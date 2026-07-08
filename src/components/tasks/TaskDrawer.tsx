@@ -163,7 +163,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
 
               <div className="section-title">Detalles</div>
               <div className="details-group">
-                <div className="detail-row">
+                <div className="detail-row frequency-row">
                   <span className="detail-label">Frecuencia</span>
                   <div className="frequency-selector">
                     {cycles.map(cycle => (
