@@ -57,9 +57,27 @@ app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;
     const user = await prisma.user.findUnique({ where: { email } });
 
-    if (!user) return res.status(400).json({ error: 'Usuario no encontrado' });
+    if (!user || !user.password) return res.status(400).json({ error: 'Usuario o contraseña incorrectos' });
 
-    const validPassword = await bcrypt.compare(password, user.password);
+    let validPassword = false;
+    
+    // Migración silenciosa: Si la contraseña no es un hash de bcrypt (no empieza por $2)
+    if (!user.password.startsWith('$2')) {
+      validPassword = (password === user.password);
+      if (validPassword) {
+        // Encriptarla para el futuro
+        const newHash = await bcrypt.hash(password, 10);
+        await prisma.user.update({ where: { id: user.id }, data: { password: newHash } });
+      }
+    } else {
+      try {
+        validPassword = await bcrypt.compare(String(password), String(user.password));
+      } catch (err) {
+        console.error('Bcrypt error:', err);
+        return res.status(400).json({ error: 'Formato de contraseña inválido' });
+      }
+    }
+
     if (!validPassword) return res.status(400).json({ error: 'Contraseña incorrecta' });
 
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET);
