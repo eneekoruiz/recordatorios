@@ -219,31 +219,33 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 <div 
                   className="nav-item profile-nav-item"
                   onClick={() => { onSelectView('DATA'); setIsProfileOpen(false); }}
+                  style={{ padding: 'var(--space-12) var(--space-16)' }}
                 >
                   <Download size={16} /> Importar / Exportar
                 </div>
                 <div 
                   className="nav-item profile-nav-item"
                   onClick={() => { onSelectView('ANALYTICS'); setIsProfileOpen(false); }}
+                  style={{ padding: 'var(--space-12) var(--space-16)' }}
                 >
                   <BarChart size={16} /> Estadísticas
                 </div>
-                <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
+                <div style={{ height: 1, background: 'var(--border-subtle)', margin: '8px 0' }} />
                 <div 
                   className="nav-item profile-nav-item"
                   onClick={() => { onSelectView('TRASH'); setIsProfileOpen(false); }}
-                  style={{ color: 'var(--accent-red)' }}
+                  style={{ color: 'var(--accent-red)', padding: 'var(--space-12) var(--space-16)' }}
                 >
                   <Trash2 size={16} /> Papelera
                 </div>
-                <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
+                <div style={{ height: 1, background: 'var(--border-subtle)', margin: '8px 0' }} />
                 <div 
                   className="nav-item profile-nav-item"
                   onClick={() => {
                     useAppStore.getState().logout();
                     setIsProfileOpen(false);
                   }}
-                  style={{ color: 'var(--accent-red)' }}
+                  style={{ color: 'var(--accent-red)', padding: 'var(--space-12) var(--space-16)' }}
                 >
                   <LogOut size={16} /> Cerrar Sesión
                 </div>
@@ -339,7 +341,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
           <button 
             className="add-list-btn" 
             onClick={handleAddList}
-            style={{ marginTop: 'var(--space-8)' }}
+            style={{ marginTop: 'var(--space-8)', width: '100%' }}
           >
             <Plus size={16} />
             Nueva Lista Raíz
@@ -347,15 +349,17 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         </div>
 
         {/* CICLOS TEMPORALES */}
-        <div style={{ marginTop: 'var(--space-16)' }}>
+        <div style={{ marginTop: 'var(--space-8)' }}>
           <div className="section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div 
-              style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flex: 1 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flex: 1, padding: 'var(--space-8) 0' }}
               onClick={() => setIsCyclesOpen(!isCyclesOpen)}
             >
               <Clock size={16} />
               <span>CICLOS TEMPORALES</span>
-              {isCyclesOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              <motion.div animate={{ rotate: isCyclesOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                <ChevronDown size={14} />
+              </motion.div>
             </div>
             <button 
               className="btn-icon"
@@ -386,18 +390,26 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
             </button>
           </div>
 
-          {isCyclesOpen && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-              {cycles.filter(c => c.isPinned).map(cycle => {
-                const Icon = getCycleIcon(cycle.icon);
-                const isActive = currentView === cycle.id;
-                return (
-                  <div 
-                    key={cycle.id}
-                    className={`nav-item ${isActive ? 'active' : ''}`}
-                    onClick={() => onSelectView(cycle.id)}
-                  >
-                    <Icon size={16} color={isActive ? 'var(--accent-primary)' : 'var(--text-tertiary)'} />
+          <AnimatePresence>
+            {isCyclesOpen && (
+              <motion.div 
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+                style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', overflow: 'hidden' }}
+              >
+                {cycles.filter(c => c.isPinned).map(cycle => {
+                  const Icon = getCycleIcon(cycle.icon);
+                  const isActive = currentView === cycle.id;
+                  return (
+                    <div 
+                      key={cycle.id}
+                      className={`nav-item ${isActive ? 'active' : ''}`}
+                      onClick={() => onSelectView(cycle.id)}
+                      style={{ margin: '2px 0' }}
+                    >
+                      <Icon size={16} color={isActive ? 'var(--accent-primary)' : 'var(--text-tertiary)'} />
                     <span>{cycle.name}</span>
                   </div>
                 );
