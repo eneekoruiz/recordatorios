@@ -52,8 +52,12 @@ export function DataModal({ isOpen, onClose }: DataModalProps) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: 'var(--space-24)'
+            padding: 'var(--space-24)',
+            background: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(10px)',
+            pointerEvents: 'auto'
           }}
+          onClick={onClose}
         >
           <motion.div 
             initial={{ scale: 0.9, y: 20 }}
@@ -66,8 +70,12 @@ export function DataModal({ isOpen, onClose }: DataModalProps) {
               padding: 'var(--space-32)',
               maxHeight: '90vh',
               display: 'flex',
-              flexDirection: 'column'
+              flexDirection: 'column',
+              background: 'var(--bg-base)', // Hacerlo opaco
+              border: '1px solid var(--border-focus)',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
             }}
+            onClick={(e) => e.stopPropagation()} // Evitar cerrar al hacer click dentro
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-24)' }}>
               <h2 className="text-title">Soberanía de Datos</h2>

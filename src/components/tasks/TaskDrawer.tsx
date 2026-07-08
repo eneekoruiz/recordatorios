@@ -23,6 +23,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
   const [alerts, setAlerts] = useState<string[]>([]);
   const [isListening, setIsListening] = useState(false);
   const [blockedBy, setBlockedBy] = useState<string[]>([]);
+  const [sectionId, setSectionId] = useState<string | undefined>(undefined);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Suggested chips purely for visual feedback
@@ -36,6 +37,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
 
   // Tareas disponibles para bloquear (no pueden ser la misma, y deben estar PENDING)
   const availableTasks = Object.values(useAppStore(state => state.tasks)).filter(t => t.status === 'PENDING' && !t.is_deleted);
+  const listSections = useAppStore(state => state.listSections || []);
+  const availableSections = listSections.filter(s => s.listId === category);
 
   // Efecto NLP en tiempo real: Escucha el título y autocompleta horas, fechas, ciclos
   useEffect(() => {
@@ -91,13 +94,15 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
       cycleId,
       blockedBy: finalBlockedBy,
       dueDate,
-      alerts
+      alerts,
+      sectionId
     });
     
     // Reset y cerrar
     setTitle('');
     setNotes('');
     setCycleId(undefined);
+    setSectionId(undefined);
     setDueDate(new Date());
     setAlerts([]);
     setBlockedBy([]);
@@ -282,6 +287,26 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
                           <option value="inbox">Bandeja de Entrada</option>
                         </select>
                       </div>
+                      
+                      {availableSections.length > 0 && (
+                        <>
+                          <div className="divider"></div>
+                          <div className="detail-row">
+                            <span className="detail-label">Sección</span>
+                            <select 
+                              className="detail-select"
+                              value={sectionId || ''}
+                              onChange={e => setSectionId(e.target.value || undefined)}
+                            >
+                              <option value="">Automática (Por Frecuencia)</option>
+                              {availableSections.map(sec => (
+                                <option key={sec.id} value={sec.id}>{sec.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </>
+                      )}
+
                       <div className="divider"></div>
                       <div className="detail-row">
                         <span className="detail-label">Bloqueada Por</span>

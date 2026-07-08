@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { TaskItem, CustomCycle, CustomList } from '../models/Task';
+import type { TaskItem, CustomCycle, CustomList, ListSection } from '../models/Task';
 import { TaskRepository } from '../repositories/TaskRepository';
 
 const INITIAL_LISTS: CustomList[] = [
@@ -20,6 +20,7 @@ interface AppState {
   tasks: Record<string, TaskItem>;
   cycles: CustomCycle[];
   lists: CustomList[];
+  listSections: ListSection[];
   
   addTask: (task: Omit<TaskItem, 'id' | 'status' | 'createdAt' | 'updated_at' | 'is_dirty' | 'is_deleted'>) => void;
   completeTask: (id: string) => void;
@@ -31,6 +32,11 @@ interface AppState {
 
   addList: (list: CustomList) => void;
   deleteList: (id: string) => void;
+
+  addListSection: (section: ListSection) => void;
+  updateListSection: (id: string, name: string) => void;
+  deleteListSection: (id: string) => void;
+  updateTaskSection: (taskId: string, sectionId: string | undefined) => void;
 
   getTasksByCycle: (cycleId: string) => Record<string, TaskItem[]>;
   getTasksByList: (listId: string) => Record<string, TaskItem[]>;
@@ -50,6 +56,7 @@ export const useAppStore = create<AppState>()(
       tasks: {},
       cycles: INITIAL_CYCLES,
       lists: INITIAL_LISTS,
+      listSections: [],
 
       addTask: (payload) => set((state) => {
         const newTask = TaskRepository.create(payload);
@@ -106,6 +113,46 @@ export const useAppStore = create<AppState>()(
         lists: (state.lists || INITIAL_LISTS).filter(l => l.id !== id)
       })),
 
+      addListSection: (section) => set((state) => ({
+        listSections: [...(state.listSections || []), section]
+      })),
+
+      updateListSection: (id, name) => set((state) => ({
+        listSections: (state.listSections || []).map(s => s.id === id ? { ...s, name } : s)
+      })),
+
+      deleteListSection: (id) => set((state) => {
+        // Al borrar una sección, las tareas de esa sección quedan sin ella
+        const updatedTasks = { ...state.tasks };
+        let changed = false;
+        for (const taskId in updatedTasks) {
+          if (updatedTasks[taskId].sectionId === id) {
+            updatedTasks[taskId] = { ...updatedTasks[taskId], sectionId: undefined, is_dirty: true, updated_at: Date.now() };
+            changed = true;
+          }
+        }
+        return {
+          listSections: (state.listSections || []).filter(s => s.id !== id),
+          tasks: changed ? updatedTasks : state.tasks
+        };
+      }),
+
+      updateTaskSection: (taskId, sectionId) => set((state) => {
+        const task = state.tasks[taskId];
+        if (!task) return state;
+        return {
+          tasks: {
+            ...state.tasks,
+            [taskId]: {
+              ...task,
+              sectionId,
+              is_dirty: true,
+              updated_at: Date.now()
+            }
+          }
+        };
+      }),
+
       // Algoritmo de Cascada Matemático
       getTasksByCycle: (cycleId) => {
         const { tasks, cycles } = get();
@@ -147,16 +194,25 @@ export const useAppStore = create<AppState>()(
       },
 
       getTasksByList: (listId) => {
-        const { tasks, cycles } = get();
+        const { tasks, cycles, listSections } = get();
         const tasksArray = Object.values(tasks);
         
         const filtered = tasksArray.filter(t => t.categoryId === listId && t.status === 'PENDING' && !t.is_deleted);
         
         const grouped: Record<string, TaskItem[]> = {};
         for (const task of filtered) {
-          const cycleName = cycles.find(c => c.id === task.cycleId)?.name || 'Personalizado';
-          if (!grouped[cycleName]) grouped[cycleName] = [];
-          grouped[cycleName].push(task);
+          let groupName = '';
+          if (task.sectionId) {
+            const section = (listSections || []).find(s => s.id === task.sectionId);
+            groupName = section ? `section_${section.name}` : 'Personalizado';
+          } else if (task.cycleId) {
+            groupName = cycles.find(c => c.id === task.cycleId)?.name || 'Personalizado';
+          } else {
+            groupName = 'Una Vez (One-off)';
+          }
+
+          if (!grouped[groupName]) grouped[groupName] = [];
+          grouped[groupName].push(task);
         }
         return grouped;
       },

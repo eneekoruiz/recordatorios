@@ -118,8 +118,12 @@ export function BrainDumpModal({ isOpen, onClose }: BrainDumpModalProps) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: 'var(--space-24)'
+            padding: 'var(--space-24)',
+            background: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(10px)',
+            pointerEvents: 'auto'
           }}
+          onClick={onClose}
         >
           <motion.div 
             initial={{ scale: 0.9, y: 20 }}
@@ -133,8 +137,12 @@ export function BrainDumpModal({ isOpen, onClose }: BrainDumpModalProps) {
               maxHeight: '90vh',
               display: 'flex',
               flexDirection: 'column',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              background: 'var(--bg-base)', // Hacerlo opaco
+              border: '1px solid var(--border-focus)',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
             }}
+            onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-24)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-12)' }}>

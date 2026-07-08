@@ -12,6 +12,12 @@ export interface CustomList {
   color: string;
 }
 
+export interface ListSection {
+  id: string;
+  listId: string;
+  name: string;
+}
+
 export interface TaskItem {
   id: string;
   categoryId: string;
@@ -24,6 +30,9 @@ export interface TaskItem {
   
   // Dependencias Topológicas (Bloqueadores)
   blockedBy?: string[]; // Opcional: dependencias complejas ocultas por defecto
+  
+  // Agrupación manual
+  sectionId?: string; // Opcional: sección personalizada dentro de una lista
   
   // Nuevo: Referencia al ciclo dinámico (sustituye a frequencyLevel)
   cycleId?: string; // Opcional: si no está presente, es un recordatorio de un solo uso (One-off)

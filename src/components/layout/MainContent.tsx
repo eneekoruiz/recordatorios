@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo } from 'react';
-import { Plus, ChevronDown, Sparkles, Sun, Calendar, Moon, Globe, Rocket, Flame, Star, Circle } from 'lucide-react';
+import { Plus, ChevronDown, Sparkles, Sun, Calendar, Moon, Globe, Rocket, Flame, Star, Circle, FolderPlus, Edit2, Check } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useAppStore } from '../../store/useAppStore';
 import type { TaskItem } from '../../models/Task';
@@ -19,7 +19,7 @@ type VirtualItemType =
 export function MainContent({ currentView, onOpenNewTask, onOpenZenMode }: MainContentProps) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   
-  const { getTasksByCycle, getTasksByList, getSmartSortTasks, completeTask, deleteTask, cycles, lists } = useAppStore();
+  const { getTasksByCycle, getTasksByList, getSmartSortTasks, completeTask, deleteTask, cycles, lists, addListSection, updateListSection, listSections } = useAppStore();
 
   const currentCycle = cycles.find(c => c.id === currentView);
   const currentList = lists?.find(l => `list_${l.id}` === currentView);
@@ -42,6 +42,35 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode }: MainC
     return currentView;
   };
 
+  const handleAddSection = () => {
+    if (!currentList) return;
+    const name = window.prompt("Nombre de la nueva sección:");
+    if (name) {
+      addListSection({
+        id: Math.random().toString(36).substring(2, 9),
+        listId: currentList.id,
+        name
+      });
+    }
+  };
+
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+  const [editingSectionName, setEditingSectionName] = useState('');
+
+  const startEditingSection = (e: React.MouseEvent, sectionId: string, currentName: string) => {
+    e.stopPropagation();
+    setEditingSectionId(sectionId);
+    setEditingSectionName(currentName);
+  };
+
+  const saveSectionName = (e: React.MouseEvent, sectionId: string) => {
+    e.stopPropagation();
+    if (editingSectionName.trim()) {
+      updateListSection(sectionId, editingSectionName.trim());
+    }
+    setEditingSectionId(null);
+  };
+
   // 1. Flatten Data para Virtualización (QA Performance Optimization)
   const flattenedData = useMemo(() => {
     const flat: VirtualItemType[] = [];
@@ -57,12 +86,21 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode }: MainC
     // Categorías (Si estamos en ciclo) o Ciclos (Si estamos en Lista)
     Object.entries(groupedTasks).forEach(([categoryOrCycle, tasks]) => {
       let color = '#34c759'; // Default
+      let originalSectionId: string | undefined;
+
       if (!isListView) {
         const catObj = lists?.find(l => l.id === categoryOrCycle);
         if (catObj) color = catObj.color;
+      } else {
+        color = currentList?.color || color;
+        if (categoryOrCycle.startsWith('section_')) {
+          const sectionName = categoryOrCycle.replace('section_', '');
+          const sec = listSections?.find(s => s.name === sectionName && s.listId === currentList?.id);
+          if (sec) originalSectionId = sec.id;
+        }
       }
       
-      flat.push({ type: 'header', title: categoryOrCycle, category: categoryOrCycle, color });
+      flat.push({ type: 'header', title: categoryOrCycle.replace('section_', ''), category: categoryOrCycle, color, sectionId: originalSectionId } as any);
       if (!collapsed[categoryOrCycle]) {
         const roots = tasks.filter(t => !t.parentId);
         const processNode = (task: TaskItem, depth: number) => {
@@ -119,7 +157,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode }: MainC
           {currentList && <div style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: currentList.color }}></div>}
           {getTitle()}
         </h1>
-        <div className="header-actions">
+        <div className="header-actions" style={{ display: 'flex', gap: '8px' }}>
+          {isListView && (
+            <button className="icon-btn" onClick={handleAddSection} title="Añadir Sección">
+              <FolderPlus size={20} />
+            </button>
+          )}
           <button className="icon-btn" onClick={onOpenNewTask}><Plus size={24} /></button>
         </div>
       </header>
@@ -140,10 +183,42 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode }: MainC
           };
 
           if (data.type === 'header') {
+            const isCustomSection = (data as any).sectionId !== undefined;
+            const sectionId = (data as any).sectionId;
             return (
               <div key={data.category} style={virtualStyle} className="group-header" onClick={() => toggleCategory(data.category)}>
-                <h3 style={{ color: data.color, display: 'flex', alignItems: 'center', gap: 8, textTransform: 'capitalize' }}>
-                  {data.category === 'smart' && <Sparkles size={20} />} {data.title}
+                <h3 style={{ color: data.color, display: 'flex', alignItems: 'center', gap: 8, textTransform: 'capitalize', flex: 1 }}>
+                  {data.category === 'smart' && <Sparkles size={20} />} 
+                  
+                  {editingSectionId === sectionId && isCustomSection ? (
+                    <input 
+                      type="text" 
+                      value={editingSectionName}
+                      onChange={e => setEditingSectionName(e.target.value)}
+                      onClick={e => e.stopPropagation()}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') saveSectionName(e as any, sectionId);
+                      }}
+                      style={{ 
+                        background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-focus)', 
+                        color: 'var(--text-primary)', fontSize: 'inherit', fontFamily: 'inherit', outline: 'none'
+                      }}
+                      autoFocus
+                    />
+                  ) : (
+                    <span>{data.title}</span>
+                  )}
+                  
+                  {isCustomSection && editingSectionId !== sectionId && (
+                    <button className="icon-btn" onClick={(e) => startEditingSection(e, sectionId, data.title)} style={{ padding: 4 }}>
+                      <Edit2 size={14} color="var(--text-secondary)" />
+                    </button>
+                  )}
+                  {isCustomSection && editingSectionId === sectionId && (
+                    <button className="icon-btn" onClick={(e) => saveSectionName(e, sectionId)} style={{ padding: 4 }}>
+                      <Check size={14} color="var(--accent-green)" />
+                    </button>
+                  )}
                 </h3>
                 <ChevronDown 
                   size={20} 
