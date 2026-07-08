@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, BarChart2, Settings, DownloadCloud, Zap, ChevronDown, ChevronRight, Clock, CheckCircle, Flag, LayoutGrid, Check, Trash2, Calendar } from 'lucide-react';
+import { Plus, BarChart2, DownloadCloud, Zap, ChevronDown, ChevronRight, Clock, CheckCircle, Flag, LayoutGrid, Check, Trash2, Calendar } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
 import { getCycleIcon } from '../../constants/icons';
@@ -203,12 +203,38 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         </div>
 
         {/* Acordeón de Ciclos */}
-        <div className="section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: 'var(--space-8) var(--space-12)' }} onClick={() => setIsCyclesOpen(!isCyclesOpen)}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)' }}>
+        <div className="section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--space-8) var(--space-12)' }}>
+          <div 
+            style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)', cursor: 'pointer', flex: 1 }}
+            onClick={() => setIsCyclesOpen(!isCyclesOpen)}
+          >
             <Clock size={16} />
             <span style={{ fontSize: '0.85rem', letterSpacing: '0.5px' }}>VISTAS TEMPORALES</span>
+            {isCyclesOpen ? <ChevronDown size={14} color="var(--text-tertiary)" /> : <ChevronRight size={14} color="var(--text-tertiary)" />}
           </div>
-          {isCyclesOpen ? <ChevronDown size={16} color="var(--text-tertiary)" /> : <ChevronRight size={16} color="var(--text-tertiary)" />}
+          <button 
+            className="btn-icon"
+            style={{ padding: 4, cursor: 'pointer' }}
+            title="Nuevo Ciclo"
+            onClick={async (e) => {
+              e.stopPropagation();
+              const name = await usePromptStore.getState().openPrompt('Nombre del nuevo ciclo temporal:', 'Ej: Siguiente Trimestre');
+              if (name) {
+                const newCycleId = `cycle_${Date.now()}`;
+                useAppStore.getState().addCycle({
+                  id: newCycleId,
+                  name,
+                  daysValue: 14,
+                  isPinned: true,
+                  icon: 'star'
+                });
+                setIsCyclesOpen(true);
+                onSelectView(newCycleId);
+              }
+            }}
+          >
+            <Plus size={14} color="var(--text-tertiary)" />
+          </button>
         </div>
 
         {isCyclesOpen && (
@@ -239,15 +265,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
           <span>Estadísticas</span>
         </div>
         
-        <div 
-          className="nav-item"
-          onClick={() => onSelectView('MANAGE_CYCLES')}
-          style={{ color: 'var(--text-tertiary)' }}
-        >
-          <Settings size={18} />
-          <span>Gestionar Ciclos</span>
-        </div>
-        
+
         <div 
           className="nav-item"
           onClick={() => onSelectView('DATA')}
