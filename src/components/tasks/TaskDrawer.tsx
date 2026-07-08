@@ -50,7 +50,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
   }, [isOpen, defaultCategoryId]);
 
   // Tareas disponibles para bloquear (no pueden ser la misma, y deben estar PENDING)
-  const availableTasks = Object.values(useAppStore(state => state.tasks)).filter(t => t.status === 'PENDING' && !t.is_deleted);
+  const availableTasks = Object.values(useAppStore(state => state.tasks)).filter(t => t.status === 'pending' && !t.deleted_at);
   const listSections = useAppStore(state => state.listSections || []);
   const availableSections = listSections.filter(s => s.listId === category);
 
@@ -105,10 +105,10 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
       categoryId: category,
       type,
       title,
-      notes: notes || undefined,
+      description: notes || undefined,
       cycleId,
       blockedBy: finalBlockedBy,
-      dueDate,
+      dueDate: dueDate.toISOString(),
       alerts,
       sectionId,
       url: url || undefined,

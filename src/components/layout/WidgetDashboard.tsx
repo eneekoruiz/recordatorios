@@ -38,7 +38,7 @@ export function WidgetDashboard() {
               />
               <div style={{ flex: 1, overflow: 'hidden' }}>
                 <div style={{ fontSize: '0.9rem', fontWeight: 500, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{task.title}</div>
-                {task.alerts.length > 0 && (
+                {(task.alerts?.length || 0) > 0 && (
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{task.alerts.join(', ')}</div>
                 )}
               </div>

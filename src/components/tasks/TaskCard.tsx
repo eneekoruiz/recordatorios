@@ -17,14 +17,14 @@ interface TaskCardProps {
 
 export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onComplete, onDelete, onOpenZenMode, index }: TaskCardProps) {
   const { cycles, tasks, nestTask, addDependency } = useAppStore();
-  const taskCycle = cycles.find(c => c.id === task.cycleId);
+  const taskCycle = cycles.find(c => c.id === task.cycle_id);
   const [isDragOver, setIsDragOver] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   
   const [menuPos, setMenuPos] = useState({ x: 0, y: 0 });
 
   // Bloqueado si alguna dependencia sigue pendiente
-  const isBlocked = task.blockedBy && task.blockedBy.some(id => tasks[id] && tasks[id].status === 'PENDING');
+  const isBlocked = task.blockedBy && task.blockedBy.some(id => tasks[id] && tasks[id].status === 'pending');
 
   // Nueva lógica modularizada (CycleCompletionService)
   const isCompletedPeriod = isCompletedInCurrentPeriod(task, cycles);
@@ -34,6 +34,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onCom
       if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
       onComplete(task.id);
     } else if (offset < -100) {
+      if (navigator.vibrate) navigator.vibrate(50);
       onDelete(task.id);
     } else if (offset < -50) {
       setShowMenu(true);
@@ -178,7 +179,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onCom
             </div>
             
             <div style={{ display: 'flex', gap: 'var(--space-8)', marginTop: 'var(--space-4)', alignItems: 'center' }}>
-              {task.alerts.map((alert: any, idx: number) => {
+              {(task.alerts || []).map((alert: any, idx: number) => {
                 const isCompleted = task.completedAlerts?.includes(alert.id);
                 const label = alert.type === 'at_time' ? alert.time : `-${alert.offsetMinutes}m`;
                 return (
@@ -273,7 +274,11 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onCom
               </button>
 
               <button 
-                onClick={() => { onDelete(task.id); setShowMenu(false); }}
+                onClick={() => { 
+                  if (navigator.vibrate) navigator.vibrate(50);
+                  onDelete(task.id); 
+                  setShowMenu(false); 
+                }}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px', background: 'transparent', border: 'none', color: 'var(--accent-red)', textAlign: 'left', cursor: 'pointer', borderRadius: 4 }}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-surface)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}

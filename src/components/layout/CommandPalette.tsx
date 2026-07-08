@@ -55,7 +55,7 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
     }
   }, [isOpen]);
 
-  const allTasks = Object.values(tasks).filter(t => !t.is_deleted && t.status === 'PENDING');
+  const allTasks = Object.values(tasks).filter(t => !t.deleted_at && t.status === 'pending');
   
   // Fuzzy search logic
   const results: any[] = [];

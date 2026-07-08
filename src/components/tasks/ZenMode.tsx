@@ -70,9 +70,9 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
           <h2 className="text-display" style={{ fontSize: '4rem', lineHeight: 1.1, marginBottom: 'var(--space-24)', color: 'white' }}>
             {task.title}
           </h2>
-          {task.notes && (
+          {task.description && (
             <p className="text-body" style={{ fontSize: '1.5rem', color: 'var(--text-secondary)', marginBottom: 'var(--space-48)' }}>
-              {task.notes}
+              {task.description}
             </p>
           )}
 

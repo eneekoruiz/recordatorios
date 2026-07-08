@@ -6,15 +6,15 @@ export function AnalyticsView() {
   const tasks = useAppStore(state => state.tasks);
 
   // Estadísticas Simples (Habit Tracking)
-  const taskList = Object.values(tasks).filter(t => !t.is_deleted);
-  const completed = taskList.filter(t => t.status === 'COMPLETED');
-  const pending = taskList.filter(t => t.status === 'PENDING');
+  const taskList = Object.values(tasks).filter(t => !t.deleted_at);
+  const completed = taskList.filter(t => t.status === 'completed');
+  const pending = taskList.filter(t => t.status === 'pending');
 
   const total = completed.length + pending.length;
   const completionRate = total === 0 ? 0 : Math.round((completed.length / total) * 100);
 
   // Cálculo de Racha de Tareas Diarias
-  const dailyCompleted = completed.filter(t => t.cycleId === 'cycle_day').length;
+  const dailyCompleted = completed.filter(t => t.cycle_id === 'cycle_day').length;
   // (En un entorno real iteraríamos las fechas, pero para esta demo mostramos el volumen como Racha)
   const streak = dailyCompleted > 0 ? dailyCompleted + 2 : 0; 
 

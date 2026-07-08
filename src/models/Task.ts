@@ -1,9 +1,15 @@
 export interface CustomCycle {
   id: string;
+  user_id?: string; // Foreign key to users
   name: string;
-  daysValue: number; // Duración en días para la cascada matemática
+  daysValue: number;
   isPinned: boolean;
-  icon: string; // Nombre del icono de Lucide (ej. 'sun', 'calendar')
+  icon: string;
+  recurrence_rule?: string; // RRULE format
+  created_at?: string; // ISO String for Supabase timestampz
+  updated_at?: string;
+  deleted_at?: string;
+  version?: number;
 }
 
 export interface CustomList {
@@ -27,52 +33,80 @@ export interface AlertDef {
   offsetMinutes?: number; // 60 = 1 hour before, 1440 = 1 day before, etc.
 }
 
+export interface Attachment {
+  id: string;
+  task_id: string;
+  file_url: string;
+  file_type: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+  version: number;
+}
+
 export interface TaskItem {
   id: string;
-  categoryId: string;
-  type: 'task' | 'log'; // NEW: Differentiation between actionable tasks and inert logs
+  user_id: string; // From Supabase
+  categoryId?: string; // Corresponds to List in frontend
+  type: 'task' | 'log'; 
   title: string;
-  notes?: string;
+  description?: string; // Changed from notes to match DB
 
   // Estructura Espacial (Subtareas y Orden)
   parentId?: string; // Si es null o undefined, es una tarea raíz
   order?: number; // Para ordenar libremente
   
   // Dependencias Topológicas (Bloqueadores)
-  blockedBy?: string[]; // Opcional: dependencias complejas ocultas por defecto
+  blockedBy?: string[]; // Opcional: dependencias complejas
   
   // Agrupación manual
   sectionId?: string; // Opcional: sección personalizada dentro de una lista
   
-  // Nuevo: Referencia al ciclo dinámico (sustituye a frequencyLevel)
-  cycleId?: string; // Opcional: si no está presente, es un recordatorio de un solo uso (One-off)
+  // Ciclo dinámico
+  cycle_id?: string; // Mapped to DB
   
-  dueDate: Date;
-  status: 'PENDING' | 'COMPLETED' | 'SKIPPED';
-  alerts: AlertDef[]; 
+  dueDate?: string; // ISO String
+  status: 'pending' | 'in_progress' | 'completed'; // Mapped to DB
+  alerts?: AlertDef[]; 
   completedAlerts?: string[]; // IDs of AlertDefs that have fired
-  completionHistory?: number[]; // Timestamps de cuando se ha completado en el pasado (Frecuencias matemáticas)
-  createdAt: number; 
-
+  completionHistory?: number[]; // Timestamps de cuando se ha completado en el pasado
+  
   // --- APPLE REMINDERS FEATURES ---
   priority?: 'none' | 'low' | 'medium' | 'high';
   flagged?: boolean;
   url?: string;
-  image?: string; // base64 o URL de imagen adjunta
+  image?: string;
 
   // --- SHOPPING & FINANCE FIELDS ---
-  isDetailed?: boolean; // Alternar entre simple y detallado
-  price?: number;       // Precio por unidad
-  quantity?: number;    // Cantidad (por defecto 1)
-  brand?: string;       // Marca recomendada
+  isDetailed?: boolean; 
+  price?: number;       
+  quantity?: number;    
+  brand?: string;       
 
   // --- INNOVATION FIELDS ---
-  /** Coordenadas de Geofencing para disparar notificaciones basadas en ubicación */
   location?: { lat: number; lng: number; radius: number; address: string };
-  locationName?: string; // Nombre amigable para UI
+  locationName?: string; 
 
-  // --- SYNC-READY FIELDS (Cloud Architect) ---
-  updated_at: number; 
-  is_dirty: boolean;  
-  is_deleted: boolean; 
+  // --- SYNC-READY FIELDS (Supabase) ---
+  created_at: string; // ISO String
+  updated_at: string; // ISO String
+  deleted_at?: string; // ISO String
+  version: number;
+
+  // --- LOCAL ONLY STATE ---
+  _is_dirty?: boolean; // Flag to indicate if it needs to be synced to server
+}
+
+export interface TaskDependency {
+  task_id: string;
+  depends_on_task_id: string;
+}
+
+export interface LogEntry {
+  id: string;
+  user_id: string;
+  task_id?: string;
+  action: string;
+  details?: Record<string, any>;
+  created_at: string;
 }

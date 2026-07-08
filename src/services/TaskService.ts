@@ -1,4 +1,4 @@
-import type { TaskItem, CustomCycle } from '../models/Task';
+import type { TaskItem } from '../models/Task';
 
 /**
  * Servicio puro para determinar si una tarea recurrente
@@ -7,11 +7,14 @@ import type { TaskItem, CustomCycle } from '../models/Task';
  * Centraliza la lógica que antes estaba duplicada en
  * useAppStore, TaskCard y MainContent.
  */
-export function isCompletedInCurrentPeriod(task: TaskItem, cycles: CustomCycle[]): boolean {
-  if (task.status === 'COMPLETED') return true;
-  if (!task.cycleId || !task.completionHistory || task.completionHistory.length === 0) return false;
+export function isCompletedInCurrentPeriod(task: Partial<TaskItem>, cycles: any[]): boolean {
+  if (task.status === 'completed') return true;
+  if (task.cycle_id && task.status === 'completed' && task.completionHistory) {
+    if (task.completionHistory.length === 0) return false;
+  }
+  if (!task.cycle_id || !task.completionHistory || task.completionHistory.length === 0) return false;
 
-  const cycle = cycles.find(c => c.id === task.cycleId);
+  const cycle = cycles.find(c => c.id === task.cycle_id);
   if (!cycle) return false;
 
   const lastCompletion = task.completionHistory[task.completionHistory.length - 1];

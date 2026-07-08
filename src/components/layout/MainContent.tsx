@@ -1,10 +1,12 @@
 import { useState, useRef, useMemo, useCallback } from 'react';
-import { Plus, ChevronDown, Sparkles, FolderPlus, Inbox } from 'lucide-react';
+import { Plus, ChevronDown, Sparkles, FolderPlus } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useAppStore } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
 import type { TaskItem } from '../../models/Task';
 import { TaskCard } from '../tasks/TaskCard';
+import { EmptyState } from '../ui/EmptyState';
+import { ConfirmModal } from '../ui/ConfirmModal';
 import { getCycleIcon } from '../../constants/icons';
 
 interface MainContentProps {
@@ -44,18 +46,18 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
 
   // Funciones auxiliares para Smart Lists (memoized)
   const getTasksForSmartView = useCallback((includeCompleted = false) => {
-    const allTasks = Object.values(tasks).filter(t => !t.is_deleted);
-    const validTasks = includeCompleted ? allTasks : allTasks.filter(t => t.status === 'PENDING');
+    const allTasks = Object.values(tasks).filter(t => !t.deleted_at);
+    const validTasks = includeCompleted ? allTasks : allTasks.filter(t => t.status === 'pending');
     let filteredTasks: TaskItem[] = [];
 
     switch (currentView) {
       case 'smart_today': {
         const today = new Date().toISOString().split('T')[0];
-        filteredTasks = validTasks.filter(t => new Date(t.dueDate).toISOString().split('T')[0] === today);
+        filteredTasks = validTasks.filter(t => new Date(t.dueDate as string).toISOString().split('T')[0] === today);
         break;
       }
       case 'smart_scheduled':
-        filteredTasks = validTasks.filter(t => new Date(t.dueDate) > new Date());
+        filteredTasks = validTasks.filter(t => new Date(t.dueDate as string) > new Date());
         break;
       case 'smart_all':
         filteredTasks = validTasks;
@@ -64,7 +66,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
         filteredTasks = validTasks.filter(t => t.flagged);
         break;
       case 'smart_completed':
-        filteredTasks = allTasks.filter(t => t.status === 'COMPLETED'); // always completed
+        filteredTasks = allTasks.filter(t => t.status === 'completed'); // always completed
         break;
     }
 
@@ -82,7 +84,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
 
   const groupedTasks = useMemo(() => {
     if (currentView === 'TRASH') {
-      return { 'Papelera': Object.values(tasks).filter(t => t.is_deleted) };
+      return { 'Papelera': Object.values(tasks).filter(t => t.deleted_at) };
     }
     if (isSmartView) return getTasksForSmartView(showCompleted);
     if (isListView) return getTasksByList(currentView.replace('list_', ''), showCompleted);
@@ -135,6 +137,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
     }
   }, [currentList, addListSection]);
 
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [confirmProps, setConfirmProps] = useState({ title: '', message: '', onConfirm: () => {} });
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [editingSectionName, setEditingSectionName] = useState('');
 
@@ -293,10 +297,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
             {currentCycle && !['cycle_day', 'cycle_week', 'cycle_month', 'cycle_year'].includes(currentCycle.id) && (
               <button 
                 onClick={async () => {
-                  const confirmDelete = confirm(`¿Estás seguro de eliminar el ciclo ${currentCycle.name}?`);
-                  if (confirmDelete) {
-                    deleteCycle(currentCycle.id);
-                  }
+                  setConfirmProps({ title: 'Eliminar Ciclo', message: `¿Estás seguro de eliminar el ciclo ${currentCycle.name}? Esta acción no se puede deshacer.`, onConfirm: () => deleteCycle(currentCycle.id) }); setIsConfirmOpen(true);
                 }}
                 className="time-pill"
                 style={{ cursor: 'pointer', background: 'rgba(255, 69, 58, 0.1)', color: 'var(--accent-red)', border: 'none' }}
@@ -423,15 +424,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
         })}
 
         {flattenedData.length === 0 && (
-          <div style={{ color: 'var(--text-muted)', textAlign: 'center', marginTop: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-            <div style={{ background: 'var(--bg-surface)', padding: '24px', borderRadius: '50%', display: 'inline-flex' }}>
-               <Inbox size={48} color="var(--text-tertiary)" />
-            </div>
-            <p>No hay tareas pendientes en esta vista.</p>
-            <button className="btn-icon" onClick={onOpenNewTask} style={{ background: 'var(--accent-glow)', color: 'var(--accent-primary)', padding: '8px 16px', borderRadius: '8px' }}>
-              Crear Tarea
-            </button>
-          </div>
+          <EmptyState />
         )}
 
       </div>
@@ -439,6 +432,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
       <button className="fab" onClick={onOpenNewTask}>
         <Plus size={24} />
       </button>
+      <ConfirmModal isOpen={isConfirmOpen} title={confirmProps.title} message={confirmProps.message} onConfirm={() => { confirmProps.onConfirm(); setIsConfirmOpen(false); }} onCancel={() => setIsConfirmOpen(false)} />
     </main>
   );
 }

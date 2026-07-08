@@ -9,30 +9,32 @@ export class TaskRepository {
     return crypto.randomUUID();
   }
 
-  public static create(payload: Omit<TaskItem, 'id' | 'status' | 'createdAt' | 'updated_at' | 'is_dirty' | 'is_deleted'>): TaskItem {
-    const now = Date.now();
+  public static create(payload: Partial<TaskItem>): TaskItem {
+    const now = new Date().toISOString();
     return {
-      ...payload,
       id: this.generateId(),
-      status: 'PENDING',
-      blockedBy: payload.blockedBy || [],
-      createdAt: now,
-      updated_at: now,
-      is_dirty: true, 
-      is_deleted: false
-    };
+      user_id: '', // Will be set by Supabase/SyncManager upon sync or auth state
+      type: 'task',
+      title: 'Nueva Tarea',
+      status: 'pending',
+      version: 1,
+      ...payload,
+      created_at: payload.created_at || now,
+      updated_at: payload.updated_at || now,
+      _is_dirty: true 
+    } as TaskItem;
   }
 
   public static update(existingTask: TaskItem, updates: Partial<TaskItem>): TaskItem {
     return {
       ...existingTask,
       ...updates,
-      updated_at: Date.now(),
-      is_dirty: true 
+      updated_at: new Date().toISOString(),
+      _is_dirty: true 
     };
   }
 
   public static markAsDeleted(existingTask: TaskItem): TaskItem {
-    return this.update(existingTask, { is_deleted: true });
+    return this.update(existingTask, { deleted_at: new Date().toISOString() });
   }
 }

@@ -41,8 +41,8 @@ export function detectFormatAndParse(input: string, currentStoreData: { cycles: 
             title,
             type: 'task',
             categoryId: 'inbox',
-            cycleId: 'cycle_day',
-            dueDate: new Date(),
+            cycle_id: 'cycle_day',
+            dueDate: new Date().toString().toString(),
             alerts: [],
             blockedBy: []
           }));
@@ -59,7 +59,7 @@ export function detectFormatAndParse(input: string, currentStoreData: { cycles: 
     if (!title || title.startsWith('//')) return;
 
     let categoryId = 'inbox';
-    let cycleId = 'cycle_day';
+    let cycle_id = 'cycle_day';
     const alerts: import('../models/Task').AlertDef[] = [];
 
     // Parse category @
@@ -77,7 +77,7 @@ export function detectFormatAndParse(input: string, currentStoreData: { cycles: 
       
       const existing = currentStoreData.cycles.find(c => c.name.toLowerCase() === rawCycle.toLowerCase());
       if (existing) {
-        cycleId = existing.id;
+        cycle_id = existing.id;
       } else {
         const newCycleId = `cycle_${Date.now()}_${Math.random()}`;
         result.cycles.push({
@@ -87,7 +87,7 @@ export function detectFormatAndParse(input: string, currentStoreData: { cycles: 
           isPinned: true,
           icon: 'sparkles'
         });
-        cycleId = newCycleId;
+        cycle_id = newCycleId;
       }
     }
 
@@ -104,8 +104,8 @@ export function detectFormatAndParse(input: string, currentStoreData: { cycles: 
         title,
         type: 'task',
         categoryId,
-        cycleId,
-        dueDate: new Date(),
+        cycle_id,
+        dueDate: new Date().toString().toString(),
         alerts,
         blockedBy: []
       }));

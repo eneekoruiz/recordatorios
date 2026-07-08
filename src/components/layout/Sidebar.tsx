@@ -82,21 +82,21 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   const [isEditMode, setIsEditMode] = useState(false);
 
   const getTaskCount = (view: string) => {
-    const allTasks = Object.values(tasks).filter(t => !t.is_deleted);
-    const pendingTasks = allTasks.filter(t => t.status === 'PENDING');
+    const allTasks = Object.values(tasks).filter(t => !t.deleted_at);
+    const pendingTasks = allTasks.filter(t => t.status === 'pending');
     
     switch (view) {
       case 'smart_today':
         const today = new Date().toISOString().split('T')[0];
-        return pendingTasks.filter(t => new Date(t.dueDate).toISOString().split('T')[0] === today).length;
+        return pendingTasks.filter(t => new Date(t.dueDate as string).toISOString().split('T')[0] === today).length;
       case 'smart_scheduled':
-        return pendingTasks.filter(t => new Date(t.dueDate) > new Date()).length;
+        return pendingTasks.filter(t => new Date(t.dueDate as string) > new Date()).length;
       case 'smart_all':
         return pendingTasks.length;
       case 'smart_flagged':
         return pendingTasks.filter(t => t.flagged).length;
       case 'smart_completed':
-        return allTasks.filter(t => t.status === 'COMPLETED').length;
+        return allTasks.filter(t => t.status === 'completed').length;
       default:
         return 0;
     }

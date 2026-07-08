@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { idbStorage } from '../utils/idbStorage';
 import type { TaskItem, CustomCycle, CustomList, ListSection } from '../models/Task';
 import { TaskRepository } from '../repositories/TaskRepository';
 import { isCompletedInCurrentPeriod, wouldCreateDependencyCycle } from '../services/TaskService';
@@ -27,7 +28,7 @@ interface AppState {
   
   toggleSmartList: (listId: string) => void;
   
-  addTask: (task: Omit<TaskItem, 'id' | 'status' | 'createdAt' | 'updated_at' | 'is_dirty' | 'is_deleted'>) => void;
+  addTask: (task: Partial<TaskItem>) => void;
   updateTaskRaw: (task: TaskItem) => void; // Para uso interno y SyncProvider
   completeTask: (id: string) => void;
   deleteTask: (id: string) => void;
@@ -46,7 +47,7 @@ interface AppState {
 
   purgeOldDeletedTasks: () => void;
 
-  getTasksByCycle: (cycleId: string, includeCompleted?: boolean) => Record<string, TaskItem[]>;
+  getTasksByCycle: (cycle_id: string, includeCompleted?: boolean) => Record<string, TaskItem[]>;
   getTasksByList: (listId: string, includeCompleted?: boolean) => Record<string, TaskItem[]>;
   getSmartSortTasks: () => TaskItem[]; 
 
@@ -120,7 +121,7 @@ export const useAppStore = create<AppState>()(
           // Si es la última alerta, se completó la dosis de este ciclo.
           const newCompletionHistory = [...(existingTask.completionHistory || []), Date.now()];
           
-          if (existingTask.cycleId) {
+          if (existingTask.cycle_id) {
             // Tarea Recurrente: Mantener PENDING, limpiar alertas parciales, añadir a historial
             updatedTask = TaskRepository.update(existingTask, { 
               completedAlerts: [], // Reset for next cycle
@@ -129,7 +130,7 @@ export const useAppStore = create<AppState>()(
           } else {
             // Tarea de un solo uso
             updatedTask = TaskRepository.update(existingTask, { 
-              status: 'COMPLETED',
+              status: 'completed',
               completedAlerts: [...completedAlerts, alerts[completedAlerts.length]?.id].filter(Boolean) as string[],
               completionHistory: newCompletionHistory
             });
@@ -190,7 +191,7 @@ export const useAppStore = create<AppState>()(
         let changed = false;
         for (const taskId in updatedTasks) {
           if (updatedTasks[taskId].sectionId === id) {
-            updatedTasks[taskId] = { ...updatedTasks[taskId], sectionId: undefined, is_dirty: true, updated_at: Date.now() };
+            updatedTasks[taskId] = { ...updatedTasks[taskId], sectionId: undefined, _is_dirty: true, updated_at: new Date().toISOString() };
             changed = true;
           }
         }
@@ -219,7 +220,7 @@ export const useAppStore = create<AppState>()(
         
         for (const taskId in newTasks) {
           const task = newTasks[taskId];
-          if (task.is_deleted && task.updated_at && (now - task.updated_at > THIRTY_DAYS_MS)) {
+          if (task.deleted_at && task.updated_at && (now - new Date(task.updated_at).getTime() > THIRTY_DAYS_MS)) {
             delete newTasks[taskId];
             purged = true;
           }
@@ -239,21 +240,21 @@ export const useAppStore = create<AppState>()(
         // Utilizamos la lógica centralizada de TaskService
         const grouped: Record<string, TaskItem[]> = {};
         Object.values(tasks)
-          .filter(t => !t.is_deleted && (includeCompleted || t.status !== 'COMPLETED'))
+          .filter(t => !t.deleted_at && (includeCompleted || t.status !== 'completed'))
           .filter(t => {
             // Regla: Hereda tareas de su propio ciclo Y de cualquier ciclo más corto.
             // NUEVO: Si no tiene ciclo (One-off), evaluamos por dueDate.
-            if (!t.cycleId) {
+            if (!t.cycle_id) {
               const now = new Date();
               const taskDate = new Date(t.dueDate);
               const diffTime = taskDate.getTime() - now.getTime();
               const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
               return diffDays <= targetCycle.daysValue;
             }
-            return validCycles.includes(t.cycleId);
+            return validCycles.includes(t.cycle_id as string);
           })
           .filter(t => includeCompleted || !isCompletedInCurrentPeriod(t, cycles)) // Si ya se hizo, no la mostramos en pendientes de la cascada
-          .sort((a, b) => a.createdAt - b.createdAt)
+          .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
           .forEach(t => {
             const listId = t.categoryId;
             if (!grouped[listId]) grouped[listId] = [];
@@ -266,7 +267,7 @@ export const useAppStore = create<AppState>()(
         const { tasks, cycles, listSections } = get();
         const tasksArray = Object.values(tasks);
         
-        const filtered = tasksArray.filter(t => t.categoryId === listId && !t.is_deleted && (includeCompleted || t.status === 'PENDING'));
+        const filtered = tasksArray.filter(t => t.categoryId === listId && !t.deleted_at && (includeCompleted || t.status === 'pending'));
         
         const grouped: Record<string, TaskItem[]> = {};
         for (const task of filtered) {
@@ -274,8 +275,8 @@ export const useAppStore = create<AppState>()(
           if (task.sectionId) {
             const section = (listSections || []).find(s => s.id === task.sectionId);
             groupName = section ? `section_${section.name}` : 'Personalizado';
-          } else if (task.cycleId) {
-            groupName = cycles.find(c => c.id === task.cycleId)?.name || 'Personalizado';
+          } else if (task.cycle_id) {
+            groupName = cycles.find(c => c.id === task.cycle_id)?.name || 'Personalizado';
           } else {
             groupName = 'Una Vez (One-off)';
           }
@@ -288,7 +289,7 @@ export const useAppStore = create<AppState>()(
 
       getSmartSortTasks: () => {
         const { tasks, cycles } = get();
-        const tasksArray = Object.values(tasks).filter(t => t.status === 'PENDING' && t.is_deleted === false);
+        const tasksArray = Object.values(tasks).filter(t => t.status === 'pending' && !t.deleted_at);
         const now = new Date();
         const currentHours = now.getHours();
 
@@ -309,7 +310,7 @@ export const useAppStore = create<AppState>()(
           }
           
           // SmartSort: Tareas Diarias por la tarde
-          const taskCycle = cycles.find(c => c.id === task.cycleId);
+          const taskCycle = cycles.find(c => c.id === task.cycle_id);
           if (taskCycle && taskCycle.daysValue === 1 && currentHours > 18) {
             score += 30;
           }
@@ -318,7 +319,7 @@ export const useAppStore = create<AppState>()(
 
         return scoredTasks.sort((a, b) => {
           if (b._score !== a._score) return b._score - a._score;
-          return a.createdAt - b.createdAt;
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
         });
       },
 
@@ -357,7 +358,7 @@ export const useAppStore = create<AppState>()(
           
           let title = trimmed;
           let categoryId = 'inbox';
-          let cycleId = 'cycle_day';
+          let cycle_id = 'cycle_day';
 
           // Extract category: @Categoria
           const catMatch = title.match(/@(\w+)/);
@@ -375,7 +376,7 @@ export const useAppStore = create<AppState>()(
             // Buscar si ya existe el ciclo por nombre (case insensitive)
             const existing = cycles.find(c => c.name.toLowerCase() === rawCycle.toLowerCase());
             if (existing) {
-              cycleId = existing.id;
+              cycle_id = existing.id;
             } else {
               // Auto-crear ciclo inferido (heurística simple, asignamos 14 días por defecto si no es conocido)
               const newCycleId = `cycle_${Date.now()}_${Math.random()}`;
@@ -386,7 +387,7 @@ export const useAppStore = create<AppState>()(
                 isPinned: true,
                 icon: 'sparkles'
               });
-              cycleId = newCycleId;
+              cycle_id = newCycleId;
             }
           }
 
@@ -395,9 +396,9 @@ export const useAppStore = create<AppState>()(
               title,
               type: 'task', // Auto-imported from quick add is a task
               categoryId,
-              cycleId,
+              cycle_id,
               blockedBy: [],
-              dueDate: new Date(),
+              dueDate: new Date().toISOString(),
               alerts: []
             }));
           }
@@ -433,8 +434,8 @@ export const useAppStore = create<AppState>()(
               [targetTaskId]: {
                 ...targetTask,
                 blockedBy: [...currentBlockedBy, blockedByTaskId],
-                is_dirty: true,
-                updated_at: Date.now()
+                _is_dirty: true,
+                updated_at: new Date().toISOString()
               }
             }
           };
@@ -452,8 +453,8 @@ export const useAppStore = create<AppState>()(
             [targetTaskId]: {
               ...targetTask,
               blockedBy: (targetTask.blockedBy || []).filter(id => id !== blockedByTaskId),
-              is_dirty: true,
-              updated_at: Date.now()
+              _is_dirty: true,
+              updated_at: new Date().toISOString()
             }
           }
         };
@@ -471,8 +472,8 @@ export const useAppStore = create<AppState>()(
             [taskId]: {
               ...task,
               parentId: parentId,
-              is_dirty: true,
-              updated_at: Date.now()
+              _is_dirty: true,
+              updated_at: new Date().toISOString()
             }
           }
         };
@@ -480,7 +481,7 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'reminders-storage',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => idbStorage),
       version: 3,
       migrate: (persistedState: any, version: number) => {
         let state = persistedState;
@@ -490,14 +491,14 @@ export const useAppStore = create<AppState>()(
           const newTasks: Record<string, TaskItem> = {};
           if (state.tasks) {
             Object.entries(state.tasks).forEach(([id, t]: [string, any]) => {
-              let cycleId = 'cycle_day';
+              let cycle_id = 'cycle_day';
               if (t.frequencyLevel === 'weekly') cycleId = 'cycle_week';
               if (t.frequencyLevel === 'monthly') cycleId = 'cycle_month';
               if (t.frequencyLevel === 'yearly') cycleId = 'cycle_year';
               
               const migratedTask: any = {
                 ...t,
-                cycleId,
+                cycle_id,
                 blockedBy: t.blockedBy || []
               };
               delete migratedTask.frequencyLevel;

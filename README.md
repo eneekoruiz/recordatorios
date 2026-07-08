@@ -1,37 +1,58 @@
-# Recordatorios Pro 🚀
+# Recordatorios Elite
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![React](https://img.shields.io/badge/react-18.x-61dafb.svg)
-![Vite](https://img.shields.io/badge/vite-latest-646cff.svg)
-![Status](https://img.shields.io/badge/status-Production_Ready-brightgreen.svg)
+PWA de productividad de nivel Staff Engineer con arquitectura Cloud-Agnostic, diseño UX/UI matemáticamente exacto y soporte Offline-First absoluto.
 
-El clon definitivo y avanzado de Apple Reminders, diseñado para operar bajo los estándares comerciales más estrictos (10/10). Con un motor cognitivo (NLP), priorización inteligente (SmartSort) y una interfaz de fricción cero basada en gestos.
+## Características Clave
+- **Cero Agobio Visual:** Revelación progresiva de opciones (Gestalt).
+- **Sincronización Bulletproof:** Motor de tokens de sincronización (Push/Pull) sobre PostgreSQL.
+- **Offline-First:** Dexie.js (IndexedDB) asume el control cuando no hay conexión.
+- **Micro-interacciones:** Feedback háptico (`navigator.vibrate`) y transiciones sedosas de 200ms `ease-out`.
+- **Almacenamiento Local-Proxy-to-Cloud:** Integración segura con Cloudflare R2 / AWS S3 sin exponer credenciales en el cliente.
 
-## Características de Nivel Comercial (Killer Features)
+## Requisitos Previos
+- Node.js v18+
+- Una base de datos PostgreSQL (ej. Neon, Supabase, Render, local).
 
-*   🧠 **Procesamiento de Lenguaje Natural (NLP):** Escribe `"Pastillas a las 5 y 8"` y el sistema auto-configurará las horas y la categoría (Skincare/Salud) al vuelo.
-*   ⚡ **SmartSort (Priorización de Contexto):** Se acabó ordenar a mano. El algoritmo heurístico evalúa la proximidad de tus alertas y el desgaste del día para destacar tus 2 tareas más urgentes en *"Up Next"*.
-*   📱 **Zero-Friction UX (Swipe Gestures):** Arrastra las tareas a la derecha para completarlas o a la izquierda para eliminarlas, acompañadas de *Haptic Feedback* (vibración).
-*   🚀 **Rendimiento Extremo (60fps):** Las listas anidadas están virtualizadas (`@tanstack/react-virtual`). El DOM jamás se sobrecarga, incluso con 10,000 tareas activas. El estado global corre en un **Hash Map $O(1)$** usando Zustand.
-*   🛡️ **Resiliencia Total (Zero Crashes):** Arquitectura *Offline-First* con persistencia de estado instantánea y manejo elegante de casos límite (permisos denegados).
+---
 
-## Desarrollo e Instalación
+## 🚀 Despliegue en 3 Pasos ("Copy & Paste")
 
-1. Clona el repositorio.
-2. Instala las dependencias: `npm install`
-3. Arranca el entorno de desarrollo: `npm run dev`
-
-### Compilación para Producción (Release Build)
-
-Este proyecto está purgado de *warnings*, *console.logs* sobrantes y *mock data*, preparado para pasar estrictos QA.
-
+### 1. Variables de Entorno
+Duplica el archivo de ejemplo para configurar tus credenciales (opcionales si solo quieres correrlo en modo caché local).
 ```bash
-# Ejecuta la comprobación estricta de TypeScript y construye los binarios minificados
-npm run build
+cp .env.example .env
+```
+Rellena la variable `DATABASE_URL` en tu nuevo `.env` con la cadena de conexión de tu PostgreSQL.
+
+### 2. Levantar la Base de Datos
+Sincroniza el esquema relacional con tu base de datos de forma automática:
+```bash
+npm install
+npx prisma db push --accept-data-loss
+```
+> *(Nota: Asegúrate de tener Prisma v7 y las credenciales de base de datos correctas).*
+
+### 3. Levantar Frontend & Backend Local
+Este comando levantará la interfaz de React (Vite) y activará las Serverless API Routes (que actuarán de proxy para la base de datos y AWS S3).
+```bash
+npm run dev
 ```
 
-El resultado se depositará en el directorio `dist/`, listo para ser servido por cualquier CDN o empaquetado con Capacitor para iOS/Android.
+---
 
-## Internacionalización (i18n) & ASO
+## Estructura de Directorios (Arquitectura)
+- `/api`: Vercel Serverless Functions (`/sync/push`, `/sync/pull`, `/upload`).
+- `/src/models`: Modelos de datos TypeScript (TaskItem, CustomCycle).
+- `/src/store`: Gestor de estado global (Zustand) + Persistencia IndexedDB.
+- `/src/db`: Base de datos de caché local (Dexie.js).
+- `/src/sync`: Motor de reconciliación de datos en segundo plano (`SyncManager`).
+- `/src/components`: UI components estructurados por Heurísticas de Nielsen.
+- `/prisma`: Esquema `schema.prisma` declarativo.
 
-La aplicación está diseñada pensando en la optimización de la App Store. Contiene etiquetas `aria-label` para *VoiceOver/TalkBack* y la estructura JSON (`src/i18n/es.json`) está preparada para escalar a 20 idiomas con un solo clic en el futuro.
+## Compilación para Producción (Vercel)
+Para subir este proyecto a Vercel, simplemente conéctalo a tu repositorio y Vercel detectará el marco de trabajo automáticamente.
+El comando de build es:
+```bash
+npm run build
+```
+Vercel compilará la carpeta `dist/` para el FrontEnd y expondrá los archivos `/api` como funciones sin servidor (*Serverless Functions*). No olvides añadir las variables de entorno en el panel de Vercel.

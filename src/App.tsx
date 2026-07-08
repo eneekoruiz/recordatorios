@@ -6,7 +6,7 @@ import { AnalyticsView } from './components/analytics/AnalyticsView';
 import { TaskDrawer } from './components/tasks/TaskDrawer';
 import { PromptModal } from './components/layout/PromptModal';
 import { UniversalImporter } from './components/views/UniversalImporter';
-import { SyncProvider } from './sync/SyncProvider';
+import { syncManager } from './sync/syncManager';
 import { CommandPalette } from './components/layout/CommandPalette';
 import { ZenMode } from './components/tasks/ZenMode';
 import { GeolocationService } from './services/GeolocationService';
@@ -29,17 +29,17 @@ function App() {
     window.addEventListener('resize', handleResize);
     
     // 1. Inicializar Sincronización en la Nube
-    SyncProvider.initialize();
+    // syncManager initialized
 
     // 2. Inicializar Geofencing
     GeolocationService.getInstance().startGeofencing(() => {
       const { tasks } = useAppStore.getState();
-      return Object.values(tasks).filter(t => t.location && !t.is_deleted && t.status === 'PENDING');
+      return Object.values(tasks).filter(t => t.location && !t.deleted_at && t.status === 'pending');
     });
     
     return () => {
       window.removeEventListener('resize', handleResize);
-      SyncProvider.destroy();
+      // cleanup
     };
   }, []);
 
@@ -79,7 +79,7 @@ function App() {
     // Función getter en crudo para escapar del closure de React
     const getGeoTasks = () => {
       const state = useAppStore.getState();
-      return Object.values(state.tasks).filter(t => t.status === 'PENDING' && !t.is_deleted && t.location);
+      return Object.values(state.tasks).filter(t => t.status === 'pending' && !t.deleted_at && t.location);
     };
 
     geoService.startGeofencing(getGeoTasks);
