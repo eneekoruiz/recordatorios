@@ -181,16 +181,19 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
-          <motion.div 
+        <motion.div 
+          key="backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="drawer-backdrop" 
             onClick={onClose} 
           />
-          
+      )}
+      
+      {isOpen && (
           <motion.div 
+            key="drawer"
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
@@ -660,7 +663,6 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
 
             </div>
           </motion.div>
-        </>
       )}
     </AnimatePresence>
   );

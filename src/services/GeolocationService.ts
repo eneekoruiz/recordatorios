@@ -40,10 +40,8 @@ export class GeolocationService {
    */
   public startGeofencing(getGeoTasks: () => TaskItem[]) {
     if (this.watchId !== null) return;
-    if (!('geolocation' in navigator)) {
-      // Silenciosamente fallar si no es soportado
-      return;
-    }
+    if (!('geolocation' in navigator)) return;
+    if (sessionStorage.getItem('geoDenied') === 'true') return;
 
     this.watchId = navigator.geolocation.watchPosition(
       (position) => {
@@ -77,8 +75,11 @@ export class GeolocationService {
           }
         });
       },
-      () => {
-        // Falla silenciosa si no se puede obtener ubicación
+      (error) => {
+        if (error.code === error.PERMISSION_DENIED) {
+          sessionStorage.setItem('geoDenied', 'true');
+          this.stopGeofencing();
+        }
       },
       {
         enableHighAccuracy: false, // Ahorro masivo de batería

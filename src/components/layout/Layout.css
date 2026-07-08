@@ -3,29 +3,39 @@
 ======================================================== */
 .sidebar {
   width: 100%;
-  min-height: 100%;
-  background-color: var(--bg-surface);
-  padding: var(--space-32) var(--space-24);
+  height: 100%;
   display: flex;
   flex-direction: column;
-  gap: var(--space-24);
-  /* Glassmorphism */
+  padding: 24px 20px;
+  gap: 16px;
+  overflow: hidden; /* Inner .sidebar-scroll-area handles scroll */
+  background: transparent;
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   transform: translateZ(0);
-  background-color: transparent;
 }
 
+/* ========================================================
+   USER PROFILE
+======================================================== */
 .user-profile {
   display: flex;
   align-items: center;
-  gap: var(--space-12);
-  margin-bottom: var(--space-16);
+  gap: 12px;
+  cursor: pointer;
+  position: relative;
+  padding: 8px 4px;
+  border-radius: 12px;
+  transition: background 0.2s ease;
+}
+
+.user-profile:hover {
+  background: var(--bg-hover);
 }
 
 .avatar {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius-full);
   background: linear-gradient(135deg, var(--accent-primary), var(--accent-purple));
   color: white;
@@ -33,33 +43,70 @@
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 1.25rem;
-  box-shadow: var(--shadow-sm);
+  font-size: 1rem;
+  flex-shrink: 0;
 }
 
 .user-info {
   display: flex;
   flex-direction: column;
+  min-width: 0; /* Prevent text overflow */
 }
 
+/* ========================================================
+   SEARCH BAR
+======================================================== */
 .search-bar input {
   width: 100%;
-  padding: var(--space-12) var(--space-16);
-  border-radius: var(--radius-lg);
+  padding: 10px 14px;
+  border-radius: 10px;
   border: 1px solid var(--border-subtle);
   background-color: var(--bg-base);
   color: var(--text-primary);
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .search-bar input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.2);
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.15);
 }
 
+/* ========================================================
+   SIDEBAR SCROLL AREA
+   — The single scrollable region inside the sidebar.
+   Everything below the search bar lives here.
+======================================================== */
+.sidebar-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  -webkit-overflow-scrolling: touch;
+
+  /* Scrollbar — Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-subtle) transparent;
+}
+
+.sidebar-scroll-area::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-scroll-area::-webkit-scrollbar-thumb {
+  background-color: var(--border-subtle);
+  border-radius: var(--radius-full);
+}
+
+/* ========================================================
+   NAVIGATION ITEMS
+======================================================== */
 .smart-lists-nav {
   display: flex;
   flex-direction: column;
@@ -69,23 +116,25 @@
 .nav-item {
   display: flex;
   align-items: center;
-  padding: var(--space-12) var(--space-16);
-  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
   font-weight: 500;
   color: var(--text-secondary);
-  gap: var(--space-12);
+  gap: 10px;
+  font-size: 0.9rem;
 }
 
 .nav-item:hover {
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: var(--bg-hover);
   color: var(--text-primary);
 }
 
 .nav-item.active {
-  background-color: rgba(255, 255, 255, 0.06);
-  color: var(--text-primary);
+  background-color: rgba(10, 132, 255, 0.1);
+  color: var(--accent-primary);
+  font-weight: 600;
 }
 
 .nav-item .count {
@@ -94,29 +143,50 @@
   opacity: 0.7;
 }
 
+/* Profile dropdown nav item */
+.profile-nav-item:hover {
+  background-color: var(--bg-hover);
+}
+
+/* Dark-mode dropdown background */
+.dark-dropdown-bg {
+  /* Placeholder — see dark-mode media query below */
+}
+
+@media (prefers-color-scheme: dark) {
+  .dark-dropdown-bg {
+    background: rgba(30, 30, 30, 0.75);
+  }
+}
+
+/* ========================================================
+   SECTIONS & CATEGORIES
+======================================================== */
 .categories-section {
-  flex: 1;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
 .section-header {
-  font-size: 0.85rem;
+  font-size: 0.7rem;
   font-weight: 600;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: var(--space-16);
-  padding-left: var(--space-12);
+  letter-spacing: 1px;
+  padding: 0 12px;
+  margin-bottom: 8px;
 }
 
 .category-item {
   display: flex;
   align-items: center;
-  padding: var(--space-8) var(--space-12);
-  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  border-radius: 8px;
   cursor: pointer;
   color: var(--text-secondary);
   transition: all 0.2s ease;
+  font-size: 0.9rem;
 }
 
 .category-item:hover {
@@ -124,29 +194,35 @@
   color: var(--text-primary);
 }
 
+.category-item.active {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
 .list-icon {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  margin-right: var(--space-12);
+  margin-right: 10px;
+  flex-shrink: 0;
 }
 
 .add-list-btn {
   display: flex;
   align-items: center;
-  gap: var(--space-8);
-  background: none;
+  gap: 8px;
+  background: transparent;
   border: none;
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
   cursor: pointer;
-  font-size: 0.95rem;
-  padding: var(--space-12);
+  font-size: 0.85rem;
+  padding: 8px 12px;
   transition: color 0.2s ease;
   width: 100%;
 }
 
 .add-list-btn:hover {
-  color: var(--text-primary);
+  color: var(--text-secondary);
 }
 
 /* ========================================================
@@ -155,8 +231,8 @@
 .content-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--space-48);
+  align-items: flex-start;
+  margin-bottom: 24px;
 }
 
 .icon-btn {
@@ -169,13 +245,16 @@
   justify-content: center;
   padding: var(--space-8);
   border-radius: var(--radius-full);
-  transition: background 0.2s;
+  transition: background 0.2s ease;
 }
 
 .icon-btn:hover {
   background: rgba(10, 132, 255, 0.1);
 }
 
+/* ========================================================
+   CATEGORY GROUPS & HEADERS
+======================================================== */
 .category-group {
   margin-bottom: var(--space-32);
 }
@@ -184,11 +263,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-8) var(--space-12);
+  padding: 8px 12px;
   cursor: pointer;
-  margin-top: var(--space-24);
-  margin-bottom: var(--space-8);
-  border-radius: var(--radius-md);
+  margin-top: 16px;
+  margin-bottom: 4px;
+  border-radius: 10px;
   user-select: none;
 }
 
@@ -197,19 +276,22 @@
 }
 
 .group-header h3 {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-family: var(--font-display);
-  font-weight: 700;
+  font-weight: 650;
   color: var(--text-primary);
   margin: 0;
 }
 
+/* ========================================================
+   FAB (Floating Action Button)
+======================================================== */
 .fab {
   position: fixed;
-  bottom: var(--space-48);
-  right: var(--space-48);
-  width: 64px;
-  height: 64px;
+  bottom: 32px;
+  right: 32px;
+  width: 56px;
+  height: 56px;
   border-radius: var(--radius-full);
   background: linear-gradient(135deg, var(--accent-primary), #005bb5);
   color: white;
@@ -219,7 +301,10 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+  z-index: 50;
+  transition:
+    transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    box-shadow 0.3s ease;
 }
 
 .fab:hover {
@@ -227,12 +312,22 @@
   box-shadow: 0 12px 28px rgba(10, 132, 255, 0.5), var(--shadow-glow);
 }
 
+/* Desktop FAB sizing */
+@media (min-width: 769px) {
+  .fab {
+    bottom: 48px;
+    right: 48px;
+    width: 60px;
+    height: 60px;
+  }
+}
+
 /* ========================================================
    TASK CARD & SWIPE PHYSICS
 ======================================================== */
 .task-item-wrapper {
   position: relative;
-  margin-bottom: var(--space-16);
+  margin-bottom: 8px;
 }
 
 .swipe-background {
@@ -258,32 +353,31 @@
 }
 
 /* ========================================================
-   RESPONSIVE DESIGN & MOBILE UX
+   RESPONSIVE — MOBILE (≤ 768px)
 ======================================================== */
 @media (max-width: 768px) {
-  .app-container.mobile-sidebar .main-container {
-    display: none;
-  }
-  
-  .app-container.mobile-sidebar .sidebar-container {
-    width: 100vw;
-    height: 100vh;
-    overflow-y: auto;
-  }
-  
-  .app-container.mobile-content .sidebar-container {
-    display: none;
-  }
-  
-  .app-container.mobile-content .main-container {
-    width: 100vw;
-    height: 100vh;
-    overflow-y: auto;
+  .sidebar {
+    padding: 20px 16px;
   }
 
-  .sidebar {
-    width: 100%;
-    border-right: none;
-    min-height: 100vh;
+  .content-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .fab {
+    bottom: 24px;
+    right: 24px;
+    width: 52px;
+    height: 52px;
+  }
+
+  /* Reduce heading sizes ~15% */
+  .group-header h3 {
+    font-size: 0.95rem;
+  }
+
+  .section-header {
+    font-size: 0.65rem;
   }
 }

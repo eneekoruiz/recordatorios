@@ -1,54 +1,106 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
-import { useNavigation } from '../../hooks/useNavigation';
 import type { ReactNode } from 'react';
 
 interface NavigationFrameProps {
   children: ReactNode;
+  isMobile: boolean;
+  canGoBack: boolean;
+  onBack: () => void;
+  backLabel?: string;
+  viewKey: string;
 }
 
-export function NavigationFrame({ children }: NavigationFrameProps) {
-  const { stack, pop } = useNavigation();
-  const currentView = stack[stack.length - 1];
-  const canGoBack = stack.length > 1;
+const pageVariants = {
+  initial: { x: 40, opacity: 0 },
+  animate: { x: 0, opacity: 1 },
+  exit: { x: -40, opacity: 0 },
+};
+
+const pageTransition = {
+  type: 'spring' as const,
+  stiffness: 380,
+  damping: 32,
+  mass: 0.8,
+};
+
+export function NavigationFrame({
+  children,
+  isMobile,
+  canGoBack,
+  onBack,
+  backLabel = 'Volver',
+  viewKey,
+}: NavigationFrameProps) {
+  const showBackBar = isMobile ? canGoBack : canGoBack;
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+    <div
+      style={{
+        width: '100%',
+        minHeight: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
       <AnimatePresence initial={false} mode="wait">
         <motion.div
-          key={currentView}
-          initial={{ x: 50, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: -50, opacity: 0 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+          key={viewKey}
+          variants={pageVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={pageTransition}
           style={{
-            position: 'absolute',
-            inset: 0,
             display: 'flex',
             flexDirection: 'column',
-            background: 'var(--bg-base)'
+            width: '100%',
+            flex: 1,
           }}
         >
-          {canGoBack && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: 'var(--space-16) var(--space-24)',
-              borderBottom: '1px solid var(--border-subtle)',
-              background: 'var(--bg-surface)'
-            }}>
-              <button 
-                onClick={pop}
-                className="btn-icon"
-                style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-8)', color: 'var(--text-primary)', padding: 'var(--space-8) var(--space-16)', borderRadius: 'var(--radius-full)', background: 'var(--bg-elevated)', cursor: 'pointer' }}
+          {showBackBar && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: 'var(--space-12, 12px) var(--space-24, 24px)',
+                borderBottom: '1px solid var(--border-subtle, #e5e5e5)',
+                background: 'var(--bg-surface, #fafafa)',
+                position: 'sticky',
+                top: 0,
+                zIndex: 10,
+              }}
+            >
+              <button
+                onClick={onBack}
+                aria-label={backLabel}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-8, 8px)',
+                  color: 'var(--text-primary, #111)',
+                  padding: 'var(--space-8, 8px) var(--space-16, 16px)',
+                  borderRadius: 'var(--radius-full, 999px)',
+                  background: 'var(--bg-elevated, #fff)',
+                  cursor: 'pointer',
+                  border: 'none',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  WebkitTapHighlightColor: 'transparent',
+                }}
               >
                 <ArrowLeft size={18} />
-                <span style={{ fontWeight: 600 }}>Volver</span>
+                <span>{backLabel}</span>
               </button>
             </div>
           )}
-          
-          <div style={{ flex: 1, overflow: 'hidden' }}>
+
+          <div
+            style={{
+              width: '100%',
+              flex: 1,
+            }}
+          >
             {children}
           </div>
         </motion.div>

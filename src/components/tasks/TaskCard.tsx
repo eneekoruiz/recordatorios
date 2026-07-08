@@ -157,9 +157,9 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onCom
           );
         })()}
         
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 500, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 'var(--space-8)' }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: 0, gap: 'var(--space-12)' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '1.1rem', fontWeight: 500, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 'var(--space-8)', flexWrap: 'wrap' }}>
               {isBlocked && <Lock size={16} color="var(--accent-red)" />}
               
               {/* Badges UI de Prioridad en lugar de "!!!" */}
@@ -169,7 +169,15 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onCom
                 </span>
               )}
 
-              <span style={{ textDecoration: isCompletedPeriod ? 'line-through' : 'none', opacity: isCompletedPeriod ? 0.6 : 1 }}>
+              <span style={{ 
+                textDecoration: isCompletedPeriod ? 'line-through' : 'none', 
+                opacity: isCompletedPeriod ? 0.6 : 1,
+                wordBreak: 'break-word',
+                display: '-webkit-box',
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden'
+              }}>
                 {task.title}
               </span>
               {task.flagged && <Flag size={14} color="var(--accent-orange)" fill="var(--accent-orange)" />}
@@ -178,7 +186,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onCom
               {task.image && <ImageIcon size={14} color="var(--text-tertiary)" />}
             </div>
             
-            <div style={{ display: 'flex', gap: 'var(--space-8)', marginTop: 'var(--space-4)', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 'var(--space-8)', marginTop: 'var(--space-4)', alignItems: 'center', flexWrap: 'wrap' }}>
               {(task.alerts || []).map((alert: any, idx: number) => {
                 const isCompleted = task.completedAlerts?.includes(alert.id);
                 const label = alert.type === 'at_time' ? alert.time : `-${alert.offsetMinutes}m`;
@@ -201,7 +209,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onCom
             </div>
 
             {task.isDetailed && (
-              <div style={{ display: 'flex', gap: 'var(--space-8)', marginTop: 'var(--space-4)', alignItems: 'center', fontSize: '0.85rem' }}>
+              <div style={{ display: 'flex', gap: 'var(--space-8)', marginTop: 'var(--space-4)', alignItems: 'center', fontSize: '0.85rem', flexWrap: 'wrap' }}>
                 {task.price !== undefined && (
                   <span style={{ color: 'var(--accent-green)', fontWeight: 600 }}>${task.price.toFixed(2)} {task.quantity ? `x ${task.quantity}` : ''}</span>
                 )}

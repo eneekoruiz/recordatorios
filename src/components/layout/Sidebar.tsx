@@ -1,10 +1,21 @@
 import { useState } from 'react';
-import { Plus, BarChart2, DownloadCloud, Zap, ChevronDown, ChevronRight, Clock, CheckCircle, Flag, LayoutGrid, Check, Trash2, Calendar } from 'lucide-react';
+import { 
+  ChevronRight, 
+  ChevronDown, 
+  Plus,
+  Clock,
+  Check,
+  LogOut,
+  BarChart,
+  Trash2,
+  Download
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
 import { getCycleIcon } from '../../constants/icons';
 import { ListConfigModal } from './ListConfigModal';
+import { SMART_LISTS } from '../../constants/smartLists';
 import './Layout.css';
 
 interface SidebarProps {
@@ -12,107 +23,89 @@ interface SidebarProps {
   onSelectView: (view: string) => void;
 }
 
-function ListHierarchy({ lists, parentId = undefined, currentView, onSelectView, onAddSublist, depth = 0 }: any) {
+// Sub-componente para jerarquía infinita
+const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, parentId = undefined, depth = 0 }: any) => {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   
-  const children = lists.filter((l: any) => l.parentId === parentId);
-  if (children.length === 0) return null;
+  const currentLevelLists = lists.filter((l: any) => l.parentId === parentId);
+  if (currentLevelLists.length === 0) return null;
 
   return (
-    <div style={{ marginLeft: depth > 0 ? 12 : 0, borderLeft: depth > 0 ? '1px solid var(--border-subtle)' : 'none', paddingLeft: depth > 0 ? 8 : 0 }}>
-      {children.map((list: any) => {
+    <div style={{ marginLeft: depth > 0 ? 16 : 0 }}>
+      {currentLevelLists.map((list: any) => {
         const hasChildren = lists.some((l: any) => l.parentId === list.id);
         const isExpanded = expanded[list.id];
-        
+        const isActive = currentView === `list_${list.id}`;
+
         return (
           <div key={list.id}>
             <div 
-              className={`category-item ${currentView === `list_${list.id}` ? 'active' : ''}`}
-              style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+              className={`category-item ${isActive ? 'active' : ''}`}
               onClick={() => onSelectView(`list_${list.id}`)}
+              style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                padding: 'var(--space-8) var(--space-12)',
+                borderRadius: 'var(--radius-sm)',
+                cursor: 'pointer',
+                color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                fontWeight: isActive ? 600 : 400,
+                transition: 'all 0.2s',
+                backgroundColor: isActive ? 'rgba(0,0,0,0.04)' : 'transparent',
+              }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {hasChildren && (
-                  <div 
-                    onClick={(e) => { e.stopPropagation(); setExpanded(prev => ({...prev, [list.id]: !prev[list.id]})); }}
-                    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                  >
-                    {isExpanded ? <ChevronDown size={14} color="var(--text-tertiary)" /> : <ChevronRight size={14} color="var(--text-tertiary)" />}
-                  </div>
-                )}
-                {!hasChildren && <div style={{ width: 14 }} />}
-                <div className="list-icon" style={{ backgroundColor: list.color, width: 10, height: 10 }}></div>
-                <span style={{ color: currentView === `list_${list.id}` ? 'var(--text-primary)' : 'inherit', fontSize: '0.9rem', fontWeight: currentView === `list_${list.id}` ? 600 : 400 }}>{list.name}</span>
-              </div>
-
-              <div 
-                className="add-sublist-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onAddSublist(list.id);
-                  setExpanded(prev => ({...prev, [list.id]: true}));
-                }}
-                style={{ cursor: 'pointer', opacity: 0.5 }}
-                title="Añadir sub-lista"
+              {hasChildren && (
+                <div 
+                  onClick={(e) => { e.stopPropagation(); setExpanded(p => ({...p, [list.id]: !p[list.id]})); }}
+                  style={{ position: 'absolute', left: -16, padding: 4, cursor: 'pointer', color: 'var(--text-tertiary)' }}
+                >
+                  {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </div>
+              )}
+              
+              <div className="list-icon" style={{ backgroundColor: list.color, width: 10, height: 10, borderRadius: '50%', marginRight: 10 }} />
+              <span style={{ flex: 1 }}>{list.name}</span>
+              
+              <button 
+                onClick={(e) => { e.stopPropagation(); onAddSublist(list.id); }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', opacity: 0.5, padding: 4 }}
+                title="Añadir Sublista"
               >
                 <Plus size={14} />
-              </div>
+              </button>
             </div>
             
-            {isExpanded && (
-              <ListHierarchy lists={lists} parentId={list.id} currentView={currentView} onSelectView={onSelectView} onAddSublist={onAddSublist} depth={depth + 1} />
+            {hasChildren && isExpanded && (
+              <ListHierarchy 
+                lists={lists} 
+                currentView={currentView} 
+                onSelectView={onSelectView} 
+                onAddSublist={onAddSublist}
+                parentId={list.id} 
+                depth={depth + 1} 
+              />
             )}
           </div>
         );
       })}
     </div>
   );
-}
+};
 
 export function Sidebar({ currentView, onSelectView }: SidebarProps) {
-  const cycles = useAppStore(state => state.cycles);
-  const lists = useAppStore(state => state.lists || []);
-  const addList = useAppStore(state => state.addList);
-  const smartListVisibility = useAppStore(state => state.smartListVisibility);
-  const toggleSmartList = useAppStore(state => state.toggleSmartList);
-  const tasks = useAppStore(state => state.tasks);
-  
-  const [isCyclesOpen, setIsCyclesOpen] = useState(false);
+  const { lists, cycles, smartListVisibility, toggleSmartList } = useAppStore();
+  const getTaskCount = useAppStore(state => state.getTaskCount);
+  const user = { name: 'Eneko Ruiz', email: 'eneko@ejemplo.com' };
+
+  const [isCyclesOpen, setIsCyclesOpen] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-
-  const getTaskCount = (view: string) => {
-    const allTasks = Object.values(tasks).filter(t => !t.deleted_at);
-    const pendingTasks = allTasks.filter(t => t.status === 'pending');
-    
-    switch (view) {
-      case 'smart_today':
-        const today = new Date().toISOString().split('T')[0];
-        return pendingTasks.filter(t => new Date(t.dueDate as string).toISOString().split('T')[0] === today).length;
-      case 'smart_scheduled':
-        return pendingTasks.filter(t => new Date(t.dueDate as string) > new Date()).length;
-      case 'smart_all':
-        return pendingTasks.length;
-      case 'smart_flagged':
-        return pendingTasks.filter(t => t.flagged).length;
-      case 'smart_completed':
-        return allTasks.filter(t => t.status === 'completed').length;
-      default:
-        return 0;
-    }
-  };
-
-  const SMART_LISTS = [
-    { id: 'smart_today', name: 'Hoy', icon: Calendar, color: 'var(--accent-blue)' },
-    { id: 'smart_scheduled', name: 'Programado', icon: Calendar, color: 'var(--accent-red)' },
-    { id: 'smart_all', name: 'Todos', icon: LayoutGrid, color: 'var(--text-secondary)' },
-    { id: 'smart_flagged', name: 'Destacado', icon: Flag, color: 'var(--accent-orange)' },
-    { id: 'smart_completed', name: 'Terminado', icon: CheckCircle, color: 'var(--text-tertiary)' },
-  ];
-
+  
   const [isListConfigOpen, setIsListConfigOpen] = useState(false);
   const [editingListId, setEditingListId] = useState<string | undefined>(undefined);
   const [parentListId, setParentListId] = useState<string | undefined>(undefined);
+
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const handleAddList = () => {
     setEditingListId(undefined);
@@ -120,84 +113,135 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
     setIsListConfigOpen(true);
   };
 
-  
   return (
     <aside className="sidebar">
+      {/* 1. USER PROFILE */}
       <div 
         className="user-profile" 
-        onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-        style={{ cursor: 'pointer', position: 'relative' }}
+        onClick={() => setIsProfileOpen(!isProfileOpen)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--space-12)',
+          cursor: 'pointer',
+          position: 'relative',
+          padding: 'var(--space-8) var(--space-4)',
+          borderRadius: 'var(--radius-md)',
+          transition: 'background 0.2s',
+        }}
       >
-        <div className="avatar">E</div>
-        <div className="user-info">
-          <div className="user-name text-title" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            Eneko Ruiz <ChevronDown size={14} color="var(--text-tertiary)" />
-          </div>
-          <div className="user-email text-muted">Plan Élite</div>
+        <div className="avatar" style={{
+          width: 36,
+          height: 36,
+          borderRadius: 'var(--radius-full)',
+          background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-purple))',
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontWeight: 700,
+          fontSize: '1.25rem',
+          boxShadow: 'var(--shadow-sm)'
+        }}>
+          {user.name.charAt(0)}
         </div>
+        <div className="user-info" style={{ flex: 1 }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+            {user.name}
+          </h2>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+            {user.email}
+          </span>
+        </div>
+        <ChevronDown size={16} color="var(--text-tertiary)" style={{ transform: isProfileOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
 
+        {/* PROFILE DROPDOWN */}
         <AnimatePresence>
-          {isProfileMenuOpen && (
+          {isProfileOpen && (
             <motion.div 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              style={{
-                position: 'absolute',
-                top: '100%',
-                left: 12,
-                right: 12,
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-md)',
-                boxShadow: 'var(--shadow-lg)',
-                zIndex: 100,
-                padding: 'var(--space-8)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 4
-              }}
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="section-header" style={{ padding: '4px 8px', marginBottom: 4 }}>Mi Espacio</div>
-              <div 
-                className="nav-item"
-                onClick={() => { onSelectView('DATA'); setIsProfileMenuOpen(false); }}
-                style={{ padding: '8px', fontSize: '0.9rem', color: 'var(--text-primary)' }}
+              key="sidebar-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              style={{ position: 'fixed', inset: 0, zIndex: 90 }} 
+              onClick={(e) => { e.stopPropagation(); setIsProfileOpen(false); }}
+            />
+          )}
+          {isProfileOpen && (
+            <motion.div 
+              key="sidebar-dropdown"
+                initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                transition={{ duration: 0.15 }}
+                className="dark-dropdown-bg"
+                style={{ 
+                  position: 'absolute', 
+                  top: '100%', 
+                  left: 0, 
+                  right: 0, 
+                  marginTop: 'var(--space-8)', 
+                  background: 'var(--bg-surface-glass)', 
+                  backdropFilter: 'blur(24px)',
+                  WebkitBackdropFilter: 'blur(24px)',
+                  borderRadius: 'var(--radius-lg)', 
+                  border: '1px solid var(--border-subtle)', 
+                  boxShadow: 'var(--shadow-lg)', 
+                  padding: 'var(--space-8)', 
+                  zIndex: 100,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--space-4)'
+                }}
+                onClick={(e) => e.stopPropagation()}
               >
-                <Zap size={16} color="var(--accent-primary)" />
-                <span style={{ fontWeight: 500 }}>Brain Dump / Exportar</span>
-              </div>
-              <div 
-                className={`nav-item ${currentView === 'ANALYTICS' ? 'active' : ''}`}
-                onClick={() => { onSelectView('ANALYTICS'); setIsProfileMenuOpen(false); }}
-                style={{ padding: '8px', fontSize: '0.9rem', color: 'var(--text-primary)' }}
-              >
-                <BarChart2 size={16} />
-                <span style={{ fontWeight: 500 }}>Estadísticas</span>
-              </div>
-              <div 
-                className={`nav-item ${currentView === 'TRASH' ? 'active' : ''}`}
-                onClick={() => { onSelectView('TRASH'); setIsProfileMenuOpen(false); }}
-                style={{ padding: '8px', fontSize: '0.9rem', color: currentView === 'TRASH' ? 'var(--accent-red)' : 'var(--text-tertiary)' }}
-              >
-                <Trash2 size={16} />
-                <span>Papelera Eliminados</span>
-              </div>
-            </motion.div>
+                <div 
+                  className="nav-item profile-nav-item"
+                  onClick={() => { onSelectView('DATA'); setIsProfileOpen(false); }}
+                >
+                  <Download size={16} /> Importar / Exportar
+                </div>
+                <div 
+                  className="nav-item profile-nav-item"
+                  onClick={() => { onSelectView('ANALYTICS'); setIsProfileOpen(false); }}
+                >
+                  <BarChart size={16} /> Estadísticas
+                </div>
+                <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
+                <div 
+                  className="nav-item profile-nav-item"
+                  onClick={() => { onSelectView('TRASH'); setIsProfileOpen(false); }}
+                  style={{ color: 'var(--accent-red)' }}
+                >
+                  <Trash2 size={16} /> Papelera
+                </div>
+                <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
+                <div 
+                  className="nav-item profile-nav-item"
+                  onClick={() => {
+                    useAppStore.getState().logout();
+                    setIsProfileOpen(false);
+                  }}
+                  style={{ color: 'var(--accent-red)' }}
+                >
+                  <LogOut size={16} /> Cerrar Sesión
+                </div>
+              </motion.div>
           )}
         </AnimatePresence>
       </div>
 
+      {/* 2. SEARCH BAR */}
       <div className="search-bar">
         <input type="text" placeholder="Buscar" />
       </div>
 
-      <div className="smart-lists-nav" style={{ flex: 1, overflowY: 'auto' }}>
+      {/* 3. SCROLLABLE AREA */}
+      <div className="sidebar-scroll-area">
         
-        {/* Smart Lists Grid */}
+        {/* SMART LISTS GRID */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 var(--space-12)', marginBottom: 'var(--space-8)' }}>
-          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', letterSpacing: '0.5px' }}>LISTAS INTELIGENTES</span>
+          <span className="section-header" style={{ margin: 0, padding: 0 }}>LISTAS INTELIGENTES</span>
           <button 
             onClick={() => setIsEditMode(!isEditMode)}
             style={{ background: 'transparent', border: 'none', color: isEditMode ? 'var(--accent-primary)' : 'var(--text-tertiary)', fontSize: '0.85rem', cursor: 'pointer' }}
@@ -234,7 +278,8 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                   padding: 'var(--space-12)',
                   cursor: 'pointer',
                   position: 'relative',
-                  opacity: isEditMode && !smartListVisibility[list.id] ? 0.5 : 1
+                  opacity: isEditMode && !smartListVisibility[list.id] ? 0.5 : 1,
+                  transition: 'all 0.2s',
                 }}
               >
                 {isEditMode && (
@@ -261,9 +306,9 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
           })}
         </div>
 
-        {/* --- MIS LISTAS (PRIORIDAD PRINCIPAL) --- */}
-        <div className="categories-section" style={{ marginTop: 'var(--space-16)', flexShrink: 0 }}>
-          <div className="section-header" style={{ padding: '0 var(--space-12)' }}>Mis Listas</div>
+        {/* MIS LISTAS */}
+        <div className="categories-section" style={{ flexShrink: 0 }}>
+          <div className="section-header">Mis Listas</div>
           <ListHierarchy 
             lists={lists} 
             currentView={currentView} 
@@ -272,35 +317,24 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
           />
           <button 
             className="add-list-btn" 
-            onClick={handleAddList} 
-            style={{ 
-              background: 'transparent', 
-              border: 'none', 
-              color: 'var(--text-secondary)', 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: 8, 
-              padding: 'var(--space-8) var(--space-12)',
-              marginTop: 'var(--space-8)',
-              cursor: 'pointer',
-              fontSize: '0.9rem'
-            }}
+            onClick={handleAddList}
+            style={{ marginTop: 'var(--space-8)' }}
           >
             <Plus size={16} />
             Nueva Lista Raíz
           </button>
         </div>
 
-        {/* --- VISTAS TEMPORALES (ACORDEÓN RESTAURADO) --- */}
+        {/* CICLOS TEMPORALES */}
         <div style={{ marginTop: 'var(--space-16)' }}>
-          <div className="section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--space-8) var(--space-12)' }}>
+          <div className="section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div 
-              style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)', cursor: 'pointer', flex: 1 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flex: 1 }}
               onClick={() => setIsCyclesOpen(!isCyclesOpen)}
             >
               <Clock size={16} />
-              <span style={{ fontSize: '0.85rem', letterSpacing: '0.5px' }}>CICLOS TEMPORALES</span>
-              {isCyclesOpen ? <ChevronDown size={14} color="var(--text-tertiary)" /> : <ChevronRight size={14} color="var(--text-tertiary)" />}
+              <span>CICLOS TEMPORALES</span>
+              {isCyclesOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
             </div>
             <button 
               className="btn-icon"
@@ -311,12 +345,14 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 const name = await usePromptStore.getState().openPrompt('Nombre del nuevo ciclo temporal:', 'Ej: Siguiente Trimestre');
                 if (name) {
                   const daysStr = await usePromptStore.getState().openPrompt('¿Cada cuántos días se repite este ciclo?', 'Ej: 14, 30, 365');
-                  const daysValue = parseInt(daysStr || '14', 10);
+                  const daysValue = parseInt(daysStr || '', 10);
+                  if (isNaN(daysValue) || daysValue <= 0) return; // Requiere frecuencia
+
                   const newCycleId = `cycle_${Date.now()}`;
                   useAppStore.getState().addCycle({
                     id: newCycleId,
                     name,
-                    daysValue: isNaN(daysValue) || daysValue <= 0 ? 14 : daysValue,
+                    daysValue,
                     isPinned: true,
                     icon: 'star'
                   });
@@ -330,17 +366,17 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
           </div>
 
           {isCyclesOpen && (
-            <div style={{ paddingLeft: 'var(--space-12)', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', marginBottom: 'var(--space-12)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
               {cycles.filter(c => c.isPinned).map(cycle => {
                 const Icon = getCycleIcon(cycle.icon);
+                const isActive = currentView === cycle.id;
                 return (
                   <div 
                     key={cycle.id}
-                    className={`nav-item ${currentView === cycle.id ? 'active' : ''}`}
+                    className={`nav-item ${isActive ? 'active' : ''}`}
                     onClick={() => onSelectView(cycle.id)}
-                    style={{ padding: 'var(--space-8) var(--space-12)', fontSize: '0.9rem', color: currentView === cycle.id ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: currentView === cycle.id ? 600 : 400 }}
                   >
-                    <Icon size={16} color={currentView === cycle.id ? 'var(--accent-primary)' : 'var(--text-tertiary)'} />
+                    <Icon size={16} color={isActive ? 'var(--accent-primary)' : 'var(--text-tertiary)'} />
                     <span>{cycle.name}</span>
                   </div>
                 );
@@ -348,8 +384,10 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
             </div>
           )}
         </div>
+
       </div>
       
+      {/* 4. MODALS (OUTSIDE SCROLL) */}
       <ListConfigModal 
         isOpen={isListConfigOpen} 
         onClose={() => setIsListConfigOpen(false)} 
