@@ -7,6 +7,7 @@ import { TaskDrawer } from './components/tasks/TaskDrawer';
 import { CycleModal } from './components/layout/CycleModal';
 import { DataModal } from './components/layout/DataModal';
 import { BrainDumpModal } from './components/layout/BrainDumpModal';
+import { PromptModal } from './components/layout/PromptModal';
 import { CommandPalette } from './components/layout/CommandPalette';
 import { ZenMode } from './components/tasks/ZenMode';
 import { GeolocationService } from './services/GeolocationService';
@@ -85,6 +86,7 @@ function App() {
         isOpen={isBrainDumpOpen}
         onClose={() => setIsBrainDumpOpen(false)}
       />
+      <PromptModal />
       {zenModeTaskId && (
         <ZenMode 
           taskId={zenModeTaskId}
@@ -96,6 +98,7 @@ function App() {
           if (view === 'MANAGE_CYCLES') setIsCycleModalOpen(true);
           else if (view === 'DATA') setIsDataModalOpen(true);
           else if (view === 'BRAIN_DUMP') setIsBrainDumpOpen(true);
+
           else setCurrentView(view);
         }}
         onOpenZenMode={(taskId) => setZenModeTaskId(taskId)}

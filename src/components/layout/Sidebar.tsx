@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, BarChart2, Settings, DownloadCloud, Zap, ChevronDown, ChevronRight, Sun, Calendar, Moon, Globe, Rocket, Flame, Sparkles, Star, Circle, Clock } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
+import { usePromptStore } from '../../store/usePromptStore';
 import './Layout.css';
 
 interface SidebarProps {
@@ -14,8 +15,8 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   const addList = useAppStore(state => state.addList);
   const [isCyclesOpen, setIsCyclesOpen] = useState(false);
 
-  const handleAddList = () => {
-    const name = prompt('Nombre de la nueva lista:');
+  const handleAddList = async () => {
+    const name = await usePromptStore.getState().openPrompt('Nombre de la nueva lista:', 'Ej: Tareas del Hogar');
     if (!name) return;
     const colors = ['#ff9500', '#34c759', '#af52de', '#0a84ff', '#ff2d55'];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];

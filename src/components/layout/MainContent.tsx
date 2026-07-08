@@ -2,6 +2,7 @@ import { useState, useRef, useMemo } from 'react';
 import { Plus, ChevronDown, Sparkles, Sun, Calendar, Moon, Globe, Rocket, Flame, Star, Circle, FolderPlus } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useAppStore } from '../../store/useAppStore';
+import { usePromptStore } from '../../store/usePromptStore';
 import type { TaskItem } from '../../models/Task';
 import { TaskCard } from '../tasks/TaskCard';
 
@@ -42,9 +43,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode }: MainC
     return currentView;
   };
 
-  const handleAddSection = () => {
+  const handleAddSection = async () => {
     if (!currentList) return;
-    const name = window.prompt("Nombre de la nueva sección:");
+    const name = await usePromptStore.getState().openPrompt("Nombre de la nueva sección:", "Ej: Compras");
     if (name) {
       addListSection({
         id: Math.random().toString(36).substring(2, 9),

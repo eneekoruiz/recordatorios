@@ -3,6 +3,7 @@ import { CheckCircle, Trash2, Lock, Play, GripVertical, Link2 } from 'lucide-rea
 import { useState } from 'react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore } from '../../store/useAppStore';
+import { usePromptStore } from '../../store/usePromptStore';
 
 interface TaskCardProps {
   task: TaskItem;
@@ -185,8 +186,8 @@ export function TaskCard({ task, virtualStyle, onComplete, onDelete, onOpenZenMo
             </div>
             
             <button 
-              onClick={() => {
-                const depId = prompt("Ingresa el ID de la tarea bloqueadora (Opcional UX rapida):");
+              onClick={async () => {
+                const depId = await usePromptStore.getState().openPrompt("Ingresa el ID de la tarea bloqueadora:");
                 if (depId) addDependency(task.id, depId);
                 setShowMenu(false);
               }}
