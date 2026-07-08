@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { CheckCircle } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://localhost:3001');
 
 interface AuthScreenProps {
   onSuccess: () => void;

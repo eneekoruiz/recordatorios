@@ -1,7 +1,7 @@
 import { useAppStore } from '../store/useAppStore';
 import type { TaskItem } from '../models/Task';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://localhost:3001');
 const PULL_URL = `${API_BASE}/api/sync/pull`;
 const PUSH_URL = `${API_BASE}/api/sync/push`;
 const SYNC_INTERVAL_MS = 30 * 1000; // 30 seconds
