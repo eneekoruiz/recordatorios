@@ -94,8 +94,29 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, parentI
 };
 
 export function Sidebar({ currentView, onSelectView }: SidebarProps) {
-  const { lists, cycles, smartListVisibility, toggleSmartList } = useAppStore();
-  const getTaskCount = useAppStore(state => state.getTaskCount);
+  const { lists, cycles, smartListVisibility, toggleSmartList, tasks } = useAppStore();
+  
+  const getTaskCount = (listId: string) => {
+    const all = Object.values(tasks || {}).filter(t => !t.deleted_at);
+    const active = all.filter(t => !t.completed_at);
+    const todayStr = new Date().toDateString();
+    
+    switch (listId) {
+      case 'smart_today': 
+        return active.filter(t => t.due_date && new Date(t.due_date).toDateString() === todayStr).length;
+      case 'smart_scheduled': 
+        return active.filter(t => t.due_date && new Date(t.due_date) > new Date()).length;
+      case 'smart_all': 
+        return active.length;
+      case 'smart_flagged': 
+        return active.filter(t => t.priority === 3).length;
+      case 'smart_completed': 
+        return all.filter(t => t.completed_at).length;
+      default: 
+        return 0;
+    }
+  };
+
   const user = { name: 'Eneko Ruiz', email: 'eneko@ejemplo.com' };
 
   const [isCyclesOpen, setIsCyclesOpen] = useState(true);
