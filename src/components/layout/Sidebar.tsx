@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, BarChart2, Settings, DownloadCloud, Zap, ChevronDown, ChevronRight, Sun, Calendar, Moon, Globe, Rocket, Flame, Sparkles, Star, Circle, Clock } from 'lucide-react';
+import { Plus, BarChart2, Settings, DownloadCloud, Zap, ChevronDown, ChevronRight, Sun, Calendar, Moon, Globe, Rocket, Flame, Sparkles, Star, Circle, Clock, CheckCircle, Flag, LayoutGrid, Check } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
 import './Layout.css';
@@ -13,7 +13,41 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   const cycles = useAppStore(state => state.cycles);
   const lists = useAppStore(state => state.lists || []);
   const addList = useAppStore(state => state.addList);
+  const smartListVisibility = useAppStore(state => state.smartListVisibility);
+  const toggleSmartList = useAppStore(state => state.toggleSmartList);
+  const tasks = useAppStore(state => state.tasks);
+  
   const [isCyclesOpen, setIsCyclesOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  const getTaskCount = (view: string) => {
+    const allTasks = Object.values(tasks).filter(t => !t.is_deleted);
+    const pendingTasks = allTasks.filter(t => t.status === 'PENDING');
+    
+    switch (view) {
+      case 'smart_today':
+        const today = new Date().toISOString().split('T')[0];
+        return pendingTasks.filter(t => new Date(t.dueDate).toISOString().split('T')[0] === today).length;
+      case 'smart_scheduled':
+        return pendingTasks.filter(t => new Date(t.dueDate) > new Date()).length;
+      case 'smart_all':
+        return pendingTasks.length;
+      case 'smart_flagged':
+        return pendingTasks.filter(t => t.flagged).length;
+      case 'smart_completed':
+        return allTasks.filter(t => t.status === 'COMPLETED').length;
+      default:
+        return 0;
+    }
+  };
+
+  const SMART_LISTS = [
+    { id: 'smart_today', name: 'Hoy', icon: Calendar, color: 'var(--accent-blue)' },
+    { id: 'smart_scheduled', name: 'Programado', icon: Calendar, color: 'var(--accent-red)' },
+    { id: 'smart_all', name: 'Todos', icon: LayoutGrid, color: 'var(--text-secondary)' },
+    { id: 'smart_flagged', name: 'Destacado', icon: Flag, color: 'var(--accent-orange)' },
+    { id: 'smart_completed', name: 'Terminado', icon: CheckCircle, color: 'var(--text-tertiary)' },
+  ];
 
   const handleAddList = async () => {
     const name = await usePromptStore.getState().openPrompt('Nombre de la nueva lista:', 'Ej: Tareas del Hogar');
@@ -46,6 +80,72 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
 
       <div className="smart-lists-nav">
         
+        {/* Smart Lists Grid */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 var(--space-12)', marginBottom: 'var(--space-8)' }}>
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', letterSpacing: '0.5px' }}>LISTAS INTELIGENTES</span>
+          <button 
+            onClick={() => setIsEditMode(!isEditMode)}
+            style={{ background: 'transparent', border: 'none', color: isEditMode ? 'var(--accent-primary)' : 'var(--text-tertiary)', fontSize: '0.85rem', cursor: 'pointer' }}
+          >
+            {isEditMode ? 'Hecho' : 'Editar'}
+          </button>
+        </div>
+
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: '1fr 1fr', 
+          gap: 'var(--space-8)', 
+          padding: '0 var(--space-12)',
+          marginBottom: 'var(--space-16)'
+        }}>
+          {SMART_LISTS.map(list => {
+            if (!smartListVisibility[list.id] && !isEditMode) return null;
+            const Icon = list.icon;
+            
+            return (
+              <div 
+                key={list.id}
+                onClick={() => {
+                  if (isEditMode) {
+                    toggleSmartList(list.id);
+                  } else {
+                    onSelectView(list.id);
+                  }
+                }}
+                style={{
+                  background: currentView === list.id ? 'var(--bg-elevated)' : 'var(--bg-surface)',
+                  border: currentView === list.id ? `1px solid ${list.color}` : '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: 'var(--space-12)',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  opacity: isEditMode && !smartListVisibility[list.id] ? 0.5 : 1
+                }}
+              >
+                {isEditMode && (
+                  <div style={{ position: 'absolute', top: 8, right: 8 }}>
+                    <div style={{ 
+                      width: 18, height: 18, borderRadius: '50%', 
+                      border: smartListVisibility[list.id] ? 'none' : '1px solid var(--border-focus)',
+                      background: smartListVisibility[list.id] ? 'var(--accent-primary)' : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                      {smartListVisibility[list.id] && <Check size={12} color="white" />}
+                    </div>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                  <div style={{ background: list.color, width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon size={14} color="white" />
+                  </div>
+                  {!isEditMode && <span style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-primary)' }}>{getTaskCount(list.id)}</span>}
+                </div>
+                <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{list.name}</span>
+              </div>
+            );
+          })}
+        </div>
+
         {/* Acordeón de Ciclos */}
         <div className="section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: 'var(--space-8) var(--space-12)' }} onClick={() => setIsCyclesOpen(!isCyclesOpen)}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)' }}>

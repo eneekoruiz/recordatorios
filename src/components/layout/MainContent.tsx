@@ -20,16 +20,55 @@ type VirtualItemType =
 export function MainContent({ currentView, onOpenNewTask, onOpenZenMode }: MainContentProps) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   
-  const { getTasksByCycle, getTasksByList, getSmartSortTasks, completeTask, deleteTask, cycles, lists, addListSection, updateListSection, updateTaskSection, listSections } = useAppStore();
+  const { getTasksByCycle, getTasksByList, getSmartSortTasks, completeTask, deleteTask, cycles, lists, addListSection, updateListSection, updateTaskSection, listSections, tasks } = useAppStore();
 
   const currentCycle = cycles.find(c => c.id === currentView);
   const currentList = lists?.find(l => `list_${l.id}` === currentView);
   
   const isListView = currentView.startsWith('list_');
 
-  const groupedTasks = isListView
-    ? getTasksByList(currentView.replace('list_', ''))
-    : getTasksByCycle(currentView);
+  const isSmartView = currentView.startsWith('smart_');
+
+  // Funciones auxiliares para Smart Lists
+  const getTasksForSmartView = () => {
+    const allTasks = Object.values(tasks).filter(t => !t.is_deleted);
+    const pendingTasks = allTasks.filter(t => t.status === 'PENDING');
+    let filteredTasks: TaskItem[] = [];
+
+    switch (currentView) {
+      case 'smart_today':
+        const today = new Date().toISOString().split('T')[0];
+        filteredTasks = pendingTasks.filter(t => new Date(t.dueDate).toISOString().split('T')[0] === today);
+        break;
+      case 'smart_scheduled':
+        filteredTasks = pendingTasks.filter(t => new Date(t.dueDate) > new Date());
+        break;
+      case 'smart_all':
+        filteredTasks = pendingTasks;
+        break;
+      case 'smart_flagged':
+        filteredTasks = pendingTasks.filter(t => t.flagged);
+        break;
+      case 'smart_completed':
+        filteredTasks = allTasks.filter(t => t.status === 'COMPLETED');
+        break;
+    }
+
+    // Agrupar por lista a la que pertenecen
+    const grouped: Record<string, TaskItem[]> = {};
+    filteredTasks.forEach(task => {
+      const listName = lists.find(l => l.id === task.categoryId)?.name || 'Sin Lista';
+      if (!grouped[listName]) grouped[listName] = [];
+      grouped[listName].push(task);
+    });
+    return grouped;
+  };
+
+  const groupedTasks = isSmartView
+    ? getTasksForSmartView()
+    : isListView
+      ? getTasksByList(currentView.replace('list_', ''))
+      : getTasksByCycle(currentView);
     
   const smartTasks = currentView === 'cycle_day' ? getSmartSortTasks() : [];
 
@@ -38,6 +77,16 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode }: MainC
   };
 
   const getTitle = () => {
+    if (isSmartView) {
+      const names: Record<string, string> = {
+        'smart_today': 'Hoy',
+        'smart_scheduled': 'Programado',
+        'smart_all': 'Todos',
+        'smart_flagged': 'Destacado',
+        'smart_completed': 'Terminado'
+      };
+      return names[currentView] || currentView;
+    }
     if (currentCycle) return currentCycle.name;
     if (currentList) return currentList.name;
     return currentView;

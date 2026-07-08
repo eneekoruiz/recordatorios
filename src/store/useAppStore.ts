@@ -21,6 +21,9 @@ interface AppState {
   cycles: CustomCycle[];
   lists: CustomList[];
   listSections: ListSection[];
+  smartListVisibility: Record<string, boolean>;
+  
+  toggleSmartList: (listId: string) => void;
   
   addTask: (task: Omit<TaskItem, 'id' | 'status' | 'createdAt' | 'updated_at' | 'is_dirty' | 'is_deleted'>) => void;
   completeTask: (id: string) => void;
@@ -57,6 +60,20 @@ export const useAppStore = create<AppState>()(
       cycles: INITIAL_CYCLES,
       lists: INITIAL_LISTS,
       listSections: [],
+      smartListVisibility: {
+        smart_today: true,
+        smart_scheduled: true,
+        smart_all: true,
+        smart_flagged: true,
+        smart_completed: false
+      },
+
+      toggleSmartList: (listId) => set((state) => ({
+        smartListVisibility: {
+          ...state.smartListVisibility,
+          [listId]: !state.smartListVisibility[listId]
+        }
+      })),
 
       addTask: (payload) => set((state) => {
         const newTask = TaskRepository.create(payload);
