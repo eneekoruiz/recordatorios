@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { TaskItem, FrequencyLevel } from '../models/Task';
+import type { TaskItem, FrequencyLevel } from '../models/Task';
 import { TaskRepository } from '../repositories/TaskRepository';
 
 interface AppState {

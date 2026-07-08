@@ -1,8 +1,9 @@
 import { useState, useRef, useMemo } from 'react';
 import { Plus, ChevronDown, Sparkles, Trash2, CheckCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useAppStore, TaskItem } from '../../store/useAppStore';
+import { useAppStore } from '../../store/useAppStore';
+import type { TaskItem } from '../../models/Task';
 
 interface MainContentProps {
   currentView: string;
@@ -114,7 +115,7 @@ export function MainContent({ currentView, onOpenNewTask }: MainContentProps) {
         <div className="task-details">
           <div className="task-title">{task.title}</div>
           <div className="task-meta">
-            {task.alerts.map((time, idx) => (
+            {task.alerts.map((time: string, idx: number) => (
               <span key={idx} className="time-pill">{time}</span>
             ))}
             {task.frequencyLevel === 1 ? 'Diario' : task.frequencyLevel === 2 ? 'Semanal' : 'Mensual'}

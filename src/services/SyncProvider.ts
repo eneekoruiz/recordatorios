@@ -1,4 +1,4 @@
-import { TaskItem } from '../models/Task';
+import type { TaskItem } from '../models/Task';
 
 /**
  * -------------------------------------------------------------

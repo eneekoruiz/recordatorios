@@ -87,7 +87,7 @@ export class NotificationService {
     });
   }
 
-  private fireNotification(title: string, taskId: string) {
+  private fireNotification(title: string, _taskId: string) {
     try {
       const notification = new Notification('Recordatorio', {
         body: title,

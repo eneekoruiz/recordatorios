@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { X, Clock, Plus, Trash2 } from 'lucide-react';
-import clsx from 'clsx';
+import { X, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAppStore, FrequencyLevel } from '../../store/useAppStore';
-import { parseNaturalLanguageTimes } from '../../utils/nlp';
+import { useAppStore } from '../../store/useAppStore';
+import type { FrequencyLevel } from '../../models/Task';
+import { parseNaturalLanguage } from '../../utils/nlp';
 import './TaskDrawer.css';
 
 interface TaskDrawerProps {
@@ -23,12 +23,10 @@ export function TaskDrawer({ isOpen, onClose }: TaskDrawerProps) {
   // Efecto NLP en tiempo real: Escucha el título y autocompleta horas
   useEffect(() => {
     if (title) {
-      const detectedTimes = parseNaturalLanguageTimes(title);
+      const { times: detectedTimes } = parseNaturalLanguage(title);
       if (detectedTimes.length > 0) {
-        // Haptic feedback suave al detectar lenguaje natural exitosamente (opcional)
         if (navigator.vibrate) navigator.vibrate(20);
         
-        // Mergear sin duplicados
         const merged = Array.from(new Set([...alerts, ...detectedTimes]));
         if (merged.length !== alerts.length) {
           setAlerts(merged);

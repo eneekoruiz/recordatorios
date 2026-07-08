@@ -1,4 +1,4 @@
-import { TaskItem, FrequencyLevel } from '../models/Task';
+import type { TaskItem } from '../models/Task';
 
 /**
  * Patrón Repositorio: Desacopla la UI de la Base de Datos.
