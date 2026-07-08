@@ -8,6 +8,7 @@ import { CycleModal } from './components/layout/CycleModal';
 import { DataModal } from './components/layout/DataModal';
 import { BrainDumpModal } from './components/layout/BrainDumpModal';
 import { PromptModal } from './components/layout/PromptModal';
+import { SyncProvider } from './sync/SyncProvider';
 import { CommandPalette } from './components/layout/CommandPalette';
 import { ZenMode } from './components/tasks/ZenMode';
 import { GeolocationService } from './services/GeolocationService';
@@ -28,7 +29,20 @@ function App() {
       setIsMobile(window.innerWidth <= 768);
     };
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    
+    // 1. Inicializar Sincronización en la Nube
+    SyncProvider.initialize();
+
+    // 2. Inicializar Geofencing
+    GeolocationService.getInstance().startGeofencing(() => {
+      const { tasks } = useAppStore.getState();
+      return Object.values(tasks).filter(t => t.location && !t.is_deleted && t.status === 'PENDING');
+    });
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      SyncProvider.destroy();
+    };
   }, []);
 
   const handleSelectView = (view: string) => {

@@ -8,8 +8,10 @@ export interface CustomCycle {
 
 export interface CustomList {
   id: string;
+  parentId?: string; // Para jerarquía infinita (Lista -> Sublistas)
   name: string;
   color: string;
+  icon?: string; // Lucide icon name
 }
 
 export interface ListSection {
@@ -41,6 +43,7 @@ export interface TaskItem {
   status: 'PENDING' | 'COMPLETED' | 'SKIPPED';
   alerts: string[]; 
   completedAlerts?: string[]; // Para tachado parcial
+  completionHistory?: number[]; // Timestamps de cuando se ha completado en el pasado (Frecuencias matemáticas)
   createdAt: number; 
 
   // --- APPLE REMINDERS FEATURES ---
@@ -48,6 +51,12 @@ export interface TaskItem {
   flagged?: boolean;
   url?: string;
   image?: string; // base64 o URL de imagen adjunta
+
+  // --- SHOPPING & FINANCE FIELDS ---
+  isDetailed?: boolean; // Alternar entre simple y detallado
+  price?: number;       // Precio por unidad
+  quantity?: number;    // Cantidad (por defecto 1)
+  brand?: string;       // Marca recomendada
 
   // --- INNOVATION FIELDS ---
   /** Coordenadas de Geofencing para disparar notificaciones basadas en ubicación */

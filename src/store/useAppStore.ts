@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { TaskItem, CustomCycle, CustomList, ListSection } from '../models/Task';
 import { TaskRepository } from '../repositories/TaskRepository';
+import { isCompletedInCurrentPeriod, wouldCreateDependencyCycle } from '../services/TaskService';
 
 const INITIAL_LISTS: CustomList[] = [
   { id: 'compras', name: 'Compras', color: '#ff9500' },
@@ -27,6 +28,7 @@ interface AppState {
   toggleSmartList: (listId: string) => void;
   
   addTask: (task: Omit<TaskItem, 'id' | 'status' | 'createdAt' | 'updated_at' | 'is_dirty' | 'is_deleted'>) => void;
+  updateTaskRaw: (task: TaskItem) => void; // Para uso interno y SyncProvider
   completeTask: (id: string) => void;
   deleteTask: (id: string) => void;
   
@@ -42,8 +44,10 @@ interface AppState {
   deleteListSection: (id: string) => void;
   updateTaskSection: (taskId: string, sectionId: string | undefined) => void;
 
-  getTasksByCycle: (cycleId: string) => Record<string, TaskItem[]>;
-  getTasksByList: (listId: string) => Record<string, TaskItem[]>;
+  purgeOldDeletedTasks: () => void;
+
+  getTasksByCycle: (cycleId: string, includeCompleted?: boolean) => Record<string, TaskItem[]>;
+  getTasksByList: (listId: string, includeCompleted?: boolean) => Record<string, TaskItem[]>;
   getSmartSortTasks: () => TaskItem[]; 
 
   exportData: () => string;
@@ -86,6 +90,13 @@ export const useAppStore = create<AppState>()(
         };
       }),
 
+      updateTaskRaw: (task) => set((state) => ({
+        tasks: {
+          ...state.tasks,
+          [task.id]: task
+        }
+      })),
+
       completeTask: (id) => set((state) => {
         const existingTask = state.tasks[id];
         if (!existingTask) return state;
@@ -97,16 +108,32 @@ export const useAppStore = create<AppState>()(
         // Lógica de tachado parcial (Multi-dosis)
         if (alerts.length > 1 && completedAlerts.length < alerts.length - 1) {
           // Aún quedan alertas por completar, añadimos la siguiente
-          const nextAlert = alerts[completedAlerts.length];
-          updatedTask = TaskRepository.update(existingTask, { 
-            completedAlerts: [...completedAlerts, nextAlert] 
-          });
+          if (alerts.length > 0) {
+            const nextAlert = alerts[completedAlerts.length] || alerts[alerts.length - 1];
+            updatedTask = TaskRepository.update(existingTask, { 
+              completedAlerts: [...completedAlerts, nextAlert] 
+            });
+          } else {
+            updatedTask = TaskRepository.update(existingTask, { completedAlerts: [] });
+          }
         } else {
-          // Es la última o la única alerta, completamos la tarea entera
-          updatedTask = TaskRepository.update(existingTask, { 
-            status: 'COMPLETED',
-            completedAlerts: [...completedAlerts, alerts[completedAlerts.length]].filter(Boolean)
-          });
+          // Si es la última alerta, se completó la dosis de este ciclo.
+          const newCompletionHistory = [...(existingTask.completionHistory || []), Date.now()];
+          
+          if (existingTask.cycleId) {
+            // Tarea Recurrente: Mantener PENDING, limpiar alertas parciales, añadir a historial
+            updatedTask = TaskRepository.update(existingTask, { 
+              completedAlerts: [], // Reset for next cycle
+              completionHistory: newCompletionHistory
+            });
+          } else {
+            // Tarea de un solo uso
+            updatedTask = TaskRepository.update(existingTask, { 
+              status: 'COMPLETED',
+              completedAlerts: [...completedAlerts, alerts[completedAlerts.length]].filter(Boolean),
+              completionHistory: newCompletionHistory
+            });
+          }
         }
 
         return {
@@ -179,61 +206,67 @@ export const useAppStore = create<AppState>()(
         return {
           tasks: {
             ...state.tasks,
-            [taskId]: {
-              ...task,
-              sectionId,
-              is_dirty: true,
-              updated_at: Date.now()
-            }
+            [taskId]: TaskRepository.update(task, { sectionId })
           }
         };
       }),
 
+      purgeOldDeletedTasks: () => set((state) => {
+        const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        const newTasks = { ...state.tasks };
+        let purged = false;
+        
+        for (const taskId in newTasks) {
+          const task = newTasks[taskId];
+          if (task.is_deleted && task.updated_at && (now - task.updated_at > THIRTY_DAYS_MS)) {
+            delete newTasks[taskId];
+            purged = true;
+          }
+        }
+        
+        return purged ? { tasks: newTasks } : state;
+      }),
+
       // Algoritmo de Cascada Matemático
-      getTasksByCycle: (cycleId) => {
+      getTasksByCycle: (cycleId, includeCompleted = false) => {
         const { tasks, cycles } = get();
         const targetCycle = cycles.find(c => c.id === cycleId);
         if (!targetCycle) return {};
 
-        const tasksArray = Object.values(tasks);
-        
-        // Regla: Hereda tareas de su propio ciclo Y de cualquier ciclo más corto.
-        // NUEVO: Si no tiene ciclo (One-off), evaluamos por dueDate.
-        const filtered = tasksArray.filter(t => {
-          if (t.status !== 'PENDING' || t.is_deleted) return false;
-          
-          if (!t.cycleId) {
-            // Es un "One-off". Evaluamos según el dueDate y el targetCycle.
-            const now = new Date();
-            const taskDate = new Date(t.dueDate);
-            const diffTime = taskDate.getTime() - now.getTime();
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
-            // Si vence en un rango menor o igual a la duración del ciclo, lo mostramos.
-            // Para 'Mi Día' (1 día), mostrará las de hoy o vencidas.
-            return diffDays <= targetCycle.daysValue;
-          }
+        const validCycles = cycles.filter(c => c.daysValue <= targetCycle.daysValue).map(c => c.id);
 
-          const taskCycle = cycles.find(c => c.id === t.cycleId);
-          // Si el ciclo de la tarea ya no existe, por fallback lo mostramos
-          if (!taskCycle) return true;
-          
-          return taskCycle.daysValue <= targetCycle.daysValue;
-        });
-        
+        // Utilizamos la lógica centralizada de TaskService
         const grouped: Record<string, TaskItem[]> = {};
-        for (const task of filtered) {
-          if (!grouped[task.categoryId]) grouped[task.categoryId] = [];
-          grouped[task.categoryId].push(task);
-        }
+        Object.values(tasks)
+          .filter(t => !t.is_deleted && (includeCompleted || t.status !== 'COMPLETED'))
+          .filter(t => {
+            // Regla: Hereda tareas de su propio ciclo Y de cualquier ciclo más corto.
+            // NUEVO: Si no tiene ciclo (One-off), evaluamos por dueDate.
+            if (!t.cycleId) {
+              const now = new Date();
+              const taskDate = new Date(t.dueDate);
+              const diffTime = taskDate.getTime() - now.getTime();
+              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              return diffDays <= targetCycle.daysValue;
+            }
+            return validCycles.includes(t.cycleId);
+          })
+          .filter(t => includeCompleted || !isCompletedInCurrentPeriod(t, cycles)) // Si ya se hizo, no la mostramos en pendientes de la cascada
+          .sort((a, b) => a.createdAt - b.createdAt)
+          .forEach(t => {
+            const listId = t.categoryId;
+            if (!grouped[listId]) grouped[listId] = [];
+            grouped[listId].push(t);
+          });
         return grouped;
       },
 
-      getTasksByList: (listId) => {
+      getTasksByList: (listId, includeCompleted = false) => {
         const { tasks, cycles, listSections } = get();
         const tasksArray = Object.values(tasks);
         
-        const filtered = tasksArray.filter(t => t.categoryId === listId && t.status === 'PENDING' && !t.is_deleted);
+        const filtered = tasksArray.filter(t => t.categoryId === listId && !t.is_deleted && (includeCompleted || t.status === 'PENDING'));
         
         const grouped: Record<string, TaskItem[]> = {};
         for (const task of filtered) {
@@ -288,8 +321,8 @@ export const useAppStore = create<AppState>()(
       },
 
       exportData: () => {
-        const { tasks, cycles } = get();
-        const data = { tasks, cycles, version: 3, exportedAt: new Date().toISOString() };
+        const { tasks, cycles, lists, listSections, smartListVisibility } = get();
+        const data = { tasks, cycles, lists, listSections, smartListVisibility, version: 3, exportedAt: new Date().toISOString() };
         return JSON.stringify(data, null, 2);
       },
 
@@ -297,16 +330,24 @@ export const useAppStore = create<AppState>()(
         try {
           const parsed = JSON.parse(jsonData);
           if (parsed.tasks && parsed.cycles) {
-            set({ tasks: parsed.tasks, cycles: parsed.cycles });
+            set({ 
+              tasks: parsed.tasks, 
+              cycles: parsed.cycles,
+              lists: parsed.lists || INITIAL_LISTS,
+              listSections: parsed.listSections || [],
+              smartListVisibility: parsed.smartListVisibility || get().smartListVisibility
+            });
           }
         } catch (e) {
-          // Silencioso
+          console.error("Failed to import data", e);
         }
       },
 
       parsePlainTextTasks: (text: string) => {
-        const { addTask, cycles, addCycle } = get();
+        const { cycles, addCycle } = get();
         const lines = text.split('\n');
+        
+        const newTasks: TaskItem[] = [];
         
         lines.forEach(line => {
           const trimmed = line.trim();
@@ -348,16 +389,25 @@ export const useAppStore = create<AppState>()(
           }
 
           if (title) {
-            addTask({
+            newTasks.push(TaskRepository.create({
               title,
               categoryId,
               cycleId,
               blockedBy: [],
               dueDate: new Date(),
               alerts: []
-            });
+            }));
           }
         });
+        
+        // Update all tasks at once
+        if (newTasks.length > 0) {
+          set((state) => {
+            const updatedTasks = { ...state.tasks };
+            newTasks.forEach(t => { updatedTasks[t.id] = t; });
+            return { tasks: updatedTasks };
+          });
+        }
       },
 
       addDependency: (targetTaskId: string, blockedByTaskId: string) => set((state) => {
@@ -366,6 +416,12 @@ export const useAppStore = create<AppState>()(
         const targetTask = state.tasks[targetTaskId];
         if (!targetTask) return state;
         
+        // Validación de Deadlock (ciclos de dependencia)
+        if (wouldCreateDependencyCycle(targetTaskId, blockedByTaskId, state.tasks)) {
+          alert('Error: Añadir esta dependencia crearía un ciclo infinito.');
+          return state;
+        }
+        
         const currentBlockedBy = targetTask.blockedBy || [];
         if (!currentBlockedBy.includes(blockedByTaskId)) {
           return {
@@ -373,7 +429,9 @@ export const useAppStore = create<AppState>()(
               ...state.tasks,
               [targetTaskId]: {
                 ...targetTask,
-                blockedBy: [...currentBlockedBy, blockedByTaskId]
+                blockedBy: [...currentBlockedBy, blockedByTaskId],
+                is_dirty: true,
+                updated_at: Date.now()
               }
             }
           };

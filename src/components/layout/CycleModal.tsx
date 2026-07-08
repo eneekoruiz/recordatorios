@@ -1,13 +1,10 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Trash2, Plus, Sun, Calendar, Moon, Globe, Rocket, Flame, Sparkles, Star, Circle } from 'lucide-react';
+import { X, Trash2, Plus } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import type { CustomCycle } from '../../models/Task';
-
-const IconMap: Record<string, any> = {
-  'sun': Sun, 'calendar': Calendar, 'moon': Moon, 'globe': Globe,
-  'rocket': Rocket, 'flame': Flame, 'sparkles': Sparkles, 'star': Star, 'circle': Circle
-};
+import { CYCLE_ICON_MAP, getCycleIcon } from '../../constants/icons';
+import React from 'react';
 
 interface CycleModalProps {
   isOpen: boolean;
@@ -19,7 +16,8 @@ export function CycleModal({ isOpen, onClose }: CycleModalProps) {
   
   const [newCycleName, setNewCycleName] = useState('');
   const [newCycleDays, setNewCycleDays] = useState(14);
-  const [newCycleIcon, setNewCycleIcon] = useState('circle');
+  const [newIcon, setNewIcon] = useState('circle');
+  const [showIconPicker, setShowIconPicker] = useState(false);
 
   const handleCreate = () => {
     if (!newCycleName) return;
@@ -28,7 +26,7 @@ export function CycleModal({ isOpen, onClose }: CycleModalProps) {
       name: newCycleName,
       daysValue: newCycleDays,
       isPinned: true,
-      icon: newCycleIcon
+      icon: newIcon
     };
     addCycle(newCycle);
     setNewCycleName('');
@@ -74,11 +72,10 @@ export function CycleModal({ isOpen, onClose }: CycleModalProps) {
             {/* Lista de Ciclos Existentes */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-12)', marginBottom: 'var(--space-32)' }}>
               {cycles.map(cycle => {
-                const CycleIcon = IconMap[cycle.icon] || Circle;
                 return (
                 <div key={cycle.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--space-12)', background: 'var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-12)' }}>
-                    <CycleIcon size={24} color="var(--accent-primary)" />
+                    {React.createElement(getCycleIcon(cycle.icon), { size: 24, color: 'var(--accent-primary)' })}
                     <div>
                       <div className="text-body" style={{ fontWeight: 500 }}>{cycle.name}</div>
                       <div className="text-muted" style={{ fontSize: '0.8rem' }}>{cycle.daysValue} días</div>
@@ -106,13 +103,31 @@ export function CycleModal({ isOpen, onClose }: CycleModalProps) {
               <h3 className="text-body" style={{ fontWeight: 600, marginBottom: 'var(--space-16)' }}>Crear Nuevo Ciclo</h3>
               
               <div style={{ display: 'flex', gap: 'var(--space-12)', marginBottom: 'var(--space-16)' }}>
-                <select 
-                  value={newCycleIcon}
-                  onChange={(e) => setNewCycleIcon(e.target.value)}
-                  style={{ width: '60px', textAlign: 'center', background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', color: 'white', cursor: 'pointer' }}
-                >
-                  {Object.keys(IconMap).map(key => <option key={key} value={key}>{key}</option>)}
-                </select>
+                <div style={{ position: 'relative' }}>
+                  <button 
+                    className="btn-icon" 
+                    onClick={() => setShowIconPicker(!showIconPicker)}
+                    style={{ width: '50px', height: '50px', background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    {React.createElement(getCycleIcon(newIcon), { size: 24 })}
+                  </button>
+                  
+                  {showIconPicker && (
+                    <div style={{ position: 'absolute', top: '60px', left: 0, background: 'var(--bg-card)', padding: 8, borderRadius: 8, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, border: '1px solid var(--border-subtle)', zIndex: 10 }}>
+                      {Object.keys(CYCLE_ICON_MAP).map(key => (
+                        <button 
+                          key={key} 
+                          className="btn-icon" 
+                          onClick={() => { setNewIcon(key); setShowIconPicker(false); }}
+                          style={{ color: newIcon === key ? 'var(--accent-primary)' : 'var(--text-secondary)' }}
+                        >
+                          {React.createElement(CYCLE_ICON_MAP[key], { size: 18 })}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <input 
                   placeholder="Nombre (ej. Mi Quincena)"
                   value={newCycleName}

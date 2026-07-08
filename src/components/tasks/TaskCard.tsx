@@ -1,9 +1,10 @@
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, Trash2, GripVertical, Play, Lock, Link2, Flag, MapPin, Link, Image as ImageIcon } from 'lucide-react';
-import { useState } from 'react';
+import { CheckCircle, Trash2, GripVertical, Play, Lock, Link2, Flag, MapPin, Link, Image as ImageIcon, X } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
+import { isCompletedInCurrentPeriod } from '../../services/TaskService';
 
 interface TaskCardProps {
   task: TaskItem;
@@ -14,17 +15,19 @@ interface TaskCardProps {
   index: number;
 }
 
-export function TaskCard({ task, virtualStyle, onComplete, onDelete, onOpenZenMode, index }: TaskCardProps) {
+export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onComplete, onDelete, onOpenZenMode, index }: TaskCardProps) {
   const { cycles, tasks, nestTask, addDependency } = useAppStore();
   const taskCycle = cycles.find(c => c.id === task.cycleId);
   const [isDragOver, setIsDragOver] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   
-  // Para posicionar el menú contextual en click derecho
   const [menuPos, setMenuPos] = useState({ x: 0, y: 0 });
 
-  // Un task está bloqueado si alguno de sus blockedBy está PENDING
+  // Bloqueado si alguna dependencia sigue pendiente
   const isBlocked = task.blockedBy && task.blockedBy.some(id => tasks[id] && tasks[id].status === 'PENDING');
+
+  // Nueva lógica modularizada (CycleCompletionService)
+  const isCompletedPeriod = isCompletedInCurrentPeriod(task, cycles);
   
   const handleSwipeEnd = (offset: number) => {
     if (offset > 100 && !isBlocked) {
@@ -33,7 +36,7 @@ export function TaskCard({ task, virtualStyle, onComplete, onDelete, onOpenZenMo
     } else if (offset < -100) {
       onDelete(task.id);
     } else if (offset < -50) {
-      setShowMenu(true); // Swipe corto izquierdo abre el menú
+      setShowMenu(true);
     }
   };
 
@@ -54,7 +57,6 @@ export function TaskCard({ task, virtualStyle, onComplete, onDelete, onOpenZenMo
         setIsDragOver(false);
         const draggedTaskId = e.dataTransfer.getData('text/plain');
         if (draggedTaskId && draggedTaskId !== task.id) {
-          // El Drag & Drop ahora anida subtareas, no bloqueos
           nestTask(draggedTaskId, task.id);
         }
       }}
@@ -82,7 +84,7 @@ export function TaskCard({ task, virtualStyle, onComplete, onDelete, onOpenZenMo
           type: 'spring', 
           stiffness: 400, 
           damping: 25, 
-          delay: Math.min(index * 0.05, 0.5) // Stagger effect
+          delay: Math.min(index * 0.05, 0.5)
         }}
         className="surface-card"
         style={{ 
@@ -99,7 +101,7 @@ export function TaskCard({ task, virtualStyle, onComplete, onDelete, onOpenZenMo
         }}
       >
         
-        {/* Grip para Drag & Drop (Power User Gestures) */}
+        {/* Grip para Drag & Drop */}
         <div 
           draggable
           onDragStart={(e) => e.dataTransfer.setData('text/plain', task.id)}
@@ -131,22 +133,25 @@ export function TaskCard({ task, virtualStyle, onComplete, onDelete, onOpenZenMo
                 border: isPartial ? 'none' : '2px solid var(--border-subtle)', 
                 marginRight: 'var(--space-16)', 
                 cursor: 'pointer',
-                background: isPartial 
-                  ? `conic-gradient(var(--accent-primary) ${percentage}%, var(--border-subtle) ${percentage}%)`
-                  : 'transparent',
+                background: isCompletedPeriod 
+                  ? 'var(--accent-primary)' 
+                  : isPartial 
+                    ? `conic-gradient(var(--accent-primary) ${percentage}%, var(--border-subtle) ${percentage}%)`
+                    : 'transparent',
                 transition: 'border-color 0.2s ease, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}
               onMouseEnter={(e) => { 
-                if (!isPartial) e.currentTarget.style.borderColor = 'var(--accent-primary)'; 
+                if (!isPartial && !isCompletedPeriod) e.currentTarget.style.borderColor = 'var(--accent-primary)'; 
                 e.currentTarget.style.transform = 'scale(1.1)'; 
               }}
               onMouseLeave={(e) => { 
-                if (!isPartial) e.currentTarget.style.borderColor = 'var(--border-subtle)'; 
+                if (!isPartial && !isCompletedPeriod) e.currentTarget.style.borderColor = 'var(--border-subtle)'; 
                 e.currentTarget.style.transform = 'scale(1)'; 
               }}
             >
-              {isPartial && <div style={{ width: 20, height: 20, background: 'var(--bg-surface)', borderRadius: '50%' }}></div>}
+              {isPartial && !isCompletedPeriod && <div style={{ width: 20, height: 20, background: 'var(--bg-surface)', borderRadius: '50%' }}></div>}
+              {isCompletedPeriod && <CheckCircle size={16} color="white" />}
             </button>
           );
         })()}
@@ -155,12 +160,15 @@ export function TaskCard({ task, virtualStyle, onComplete, onDelete, onOpenZenMo
           <div>
             <div style={{ fontSize: '1.1rem', fontWeight: 500, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 'var(--space-8)' }}>
               {isBlocked && <Lock size={16} color="var(--accent-red)" />}
+              
+              {/* Badges UI de Prioridad en lugar de "!!!" */}
               {task.priority && task.priority !== 'none' && (
-                <span style={{ color: 'var(--accent-red)', fontWeight: 'bold' }}>
+                <span className={`priority-badge ${task.priority}`}>
                   {task.priority === 'low' ? '!' : task.priority === 'medium' ? '!!' : '!!!'}
                 </span>
               )}
-              <span style={{ textDecoration: task.status === 'COMPLETED' ? 'line-through' : 'none' }}>
+
+              <span style={{ textDecoration: isCompletedPeriod ? 'line-through' : 'none', opacity: isCompletedPeriod ? 0.6 : 1 }}>
                 {task.title}
               </span>
               {task.flagged && <Flag size={14} color="var(--accent-orange)" fill="var(--accent-orange)" />}
@@ -168,6 +176,7 @@ export function TaskCard({ task, virtualStyle, onComplete, onDelete, onOpenZenMo
               {task.locationName && <MapPin size={14} color="var(--accent-blue)" />}
               {task.image && <ImageIcon size={14} color="var(--text-tertiary)" />}
             </div>
+            
             <div style={{ display: 'flex', gap: 'var(--space-8)', marginTop: 'var(--space-4)', alignItems: 'center' }}>
               {task.alerts.map((time: string, idx: number) => {
                 const isCompleted = task.completedAlerts?.includes(time);
@@ -188,6 +197,22 @@ export function TaskCard({ task, virtualStyle, onComplete, onDelete, onOpenZenMo
                 {taskCycle ? taskCycle.name : 'Personalizado'}
               </span>
             </div>
+
+            {task.isDetailed && (
+              <div style={{ display: 'flex', gap: 'var(--space-8)', marginTop: 'var(--space-4)', alignItems: 'center', fontSize: '0.85rem' }}>
+                {task.price !== undefined && (
+                  <span style={{ color: 'var(--accent-green)', fontWeight: 600 }}>${task.price.toFixed(2)} {task.quantity ? `x ${task.quantity}` : ''}</span>
+                )}
+                {task.brand && (
+                  <span style={{ color: 'var(--text-tertiary)', background: 'var(--bg-elevated)', padding: '2px 6px', borderRadius: 4 }}>
+                    {task.brand}
+                  </span>
+                )}
+                {task.price !== undefined && task.quantity && (
+                  <span style={{ color: 'var(--text-secondary)' }}>= ${(task.price * task.quantity).toFixed(2)}</span>
+                )}
+              </div>
+            )}
           </div>
           
           {!isBlocked && (
@@ -202,55 +227,62 @@ export function TaskCard({ task, virtualStyle, onComplete, onDelete, onOpenZenMo
           )}
         </div>
 
-        {/* Action Menu (Swipe or Context Menu) */}
+        {/* Action Menu (Context Menu) */}
         {showMenu && (
-          <div 
-            style={{
-              position: 'absolute',
-              top: menuPos.y || '10%',
-              right: 'var(--space-16)',
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-md)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-              zIndex: 100,
-              padding: 'var(--space-8)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 'var(--space-4)',
-              minWidth: 160
-            }}
-            onClick={(e) => e.stopPropagation()} // Prevenir cerrar inmediatamente
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid var(--border-subtle)' }}>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>ACCIONES</span>
-              <button className="btn-icon" style={{ width: 24, height: 24 }} onClick={() => setShowMenu(false)}>✕</button>
-            </div>
-            
-            <button 
-              onClick={async () => {
-                const depId = await usePromptStore.getState().openPrompt("Ingresa el ID de la tarea bloqueadora:");
-                if (depId) addDependency(task.id, depId);
-                setShowMenu(false);
+          <>
+            <div 
+              style={{ position: 'fixed', inset: 0, zIndex: 99 }} 
+              onClick={(e) => { e.stopPropagation(); setShowMenu(false); }} 
+            />
+            <div 
+              style={{
+                position: 'absolute',
+                top: menuPos.y || '10%',
+                right: 'var(--space-16)',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-md)',
+                boxShadow: 'var(--shadow-lg)',
+                zIndex: 100,
+                padding: 'var(--space-8)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--space-4)',
+                minWidth: 160
               }}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 4 }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-surface)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
             >
-              <Link2 size={16} /> Vincular Bloqueo
-            </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid var(--border-subtle)' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>ACCIONES</span>
+                <button className="btn-icon" style={{ width: 24, height: 24 }} onClick={() => setShowMenu(false)}>
+                  <X size={14} />
+                </button>
+              </div>
+              
+              <button 
+                onClick={async () => {
+                  const depId = await usePromptStore.getState().openPrompt("Ingresa el ID de la tarea bloqueadora:");
+                  if (depId) addDependency(task.id, depId);
+                  setShowMenu(false);
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 4 }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-surface)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <Link2 size={16} /> Vincular Bloqueo
+              </button>
 
-            <button 
-              onClick={() => { onDelete(task.id); setShowMenu(false); }}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px', background: 'transparent', border: 'none', color: 'var(--accent-red)', textAlign: 'left', cursor: 'pointer', borderRadius: 4 }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-surface)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-            >
-              <Trash2 size={16} /> Eliminar
-            </button>
-          </div>
+              <button 
+                onClick={() => { onDelete(task.id); setShowMenu(false); }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px', background: 'transparent', border: 'none', color: 'var(--accent-red)', textAlign: 'left', cursor: 'pointer', borderRadius: 4 }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-surface)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <Trash2 size={16} /> Eliminar
+              </button>
+            </div>
+          </>
         )}
       </motion.div>
     </div>
   );
-}
+});

@@ -1,10 +1,11 @@
-import { useState, useRef, useMemo } from 'react';
-import { Plus, ChevronDown, Sparkles, Sun, Calendar, Moon, Globe, Rocket, Flame, Star, Circle, FolderPlus } from 'lucide-react';
+import { useState, useRef, useMemo, useCallback } from 'react';
+import { Plus, ChevronDown, Sparkles, FolderPlus, Inbox } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useAppStore } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
 import type { TaskItem } from '../../models/Task';
 import { TaskCard } from '../tasks/TaskCard';
+import { getCycleIcon } from '../../constants/icons';
 
 interface MainContentProps {
   currentView: string;
@@ -14,9 +15,8 @@ interface MainContentProps {
   isMobile?: boolean;
 }
 
-// Flat representation para la virtualización
 type VirtualItemType = 
-  | { type: 'header', title: string, category: string, color: string }
+  | { type: 'header', title: string, category: string, color: string, sectionId?: string }
   | { type: 'task', task: TaskItem, depth: number };
 
 const SMART_COLORS: Record<string, string> = {
@@ -32,61 +32,77 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
   
   const { getTasksByCycle, getTasksByList, getSmartSortTasks, completeTask, deleteTask, cycles, lists, addListSection, updateListSection, updateTaskSection, listSections, tasks } = useAppStore();
 
-  const currentCycle = cycles.find(c => c.id === currentView);
-  const currentList = lists?.find(l => `list_${l.id}` === currentView);
+  const currentCycle = useMemo(() => cycles.find(c => c.id === currentView), [cycles, currentView]);
+  const currentList = useMemo(() => lists?.find(l => `list_${l.id}` === currentView), [lists, currentView]);
   
   const isListView = currentView.startsWith('list_');
-
   const isSmartView = currentView.startsWith('smart_');
 
-  // Funciones auxiliares para Smart Lists
-  const getTasksForSmartView = () => {
+  // Funciones auxiliares para Smart Lists (memoized)
+  const getTasksForSmartView = useCallback((includeCompleted = false) => {
     const allTasks = Object.values(tasks).filter(t => !t.is_deleted);
-    const pendingTasks = allTasks.filter(t => t.status === 'PENDING');
+    const validTasks = includeCompleted ? allTasks : allTasks.filter(t => t.status === 'PENDING');
     let filteredTasks: TaskItem[] = [];
 
     switch (currentView) {
-      case 'smart_today':
+      case 'smart_today': {
         const today = new Date().toISOString().split('T')[0];
-        filteredTasks = pendingTasks.filter(t => new Date(t.dueDate).toISOString().split('T')[0] === today);
+        filteredTasks = validTasks.filter(t => new Date(t.dueDate).toISOString().split('T')[0] === today);
         break;
+      }
       case 'smart_scheduled':
-        filteredTasks = pendingTasks.filter(t => new Date(t.dueDate) > new Date());
+        filteredTasks = validTasks.filter(t => new Date(t.dueDate) > new Date());
         break;
       case 'smart_all':
-        filteredTasks = pendingTasks;
+        filteredTasks = validTasks;
         break;
       case 'smart_flagged':
-        filteredTasks = pendingTasks.filter(t => t.flagged);
+        filteredTasks = validTasks.filter(t => t.flagged);
         break;
       case 'smart_completed':
-        filteredTasks = allTasks.filter(t => t.status === 'COMPLETED');
+        filteredTasks = allTasks.filter(t => t.status === 'COMPLETED'); // always completed
         break;
     }
 
     // Agrupar por lista a la que pertenecen
     const grouped: Record<string, TaskItem[]> = {};
     filteredTasks.forEach(task => {
-      const listName = lists.find(l => l.id === task.categoryId)?.name || 'Sin Lista';
+      const listName = lists?.find(l => l.id === task.categoryId)?.name || 'Sin Lista';
       if (!grouped[listName]) grouped[listName] = [];
       grouped[listName].push(task);
     });
     return grouped;
-  };
+  }, [currentView, tasks, lists]);
 
-  const groupedTasks = isSmartView
-    ? getTasksForSmartView()
-    : isListView
-      ? getTasksByList(currentView.replace('list_', ''))
-      : getTasksByCycle(currentView);
+  const [showCompleted, setShowCompleted] = useState(false);
+
+  const groupedTasks = useMemo(() => {
+    if (currentView === 'TRASH') {
+      return { 'Papelera': Object.values(tasks).filter(t => t.is_deleted) };
+    }
+    if (isSmartView) return getTasksForSmartView(showCompleted);
+    if (isListView) return getTasksByList(currentView.replace('list_', ''), showCompleted);
+    return getTasksByCycle(currentView, showCompleted);
+  }, [currentView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, showCompleted]);
     
-  const smartTasks = currentView === 'cycle_day' ? getSmartSortTasks() : [];
+  const smartTasks = useMemo(() => currentView === 'cycle_day' ? getSmartSortTasks() : [], [currentView, getSmartSortTasks]);
 
-  const toggleCategory = (cat: string) => {
+  // Calcular Resumen Financiero Total
+  const totalCost = useMemo(() => {
+    let sum = 0;
+    Object.values(groupedTasks).flat().forEach(t => {
+      if (t.isDetailed && t.price) {
+        sum += t.price * (t.quantity || 1);
+      }
+    });
+    return sum;
+  }, [groupedTasks]);
+
+  const toggleCategory = useCallback((cat: string) => {
     setCollapsed(prev => ({ ...prev, [cat]: !prev[cat] }));
-  };
+  }, []);
 
-  const getTitle = () => {
+  const getTitle = useCallback(() => {
     if (isSmartView) {
       const names: Record<string, string> = {
         'smart_today': 'Hoy',
@@ -97,39 +113,40 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
       };
       return names[currentView] || currentView;
     }
+    if (currentView === 'TRASH') return 'Papelera Eliminados';
     if (currentCycle) return currentCycle.name;
     if (currentList) return currentList.name;
-    return currentView;
-  };
+    return 'Tareas';
+  }, [isSmartView, currentView, currentCycle, currentList]);
 
-  const handleAddSection = async () => {
+  const handleAddSection = useCallback(async () => {
     if (!currentList) return;
     const name = await usePromptStore.getState().openPrompt("Nombre de la nueva sección:", "Ej: Compras");
     if (name) {
       addListSection({
-        id: Math.random().toString(36).substring(2, 9),
+        id: crypto.randomUUID(),
         listId: currentList.id,
         name
       });
     }
-  };
+  }, [currentList, addListSection]);
 
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [editingSectionName, setEditingSectionName] = useState('');
 
-  const startEditingSection = (e: React.MouseEvent, sectionId: string, currentName: string) => {
+  const startEditingSection = useCallback((e: React.MouseEvent, sectionId: string, currentName: string) => {
     e.stopPropagation();
     setEditingSectionId(sectionId);
     setEditingSectionName(currentName);
-  };
+  }, []);
 
-  const saveSectionName = (e: React.MouseEvent, sectionId: string) => {
+  const saveSectionName = useCallback((e: React.MouseEvent, sectionId: string) => {
     e.stopPropagation();
     if (editingSectionName.trim()) {
       updateListSection(sectionId, editingSectionName.trim());
     }
     setEditingSectionId(null);
-  };
+  }, [editingSectionName, updateListSection]);
 
   const [dragOverSectionId, setDragOverSectionId] = useState<string | null>(null);
 
@@ -146,7 +163,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
     }
 
     // Categorías (Si estamos en ciclo) o Ciclos (Si estamos en Lista)
-    Object.entries(groupedTasks).forEach(([categoryOrCycle, tasks]) => {
+    Object.entries(groupedTasks).forEach(([categoryOrCycle, categoryTasks]) => {
       let color = '#34c759'; // Default
       let originalSectionId: string | undefined;
 
@@ -162,12 +179,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
         }
       }
       
-      flat.push({ type: 'header', title: categoryOrCycle.replace('section_', ''), category: categoryOrCycle, color, sectionId: originalSectionId } as any);
+      flat.push({ type: 'header', title: categoryOrCycle.replace('section_', ''), category: categoryOrCycle, color, sectionId: originalSectionId });
       if (!collapsed[categoryOrCycle]) {
-        const roots = tasks.filter(t => !t.parentId);
+        const roots = categoryTasks.filter(t => !t.parentId);
         const processNode = (task: TaskItem, depth: number) => {
           flat.push({ type: 'task', task, depth });
-          const children = tasks.filter(t => t.parentId === task.id);
+          const children = categoryTasks.filter(t => t.parentId === task.id);
           children.forEach(c => processNode(c, depth + 1));
         };
         roots.forEach(r => processNode(r, 0));
@@ -175,7 +192,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
     });
 
     return flat;
-  }, [groupedTasks, smartTasks, currentView, collapsed]);
+  }, [groupedTasks, smartTasks, currentCycle, collapsed, isListView, lists, listSections, currentList]);
 
   // 2. React Virtualizer
   const parentRef = useRef<HTMLDivElement>(null);
@@ -190,7 +207,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
     overscan: 5,
   });
 
-  const renderTask = (task: TaskItem, virtualStyle: React.CSSProperties, index: number, depth: number) => (
+  const renderTask = useCallback((task: TaskItem, virtualStyle: React.CSSProperties, index: number, depth: number) => (
     <TaskCard 
       key={task.id}
       task={task}
@@ -203,13 +220,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
       onOpenZenMode={onOpenZenMode}
       index={index}
     />
-  );
+  ), [completeTask, deleteTask, onOpenZenMode]);
 
-  const IconMap: Record<string, any> = {
-    'sun': Sun, 'calendar': Calendar, 'moon': Moon, 'globe': Globe,
-    'rocket': Rocket, 'flame': Flame, 'sparkles': Sparkles, 'star': Star, 'circle': Circle
-  };
-  const CycleIcon = currentCycle ? (IconMap[currentCycle.icon] || Circle) : null;
+  const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
 
   return (
     <main className="main-content" ref={parentRef} style={{ overflowY: 'auto' }}>
@@ -239,8 +252,20 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
           <p className="text-secondary" style={{ marginTop: 'var(--space-8)' }}>
             {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
+          {totalCost > 0 && (
+            <div style={{ marginTop: 12, display: 'inline-block', background: 'var(--accent-glow)', color: 'var(--accent-primary)', padding: '6px 12px', borderRadius: 8, fontWeight: 600 }}>
+              Total Estimado: ${totalCost.toFixed(2)}
+            </div>
+          )}
         </div>
-        <div className="header-actions" style={{ display: 'flex', gap: '8px' }}>
+        <div className="header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {!isSmartView && currentView !== 'TRASH' && (
+            <label className="switch" style={{ marginRight: 16 }} title="Mostrar Completados">
+              <span style={{ marginRight: 8, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Completados</span>
+              <input type="checkbox" checked={showCompleted} onChange={e => setShowCompleted(e.target.checked)} />
+              <span className="slider round"></span>
+            </label>
+          )}
           {isListView && (
             <button className="icon-btn" onClick={handleAddSection} title="Añadir Sección">
               <FolderPlus size={20} />
@@ -266,8 +291,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
           };
 
           if (data.type === 'header') {
-            const isCustomSection = (data as any).sectionId !== undefined;
-            const sectionId = (data as any).sectionId;
+            const isCustomSection = data.sectionId !== undefined;
+            const sectionId = data.sectionId;
             const isDraggingOver = dragOverSectionId === sectionId && isCustomSection;
 
             return (
@@ -282,7 +307,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
                 className="group-header" 
                 onClick={() => toggleCategory(data.category)}
                 onDragOver={(e) => {
-                  if (!isCustomSection) return;
+                  if (!isCustomSection || !sectionId) return;
                   e.preventDefault();
                   setDragOverSectionId(sectionId);
                 }}
@@ -292,7 +317,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
                 onDrop={(e) => {
                   e.preventDefault();
                   setDragOverSectionId(null);
-                  if (!isCustomSection) return;
+                  if (!isCustomSection || !sectionId) return;
                   
                   const draggedTaskId = e.dataTransfer.getData('text/plain');
                   if (draggedTaskId) {
@@ -303,12 +328,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
                 <h3 
                   style={{ color: data.color, display: 'flex', alignItems: 'center', gap: 8, flex: 1, margin: 0 }}
                   onDoubleClick={(e) => {
-                    if (isCustomSection) startEditingSection(e, sectionId, data.title);
+                    if (isCustomSection && sectionId) startEditingSection(e, sectionId, data.title);
                   }}
                 >
                   {data.category === 'smart' && <Sparkles size={20} />} 
                   
-                  {editingSectionId === sectionId && isCustomSection ? (
+                  {editingSectionId === sectionId && isCustomSection && sectionId ? (
                     <input 
                       type="text" 
                       value={editingSectionName}
@@ -345,8 +370,14 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
         })}
 
         {flattenedData.length === 0 && (
-          <div style={{ color: 'var(--text-muted)', textAlign: 'center', marginTop: '40px' }}>
-            No hay tareas pendientes en esta vista.
+          <div style={{ color: 'var(--text-muted)', textAlign: 'center', marginTop: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+            <div style={{ background: 'var(--bg-surface)', padding: '24px', borderRadius: '50%', display: 'inline-flex' }}>
+               <Inbox size={48} color="var(--text-tertiary)" />
+            </div>
+            <p>No hay tareas pendientes en esta vista.</p>
+            <button className="btn-icon" onClick={onOpenNewTask} style={{ background: 'var(--accent-glow)', color: 'var(--accent-primary)', padding: '8px 16px', borderRadius: '8px' }}>
+              Crear Tarea
+            </button>
           </div>
         )}
 

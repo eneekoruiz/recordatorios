@@ -1,12 +1,73 @@
 import { useState } from 'react';
-import { Plus, BarChart2, Settings, DownloadCloud, Zap, ChevronDown, ChevronRight, Sun, Calendar, Moon, Globe, Rocket, Flame, Sparkles, Star, Circle, Clock, CheckCircle, Flag, LayoutGrid, Check } from 'lucide-react';
+import { Plus, BarChart2, Settings, DownloadCloud, Zap, ChevronDown, ChevronRight, Clock, CheckCircle, Flag, LayoutGrid, Check, Trash2, Calendar } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
+import { getCycleIcon } from '../../constants/icons';
 import './Layout.css';
 
 interface SidebarProps {
   currentView: string;
   onSelectView: (view: string) => void;
+}
+
+function ListHierarchy({ lists, parentId = undefined, currentView, onSelectView, addList, depth = 0 }: any) {
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  
+  const children = lists.filter((l: any) => l.parentId === parentId);
+  if (children.length === 0) return null;
+
+  return (
+    <div style={{ marginLeft: depth > 0 ? 12 : 0, borderLeft: depth > 0 ? '1px solid var(--border-subtle)' : 'none', paddingLeft: depth > 0 ? 8 : 0 }}>
+      {children.map((list: any) => {
+        const hasChildren = lists.some((l: any) => l.parentId === list.id);
+        const isExpanded = expanded[list.id];
+        
+        return (
+          <div key={list.id}>
+            <div 
+              className={`category-item ${currentView === `list_${list.id}` ? 'active' : ''}`}
+              style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+              onClick={() => onSelectView(`list_${list.id}`)}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {hasChildren && (
+                  <div 
+                    onClick={(e) => { e.stopPropagation(); setExpanded(prev => ({...prev, [list.id]: !prev[list.id]})); }}
+                    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                  >
+                    {isExpanded ? <ChevronDown size={14} color="var(--text-tertiary)" /> : <ChevronRight size={14} color="var(--text-tertiary)" />}
+                  </div>
+                )}
+                {!hasChildren && <div style={{ width: 14 }} />}
+                <div className="list-icon" style={{ backgroundColor: list.color, width: 10, height: 10 }}></div>
+                <span style={{ color: currentView === `list_${list.id}` ? 'white' : 'inherit', fontSize: '0.9rem' }}>{list.name}</span>
+              </div>
+
+              <div 
+                className="add-sublist-btn"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  const name = await usePromptStore.getState().openPrompt(`Sub-lista para ${list.name}:`, 'Nombre');
+                  if (!name) return;
+                  const id = name.toLowerCase().replace(/\s+/g, '-');
+                  addList({ id, parentId: list.id, name, color: list.color });
+                  setExpanded(prev => ({...prev, [list.id]: true}));
+                }}
+                style={{ cursor: 'pointer', opacity: 0.5 }}
+                title="Añadir sub-lista"
+              >
+                <Plus size={14} />
+              </div>
+            </div>
+            
+            {isExpanded && (
+              <ListHierarchy lists={lists} parentId={list.id} currentView={currentView} onSelectView={onSelectView} addList={addList} depth={depth + 1} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 export function Sidebar({ currentView, onSelectView }: SidebarProps) {
@@ -58,11 +119,6 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
     addList({ id, name, color: randomColor });
     onSelectView(`list_${id}`);
   };
-
-  const IconMap: Record<string, any> = {
-    'sun': Sun, 'calendar': Calendar, 'moon': Moon, 'globe': Globe,
-    'rocket': Rocket, 'flame': Flame, 'sparkles': Sparkles, 'star': Star, 'circle': Circle
-  };
   
   return (
     <aside className="sidebar">
@@ -78,7 +134,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         <input type="text" placeholder="Buscar" />
       </div>
 
-      <div className="smart-lists-nav">
+      <div className="smart-lists-nav" style={{ flex: 1, overflowY: 'auto' }}>
         
         {/* Smart Lists Grid */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 var(--space-12)', marginBottom: 'var(--space-8)' }}>
@@ -158,7 +214,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         {isCyclesOpen && (
           <div style={{ paddingLeft: 'var(--space-12)', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', marginBottom: 'var(--space-12)' }}>
             {cycles.filter(c => c.isPinned).map(cycle => {
-              const Icon = IconMap[cycle.icon] || Circle;
+              const Icon = getCycleIcon(cycle.icon);
               return (
                 <div 
                   key={cycle.id}
@@ -209,25 +265,24 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
           <Zap size={18} color="var(--accent-primary)" />
           <span style={{ color: 'var(--accent-primary)', fontWeight: 500 }}>Brain Dump</span>
         </div>
+        <div 
+          className={`nav-item ${currentView === 'TRASH' ? 'active' : ''}`}
+          onClick={() => onSelectView('TRASH')}
+          style={{ color: currentView === 'TRASH' ? 'var(--accent-red)' : 'var(--text-tertiary)', marginTop: 'var(--space-12)' }}
+        >
+          <Trash2 size={18} />
+          <span>Papelera Eliminados</span>
+        </div>
       </div>
 
-      <div className="categories-section">
+      <div className="categories-section" style={{ flexShrink: 0 }}>
         <div className="section-header">Mis Listas</div>
-        {lists.map(list => (
-          <div 
-            key={list.id} 
-            className={`category-item ${currentView === `list_${list.id}` ? 'active' : ''}`}
-            onClick={() => onSelectView(`list_${list.id}`)}
-          >
-            <div className="list-icon" style={{ backgroundColor: list.color }}></div>
-            <span style={{ color: currentView === `list_${list.id}` ? 'white' : 'inherit' }}>{list.name}</span>
-          </div>
-        ))}
+        <ListHierarchy lists={lists} currentView={currentView} onSelectView={onSelectView} addList={addList} />
       </div>
 
-      <button className="add-list-btn" onClick={handleAddList}>
+      <button className="add-list-btn" onClick={handleAddList} style={{ flexShrink: 0 }}>
         <Plus size={18} />
-        Añadir Lista
+        Nueva Lista Raíz
       </button>
     </aside>
   );

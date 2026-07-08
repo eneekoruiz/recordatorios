@@ -33,6 +33,12 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
   const [locationName, setLocationName] = useState('');
   const [image, setImage] = useState('');
 
+  // Finance Fields
+  const [isDetailed, setIsDetailed] = useState(false);
+  const [price, setPrice] = useState<number | undefined>(undefined);
+  const [quantity, setQuantity] = useState<number>(1);
+  const [brand, setBrand] = useState('');
+
   // Suggested chips purely for visual feedback
   const [suggestedChips, setSuggestedChips] = useState<{type: 'time'|'date'|'cycle', label: string}[]>([]);
 
@@ -107,7 +113,11 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
       flagged: flagged || undefined,
       priority: priority !== 'none' ? priority : undefined,
       locationName: locationName || undefined,
-      image: image || undefined
+      image: image || undefined,
+      isDetailed,
+      price: isDetailed ? price : undefined,
+      quantity: isDetailed ? quantity : undefined,
+      brand: isDetailed && brand ? brand : undefined
     });
     
     // Reset y cerrar
@@ -126,6 +136,10 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
     setPriority('none');
     setLocationName('');
     setImage('');
+    setIsDetailed(false);
+    setPrice(undefined);
+    setQuantity(1);
+    setBrand('');
     onClose();
   };
 
@@ -266,6 +280,66 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
                         rows={3} 
                         aria-label="Notas de la tarea"
                       />
+                    </div>
+
+                    <div className="section-title">Modo Financiero (Shopping)</div>
+                    <div className="details-group">
+                      <div className="detail-row frequency-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span className="detail-label" style={{ marginBottom: 0 }}>Habilitar Detalle</span>
+                        <label className="switch">
+                          <input type="checkbox" checked={isDetailed} onChange={e => setIsDetailed(e.target.checked)} />
+                          <span className="slider round"></span>
+                        </label>
+                      </div>
+
+                      <AnimatePresence>
+                        {isDetailed && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            style={{ overflow: 'hidden' }}
+                          >
+                            <div className="divider"></div>
+                            
+                            <div className="detail-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+                              <span className="detail-label" style={{ marginBottom: 0 }}>Precio/Unidad ($)</span>
+                              <input 
+                                type="number" 
+                                step="0.01" 
+                                min="0" 
+                                placeholder="0.00" 
+                                value={price || ''} 
+                                onChange={e => setPrice(parseFloat(e.target.value))}
+                                style={{ width: 80, textAlign: 'right', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-primary)' }}
+                              />
+                            </div>
+                            
+                            <div className="detail-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+                              <span className="detail-label" style={{ marginBottom: 0 }}>Cantidad</span>
+                              <input 
+                                type="number" 
+                                step="1" 
+                                min="1" 
+                                value={quantity} 
+                                onChange={e => setQuantity(parseInt(e.target.value) || 1)}
+                                style={{ width: 80, textAlign: 'right', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-primary)' }}
+                              />
+                            </div>
+
+                            <div className="detail-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, marginBottom: 8 }}>
+                              <span className="detail-label" style={{ marginBottom: 0 }}>Marca sugerida</span>
+                              <input 
+                                type="text" 
+                                placeholder="Ej: Nestlé" 
+                                value={brand} 
+                                onChange={e => setBrand(e.target.value)}
+                                style={{ width: 120, textAlign: 'right', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-primary)' }}
+                              />
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
 
                     <div className="section-title">Detalles</div>
@@ -448,7 +522,6 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
 
                       <div className="detail-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ color: 'var(--accent-red)', fontWeight: 'bold', fontSize: '18px', width: 18, textAlign: 'center' }}>!!!</span>
                           <span className="detail-label" style={{ marginBottom: 0 }}>Prioridad</span>
                         </div>
                         <select 
@@ -458,9 +531,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
                           style={{ width: 'auto', textAlign: 'right', border: 'none', background: 'transparent' }}
                         >
                           <option value="none">Ninguna</option>
-                          <option value="low">Baja (!)</option>
-                          <option value="medium">Media (!!)</option>
-                          <option value="high">Alta (!!!)</option>
+                          <option value="low">Baja</option>
+                          <option value="medium">Media</option>
+                          <option value="high">Alta</option>
                         </select>
                       </div>
 

@@ -6,7 +6,7 @@ import type { TaskItem } from '../models/Task';
 export class TaskRepository {
   
   public static generateId(): string {
-    return Math.random().toString(36).substring(2, 9);
+    return crypto.randomUUID();
   }
 
   public static create(payload: Omit<TaskItem, 'id' | 'status' | 'createdAt' | 'updated_at' | 'is_dirty' | 'is_deleted'>): TaskItem {
