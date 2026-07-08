@@ -23,10 +23,10 @@ export interface TaskItem {
   order?: number; // Para ordenar libremente
   
   // Dependencias Topológicas (Bloqueadores)
-  blockedBy: string[]; // Array de IDs de tareas que deben completarse primero
+  blockedBy?: string[]; // Opcional: dependencias complejas ocultas por defecto
   
   // Nuevo: Referencia al ciclo dinámico (sustituye a frequencyLevel)
-  cycleId: string;
+  cycleId?: string; // Opcional: si no está presente, es un recordatorio de un solo uso (One-off)
   
   dueDate: Date;
   status: 'PENDING' | 'COMPLETED' | 'SKIPPED';

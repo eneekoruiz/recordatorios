@@ -29,15 +29,41 @@ export function parseNaturalLanguage(text: string) {
       }
     }
 
-    // Normalización estricta
-    if (hour === 24) hour = 0; // 24:00 -> 00:00
+    if (hour === 24) hour = 0;
 
     const formattedHour = String(hour).padStart(2, '0');
     const formattedMinutes = String(minutes).padStart(2, '0');
     times.push(`${formattedHour}:${formattedMinutes}`);
   }
 
-  // 2. Motor de Inferencia de Categorías (Auto-Categorization)
+  // 2. Detección de Fechas y Ciclos
+  let suggestedDueDate: Date | undefined;
+  let suggestedCycleId: string | undefined;
+
+  // Ciclos
+  if (/(todos los d[íi]as|diario|cada d[íi]a|diariamente)/.test(textLower)) {
+    suggestedCycleId = 'cycle_day';
+  } else if (/(cada semana|semanal|todos los (lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bados|domingos))/.test(textLower)) {
+    suggestedCycleId = 'cycle_week';
+  } else if (/(cada mes|mensual|todos los meses)/.test(textLower)) {
+    suggestedCycleId = 'cycle_month';
+  } else if (/(cada a[ñn]o|anual|todos los a[ñn]os)/.test(textLower)) {
+    suggestedCycleId = 'cycle_year';
+  }
+
+  // Fechas (One-off)
+  const now = new Date();
+  if (/\bma[ñn]ana\b/.test(textLower)) {
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    suggestedDueDate = tomorrow;
+  } else if (/\bp[rR][óo]xima semana\b/.test(textLower)) {
+    const nextWeek = new Date(now);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    suggestedDueDate = nextWeek;
+  }
+
+  // 3. Motor de Inferencia de Categorías (Auto-Categorization)
   const categoryKeywords: Record<string, string[]> = {
     'limpieza': ['limpiar', 'barrer', 'fregar', 'basura', 'polvo', 'lavadora', 'ropa'],
     'compra': ['comprar', 'supermercado', 'pan', 'leche', 'huevos', 'verdura', 'carne'],
@@ -54,6 +80,8 @@ export function parseNaturalLanguage(text: string) {
 
   return {
     times: [...new Set(times)],
-    suggestedCategory: inferredCategory
+    suggestedCategory: inferredCategory,
+    suggestedCycleId,
+    suggestedDueDate
   };
 }

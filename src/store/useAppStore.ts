@@ -115,9 +115,22 @@ export const useAppStore = create<AppState>()(
         const tasksArray = Object.values(tasks);
         
         // Regla: Hereda tareas de su propio ciclo Y de cualquier ciclo más corto.
+        // NUEVO: Si no tiene ciclo (One-off), evaluamos por dueDate.
         const filtered = tasksArray.filter(t => {
           if (t.status !== 'PENDING' || t.is_deleted) return false;
           
+          if (!t.cycleId) {
+            // Es un "One-off". Evaluamos según el dueDate y el targetCycle.
+            const now = new Date();
+            const taskDate = new Date(t.dueDate);
+            const diffTime = taskDate.getTime() - now.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            // Si vence en un rango menor o igual a la duración del ciclo, lo mostramos.
+            // Para 'Mi Día' (1 día), mostrará las de hoy o vencidas.
+            return diffDays <= targetCycle.daysValue;
+          }
+
           const taskCycle = cycles.find(c => c.id === t.cycleId);
           // Si el ciclo de la tarea ya no existe, por fallback lo mostramos
           if (!taskCycle) return true;
@@ -261,13 +274,14 @@ export const useAppStore = create<AppState>()(
         const targetTask = state.tasks[targetTaskId];
         if (!targetTask) return state;
         
-        if (!targetTask.blockedBy.includes(blockedByTaskId)) {
+        const currentBlockedBy = targetTask.blockedBy || [];
+        if (!currentBlockedBy.includes(blockedByTaskId)) {
           return {
             tasks: {
               ...state.tasks,
               [targetTaskId]: {
                 ...targetTask,
-                blockedBy: [...targetTask.blockedBy, blockedByTaskId]
+                blockedBy: [...currentBlockedBy, blockedByTaskId]
               }
             }
           };
@@ -284,7 +298,7 @@ export const useAppStore = create<AppState>()(
             ...state.tasks,
             [targetTaskId]: {
               ...targetTask,
-              blockedBy: targetTask.blockedBy.filter(id => id !== blockedByTaskId),
+              blockedBy: (targetTask.blockedBy || []).filter(id => id !== blockedByTaskId),
               is_dirty: true,
               updated_at: Date.now()
             }

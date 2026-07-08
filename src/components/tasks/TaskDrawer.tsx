@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Clock, Mic, MicOff } from 'lucide-react';
+import { X, Clock, Mic, MicOff, Settings2, Calendar as CalendarIcon, Repeat } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 import { parseNaturalLanguage } from '../../utils/nlp';
@@ -17,11 +17,16 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
   
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
-  const [cycleId, setCycleId] = useState('cycle_day');
+  const [cycleId, setCycleId] = useState<string | undefined>(undefined);
+  const [dueDate, setDueDate] = useState<Date>(new Date());
   const [category, setCategory] = useState(defaultCategoryId || 'limpieza');
   const [alerts, setAlerts] = useState<string[]>([]);
   const [isListening, setIsListening] = useState(false);
   const [blockedBy, setBlockedBy] = useState<string[]>([]);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Suggested chips purely for visual feedback
+  const [suggestedChips, setSuggestedChips] = useState<{type: 'time'|'date'|'cycle', label: string}[]>([]);
 
   useEffect(() => {
     if (isOpen && defaultCategoryId) {
@@ -32,40 +37,71 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
   // Tareas disponibles para bloquear (no pueden ser la misma, y deben estar PENDING)
   const availableTasks = Object.values(useAppStore(state => state.tasks)).filter(t => t.status === 'PENDING' && !t.is_deleted);
 
-  // Efecto NLP en tiempo real: Escucha el título y autocompleta horas
+  // Efecto NLP en tiempo real: Escucha el título y autocompleta horas, fechas, ciclos
   useEffect(() => {
     if (title) {
-      const { times: detectedTimes } = parseNaturalLanguage(title);
-      if (detectedTimes.length > 0) {
+      const nlp = parseNaturalLanguage(title);
+      const newChips: {type: 'time'|'date'|'cycle', label: string}[] = [];
+      
+      // Manejar tiempos
+      if (nlp.times.length > 0) {
         if (navigator.vibrate) navigator.vibrate(20);
-        
-        const merged = Array.from(new Set([...alerts, ...detectedTimes]));
+        const merged = Array.from(new Set([...alerts, ...nlp.times]));
         if (merged.length !== alerts.length) {
           setAlerts(merged);
         }
+        nlp.times.forEach(t => newChips.push({ type: 'time', label: t }));
       }
+      
+      // Manejar sugerencia de fecha
+      if (nlp.suggestedDueDate) {
+        setDueDate(nlp.suggestedDueDate);
+        newChips.push({ type: 'date', label: nlp.suggestedDueDate.toLocaleDateString() });
+      } else {
+        setDueDate(new Date()); // Volver a hoy por defecto
+      }
+
+      // Manejar sugerencia de ciclo
+      if (nlp.suggestedCycleId) {
+        setCycleId(nlp.suggestedCycleId);
+        const cName = cycles.find(c => c.id === nlp.suggestedCycleId)?.name || 'Ciclo';
+        newChips.push({ type: 'cycle', label: cName });
+      } else {
+        setCycleId(undefined); // Volver a one-off
+      }
+      
+      setSuggestedChips(newChips);
+    } else {
+      setSuggestedChips([]);
+      setCycleId(undefined);
+      setDueDate(new Date());
     }
   }, [title]);
 
   const handleSave = () => {
     if (!title.trim()) return;
     
+    // Si no hay cycleId y es "One-off", removemos dependencias vacías para limpiar
+    const finalBlockedBy = blockedBy.length > 0 ? blockedBy : undefined;
+
     addTask({
       categoryId: category,
       title,
-      notes,
+      notes: notes || undefined,
       cycleId,
-      blockedBy,
-      dueDate: new Date(),
+      blockedBy: finalBlockedBy,
+      dueDate,
       alerts
     });
     
     // Reset y cerrar
     setTitle('');
     setNotes('');
-    setCycleId('cycle_day');
+    setCycleId(undefined);
+    setDueDate(new Date());
     setAlerts([]);
     setBlockedBy([]);
+    setShowAdvanced(false);
     onClose();
   };
 
@@ -151,66 +187,123 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
                     {isListening ? <MicOff size={20} className="pulse-anim" /> : <Mic size={20} />}
                   </button>
                 </div>
-                <textarea 
-                  className="notes-input" 
-                  placeholder="Notas adicionales" 
-                  value={notes}
-                  onChange={e => setNotes(e.target.value)}
-                  rows={3} 
-                  aria-label="Notas de la tarea"
-                />
               </div>
 
-              <div className="section-title">Detalles</div>
-              <div className="details-group">
-                <div className="detail-row frequency-row">
-                  <span className="detail-label">Frecuencia</span>
-                  <div className="frequency-selector">
-                    {cycles.map(cycle => (
-                      <button 
-                        key={cycle.id}
-                        className={`freq-btn ${cycleId === cycle.id ? 'active' : ''}`}
-                        onClick={() => setCycleId(cycle.id)}
-                        type="button"
-                      >
-                        {cycle.name}
-                      </button>
-                    ))}
-                  </div>
+              {/* Muestra chips dinámicos detectados por NLP */}
+              {suggestedChips.length > 0 && (
+                <div style={{ display: 'flex', gap: '8px', padding: '0 16px', flexWrap: 'wrap' }}>
+                  {suggestedChips.map((chip, idx) => (
+                    <div key={idx} style={{ 
+                      fontSize: '0.75rem', 
+                      background: 'var(--accent-glow)', 
+                      color: 'var(--accent-primary)',
+                      padding: '4px 10px',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      {chip.type === 'time' && <Clock size={12} />}
+                      {chip.type === 'date' && <CalendarIcon size={12} />}
+                      {chip.type === 'cycle' && <Repeat size={12} />}
+                      {chip.label}
+                    </div>
+                  ))}
                 </div>
-                <div className="divider"></div>
-                <div className="detail-row">
-                  <span className="detail-label">Lista</span>
-                  <select 
-                    className="detail-select"
-                    value={category}
-                    onChange={e => setCategory(e.target.value)}
-                  >
-                    {useAppStore.getState().lists?.map(list => (
-                      <option key={list.id} value={list.id}>{list.name}</option>
-                    ))}
-                    <option value="inbox">Bandeja de Entrada</option>
-                  </select>
-                </div>
-                <div className="divider"></div>
-                <div className="detail-row">
-                  <span className="detail-label">Bloqueada Por</span>
-                  <select 
-                    multiple
-                    className="detail-select"
-                    value={blockedBy}
-                    onChange={e => {
-                      const options = Array.from(e.target.selectedOptions, option => option.value);
-                      setBlockedBy(options);
-                    }}
-                    style={{ height: '80px' }}
-                  >
-                    {availableTasks.map(t => (
-                      <option key={t.id} value={t.id}>{t.title}</option>
-                    ))}
-                  </select>
-                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0' }}>
+                <button 
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  style={{
+                    background: 'none', border: 'none', color: 'var(--text-secondary)',
+                    display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', cursor: 'pointer'
+                  }}
+                >
+                  <Settings2 size={14} />
+                  {showAdvanced ? 'Ocultar Opciones Avanzadas' : 'Opciones Avanzadas'}
+                </button>
               </div>
+
+              <AnimatePresence>
+                {showAdvanced && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '16px' }}
+                  >
+                    <div className="input-group">
+                      <textarea 
+                        className="notes-input" 
+                        placeholder="Notas adicionales" 
+                        value={notes}
+                        onChange={e => setNotes(e.target.value)}
+                        rows={3} 
+                        aria-label="Notas de la tarea"
+                      />
+                    </div>
+
+                    <div className="section-title">Detalles</div>
+                    <div className="details-group">
+                      <div className="detail-row frequency-row">
+                        <span className="detail-label">Frecuencia</span>
+                        <div className="frequency-selector">
+                          <button 
+                            className={`freq-btn ${!cycleId ? 'active' : ''}`}
+                            onClick={() => setCycleId(undefined)}
+                            type="button"
+                          >
+                            Una Vez
+                          </button>
+                          {cycles.map(cycle => (
+                            <button 
+                              key={cycle.id}
+                              className={`freq-btn ${cycleId === cycle.id ? 'active' : ''}`}
+                              onClick={() => setCycleId(cycle.id)}
+                              type="button"
+                            >
+                              {cycle.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="divider"></div>
+                      <div className="detail-row">
+                        <span className="detail-label">Lista</span>
+                        <select 
+                          className="detail-select"
+                          value={category}
+                          onChange={e => setCategory(e.target.value)}
+                        >
+                          {useAppStore.getState().lists?.map(list => (
+                            <option key={list.id} value={list.id}>{list.name}</option>
+                          ))}
+                          <option value="inbox">Bandeja de Entrada</option>
+                        </select>
+                      </div>
+                      <div className="divider"></div>
+                      <div className="detail-row">
+                        <span className="detail-label">Bloqueada Por</span>
+                        <select 
+                          multiple
+                          className="detail-select"
+                          value={blockedBy}
+                          onChange={e => {
+                            const options = Array.from(e.target.selectedOptions, option => option.value);
+                            setBlockedBy(options);
+                          }}
+                          style={{ height: '80px' }}
+                        >
+                          {availableTasks.map(t => (
+                            <option key={t.id} value={t.id}>{t.title}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <div className="section-title">Alertas Detectadas</div>
               <div className="details-group alerts-group">
