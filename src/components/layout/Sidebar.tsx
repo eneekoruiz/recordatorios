@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Plus, BarChart2, DownloadCloud, Zap, ChevronDown, ChevronRight, Clock, CheckCircle, Flag, LayoutGrid, Check, Trash2, Calendar } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
 import { getCycleIcon } from '../../constants/icons';
+import { ListConfigModal } from './ListConfigModal';
 import './Layout.css';
 
 interface SidebarProps {
@@ -10,7 +12,7 @@ interface SidebarProps {
   onSelectView: (view: string) => void;
 }
 
-function ListHierarchy({ lists, parentId = undefined, currentView, onSelectView, addList, depth = 0 }: any) {
+function ListHierarchy({ lists, parentId = undefined, currentView, onSelectView, onAddSublist, depth = 0 }: any) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   
   const children = lists.filter((l: any) => l.parentId === parentId);
@@ -45,12 +47,9 @@ function ListHierarchy({ lists, parentId = undefined, currentView, onSelectView,
 
               <div 
                 className="add-sublist-btn"
-                onClick={async (e) => {
+                onClick={(e) => {
                   e.stopPropagation();
-                  const name = await usePromptStore.getState().openPrompt(`Sub-lista para ${list.name}:`, 'Nombre');
-                  if (!name) return;
-                  const id = name.toLowerCase().replace(/\s+/g, '-');
-                  addList({ id, parentId: list.id, name, color: list.color });
+                  onAddSublist(list.id);
                   setExpanded(prev => ({...prev, [list.id]: true}));
                 }}
                 style={{ cursor: 'pointer', opacity: 0.5 }}
@@ -61,7 +60,7 @@ function ListHierarchy({ lists, parentId = undefined, currentView, onSelectView,
             </div>
             
             {isExpanded && (
-              <ListHierarchy lists={lists} parentId={list.id} currentView={currentView} onSelectView={onSelectView} addList={addList} depth={depth + 1} />
+              <ListHierarchy lists={lists} parentId={list.id} currentView={currentView} onSelectView={onSelectView} onAddSublist={onAddSublist} depth={depth + 1} />
             )}
           </div>
         );
@@ -80,6 +79,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   
   const [isCyclesOpen, setIsCyclesOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   const getTaskCount = (view: string) => {
     const allTasks = Object.values(tasks).filter(t => !t.deleted_at);
@@ -110,24 +110,83 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
     { id: 'smart_completed', name: 'Terminado', icon: CheckCircle, color: 'var(--text-tertiary)' },
   ];
 
-  const handleAddList = async () => {
-    const name = await usePromptStore.getState().openPrompt('Nombre de la nueva lista:', 'Ej: Tareas del Hogar');
-    if (!name) return;
-    const colors = ['#ff9500', '#34c759', '#af52de', '#0a84ff', '#ff2d55'];
-    const randomColor = colors[Math.floor(Math.random() * colors.length)];
-    const id = name.toLowerCase().replace(/\s+/g, '-');
-    addList({ id, name, color: randomColor });
-    onSelectView(`list_${id}`);
+  const [isListConfigOpen, setIsListConfigOpen] = useState(false);
+  const [editingListId, setEditingListId] = useState<string | undefined>(undefined);
+  const [parentListId, setParentListId] = useState<string | undefined>(undefined);
+
+  const handleAddList = () => {
+    setEditingListId(undefined);
+    setParentListId(undefined);
+    setIsListConfigOpen(true);
   };
+
   
   return (
     <aside className="sidebar">
-      <div className="user-profile">
+      <div 
+        className="user-profile" 
+        onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+        style={{ cursor: 'pointer', position: 'relative' }}
+      >
         <div className="avatar">E</div>
         <div className="user-info">
-          <div className="user-name text-title">Eneko Ruiz</div>
+          <div className="user-name text-title" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            Eneko Ruiz <ChevronDown size={14} color="var(--text-tertiary)" />
+          </div>
           <div className="user-email text-muted">Plan Élite</div>
         </div>
+
+        <AnimatePresence>
+          {isProfileMenuOpen && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              style={{
+                position: 'absolute',
+                top: '100%',
+                left: 12,
+                right: 12,
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-md)',
+                boxShadow: 'var(--shadow-lg)',
+                zIndex: 100,
+                padding: 'var(--space-8)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 4
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="section-header" style={{ padding: '4px 8px', marginBottom: 4 }}>Mi Espacio</div>
+              <div 
+                className="nav-item"
+                onClick={() => { onSelectView('DATA'); setIsProfileMenuOpen(false); }}
+                style={{ padding: '8px', fontSize: '0.9rem', color: 'var(--text-primary)' }}
+              >
+                <Zap size={16} color="var(--accent-primary)" />
+                <span style={{ fontWeight: 500 }}>Brain Dump / Exportar</span>
+              </div>
+              <div 
+                className={`nav-item ${currentView === 'ANALYTICS' ? 'active' : ''}`}
+                onClick={() => { onSelectView('ANALYTICS'); setIsProfileMenuOpen(false); }}
+                style={{ padding: '8px', fontSize: '0.9rem', color: 'var(--text-primary)' }}
+              >
+                <BarChart2 size={16} />
+                <span style={{ fontWeight: 500 }}>Estadísticas</span>
+              </div>
+              <div 
+                className={`nav-item ${currentView === 'TRASH' ? 'active' : ''}`}
+                onClick={() => { onSelectView('TRASH'); setIsProfileMenuOpen(false); }}
+                style={{ padding: '8px', fontSize: '0.9rem', color: currentView === 'TRASH' ? 'var(--accent-red)' : 'var(--text-tertiary)' }}
+              >
+                <Trash2 size={16} />
+                <span>Papelera Eliminados</span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <div className="search-bar">
@@ -205,7 +264,31 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         {/* --- MIS LISTAS (PRIORIDAD PRINCIPAL) --- */}
         <div className="categories-section" style={{ marginTop: 'var(--space-16)', flexShrink: 0 }}>
           <div className="section-header" style={{ padding: '0 var(--space-12)' }}>Mis Listas</div>
-          <ListHierarchy lists={lists} currentView={currentView} onSelectView={onSelectView} addList={addList} />
+          <ListHierarchy 
+            lists={lists} 
+            currentView={currentView} 
+            onSelectView={onSelectView} 
+            onAddSublist={(pId: string) => { setEditingListId(undefined); setParentListId(pId); setIsListConfigOpen(true); }} 
+          />
+          <button 
+            className="add-list-btn" 
+            onClick={handleAddList} 
+            style={{ 
+              background: 'transparent', 
+              border: 'none', 
+              color: 'var(--text-secondary)', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 8, 
+              padding: 'var(--space-8) var(--space-12)',
+              marginTop: 'var(--space-8)',
+              cursor: 'pointer',
+              fontSize: '0.9rem'
+            }}
+          >
+            <Plus size={16} />
+            Nueva Lista Raíz
+          </button>
         </div>
 
         {/* --- VISTAS TEMPORALES (ACORDEÓN RESTAURADO) --- */}
@@ -227,11 +310,13 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 e.stopPropagation();
                 const name = await usePromptStore.getState().openPrompt('Nombre del nuevo ciclo temporal:', 'Ej: Siguiente Trimestre');
                 if (name) {
+                  const daysStr = await usePromptStore.getState().openPrompt('¿Cada cuántos días se repite este ciclo?', 'Ej: 14, 30, 365');
+                  const daysValue = parseInt(daysStr || '14', 10);
                   const newCycleId = `cycle_${Date.now()}`;
                   useAppStore.getState().addCycle({
                     id: newCycleId,
                     name,
-                    daysValue: 14,
+                    daysValue: isNaN(daysValue) || daysValue <= 0 ? 14 : daysValue,
                     isPinned: true,
                     icon: 'star'
                   });
@@ -263,44 +348,14 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
             </div>
           )}
         </div>
-
-        {/* --- MI ESPACIO (AL FINAL) --- */}
-        <div style={{ marginTop: 'var(--space-24)', paddingBottom: 'var(--space-24)' }}>
-          <div className="section-header" style={{ padding: '0 var(--space-12)' }}>Mi Espacio</div>
-          
-          <div 
-            className="nav-item"
-            onClick={() => onSelectView('DATA')}
-            style={{ color: 'var(--text-primary)' }}
-          >
-            <Zap size={18} color="var(--accent-primary)" />
-            <span style={{ fontWeight: 500 }}>Brain Dump / Exportar</span>
-          </div>
-
-          <div 
-            className={`nav-item ${currentView === 'ANALYTICS' ? 'active' : ''}`}
-            onClick={() => onSelectView('ANALYTICS')}
-            style={{ color: 'var(--text-primary)' }}
-          >
-            <BarChart2 size={18} />
-            <span style={{ fontWeight: 500 }}>Estadísticas</span>
-          </div>
-          
-          <div 
-            className={`nav-item ${currentView === 'TRASH' ? 'active' : ''}`}
-            onClick={() => onSelectView('TRASH')}
-            style={{ color: currentView === 'TRASH' ? 'var(--accent-red)' : 'var(--text-tertiary)' }}
-          >
-            <Trash2 size={18} />
-            <span>Papelera Eliminados</span>
-          </div>
-        </div>
       </div>
-
-      <button className="add-list-btn" onClick={handleAddList} style={{ flexShrink: 0 }}>
-        <Plus size={18} />
-        Nueva Lista Raíz
-      </button>
+      
+      <ListConfigModal 
+        isOpen={isListConfigOpen} 
+        onClose={() => setIsListConfigOpen(false)} 
+        listId={editingListId} 
+        parentId={parentListId} 
+      />
     </aside>
   );
 }

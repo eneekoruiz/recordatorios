@@ -46,8 +46,10 @@ function App() {
   const handleSelectView = (view: string) => {
     if (view === 'DATA' || view === 'BRAIN_DUMP') {
       useNavigation.getState().reset('UNIVERSAL_IMPORTER');
+      if (isMobile) setMobileView('content');
     } else if (view === 'ANALYTICS') {
       useNavigation.getState().reset('ANALYTICS');
+      if (isMobile) setMobileView('content');
     } else {
       setCurrentView(view);
       useNavigation.getState().reset('HOME');
