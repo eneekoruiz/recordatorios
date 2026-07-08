@@ -6,6 +6,12 @@ export interface CustomCycle {
   icon: string; // Nombre del icono de Lucide (ej. 'sun', 'calendar')
 }
 
+export interface CustomList {
+  id: string;
+  name: string;
+  color: string;
+}
+
 export interface TaskItem {
   id: string;
   categoryId: string;

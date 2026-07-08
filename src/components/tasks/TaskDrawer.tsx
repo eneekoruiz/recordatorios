@@ -8,19 +8,26 @@ import './TaskDrawer.css';
 interface TaskDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  defaultCategoryId?: string;
 }
 
-export function TaskDrawer({ isOpen, onClose }: TaskDrawerProps) {
+export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerProps) {
   const addTask = useAppStore(state => state.addTask);
   const cycles = useAppStore(state => state.cycles);
   
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [cycleId, setCycleId] = useState('cycle_day');
-  const [category, setCategory] = useState('limpieza');
+  const [category, setCategory] = useState(defaultCategoryId || 'limpieza');
   const [alerts, setAlerts] = useState<string[]>([]);
   const [isListening, setIsListening] = useState(false);
   const [blockedBy, setBlockedBy] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (isOpen && defaultCategoryId) {
+      setCategory(defaultCategoryId);
+    }
+  }, [isOpen, defaultCategoryId]);
 
   // Tareas disponibles para bloquear (no pueden ser la misma, y deben estar PENDING)
   const availableTasks = Object.values(useAppStore(state => state.tasks)).filter(t => t.status === 'PENDING' && !t.is_deleted);
@@ -179,9 +186,9 @@ export function TaskDrawer({ isOpen, onClose }: TaskDrawerProps) {
                     value={category}
                     onChange={e => setCategory(e.target.value)}
                   >
-                    <option value="limpieza">Limpieza</option>
-                    <option value="compra">Compra</option>
-                    <option value="skincare">Skincare</option>
+                    {useAppStore.getState().lists?.map(list => (
+                      <option key={list.id} value={list.id}>{list.name}</option>
+                    ))}
                     <option value="inbox">Bandeja de Entrada</option>
                   </select>
                 </div>

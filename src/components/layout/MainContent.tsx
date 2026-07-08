@@ -19,10 +19,17 @@ type VirtualItemType =
 export function MainContent({ currentView, onOpenNewTask, onOpenZenMode }: MainContentProps) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   
-  const { getTasksByCycle, getSmartSortTasks, completeTask, deleteTask, cycles } = useAppStore();
+  const { getTasksByCycle, getTasksByList, getSmartSortTasks, completeTask, deleteTask, cycles, lists } = useAppStore();
 
   const currentCycle = cycles.find(c => c.id === currentView);
-  const groupedTasks = getTasksByCycle(currentView);
+  const currentList = lists?.find(l => `list_${l.id}` === currentView);
+  
+  const isListView = currentView.startsWith('list_');
+
+  const groupedTasks = isListView
+    ? getTasksByList(currentView.replace('list_', ''))
+    : getTasksByCycle(currentView);
+    
   const smartTasks = currentView === 'cycle_day' ? getSmartSortTasks() : [];
 
   const toggleCategory = (cat: string) => {
@@ -31,6 +38,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode }: MainC
 
   const getTitle = () => {
     if (currentCycle) return currentCycle.name;
+    if (currentList) return currentList.name;
     return currentView;
   };
 
@@ -46,11 +54,16 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode }: MainC
       }
     }
 
-    // Categorías
-    Object.entries(groupedTasks).forEach(([category, tasks]) => {
-      const color = category === 'limpieza' ? '#ff9500' : category === 'skincare' ? '#af52de' : '#34c759';
-      flat.push({ type: 'header', title: category, category, color });
-      if (!collapsed[category]) {
+    // Categorías (Si estamos en ciclo) o Ciclos (Si estamos en Lista)
+    Object.entries(groupedTasks).forEach(([categoryOrCycle, tasks]) => {
+      let color = '#34c759'; // Default
+      if (!isListView) {
+        const catObj = lists?.find(l => l.id === categoryOrCycle);
+        if (catObj) color = catObj.color;
+      }
+      
+      flat.push({ type: 'header', title: categoryOrCycle, category: categoryOrCycle, color });
+      if (!collapsed[categoryOrCycle]) {
         const roots = tasks.filter(t => !t.parentId);
         const processNode = (task: TaskItem, depth: number) => {
           flat.push({ type: 'task', task, depth });
@@ -101,8 +114,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode }: MainC
   return (
     <main className="main-content" ref={parentRef} style={{ overflowY: 'auto' }}>
       <header className="content-header">
-        <h1 className="text-display" style={{ color: 'var(--text-primary)', marginBottom: 0, display: 'flex', alignItems: 'center', gap: 'var(--space-12)' }}>
-          {CycleIcon && <CycleIcon size={32} color="var(--accent-primary)" />} {getTitle()}
+        <h1 className="text-display" style={{ color: currentList ? currentList.color : 'var(--text-primary)', marginBottom: 0, display: 'flex', alignItems: 'center', gap: 'var(--space-12)' }}>
+          {CycleIcon && <CycleIcon size={32} color="var(--accent-primary)" />}
+          {currentList && <div style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: currentList.color }}></div>}
+          {getTitle()}
         </h1>
         <div className="header-actions">
           <button className="icon-btn" onClick={onOpenNewTask}><Plus size={24} /></button>

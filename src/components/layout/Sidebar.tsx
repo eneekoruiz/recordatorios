@@ -10,7 +10,19 @@ interface SidebarProps {
 
 export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   const cycles = useAppStore(state => state.cycles);
+  const lists = useAppStore(state => state.lists || []);
+  const addList = useAppStore(state => state.addList);
   const [isCyclesOpen, setIsCyclesOpen] = useState(false);
+
+  const handleAddList = () => {
+    const name = prompt('Nombre de la nueva lista:');
+    if (!name) return;
+    const colors = ['#ff9500', '#34c759', '#af52de', '#0a84ff', '#ff2d55'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    const id = name.toLowerCase().replace(/\s+/g, '-');
+    addList({ id, name, color: randomColor });
+    onSelectView(`list_${id}`);
+  };
 
   const IconMap: Record<string, any> = {
     'sun': Sun, 'calendar': Calendar, 'moon': Moon, 'globe': Globe,
@@ -100,21 +112,19 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
 
       <div className="categories-section">
         <div className="section-header">Mis Listas</div>
-        <div className="category-item">
-          <div className="list-icon" style={{ backgroundColor: '#ff9500' }}></div>
-          <span>Limpieza</span>
-        </div>
-        <div className="category-item">
-          <div className="list-icon" style={{ backgroundColor: '#34c759' }}></div>
-          <span>Compra</span>
-        </div>
-        <div className="category-item">
-          <div className="list-icon" style={{ backgroundColor: '#af52de' }}></div>
-          <span>Skincare</span>
-        </div>
+        {lists.map(list => (
+          <div 
+            key={list.id} 
+            className={`category-item ${currentView === `list_${list.id}` ? 'active' : ''}`}
+            onClick={() => onSelectView(`list_${list.id}`)}
+          >
+            <div className="list-icon" style={{ backgroundColor: list.color }}></div>
+            <span style={{ color: currentView === `list_${list.id}` ? 'white' : 'inherit' }}>{list.name}</span>
+          </div>
+        ))}
       </div>
 
-      <button className="add-list-btn">
+      <button className="add-list-btn" onClick={handleAddList}>
         <Plus size={18} />
         Añadir Lista
       </button>

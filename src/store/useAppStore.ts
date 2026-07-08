@@ -1,7 +1,13 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { TaskItem, CustomCycle } from '../models/Task';
+import type { TaskItem, CustomCycle, CustomList } from '../models/Task';
 import { TaskRepository } from '../repositories/TaskRepository';
+
+const INITIAL_LISTS: CustomList[] = [
+  { id: 'limpieza', name: 'Limpieza', color: '#ff9500' },
+  { id: 'compra', name: 'Compra', color: '#34c759' },
+  { id: 'skincare', name: 'Skincare', color: '#af52de' }
+];
 
 const INITIAL_CYCLES: CustomCycle[] = [
   { id: 'cycle_day', name: 'Mi Día', daysValue: 1, isPinned: true, icon: 'sun' },
@@ -13,6 +19,7 @@ const INITIAL_CYCLES: CustomCycle[] = [
 interface AppState {
   tasks: Record<string, TaskItem>;
   cycles: CustomCycle[];
+  lists: CustomList[];
   
   addTask: (task: Omit<TaskItem, 'id' | 'status' | 'createdAt' | 'updated_at' | 'is_dirty' | 'is_deleted'>) => void;
   completeTask: (id: string) => void;
@@ -22,7 +29,11 @@ interface AppState {
   updateCycle: (id: string, updates: Partial<CustomCycle>) => void;
   deleteCycle: (id: string) => void;
 
+  addList: (list: CustomList) => void;
+  deleteList: (id: string) => void;
+
   getTasksByCycle: (cycleId: string) => Record<string, TaskItem[]>;
+  getTasksByList: (listId: string) => Record<string, TaskItem[]>;
   getSmartSortTasks: () => TaskItem[]; 
 
   exportData: () => string;
@@ -38,6 +49,7 @@ export const useAppStore = create<AppState>()(
     (set, get) => ({
       tasks: {},
       cycles: INITIAL_CYCLES,
+      lists: INITIAL_LISTS,
 
       addTask: (payload) => set((state) => {
         const newTask = TaskRepository.create(payload);
@@ -86,6 +98,14 @@ export const useAppStore = create<AppState>()(
         cycles: state.cycles.filter(c => c.id !== id)
       })),
 
+      addList: (list) => set((state) => ({
+        lists: [...(state.lists || INITIAL_LISTS), list]
+      })),
+
+      deleteList: (id) => set((state) => ({
+        lists: (state.lists || INITIAL_LISTS).filter(l => l.id !== id)
+      })),
+
       // Algoritmo de Cascada Matemático
       getTasksByCycle: (cycleId) => {
         const { tasks, cycles } = get();
@@ -109,6 +129,21 @@ export const useAppStore = create<AppState>()(
         for (const task of filtered) {
           if (!grouped[task.categoryId]) grouped[task.categoryId] = [];
           grouped[task.categoryId].push(task);
+        }
+        return grouped;
+      },
+
+      getTasksByList: (listId) => {
+        const { tasks, cycles } = get();
+        const tasksArray = Object.values(tasks);
+        
+        const filtered = tasksArray.filter(t => t.categoryId === listId && t.status === 'PENDING' && !t.is_deleted);
+        
+        const grouped: Record<string, TaskItem[]> = {};
+        for (const task of filtered) {
+          const cycleName = cycles.find(c => c.id === task.cycleId)?.name || 'Personalizado';
+          if (!grouped[cycleName]) grouped[cycleName] = [];
+          grouped[cycleName].push(task);
         }
         return grouped;
       },
@@ -302,7 +337,7 @@ export const useAppStore = create<AppState>()(
               newTasks[id] = migratedTask;
             });
           }
-          state = { ...state, tasks: newTasks, cycles: INITIAL_CYCLES };
+          state = { ...state, tasks: newTasks, cycles: INITIAL_CYCLES, lists: INITIAL_LISTS };
         }
 
         if (version < 3) {
@@ -317,7 +352,7 @@ export const useAppStore = create<AppState>()(
               icon: c.icon || iconMap[c.emoji] || 'circle'
             };
           });
-          state = { ...state, cycles: migratedCycles };
+          state = { ...state, cycles: migratedCycles, lists: state.lists || INITIAL_LISTS };
         }
         
         return state as AppState;

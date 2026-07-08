@@ -71,6 +71,7 @@ function App() {
       <TaskDrawer 
         isOpen={isDrawerOpen} 
         onClose={() => setIsDrawerOpen(false)} 
+        defaultCategoryId={currentView.startsWith('list_') ? currentView.replace('list_', '') : undefined}
       />
       <CycleModal 
         isOpen={isCycleModalOpen}
