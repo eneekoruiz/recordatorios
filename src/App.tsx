@@ -13,6 +13,7 @@ import { useAppStore } from './store/useAppStore';
 import { useNavigation } from './hooks/useNavigation';
 import { NavigationFrame } from './components/layout/NavigationFrame';
 import { AuthScreen } from './components/auth/AuthScreen';
+import { InstallPromptModal } from './components/layout/InstallPromptModal';
 
 function App() {
   // ── All hooks FIRST (before any conditional returns) ──────────────
@@ -166,6 +167,7 @@ function App() {
         }}
         onOpenZenMode={(taskId) => setZenModeTaskId(taskId)}
       />
+      <InstallPromptModal />
     </div>
   );
 }
