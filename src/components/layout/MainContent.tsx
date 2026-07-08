@@ -252,7 +252,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
 
   return (
-    <main className="main-content" ref={parentRef} style={{ overflowY: 'auto' }}>
+    <main className="main-content" ref={parentRef} style={{ overflowY: 'auto', height: '100%', WebkitOverflowScrolling: 'touch' }}>
       {/* Header */}
       <header className="content-header" style={{ padding: 'var(--space-24) var(--space-48) var(--space-16)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div>
@@ -377,7 +377,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
 
             return (
               <div 
-                key={data.category} 
                 key={virtualItem.key}
                 className="group-header"
                 style={{ 

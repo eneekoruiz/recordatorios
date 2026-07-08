@@ -1,9 +1,10 @@
 import { useAppStore } from '../store/useAppStore';
 import type { TaskItem } from '../models/Task';
 
-const PULL_URL = '/api/sync/pull';
-const PUSH_URL = '/api/sync/push';
-const SYNC_INTERVAL_MS = 10 * 1000; // 10 seconds for testing
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const PULL_URL = `${API_BASE}/api/sync/pull`;
+const PUSH_URL = `${API_BASE}/api/sync/push`;
+const SYNC_INTERVAL_MS = 30 * 1000; // 30 seconds
 
 class SyncManager {
   private syncInterval: any = null;
@@ -35,11 +36,14 @@ class SyncManager {
 
   async syncNow() {
     if (this.isSyncing || !this.isOnline) return;
+    const { token } = useAppStore.getState();
+    if (!token) return; // No auth, no sync
+
     this.isSyncing = true;
 
     try {
-      await this.push();
-      await this.pull();
+      await this.push(token);
+      await this.pull(token);
     } catch (error) {
       console.error('Sync failed:', error);
     } finally {
@@ -47,22 +51,22 @@ class SyncManager {
     }
   }
 
-  private async push() {
+  private async push(token: string) {
     const state = useAppStore.getState();
     const tasks = Object.values(state.tasks).filter(t => t._is_dirty);
     const cycles = state.cycles.filter((c: any) => c._is_dirty);
+    const lists = state.lists.filter((l: any) => l._is_dirty);
 
-    if (tasks.length === 0 && cycles.length === 0) return;
+    if (tasks.length === 0 && cycles.length === 0 && lists.length === 0) return;
 
     // Send payload to backend
     const response = await fetch(PUSH_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: 'temp-user-id', // En prod sacaríamos del Auth Provider
-        tasks,
-        cycles
-      })
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ tasks, cycles, lists })
     });
 
     if (!response.ok) throw new Error('Push failed');
@@ -74,7 +78,7 @@ class SyncManager {
     // Cycles would be updated similarly
   }
 
-  private async pull() {
+  private async pull(token: string) {
     // Get highest updatedAt from local state to use as token
     const state = useAppStore.getState();
     let maxUpdatedAt = 0;
@@ -86,11 +90,14 @@ class SyncManager {
       }
     });
 
-    const url = new URL(PULL_URL, window.location.origin);
-    url.searchParams.append('userId', 'temp-user-id');
+    const url = new URL(PULL_URL);
     url.searchParams.append('lastToken', maxUpdatedAt.toString());
 
-    const response = await fetch(url.toString());
+    const response = await fetch(url.toString(), {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
     if (!response.ok) throw new Error('Pull failed');
 
     const data = await response.json();

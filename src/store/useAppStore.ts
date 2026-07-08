@@ -59,6 +59,11 @@ interface AppState {
   addDependency: (targetTaskId: string, blockedByTaskId: string) => void;
   removeDependency: (targetTaskId: string, blockedByTaskId: string) => void;
   nestTask: (taskId: string, parentId: string | undefined) => void;
+
+  token: string | null;
+  userId: string | null;
+  setToken: (token: string | null, userId: string | null) => void;
+  logout: () => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -68,6 +73,8 @@ export const useAppStore = create<AppState>()(
       cycles: INITIAL_CYCLES,
       lists: INITIAL_LISTS,
       listSections: [],
+      token: null,
+      userId: null,
       smartListVisibility: {
         smart_today: true,
         smart_scheduled: true,
@@ -75,6 +82,9 @@ export const useAppStore = create<AppState>()(
         smart_flagged: true,
         smart_completed: false
       },
+
+      setToken: (token, userId) => set({ token, userId }),
+      logout: () => set({ token: null, userId: null, tasks: {}, lists: INITIAL_LISTS, cycles: INITIAL_CYCLES, listSections: [] }),
 
       toggleSmartList: (listId) => set((state) => ({
         smartListVisibility: {

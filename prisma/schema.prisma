@@ -9,74 +9,36 @@ datasource db {
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
+  password  String
   tasks     Task[]
   cycles    Cycle[]
-  logs      Log[]
+  lists     List[]
   createdAt DateTime @default(now())
 }
 
 model Task {
-  id          String   @id @default(uuid())
+  id          String   @id
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title       String
-  description String?
-  status      String   @default("pending") // pending, in_progress, completed
-  cycleId     String?
-  cycle       Cycle?   @relation(fields: [cycleId], references: [id], onDelete: SetNull)
-  
-  attachments Attachment[]
-  
-  // Relaciones bidireccionales (dependencias)
-  dependsOn   TaskDependency[] @relation("TaskDependsOn")
-  blocking    TaskDependency[] @relation("TaskBlocking")
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt // <- El 'Sync Token'
-  deletedAt   DateTime?           // <- Soft Deletes
-  version     Int      @default(1)
-}
-
-model TaskDependency {
-  taskId          String
-  dependsOnTaskId String
-  task            Task @relation("TaskDependsOn", fields: [taskId], references: [id], onDelete: Cascade)
-  dependsOnTask   Task @relation("TaskBlocking", fields: [dependsOnTaskId], references: [id], onDelete: Cascade)
-
-  @@id([taskId, dependsOnTaskId])
+  payload     Json
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
 }
 
 model Cycle {
-  id             String   @id @default(uuid())
-  userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name           String
-  recurrenceRule String   // RRULE
-  tasks          Task[]
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  deletedAt      DateTime?
-  version        Int      @default(1)
+  id          String   @id
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payload     Json
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
 }
 
-model Attachment {
-  id        String   @id @default(uuid())
-  taskId    String
-  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  fileUrl   String   // URL en Cloudflare R2 / S3
-  fileType  String
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deletedAt DateTime?
-}
-
-model Log {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  action    String
-  details   Json?
-  createdAt DateTime @default(now())
+model List {
+  id          String   @id
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payload     Json
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
 }

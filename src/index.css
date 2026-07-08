@@ -1,17 +1,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap');
 
+/* ========================================================
+   DESIGN SYSTEM TOKENS
+======================================================== */
 :root {
-  /* ========================================================
-     DESIGN SYSTEM TOKENS
-  ======================================================== */
-  
-  /* Color Palette - Light Theme (Clean & Premium) */
+  /* Color Palette — Light Theme (Clean & Premium) */
   --bg-base: #f4f4f5;
   --bg-surface: #ffffff;
   --bg-surface-glass: rgba(255, 255, 255, 0.85);
   --bg-elevated: #f4f4f5;
   --bg-card: #ffffff;
-  
+  --bg-hover: rgba(0, 0, 0, 0.04);
+
   --accent-primary: #0a84ff;
   --accent-blue: #0a84ff;
   --accent-glow: rgba(10, 132, 255, 0.15);
@@ -55,10 +55,18 @@
   --shadow-sm: none;
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.15);
   --shadow-glow: 0 0 15px rgba(10, 132, 255, 0.3);
 
   /* Card Backgrounds */
   --card-bg: #ffffff;
+}
+
+/* ========================================================
+   GLOBAL SMOOTH SCROLLING
+======================================================== */
+html {
+  scroll-behavior: smooth;
 }
 
 /* ========================================================
@@ -74,46 +82,100 @@ body {
   font-family: var(--font-sans);
   background-color: var(--bg-base);
   color: var(--text-primary);
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 /* ========================================================
-   UTILITY & LAYOUT
+   KEYFRAME ANIMATIONS
+======================================================== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* ========================================================
+   LAYOUT — APP SHELL
 ======================================================== */
 .app-container {
   display: flex;
-  height: 100vh;
-  width: 100vw;
+  min-height: 100vh;
+  width: 100%;
   background: var(--bg-base);
 }
 
+/* ---------- Sidebar ---------- */
 .sidebar-container {
   width: 280px;
   height: 100vh;
+  position: sticky;
+  top: 0;
+  flex-shrink: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  flex-shrink: 0;
   border-right: 1px solid var(--border-subtle);
   background: var(--bg-surface-glass);
+
+  /* Scrollbar — Firefox */
   scrollbar-width: thin;
   scrollbar-color: var(--border-subtle) transparent;
 }
 
+/* Scrollbar — Webkit (Chrome / Safari / Edge) */
+.sidebar-container::-webkit-scrollbar {
+  width: 5px;
+}
+.sidebar-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-container::-webkit-scrollbar-thumb {
+  background-color: var(--border-subtle);
+  border-radius: var(--radius-full);
+}
+
+/* ---------- Main ---------- */
 .main-container {
   flex: 1;
-  height: 100vh;
+  min-height: 100vh;
   overflow-y: auto;
   position: relative;
+
+  /* Scrollbar — Firefox */
   scrollbar-width: thin;
   scrollbar-color: var(--border-subtle) transparent;
+}
+
+.main-container::-webkit-scrollbar {
+  width: 5px;
+}
+.main-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+.main-container::-webkit-scrollbar-thumb {
+  background-color: var(--border-subtle);
+  border-radius: var(--radius-full);
 }
 
 .main-content {
-  padding: var(--space-48) var(--space-64);
-  max-width: 1200px;
+  padding: 32px 48px;
+  max-width: 900px;
   margin: 0 auto;
 }
 
@@ -156,7 +218,7 @@ body {
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid var(--border-focus);
-  transform: translateZ(0); 
+  transform: translateZ(0);
 }
 
 .surface-card {
@@ -287,4 +349,65 @@ input:checked + .slider::before {
 }
 .slider.round::before {
   border-radius: 50%;
+}
+
+/* ========================================================
+   FAB (Floating Action Button)
+======================================================== */
+.fab {
+  position: fixed;
+  bottom: 48px;
+  right: 48px;
+  z-index: 50;
+}
+
+/* ========================================================
+   RESPONSIVE — MOBILE FIRST (≤ 768px)
+======================================================== */
+@media (max-width: 768px) {
+  /* Stack layout vertically */
+  .app-container {
+    flex-direction: column;
+  }
+
+  /* Sidebar: full-width, non-sticky on mobile */
+  .sidebar-container {
+    width: 100%;
+    height: auto;
+    position: relative;
+    border-right: none;
+    overflow-y: visible;
+  }
+
+  /* Toggle classes for mobile navigation */
+  .app-container.mobile-sidebar .main-container {
+    display: none;
+  }
+
+  .app-container.mobile-sidebar .sidebar-container {
+    width: 100%;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+
+  .app-container.mobile-content .sidebar-container {
+    display: none;
+  }
+
+  .app-container.mobile-content .main-container {
+    width: 100%;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+
+  /* Content padding reduction */
+  .main-content {
+    padding: 16px;
+  }
+
+  /* FAB repositioning */
+  .fab {
+    bottom: 32px;
+    right: 32px;
+  }
 }

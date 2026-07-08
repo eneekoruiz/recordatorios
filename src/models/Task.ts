@@ -6,7 +6,7 @@ export interface CustomCycle {
   isPinned: boolean;
   icon: string;
   recurrence_rule?: string; // RRULE format
-  created_at?: string; // ISO String for Supabase timestampz
+  created_at?: string; // ISO String
   updated_at?: string;
   deleted_at?: string;
   version?: number;
@@ -48,7 +48,7 @@ export interface Attachment {
 
 export interface TaskItem {
   id: string;
-  user_id: string; // From Supabase
+  user_id: string; // Foreign key to users
   categoryId?: string; // Corresponds to List in frontend
   type: 'task' | 'log'; 
   title: string;
@@ -89,7 +89,7 @@ export interface TaskItem {
   location?: { lat: number; lng: number; radius: number; address: string };
   locationName?: string; 
 
-  // --- SYNC-READY FIELDS (Supabase) ---
+  // --- SYNC-READY FIELDS ---
   created_at: string; // ISO String
   updated_at: string; // ISO String
   deleted_at?: string; // ISO String

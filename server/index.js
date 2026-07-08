@@ -1,0 +1,164 @@
+import express from 'express';
+import cors from 'cors';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
+import pkg from '@prisma/client';
+const { PrismaClient } = pkg;
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const app = express();
+const prisma = new PrismaClient();
+const PORT = process.env.PORT || 3001;
+const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_for_recordatorios';
+
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
+
+// --- MIDDLEWARE ---
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) return res.sendStatus(401);
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.sendStatus(403);
+    req.user = user;
+    next();
+  });
+};
+
+// --- AUTHENTICATION ---
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'Faltan credenciales' });
+
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) return res.status(400).json({ error: 'El email ya está registrado' });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await prisma.user.create({
+      data: { email, password: hashedPassword }
+    });
+
+    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET);
+    res.json({ token, user: { id: user.id, email: user.email } });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) return res.status(400).json({ error: 'Usuario no encontrado' });
+
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) return res.status(400).json({ error: 'Contraseña incorrecta' });
+
+    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET);
+    res.json({ token, user: { id: user.id, email: user.email } });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// --- SYNC ---
+app.post('/api/sync/push', authenticateToken, async (req, res) => {
+  const { tasks, cycles, lists } = req.body;
+  const userId = req.user.id;
+
+  try {
+    const transaction = [];
+
+    // Tareas
+    if (tasks && tasks.length > 0) {
+      for (const t of tasks) {
+        transaction.push(
+          prisma.task.upsert({
+            where: { id: t.id },
+            update: { payload: t, deletedAt: t.deleted_at ? new Date(t.deleted_at) : null },
+            create: { id: t.id, userId, payload: t, deletedAt: t.deleted_at ? new Date(t.deleted_at) : null }
+          })
+        );
+      }
+    }
+
+    // Ciclos
+    if (cycles && cycles.length > 0) {
+      for (const c of cycles) {
+        transaction.push(
+          prisma.cycle.upsert({
+            where: { id: c.id },
+            update: { payload: c },
+            create: { id: c.id, userId, payload: c }
+          })
+        );
+      }
+    }
+
+    // Listas (CustomLists)
+    if (lists && lists.length > 0) {
+      for (const l of lists) {
+        transaction.push(
+          prisma.list.upsert({
+            where: { id: l.id },
+            update: { payload: l },
+            create: { id: l.id, userId, payload: l }
+          })
+        );
+      }
+    }
+
+    await prisma.$transaction(transaction);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Push error:', error);
+    res.status(500).json({ error: 'Error sincronizando datos' });
+  }
+});
+
+app.get('/api/sync/pull', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  const lastToken = parseInt(req.query.lastToken || '0', 10);
+  const lastDate = new Date(lastToken);
+
+  try {
+    const tasks = await prisma.task.findMany({
+      where: { userId, updatedAt: { gt: lastDate } }
+    });
+    
+    const cycles = await prisma.cycle.findMany({
+      where: { userId, updatedAt: { gt: lastDate } }
+    });
+
+    const lists = await prisma.list.findMany({
+      where: { userId, updatedAt: { gt: lastDate } }
+    });
+
+    res.json({
+      tasks: tasks.map(t => t.payload),
+      cycles: cycles.map(c => c.payload),
+      lists: lists.map(l => l.payload)
+    });
+  } catch (error) {
+    console.error('Pull error:', error);
+    res.status(500).json({ error: 'Error obteniendo datos' });
+  }
+});
+
+// START
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`✅ Recordatorios Backend running on port ${PORT}`);
+  });
+}
+
+export default app;
