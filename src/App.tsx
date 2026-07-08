@@ -18,6 +18,7 @@ import { InstallPromptModal } from './components/layout/InstallPromptModal';
 function App() {
   // ── All hooks FIRST (before any conditional returns) ──────────────
   const token = useAppStore((state) => state.token);
+  const tasks = useAppStore((state) => state.tasks); // Subscribing to tasks
   const [currentView, setCurrentView] = useState('cycle_day');
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [mobileView, setMobileView] = useState<'sidebar' | 'content'>('sidebar');
@@ -40,15 +41,20 @@ function App() {
     const geoService = GeolocationService.getInstance();
 
     const getGeoTasks = () => {
-      const state = useAppStore.getState();
-      return Object.values(state.tasks).filter(
+      return Object.values(tasks).filter(
         (t) => t.status === 'pending' && !t.deleted_at && t.location,
       );
     };
 
     geoService.startGeofencing(getGeoTasks);
-    return () => geoService.stopGeofencing();
-  }, []);
+    
+    // Cleanup no borra el watcher si no hay tareas, pero stopGeofencing lo maneja
+    return () => {
+      // Solo detenemos si el componente App se desmonta (casi nunca), 
+      // o cuando cambian las dependencias para reiniciar con nuevas tareas.
+      geoService.stopGeofencing();
+    };
+  }, [tasks]); // Re-evaluar cuando cambien las tareas
 
   // ── Default lists initialization ─────────────────────────────────
   useEffect(() => {
