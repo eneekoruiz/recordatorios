@@ -12,10 +12,10 @@ const INITIAL_LISTS: CustomList[] = [
 ];
 
 const INITIAL_CYCLES: CustomCycle[] = [
-  { id: 'cycle_day', name: 'Mi Día', daysValue: 1, isPinned: true, icon: 'sun' },
-  { id: 'cycle_week', name: 'Mi Semana', daysValue: 7, isPinned: true, icon: 'calendar' },
-  { id: 'cycle_month', name: 'Mi Mes', daysValue: 30, isPinned: true, icon: 'moon' },
-  { id: 'cycle_year', name: 'Mi Año', daysValue: 365, isPinned: true, icon: 'globe' },
+  { id: 'cycle_day', name: 'Diario', daysValue: 1, isPinned: true, icon: 'sun' },
+  { id: 'cycle_week', name: 'Semanal', daysValue: 7, isPinned: true, icon: 'calendar' },
+  { id: 'cycle_month', name: 'Mensual', daysValue: 30, isPinned: true, icon: 'moon' },
+  { id: 'cycle_year', name: 'Anual', daysValue: 365, isPinned: true, icon: 'globe' },
 ];
 
 interface AppState {

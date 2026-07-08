@@ -185,6 +185,9 @@
   text-align: right;
   cursor: pointer;
   max-width: 60%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .detail-select:focus {

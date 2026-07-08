@@ -498,7 +498,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
                           }}
                           style={{ width: '100%' }}
                         >
-                          <option value="">+ Añadir tarea bloqueadora...</option>
+                          <option value="">+ Tarea bloqueadora...</option>
                           {availableTasks.filter(t => !blockedBy.includes(t.id)).map(t => (
                             <option key={t.id} value={t.id}>{t.title}</option>
                           ))}
