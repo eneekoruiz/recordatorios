@@ -90,13 +90,30 @@ body {
   background: radial-gradient(circle at top left, #121214 0%, var(--bg-base) 100%);
 }
 
-.main-content {
+.sidebar-container {
+  width: 280px;
+  height: 100vh;
+  overflow-y: auto;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border-subtle);
+  background: var(--bg-surface-glass);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-subtle) transparent;
+}
+
+.main-container {
   flex: 1;
-  padding: var(--space-48) var(--space-64);
+  height: 100vh;
   overflow-y: auto;
   position: relative;
   scrollbar-width: thin;
   scrollbar-color: var(--border-subtle) transparent;
+}
+
+.main-content {
+  padding: var(--space-48) var(--space-64);
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 /* ========================================================
