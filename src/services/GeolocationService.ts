@@ -43,6 +43,10 @@ export class GeolocationService {
     if (!('geolocation' in navigator)) return;
     if (sessionStorage.getItem('geoDenied') === 'true') return;
 
+    // Solo pedir ubicación si hay tareas que la necesiten o si el usuario ya dio permiso
+    const tasks = getGeoTasks();
+    if (tasks.length === 0) return;
+
     this.watchId = navigator.geolocation.watchPosition(
       (position) => {
         const now = Date.now();

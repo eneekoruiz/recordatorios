@@ -498,6 +498,14 @@ export const useAppStore = create<AppState>()(
       name: 'reminders-storage',
       storage: createJSONStorage(() => idbStorage),
       version: 3,
+      merge: (persistedState: any, currentState: any) => ({
+        ...currentState,
+        ...persistedState,
+        smartListVisibility: {
+          ...currentState.smartListVisibility,
+          ...(persistedState.smartListVisibility || {})
+        }
+      }),
       migrate: (persistedState: any, version: number) => {
         let state = persistedState;
         
