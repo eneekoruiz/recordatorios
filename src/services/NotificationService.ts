@@ -17,7 +17,7 @@ export class NotificationService {
   public async requestPermissions(): Promise<boolean> {
     try {
       if (!('Notification' in window)) {
-        console.warn('[QA Fallback] Entorno sin soporte de notificaciones.');
+        // Silencioso
         this.permissionDenied = true;
         return false;
       }
@@ -31,7 +31,7 @@ export class NotificationService {
       if (Notification.permission === 'denied') {
         this.permissionDenied = true;
         this.hasPermission = false;
-        console.warn('[QA Fallback] El usuario denegó permanentemente las notificaciones. La app seguirá funcionando en modo silencioso.');
+        // Silencioso
         return false;
       }
 
@@ -40,7 +40,7 @@ export class NotificationService {
       this.permissionDenied = permission === 'denied';
       return this.hasPermission;
     } catch (error) {
-      console.error('[QA Fatal Error] Fallo al solicitar permisos:', error);
+      // Silencioso
       this.permissionDenied = true;
       return false; // Zero crashes
     }
@@ -54,7 +54,7 @@ export class NotificationService {
       try {
         this.checkAndFireAlerts(getPendingAlerts());
       } catch (e) {
-        console.error('[QA Background Error] El planificador falló pero fue interceptado para evitar crash:', e);
+        // Silencioso
       }
     }, 60000);
     
@@ -100,7 +100,7 @@ export class NotificationService {
         notification.close();
       };
     } catch (error) {
-      console.error('[QA Notification Error] Imposible instanciar la notificación nativa:', error);
+      // Silencioso
     }
   }
 }

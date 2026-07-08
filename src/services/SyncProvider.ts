@@ -23,7 +23,7 @@ export class SyncProvider {
     const dirtyTasks = Object.values(localTasks).filter(t => t.is_dirty);
     if (dirtyTasks.length === 0) return;
 
-    console.log(`[Cloud Sync] Preparando para subir ${dirtyTasks.length} registros...`);
+    // Silencioso
     
     // TODO: Ejemplo para Supabase:
     // const { error } = await supabase.from('tasks').upsert(dirtyTasks);
@@ -35,7 +35,7 @@ export class SyncProvider {
    * Utiliza el campo `updated_at` para resolver conflictos (gana el registro más reciente).
    */
   public static async pullRemoteUpdates(lastSyncTimestamp: number): Promise<TaskItem[]> {
-    console.log(`[Cloud Sync] Buscando cambios remotos desde ${new Date(lastSyncTimestamp).toISOString()}`);
+    // Silencioso
     
     // TODO: Ejemplo para Supabase:
     // const { data, error } = await supabase
@@ -57,7 +57,7 @@ export class SyncProvider {
       // const incoming = await this.pullRemoteUpdates(Date.now() - 60000); // pull
       // TODO: Hacer un 'merge' en el Repositorio de los records incoming
     } catch (e) {
-      console.error('[Cloud Sync] Fallo en el ciclo de sincronización. La app sigue operando en modo Offline-First.', e);
+      // Silencioso
     }
   }
 }
