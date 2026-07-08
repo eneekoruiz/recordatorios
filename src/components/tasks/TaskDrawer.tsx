@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Clock, Mic, MicOff, Settings2, Calendar as CalendarIcon, Repeat } from 'lucide-react';
+import { X, Clock, Mic, MicOff, Settings2, Calendar as CalendarIcon, Repeat, Link2, PlusCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 import { parseNaturalLanguage } from '../../utils/nlp';
@@ -25,6 +25,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
   const [blockedBy, setBlockedBy] = useState<string[]>([]);
   const [sectionId, setSectionId] = useState<string | undefined>(undefined);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [hasDate, setHasDate] = useState(false);
+  const [hasTime, setHasTime] = useState(false);
 
   // Suggested chips purely for visual feedback
   const [suggestedChips, setSuggestedChips] = useState<{type: 'time'|'date'|'cycle', label: string}[]>([]);
@@ -107,6 +109,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
     setAlerts([]);
     setBlockedBy([]);
     setShowAdvanced(false);
+    setHasDate(false);
+    setHasTime(false);
     onClose();
   };
 
@@ -251,28 +255,90 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
 
                     <div className="section-title">Detalles</div>
                     <div className="details-group">
-                      <div className="detail-row frequency-row">
-                        <span className="detail-label">Frecuencia</span>
-                        <div className="frequency-selector">
-                          <button 
-                            className={`freq-btn ${!cycleId ? 'active' : ''}`}
-                            onClick={() => setCycleId(undefined)}
-                            type="button"
-                          >
-                            Una Vez
-                          </button>
+                      <div className="detail-row frequency-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span className="detail-label" style={{ marginBottom: 0 }}>Repetir</span>
+                        <select 
+                          className="detail-select"
+                          value={cycleId || ''}
+                          onChange={e => setCycleId(e.target.value || undefined)}
+                          style={{ width: 'auto', textAlign: 'right', border: 'none', background: 'transparent' }}
+                        >
+                          <option value="">Nunca</option>
                           {cycles.map(cycle => (
-                            <button 
-                              key={cycle.id}
-                              className={`freq-btn ${cycleId === cycle.id ? 'active' : ''}`}
-                              onClick={() => setCycleId(cycle.id)}
-                              type="button"
-                            >
-                              {cycle.name}
-                            </button>
+                            <option key={cycle.id} value={cycle.id}>{cycle.name}</option>
                           ))}
-                        </div>
+                        </select>
                       </div>
+                      <div className="divider"></div>
+                      
+                      <div className="detail-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <CalendarIcon size={18} color="var(--accent-red)" />
+                          <span className="detail-label" style={{ marginBottom: 0 }}>Fecha</span>
+                        </div>
+                        <label className="switch">
+                          <input type="checkbox" checked={hasDate} onChange={e => setHasDate(e.target.checked)} />
+                          <span className="slider round"></span>
+                        </label>
+                      </div>
+                      {hasDate && (
+                        <div className="detail-row" style={{ marginTop: -8 }}>
+                          <input 
+                            type="date" 
+                            className="detail-select" 
+                            value={dueDate.toISOString().split('T')[0]}
+                            onChange={e => setDueDate(new Date(e.target.value))}
+                          />
+                        </div>
+                      )}
+                      
+                      <div className="divider"></div>
+
+                      <div className="detail-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <Clock size={18} color="var(--accent-blue)" />
+                          <span className="detail-label" style={{ marginBottom: 0 }}>Hora</span>
+                        </div>
+                        <label className="switch">
+                          <input type="checkbox" checked={hasTime} onChange={e => {
+                            setHasTime(e.target.checked);
+                            if (e.target.checked && alerts.length === 0) setAlerts(['09:00']);
+                          }} />
+                          <span className="slider round"></span>
+                        </label>
+                      </div>
+                      {hasTime && (
+                        <div className="detail-row" style={{ marginTop: -8 }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {alerts.map((time, idx) => (
+                              <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                <input 
+                                  type="time" 
+                                  className="detail-select" 
+                                  value={time}
+                                  onChange={e => {
+                                    const newAlerts = [...alerts];
+                                    newAlerts[idx] = e.target.value;
+                                    setAlerts(newAlerts);
+                                  }}
+                                  style={{ flex: 1 }}
+                                />
+                                <button className="icon-btn" onClick={() => removeAlert(time)} style={{ background: 'var(--bg-surface)' }}>
+                                  <X size={16} color="var(--text-tertiary)" />
+                                </button>
+                              </div>
+                            ))}
+                            <button 
+                              className="add-alert-btn"
+                              onClick={() => setAlerts([...alerts, '12:00'])}
+                              style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--accent-primary)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px 0', fontSize: '0.9rem' }}
+                            >
+                              <PlusCircle size={16} /> Añadir hora
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      
                       <div className="divider"></div>
                       <div className="detail-row">
                         <span className="detail-label">Lista</span>
@@ -308,19 +374,43 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
                       )}
 
                       <div className="divider"></div>
-                      <div className="detail-row">
-                        <span className="detail-label">Bloqueada Por</span>
+                      <div className="detail-row" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                          <Link2 size={18} color="var(--text-tertiary)" />
+                          <span className="detail-label" style={{ marginBottom: 0 }}>Bloqueada Por</span>
+                        </div>
+                        
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                          {blockedBy.map(tId => {
+                            const bTask = availableTasks.find(t => t.id === tId);
+                            if (!bTask) return null;
+                            return (
+                              <div key={tId} style={{ 
+                                display: 'flex', alignItems: 'center', gap: 4, 
+                                background: 'var(--bg-surface)', padding: '4px 10px', 
+                                borderRadius: 16, fontSize: '0.85rem' 
+                              }}>
+                                <span>{bTask.title}</span>
+                                <button className="chip-remove" onClick={() => setBlockedBy(blockedBy.filter(id => id !== tId))} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 2 }}>
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+
                         <select 
-                          multiple
                           className="detail-select"
-                          value={blockedBy}
+                          value=""
                           onChange={e => {
-                            const options = Array.from(e.target.selectedOptions, option => option.value);
-                            setBlockedBy(options);
+                            if (e.target.value && !blockedBy.includes(e.target.value)) {
+                              setBlockedBy([...blockedBy, e.target.value]);
+                            }
                           }}
-                          style={{ height: '80px' }}
+                          style={{ width: '100%' }}
                         >
-                          {availableTasks.map(t => (
+                          <option value="">+ Añadir tarea bloqueadora...</option>
+                          {availableTasks.filter(t => !blockedBy.includes(t.id)).map(t => (
                             <option key={t.id} value={t.id}>{t.title}</option>
                           ))}
                         </select>
