@@ -45,13 +45,12 @@ function App() {
 
   const handleSelectView = (view: string) => {
     if (view === 'DATA' || view === 'BRAIN_DUMP') {
-      push('UNIVERSAL_IMPORTER');
+      useNavigation.getState().reset('UNIVERSAL_IMPORTER');
     } else if (view === 'ANALYTICS') {
-      push('ANALYTICS');
-    } else if (view === 'MANAGE_CYCLES') {
-      // Ignorado, ahora se hace inline
+      useNavigation.getState().reset('ANALYTICS');
     } else {
       setCurrentView(view);
+      useNavigation.getState().reset('HOME');
       if (isMobile) setMobileView('content');
     }
   };
@@ -107,7 +106,7 @@ function App() {
       </div>
       
       <NavigationFrame>
-        {getNavView() === 'HOME' && (
+        {useNavigation.getState().currentView() === 'HOME' && (
           <div className="main-container">
             <MainContent 
               currentView={currentView}
@@ -118,10 +117,10 @@ function App() {
             />
           </div>
         )}
-        {getNavView() === 'UNIVERSAL_IMPORTER' && (
+        {useNavigation.getState().currentView() === 'UNIVERSAL_IMPORTER' && (
           <UniversalImporter />
         )}
-        {getNavView() === 'ANALYTICS' && (
+        {useNavigation.getState().currentView() === 'ANALYTICS' && (
           <AnalyticsView />
         )}
       </NavigationFrame>

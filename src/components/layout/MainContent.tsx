@@ -314,11 +314,13 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
         </div>
         <div className="header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {!isSmartView && currentView !== 'TRASH' && (
-            <label className="switch" style={{ marginRight: 16 }} title="Mostrar Completados">
-              <span style={{ marginRight: 8, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Completados</span>
-              <input type="checkbox" checked={showCompleted} onChange={e => setShowCompleted(e.target.checked)} />
-              <span className="slider round"></span>
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', marginRight: 16, gap: 8 }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Completados</span>
+              <label className="switch" title="Mostrar Completados">
+                <input type="checkbox" checked={showCompleted} onChange={e => setShowCompleted(e.target.checked)} />
+                <span className="slider round"></span>
+              </label>
+            </div>
           )}
           {isListView && (
             <button className="icon-btn" onClick={handleAddSection} title="Añadir Sección">
