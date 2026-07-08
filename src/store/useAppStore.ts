@@ -38,7 +38,9 @@ interface AppState {
   deleteCycle: (id: string) => void;
 
   addList: (list: CustomList) => void;
+  updateList: (id: string, updates: Partial<CustomList>) => void;
   deleteList: (id: string) => void;
+  removeList: (id: string) => void;
 
   addListSection: (section: ListSection) => void;
   updateListSection: (id: string, name: string) => void;
@@ -170,11 +172,15 @@ export const useAppStore = create<AppState>()(
       })),
 
       addList: (list) => set((state) => ({
-        lists: [...(state.lists || INITIAL_LISTS), list]
+        lists: [...state.lists, list]
       })),
 
-      deleteList: (id) => set((state) => ({
-        lists: (state.lists || INITIAL_LISTS).filter(l => l.id !== id)
+      updateList: (id, data) => set((state) => ({
+        lists: state.lists.map(l => l.id === id ? { ...l, ...data } : l)
+      })),
+
+      removeList: (id) => set((state) => ({
+        lists: state.lists.filter(l => l.id !== id && l.parentId !== id) // Remove list and its sublists
       })),
 
       addListSection: (section) => set((state) => ({
@@ -271,18 +277,17 @@ export const useAppStore = create<AppState>()(
         
         const grouped: Record<string, TaskItem[]> = {};
         for (const task of filtered) {
-          let groupName = '';
+          let groupKey = '';
           if (task.sectionId) {
-            const section = (listSections || []).find(s => s.id === task.sectionId);
-            groupName = section ? `section_${section.name}` : 'Personalizado';
+            groupKey = `section_${task.sectionId}`;
           } else if (task.cycle_id) {
-            groupName = cycles.find(c => c.id === task.cycle_id)?.name || 'Personalizado';
+            groupKey = `cycle_${task.cycle_id}`;
           } else {
-            groupName = 'Una Vez (One-off)';
+            groupKey = 'Una Vez (One-off)';
           }
 
-          if (!grouped[groupName]) grouped[groupName] = [];
-          grouped[groupName].push(task);
+          if (!grouped[groupKey]) grouped[groupKey] = [];
+          grouped[groupKey].push(task);
         }
         return grouped;
       },

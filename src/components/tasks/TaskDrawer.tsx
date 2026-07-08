@@ -205,7 +205,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
               </button>
             </div>
 
-            <div className="drawer-content" role="form" aria-labelledby="drawer-title">
+            <div className="drawer-content" role="form" aria-labelledby="drawer-title" style={{ overflowY: 'auto' }}>
               
               <div className="input-group">
                 <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -287,18 +287,21 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
                       />
                     </div>
 
-                    <div className="section-title">Modo Financiero (Shopping)</div>
-                    <div className="details-group">
-                      <div className="detail-row frequency-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span className="detail-label" style={{ marginBottom: 0 }}>Habilitar Detalle</span>
-                        <label className="switch">
-                          <input type="checkbox" checked={isDetailed} onChange={e => setIsDetailed(e.target.checked)} />
-                          <span className="slider round"></span>
-                        </label>
-                      </div>
+                    {/* Only show Financial Mode if the list is financial or if it's inbox/uncategorized */}
+                    {(category === 'inbox' || useAppStore.getState().lists.find(l => l.id === category)?.isFinancial) && (
+                      <>
+                        <div className="section-title">Modo Financiero (Shopping)</div>
+                        <div className="details-group">
+                          <div className="detail-row frequency-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span className="detail-label" style={{ marginBottom: 0 }}>Habilitar Detalle</span>
+                            <label className="switch">
+                              <input type="checkbox" checked={isDetailed} onChange={e => setIsDetailed(e.target.checked)} />
+                              <span className="slider round"></span>
+                            </label>
+                          </div>
 
-                      <AnimatePresence>
-                        {isDetailed && (
+                          <AnimatePresence>
+                            {isDetailed && (
                           <motion.div
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
@@ -346,6 +349,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
                         )}
                       </AnimatePresence>
                     </div>
+                    </>
+                    )}
 
                     <div className="section-title">Detalles</div>
                     <div className="details-group">

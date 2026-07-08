@@ -18,11 +18,13 @@ export interface CustomList {
   name: string;
   color: string;
   icon?: string; // Lucide icon name
+  isFinancial?: boolean; // Habilita campos de coste y modo financiero en tareas
 }
 
 export interface ListSection {
   id: string;
   listId: string;
+  parentId?: string; // Para sub-secciones anidadas
   name: string;
 }
 

@@ -8,6 +8,8 @@ import { TaskCard } from '../tasks/TaskCard';
 import { EmptyState } from '../ui/EmptyState';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { getCycleIcon } from '../../constants/icons';
+import { ListConfigModal } from './ListConfigModal';
+import { Settings } from 'lucide-react';
 
 interface MainContentProps {
   currentView: string;
@@ -18,7 +20,7 @@ interface MainContentProps {
 }
 
 type VirtualItemType = 
-  | { type: 'header', title: string, category: string, color: string, sectionId?: string }
+  | { type: 'header', title: string, category: string, color: string, sectionId?: string, depth: number }
   | { type: 'task', task: TaskItem, depth: number };
 
 const SMART_COLORS: Record<string, string> = {
@@ -125,17 +127,20 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
     return 'Tareas';
   }, [isSmartView, currentView, currentCycle, currentList]);
 
-  const handleAddSection = useCallback(async () => {
+  const handleAddSection = useCallback(async (parentId?: string) => {
     if (!currentList) return;
     const name = await usePromptStore.getState().openPrompt("Nombre de la nueva sección:", "Ej: Compras");
     if (name) {
       addListSection({
         id: crypto.randomUUID(),
         listId: currentList.id,
+        parentId,
         name
       });
     }
   }, [currentList, addListSection]);
+
+  const [isListConfigOpen, setIsListConfigOpen] = useState(false);
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [confirmProps, setConfirmProps] = useState({ title: '', message: '', onConfirm: () => {} });
@@ -174,6 +179,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
     Object.entries(groupedTasks).forEach(([categoryOrCycle, categoryTasks]) => {
       let color = '#34c759'; // Default
       let originalSectionId: string | undefined;
+      let headerTitle = categoryOrCycle;
+      let headerDepth = 0;
 
       if (!isListView) {
         const catObj = lists?.find(l => l.id === categoryOrCycle);
@@ -181,13 +188,25 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
       } else {
         color = currentList?.color || color;
         if (categoryOrCycle.startsWith('section_')) {
-          const sectionName = categoryOrCycle.replace('section_', '');
-          const sec = listSections?.find(s => s.name === sectionName && s.listId === currentList?.id);
-          if (sec) originalSectionId = sec.id;
+          const sectionId = categoryOrCycle.replace('section_', '');
+          const sec = listSections?.find(s => s.id === sectionId);
+          if (sec) {
+            originalSectionId = sec.id;
+            headerTitle = sec.name;
+            // Calculate depth
+            let currentSec = sec;
+            while (currentSec?.parentId) {
+              headerDepth++;
+              currentSec = listSections?.find(s => s.id === currentSec?.parentId);
+            }
+          }
+        } else if (categoryOrCycle.startsWith('cycle_')) {
+          const cycleId = categoryOrCycle.replace('cycle_', '');
+          headerTitle = cycles.find(c => c.id === cycleId)?.name || 'Ciclo';
         }
       }
       
-      flat.push({ type: 'header', title: categoryOrCycle.replace('section_', ''), category: categoryOrCycle, color, sectionId: originalSectionId });
+      flat.push({ type: 'header', title: headerTitle, category: categoryOrCycle, color, sectionId: originalSectionId, depth: headerDepth });
       if (!collapsed[categoryOrCycle]) {
         const roots = categoryTasks.filter(t => !t.parentId);
         const processNode = (task: TaskItem, depth: number) => {
@@ -322,8 +341,13 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
               </label>
             </div>
           )}
+          {isListView && currentList && (
+            <button className="icon-btn" onClick={() => setIsListConfigOpen(true)} title="Configurar Lista">
+              <Settings size={20} />
+            </button>
+          )}
           {isListView && (
-            <button className="icon-btn" onClick={handleAddSection} title="Añadir Sección">
+            <button className="icon-btn" onClick={() => handleAddSection()} title="Añadir Sección Raíz">
               <FolderPlus size={20} />
             </button>
           )}
@@ -354,70 +378,68 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
             return (
               <div 
                 key={data.category} 
-                style={{
-                  ...virtualStyle,
-                  background: isDraggingOver ? 'var(--bg-surface-glass)' : 'transparent',
-                  transition: 'background 0.2s',
-                  borderRadius: 'var(--radius-md)'
-                }} 
-                className="group-header" 
+                key={virtualItem.key}
+                className="group-header"
+                style={{ 
+                  ...virtualStyle, 
+                  borderBottom: `2px solid ${data.color}30`,
+                  paddingLeft: `calc(12px + ${data.depth * 24}px)` // Indent sub-sections
+                }}
                 onClick={() => toggleCategory(data.category)}
-                onDragOver={(e) => {
-                  if (!isCustomSection || !sectionId) return;
-                  e.preventDefault();
-                  setDragOverSectionId(sectionId);
-                }}
-                onDragLeave={() => {
-                  setDragOverSectionId(null);
-                }}
-                onDrop={(e) => {
+                onDragOver={isCustomSection ? (e) => { e.preventDefault(); setDragOverSectionId(data.sectionId!); } : undefined}
+                onDragLeave={isCustomSection ? () => setDragOverSectionId(null) : undefined}
+                onDrop={isCustomSection ? (e) => {
                   e.preventDefault();
                   setDragOverSectionId(null);
-                  if (!isCustomSection || !sectionId) return;
-                  
-                  const draggedTaskId = e.dataTransfer.getData('text/plain');
-                  if (draggedTaskId) {
-                    updateTaskSection(draggedTaskId, sectionId);
-                  }
-                }}
+                  const taskId = e.dataTransfer.getData('text/plain');
+                  if (taskId) updateTaskSection(taskId, data.sectionId!);
+                } : undefined}
               >
-                <h3 
-                  style={{ color: data.color, display: 'flex', alignItems: 'center', gap: 8, flex: 1, margin: 0 }}
-                  onDoubleClick={(e) => {
-                    if (isCustomSection && sectionId) startEditingSection(e, sectionId, data.title);
-                  }}
-                >
-                  {data.category === 'smart' && <Sparkles size={20} />} 
-                  
-                  {editingSectionId === sectionId && isCustomSection && sectionId ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <ChevronDown 
+                    size={20} 
+                    color="var(--text-tertiary)" 
+                    style={{ transform: collapsed[data.category] ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }}
+                  />
+                  {isCustomSection && editingSectionId === data.sectionId ? (
                     <input 
                       type="text" 
                       value={editingSectionName}
                       onChange={e => setEditingSectionName(e.target.value)}
-                      onClick={e => e.stopPropagation()}
-                      onBlur={(e) => saveSectionName(e as any, sectionId)}
+                      onBlur={(e) => saveSectionName(e, data.sectionId!)}
                       onKeyDown={e => {
-                        if (e.key === 'Enter') saveSectionName(e as any, sectionId);
-                      }}
-                      style={{ 
-                        background: 'transparent', border: 'none', borderBottom: '2px solid var(--accent-primary)', 
-                        color: 'var(--text-primary)', fontSize: 'inherit', fontFamily: 'inherit', outline: 'none',
-                        fontWeight: 'bold', width: '100%'
+                        if (e.key === 'Enter') saveSectionName(e as any, data.sectionId!);
                       }}
                       autoFocus
+                      onClick={e => e.stopPropagation()}
+                      style={{ background: 'transparent', border: 'none', borderBottom: `2px solid ${data.color}`, color: 'inherit', fontSize: 'inherit', fontFamily: 'inherit', outline: 'none' }}
                     />
                   ) : (
-                    <span style={{ fontWeight: 700, fontSize: '1.25rem' }}>{data.title}</span>
+                    <h3 
+                      onDoubleClick={(e) => isCustomSection && startEditingSection(e, data.sectionId!, data.title)}
+                      style={{ cursor: isCustomSection ? 'text' : 'pointer' }}
+                      title={isCustomSection ? "Doble click para editar" : ""}
+                    >
+                      {data.title}
+                    </h3>
                   )}
-                </h3>
-                <ChevronDown 
-                  size={20} 
-                  style={{ 
-                    color: 'var(--text-tertiary)', 
-                    transition: 'transform 0.3s ease',
-                    transform: collapsed[data.category] ? 'rotate(-90deg)' : 'rotate(0)' 
-                  }} 
-                />
+                  {isCustomSection && (
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddSection(data.sectionId);
+                        if (collapsed[data.category]) toggleCategory(data.category);
+                      }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5, padding: 4 }}
+                      title="Añadir Sub-sección"
+                    >
+                      <Plus size={16} color="var(--text-primary)" />
+                    </button>
+                  )}
+                </div>
+                {isCustomSection && dragOverSectionId === data.sectionId && (
+                  <span style={{ fontSize: '0.8rem', color: data.color }}>Mover aquí</span>
+                )}
               </div>
             );
           } else {
@@ -431,10 +453,22 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
 
       </div>
 
+      <ListConfigModal 
+        isOpen={isListConfigOpen} 
+        onClose={() => setIsListConfigOpen(false)} 
+        listId={currentList?.id} 
+      />
+
       <button className="fab" onClick={onOpenNewTask}>
         <Plus size={24} />
       </button>
-      <ConfirmModal isOpen={isConfirmOpen} title={confirmProps.title} message={confirmProps.message} onConfirm={() => { confirmProps.onConfirm(); setIsConfirmOpen(false); }} onCancel={() => setIsConfirmOpen(false)} />
+      <ConfirmModal
+        isOpen={isConfirmOpen}
+        onCancel={() => setIsConfirmOpen(false)}
+        onConfirm={() => { confirmProps.onConfirm(); setIsConfirmOpen(false); }}
+        title={confirmProps.title}
+        message={confirmProps.message}
+      />
     </main>
   );
 }
