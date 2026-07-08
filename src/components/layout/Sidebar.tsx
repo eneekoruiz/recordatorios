@@ -40,7 +40,7 @@ function ListHierarchy({ lists, parentId = undefined, currentView, onSelectView,
                 )}
                 {!hasChildren && <div style={{ width: 14 }} />}
                 <div className="list-icon" style={{ backgroundColor: list.color, width: 10, height: 10 }}></div>
-                <span style={{ color: currentView === `list_${list.id}` ? 'white' : 'inherit', fontSize: '0.9rem' }}>{list.name}</span>
+                <span style={{ color: currentView === `list_${list.id}` ? 'var(--text-primary)' : 'inherit', fontSize: '0.9rem', fontWeight: currentView === `list_${list.id}` ? 600 : 400 }}>{list.name}</span>
               </div>
 
               <div 
@@ -200,93 +200,60 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               </div>
             );
           })}
-        </div>
-
-        {/* Acordeón de Ciclos */}
-        <div className="section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--space-8) var(--space-12)' }}>
-          <div 
-            style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)', cursor: 'pointer', flex: 1 }}
-            onClick={() => setIsCyclesOpen(!isCyclesOpen)}
-          >
-            <Clock size={16} />
-            <span style={{ fontSize: '0.85rem', letterSpacing: '0.5px' }}>VISTAS TEMPORALES</span>
-            {isCyclesOpen ? <ChevronDown size={14} color="var(--text-tertiary)" /> : <ChevronRight size={14} color="var(--text-tertiary)" />}
-          </div>
-          <button 
-            className="btn-icon"
-            style={{ padding: 4, cursor: 'pointer' }}
-            title="Nuevo Ciclo"
-            onClick={async (e) => {
-              e.stopPropagation();
-              const name = await usePromptStore.getState().openPrompt('Nombre del nuevo ciclo temporal:', 'Ej: Siguiente Trimestre');
-              if (name) {
-                const newCycleId = `cycle_${Date.now()}`;
-                useAppStore.getState().addCycle({
-                  id: newCycleId,
-                  name,
-                  daysValue: 14,
-                  isPinned: true,
-                  icon: 'star'
-                });
-                setIsCyclesOpen(true);
-                onSelectView(newCycleId);
-              }
-            }}
-          >
-            <Plus size={14} color="var(--text-tertiary)" />
-          </button>
-        </div>
-
-        {isCyclesOpen && (
-          <div style={{ paddingLeft: 'var(--space-12)', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', marginBottom: 'var(--space-12)' }}>
-            {cycles.filter(c => c.isPinned).map(cycle => {
-              const Icon = getCycleIcon(cycle.icon);
-              return (
-                <div 
-                  key={cycle.id}
-                  className={`nav-item ${currentView === cycle.id ? 'active' : ''}`}
-                  onClick={() => onSelectView(cycle.id)}
-                  style={{ padding: 'var(--space-8) var(--space-12)', fontSize: '0.9rem', color: currentView === cycle.id ? 'white' : 'var(--text-secondary)' }}
-                >
-                  <Icon size={16} color={currentView === cycle.id ? 'white' : 'var(--text-tertiary)'} />
-                  <span>{cycle.name}</span>
+          {/* Custom Cycles (Vistas Temporales) integrated as Smart Lists */}
+          {cycles.filter(c => c.isPinned).map(cycle => {
+            const Icon = getCycleIcon(cycle.icon);
+            return (
+              <div 
+                key={cycle.id}
+                onClick={() => onSelectView(cycle.id)}
+                style={{
+                  background: currentView === cycle.id ? 'var(--bg-elevated)' : 'var(--bg-surface)',
+                  border: currentView === cycle.id ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: 'var(--space-12)',
+                  cursor: 'pointer',
+                  position: 'relative'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                  <div style={{ background: 'var(--accent-glow)', width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon size={14} color="var(--accent-primary)" />
+                  </div>
+                  <span style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {Object.values(tasks).filter(t => !t.deleted_at && t.status === 'pending' && t.cycle_id === cycle.id).length}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-        )}
+                <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{cycle.name}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="section-header" style={{ marginTop: 'var(--space-24)', padding: '0 var(--space-12)' }}>Mi Espacio</div>
+        
+        <div 
+          className="nav-item"
+          onClick={() => onSelectView('DATA')}
+          style={{ color: 'var(--text-primary)' }}
+        >
+          <Zap size={18} color="var(--accent-primary)" />
+          <span style={{ fontWeight: 500 }}>Brain Dump / Exportar</span>
+        </div>
 
         <div 
           className={`nav-item ${currentView === 'ANALYTICS' ? 'active' : ''}`}
           onClick={() => onSelectView('ANALYTICS')}
-          style={{ marginTop: 'var(--space-12)' }}
+          style={{ color: 'var(--text-primary)' }}
         >
           <BarChart2 size={18} />
-          <span>Estadísticas</span>
+          <span style={{ fontWeight: 500 }}>Estadísticas</span>
         </div>
         
-
-        <div 
-          className="nav-item"
-          onClick={() => onSelectView('DATA')}
-          style={{ color: 'var(--text-tertiary)' }}
-        >
-          <DownloadCloud size={18} />
-          <span>Importar / Exportar</span>
-        </div>
-
-        <div 
-          className="nav-item"
-          onClick={() => onSelectView('BRAIN_DUMP')}
-          style={{ color: 'var(--accent-glow)' }}
-        >
-          <Zap size={18} color="var(--accent-primary)" />
-          <span style={{ color: 'var(--accent-primary)', fontWeight: 500 }}>Brain Dump</span>
-        </div>
         <div 
           className={`nav-item ${currentView === 'TRASH' ? 'active' : ''}`}
           onClick={() => onSelectView('TRASH')}
-          style={{ color: currentView === 'TRASH' ? 'var(--accent-red)' : 'var(--text-tertiary)', marginTop: 'var(--space-12)' }}
+          style={{ color: currentView === 'TRASH' ? 'var(--accent-red)' : 'var(--text-tertiary)' }}
         >
           <Trash2 size={18} />
           <span>Papelera Eliminados</span>

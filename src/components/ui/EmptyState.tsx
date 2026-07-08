@@ -8,19 +8,39 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({
-  title = "Todo despejado",
-  message = "No hay tareas por aquí. Disfruta de la tranquilidad o añade algo nuevo para conquistar el día.",
-  icon = <Sparkles className="w-12 h-12 text-blue-400" />
+  title = "No hay recordatorios",
+  message = "Disfruta de la tranquilidad o añade algo nuevo para empezar.",
+  icon = <Sparkles size={48} color="var(--border-focus)" strokeWidth={1} />
 }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center h-full px-6 py-20 text-center animate-in fade-in duration-500">
-      <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-full shadow-sm">
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: '100%',
+      minHeight: '300px',
+      padding: 'var(--space-24)',
+      textAlign: 'center',
+      animation: 'fadeIn 0.5s ease-out'
+    }}>
+      <div style={{ marginBottom: 'var(--space-16)' }}>
         {icon}
       </div>
-      <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-2">
+      <h3 style={{
+        fontSize: '1.25rem',
+        fontWeight: 600,
+        color: 'var(--text-secondary)',
+        marginBottom: 'var(--space-8)'
+      }}>
         {title}
       </h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400 max-w-[280px]">
+      <p style={{
+        fontSize: '0.95rem',
+        color: 'var(--text-tertiary)',
+        maxWidth: 300,
+        lineHeight: 1.4
+      }}>
         {message}
       </p>
     </div>
