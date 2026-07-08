@@ -178,18 +178,19 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onCom
             </div>
             
             <div style={{ display: 'flex', gap: 'var(--space-8)', marginTop: 'var(--space-4)', alignItems: 'center' }}>
-              {task.alerts.map((time: string, idx: number) => {
-                const isCompleted = task.completedAlerts?.includes(time);
+              {task.alerts.map((alert: any, idx: number) => {
+                const isCompleted = task.completedAlerts?.includes(alert.id);
+                const label = alert.type === 'at_time' ? alert.time : `-${alert.offsetMinutes}m`;
                 return (
                   <span 
-                    key={idx} 
+                    key={alert.id || idx} 
                     className="time-pill"
                     style={{ 
                       textDecoration: isCompleted ? 'line-through' : 'none',
                       opacity: isCompleted ? 0.5 : 1
                     }}
                   >
-                    {time}
+                    {label}
                   </span>
                 );
               })}

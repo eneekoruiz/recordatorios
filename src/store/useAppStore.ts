@@ -111,7 +111,7 @@ export const useAppStore = create<AppState>()(
           if (alerts.length > 0) {
             const nextAlert = alerts[completedAlerts.length] || alerts[alerts.length - 1];
             updatedTask = TaskRepository.update(existingTask, { 
-              completedAlerts: [...completedAlerts, nextAlert] 
+              completedAlerts: [...completedAlerts, nextAlert.id] 
             });
           } else {
             updatedTask = TaskRepository.update(existingTask, { completedAlerts: [] });
@@ -130,7 +130,7 @@ export const useAppStore = create<AppState>()(
             // Tarea de un solo uso
             updatedTask = TaskRepository.update(existingTask, { 
               status: 'COMPLETED',
-              completedAlerts: [...completedAlerts, alerts[completedAlerts.length]].filter(Boolean),
+              completedAlerts: [...completedAlerts, alerts[completedAlerts.length]?.id].filter(Boolean) as string[],
               completionHistory: newCompletionHistory
             });
           }
@@ -297,10 +297,12 @@ export const useAppStore = create<AppState>()(
           if (task.alerts.length > 0) {
             let closestDiff = 999;
             task.alerts.forEach(alert => {
-              const [h] = alert.split(':');
-              const alertHour = parseInt(h, 10);
-              const diff = alertHour - currentHours;
-              if (diff >= 0 && diff < closestDiff) closestDiff = diff;
+              if (alert.type === 'at_time' && alert.time) {
+                const [h] = alert.time.split(':');
+                const alertHour = parseInt(h, 10);
+                const diff = alertHour - currentHours;
+                if (diff >= 0 && diff < closestDiff) closestDiff = diff;
+              }
             });
             if (closestDiff <= 2) score += 50; 
             else if (closestDiff <= 5) score += 20;
@@ -391,6 +393,7 @@ export const useAppStore = create<AppState>()(
           if (title) {
             newTasks.push(TaskRepository.create({
               title,
+              type: 'task', // Auto-imported from quick add is a task
               categoryId,
               cycleId,
               blockedBy: [],

@@ -39,6 +39,7 @@ export function detectFormatAndParse(input: string, currentStoreData: { cycles: 
         if (title) {
           result.tasks.push(TaskRepository.create({
             title,
+            type: 'task',
             categoryId: 'inbox',
             cycleId: 'cycle_day',
             dueDate: new Date(),
@@ -59,7 +60,7 @@ export function detectFormatAndParse(input: string, currentStoreData: { cycles: 
 
     let categoryId = 'inbox';
     let cycleId = 'cycle_day';
-    const alerts: string[] = [];
+    const alerts: import('../models/Task').AlertDef[] = [];
 
     // Parse category @
     const catMatch = title.match(/@(\w+)/);
@@ -94,13 +95,14 @@ export function detectFormatAndParse(input: string, currentStoreData: { cycles: 
     const timeRegex = /\b([0-1]?[0-9]|2[0-3])(:[0-5][0-9])?\s*(am|pm|h)\b/i;
     const timeMatch = title.match(timeRegex);
     if (timeMatch) {
-      alerts.push(timeMatch[0]);
+      alerts.push({ id: `alert_${Date.now()}_${Math.random()}`, type: 'at_time', time: timeMatch[0] });
       title = title.replace(timeMatch[0], '').trim();
     }
 
     if (title) {
       result.tasks.push(TaskRepository.create({
         title,
+        type: 'task',
         categoryId,
         cycleId,
         dueDate: new Date(),

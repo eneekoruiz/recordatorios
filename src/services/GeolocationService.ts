@@ -98,7 +98,7 @@ export class GeolocationService {
   private fireLocationAlert(title: string) {
     try {
       if (Notification.permission === 'granted') {
-        new Notification('📍 Has llegado a tu destino', {
+        new Notification('Has llegado a tu destino', {
           body: title,
           icon: '/vite.svg',
           requireInteraction: true

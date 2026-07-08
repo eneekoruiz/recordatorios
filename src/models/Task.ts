@@ -20,9 +20,17 @@ export interface ListSection {
   name: string;
 }
 
+export interface AlertDef {
+  id: string;
+  type: 'at_time' | 'before';
+  time?: string; // Format "HH:MM" para notificaciones en momento exacto
+  offsetMinutes?: number; // 60 = 1 hour before, 1440 = 1 day before, etc.
+}
+
 export interface TaskItem {
   id: string;
   categoryId: string;
+  type: 'task' | 'log'; // NEW: Differentiation between actionable tasks and inert logs
   title: string;
   notes?: string;
 
@@ -41,8 +49,8 @@ export interface TaskItem {
   
   dueDate: Date;
   status: 'PENDING' | 'COMPLETED' | 'SKIPPED';
-  alerts: string[]; 
-  completedAlerts?: string[]; // Para tachado parcial
+  alerts: AlertDef[]; 
+  completedAlerts?: string[]; // IDs of AlertDefs that have fired
   completionHistory?: number[]; // Timestamps de cuando se ha completado en el pasado (Frecuencias matemáticas)
   createdAt: number; 
 

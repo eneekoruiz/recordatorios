@@ -2,9 +2,9 @@
    SIDEBAR
 ======================================================== */
 .sidebar {
-  width: 300px;
+  width: 100%;
+  min-height: 100%;
   background-color: var(--bg-surface);
-  border-right: 1px solid var(--border-subtle);
   padding: var(--space-32) var(--space-24);
   display: flex;
   flex-direction: column;
@@ -268,6 +268,7 @@
   .app-container.mobile-sidebar .sidebar-container {
     width: 100vw;
     height: 100vh;
+    overflow-y: auto;
   }
   
   .app-container.mobile-content .sidebar-container {
@@ -277,10 +278,12 @@
   .app-container.mobile-content .main-container {
     width: 100vw;
     height: 100vh;
+    overflow-y: auto;
   }
 
   .sidebar {
     width: 100%;
     border-right: none;
+    min-height: 100vh;
   }
 }

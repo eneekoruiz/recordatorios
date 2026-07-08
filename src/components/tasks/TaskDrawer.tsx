@@ -20,7 +20,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
   const [cycleId, setCycleId] = useState<string | undefined>(undefined);
   const [dueDate, setDueDate] = useState<Date>(new Date());
   const [category, setCategory] = useState(defaultCategoryId || 'limpieza');
-  const [alerts, setAlerts] = useState<string[]>([]);
+  const [type, setType] = useState<'task' | 'log'>('task');
+  const [alerts, setAlerts] = useState<import('../../models/Task').AlertDef[]>([]);
   const [isListening, setIsListening] = useState(false);
   const [blockedBy, setBlockedBy] = useState<string[]>([]);
   const [sectionId, setSectionId] = useState<string | undefined>(undefined);
@@ -62,9 +63,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
       // Manejar tiempos
       if (nlp.times.length > 0) {
         if (navigator.vibrate) navigator.vibrate(20);
-        const merged = Array.from(new Set([...alerts, ...nlp.times]));
-        if (merged.length !== alerts.length) {
-          setAlerts(merged);
+        const newAlerts = nlp.times.filter(t => !alerts.find(a => a.time === t)).map(t => ({ id: `alert_${Date.now()}_${t}`, type: 'at_time' as const, time: t }));
+        if (newAlerts.length > 0) {
+          setAlerts(prev => [...prev, ...newAlerts]);
         }
         nlp.times.forEach(t => newChips.push({ type: 'time', label: t }));
       }
@@ -102,6 +103,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
 
     addTask({
       categoryId: category,
+      type,
       title,
       notes: notes || undefined,
       cycleId,
@@ -143,8 +145,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
     onClose();
   };
 
-  const removeAlert = (timeToRemove: string) => {
-    setAlerts(alerts.filter(t => t !== timeToRemove));
+  const removeAlert = (idToRemove: string) => {
+    setAlerts(alerts.filter(a => a.id !== idToRemove));
   };
 
   const toggleListening = () => {
@@ -229,7 +231,10 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
 
               {/* Muestra chips dinámicos detectados por NLP */}
               {suggestedChips.length > 0 && (
-                <div style={{ display: 'flex', gap: '8px', padding: '0 16px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 'var(--space-8)', flexWrap: 'wrap' }}>
+                  {alerts.map((alert) => (
+                    <span key={alert.id} className="pill">{alert.time}</span>
+                  ))}
                   {suggestedChips.map((chip, idx) => (
                     <div key={idx} style={{ 
                       fontSize: '0.75rem', 
@@ -391,7 +396,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
                         <label className="switch">
                           <input type="checkbox" checked={hasTime} onChange={e => {
                             setHasTime(e.target.checked);
-                            if (e.target.checked && alerts.length === 0) setAlerts(['09:00']);
+                            if (e.target.checked && alerts.length === 0) setAlerts([{ id: `alert_${Date.now()}`, type: 'at_time', time: '09:00' }]);
                           }} />
                           <span className="slider round"></span>
                         </label>
@@ -399,27 +404,27 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
                       {hasTime && (
                         <div className="detail-row" style={{ marginTop: -8 }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {alerts.map((time, idx) => (
-                              <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            {alerts.map((alert, idx) => (
+                              <div key={alert.id || idx} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                                 <input 
                                   type="time" 
                                   className="detail-select" 
-                                  value={time}
+                                  value={alert.time || '09:00'}
                                   onChange={e => {
                                     const newAlerts = [...alerts];
-                                    newAlerts[idx] = e.target.value;
+                                    newAlerts[idx] = { ...newAlerts[idx], time: e.target.value };
                                     setAlerts(newAlerts);
                                   }}
                                   style={{ flex: 1 }}
                                 />
-                                <button className="icon-btn" onClick={() => removeAlert(time)} style={{ background: 'var(--bg-surface)' }}>
+                                <button className="icon-btn" onClick={() => removeAlert(alert.id)} style={{ background: 'var(--bg-surface)' }}>
                                   <X size={16} color="var(--text-tertiary)" />
                                 </button>
                               </div>
                             ))}
                             <button 
                               className="add-alert-btn"
-                              onClick={() => setAlerts([...alerts, '12:00'])}
+                              onClick={() => setAlerts([...alerts, { id: `alert_${Date.now()}`, type: 'at_time', time: '12:00' }])}
                               style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--accent-primary)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px 0', fontSize: '0.9rem' }}
                             >
                               <PlusCircle size={16} /> Añadir hora
@@ -428,6 +433,19 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
                         </div>
                       )}
                       
+                      <div className="divider"></div>
+                      <div className="detail-row">
+                        <span className="detail-label">Tipo</span>
+                        <select 
+                          className="detail-select"
+                          value={type}
+                          onChange={e => setType(e.target.value as 'task' | 'log')}
+                        >
+                          <option value="task">Acción (Checklist)</option>
+                          <option value="log">Registro / Evento (Historial)</option>
+                        </select>
+                      </div>
+
                       <div className="divider"></div>
                       <div className="detail-row">
                         <span className="detail-label">Lista</span>
@@ -616,17 +634,17 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
                 
                 <div className="chips-container">
                   <AnimatePresence>
-                    {alerts.map((time) => (
+                    {alerts.map((alert) => (
                       <motion.div 
-                        key={time}
+                        key={alert.id}
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.5 }}
                         className="alert-chip"
                       >
                         <Clock size={14} />
-                        <span>{time}</span>
-                        <button className="chip-remove" onClick={() => removeAlert(time)}>
+                        <span>{alert.time || `-${alert.offsetMinutes}m`}</span>
+                        <button className="chip-remove" onClick={() => removeAlert(alert.id)}>
                           <X size={14} />
                         </button>
                       </motion.div>
