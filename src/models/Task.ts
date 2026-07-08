@@ -40,6 +40,7 @@ export interface TaskItem {
   dueDate: Date;
   status: 'PENDING' | 'COMPLETED' | 'SKIPPED';
   alerts: string[]; 
+  completedAlerts?: string[]; // Para tachado parcial
   createdAt: number; 
 
   // --- APPLE REMINDERS FEATURES ---

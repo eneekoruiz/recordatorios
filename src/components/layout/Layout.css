@@ -257,4 +257,30 @@
   justify-content: flex-end;
 }
 
-/* El TaskCard actual se abstraerá a TaskCard.tsx, pero usará clases de surface-card */
+/* ========================================================
+   RESPONSIVE DESIGN & MOBILE UX
+======================================================== */
+@media (max-width: 768px) {
+  .app-container.mobile-sidebar .main-container {
+    display: none;
+  }
+  
+  .app-container.mobile-sidebar .sidebar-container {
+    width: 100vw;
+    height: 100vh;
+  }
+  
+  .app-container.mobile-content .sidebar-container {
+    display: none;
+  }
+  
+  .app-container.mobile-content .main-container {
+    width: 100vw;
+    height: 100vh;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+  }
+}

@@ -108,27 +108,48 @@ export function TaskCard({ task, virtualStyle, onComplete, onDelete, onOpenZenMo
           <GripVertical size={16} />
         </div>
 
-        <button 
-          className="checkbox" 
-          aria-label="Completar tarea"
-          disabled={isBlocked}
-          onClick={() => {
-            if (isBlocked) return;
-            if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
-            onComplete(task.id);
-          }}
-          style={{
-            width: 24, height: 24, 
-            borderRadius: '50%', 
-            border: '2px solid var(--border-subtle)', 
-            marginRight: 'var(--space-16)', 
-            cursor: 'pointer',
-            background: 'transparent',
-            transition: 'border-color 0.2s ease, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent-primary)'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; e.currentTarget.style.transform = 'scale(1)'; }}
-        />
+        {/* Checkbox con progreso parcial */}
+        {(() => {
+          const totalAlerts = task.alerts?.length || 0;
+          const completedAlerts = task.completedAlerts?.length || 0;
+          const isPartial = totalAlerts > 1 && completedAlerts > 0 && completedAlerts < totalAlerts;
+          const percentage = totalAlerts > 1 ? (completedAlerts / totalAlerts) * 100 : 0;
+          
+          return (
+            <button 
+              className="checkbox" 
+              aria-label="Completar tarea"
+              disabled={isBlocked}
+              onClick={() => {
+                if (isBlocked) return;
+                if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+                onComplete(task.id);
+              }}
+              style={{
+                width: 24, height: 24, 
+                borderRadius: '50%', 
+                border: isPartial ? 'none' : '2px solid var(--border-subtle)', 
+                marginRight: 'var(--space-16)', 
+                cursor: 'pointer',
+                background: isPartial 
+                  ? `conic-gradient(var(--accent-primary) ${percentage}%, var(--border-subtle) ${percentage}%)`
+                  : 'transparent',
+                transition: 'border-color 0.2s ease, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}
+              onMouseEnter={(e) => { 
+                if (!isPartial) e.currentTarget.style.borderColor = 'var(--accent-primary)'; 
+                e.currentTarget.style.transform = 'scale(1.1)'; 
+              }}
+              onMouseLeave={(e) => { 
+                if (!isPartial) e.currentTarget.style.borderColor = 'var(--border-subtle)'; 
+                e.currentTarget.style.transform = 'scale(1)'; 
+              }}
+            >
+              {isPartial && <div style={{ width: 20, height: 20, background: 'var(--bg-surface)', borderRadius: '50%' }}></div>}
+            </button>
+          );
+        })()}
         
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
@@ -148,9 +169,21 @@ export function TaskCard({ task, virtualStyle, onComplete, onDelete, onOpenZenMo
               {task.image && <ImageIcon size={14} color="var(--text-tertiary)" />}
             </div>
             <div style={{ display: 'flex', gap: 'var(--space-8)', marginTop: 'var(--space-4)', alignItems: 'center' }}>
-              {task.alerts.map((time: string, idx: number) => (
-                <span key={idx} className="time-pill">{time}</span>
-              ))}
+              {task.alerts.map((time: string, idx: number) => {
+                const isCompleted = task.completedAlerts?.includes(time);
+                return (
+                  <span 
+                    key={idx} 
+                    className="time-pill"
+                    style={{ 
+                      textDecoration: isCompleted ? 'line-through' : 'none',
+                      opacity: isCompleted ? 0.5 : 1
+                    }}
+                  >
+                    {time}
+                  </span>
+                );
+              })}
               <span className="text-muted" style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 4 }}>
                 {taskCycle ? taskCycle.name : 'Personalizado'}
               </span>

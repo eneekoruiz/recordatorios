@@ -15,11 +15,45 @@ import { useAppStore } from './store/useAppStore';
 
 function App() {
   const [currentView, setCurrentView] = useState('cycle_day'); // 'cycle_day', 'cycle_week', 'ANALYTICS', etc.
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [mobileView, setMobileView] = useState<'sidebar' | 'content'>('sidebar');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCycleModalOpen, setIsCycleModalOpen] = useState(false);
   const [isDataModalOpen, setIsDataModalOpen] = useState(false);
   const [isBrainDumpOpen, setIsBrainDumpOpen] = useState(false);
   const [zenModeTaskId, setZenModeTaskId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handleSelectView = (view: string) => {
+    if (view === 'MANAGE_CYCLES') setIsCycleModalOpen(true);
+    else if (view === 'DATA') setIsDataModalOpen(true);
+    else if (view === 'BRAIN_DUMP') setIsBrainDumpOpen(true);
+    else {
+      setCurrentView(view);
+      if (isMobile) setMobileView('content');
+    }
+  };
+
+  // Check custom lists initialization
+  useEffect(() => {
+    const lists = useAppStore.getState().lists;
+    if (!lists || lists.length === 0) {
+      const initial = [
+        { id: 'compras', name: 'Compras', color: '#ff9500' },
+        { id: 'care', name: 'Care', color: '#af52de' },
+        { id: 'quehaceres', name: 'Quehaceres', color: '#34c759' },
+        { id: 'limpieza', name: 'Limpieza', color: '#0a84ff' }
+      ];
+      initial.forEach(l => useAppStore.getState().addList(l));
+    }
+  }, []);
 
   const urlParams = new URLSearchParams(window.location.search);
   const isWidgetMode = urlParams.get('widget') === 'true';
@@ -49,26 +83,27 @@ function App() {
   }
 
   return (
-    <div className="app-container">
-      <Sidebar 
-        currentView={currentView} 
-        onSelectView={(view) => {
-          if (view === 'MANAGE_CYCLES') setIsCycleModalOpen(true);
-          else if (view === 'DATA') setIsDataModalOpen(true);
-          else if (view === 'BRAIN_DUMP') setIsBrainDumpOpen(true);
-          else setCurrentView(view);
-        }} 
-      />
-      
-      {currentView === 'ANALYTICS' ? (
-        <AnalyticsView />
-      ) : (
-        <MainContent 
-          currentView={currentView}
-          onOpenNewTask={() => setIsDrawerOpen(true)}
-          onOpenZenMode={(taskId) => setZenModeTaskId(taskId)}
+    <div className={`app-container ${isMobile ? `mobile-${mobileView}` : ''}`}>
+      <div className="sidebar-container">
+        <Sidebar 
+          currentView={currentView} 
+          onSelectView={handleSelectView} 
         />
-      )}
+      </div>
+      
+      <div className="main-container">
+        {currentView === 'ANALYTICS' ? (
+          <AnalyticsView />
+        ) : (
+          <MainContent 
+            currentView={currentView}
+            onOpenNewTask={() => setIsDrawerOpen(true)}
+            onOpenZenMode={(taskId) => setZenModeTaskId(taskId)}
+            onBackToSidebar={() => setMobileView('sidebar')}
+            isMobile={isMobile}
+          />
+        )}
+      </div>
       <TaskDrawer 
         isOpen={isDrawerOpen} 
         onClose={() => setIsDrawerOpen(false)} 

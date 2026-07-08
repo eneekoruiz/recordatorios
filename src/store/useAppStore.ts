@@ -4,9 +4,10 @@ import type { TaskItem, CustomCycle, CustomList, ListSection } from '../models/T
 import { TaskRepository } from '../repositories/TaskRepository';
 
 const INITIAL_LISTS: CustomList[] = [
-  { id: 'limpieza', name: 'Limpieza', color: '#ff9500' },
-  { id: 'compra', name: 'Compra', color: '#34c759' },
-  { id: 'skincare', name: 'Skincare', color: '#af52de' }
+  { id: 'compras', name: 'Compras', color: '#ff9500' },
+  { id: 'care', name: 'Care', color: '#af52de' },
+  { id: 'quehaceres', name: 'Quehaceres', color: '#34c759' },
+  { id: 'limpieza', name: 'Limpieza', color: '#0a84ff' }
 ];
 
 const INITIAL_CYCLES: CustomCycle[] = [
@@ -89,7 +90,25 @@ export const useAppStore = create<AppState>()(
         const existingTask = state.tasks[id];
         if (!existingTask) return state;
         
-        const updatedTask = TaskRepository.update(existingTask, { status: 'COMPLETED' });
+        let updatedTask: TaskItem;
+        const alerts = existingTask.alerts || [];
+        const completedAlerts = existingTask.completedAlerts || [];
+
+        // Lógica de tachado parcial (Multi-dosis)
+        if (alerts.length > 1 && completedAlerts.length < alerts.length - 1) {
+          // Aún quedan alertas por completar, añadimos la siguiente
+          const nextAlert = alerts[completedAlerts.length];
+          updatedTask = TaskRepository.update(existingTask, { 
+            completedAlerts: [...completedAlerts, nextAlert] 
+          });
+        } else {
+          // Es la última o la única alerta, completamos la tarea entera
+          updatedTask = TaskRepository.update(existingTask, { 
+            status: 'COMPLETED',
+            completedAlerts: [...completedAlerts, alerts[completedAlerts.length]].filter(Boolean)
+          });
+        }
+
         return {
           tasks: {
             ...state.tasks,

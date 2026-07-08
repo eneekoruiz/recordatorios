@@ -10,6 +10,8 @@ interface MainContentProps {
   currentView: string;
   onOpenNewTask: () => void;
   onOpenZenMode: (taskId: string) => void;
+  onBackToSidebar?: () => void;
+  isMobile?: boolean;
 }
 
 // Flat representation para la virtualización
@@ -17,7 +19,15 @@ type VirtualItemType =
   | { type: 'header', title: string, category: string, color: string }
   | { type: 'task', task: TaskItem, depth: number };
 
-export function MainContent({ currentView, onOpenNewTask, onOpenZenMode }: MainContentProps) {
+const SMART_COLORS: Record<string, string> = {
+  'smart_today': 'var(--accent-blue)',
+  'smart_scheduled': 'var(--accent-red)',
+  'smart_all': 'var(--text-secondary)',
+  'smart_flagged': 'var(--accent-orange)',
+  'smart_completed': 'var(--text-tertiary)'
+};
+
+export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackToSidebar, isMobile }: MainContentProps) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   
   const { getTasksByCycle, getTasksByList, getSmartSortTasks, completeTask, deleteTask, cycles, lists, addListSection, updateListSection, updateTaskSection, listSections, tasks } = useAppStore();
@@ -203,12 +213,33 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode }: MainC
 
   return (
     <main className="main-content" ref={parentRef} style={{ overflowY: 'auto' }}>
-      <header className="content-header">
-        <h1 className="text-display" style={{ color: currentList ? currentList.color : 'var(--text-primary)', marginBottom: 0, display: 'flex', alignItems: 'center', gap: 'var(--space-12)' }}>
-          {CycleIcon && <CycleIcon size={32} color="var(--accent-primary)" />}
-          {currentList && <div style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: currentList.color }}></div>}
-          {getTitle()}
-        </h1>
+      {/* Header */}
+      <header className="content-header" style={{ padding: 'var(--space-24) var(--space-48) var(--space-16)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <div>
+          {isMobile && (
+            <button 
+              onClick={onBackToSidebar}
+              style={{
+                background: 'transparent', border: 'none', color: 'var(--accent-primary)',
+                display: 'flex', alignItems: 'center', gap: 4, marginBottom: 12, padding: 0,
+                fontSize: '1rem', cursor: 'pointer'
+              }}
+            >
+              <ChevronDown size={20} style={{ transform: 'rotate(90deg)' }} />
+              Listas
+            </button>
+          )}
+          <h1 className="text-display" style={{ 
+            fontSize: '2.5rem', 
+            color: isSmartView ? SMART_COLORS[currentView] : isListView && currentList ? currentList.color : 'var(--text-primary)'
+          }}>
+            {CycleIcon && <CycleIcon size={32} color="var(--accent-primary)" style={{ marginRight: 12 }} />}
+            {getTitle()}
+          </h1>
+          <p className="text-secondary" style={{ marginTop: 'var(--space-8)' }}>
+            {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </p>
+        </div>
         <div className="header-actions" style={{ display: 'flex', gap: '8px' }}>
           {isListView && (
             <button className="icon-btn" onClick={handleAddSection} title="Añadir Sección">
