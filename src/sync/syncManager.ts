@@ -10,6 +10,7 @@ class SyncManager {
   private syncInterval: any = null;
   private isSyncing = false;
   private isOnline = navigator.onLine;
+  private eventSource: EventSource | null = null;
 
   constructor() {
     window.addEventListener('online', () => {
@@ -32,12 +33,47 @@ class SyncManager {
       clearInterval(this.syncInterval);
       this.syncInterval = null;
     }
+    if (this.eventSource) {
+      this.eventSource.close();
+      this.eventSource = null;
+    }
+  }
+
+  private setupRealtime(token: string) {
+    if (this.eventSource) {
+      this.eventSource.close();
+    }
+
+    const url = `${API_BASE}/api/sync/live?token=${encodeURIComponent(token)}`;
+    this.eventSource = new EventSource(url);
+
+    this.eventSource.onmessage = (event) => {
+      if (event.data === 'check_sync') {
+        this.pull(token).catch(err => console.error('Silent pull failed:', err));
+      }
+    };
+
+    this.eventSource.onerror = () => {
+      this.eventSource?.close();
+      this.eventSource = null;
+      // Reconnect after 5s if still logged in
+      setTimeout(() => {
+        const currentToken = useAppStore.getState().token;
+        if (currentToken && this.isOnline) {
+          this.setupRealtime(currentToken);
+        }
+      }, 5000);
+    };
   }
 
   async syncNow() {
     if (this.isSyncing || !this.isOnline) return;
     const { token } = useAppStore.getState();
     if (!token) return; // No auth, no sync
+
+    if (!this.eventSource) {
+      this.setupRealtime(token);
+    }
 
     this.isSyncing = true;
 

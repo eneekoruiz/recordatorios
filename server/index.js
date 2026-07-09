@@ -11,6 +11,7 @@ const app = express();
 const prisma = new PrismaClient({});
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_for_recordatorios';
+const clients = new Map(); // userId -> Set of Response objects
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
@@ -136,6 +137,14 @@ app.post('/api/sync/push', authenticateToken, async (req, res) => {
 
     await prisma.$transaction(transaction);
     res.json({ success: true });
+
+    // Broadcast check_sync to other active devices of this user
+    const userClients = clients.get(userId);
+    if (userClients) {
+      for (const client of userClients) {
+        client.write('data: check_sync\n\n');
+      }
+    }
   } catch (error) {
     console.error('Push error:', error);
     res.status(500).json({ error: 'Error sincronizando datos' });
@@ -168,6 +177,42 @@ app.get('/api/sync/pull', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Pull error:', error);
     res.status(500).json({ error: 'Error obteniendo datos' });
+  }
+});
+
+app.get('/api/sync/live', (req, res) => {
+  const token = req.query.token;
+  if (!token) return res.sendStatus(401);
+
+  try {
+    const user = jwt.verify(token, JWT_SECRET);
+    const userId = user.id;
+
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive'
+    });
+
+    res.write('data: connected\n\n');
+
+    if (!clients.has(userId)) {
+      clients.set(userId, new Set());
+    }
+    clients.get(userId).add(res);
+
+    req.on('close', () => {
+      const userClients = clients.get(userId);
+      if (userClients) {
+        userClients.delete(res);
+        if (userClients.size === 0) {
+          clients.delete(userId);
+        }
+      }
+    });
+  } catch (error) {
+    console.error('SSE connection error:', error);
+    res.sendStatus(403);
   }
 });
 
