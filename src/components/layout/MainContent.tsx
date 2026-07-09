@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo, useCallback } from 'react';
-import { Plus, ChevronDown, Sparkles, FolderPlus } from 'lucide-react';
+import { Plus, ChevronDown, Sparkles, FolderPlus, Settings, Trash2 } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useAppStore } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
@@ -9,7 +9,7 @@ import { EmptyState } from '../ui/EmptyState';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { getCycleIcon } from '../../constants/icons';
 import { ListConfigModal } from './ListConfigModal';
-import { Settings } from 'lucide-react';
+// Settings icon import removed because it was merged into single lucide-react import above
 
 interface MainContentProps {
   currentView: string;
@@ -432,17 +432,31 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
                     </h3>
                   )}
                   {isCustomSection && (
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddSection(data.sectionId);
-                        if (collapsed[data.category]) toggleCategory(data.category);
-                      }}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5, padding: 4 }}
-                      title="Añadir Sub-sección"
-                    >
-                      <Plus size={16} color="var(--text-primary)" />
-                    </button>
+                    <>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddSection(data.sectionId);
+                          if (collapsed[data.category]) toggleCategory(data.category);
+                        }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5, padding: 4 }}
+                        title="Añadir Sub-sección"
+                      >
+                        <Plus size={16} color="var(--text-primary)" />
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm('¿Seguro que quieres borrar esta sección? Las tareas no se borrarán, solo quedarán sin sección.')) {
+                            deleteListSection(data.sectionId!);
+                          }
+                        }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5, padding: 4, marginLeft: 4, color: 'var(--accent-red)' }}
+                        title="Eliminar Sección"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </>
                   )}
                 </div>
                 {isCustomSection && dragOverSectionId === data.sectionId && (
