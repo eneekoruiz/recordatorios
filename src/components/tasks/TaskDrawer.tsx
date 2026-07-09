@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Clock, Mic, MicOff, Settings2, Calendar as CalendarIcon, Repeat, Link2, PlusCircle, Flag, MapPin, Link, Image as ImageIcon } from 'lucide-react';
+import { X, Clock, Mic, MicOff, Settings2, Calendar as CalendarIcon, Repeat, Link2, PlusCircle, Flag, MapPin, Link, Image as ImageIcon, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 import { parseNaturalLanguage } from '../../utils/nlp';
@@ -28,7 +28,11 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
   const [isListening, setIsListening] = useState(false);
   const [blockedBy, setBlockedBy] = useState<string[]>([]);
   const [sectionId, setSectionId] = useState<string | undefined>(undefined);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [cardTimeOpen, setCardTimeOpen] = useState(true);
+  const [cardRepeatOpen, setCardRepeatOpen] = useState(false);
+  const [cardReqOpen, setCardReqOpen] = useState(false);
+  const [cardDetailsOpen, setCardDetailsOpen] = useState(false);
+  const [cardFinanceOpen, setCardFinanceOpen] = useState(false);
   const [hasDate, setHasDate] = useState(false);
   const [hasTime, setHasTime] = useState(false);
   const [url, setUrl] = useState('');
@@ -73,7 +77,13 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
         setDuration(task.duration || '');
         setHasDate(!!task.dueDate);
         setHasTime(!!task.alerts?.some(a => a.type === 'at_time'));
-        setShowAdvanced(true);
+        
+        // Open cards dynamically if they have values configured
+        setCardTimeOpen(!!task.dueDate || !!task.alerts?.some(a => a.type === 'at_time'));
+        setCardRepeatOpen(!!task.cycle_id || !!task.sectionId || !!task.locationName);
+        setCardReqOpen(task.blockedBy && task.blockedBy.length > 0);
+        setCardDetailsOpen(task.priority !== 'none' || !!task.flagged || !!task.url || !!task.image);
+        setCardFinanceOpen(!!task.isDetailed);
       } else {
         setTitle('');
         setNotes('');
@@ -96,7 +106,13 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
         setDuration('');
         setHasDate(false);
         setHasTime(false);
-        setShowAdvanced(false);
+        
+        // Reset to default collapsed status on create
+        setCardTimeOpen(true);
+        setCardRepeatOpen(false);
+        setCardReqOpen(false);
+        setCardDetailsOpen(false);
+        setCardFinanceOpen(false);
       }
     }
   }, [isOpen, taskId, task, defaultCategoryId]);
@@ -268,9 +284,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
               </button>
             </div>
 
-            <div className="drawer-content" role="form" aria-labelledby="drawer-title" style={{ overflowY: 'auto' }}>
+            <div className="drawer-content" role="form" aria-labelledby="drawer-title" style={{ overflowY: 'auto', padding: '16px' }}>
               
-              <div className="input-group">
+              <div className="input-group" style={{ marginBottom: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   <input 
                     type="text" 
@@ -290,14 +306,19 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
                     {isListening ? <MicOff size={20} className="pulse-anim" /> : <Mic size={20} />}
                   </button>
                 </div>
+                <textarea 
+                  className="notes-input" 
+                  placeholder="Notas adicionales..." 
+                  value={notes}
+                  onChange={e => setNotes(e.target.value)}
+                  rows={3} 
+                  aria-label="Notas de la tarea"
+                />
               </div>
 
               {/* Muestra chips dinámicos detectados por NLP */}
               {suggestedChips.length > 0 && (
-                <div style={{ display: 'flex', gap: 'var(--space-8)', flexWrap: 'wrap' }}>
-                  {alerts.map((alert) => (
-                    <span key={alert.id} className="pill">{alert.time}</span>
-                  ))}
+                <div style={{ display: 'flex', gap: 'var(--space-8)', flexWrap: 'wrap', marginBottom: '16px' }}>
                   {suggestedChips.map((chip, idx) => (
                     <div key={idx} style={{ 
                       fontSize: '0.75rem', 
@@ -318,444 +339,452 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
                 </div>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0' }}>
-                <button 
-                  onClick={() => setShowAdvanced(!showAdvanced)}
-                  style={{
-                    background: 'none', border: 'none', color: 'var(--text-secondary)',
-                    display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', cursor: 'pointer'
-                  }}
-                >
-                  <Settings2 size={14} />
-                  {showAdvanced ? 'Ocultar Opciones Avanzadas' : 'Opciones Avanzadas'}
-                </button>
+              {/* List and Type pickers */}
+              <div className="details-group" style={{ marginBottom: '20px' }}>
+                <div className="detail-row" style={{ padding: '12px 0' }}>
+                  <span className="detail-label">Mover a Lista</span>
+                  <select 
+                    className="detail-select"
+                    value={category}
+                    onChange={e => setCategory(e.target.value)}
+                    style={{ width: 'auto', textAlign: 'right', border: 'none', background: 'transparent' }}
+                  >
+                    {useAppStore.getState().lists?.map(list => (
+                      <option key={list.id} value={list.id}>{list.name}</option>
+                    ))}
+                    <option value="inbox">Bandeja de Entrada</option>
+                  </select>
+                </div>
+                
+                <div className="divider"></div>
+                
+                <div className="detail-row" style={{ padding: '12px 0' }}>
+                  <span className="detail-label">Tipo de Recordatorio</span>
+                  <select 
+                    className="detail-select"
+                    value={type}
+                    onChange={e => setType(e.target.value as 'task' | 'log')}
+                    style={{ width: 'auto', textAlign: 'right', border: 'none', background: 'transparent' }}
+                  >
+                    <option value="task">Acción (Checklist)</option>
+                    <option value="log">Registro (Historial)</option>
+                  </select>
+                </div>
               </div>
 
-              <AnimatePresence>
-                {showAdvanced && (
-                  <motion.div 
-                    initial={{ opacity: 0, height: 0, overflow: 'hidden' }}
-                    animate={{ opacity: 1, height: 'auto', transitionEnd: { overflow: 'visible' } }}
-                    exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
-                    style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
-                  >
-                    <div className="input-group">
-                      <textarea 
-                        className="notes-input" 
-                        placeholder="Notas adicionales" 
-                        value={notes}
-                        onChange={e => setNotes(e.target.value)}
-                        rows={3} 
-                        aria-label="Notas de la tarea"
+              {/* Card 1: Fecha y Horarios */}
+              <div className="section-card">
+                <button 
+                  type="button"
+                  className="section-card-header"
+                  onClick={() => setCardTimeOpen(!cardTimeOpen)}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <CalendarIcon size={16} color="var(--accent-red)" />
+                    Fecha y Horarios
+                  </span>
+                  <ChevronDown size={18} style={{ transform: cardTimeOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                </button>
+                {cardTimeOpen && (
+                  <div className="section-card-content">
+                    <div className="detail-row" style={{ padding: '8px 0' }}>
+                      <span className="detail-label">Fecha</span>
+                      <label className="switch">
+                        <input type="checkbox" checked={hasDate} onChange={e => setHasDate(e.target.checked)} />
+                        <span className="slider round"></span>
+                      </label>
+                    </div>
+                    {hasDate && (
+                      <div className="detail-row" style={{ padding: '4px 0', marginTop: -8 }}>
+                        <input 
+                          type="date" 
+                          className="detail-select" 
+                          value={dueDate.toISOString().split('T')[0]}
+                          onChange={e => setDueDate(new Date(e.target.value))}
+                          style={{ width: '100%', textAlign: 'right' }}
+                        />
+                      </div>
+                    )}
+                    
+                    <div className="divider"></div>
+                    
+                    <div className="detail-row" style={{ padding: '8px 0' }}>
+                      <span className="detail-label">Hora</span>
+                      <label className="switch">
+                        <input type="checkbox" checked={hasTime} onChange={e => {
+                          setHasTime(e.target.checked);
+                          if (e.target.checked && alerts.length === 0) setAlerts([{ id: `alert_${Date.now()}`, type: 'at_time', time: '09:00' }]);
+                        }} />
+                        <span className="slider round"></span>
+                      </label>
+                    </div>
+                    {hasTime && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 8 }}>
+                        {alerts.map((alert, idx) => (
+                          <div key={alert.id || idx} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <input 
+                              type="time" 
+                              className="detail-select" 
+                              value={alert.time || '09:00'}
+                              onChange={e => {
+                                const newAlerts = [...alerts];
+                                newAlerts[idx] = { ...newAlerts[idx], time: e.target.value };
+                                setAlerts(newAlerts);
+                              }}
+                              style={{ flex: 1 }}
+                            />
+                            <button className="icon-btn" onClick={() => removeAlert(alert.id)} style={{ background: 'var(--bg-surface)' }}>
+                              <X size={16} color="var(--text-tertiary)" />
+                            </button>
+                          </div>
+                        ))}
+                        <button 
+                          type="button"
+                          className="add-alert-btn"
+                          onClick={() => setAlerts([...alerts, { id: `alert_${Date.now()}`, type: 'at_time', time: '12:00' }])}
+                          style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--accent-primary)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px 0', fontSize: '0.9rem' }}
+                        >
+                          <PlusCircle size={16} /> Añadir hora
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Alertas Detectadas */}
+                    {alerts.length > 0 && (
+                      <>
+                        <div className="divider"></div>
+                        <div style={{ padding: '8px 0' }}>
+                          <span className="detail-label" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Alertas configuradas</span>
+                          <div className="chips-container" style={{ marginTop: 8 }}>
+                            <AnimatePresence>
+                              {alerts.map((alert) => (
+                                <motion.div 
+                                  key={alert.id}
+                                  initial={{ opacity: 0, scale: 0.8 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  exit={{ opacity: 0, scale: 0.5 }}
+                                  className="alert-chip"
+                                >
+                                  <Clock size={14} />
+                                  <span>{alert.time || `-${alert.offsetMinutes}m`}</span>
+                                  <button className="chip-remove" onClick={() => removeAlert(alert.id)}>
+                                    <X size={14} />
+                                  </button>
+                                </motion.div>
+                              ))}
+                            </AnimatePresence>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Card 2: Repetición y Ubicación */}
+              <div className="section-card">
+                <button 
+                  type="button"
+                  className="section-card-header"
+                  onClick={() => setCardRepeatOpen(!cardRepeatOpen)}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Repeat size={16} color="var(--accent-green)" />
+                    Repetición y Ubicación
+                  </span>
+                  <ChevronDown size={18} style={{ transform: cardRepeatOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                </button>
+                {cardRepeatOpen && (
+                  <div className="section-card-content">
+                    <div className="detail-row" style={{ padding: '8px 0' }}>
+                      <span className="detail-label">Repetir (Ciclo)</span>
+                      <select 
+                        className="detail-select"
+                        value={cycleId || ''}
+                        onChange={e => setCycleId(e.target.value || undefined)}
+                      >
+                        <option value="">Nunca</option>
+                        {cycles.map(cycle => (
+                          <option key={cycle.id} value={cycle.id}>{cycle.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div className="divider"></div>
+                    
+                    <div className="detail-row" style={{ padding: '8px 0' }}>
+                      <span className="detail-label">Sección de Lista</span>
+                      <select 
+                        className="detail-select"
+                        value={sectionId || ''}
+                        onChange={async e => {
+                          if (e.target.value === 'new') {
+                            const name = prompt('Nombre de la nueva sección:');
+                            if (name && name.trim()) {
+                              const newId = crypto.randomUUID();
+                              useAppStore.getState().addListSection({
+                                id: newId,
+                                listId: category,
+                                name: name.trim()
+                              });
+                              setSectionId(newId);
+                            }
+                          } else {
+                            setSectionId(e.target.value || undefined);
+                          }
+                        }}
+                      >
+                        <option value="">Automática / General</option>
+                        {availableSections.map(sec => (
+                          <option key={sec.id} value={sec.id}>{sec.name}</option>
+                        ))}
+                        <option value="new">+ Añadir nueva sección...</option>
+                      </select>
+                    </div>
+
+                    <div className="divider"></div>
+
+                    <div className="detail-row" style={{ padding: '8px 0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <MapPin size={18} color="var(--accent-blue)" />
+                        <span className="detail-label" style={{ marginBottom: 0 }}>Ubicación</span>
+                      </div>
+                      <label className="switch">
+                        <input type="checkbox" checked={!!locationName} onChange={e => setLocationName(e.target.checked ? 'Dirección actual' : '')} />
+                        <span className="slider round"></span>
+                      </label>
+                    </div>
+                    {!!locationName && (
+                      <div className="detail-row" style={{ padding: '4px 0', marginTop: -8 }}>
+                        <input 
+                          type="text" 
+                          className="detail-select" 
+                          placeholder="Buscar dirección o usar actual..."
+                          value={locationName === 'Dirección actual' ? '' : locationName}
+                          onChange={e => setLocationName(e.target.value)}
+                          style={{ width: '100%', textAlign: 'right', borderBottom: '1px solid var(--border-subtle)' }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Card 3: Requisitos (Tareas que la bloquean) */}
+              <div className="section-card">
+                <button 
+                  type="button"
+                  className="section-card-header"
+                  onClick={() => setCardReqOpen(!cardReqOpen)}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Link2 size={16} color="var(--accent-orange)" />
+                    Requisitos / Dependencias
+                  </span>
+                  <ChevronDown size={18} style={{ transform: cardReqOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                </button>
+                {cardReqOpen && (
+                  <div className="section-card-content">
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '4px 0 8px 0', lineHeight: 1.3 }}>
+                      Esta tarea estará bloqueada y no se podrá marcar como completada hasta que se finalicen primero los requisitos seleccionados abajo:
+                    </p>
+                    
+                    {blockedBy.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                        {blockedBy.map(tId => {
+                          const bTask = availableTasks.find(t => t.id === tId);
+                          if (!bTask) return null;
+                          return (
+                            <div key={tId} style={{ 
+                              display: 'flex', alignItems: 'center', gap: 4, 
+                              background: 'var(--bg-surface)', padding: '4px 10px', 
+                              borderRadius: 16, fontSize: '0.85rem', border: '1px solid var(--border-subtle)'
+                            }}>
+                              <span>{bTask.title}</span>
+                              <button 
+                                type="button"
+                                className="chip-remove" 
+                                onClick={() => setBlockedBy(blockedBy.filter(id => id !== tId))} 
+                                style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 2 }}
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <select 
+                      className="detail-select"
+                      value=""
+                      onChange={e => {
+                        if (e.target.value && !blockedBy.includes(e.target.value)) {
+                          setBlockedBy([...blockedBy, e.target.value]);
+                        }
+                      }}
+                      style={{ width: '100%', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', borderRadius: 6, padding: 8, textAlign: 'left' }}
+                    >
+                      <option value="">+ Añadir tarea bloqueadora (requisito)...</option>
+                      {availableTasks.filter(t => !blockedBy.includes(t.id)).map(t => (
+                        <option key={t.id} value={t.id}>{t.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Card 4: Detalles Adicionales */}
+              <div className="section-card">
+                <button 
+                  type="button"
+                  className="section-card-header"
+                  onClick={() => setCardDetailsOpen(!cardDetailsOpen)}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Settings2 size={16} color="var(--text-secondary)" />
+                    Detalles Adicionales
+                  </span>
+                  <ChevronDown size={18} style={{ transform: cardDetailsOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                </button>
+                {cardDetailsOpen && (
+                  <div className="section-card-content">
+                    <div className="detail-row" style={{ padding: '8px 0' }}>
+                      <span className="detail-label">Prioridad</span>
+                      <select 
+                        className="detail-select"
+                        value={priority}
+                        onChange={e => setPriority(e.target.value as any)}
+                        style={{ border: 'none', background: 'transparent' }}
+                      >
+                        <option value="none">Ninguna</option>
+                        <option value="low">Baja</option>
+                        <option value="medium">Media</option>
+                        <option value="high">Alta</option>
+                      </select>
+                    </div>
+
+                    <div className="divider"></div>
+
+                    <div className="detail-row" style={{ padding: '8px 0' }}>
+                      <span className="detail-label">Destacado</span>
+                      <label className="switch">
+                        <input type="checkbox" checked={flagged} onChange={e => setFlagged(e.target.checked)} />
+                        <span className="slider round"></span>
+                      </label>
+                    </div>
+
+                    <div className="divider"></div>
+
+                    <div className="detail-row" style={{ padding: '8px 0' }}>
+                      <span className="detail-label">URL del enlace</span>
+                      <input 
+                        type="url"
+                        placeholder="https://example.com"
+                        value={url}
+                        onChange={e => setUrl(e.target.value)}
+                        style={{ width: '60%', textAlign: 'right', border: 'none', background: 'transparent', outline: 'none', color: 'var(--text-secondary)' }}
                       />
                     </div>
 
-                    {/* Only show Financial Mode if the list is financial or if it's inbox/uncategorized */}
-                    {(category === 'inbox' || useAppStore.getState().lists.find(l => l.id === category)?.isFinancial) && (
-                      <>
-                        <div className="section-title">Modo Financiero (Shopping)</div>
-                        <div className="details-group">
-                          <div className="detail-row frequency-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span className="detail-label" style={{ marginBottom: 0 }}>Habilitar Detalle</span>
-                            <label className="switch">
-                              <input type="checkbox" checked={isDetailed} onChange={e => setIsDetailed(e.target.checked)} />
-                              <span className="slider round"></span>
-                            </label>
-                          </div>
+                    <div className="divider"></div>
 
-                          <AnimatePresence>
-                            {isDetailed && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0, overflow: 'hidden' }}
-                            animate={{ opacity: 1, height: 'auto', transitionEnd: { overflow: 'visible' } }}
-                            exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
-                          >
-                            <div className="divider"></div>
-                            
-                            <div className="detail-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-                              <span className="detail-label" style={{ marginBottom: 0 }}>Precio/Unidad ($)</span>
-                              <input 
-                                type="number" 
-                                step="0.01" 
-                                min="0" 
-                                placeholder="0.00" 
-                                value={price || ''} 
-                                onChange={e => setPrice(parseFloat(e.target.value))}
-                                style={{ width: 80, textAlign: 'right', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-primary)' }}
-                              />
-                            </div>
-                            
-                            <div className="detail-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-                              <span className="detail-label" style={{ marginBottom: 0 }}>Cantidad</span>
-                              <input 
-                                type="number" 
-                                step="1" 
-                                min="1" 
-                                value={quantity} 
-                                onChange={e => setQuantity(parseInt(e.target.value) || 1)}
-                                style={{ width: 80, textAlign: 'right', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-primary)' }}
-                              />
-                            </div>
-
-                            <div className="detail-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, marginBottom: 8 }}>
-                              <span className="detail-label" style={{ marginBottom: 0 }}>Marca sugerida</span>
-                              <input 
-                                type="text" 
-                                placeholder="Ej: Nestlé" 
-                                value={brand} 
-                                onChange={e => setBrand(e.target.value)}
-                                style={{ width: 120, textAlign: 'right', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-primary)' }}
-                              />
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                    <div className="detail-row" style={{ padding: '8px 0' }}>
+                      <span className="detail-label">Adjuntar Imagen</span>
+                      <label className="switch">
+                        <input type="checkbox" checked={!!image} onChange={e => setImage(e.target.checked ? 'https://picsum.photos/200/300' : '')} />
+                        <span className="slider round"></span>
+                      </label>
                     </div>
-                    </>
-                    )}
-
-                    <div className="section-title">Detalles</div>
-                    <div className="details-group">
-                      <div className="detail-row frequency-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span className="detail-label" style={{ marginBottom: 0 }}>Repetir</span>
-                        <select 
-                          className="detail-select"
-                          value={cycleId || ''}
-                          onChange={e => setCycleId(e.target.value || undefined)}
-                          style={{ width: 'auto', textAlign: 'right', border: 'none', background: 'transparent' }}
-                        >
-                          <option value="">Nunca</option>
-                          {cycles.map(cycle => (
-                            <option key={cycle.id} value={cycle.id}>{cycle.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="divider"></div>
-                      
-                      <div className="detail-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <CalendarIcon size={18} color="var(--accent-red)" />
-                          <span className="detail-label" style={{ marginBottom: 0 }}>Fecha</span>
-                        </div>
-                        <label className="switch">
-                          <input type="checkbox" checked={hasDate} onChange={e => setHasDate(e.target.checked)} />
-                          <span className="slider round"></span>
-                        </label>
-                      </div>
-                      {hasDate && (
-                        <div className="detail-row" style={{ marginTop: -8 }}>
-                          <input 
-                            type="date" 
-                            className="detail-select" 
-                            value={dueDate.toISOString().split('T')[0]}
-                            onChange={e => setDueDate(new Date(e.target.value))}
-                          />
-                        </div>
-                      )}
-                      
-                      <div className="divider"></div>
-
-                      <div className="detail-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <Clock size={18} color="var(--accent-blue)" />
-                          <span className="detail-label" style={{ marginBottom: 0 }}>Hora</span>
-                        </div>
-                        <label className="switch">
-                          <input type="checkbox" checked={hasTime} onChange={e => {
-                            setHasTime(e.target.checked);
-                            if (e.target.checked && alerts.length === 0) setAlerts([{ id: `alert_${Date.now()}`, type: 'at_time', time: '09:00' }]);
-                          }} />
-                          <span className="slider round"></span>
-                        </label>
-                      </div>
-                      {hasTime && (
-                        <div className="detail-row" style={{ marginTop: -8 }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {alerts.map((alert, idx) => (
-                              <div key={alert.id || idx} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                                <input 
-                                  type="time" 
-                                  className="detail-select" 
-                                  value={alert.time || '09:00'}
-                                  onChange={e => {
-                                    const newAlerts = [...alerts];
-                                    newAlerts[idx] = { ...newAlerts[idx], time: e.target.value };
-                                    setAlerts(newAlerts);
-                                  }}
-                                  style={{ flex: 1 }}
-                                />
-                                <button className="icon-btn" onClick={() => removeAlert(alert.id)} style={{ background: 'var(--bg-surface)' }}>
-                                  <X size={16} color="var(--text-tertiary)" />
-                                </button>
-                              </div>
-                            ))}
-                            <button 
-                              className="add-alert-btn"
-                              onClick={() => setAlerts([...alerts, { id: `alert_${Date.now()}`, type: 'at_time', time: '12:00' }])}
-                              style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--accent-primary)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px 0', fontSize: '0.9rem' }}
-                            >
-                              <PlusCircle size={16} /> Añadir hora
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                      
-                      <div className="divider"></div>
-                      <div className="detail-row">
-                        <span className="detail-label">Tipo</span>
-                        <select 
-                          className="detail-select"
-                          value={type}
-                          onChange={e => setType(e.target.value as 'task' | 'log')}
-                        >
-                          <option value="task">Acción (Checklist)</option>
-                          <option value="log">Registro / Evento (Historial)</option>
-                        </select>
-                      </div>
-
-                      <div className="divider"></div>
-                      <div className="detail-row">
-                        <span className="detail-label">Lista</span>
-                        <select 
-                          className="detail-select"
-                          value={category}
-                          onChange={e => setCategory(e.target.value)}
-                        >
-                          {useAppStore.getState().lists?.map(list => (
-                            <option key={list.id} value={list.id}>{list.name}</option>
-                          ))}
-                          <option value="inbox">Bandeja de Entrada</option>
-                        </select>
-                      </div>
-                      
-                      <div className="divider"></div>
-                      <div className="detail-row">
-                        <span className="detail-label">Sección</span>
-                        <select 
-                          className="detail-select"
-                          value={sectionId || ''}
-                          onChange={async e => {
-                            if (e.target.value === 'new') {
-                              const name = prompt('Nombre de la nueva sección:');
-                              if (name && name.trim()) {
-                                const newId = crypto.randomUUID();
-                                useAppStore.getState().addListSection({
-                                  id: newId,
-                                  listId: category,
-                                  name: name.trim()
-                                });
-                                setSectionId(newId);
-                              }
-                            } else {
-                              setSectionId(e.target.value || undefined);
-                            }
-                          }}
-                        >
-                          <option value="">Automática / General</option>
-                          {availableSections.map(sec => (
-                            <option key={sec.id} value={sec.id}>{sec.name}</option>
-                          ))}
-                          <option value="new">+ Añadir nueva sección...</option>
-                        </select>
-                      </div>
-
-                      <div className="divider"></div>
-                      <div className="detail-row" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                          <Link2 size={18} color="var(--text-tertiary)" />
-                          <span className="detail-label" style={{ marginBottom: 0 }}>Bloqueada Por</span>
-                        </div>
-                        
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
-                          {blockedBy.map(tId => {
-                            const bTask = availableTasks.find(t => t.id === tId);
-                            if (!bTask) return null;
-                            return (
-                              <div key={tId} style={{ 
-                                display: 'flex', alignItems: 'center', gap: 4, 
-                                background: 'var(--bg-surface)', padding: '4px 10px', 
-                                borderRadius: 16, fontSize: '0.85rem' 
-                              }}>
-                                <span>{bTask.title}</span>
-                                <button className="chip-remove" onClick={() => setBlockedBy(blockedBy.filter(id => id !== tId))} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 2 }}>
-                                  <X size={14} />
-                                </button>
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        <select 
-                          className="detail-select"
-                          value=""
-                          onChange={e => {
-                            if (e.target.value && !blockedBy.includes(e.target.value)) {
-                              setBlockedBy([...blockedBy, e.target.value]);
-                            }
-                          }}
-                          style={{ width: '100%' }}
-                        >
-                          <option value="">+ Tarea bloqueadora...</option>
-                          {availableTasks.filter(t => !blockedBy.includes(t.id)).map(t => (
-                            <option key={t.id} value={t.id}>{t.title}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="divider"></div>
-
-                      <div className="detail-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <Flag size={18} color="var(--accent-orange)" />
-                          <span className="detail-label" style={{ marginBottom: 0 }}>Destacado</span>
-                        </div>
-                        <label className="switch">
-                          <input type="checkbox" checked={flagged} onChange={e => setFlagged(e.target.checked)} />
-                          <span className="slider round"></span>
-                        </label>
-                      </div>
-
-                      <div className="divider"></div>
-
-                      <div className="detail-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span className="detail-label" style={{ marginBottom: 0 }}>Prioridad</span>
-                        </div>
-                        <select 
-                          className="detail-select"
-                          value={priority}
-                          onChange={e => setPriority(e.target.value as any)}
-                          style={{ width: 'auto', textAlign: 'right', border: 'none', background: 'transparent' }}
-                        >
-                          <option value="none">Ninguna</option>
-                          <option value="low">Baja</option>
-                          <option value="medium">Media</option>
-                          <option value="high">Alta</option>
-                        </select>
-                      </div>
-
-                      <div className="divider"></div>
-                      
-                      <div className="detail-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <Clock size={18} color="var(--accent-blue)" />
-                          <span className="detail-label" style={{ marginBottom: 0 }}>Duración (min)</span>
-                        </div>
+                    {!!image && (
+                      <div className="detail-row" style={{ padding: '4px 0', marginTop: -8 }}>
                         <input 
-                          type="number"
-                          value={duration}
-                          onChange={e => setDuration(e.target.value === '' ? '' : Number(e.target.value))}
-                          placeholder="Ej: 25"
-                          min="1"
-                          style={{ 
-                            width: 80, 
-                            textAlign: 'right', 
-                            border: 'none', 
-                            background: 'transparent',
-                            color: 'var(--text-primary)',
-                            fontSize: '0.95rem',
-                            outline: 'none'
-                          }}
-                        />
-                      </div>
-
-                      <div className="divider"></div>
-                      
-                      <div className="detail-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <MapPin size={18} color="var(--accent-blue)" />
-                          <span className="detail-label" style={{ marginBottom: 0 }}>Ubicación</span>
-                        </div>
-                        <label className="switch">
-                          <input type="checkbox" checked={!!locationName} onChange={e => setLocationName(e.target.checked ? 'Dirección actual' : '')} />
-                          <span className="slider round"></span>
-                        </label>
-                      </div>
-                      {!!locationName && (
-                        <div className="detail-row" style={{ marginTop: -8 }}>
-                          <input 
-                            type="text" 
-                            className="detail-select" 
-                            placeholder="Buscar dirección o usar actual..."
-                            value={locationName === 'Dirección actual' ? '' : locationName}
-                            onChange={e => setLocationName(e.target.value)}
-                          />
-                        </div>
-                      )}
-
-                      <div className="divider"></div>
-
-                      <div className="detail-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <Link size={18} color="var(--text-tertiary)" />
-                          <span className="detail-label" style={{ marginBottom: 0 }}>URL</span>
-                        </div>
-                      </div>
-                      <div className="detail-row" style={{ marginTop: -12 }}>
-                        <input 
-                          type="url" 
+                          type="text" 
                           className="detail-select" 
-                          placeholder="https://..."
-                          value={url}
-                          onChange={e => setUrl(e.target.value)}
+                          placeholder="URL de imagen..."
+                          value={image === 'https://picsum.photos/200/300' ? '' : image}
+                          onChange={e => setImage(e.target.value)}
+                          style={{ width: '100%', textAlign: 'right', borderBottom: '1px solid var(--border-subtle)' }}
                         />
                       </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
-                      <div className="divider"></div>
-
-                      <div className="detail-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <ImageIcon size={18} color="var(--text-tertiary)" />
-                          <span className="detail-label" style={{ marginBottom: 0 }}>Imagen</span>
-                        </div>
+              {/* Card 5: Modo Financiero (Costes) */}
+              {(category === 'inbox' || useAppStore.getState().lists.find(l => l.id === category)?.isFinancial) && (
+                <div className="section-card" style={{ marginBottom: '0' }}>
+                  <button 
+                    type="button"
+                    className="section-card-header"
+                    onClick={() => setCardFinanceOpen(!cardFinanceOpen)}
+                  >
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 14 }}>💰</span>
+                      Modo Financiero (Costes)
+                    </span>
+                    <ChevronDown size={18} style={{ transform: cardFinanceOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                  </button>
+                  {cardFinanceOpen && (
+                    <div className="section-card-content">
+                      <div className="detail-row" style={{ padding: '8px 0' }}>
+                        <span className="detail-label">Habilitar Detalles</span>
                         <label className="switch">
-                          <input type="checkbox" checked={!!image} onChange={e => setImage(e.target.checked ? 'https://picsum.photos/200/300' : '')} />
+                          <input type="checkbox" checked={isDetailed} onChange={e => setIsDetailed(e.target.checked)} />
                           <span className="slider round"></span>
                         </label>
                       </div>
-                      {!!image && (
-                        <div className="detail-row" style={{ marginTop: -8 }}>
-                          <input 
-                            type="url" 
-                            className="detail-select" 
-                            placeholder="URL de imagen..."
-                            value={image === 'https://picsum.photos/200/300' ? '' : image}
-                            onChange={e => setImage(e.target.value)}
-                          />
-                        </div>
+
+                      {isDetailed && (
+                        <>
+                          <div className="divider"></div>
+                          
+                          <div className="detail-row" style={{ padding: '8px 0' }}>
+                            <span className="detail-label">Precio/Unidad ($)</span>
+                            <input 
+                              type="number" 
+                              step="0.01" 
+                              min="0" 
+                              placeholder="0.00" 
+                              value={price || ''} 
+                              onChange={e => setPrice(parseFloat(e.target.value))}
+                              style={{ width: 80, textAlign: 'right', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-primary)' }}
+                            />
+                          </div>
+                          
+                          <div className="divider"></div>
+
+                          <div className="detail-row" style={{ padding: '8px 0' }}>
+                            <span className="detail-label">Cantidad</span>
+                            <input 
+                              type="number" 
+                              step="1" 
+                              min="1" 
+                              value={quantity} 
+                              onChange={e => setQuantity(parseInt(e.target.value) || 1)}
+                              style={{ width: 80, textAlign: 'right', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-primary)' }}
+                            />
+                          </div>
+
+                          <div className="divider"></div>
+
+                          <div className="detail-row" style={{ padding: '8px 0' }}>
+                            <span className="detail-label">Marca sugerida</span>
+                            <input 
+                              type="text" 
+                              placeholder="Ej: Nestlé" 
+                              value={brand} 
+                              onChange={e => setBrand(e.target.value)}
+                              style={{ width: 120, textAlign: 'right', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-primary)' }}
+                            />
+                          </div>
+                        </>
                       )}
-
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <div className="section-title">Alertas Detectadas</div>
-              <div className="details-group alerts-group">
-                <div className="alerts-description">
-                  Las horas detectadas al escribir aparecerán aquí automáticamente.
+                  )}
                 </div>
-                
-                <div className="chips-container">
-                  <AnimatePresence>
-                    {alerts.map((alert) => (
-                      <motion.div 
-                        key={alert.id}
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.5 }}
-                        className="alert-chip"
-                      >
-                        <Clock size={14} />
-                        <span>{alert.time || `-${alert.offsetMinutes}m`}</span>
-                        <button className="chip-remove" onClick={() => removeAlert(alert.id)}>
-                          <X size={14} />
-                        </button>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </div>
-              </div>
+              )}
 
             </div>
           </motion.div>
