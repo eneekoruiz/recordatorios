@@ -19,7 +19,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
   const [notes, setNotes] = useState('');
   const [cycleId, setCycleId] = useState<string | undefined>(undefined);
   const [dueDate, setDueDate] = useState<Date>(new Date());
-  const [category, setCategory] = useState(defaultCategoryId || 'limpieza');
+  const [category, setCategory] = useState(defaultCategoryId || 'inbox');
   const [type, setType] = useState<'task' | 'log'>('task');
   const [alerts, setAlerts] = useState<import('../../models/Task').AlertDef[]>([]);
   const [isListening, setIsListening] = useState(false);

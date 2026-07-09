@@ -122,6 +122,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
       return names[currentView] || currentView;
     }
     if (currentView === 'TRASH') return 'Papelera Eliminados';
+    if (currentView === 'list_inbox') return 'Bandeja de entrada';
     if (currentCycle) return currentCycle.name;
     if (currentList) return currentList.name;
     return 'Tareas';

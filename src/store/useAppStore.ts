@@ -302,7 +302,12 @@ export const useAppStore = create<AppState>()(
         const { tasks, cycles, listSections } = get();
         const tasksArray = Object.values(tasks);
         
-        const filtered = tasksArray.filter(t => t.categoryId === listId && !t.deleted_at && (includeCompleted || t.status === 'pending'));
+        const filtered = tasksArray.filter(t => {
+          const matchesList = listId === 'inbox' 
+            ? (t.categoryId === 'inbox' || !t.categoryId)
+            : t.categoryId === listId;
+          return matchesList && !t.deleted_at && (includeCompleted || t.status === 'pending');
+        });
         
         const grouped: Record<string, TaskItem[]> = {};
         for (const task of filtered) {
