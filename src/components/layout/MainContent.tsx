@@ -34,7 +34,7 @@ const SMART_COLORS: Record<string, string> = {
 export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackToSidebar, isMobile }: MainContentProps) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   
-  const { getTasksByCycle, getTasksByList, getSmartSortTasks, completeTask, deleteTask, cycles, updateCycle, deleteCycle, lists, addListSection, updateListSection, updateTaskSection, listSections, tasks } = useAppStore();
+  const { getTasksByCycle, getTasksByList, getSmartSortTasks, toggleTask, deleteTask, cycles, updateCycle, deleteCycle, lists, addListSection, updateListSection, updateTaskSection, listSections, tasks } = useAppStore();
 
   const currentCycle = useMemo(() => cycles.find(c => c.id === currentView), [cycles, currentView]);
   const currentList = useMemo(() => lists?.find(l => `list_${l.id}` === currentView), [lists, currentView]);
@@ -242,12 +242,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
         ...virtualStyle,
         paddingLeft: `calc(${depth * 32}px)`
       }}
-      onComplete={completeTask}
+      onToggle={toggleTask}
       onDelete={deleteTask}
       onOpenZenMode={onOpenZenMode}
       index={index}
     />
-  ), [completeTask, deleteTask, onOpenZenMode]);
+  ), [toggleTask, deleteTask, onOpenZenMode]);
 
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
 

@@ -9,7 +9,7 @@ interface ZenModeProps {
 }
 
 export function ZenMode({ taskId, onClose }: ZenModeProps) {
-  const { tasks, completeTask } = useAppStore();
+  const { tasks, toggleTask } = useAppStore();
   const [timeLeft, setTimeLeft] = useState(25 * 60); // 25 minutes pomodoro
   const [isActive, setIsActive] = useState(false);
 
@@ -26,7 +26,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
   if (!task) return null;
 
   const handleComplete = () => {
-    completeTask(task.id);
+    toggleTask(task.id);
     onClose();
   };
 

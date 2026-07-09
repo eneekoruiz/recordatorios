@@ -424,7 +424,7 @@ input:checked + .slider::before {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 99999;
 }
 
 .prompt-modal {
@@ -433,9 +433,12 @@ input:checked + .slider::before {
   padding: var(--space-24);
   width: 90%;
   max-width: 400px;
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: var(--shadow-xl);
   border: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
   gap: var(--space-16);
+  -webkit-overflow-scrolling: touch;
 }
