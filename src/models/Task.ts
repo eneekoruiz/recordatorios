@@ -79,6 +79,8 @@ export interface TaskItem {
   url?: string;
   image?: string;
 
+  duration?: number;
+
   // --- SHOPPING & FINANCE FIELDS ---
   isDetailed?: boolean; 
   price?: number;       
