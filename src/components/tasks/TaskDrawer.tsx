@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Clock, Mic, MicOff, Settings2, Calendar as CalendarIcon, Repeat, Link2, PlusCircle, Flag, MapPin, Link, Image as ImageIcon, ChevronDown } from 'lucide-react';
+import { X, Clock, Mic, MicOff, Settings2, Calendar as CalendarIcon, Repeat, Link2, PlusCircle, Flag, MapPin, Link, Image as ImageIcon, ChevronDown, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 import { parseNaturalLanguage } from '../../utils/nlp';
@@ -44,6 +44,20 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
   const [locationLng, setLocationLng] = useState<number | null>(null);
   const [locationRadius, setLocationRadius] = useState<number>(100);
   const [locationAddress, setLocationAddress] = useState<string>('');
+  
+  // Location Presets
+  const [homeLocation, setHomeLocation] = useState<{ lat: number; lng: number; address: string } | null>(() => {
+    const val = localStorage.getItem('home_location');
+    return val ? JSON.parse(val) : null;
+  });
+  const [workLocation, setWorkLocation] = useState<{ lat: number; lng: number; address: string } | null>(() => {
+    const val = localStorage.getItem('work_location');
+    return val ? JSON.parse(val) : null;
+  });
+  const [selectedPreset, setSelectedPreset] = useState<'current' | 'home' | 'work' | 'custom'>('current');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<{ lat: string; lon: string; display_name: string }[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [image, setImage] = useState('');
 
   // Finance Fields
@@ -78,6 +92,26 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
         setLocationLng(task.location ? task.location.lng : null);
         setLocationRadius(task.location ? task.location.radius : 100);
         setLocationAddress(task.location ? task.location.address : '');
+        
+        // Hydrate selected preset if it matches home/work within close tolerance
+        if (task.location) {
+          const homeVal = localStorage.getItem('home_location');
+          const workVal = localStorage.getItem('work_location');
+          const home = homeVal ? JSON.parse(homeVal) : null;
+          const work = workVal ? JSON.parse(workVal) : null;
+          const isHome = home && Math.abs(task.location.lat - home.lat) < 0.0001 && Math.abs(task.location.lng - home.lng) < 0.0001;
+          const isWork = work && Math.abs(task.location.lat - work.lat) < 0.0001 && Math.abs(task.location.lng - work.lng) < 0.0001;
+          
+          if (isHome) {
+            setSelectedPreset('home');
+          } else if (isWork) {
+            setSelectedPreset('work');
+          } else {
+            setSelectedPreset('custom');
+          }
+        } else {
+          setSelectedPreset('current');
+        }
         setUrl(task.url || '');
         setImage(task.image || '');
         setIsDetailed(!!task.isDetailed);
@@ -184,6 +218,16 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
     }
   }, [title]);
 
+  const saveHomeLocation = (loc: { lat: number; lng: number; address: string }) => {
+    localStorage.setItem('home_location', JSON.stringify(loc));
+    setHomeLocation(loc);
+  };
+
+  const saveWorkLocation = (loc: { lat: number; lng: number; address: string }) => {
+    localStorage.setItem('work_location', JSON.stringify(loc));
+    setWorkLocation(loc);
+  };
+
   const obtenerUbicacionActual = () => {
     if (!navigator.geolocation) {
       alert('La geolocalización no está soportada por tu navegador.');
@@ -201,6 +245,96 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
         alert(`Error obteniendo coordenadas: ${err.message}`);
       }
     );
+  };
+
+  const selectPresetLocation = (preset: 'current' | 'home' | 'work' | 'custom') => {
+    setSelectedPreset(preset);
+    if (preset === 'current') {
+      obtenerUbicacionActual();
+    } else if (preset === 'home') {
+      if (homeLocation) {
+        setLocationLat(homeLocation.lat);
+        setLocationLng(homeLocation.lng);
+        setLocationAddress(homeLocation.address);
+      } else {
+        const confirmSave = confirm('No tienes configurada la ubicación de Casa. ¿Quieres obtener tu ubicación actual y guardarla como Casa?');
+        if (confirmSave) {
+          if (!navigator.geolocation) {
+            alert('Geolocalización no soportada.');
+            return;
+          }
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude, address: 'Casa' };
+              saveHomeLocation(loc);
+              setLocationLat(loc.lat);
+              setLocationLng(loc.lng);
+              setLocationAddress(loc.address);
+            },
+            (err) => alert(`Error: ${err.message}`)
+          );
+        } else {
+          setSelectedPreset('custom');
+        }
+      }
+    } else if (preset === 'work') {
+      if (workLocation) {
+        setLocationLat(workLocation.lat);
+        setLocationLng(workLocation.lng);
+        setLocationAddress(workLocation.address);
+      } else {
+        const confirmSave = confirm('No tienes configurada la ubicación de Trabajo. ¿Quieres obtener tu ubicación actual y guardarla como Trabajo?');
+        if (confirmSave) {
+          if (!navigator.geolocation) {
+            alert('Geolocalización no soportada.');
+            return;
+          }
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude, address: 'Trabajo' };
+              saveWorkLocation(loc);
+              setLocationLat(loc.lat);
+              setLocationLng(loc.lng);
+              setLocationAddress(loc.address);
+            },
+            (err) => alert(`Error: ${err.message}`)
+          );
+        } else {
+          setSelectedPreset('custom');
+        }
+      }
+    }
+  };
+
+  const handleAddressSearch = async () => {
+    if (!searchQuery.trim()) return;
+    setIsSearching(true);
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5`, {
+        headers: {
+          'Accept-Language': 'es-ES,es;q=0.9'
+        }
+      });
+      const data = await res.json();
+      setSearchResults(data);
+    } catch (err) {
+      console.error(err);
+      alert('Error al buscar dirección. Por favor inténtalo de nuevo.');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSelectSearchResult = (result: { lat: string; lon: string; display_name: string }) => {
+    const lat = parseFloat(result.lat);
+    const lng = parseFloat(result.lon);
+    const address = result.display_name;
+    
+    setLocationLat(lat);
+    setLocationLng(lng);
+    setLocationAddress(address);
+    setSearchResults([]);
+    setSearchQuery('');
   };
 
   const handleSave = () => {
@@ -620,49 +754,168 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
                         <input type="checkbox" checked={hasLocationAlert} onChange={e => {
                           setHasLocationAlert(e.target.checked);
                           if (e.target.checked && locationLat === null) {
-                            obtenerUbicacionActual();
+                            selectPresetLocation('current');
                           }
                         }} />
                         <span className="slider round"></span>
                       </label>
                     </div>
                     {hasLocationAlert && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '8px 0', background: 'var(--bg-surface)', borderRadius: 8, marginTop: -4, border: '1px solid var(--border-subtle)', paddingLeft: 12, paddingRight: 12 }}>
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                          <input 
-                            type="text" 
-                            className="detail-select" 
-                            placeholder="Nombre del lugar (Ej: Mi Casa, Supermercado)"
-                            value={locationAddress}
-                            onChange={e => setLocationAddress(e.target.value)}
-                            style={{ flex: 1, padding: 6, borderBottom: '1px solid var(--border-subtle)', background: 'transparent' }}
-                          />
-                        </div>
-                        <div style={{ display: 'flex', gap: 12, fontSize: '0.8rem', color: 'var(--text-secondary)', alignItems: 'center', flexWrap: 'wrap' }}>
-                          <span>Lat: {locationLat?.toFixed(6) || '—'}</span>
-                          <span>Lng: {locationLng?.toFixed(6) || '—'}</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '12px', background: 'var(--bg-surface)', borderRadius: 8, marginTop: -4, border: '1px solid var(--border-subtle)', flexShrink: 0 }}>
+                        
+                        {/* Selector de Presets */}
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           <button 
                             type="button"
-                            onClick={obtenerUbicacionActual}
-                            style={{ background: 'var(--accent-glow)', color: 'var(--accent-primary)', border: 'none', borderRadius: 4, padding: '4px 8px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600 }}
+                            onClick={() => selectPresetLocation('current')}
+                            style={{ 
+                              flex: 1, minWidth: '70px', padding: '6px 4px', fontSize: '0.75rem', borderRadius: 6, cursor: 'pointer', border: '1px solid var(--border-subtle)',
+                              background: selectedPreset === 'current' ? 'var(--accent-glow)' : 'transparent',
+                              color: selectedPreset === 'current' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                              fontWeight: selectedPreset === 'current' ? 600 : 400
+                            }}
                           >
-                            📍 Obtener actual
+                            📍 Actual
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => selectPresetLocation('home')}
+                            style={{ 
+                              flex: 1, minWidth: '70px', padding: '6px 4px', fontSize: '0.75rem', borderRadius: 6, cursor: 'pointer', border: '1px solid var(--border-subtle)',
+                              background: selectedPreset === 'home' ? 'var(--accent-glow)' : 'transparent',
+                              color: selectedPreset === 'home' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                              fontWeight: selectedPreset === 'home' ? 600 : 400
+                            }}
+                          >
+                            🏠 Casa
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => selectPresetLocation('work')}
+                            style={{ 
+                              flex: 1, minWidth: '70px', padding: '6px 4px', fontSize: '0.75rem', borderRadius: 6, cursor: 'pointer', border: '1px solid var(--border-subtle)',
+                              background: selectedPreset === 'work' ? 'var(--accent-glow)' : 'transparent',
+                              color: selectedPreset === 'work' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                              fontWeight: selectedPreset === 'work' ? 600 : 400
+                            }}
+                          >
+                            💼 Trabajo
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => setSelectedPreset('custom')}
+                            style={{ 
+                              flex: 1, minWidth: '70px', padding: '6px 4px', fontSize: '0.75rem', borderRadius: 6, cursor: 'pointer', border: '1px solid var(--border-subtle)',
+                              background: selectedPreset === 'custom' ? 'var(--accent-glow)' : 'transparent',
+                              color: selectedPreset === 'custom' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                              fontWeight: selectedPreset === 'custom' ? 600 : 400
+                            }}
+                          >
+                            🔍 Buscar
                           </button>
                         </div>
-                        <div className="detail-row" style={{ padding: '4px 0', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Radio de aviso</span>
-                          <select 
-                            className="detail-select"
-                            value={locationRadius}
-                            onChange={e => setLocationRadius(Number(e.target.value))}
-                            style={{ width: 'auto', border: 'none', background: 'transparent' }}
-                          >
-                            <option value={100}>100 metros</option>
-                            <option value={250}>250 metros</option>
-                            <option value={500}>500 metros</option>
-                            <option value={1000}>1 kilómetro</option>
-                          </select>
-                        </div>
+
+                        {/* Buscador de Nominatim si está seleccionado "custom" */}
+                        {selectedPreset === 'custom' && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <input 
+                                type="text"
+                                className="detail-select"
+                                placeholder="Buscar dirección (ej: Mercadona, Sol, etc.)"
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleAddressSearch();
+                                  }
+                                }}
+                                style={{ flex: 1, padding: 6, borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'transparent' }}
+                              />
+                              <button 
+                                type="button"
+                                onClick={handleAddressSearch}
+                                disabled={isSearching}
+                                style={{ padding: '6px 12px', borderRadius: 6, background: 'var(--accent-glow)', color: 'var(--accent-primary)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                              >
+                                {isSearching ? '...' : <Search size={14} />}
+                              </button>
+                            </div>
+
+                            {searchResults.length > 0 && (
+                              <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: 6, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '150px', overflowY: 'auto' }}>
+                                {searchResults.map((res, idx) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => handleSelectSearchResult(res)}
+                                    style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'transparent', border: 'none', borderBottom: idx < searchResults.length - 1 ? '1px solid var(--border-subtle)' : 'none', color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                  >
+                                    {res.display_name}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Detalle de la Ubicación Configurada */}
+                        {locationLat !== null && locationLng !== null && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: '0.8rem', borderTop: '1px solid var(--border-subtle)', paddingTop: 8 }}>
+                            <div style={{ color: 'var(--text-primary)', fontWeight: 500, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                              <span style={{ fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.2 }}>
+                                {locationAddress || 'Ubicación seleccionada'}
+                              </span>
+                              
+                              {/* Botón para guardar ubicación actual como Casa / Trabajo */}
+                              {(selectedPreset === 'current' || selectedPreset === 'custom') && (
+                                <div style={{ display: 'flex', gap: 4 }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      saveHomeLocation({ lat: locationLat, lng: locationLng, address: locationAddress || 'Casa' });
+                                      alert('Ubicación guardada como Casa');
+                                    }}
+                                    style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: 4, background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                                  >
+                                    Guardar Casa
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      saveWorkLocation({ lat: locationLat, lng: locationLng, address: locationAddress || 'Trabajo' });
+                                      alert('Ubicación guardada como Trabajo');
+                                    }}
+                                    style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: 4, background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                                  >
+                                    Guardar Trab.
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div style={{ display: 'flex', gap: 12, color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>
+                              <span>Lat: {locationLat.toFixed(5)}</span>
+                              <span>Lng: {locationLng.toFixed(5)}</span>
+                            </div>
+
+                            <div className="detail-row" style={{ padding: '4px 0', justifyContent: 'space-between', marginTop: 4 }}>
+                              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Radio de aviso</span>
+                              <select 
+                                className="detail-select"
+                                value={locationRadius}
+                                onChange={e => setLocationRadius(Number(e.target.value))}
+                                style={{ width: 'auto', border: 'none', background: 'transparent', paddingRight: 4 }}
+                              >
+                                <option value={100}>100 metros</option>
+                                <option value={250}>250 metros</option>
+                                <option value={500}>500 metros</option>
+                                <option value={1000}>1 kilómetro</option>
+                              </select>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
