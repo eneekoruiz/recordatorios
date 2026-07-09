@@ -13,7 +13,7 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   
-  const { tasks, cycles, completeTask } = useAppStore();
+  const { tasks, cycles, toggleTask } = useAppStore();
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Global keydown listener
@@ -94,7 +94,7 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
         onOpenZenMode(action.id);
         break;
       case 'task_complete':
-        completeTask(action.id);
+        toggleTask(action.id);
         break;
     }
     setIsOpen(false);

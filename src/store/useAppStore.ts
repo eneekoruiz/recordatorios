@@ -30,7 +30,7 @@ interface AppState {
   
   addTask: (task: Partial<TaskItem>) => void;
   updateTaskRaw: (task: TaskItem) => void; // Para uso interno y SyncProvider
-  completeTask: (id: string) => void;
+  toggleTask: (id: string, forceReverse?: boolean) => void;
   deleteTask: (id: string) => void;
   
   addCycle: (cycle: CustomCycle) => void;
@@ -110,42 +110,58 @@ export const useAppStore = create<AppState>()(
         }
       })),
 
-      completeTask: (id) => set((state) => {
+      toggleTask: (id, forceReverse?: boolean) => set((state) => {
         const existingTask = state.tasks[id];
         if (!existingTask) return state;
         
         let updatedTask: TaskItem;
         const alerts = existingTask.alerts || [];
         const completedAlerts = existingTask.completedAlerts || [];
-
-        // Lógica de tachado parcial (Multi-dosis)
-        if (alerts.length > 1 && completedAlerts.length < alerts.length - 1) {
-          // Aún quedan alertas por completar, añadimos la siguiente
-          if (alerts.length > 0) {
+        const isOneOff = !existingTask.cycle_id;
+        
+        if (forceReverse) {
+          const newHistory = [...(existingTask.completionHistory || [])];
+          
+          if (completedAlerts.length > 0) {
+            // Uncheck last partial alert
+            updatedTask = TaskRepository.update(existingTask, {
+              completedAlerts: completedAlerts.slice(0, -1),
+              status: 'pending'
+            });
+          } else if (newHistory.length > 0) {
+            // Uncheck full completion
+            newHistory.pop();
+            const restoredAlerts = alerts.length > 1 ? alerts.slice(0, -1).map(a => a.id).filter(Boolean) as string[] : [];
+            updatedTask = TaskRepository.update(existingTask, {
+              status: 'pending',
+              completedAlerts: restoredAlerts,
+              completionHistory: newHistory
+            });
+          } else {
+            updatedTask = TaskRepository.update(existingTask, { status: 'pending', completedAlerts: [] });
+          }
+        } else {
+          // Normal complete forward logic
+          if (alerts.length > 1 && completedAlerts.length < alerts.length - 1) {
             const nextAlert = alerts[completedAlerts.length] || alerts[alerts.length - 1];
             updatedTask = TaskRepository.update(existingTask, { 
               completedAlerts: [...completedAlerts, nextAlert.id] 
             });
           } else {
-            updatedTask = TaskRepository.update(existingTask, { completedAlerts: [] });
-          }
-        } else {
-          // Si es la última alerta, se completó la dosis de este ciclo.
-          const newCompletionHistory = [...(existingTask.completionHistory || []), Date.now()];
-          
-          if (existingTask.cycle_id) {
-            // Tarea Recurrente: Mantener PENDING, limpiar alertas parciales, añadir a historial
-            updatedTask = TaskRepository.update(existingTask, { 
-              completedAlerts: [], // Reset for next cycle
-              completionHistory: newCompletionHistory
-            });
-          } else {
-            // Tarea de un solo uso
-            updatedTask = TaskRepository.update(existingTask, { 
-              status: 'completed',
-              completedAlerts: [...completedAlerts, alerts[completedAlerts.length]?.id].filter(Boolean) as string[],
-              completionHistory: newCompletionHistory
-            });
+            const newCompletionHistory = [...(existingTask.completionHistory || []), Date.now()];
+            if (!isOneOff) {
+              updatedTask = TaskRepository.update(existingTask, { 
+                completedAlerts: [], 
+                completionHistory: newCompletionHistory,
+                status: 'pending'
+              });
+            } else {
+              updatedTask = TaskRepository.update(existingTask, { 
+                status: 'completed',
+                completedAlerts: [...completedAlerts, alerts[completedAlerts.length]?.id].filter(Boolean) as string[],
+                completionHistory: newCompletionHistory
+              });
+            }
           }
         }
 

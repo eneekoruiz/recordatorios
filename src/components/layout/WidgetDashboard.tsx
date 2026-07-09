@@ -8,7 +8,7 @@ import './Layout.css';
  */
 export function WidgetDashboard() {
   const smartTasks = useAppStore(state => state.getSmartSortTasks());
-  const completeTask = useAppStore(state => state.completeTask);
+  const toggleTask = useAppStore(state => state.toggleTask);
 
   // Filtramos tareas para el widget
   const topTasks = smartTasks.slice(0, 3);
@@ -32,7 +32,7 @@ export function WidgetDashboard() {
                 className="checkbox" 
                 onClick={() => {
                   if (navigator.vibrate) navigator.vibrate([30]);
-                  completeTask(task.id);
+                  toggleTask(task.id);
                 }}
                 style={{ width: '20px', height: '20px', minWidth: '20px', cursor: 'pointer' }}
               />

@@ -168,6 +168,36 @@
   gap: var(--space-4);
 }
 
+.ios-list-block {
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.ios-list-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: var(--space-12) var(--space-16);
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: transparent;
+}
+
+.ios-list-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 44px; /* Align with text, after icon */
+  right: 0;
+  height: 1px;
+  background-color: var(--border-subtle);
+}
+
+.ios-list-item.active {
+  background-color: var(--bg-hover);
+}
 .section-header {
   font-size: 0.7rem;
   font-weight: 600;

@@ -41,19 +41,11 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, parentI
         return (
           <div key={list.id}>
             <div 
-              className={`category-item ${isActive ? 'active' : ''}`}
+              className={`ios-list-item ${isActive ? 'active' : ''}`}
               onClick={() => onSelectView(`list_${list.id}`)}
               style={{
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                padding: 'var(--space-8) var(--space-12)',
-                borderRadius: 'var(--radius-sm)',
-                cursor: 'pointer',
                 color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                 fontWeight: isActive ? 600 : 400,
-                transition: 'all 0.2s',
-                backgroundColor: isActive ? 'rgba(0,0,0,0.04)' : 'transparent',
               }}
             >
               {hasChildren && (
@@ -339,12 +331,14 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         {/* MIS LISTAS */}
         <div className="categories-section" style={{ flexShrink: 0 }}>
           <div className="section-header">Mis Listas</div>
-          <ListHierarchy 
-            lists={lists} 
-            currentView={currentView} 
-            onSelectView={onSelectView} 
-            onAddSublist={(pId: string) => { setEditingListId(undefined); setParentListId(pId); setIsListConfigOpen(true); }} 
-          />
+          <div className="ios-list-block">
+            <ListHierarchy 
+              lists={lists} 
+              currentView={currentView} 
+              onSelectView={onSelectView} 
+              onAddSublist={(pId: string) => { setEditingListId(undefined); setParentListId(pId); setIsListConfigOpen(true); }} 
+            />
+          </div>
           <button 
             className="add-list-btn" 
             onClick={handleAddList}

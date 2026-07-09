@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { CheckCircle, Trash2, GripVertical, Play, Lock, Link2, Flag, MapPin, Link, Image as ImageIcon, X } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore } from '../../store/useAppStore';
@@ -9,15 +9,26 @@ import { isCompletedInCurrentPeriod } from '../../services/TaskService';
 interface TaskCardProps {
   task: TaskItem;
   virtualStyle: React.CSSProperties;
-  onComplete: (id: string) => void;
+  onToggle: (id: string, forceReverse?: boolean) => void;
   onDelete: (id: string) => void;
   onOpenZenMode: (id: string) => void;
   index: number;
 }
 
-export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onComplete, onDelete, onOpenZenMode, index }: TaskCardProps) {
-  const { cycles, tasks, nestTask, addDependency } = useAppStore();
+export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onToggle, onDelete, onOpenZenMode, index }: TaskCardProps) {
+  const { cycles, tasks, nestTask, addDependency, lists } = useAppStore();
   const taskCycle = cycles.find(c => c.id === task.cycle_id);
+  const taskList = lists?.find(l => l.id === task.category_id);
+
+  let dueDateColor = 'var(--text-secondary)';
+  if (task.due_date) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const due = new Date(task.due_date);
+    due.setHours(0, 0, 0, 0);
+    if (due < today) dueDateColor = 'var(--accent-red)';
+    else if (due.getTime() === today.getTime()) dueDateColor = 'var(--accent-orange)';
+  }
   const [isDragOver, setIsDragOver] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   
@@ -26,14 +37,20 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onCom
   // Bloqueado si alguna dependencia sigue pendiente
   const isBlocked = task.blockedBy && task.blockedBy.some(id => tasks[id] && tasks[id].status === 'pending');
 
-  // Nueva lógica modularizada (CycleCompletionService)
   const isCompletedPeriod = isCompletedInCurrentPeriod(task, cycles);
   
+  // Físicas de Swipe Nativas (iOS style)
+  const x = useMotionValue(0);
+  const leftOpacity = useTransform(x, [0, 50, 80], [0, 0.5, 1]);
+  const leftScale = useTransform(x, [0, 50, 80], [0.5, 0.8, 1]);
+  const rightOpacity = useTransform(x, [0, -50, -80], [0, 0.5, 1]);
+  const rightScale = useTransform(x, [0, -50, -80], [0.5, 0.8, 1]);
+
   const handleSwipeEnd = (offset: number) => {
-    if (offset > 100 && !isBlocked) {
+    if (offset > 80 && !isBlocked) {
       if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
-      onComplete(task.id);
-    } else if (offset < -100) {
+      onToggle(task.id);
+    } else if (offset < -80) {
       if (navigator.vibrate) navigator.vibrate(50);
       onDelete(task.id);
     } else if (offset < -50) {
@@ -64,18 +81,19 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onCom
     >
       
       {/* Fondos de Swipe */}
-      <div className="swipe-background left" style={{ bottom: 16 }}>
-        <CheckCircle color="white" />
-      </div>
-      <div className="swipe-background right" style={{ bottom: 16 }}>
-        <Trash2 color="white" />
-      </div>
+      <motion.div className="swipe-background left" style={{ bottom: 16, opacity: leftOpacity }}>
+        <motion.div style={{ scale: leftScale }}><CheckCircle color="white" /></motion.div>
+      </motion.div>
+      <motion.div className="swipe-background right" style={{ bottom: 16, opacity: rightOpacity }}>
+        <motion.div style={{ scale: rightScale }}><Trash2 color="white" /></motion.div>
+      </motion.div>
 
       {/* Tarjeta Principal */}
       <motion.div 
         onContextMenu={handleContextMenu}
         drag="x"
-        dragConstraints={{ left: -120, right: 120 }}
+        style={{ x }}
+        dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.2}
         onDragEnd={(_, info) => handleSwipeEnd(info.offset.x)}
         whileTap={{ scale: 0.98 }}
@@ -126,7 +144,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onCom
               onClick={() => {
                 if (isBlocked) return;
                 if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
-                onComplete(task.id);
+                onToggle(task.id, isCompletedPeriod || isPartial);
               }}
               style={{
                 width: 24, height: 24, 
@@ -181,12 +199,21 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onCom
                 {task.title}
               </span>
               {task.flagged && <Flag size={14} color="var(--accent-orange)" fill="var(--accent-orange)" />}
-              {task.url && <Link size={14} color="var(--text-tertiary)" />}
               {task.locationName && <MapPin size={14} color="var(--accent-blue)" />}
               {task.image && <ImageIcon size={14} color="var(--text-tertiary)" />}
             </div>
             
             <div style={{ display: 'flex', gap: 'var(--space-8)', marginTop: 'var(--space-4)', alignItems: 'center', flexWrap: 'wrap' }}>
+              {taskList && (
+                <span style={{ fontSize: '0.8rem', color: taskList.color, display: 'flex', alignItems: 'center', gap: 4, fontWeight: 500, background: 'var(--bg-elevated)', padding: '2px 6px', borderRadius: 6 }}>
+                  {taskList.name}
+                </span>
+              )}
+              {task.due_date && (
+                <span style={{ fontSize: '0.8rem', color: dueDateColor, display: 'flex', alignItems: 'center', fontWeight: 500 }}>
+                  {new Date(task.due_date).toLocaleDateString()}
+                </span>
+              )}
               {(task.alerts || []).map((alert: any, idx: number) => {
                 const isCompleted = task.completedAlerts?.includes(alert.id);
                 const label = alert.type === 'at_time' ? alert.time : `-${alert.offsetMinutes}m`;
@@ -222,6 +249,24 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onCom
                   <span style={{ color: 'var(--text-secondary)' }}>= ${(task.price * task.quantity).toFixed(2)}</span>
                 )}
               </div>
+            )}
+
+            {task.url && (
+              <a 
+                href={task.url} 
+                target="_blank" 
+                rel="noreferrer"
+                style={{ 
+                  display: 'flex', alignItems: 'center', gap: 6, marginTop: 'var(--space-8)', 
+                  padding: 'var(--space-8)', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-md)', 
+                  textDecoration: 'none', color: 'var(--accent-primary)', fontSize: '0.85rem',
+                  minWidth: 0
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Link size={14} style={{ flexShrink: 0 }} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{task.url}</span>
+              </a>
             )}
           </div>
           
