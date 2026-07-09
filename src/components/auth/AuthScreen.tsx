@@ -34,6 +34,7 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
       if (!res.ok) throw new Error(data.error || 'Error de autenticación');
 
       setToken(data.token, data.user.id);
+      localStorage.setItem('userEmail', data.user.email || email);
       onSuccess();
     } catch (err: any) {
       setError(err.message);

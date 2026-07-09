@@ -98,9 +98,10 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           onClick={e => e.stopPropagation()}
+          style={{ maxWidth: 500 }}
         >
           <div className="prompt-header">
-            <h3>{existingList ? 'Editar Lista' : 'Nueva Lista'}</h3>
+            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-primary)' }}>{existingList ? 'Editar Lista' : 'Nueva Lista'}</h3>
           </div>
           
           <div className="prompt-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-24)' }}>
@@ -133,7 +134,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
 
             {/* Colors */}
             <div>
-              <span className="detail-label">Color</span>
+              <span className="detail-label" style={{ display: 'block', marginBottom: 8, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Color</span>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginTop: 8 }}>
                 {COLORS.map(c => (
                   <button 
@@ -151,8 +152,8 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
 
             {/* Icons */}
             <div>
-              <span className="detail-label">Icono</span>
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginTop: 8, background: 'var(--bg-surface)', padding: 16, borderRadius: 'var(--radius-lg)' }}>
+              <span className="detail-label" style={{ display: 'block', marginBottom: 8, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Icono</span>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginTop: 8, background: 'var(--bg-base)', padding: 16, borderRadius: 'var(--radius-lg)' }}>
                 {Object.keys(ICONS).map(k => {
                   const IconComp = ICONS[k];
                   return (
@@ -174,7 +175,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
             </div>
 
             {/* Financial Mode */}
-            <div className="detail-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', padding: '16px', borderRadius: 'var(--radius-lg)' }}>
+            <div className="detail-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-base)', padding: '16px', borderRadius: 'var(--radius-lg)' }}>
               <div>
                 <span style={{ fontWeight: 600, display: 'block', color: 'var(--text-primary)' }}>Modo Financiero</span>
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>Habilita campos de coste en esta lista</span>
@@ -187,9 +188,9 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
 
           </div>
           
-          <div className="prompt-footer">
-            <button className="cancel-btn" onClick={onClose}>Cancelar</button>
-            <button className="save-btn" onClick={handleSave} disabled={!name.trim()}>
+          <div className="prompt-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--border-subtle)' }}>
+            <button className="cancel-btn" onClick={onClose} style={{ padding: '10px 16px', background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontWeight: 500, cursor: 'pointer', margin: 0 }}>Cancelar</button>
+            <button className="save-btn" onClick={handleSave} disabled={!name.trim()} style={{ padding: '10px 24px', background: 'var(--accent-primary)', border: 'none', borderRadius: 10, color: 'white', fontWeight: 600, cursor: (!name.trim()) ? 'not-allowed' : 'pointer', opacity: (!name.trim()) ? 0.5 : 1, margin: 0 }}>
               {existingList ? 'Guardar' : 'Crear'}
             </button>
           </div>
