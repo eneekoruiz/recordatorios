@@ -274,10 +274,10 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
               <AnimatePresence>
                 {showAdvanced && (
                   <motion.div 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '16px' }}
+                    initial={{ opacity: 0, height: 0, overflow: 'hidden' }}
+                    animate={{ opacity: 1, height: 'auto', transitionEnd: { overflow: 'visible' } }}
+                    exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
+                    style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
                   >
                     <div className="input-group">
                       <textarea 
@@ -306,10 +306,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
                           <AnimatePresence>
                             {isDetailed && (
                           <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            style={{ overflow: 'hidden' }}
+                            initial={{ opacity: 0, height: 0, overflow: 'hidden' }}
+                            animate={{ opacity: 1, height: 'auto', transitionEnd: { overflow: 'visible' } }}
+                            exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
                           >
                             <div className="divider"></div>
                             
