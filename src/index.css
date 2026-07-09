@@ -411,3 +411,31 @@ input:checked + .slider::before {
     right: 32px;
   }
 }
+
+/* ========================================================
+   CUSTOM PROMPT MODALS
+======================================================== */
+.prompt-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.prompt-modal {
+  background: var(--bg-surface);
+  border-radius: var(--radius-xl);
+  padding: var(--space-24);
+  width: 90%;
+  max-width: 400px;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}

@@ -15,6 +15,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
 import { getCycleIcon } from '../../constants/icons';
 import { ListConfigModal } from './ListConfigModal';
+import { CycleConfigModal } from './CycleConfigModal';
 import { SMART_LISTS } from '../../constants/smartLists';
 import './Layout.css';
 
@@ -123,6 +124,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   const [isEditMode, setIsEditMode] = useState(false);
   
   const [isListConfigOpen, setIsListConfigOpen] = useState(false);
+  const [isCycleModalOpen, setIsCycleModalOpen] = useState(false);
   const [editingListId, setEditingListId] = useState<string | undefined>(undefined);
   const [parentListId, setParentListId] = useState<string | undefined>(undefined);
 
@@ -280,9 +282,14 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
           padding: '0 var(--space-12)',
           marginBottom: 'var(--space-16)'
         }}>
-          {SMART_LISTS.map(list => {
-            if (!smartListVisibility[list.id] && !isEditMode) return null;
-            const Icon = list.icon;
+          {SMART_LISTS.filter(list => smartListVisibility[list.id] || isEditMode).length === 0 ? (
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 'var(--space-16) 0', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>
+              No tienes listas inteligentes seleccionadas
+            </div>
+          ) : (
+            SMART_LISTS.map(list => {
+              if (!smartListVisibility[list.id] && !isEditMode) return null;
+              const Icon = list.icon;
             
             return (
               <div 
@@ -326,7 +333,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{list.name}</span>
               </div>
             );
-          })}
+          }))}
         </div>
 
         {/* MIS LISTAS */}
@@ -365,25 +372,9 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               className="btn-icon"
               style={{ padding: 4, cursor: 'pointer' }}
               title="Nuevo Ciclo"
-              onClick={async (e) => {
+              onClick={(e) => {
                 e.stopPropagation();
-                const name = await usePromptStore.getState().openPrompt('Nombre del nuevo ciclo temporal:', 'Ej: Siguiente Trimestre');
-                if (name) {
-                  const daysStr = await usePromptStore.getState().openPrompt('¿Cada cuántos días se repite este ciclo?', 'Ej: 14, 30, 365');
-                  const daysValue = parseInt(daysStr || '', 10);
-                  if (isNaN(daysValue) || daysValue <= 0) return; // Requiere frecuencia
-
-                  const newCycleId = `cycle_${Date.now()}`;
-                  useAppStore.getState().addCycle({
-                    id: newCycleId,
-                    name,
-                    daysValue,
-                    isPinned: true,
-                    icon: 'star'
-                  });
-                  setIsCyclesOpen(true);
-                  onSelectView(newCycleId);
-                }
+                setIsCycleModalOpen(true);
               }}
             >
               <Plus size={14} color="var(--text-tertiary)" />
@@ -421,12 +412,21 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
 
       </div>
       
-      {/* 4. MODALS (OUTSIDE SCROLL) */}
+      {/* MODALS (OUTSIDE SCROLL) */}
       <ListConfigModal 
         isOpen={isListConfigOpen} 
         onClose={() => setIsListConfigOpen(false)} 
         listId={editingListId} 
         parentId={parentListId} 
+      />
+      <CycleConfigModal 
+        isOpen={isCycleModalOpen}
+        onClose={() => setIsCycleModalOpen(false)}
+        onSuccess={(id) => {
+          setIsCycleModalOpen(false);
+          setIsCyclesOpen(true);
+          onSelectView(id);
+        }}
       />
     </aside>
   );
