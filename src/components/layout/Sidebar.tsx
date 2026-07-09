@@ -118,7 +118,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
     }
   };
 
-  const user = { name: 'Eneko Ruiz', email: 'eneko@ejemplo.com' };
+  const user = { name: 'Eneko Ruiz', email: localStorage.getItem('userEmail') || 'eneko@ejemplo.com' };
 
   const [isCyclesOpen, setIsCyclesOpen] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
