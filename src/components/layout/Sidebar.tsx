@@ -414,8 +414,9 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                   </div>
                 );
               })}
-            </div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
       </div>
