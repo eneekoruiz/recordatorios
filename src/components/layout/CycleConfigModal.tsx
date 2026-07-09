@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 
@@ -32,7 +33,7 @@ export function CycleConfigModal({ isOpen, onClose, onSuccess }: CycleConfigModa
     setDays('');
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       <div className="prompt-overlay" onClick={onClose} style={{ zIndex: 1000 }}>
         <motion.div 
@@ -90,6 +91,7 @@ export function CycleConfigModal({ isOpen, onClose, onSuccess }: CycleConfigModa
           </div>
         </motion.div>
       </div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

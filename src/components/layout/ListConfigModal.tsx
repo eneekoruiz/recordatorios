@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, Briefcase, Heart, Book, Coffee, CheckSquare, Plane, Music, Video, Zap, Home } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
@@ -89,7 +90,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
     onClose();
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       <div className="prompt-overlay" onClick={onClose} style={{ zIndex: 1000 }}>
         <motion.div 
@@ -196,6 +197,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
           </div>
         </motion.div>
       </div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
