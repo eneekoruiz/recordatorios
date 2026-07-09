@@ -270,9 +270,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
             </button>
           )}
           <h1 className="text-display" style={{ 
-            fontSize: '2.5rem', 
+            fontSize: '2.2rem', 
+            fontWeight: 750,
             color: isSmartView ? SMART_COLORS[currentView] : isListView && currentList ? currentList.color : 'var(--text-primary)',
-            display: 'flex', alignItems: 'center'
+            display: 'flex', alignItems: 'center', margin: 0
           }}>
             {CycleIcon && <CycleIcon size={32} color="var(--accent-primary)" style={{ marginRight: 12 }} />}
             
@@ -381,7 +382,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
                 className="group-header"
                 style={{ 
                   ...virtualStyle, 
-                  borderBottom: `2px solid ${data.color}30`,
+                  borderBottom: `1px solid var(--border-subtle)`,
                   paddingLeft: `calc(12px + ${data.depth * 24}px)` // Indent sub-sections
                 }}
                 onClick={() => toggleCategory(data.category)}
@@ -416,7 +417,14 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
                   ) : (
                     <h3 
                       onDoubleClick={(e) => isCustomSection && startEditingSection(e, data.sectionId!, data.title)}
-                      style={{ cursor: isCustomSection ? 'text' : 'pointer' }}
+                      style={{ 
+                        cursor: isCustomSection ? 'text' : 'pointer',
+                        textTransform: 'uppercase',
+                        fontWeight: 800,
+                        color: '#000',
+                        fontSize: '1rem',
+                        margin: 0
+                      }}
                       title={isCustomSection ? "Doble click para editar" : ""}
                     >
                       {data.title}

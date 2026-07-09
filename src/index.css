@@ -442,3 +442,100 @@ input:checked + .slider::before {
   gap: var(--space-16);
   -webkit-overflow-scrolling: touch;
 }
+
+/* ========================================================
+   IOS PIXEL-PERFECT REDESIGN
+======================================================== */
+.ios-smart-card {
+  border-radius: 16px;
+  padding: 12px 16px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+  display: flex; 
+  flex-direction: column;
+  min-height: 85px;
+  justify-content: space-between;
+  border: none;
+}
+.ios-smart-card .icon-circle {
+  background: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ios-smart-card h3 {
+  color: white;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  align-self: flex-start;
+}
+.ios-smart-card .count {
+  position: absolute;
+  top: 6px;
+  right: 12px;
+  font-size: 2rem;
+  font-weight: 700;
+  color: white;
+  line-height: 1;
+}
+
+.categories-section .section-header {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #000;
+  margin-bottom: 12px;
+}
+
+.ios-list-block {
+  background: var(--bg-card); /* Should be white on light mode */
+  border-radius: 16px;
+  overflow: hidden;
+}
+.ios-list-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  position: relative;
+  cursor: pointer;
+}
+.ios-list-item:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 52px; /* icon width + margin */
+  right: 0;
+  height: 1px;
+  background: var(--border-subtle);
+}
+.ios-list-item .list-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  margin-right: 12px;
+}
+.ios-list-item span.title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+.ios-list-item .subtitle {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  display: block;
+  font-weight: 400;
+}
+.ios-list-item .count {
+  color: var(--text-tertiary);
+  font-size: 1rem;
+  margin-right: 4px;
+}
+.ios-list-item:active {
+  background: var(--bg-hover);
+}
+
