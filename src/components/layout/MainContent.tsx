@@ -45,11 +45,14 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
   // Estados para la edición de ciclos in-place
   const [isEditingCycle, setIsEditingCycle] = useState(false);
   const [cycleEditName, setCycleEditName] = useState('');
+  const [recentlyCompletedIds, setRecentlyCompletedIds] = useState<string[]>([]);
 
   // Funciones auxiliares para Smart Lists (memoized)
-  const getTasksForSmartView = useCallback((includeCompleted = false) => {
+  const getTasksForSmartView = useCallback((includeCompleted = false, temporarilyShowIds: string[] = []) => {
     const allTasks = Object.values(tasks).filter(t => !t.deleted_at);
-    const validTasks = includeCompleted ? allTasks : allTasks.filter(t => t.status === 'pending');
+    const validTasks = includeCompleted 
+      ? allTasks 
+      : allTasks.filter(t => t.status === 'pending' || temporarilyShowIds.includes(t.id));
     let filteredTasks: TaskItem[] = [];
 
     switch (currentView) {
@@ -84,14 +87,30 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
 
   const [showCompleted, setShowCompleted] = useState(false);
 
+  const handleToggleTask = useCallback((id: string, forceReverse?: boolean) => {
+    const task = tasks[id];
+    if (task) {
+      const willBeCompleted = task.status !== 'completed';
+      if (willBeCompleted) {
+        setRecentlyCompletedIds(prev => [...prev, id]);
+        setTimeout(() => {
+          setRecentlyCompletedIds(prev => prev.filter(x => x !== id));
+        }, 3000);
+      } else {
+        setRecentlyCompletedIds(prev => prev.filter(x => x !== id));
+      }
+    }
+    toggleTask(id, forceReverse);
+  }, [tasks, toggleTask]);
+
   const groupedTasks = useMemo(() => {
     if (currentView === 'TRASH') {
       return { 'Papelera': Object.values(tasks).filter(t => t.deleted_at) };
     }
-    if (isSmartView) return getTasksForSmartView(showCompleted);
-    if (isListView) return getTasksByList(currentView.replace('list_', ''), showCompleted);
-    return getTasksByCycle(currentView, showCompleted);
-  }, [currentView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, showCompleted]);
+    if (isSmartView) return getTasksForSmartView(showCompleted, recentlyCompletedIds);
+    if (isListView) return getTasksByList(currentView.replace('list_', ''), showCompleted, recentlyCompletedIds);
+    return getTasksByCycle(currentView, showCompleted, recentlyCompletedIds);
+  }, [currentView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, showCompleted, recentlyCompletedIds]);
     
   const smartTasks = useMemo(() => currentView === 'cycle_day' ? getSmartSortTasks() : [], [currentView, getSmartSortTasks]);
 
@@ -207,7 +226,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
         }
       }
       
-      flat.push({ type: 'header', title: headerTitle, category: categoryOrCycle, color, sectionId: originalSectionId, depth: headerDepth });
+      if (categoryOrCycle !== 'no_section') {
+        flat.push({ type: 'header', title: headerTitle, category: categoryOrCycle, color, sectionId: originalSectionId, depth: headerDepth });
+      }
       if (!collapsed[categoryOrCycle]) {
         const roots = categoryTasks.filter(t => !t.parentId);
         const processNode = (task: TaskItem, depth: number) => {
@@ -243,12 +264,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
         ...virtualStyle,
         paddingLeft: `calc(${depth * 32}px)`
       }}
-      onToggle={toggleTask}
+      onToggle={handleToggleTask}
       onDelete={deleteTask}
       onOpenZenMode={onOpenZenMode}
       index={index}
     />
-  ), [toggleTask, deleteTask, onOpenZenMode]);
+  ), [handleToggleTask, deleteTask, onOpenZenMode]);
 
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
 

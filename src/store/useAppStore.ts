@@ -49,8 +49,8 @@ interface AppState {
 
   purgeOldDeletedTasks: () => void;
 
-  getTasksByCycle: (cycle_id: string, includeCompleted?: boolean) => Record<string, TaskItem[]>;
-  getTasksByList: (listId: string, includeCompleted?: boolean) => Record<string, TaskItem[]>;
+  getTasksByCycle: (cycle_id: string, includeCompleted?: boolean, temporarilyShowIds?: string[]) => Record<string, TaskItem[]>;
+  getTasksByList: (listId: string, includeCompleted?: boolean, temporarilyShowIds?: string[]) => Record<string, TaskItem[]>;
   getSmartSortTasks: () => TaskItem[]; 
 
   exportData: () => string;
@@ -265,7 +265,7 @@ export const useAppStore = create<AppState>()(
       }),
 
       // Algoritmo de Cascada Matemático
-      getTasksByCycle: (cycleId, includeCompleted = false) => {
+      getTasksByCycle: (cycleId, includeCompleted = false, temporarilyShowIds = []) => {
         const { tasks, cycles } = get();
         const targetCycle = cycles.find(c => c.id === cycleId);
         if (!targetCycle) return {};
@@ -275,7 +275,7 @@ export const useAppStore = create<AppState>()(
         // Utilizamos la lógica centralizada de TaskService
         const grouped: Record<string, TaskItem[]> = {};
         Object.values(tasks)
-          .filter(t => !t.deleted_at && (includeCompleted || t.status !== 'completed'))
+          .filter(t => !t.deleted_at && (includeCompleted || t.status !== 'completed' || temporarilyShowIds.includes(t.id)))
           .filter(t => {
             // Regla: Hereda tareas de su propio ciclo Y de cualquier ciclo más corto.
             // NUEVO: Si no tiene ciclo (One-off), evaluamos por dueDate.
@@ -288,7 +288,7 @@ export const useAppStore = create<AppState>()(
             }
             return validCycles.includes(t.cycle_id as string);
           })
-          .filter(t => includeCompleted || !isCompletedInCurrentPeriod(t, cycles)) // Si ya se hizo, no la mostramos en pendientes de la cascada
+          .filter(t => includeCompleted || temporarilyShowIds.includes(t.id) || !isCompletedInCurrentPeriod(t, cycles)) // Si ya se hizo, no la mostramos en pendientes de la cascada
           .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
           .forEach(t => {
             const listId = t.categoryId;
@@ -298,7 +298,7 @@ export const useAppStore = create<AppState>()(
         return grouped;
       },
 
-      getTasksByList: (listId, includeCompleted = false) => {
+      getTasksByList: (listId, includeCompleted = false, temporarilyShowIds = []) => {
         const { tasks, cycles, listSections } = get();
         const tasksArray = Object.values(tasks);
         
@@ -306,7 +306,7 @@ export const useAppStore = create<AppState>()(
           const matchesList = listId === 'inbox' 
             ? (t.categoryId === 'inbox' || !t.categoryId)
             : t.categoryId === listId;
-          return matchesList && !t.deleted_at && (includeCompleted || t.status === 'pending');
+          return matchesList && !t.deleted_at && (includeCompleted || t.status === 'pending' || temporarilyShowIds.includes(t.id));
         });
         
         const grouped: Record<string, TaskItem[]> = {};
@@ -314,10 +314,8 @@ export const useAppStore = create<AppState>()(
           let groupKey = '';
           if (task.sectionId) {
             groupKey = `section_${task.sectionId}`;
-          } else if (task.cycle_id) {
-            groupKey = `cycle_${task.cycle_id}`;
           } else {
-            groupKey = 'Una Vez (One-off)';
+            groupKey = 'no_section';
           }
 
           if (!grouped[groupKey]) grouped[groupKey] = [];
