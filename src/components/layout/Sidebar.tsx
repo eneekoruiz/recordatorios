@@ -33,7 +33,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
   const [menuCoords, setMenuCoords] = useState<{ top: number; left: number } | null>(null);
   const { removeList } = useAppStore();
   
-  const currentLevelLists = lists.filter((l: any) => l.parentId === parentId);
+  const currentLevelLists = lists.filter((l: any) => l.parentId === parentId && l.id !== 'user_preferences_smart_lists');
   if (currentLevelLists.length === 0) return null;
 
   return (

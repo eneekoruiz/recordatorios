@@ -15,6 +15,7 @@ interface MainContentProps {
   currentView: string;
   onOpenNewTask: () => void;
   onOpenZenMode: (taskId: string) => void;
+  onEditTask?: (taskId: string) => void;
   onBackToSidebar?: () => void;
   isMobile?: boolean;
 }
@@ -31,7 +32,7 @@ const SMART_COLORS: Record<string, string> = {
   'smart_completed': 'var(--text-tertiary)'
 };
 
-export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackToSidebar, isMobile }: MainContentProps) {
+export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditTask, onBackToSidebar, isMobile }: MainContentProps) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   
   const { getTasksByCycle, getTasksByList, getSmartSortTasks, toggleTask, deleteTask, cycles, updateCycle, deleteCycle, lists, addListSection, updateListSection, updateTaskSection, listSections, tasks } = useAppStore();
@@ -267,9 +268,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onBackT
       onToggle={handleToggleTask}
       onDelete={deleteTask}
       onOpenZenMode={onOpenZenMode}
+      onEdit={onEditTask || (() => {})}
       index={index}
     />
-  ), [handleToggleTask, deleteTask, onOpenZenMode]);
+  ), [handleToggleTask, deleteTask, onOpenZenMode, onEditTask]);
 
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
 
