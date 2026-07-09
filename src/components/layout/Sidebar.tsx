@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   ChevronRight, 
   ChevronDown, 
@@ -28,6 +29,7 @@ interface SidebarProps {
 const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditList, getTaskCount, parentId = undefined, depth = 0 }: any) => {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [menuCoords, setMenuCoords] = useState<{ top: number; left: number } | null>(null);
   const { removeList } = useAppStore();
   
   const currentLevelLists = lists.filter((l: any) => l.parentId === parentId);
@@ -66,29 +68,42 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
               <ChevronRight size={16} color="var(--text-tertiary)" />
               
               <button 
-                onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === list.id ? null : list.id); }}
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  if (activeMenuId === list.id) {
+                    setActiveMenuId(null);
+                    setMenuCoords(null);
+                  } else {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setMenuCoords({
+                      top: rect.bottom + window.scrollY,
+                      left: rect.left + window.scrollX - 120
+                    });
+                    setActiveMenuId(list.id);
+                  }
+                }}
                 style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', opacity: 0.5, padding: 4, marginLeft: 8 }}
                 title="Acciones de Lista"
               >
                 <MoreHorizontal size={14} />
               </button>
 
-              {activeMenuId === list.id && (
+              {activeMenuId === list.id && menuCoords && createPortal(
                 <>
                   <div 
-                    style={{ position: 'fixed', inset: 0, zIndex: 100 }} 
-                    onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); }} 
+                    style={{ position: 'fixed', inset: 0, zIndex: 99998 }} 
+                    onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); setMenuCoords(null); }} 
                   />
                   <div 
                     style={{
                       position: 'absolute',
-                      top: '80%',
-                      right: 16,
+                      top: menuCoords.top + 4,
+                      left: menuCoords.left,
                       background: 'var(--bg-surface)',
                       border: '1px solid var(--border-subtle)',
                       borderRadius: '10px',
                       boxShadow: 'var(--shadow-lg)',
-                      zIndex: 101,
+                      zIndex: 99999,
                       padding: '4px',
                       display: 'flex',
                       flexDirection: 'column',
@@ -99,6 +114,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                     <button 
                       onClick={() => {
                         setActiveMenuId(null);
+                        setMenuCoords(null);
                         onAddSublist(list.id);
                       }}
                       style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
@@ -110,6 +126,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                     <button 
                       onClick={() => {
                         setActiveMenuId(null);
+                        setMenuCoords(null);
                         onEditList(list.id);
                       }}
                       style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
@@ -124,6 +141,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                           removeList(list.id);
                         }
                         setActiveMenuId(null);
+                        setMenuCoords(null);
                       }}
                       style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--accent-red)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
                       onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
@@ -132,7 +150,8 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                       <Trash2 size={14} /> Eliminar Lista
                     </button>
                   </div>
-                </>
+                </>,
+                document.body
               )}
             </div>
             
