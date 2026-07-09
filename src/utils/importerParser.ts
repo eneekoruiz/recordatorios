@@ -5,6 +5,7 @@ export interface ParseResult {
   tasks: TaskItem[];
   cycles: any[];
   lists: any[];
+  listSections?: any[];
 }
 
 export function detectFormatAndParse(input: string, currentStoreData: { cycles: any[] }): ParseResult {
@@ -20,9 +21,11 @@ export function detectFormatAndParse(input: string, currentStoreData: { cycles: 
       }
       if (parsed.cycles) result.cycles = parsed.cycles;
       if (parsed.lists) result.lists = parsed.lists;
+      if (parsed.listSections) result.listSections = parsed.listSections;
       return result;
     } catch (e) {
-      console.warn("Fallo al parsear JSON, cayendo a texto plano");
+      console.warn("Fallo al parsear JSON:", e);
+      throw new Error("El texto parece JSON pero es inválido o está incompleto.");
     }
   }
 

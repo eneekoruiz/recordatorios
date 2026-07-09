@@ -25,8 +25,31 @@ export function UniversalImporter() {
 
   const handleProcessText = () => {
     if (!inputText.trim()) return;
-    const result = detectFormatAndParse(inputText, { cycles });
-    setPreview(result);
+    try {
+      const result = detectFormatAndParse(inputText, { cycles });
+      setPreview(result);
+    } catch (e: any) {
+      alert(e.message || "Error al procesar los datos.");
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const text = evt.target?.result as string;
+      if (text) {
+        setInputText(text);
+        try {
+          const result = detectFormatAndParse(text, { cycles });
+          setPreview(result);
+        } catch (err: any) {
+          alert(err.message || "Error al procesar el archivo.");
+        }
+      }
+    };
+    reader.readAsText(file);
   };
 
   const handleConfirmImport = () => {
@@ -39,7 +62,8 @@ export function UniversalImporter() {
       return {
         tasks: updatedTasks,
         cycles: [...state.cycles, ...preview.cycles],
-        lists: preview.lists.length > 0 ? preview.lists : state.lists,
+        lists: preview.lists && preview.lists.length > 0 ? preview.lists : state.lists,
+        listSections: preview.listSections && preview.listSections.length > 0 ? preview.listSections : state.listSections,
       };
     });
 
@@ -132,20 +156,41 @@ export function UniversalImporter() {
                   onFocus={e => e.currentTarget.style.borderColor = 'var(--accent-primary)'}
                   onBlur={e => e.currentTarget.style.borderColor = 'var(--border-subtle)'}
                 />
-                <button 
-                  onClick={handleProcessText}
-                  disabled={!inputText.trim()}
-                  style={{ 
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-8)', 
-                    width: '100%', background: inputText.trim() ? 'var(--text-primary)' : 'var(--bg-elevated)', 
-                    color: inputText.trim() ? 'var(--bg-base)' : 'var(--text-tertiary)', border: 'none', 
-                    padding: 'var(--space-16)', borderRadius: 'var(--radius-md)', fontWeight: 600, 
-                    cursor: inputText.trim() ? 'pointer' : 'not-allowed', transition: 'all 0.2s' 
-                  }}
-                >
-                  <Upload size={20} /> Procesar Datos
-                </button>
-              </motion.div>
+                  <div style={{ display: 'flex', gap: 'var(--space-12)' }}>
+                    <button 
+                      onClick={handleProcessText}
+                      disabled={!inputText.trim()}
+                      style={{ 
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-8)', 
+                        flex: 1, background: inputText.trim() ? 'var(--text-primary)' : 'var(--bg-elevated)', 
+                        color: inputText.trim() ? 'var(--bg-base)' : 'var(--text-tertiary)', border: 'none', 
+                        padding: 'var(--space-16)', borderRadius: 'var(--radius-md)', fontWeight: 600, 
+                        cursor: inputText.trim() ? 'pointer' : 'not-allowed', transition: 'all 0.2s' 
+                      }}
+                    >
+                      <Upload size={20} /> Procesar Datos
+                    </button>
+                    <label 
+                      style={{ 
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-8)', 
+                        flex: 1, background: 'var(--bg-elevated)', 
+                        color: 'var(--text-primary)', border: '1px solid var(--border-subtle)', 
+                        padding: 'var(--space-16)', borderRadius: 'var(--radius-md)', fontWeight: 600, 
+                        cursor: 'pointer', transition: 'all 0.2s' 
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-elevated)'}
+                    >
+                      <Upload size={20} /> Subir Archivo JSON
+                      <input 
+                        type="file" 
+                        accept=".json,.txt,.csv" 
+                        style={{ display: 'none' }} 
+                        onChange={handleFileUpload} 
+                      />
+                    </label>
+                  </div>
+                </motion.div>
             ) : (
               <motion.div
                 key="preview"
@@ -165,7 +210,10 @@ export function UniversalImporter() {
                   <ul style={{ color: 'var(--text-primary)', marginLeft: 24, fontSize: '0.95rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <li><strong style={{ color: 'var(--accent-green)' }}>{preview.tasks.length}</strong> Tareas detectadas</li>
                     <li><strong style={{ color: 'var(--accent-green)' }}>{preview.cycles.length}</strong> Nuevos ciclos detectados</li>
-                    <li><strong style={{ color: 'var(--accent-green)' }}>{preview.lists.length}</strong> Listas nuevas</li>
+                    <li><strong style={{ color: 'var(--accent-green)' }}>{preview.lists?.length || 0}</strong> Listas nuevas</li>
+                    {preview.listSections && preview.listSections.length > 0 && (
+                      <li><strong style={{ color: 'var(--accent-green)' }}>{preview.listSections.length}</strong> Secciones de lista</li>
+                    )}
                   </ul>
                 </div>
                 <div style={{ display: 'flex', gap: 'var(--space-16)' }}>
