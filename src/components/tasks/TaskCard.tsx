@@ -377,14 +377,41 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
               <button 
                 onClick={async () => {
                   setShowMenu(false);
-                  const depId = await usePromptStore.getState().openPrompt("Ingresa el ID de la tarea bloqueadora:");
-                  if (depId) addDependency(task.id, depId);
+                  const query = await usePromptStore.getState().openPrompt(
+                    "Esta tarea dependerá de otra. Escribe el nombre de la tarea bloqueadora para buscarla:"
+                  );
+                  if (query) {
+                    const allTasks = Object.values(useAppStore.getState().tasks);
+                    const matching = allTasks.filter(t => 
+                      t.title.toLowerCase().includes(query.toLowerCase()) && 
+                      t.id !== task.id &&
+                      t.status === 'pending' &&
+                      !t.deleted_at
+                    );
+                    
+                    if (matching.length === 0) {
+                      alert("No se encontró ninguna tarea pendiente con ese nombre.");
+                    } else if (matching.length === 1) {
+                      addDependency(task.id, matching[0].id);
+                      alert(`Vinculado: Esta tarea ahora depende de "${matching[0].title}".`);
+                    } else {
+                      const listString = matching.map((t, idx) => `${idx + 1}. ${t.title}`).join('\n');
+                      const selectIdxStr = await usePromptStore.getState().openPrompt(
+                        `Elige el número de la tarea de la que dependerá:\n\n${listString}`
+                      );
+                      const selectIdx = Number(selectIdxStr) - 1;
+                      if (selectIdx >= 0 && selectIdx < matching.length) {
+                        addDependency(task.id, matching[selectIdx].id);
+                        alert(`Vinculado: Esta tarea ahora depende de "${matching[selectIdx].title}".`);
+                      }
+                    }
+                  }
                 }}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
-                <Link2 size={16} /> Vincular Bloqueo
+                <Link2 size={16} /> Bloquear con otra tarea
               </button>
 
               <button 

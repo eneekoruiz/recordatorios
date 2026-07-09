@@ -267,3 +267,45 @@ select[multiple].detail-select {
 .chip-remove:hover {
   opacity: 1;
 }
+
+/* Collapsible Section Cards */
+.section-card {
+  background-color: var(--bg-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-12);
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+}
+
+.section-card:focus-within {
+  border-color: var(--accent-primary);
+}
+
+.section-card-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-12) var(--space-16);
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-sans);
+}
+
+.section-card-header:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.section-card-content {
+  padding: 0 var(--space-16) var(--space-12) var(--space-16);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
