@@ -9,7 +9,8 @@ import {
   BarChart,
   Trash2,
   Download,
-  MoreHorizontal
+  MoreHorizontal,
+  Inbox
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
@@ -413,6 +414,23 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         <div className="categories-section" style={{ flexShrink: 0 }}>
           <div className="section-header">Mis listas</div>
           <div className="ios-list-block">
+            {/* Bandeja de entrada */}
+            <div 
+              className={`ios-list-item ${currentView === 'list_inbox' ? 'active' : ''}`}
+              onClick={() => onSelectView('list_inbox')}
+            >
+              <div className="list-icon" style={{ backgroundColor: '#0a84ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Inbox size={12} color="white" />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                <span className="title" style={{ color: currentView === 'list_inbox' ? 'var(--accent-primary)' : 'var(--text-primary)' }}>Bandeja de entrada</span>
+              </div>
+              <span className="count">
+                {Object.values(tasks || {}).filter(t => !t.deleted_at && !t.completed_at && (t.categoryId === 'inbox' || !t.categoryId)).length}
+              </span>
+              <ChevronRight size={16} color="var(--text-tertiary)" />
+            </div>
+
             <ListHierarchy 
               lists={lists} 
               currentView={currentView} 
