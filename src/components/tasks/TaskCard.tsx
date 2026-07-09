@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
-import { CheckCircle, Trash2, GripVertical, Play, Lock, Link2, Flag, MapPin, Link, Image as ImageIcon, X, Info } from 'lucide-react';
+import { CheckCircle, Trash2, GripVertical, Play, Lock, Link2, Flag, MapPin, Link, Image as ImageIcon, X, Info, MoreHorizontal } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
@@ -287,85 +288,121 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
           </div>
           
           {!isBlocked && (
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button 
-                className="btn-icon" 
-                onClick={() => onEdit(task.id)}
-                style={{ background: 'var(--border-subtle)', color: 'var(--text-secondary)' }}
-                title="Detalles"
-              >
-                <Info size={18} />
-              </button>
-              <button 
-                className="btn-icon" 
-                onClick={() => onOpenZenMode(task.id)}
-                style={{ background: 'var(--border-subtle)', color: 'var(--accent-primary)' }}
-                title="Modo Flow"
-              >
-                <Play size={18} fill="currentColor" />
-              </button>
-            </div>
+            <button 
+              className="btn-icon" 
+              onClick={(e) => {
+                e.stopPropagation();
+                if (showMenu) {
+                  setShowMenu(false);
+                } else {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setMenuPos({
+                    x: rect.left + window.scrollX - 120,
+                    y: rect.bottom + window.scrollY
+                  });
+                  setShowMenu(true);
+                }
+              }}
+              style={{ background: 'var(--border-subtle)', color: 'var(--text-secondary)' }}
+              title="Acciones"
+            >
+              <MoreHorizontal size={18} />
+            </button>
           )}
         </div>
 
         {/* Action Menu (Context Menu) */}
-        {showMenu && (
+        {showMenu && createPortal(
           <>
             <div 
-              style={{ position: 'fixed', inset: 0, zIndex: 99 }} 
+              style={{ position: 'fixed', inset: 0, zIndex: 99998 }} 
               onClick={(e) => { e.stopPropagation(); setShowMenu(false); }} 
             />
             <div 
               style={{
                 position: 'absolute',
-                top: menuPos.y || '10%',
-                right: 'var(--space-16)',
-                background: 'var(--bg-card)',
+                top: menuPos.y + 4,
+                left: menuPos.x,
+                background: 'var(--bg-surface)',
                 border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-md)',
+                borderRadius: '10px',
                 boxShadow: 'var(--shadow-lg)',
-                zIndex: 100,
-                padding: 'var(--space-8)',
+                zIndex: 99999,
+                padding: '4px',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 'var(--space-4)',
-                minWidth: 160
+                minWidth: 150
               }}
+              onClick={(e) => e.stopPropagation()}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid var(--border-subtle)' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>ACCIONES</span>
-                <button className="btn-icon" style={{ width: 24, height: 24 }} onClick={() => setShowMenu(false)}>
-                  <X size={14} />
-                </button>
-              </div>
-              
               <button 
                 onClick={async () => {
+                  setShowMenu(false);
+                  
+                  let taskDuration = task.duration;
+                  if (!taskDuration) {
+                    const input = await usePromptStore.getState().openPrompt(
+                      "Introduce la duración de la tarea (en minutos):",
+                      "Ej: 25"
+                    );
+                    if (input && !isNaN(Number(input)) && Number(input) > 0) {
+                      taskDuration = Number(input);
+                      useAppStore.getState().updateTask(task.id, { duration: taskDuration });
+                    } else {
+                      return;
+                    }
+                  }
+                  
+                  onOpenZenMode(task.id);
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--accent-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%', fontWeight: 600 }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <Play size={14} fill="currentColor" /> Empezar ya
+              </button>
+
+              <button 
+                onClick={() => {
+                  setShowMenu(false);
+                  onEdit(task.id);
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <span style={{ fontSize: 12 }}>✏️</span> Editar recordatorio
+              </button>
+
+              <button 
+                onClick={async () => {
+                  setShowMenu(false);
                   const depId = await usePromptStore.getState().openPrompt("Ingresa el ID de la tarea bloqueadora:");
                   if (depId) addDependency(task.id, depId);
-                  setShowMenu(false);
                 }}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 4 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-surface)'}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
                 <Link2 size={16} /> Vincular Bloqueo
               </button>
 
               <button 
-                onClick={() => { 
-                  if (navigator.vibrate) navigator.vibrate(50);
-                  onDelete(task.id); 
-                  setShowMenu(false); 
+                onClick={() => {
+                  setShowMenu(false);
+                  if (confirm('¿Seguro que quieres eliminar este recordatorio?')) {
+                    onDelete(task.id);
+                  }
                 }}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px', background: 'transparent', border: 'none', color: 'var(--accent-red)', textAlign: 'left', cursor: 'pointer', borderRadius: 4 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-surface)'}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--accent-red)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
-                <Trash2 size={16} /> Eliminar
+                <Trash2 size={14} /> Eliminar
               </button>
             </div>
-          </>
+          </>,
+          document.body
         )}
       </motion.div>
     </div>

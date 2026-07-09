@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Clock, Mic, MicOff, Settings2, Calendar as CalendarIcon, Repeat, Link2, PlusCircle, Flag, MapPin, Link, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
@@ -41,6 +42,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
   const [price, setPrice] = useState<number | undefined>(undefined);
   const [quantity, setQuantity] = useState<number>(1);
   const [brand, setBrand] = useState('');
+  const [duration, setDuration] = useState<number | ''>('');
 
   // Suggested chips purely for visual feedback
   const [suggestedChips, setSuggestedChips] = useState<{type: 'time'|'date'|'cycle', label: string}[]>([]);
@@ -68,6 +70,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
         setPrice(task.price !== undefined ? task.price : undefined);
         setQuantity(task.quantity !== undefined ? task.quantity : 1);
         setBrand(task.brand || '');
+        setDuration(task.duration || '');
         setHasDate(!!task.dueDate);
         setHasTime(!!task.alerts?.some(a => a.type === 'at_time'));
         setShowAdvanced(true);
@@ -90,6 +93,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
         setPrice(undefined);
         setQuantity(1);
         setBrand('');
+        setDuration('');
         setHasDate(false);
         setHasTime(false);
         setShowAdvanced(false);
@@ -173,7 +177,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
       isDetailed,
       price: isDetailed && price !== undefined ? Number(price) : undefined,
       quantity: isDetailed && quantity !== undefined ? Number(quantity) : undefined,
-      brand: isDetailed && brand ? brand : undefined
+      brand: isDetailed && brand ? brand : undefined,
+      duration: duration !== '' ? Number(duration) : undefined
     };
 
     if (taskId) {
@@ -202,6 +207,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
     setPrice(undefined);
     setQuantity(1);
     setBrand('');
+    setDuration('');
     onClose();
   };
 
@@ -238,27 +244,21 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
     recognition.start();
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <motion.div 
-          key="backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="drawer-backdrop" 
-            onClick={onClose} 
-          />
-      )}
-      
-      {isOpen && (
+        <div className="drawer-overlay" onClick={onClose}>
           <motion.div 
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="drawer-title"
             key="drawer"
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
+            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 15 }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="drawer"
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="drawer-header" role="banner">
               <button className="cancel-btn" onClick={onClose} aria-label={taskId ? 'Cancelar edición' : 'Cancelar creación de tarea'}>Cancelar</button>
@@ -638,6 +638,31 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
                       
                       <div className="detail-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <Clock size={18} color="var(--accent-blue)" />
+                          <span className="detail-label" style={{ marginBottom: 0 }}>Duración (min)</span>
+                        </div>
+                        <input 
+                          type="number"
+                          value={duration}
+                          onChange={e => setDuration(e.target.value === '' ? '' : Number(e.target.value))}
+                          placeholder="Ej: 25"
+                          min="1"
+                          style={{ 
+                            width: 80, 
+                            textAlign: 'right', 
+                            border: 'none', 
+                            background: 'transparent',
+                            color: 'var(--text-primary)',
+                            fontSize: '0.95rem',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+
+                      <div className="divider"></div>
+                      
+                      <div className="detail-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <MapPin size={18} color="var(--accent-blue)" />
                           <span className="detail-label" style={{ marginBottom: 0 }}>Ubicación</span>
                         </div>
@@ -734,7 +759,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
 
             </div>
           </motion.div>
+        </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
