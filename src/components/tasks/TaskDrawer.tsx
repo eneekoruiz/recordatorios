@@ -39,6 +39,11 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
   const [flagged, setFlagged] = useState(false);
   const [priority, setPriority] = useState<'none' | 'low' | 'medium' | 'high'>('none');
   const [locationName, setLocationName] = useState('');
+  const [hasLocationAlert, setHasLocationAlert] = useState(false);
+  const [locationLat, setLocationLat] = useState<number | null>(null);
+  const [locationLng, setLocationLng] = useState<number | null>(null);
+  const [locationRadius, setLocationRadius] = useState<number>(100);
+  const [locationAddress, setLocationAddress] = useState<string>('');
   const [image, setImage] = useState('');
 
   // Finance Fields
@@ -68,6 +73,11 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
         setFlagged(!!task.flagged);
         setPriority(task.priority || 'none');
         setLocationName(task.locationName || '');
+        setHasLocationAlert(!!task.location);
+        setLocationLat(task.location ? task.location.lat : null);
+        setLocationLng(task.location ? task.location.lng : null);
+        setLocationRadius(task.location ? task.location.radius : 100);
+        setLocationAddress(task.location ? task.location.address : '');
         setUrl(task.url || '');
         setImage(task.image || '');
         setIsDetailed(!!task.isDetailed);
@@ -80,7 +90,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
         
         // Open cards dynamically if they have values configured
         setCardTimeOpen(!!task.dueDate || !!task.alerts?.some(a => a.type === 'at_time'));
-        setCardRepeatOpen(!!task.cycle_id || !!task.sectionId || !!task.locationName);
+        setCardRepeatOpen(!!task.cycle_id || !!task.sectionId || !!task.locationName || !!task.location);
         setCardReqOpen(task.blockedBy && task.blockedBy.length > 0);
         setCardDetailsOpen(task.priority !== 'none' || !!task.flagged || !!task.url || !!task.image);
         setCardFinanceOpen(!!task.isDetailed);
@@ -97,6 +107,11 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
         setFlagged(false);
         setPriority('none');
         setLocationName('');
+        setHasLocationAlert(false);
+        setLocationLat(null);
+        setLocationLng(null);
+        setLocationRadius(100);
+        setLocationAddress('');
         setUrl('');
         setImage('');
         setIsDetailed(false);
@@ -169,6 +184,25 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
     }
   }, [title]);
 
+  const obtenerUbicacionActual = () => {
+    if (!navigator.geolocation) {
+      alert('La geolocalización no está soportada por tu navegador.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocationLat(pos.coords.latitude);
+        setLocationLng(pos.coords.longitude);
+        if (!locationAddress) {
+          setLocationAddress('Mi ubicación actual');
+        }
+      },
+      (err) => {
+        alert(`Error obteniendo coordenadas: ${err.message}`);
+      }
+    );
+  };
+
   const handleSave = () => {
     if (!title.trim()) return;
     
@@ -189,6 +223,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
       flagged: flagged || undefined,
       priority: priority !== 'none' ? priority : undefined,
       locationName: locationName || undefined,
+      location: hasLocationAlert && locationLat !== null && locationLng !== null ? { lat: locationLat, lng: locationLng, radius: locationRadius, address: locationAddress } : undefined,
       image: image || undefined,
       isDetailed,
       price: isDetailed && price !== undefined ? Number(price) : undefined,
@@ -218,6 +253,11 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
     setFlagged(false);
     setPriority('none');
     setLocationName('');
+    setHasLocationAlert(false);
+    setLocationLat(null);
+    setLocationLng(null);
+    setLocationRadius(100);
+    setLocationAddress('');
     setImage('');
     setIsDetailed(false);
     setPrice(undefined);
@@ -544,10 +584,11 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
 
                     <div className="divider"></div>
 
+                    {/* Ubicación Informativa */}
                     <div className="detail-row" style={{ padding: '8px 0' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <MapPin size={18} color="var(--accent-blue)" />
-                        <span className="detail-label" style={{ marginBottom: 0 }}>Ubicación</span>
+                        <span className="detail-label" style={{ marginBottom: 0 }}>Información de Ubicación</span>
                       </div>
                       <label className="switch">
                         <input type="checkbox" checked={!!locationName} onChange={e => setLocationName(e.target.checked ? 'Dirección actual' : '')} />
@@ -559,11 +600,69 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
                         <input 
                           type="text" 
                           className="detail-select" 
-                          placeholder="Buscar dirección o usar actual..."
+                          placeholder="Escribe la dirección, URL de Google Maps, etc..."
                           value={locationName === 'Dirección actual' ? '' : locationName}
                           onChange={e => setLocationName(e.target.value)}
                           style={{ width: '100%', textAlign: 'right', borderBottom: '1px solid var(--border-subtle)' }}
                         />
+                      </div>
+                    )}
+
+                    <div className="divider"></div>
+
+                    {/* Alerta de Aviso al Llegar */}
+                    <div className="detail-row" style={{ padding: '8px 0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Clock size={18} color="var(--accent-red)" />
+                        <span className="detail-label" style={{ marginBottom: 0 }}>Aviso al Llegar (Geocerca)</span>
+                      </div>
+                      <label className="switch">
+                        <input type="checkbox" checked={hasLocationAlert} onChange={e => {
+                          setHasLocationAlert(e.target.checked);
+                          if (e.target.checked && locationLat === null) {
+                            obtenerUbicacionActual();
+                          }
+                        }} />
+                        <span className="slider round"></span>
+                      </label>
+                    </div>
+                    {hasLocationAlert && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '8px 0', background: 'var(--bg-surface)', borderRadius: 8, marginTop: -4, border: '1px solid var(--border-subtle)', paddingLeft: 12, paddingRight: 12 }}>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <input 
+                            type="text" 
+                            className="detail-select" 
+                            placeholder="Nombre del lugar (Ej: Mi Casa, Supermercado)"
+                            value={locationAddress}
+                            onChange={e => setLocationAddress(e.target.value)}
+                            style={{ flex: 1, padding: 6, borderBottom: '1px solid var(--border-subtle)', background: 'transparent' }}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', gap: 12, fontSize: '0.8rem', color: 'var(--text-secondary)', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <span>Lat: {locationLat?.toFixed(6) || '—'}</span>
+                          <span>Lng: {locationLng?.toFixed(6) || '—'}</span>
+                          <button 
+                            type="button"
+                            onClick={obtenerUbicacionActual}
+                            style={{ background: 'var(--accent-glow)', color: 'var(--accent-primary)', border: 'none', borderRadius: 4, padding: '4px 8px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600 }}
+                          >
+                            📍 Obtener actual
+                          </button>
+                        </div>
+                        <div className="detail-row" style={{ padding: '4px 0', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Radio de aviso</span>
+                          <select 
+                            className="detail-select"
+                            value={locationRadius}
+                            onChange={e => setLocationRadius(Number(e.target.value))}
+                            style={{ width: 'auto', border: 'none', background: 'transparent' }}
+                          >
+                            <option value={100}>100 metros</option>
+                            <option value={250}>250 metros</option>
+                            <option value={500}>500 metros</option>
+                            <option value={1000}>1 kilómetro</option>
+                          </select>
+                        </div>
                       </div>
                     )}
                   </div>
