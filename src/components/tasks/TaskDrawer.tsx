@@ -468,24 +468,36 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
                         </select>
                       </div>
                       
-                      {availableSections.length > 0 && (
-                        <>
-                          <div className="divider"></div>
-                          <div className="detail-row">
-                            <span className="detail-label">Sección</span>
-                            <select 
-                              className="detail-select"
-                              value={sectionId || ''}
-                              onChange={e => setSectionId(e.target.value || undefined)}
-                            >
-                              <option value="">Automática (Por Frecuencia)</option>
-                              {availableSections.map(sec => (
-                                <option key={sec.id} value={sec.id}>{sec.name}</option>
-                              ))}
-                            </select>
-                          </div>
-                        </>
-                      )}
+                      <div className="divider"></div>
+                      <div className="detail-row">
+                        <span className="detail-label">Sección</span>
+                        <select 
+                          className="detail-select"
+                          value={sectionId || ''}
+                          onChange={async e => {
+                            if (e.target.value === 'new') {
+                              const name = prompt('Nombre de la nueva sección:');
+                              if (name && name.trim()) {
+                                const newId = crypto.randomUUID();
+                                useAppStore.getState().addListSection({
+                                  id: newId,
+                                  listId: category,
+                                  name: name.trim()
+                                });
+                                setSectionId(newId);
+                              }
+                            } else {
+                              setSectionId(e.target.value || undefined);
+                            }
+                          }}
+                        >
+                          <option value="">Automática / General</option>
+                          {availableSections.map(sec => (
+                            <option key={sec.id} value={sec.id}>{sec.name}</option>
+                          ))}
+                          <option value="new">+ Añadir nueva sección...</option>
+                        </select>
+                      </div>
 
                       <div className="divider"></div>
                       <div className="detail-row" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
