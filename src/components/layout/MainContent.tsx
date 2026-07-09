@@ -278,26 +278,58 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   return (
     <main className="main-content" ref={parentRef} style={{ overflowY: 'auto', height: '100%', WebkitOverflowScrolling: 'touch' }}>
       {/* Header */}
-      <header className="content-header" style={{ padding: 'var(--space-24) var(--space-48) var(--space-16)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        <div>
-          {isMobile && (
+      <header className="content-header" style={{ padding: 'var(--space-16) 0 var(--space-16)', display: 'flex', flexDirection: 'column', gap: 'var(--space-12)', flexShrink: 0 }}>
+        
+        {/* Top Bar (Barra Superior de Navegación) */}
+        <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between' }}>
+          {/* Left: Volver button (only for mobile content view) */}
+          {isMobile && onBackToSidebar && (
             <button 
               onClick={onBackToSidebar}
               style={{
                 background: 'transparent', border: 'none', color: 'var(--accent-primary)',
-                display: 'flex', alignItems: 'center', gap: 4, marginBottom: 12, padding: 0,
-                fontSize: '1rem', cursor: 'pointer'
+                display: 'flex', alignItems: 'center', gap: 4, padding: '8px 0',
+                fontSize: '1.05rem', cursor: 'pointer', fontWeight: 500
               }}
             >
-              <ChevronDown size={20} style={{ transform: 'rotate(90deg)' }} />
-              Listas
+              <ChevronDown size={20} style={{ transform: 'rotate(90deg)', color: 'var(--accent-primary)' }} />
+              <span>Listas</span>
             </button>
           )}
+          
+          {/* Right: Actions aligned to the right */}
+          <div className="header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginLeft: 'auto' }}>
+            {!isSmartView && currentView !== 'TRASH' && (
+              <div style={{ display: 'flex', alignItems: 'center', marginRight: 12, gap: 8 }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Mostrar completados</span>
+                <label className="switch" title="Mostrar Completados">
+                  <input type="checkbox" checked={showCompleted} onChange={e => setShowCompleted(e.target.checked)} />
+                  <span className="slider round"></span>
+                </label>
+              </div>
+            )}
+            {isListView && currentList && (
+              <button className="icon-btn" onClick={() => setIsListConfigOpen(true)} title="Configurar Lista">
+                <Settings size={20} />
+              </button>
+            )}
+            {isListView && (
+              <button className="icon-btn" onClick={() => handleAddSection()} title="Añadir Sección Raíz">
+                <FolderPlus size={20} />
+              </button>
+            )}
+            <button className="icon-btn" onClick={onOpenNewTask} title="Añadir Tarea"><Plus size={24} /></button>
+          </div>
+        </div>
+
+        {/* Línea del Título (Debajo del Top Bar) */}
+        <div style={{ width: '100%' }}>
           <h1 className="text-display" style={{ 
             fontSize: '2.2rem', 
             fontWeight: 750,
             color: isSmartView ? SMART_COLORS[currentView] : isListView && currentList ? currentList.color : 'var(--text-primary)',
-            display: 'flex', alignItems: 'center', margin: 0
+            display: 'flex', alignItems: 'center', margin: 0,
+            padding: 0
           }}>
             {CycleIcon && <CycleIcon size={32} color="var(--accent-primary)" style={{ marginRight: 12 }} />}
             
@@ -333,7 +365,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               </span>
             )}
           </h1>
-          
+
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-12)', marginTop: 'var(--space-8)' }}>
             <p className="text-secondary" style={{ margin: 0 }}>
               {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -350,33 +382,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               </button>
             )}
           </div>
+
           {totalCost > 0 && (
             <div style={{ marginTop: 12, display: 'inline-block', background: 'var(--accent-glow)', color: 'var(--accent-primary)', padding: '6px 12px', borderRadius: 8, fontWeight: 600 }}>
               Total Estimado: ${totalCost.toFixed(2)}
             </div>
           )}
-        </div>
-        <div className="header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {!isSmartView && currentView !== 'TRASH' && (
-            <div style={{ display: 'flex', alignItems: 'center', marginRight: 16, gap: 8 }}>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Mostrar completados</span>
-              <label className="switch" title="Mostrar Completados">
-                <input type="checkbox" checked={showCompleted} onChange={e => setShowCompleted(e.target.checked)} />
-                <span className="slider round"></span>
-              </label>
-            </div>
-          )}
-          {isListView && currentList && (
-            <button className="icon-btn" onClick={() => setIsListConfigOpen(true)} title="Configurar Lista">
-              <Settings size={20} />
-            </button>
-          )}
-          {isListView && (
-            <button className="icon-btn" onClick={() => handleAddSection()} title="Añadir Sección Raíz">
-              <FolderPlus size={20} />
-            </button>
-          )}
-          <button className="icon-btn" onClick={onOpenNewTask}><Plus size={24} /></button>
         </div>
       </header>
 

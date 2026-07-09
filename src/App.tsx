@@ -14,6 +14,7 @@ import { useNavigation } from './hooks/useNavigation';
 import { NavigationFrame } from './components/layout/NavigationFrame';
 import { AuthScreen } from './components/auth/AuthScreen';
 import { InstallPromptModal } from './components/layout/InstallPromptModal';
+import { syncManager } from './sync/syncManager';
 
 function App() {
   // ── All hooks FIRST (before any conditional returns) ──────────────
@@ -71,6 +72,28 @@ function App() {
       initial.forEach((l) => useAppStore.getState().addList(l));
     }
   }, []);
+
+  // ── Sync Manager lifecycle and listeners ──────────────────────────
+  useEffect(() => {
+    if (token) {
+      syncManager.start();
+      
+      const handleFocusOrVisible = () => {
+        if (document.visibilityState === 'visible') {
+          syncManager.syncNow();
+        }
+      };
+      
+      window.addEventListener('focus', handleFocusOrVisible);
+      document.addEventListener('visibilitychange', handleFocusOrVisible);
+      
+      return () => {
+        window.removeEventListener('focus', handleFocusOrVisible);
+        document.removeEventListener('visibilitychange', handleFocusOrVisible);
+        syncManager.stop();
+      };
+    }
+  }, [token]);
 
   // ── Helpers ──────────────────────────────────────────────────────
   const handleSelectView = (view: string) => {
@@ -160,7 +183,7 @@ function App() {
       <div className="main-container">
         <NavigationFrame
           isMobile={isMobile}
-          canGoBack={navStack.length > 1 || (isMobile && mobileView === 'content')}
+          canGoBack={navView !== 'HOME' && (navStack.length > 1 || (isMobile && mobileView === 'content'))}
           onBack={handleBack}
           viewKey={navView}
           backLabel={navStack.length > 1 ? 'Volver' : 'Listas'}
