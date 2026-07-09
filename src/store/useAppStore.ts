@@ -32,13 +32,14 @@ interface AppState {
   updateTaskRaw: (task: TaskItem) => void; // Para uso interno y SyncProvider
   toggleTask: (id: string, forceReverse?: boolean) => void;
   deleteTask: (id: string) => void;
+  updateTask: (id: string, updates: Partial<TaskItem>) => void;
   
   addCycle: (cycle: CustomCycle) => void;
   updateCycle: (id: string, updates: Partial<CustomCycle>) => void;
   deleteCycle: (id: string) => void;
 
   addList: (list: CustomList) => void;
-  updateList: (id: string, updates: Partial<CustomList>) => void;
+  updateList: (id: string, data: Partial<CustomList>) => void;
   deleteList: (id: string) => void;
   removeList: (id: string) => void;
 
@@ -59,6 +60,9 @@ interface AppState {
   addDependency: (targetTaskId: string, blockedByTaskId: string) => void;
   removeDependency: (targetTaskId: string, blockedByTaskId: string) => void;
   nestTask: (taskId: string, parentId: string | undefined) => void;
+
+  hasHydrated: boolean;
+  setHasHydrated: (val: boolean) => void;
 
   token: string | null;
   userId: string | null;
@@ -84,14 +88,36 @@ export const useAppStore = create<AppState>()(
       },
 
       setToken: (token, userId) => set({ token, userId }),
-      logout: () => set({ token: null, userId: null, tasks: {}, lists: INITIAL_LISTS, cycles: INITIAL_CYCLES, listSections: [] }),
+      hasHydrated: false,
+      setHasHydrated: (val) => set({ hasHydrated: val }),
 
-      toggleSmartList: (listId) => set((state) => ({
-        smartListVisibility: {
+      toggleSmartList: (listId) => set((state) => {
+        const newVisibility = {
           ...state.smartListVisibility,
           [listId]: !state.smartListVisibility[listId]
-        }
-      })),
+        };
+        
+        // Save to lists as a settings record so it syncs
+        const settingsId = 'user_preferences_smart_lists';
+        const existingSettings = state.lists.find(l => l.id === settingsId);
+        const updatedList: any = {
+          id: settingsId,
+          name: 'Settings',
+          color: '#000000',
+          icon: JSON.stringify(newVisibility),
+          _is_dirty: true,
+          updated_at: new Date().toISOString()
+        };
+        
+        const newLists = existingSettings
+          ? state.lists.map(l => l.id === settingsId ? updatedList : l)
+          : [...state.lists, updatedList];
+
+        return {
+          smartListVisibility: newVisibility,
+          lists: newLists
+        };
+      }),
 
       addTask: (payload) => set((state) => {
         const newTask = TaskRepository.create(payload);
@@ -188,12 +214,33 @@ export const useAppStore = create<AppState>()(
         };
       }),
 
+      updateTask: (id, updates) => set((state) => {
+        const task = state.tasks[id];
+        if (!task) return state;
+        const updated = TaskRepository.update(task, updates);
+        return {
+          tasks: {
+            ...state.tasks,
+            [id]: updated
+          }
+        };
+      }),
+
       addCycle: (cycle) => set((state) => ({
-        cycles: [...state.cycles, cycle].sort((a, b) => a.daysValue - b.daysValue)
+        cycles: [...state.cycles, { 
+          ...cycle, 
+          _is_dirty: cycle._is_dirty ?? true, 
+          updated_at: cycle.updated_at || new Date().toISOString() 
+        }].sort((a, b) => a.daysValue - b.daysValue)
       })),
 
       updateCycle: (id, updates) => set((state) => ({
-        cycles: state.cycles.map(c => c.id === id ? { ...c, ...updates } : c).sort((a, b) => a.daysValue - b.daysValue)
+        cycles: state.cycles.map(c => c.id === id ? { 
+          ...c, 
+          ...updates, 
+          _is_dirty: updates._is_dirty ?? true, 
+          updated_at: new Date().toISOString() 
+        } : c).sort((a, b) => a.daysValue - b.daysValue)
       })),
 
       deleteCycle: (id) => set((state) => ({
@@ -201,11 +248,20 @@ export const useAppStore = create<AppState>()(
       })),
 
       addList: (list) => set((state) => ({
-        lists: [...state.lists, list]
+        lists: [...state.lists, { 
+          ...list, 
+          _is_dirty: list._is_dirty ?? true, 
+          updated_at: list.updated_at || new Date().toISOString() 
+        }]
       })),
 
       updateList: (id, data) => set((state) => ({
-        lists: state.lists.map(l => l.id === id ? { ...l, ...data } : l)
+        lists: state.lists.map(l => l.id === id ? { 
+          ...l, 
+          ...data, 
+          _is_dirty: data._is_dirty ?? true, 
+          updated_at: new Date().toISOString() 
+        } : l)
       })),
 
       removeList: (id) => set((state) => ({
@@ -520,6 +576,13 @@ export const useAppStore = create<AppState>()(
       name: 'reminders-storage',
       storage: createJSONStorage(() => idbStorage),
       version: 3,
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
+      partialize: (state) => {
+        const { hasHydrated, ...rest } = state;
+        return rest;
+      },
       merge: (persistedState: any, currentState: any) => ({
         ...currentState,
         ...persistedState,

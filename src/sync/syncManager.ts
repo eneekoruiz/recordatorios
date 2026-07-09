@@ -75,7 +75,17 @@ class SyncManager {
     const updatedTasks = tasks.map(t => ({ ...t, _is_dirty: false }));
     updatedTasks.forEach(t => state.updateTaskRaw(t));
     
-    // Cycles would be updated similarly
+    if (cycles.length > 0) {
+      cycles.forEach((c: any) => {
+        state.updateCycle(c.id, { _is_dirty: false });
+      });
+    }
+    
+    if (lists.length > 0) {
+      lists.forEach((l: any) => {
+        state.updateList(l.id, { _is_dirty: false });
+      });
+    }
   }
 
   private async pull(token: string) {
@@ -109,6 +119,40 @@ class SyncManager {
         // Last Write Wins
         if (!localTask || new Date(serverTask.updated_at).getTime() > new Date(localTask.updated_at).getTime()) {
            state.updateTaskRaw({ ...serverTask, _is_dirty: false });
+        }
+      });
+    }
+
+    // Ingest lists
+    if (data.lists && Array.isArray(data.lists)) {
+      data.lists.forEach((serverList: any) => {
+        if (serverList.id === 'user_preferences_smart_lists') {
+          try {
+            const parsed = JSON.parse(serverList.icon);
+            useAppStore.setState({ smartListVisibility: parsed });
+          } catch (e) {
+            console.error('Failed to parse smart list visibility:', e);
+          }
+          return;
+        }
+
+        const localList = state.lists.find(l => l.id === serverList.id);
+        if (!localList) {
+          state.addList({ ...serverList, _is_dirty: false });
+        } else if (!localList.updated_at || new Date(serverList.updated_at).getTime() > new Date(localList.updated_at).getTime()) {
+          state.updateList(serverList.id, { ...serverList, _is_dirty: false });
+        }
+      });
+    }
+
+    // Ingest cycles
+    if (data.cycles && Array.isArray(data.cycles)) {
+      data.cycles.forEach((serverCycle: any) => {
+        const localCycle = state.cycles.find(c => c.id === serverCycle.id);
+        if (!localCycle) {
+          state.addCycle({ ...serverCycle, _is_dirty: false });
+        } else if (!localCycle.updated_at || new Date(serverCycle.updated_at).getTime() > new Date(localCycle.updated_at).getTime()) {
+          state.updateCycle(serverCycle.id, { ...serverCycle, _is_dirty: false });
         }
       });
     }

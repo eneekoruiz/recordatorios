@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
-import { CheckCircle, Trash2, GripVertical, Play, Lock, Link2, Flag, MapPin, Link, Image as ImageIcon, X } from 'lucide-react';
+import { CheckCircle, Trash2, GripVertical, Play, Lock, Link2, Flag, MapPin, Link, Image as ImageIcon, X, Info } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
@@ -12,10 +12,11 @@ interface TaskCardProps {
   onToggle: (id: string, forceReverse?: boolean) => void;
   onDelete: (id: string) => void;
   onOpenZenMode: (id: string) => void;
+  onEdit: (id: string) => void;
   index: number;
 }
 
-export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onToggle, onDelete, onOpenZenMode, index }: TaskCardProps) {
+export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, index }: TaskCardProps) {
   const { cycles, tasks, nestTask, addDependency, lists } = useAppStore();
   const taskCycle = cycles.find(c => c.id === task.cycle_id);
   const taskList = lists?.find(l => l.id === task.category_id);
@@ -286,14 +287,24 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
           </div>
           
           {!isBlocked && (
-            <button 
-              className="btn-icon" 
-              onClick={() => onOpenZenMode(task.id)}
-              style={{ background: 'var(--border-subtle)', color: 'var(--accent-primary)' }}
-              title="Modo Flow"
-            >
-              <Play size={18} fill="currentColor" />
-            </button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button 
+                className="btn-icon" 
+                onClick={() => onEdit(task.id)}
+                style={{ background: 'var(--border-subtle)', color: 'var(--text-secondary)' }}
+                title="Detalles"
+              >
+                <Info size={18} />
+              </button>
+              <button 
+                className="btn-icon" 
+                onClick={() => onOpenZenMode(task.id)}
+                style={{ background: 'var(--border-subtle)', color: 'var(--accent-primary)' }}
+                title="Modo Flow"
+              >
+                <Play size={18} fill="currentColor" />
+              </button>
+            </div>
           )}
         </div>
 

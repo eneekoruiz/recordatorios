@@ -23,7 +23,9 @@ function App() {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [mobileView, setMobileView] = useState<'sidebar' | 'content'>('sidebar');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [zenModeTaskId, setZenModeTaskId] = useState<string | null>(null);
+  const hasHydrated = useAppStore((state) => state.hasHydrated);
 
   const navStack = useNavigation((state) => state.stack);
   const navView = useNavigation((state) => state.currentView());
@@ -99,6 +101,40 @@ function App() {
   };
 
   // ── Conditional returns (AFTER all hooks) ────────────────────────
+  if (!hasHydrated) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        width: '100vw',
+        background: 'var(--bg-base)',
+        color: 'var(--text-primary)',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      }}>
+        <div style={{
+          width: 40,
+          height: 40,
+          border: '3px solid var(--border-subtle)',
+          borderTop: '3px solid var(--accent-primary)',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite',
+          marginBottom: 16
+        }} />
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+        <p style={{ fontSize: '1rem', fontWeight: 500, margin: 0 }}>Tranquilo, ya casi estamos...</p>
+        <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', marginTop: 8 }}>Cargando tus recordatorios...</p>
+      </div>
+    );
+  }
+
   if (!token) {
     return <AuthScreen onSuccess={() => {}} />;
   }
@@ -132,8 +168,9 @@ function App() {
           {navView === 'HOME' && (
             <MainContent
               currentView={currentView}
-              onOpenNewTask={() => setIsDrawerOpen(true)}
+              onOpenNewTask={() => { setEditingTaskId(null); setIsDrawerOpen(true); }}
               onOpenZenMode={(taskId) => setZenModeTaskId(taskId)}
+              onEditTask={(taskId) => { setEditingTaskId(taskId); setIsDrawerOpen(true); }}
               onBackToSidebar={() => setMobileView('sidebar')}
               isMobile={isMobile}
             />
@@ -145,10 +182,11 @@ function App() {
 
       <TaskDrawer
         isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
+        onClose={() => { setIsDrawerOpen(false); setEditingTaskId(null); }}
         defaultCategoryId={
           currentView.startsWith('list_') ? currentView.replace('list_', '') : undefined
         }
+        taskId={editingTaskId || undefined}
       />
 
       <PromptModal />

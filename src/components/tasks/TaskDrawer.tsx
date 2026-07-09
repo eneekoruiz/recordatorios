@@ -9,10 +9,12 @@ interface TaskDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   defaultCategoryId?: string;
+  taskId?: string;
 }
 
-export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerProps) {
+export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskDrawerProps) {
   const addTask = useAppStore(state => state.addTask);
+  const updateTask = useAppStore(state => state.updateTask);
   const cycles = useAppStore(state => state.cycles);
   
   const [title, setTitle] = useState('');
@@ -42,6 +44,58 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
 
   // Suggested chips purely for visual feedback
   const [suggestedChips, setSuggestedChips] = useState<{type: 'time'|'date'|'cycle', label: string}[]>([]);
+
+  const task = useAppStore(state => taskId ? state.tasks[taskId] : undefined);
+
+  useEffect(() => {
+    if (isOpen) {
+      if (task) {
+        setTitle(task.title || '');
+        setNotes(task.description || '');
+        setCycleId(task.cycle_id || undefined);
+        setDueDate(task.dueDate ? new Date(task.dueDate) : new Date());
+        setCategory(task.categoryId || 'inbox');
+        setType(task.type || 'task');
+        setAlerts(task.alerts || []);
+        setBlockedBy(task.blockedBy || []);
+        setSectionId(task.sectionId || undefined);
+        setFlagged(!!task.flagged);
+        setPriority(task.priority || 'none');
+        setLocationName(task.locationName || '');
+        setUrl(task.url || '');
+        setImage(task.image || '');
+        setIsDetailed(!!task.isDetailed);
+        setPrice(task.price !== undefined ? task.price : undefined);
+        setQuantity(task.quantity !== undefined ? task.quantity : 1);
+        setBrand(task.brand || '');
+        setHasDate(!!task.dueDate);
+        setHasTime(!!task.alerts?.some(a => a.type === 'at_time'));
+        setShowAdvanced(true);
+      } else {
+        setTitle('');
+        setNotes('');
+        setCycleId(undefined);
+        setDueDate(new Date());
+        setCategory(defaultCategoryId || 'inbox');
+        setType('task');
+        setAlerts([]);
+        setBlockedBy([]);
+        setSectionId(undefined);
+        setFlagged(false);
+        setPriority('none');
+        setLocationName('');
+        setUrl('');
+        setImage('');
+        setIsDetailed(false);
+        setPrice(undefined);
+        setQuantity(1);
+        setBrand('');
+        setHasDate(false);
+        setHasTime(false);
+        setShowAdvanced(false);
+      }
+    }
+  }, [isOpen, taskId, task, defaultCategoryId]);
 
   useEffect(() => {
     if (isOpen && defaultCategoryId) {
@@ -101,12 +155,12 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
     // Si no hay cycleId y es "One-off", removemos dependencias vacías para limpiar
     const finalBlockedBy = blockedBy.length > 0 ? blockedBy : undefined;
 
-    addTask({
+    const payload: any = {
       categoryId: category,
       type,
       title,
       description: notes || undefined,
-      cycleId,
+      cycle_id: cycleId,
       blockedBy: finalBlockedBy,
       dueDate: dueDate.toISOString(),
       alerts,
@@ -117,10 +171,16 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
       locationName: locationName || undefined,
       image: image || undefined,
       isDetailed,
-      price: isDetailed ? price : undefined,
-      quantity: isDetailed ? quantity : undefined,
+      price: isDetailed && price !== undefined ? Number(price) : undefined,
+      quantity: isDetailed && quantity !== undefined ? Number(quantity) : undefined,
       brand: isDetailed && brand ? brand : undefined
-    });
+    };
+
+    if (taskId) {
+      updateTask(taskId, payload);
+    } else {
+      addTask(payload);
+    }
     
     // Reset y cerrar
     setTitle('');
@@ -201,10 +261,10 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId }: TaskDrawerPro
             className="drawer"
           >
             <div className="drawer-header" role="banner">
-              <button className="cancel-btn" onClick={onClose} aria-label="Cancelar creación de tarea">Cancelar</button>
-              <h3 id="drawer-title">Nueva Tarea</h3>
-              <button className="save-btn" onClick={handleSave} disabled={!title.trim()} aria-label="Guardar nueva tarea">
-                Añadir
+              <button className="cancel-btn" onClick={onClose} aria-label={taskId ? 'Cancelar edición' : 'Cancelar creación de tarea'}>Cancelar</button>
+              <h3 id="drawer-title">{taskId ? 'Detalles de Tarea' : 'Nueva Tarea'}</h3>
+              <button className="save-btn" onClick={handleSave} disabled={!title.trim()} aria-label={taskId ? 'Guardar cambios' : 'Guardar nueva tarea'}>
+                {taskId ? 'Aceptar' : 'Añadir'}
               </button>
             </div>
 
