@@ -3,12 +3,12 @@ import {
   ChevronRight, 
   ChevronDown, 
   Plus,
-  Clock,
   Check,
   LogOut,
   BarChart,
   Trash2,
-  Download
+  Download,
+  MoreHorizontal
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
@@ -25,8 +25,10 @@ interface SidebarProps {
 }
 
 // Sub-componente para jerarquía infinita
-const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, getTaskCount, parentId = undefined, depth = 0 }: any) => {
+const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditList, getTaskCount, parentId = undefined, depth = 0 }: any) => {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const { removeList } = useAppStore();
   
   const currentLevelLists = lists.filter((l: any) => l.parentId === parentId);
   if (currentLevelLists.length === 0) return null;
@@ -39,10 +41,11 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, getTask
         const isActive = currentView === `list_${list.id}`;
 
         return (
-          <div key={list.id}>
+          <div key={list.id} style={{ position: 'relative' }}>
             <div 
               className={`ios-list-item ${isActive ? 'active' : ''}`}
               onClick={() => onSelectView(`list_${list.id}`)}
+              style={{ position: 'relative' }}
             >
               {hasChildren && (
                 <div 
@@ -63,12 +66,74 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, getTask
               <ChevronRight size={16} color="var(--text-tertiary)" />
               
               <button 
-                onClick={(e) => { e.stopPropagation(); onAddSublist(list.id); }}
+                onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === list.id ? null : list.id); }}
                 style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', opacity: 0.5, padding: 4, marginLeft: 8 }}
-                title="Añadir Sublista"
+                title="Acciones de Lista"
               >
-                <Plus size={14} />
+                <MoreHorizontal size={14} />
               </button>
+
+              {activeMenuId === list.id && (
+                <>
+                  <div 
+                    style={{ position: 'fixed', inset: 0, zIndex: 100 }} 
+                    onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); }} 
+                  />
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      top: '80%',
+                      right: 16,
+                      background: 'var(--bg-surface)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '10px',
+                      boxShadow: 'var(--shadow-lg)',
+                      zIndex: 101,
+                      padding: '4px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      minWidth: 140
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button 
+                      onClick={() => {
+                        setActiveMenuId(null);
+                        onAddSublist(list.id);
+                      }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <Plus size={14} /> Añadir Sublista
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setActiveMenuId(null);
+                        onEditList(list.id);
+                      }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <span style={{ fontSize: 12 }}>✏️</span> Editar Lista
+                    </button>
+                    <button 
+                      onClick={() => {
+                        if (confirm(`¿Seguro que quieres borrar la lista "${list.name}" y sus sublistas?`)) {
+                          removeList(list.id);
+                        }
+                        setActiveMenuId(null);
+                      }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--accent-red)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <Trash2 size={14} /> Eliminar Lista
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
             
             {hasChildren && isExpanded && (
@@ -77,7 +142,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, getTask
                 currentView={currentView} 
                 onSelectView={onSelectView} 
                 onAddSublist={onAddSublist}
-                onAddSublist={onAddSublist}
+                onEditList={onEditList}
                 getTaskCount={getTaskCount}
                 parentId={list.id} 
                 depth={depth + 1} 
@@ -335,6 +400,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               onSelectView={onSelectView}
               getTaskCount={(id: string) => Object.values(tasks || {}).filter(t => !t.deleted_at && !t.completed_at && t.category_id === id).length}
               onAddSublist={(pId: string) => { setEditingListId(undefined); setParentListId(pId); setIsListConfigOpen(true); }} 
+              onEditList={(listId: string) => { setEditingListId(listId); setParentListId(undefined); setIsListConfigOpen(true); }}
             />
           </div>
           <button 
@@ -348,18 +414,9 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         </div>
 
         {/* CICLOS TEMPORALES */}
-        <div style={{ marginTop: 'var(--space-8)' }}>
+        <div style={{ marginTop: 'var(--space-16)' }}>
           <div className="section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div 
-              style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flex: 1, padding: 'var(--space-8) 0' }}
-              onClick={() => setIsCyclesOpen(!isCyclesOpen)}
-            >
-              <Clock size={16} />
-              <span>CICLOS TEMPORALES</span>
-              <motion.div animate={{ rotate: isCyclesOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                <ChevronDown size={14} />
-              </motion.div>
-            </div>
+            <span>Ciclos temporales</span>
             <button 
               className="btn-icon"
               style={{ padding: 4, cursor: 'pointer' }}
@@ -373,33 +430,29 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
             </button>
           </div>
 
-          <AnimatePresence>
-            {isCyclesOpen && (
-              <motion.div 
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2, ease: "easeInOut" }}
-                style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', overflow: 'hidden' }}
-              >
-                {cycles.filter(c => c.isPinned).map(cycle => {
-                  const Icon = getCycleIcon(cycle.icon);
-                  const isActive = currentView === cycle.id;
-                  return (
-                    <div 
-                      key={cycle.id}
-                      className={`nav-item ${isActive ? 'active' : ''}`}
-                      onClick={() => onSelectView(cycle.id)}
-                      style={{ margin: '2px 0' }}
-                    >
-                      <Icon size={16} color={isActive ? 'var(--accent-primary)' : 'var(--text-tertiary)'} />
-                    <span>{cycle.name}</span>
+          <div className="ios-list-block">
+            {cycles.filter(c => c.isPinned).map(cycle => {
+              const Icon = getCycleIcon(cycle.icon);
+              const isActive = currentView === cycle.id;
+              const taskCount = Object.values(tasks || {}).filter(t => !t.deleted_at && !t.completed_at && t.cycle_id === cycle.id).length;
+              return (
+                <div 
+                  key={cycle.id}
+                  className={`ios-list-item ${isActive ? 'active' : ''}`}
+                  onClick={() => onSelectView(cycle.id)}
+                >
+                  <div className="list-icon" style={{ backgroundColor: '#8e8e93', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon size={12} color="white" />
                   </div>
-                );
-              })}
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                    <span className="title" style={{ color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)' }}>{cycle.name}</span>
+                  </div>
+                  <span className="count">{taskCount}</span>
+                  <ChevronRight size={16} color="var(--text-tertiary)" />
+                </div>
+              );
+            })}
+          </div>
         </div>
 
       </div>
