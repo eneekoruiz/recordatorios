@@ -11,6 +11,16 @@ class SyncManager {
   private isSyncing = false;
   private isOnline = navigator.onLine;
   private eventSource: EventSource | null = null;
+  private debounceTimeout: any = null;
+
+  triggerDebouncedSync() {
+    if (this.debounceTimeout) {
+      clearTimeout(this.debounceTimeout);
+    }
+    this.debounceTimeout = setTimeout(() => {
+      this.syncNow();
+    }, 1000); // 1-second debounce to group batch edits
+  }
 
   constructor() {
     window.addEventListener('online', () => {
@@ -196,3 +206,14 @@ class SyncManager {
 }
 
 export const syncManager = new SyncManager();
+
+// Automatically trigger sync when CRUD changes flags an item as _is_dirty
+useAppStore.subscribe((state) => {
+  const hasDirtyTasks = Object.values(state.tasks).some(t => t._is_dirty);
+  const hasDirtyCycles = state.cycles.some((c: any) => c._is_dirty);
+  const hasDirtyLists = state.lists.some((l: any) => l._is_dirty);
+
+  if (hasDirtyTasks || hasDirtyCycles || hasDirtyLists) {
+    syncManager.triggerDebouncedSync();
+  }
+});
