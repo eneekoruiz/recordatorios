@@ -119,11 +119,14 @@ export const useAppStore = create<AppState>()(
         const completedAlerts = existingTask.completedAlerts || [];
         const isOneOff = !existingTask.cycle_id;
         
-        if (forceReverse) {
+        // Auto-detect reverse if already completed or if forceReverse is explicitly passed
+        const shouldReverse = forceReverse || existingTask.status === 'completed';
+        
+        if (shouldReverse) {
           const newHistory = [...(existingTask.completionHistory || [])];
           
-          if (completedAlerts.length > 0) {
-            // Uncheck last partial alert
+          if (completedAlerts.length > 0 && !existingTask.status?.includes('completed')) {
+            // Uncheck last partial alert if not fully completed
             updatedTask = TaskRepository.update(existingTask, {
               completedAlerts: completedAlerts.slice(0, -1),
               status: 'pending'

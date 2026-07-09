@@ -94,7 +94,8 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
         drag="x"
         style={{ x }}
         dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.2}
+        dragElastic={0.7}
+        dragTransition={{ bounceStiffness: 400, bounceDamping: 25 }}
         onDragEnd={(_, info) => handleSwipeEnd(info.offset.x)}
         whileTap={{ scale: 0.98 }}
         initial={{ opacity: 0, y: 20 }}
@@ -105,18 +106,21 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
           damping: 25, 
           delay: Math.min(index * 0.05, 0.5)
         }}
-        className="surface-card"
+        className="surface-card ios-task-row"
         style={{ 
           position: 'relative', 
           height: '100%', 
           display: 'flex', 
           alignItems: 'center', 
-          padding: 'var(--space-16)', 
+          padding: '12px 16px', 
           zIndex: 2,
-          background: 'var(--bg-surface)',
+          background: 'transparent',
           opacity: isBlocked ? 0.6 : 1,
           pointerEvents: isBlocked ? 'none' : 'auto',
-          border: isDragOver ? '2px dashed var(--accent-primary)' : '1px solid var(--border-subtle)'
+          border: 'none',
+          borderBottom: '1px solid var(--border-subtle)',
+          borderRadius: 0,
+          boxShadow: 'none'
         }}
       >
         
@@ -150,22 +154,21 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
                 width: 24, height: 24, 
                 borderRadius: '50%', 
                 border: isPartial ? 'none' : '2px solid var(--border-subtle)', 
-                marginRight: 'var(--space-16)', 
+                marginRight: 'var(--space-12)', 
                 cursor: 'pointer',
                 background: isCompletedPeriod 
                   ? 'var(--accent-primary)' 
                   : isPartial 
                     ? `conic-gradient(var(--accent-primary) ${percentage}%, var(--border-subtle) ${percentage}%)`
                     : 'transparent',
-                transition: 'border-color 0.2s ease, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                transition: 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0
               }}
               onMouseEnter={(e) => { 
-                if (!isPartial && !isCompletedPeriod) e.currentTarget.style.borderColor = 'var(--accent-primary)'; 
                 e.currentTarget.style.transform = 'scale(1.1)'; 
               }}
               onMouseLeave={(e) => { 
-                if (!isPartial && !isCompletedPeriod) e.currentTarget.style.borderColor = 'var(--border-subtle)'; 
                 e.currentTarget.style.transform = 'scale(1)'; 
               }}
             >
@@ -177,7 +180,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
         
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: 0, gap: 'var(--space-12)' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '1.1rem', fontWeight: 500, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 'var(--space-8)', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-8)', flexWrap: 'wrap' }}>
               {isBlocked && <Lock size={16} color="var(--accent-red)" />}
               
               {/* Badges UI de Prioridad en lugar de "!!!" */}
@@ -188,6 +191,9 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
               )}
 
               <span style={{ 
+                fontSize: '1rem',
+                fontWeight: 500,
+                color: 'var(--text-primary)',
                 textDecoration: isCompletedPeriod ? 'line-through' : 'none', 
                 opacity: isCompletedPeriod ? 0.6 : 1,
                 wordBreak: 'break-word',
@@ -203,15 +209,17 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
               {task.image && <ImageIcon size={14} color="var(--text-tertiary)" />}
             </div>
             
-            <div style={{ display: 'flex', gap: 'var(--space-8)', marginTop: 'var(--space-4)', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 'var(--space-8)', marginTop: '2px', alignItems: 'center', flexWrap: 'wrap' }}>
               {taskList && (
-                <span style={{ fontSize: '0.8rem', color: taskList.color, display: 'flex', alignItems: 'center', gap: 4, fontWeight: 500, background: 'var(--bg-elevated)', padding: '2px 6px', borderRadius: 6 }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', fontWeight: 500 }}>
                   {taskList.name}
                 </span>
               )}
-              {task.due_date && (
-                <span style={{ fontSize: '0.8rem', color: dueDateColor, display: 'flex', alignItems: 'center', fontWeight: 500 }}>
-                  {new Date(task.due_date).toLocaleDateString()}
+              {(task.due_date || taskCycle) && (
+                <span style={{ fontSize: '0.85rem', color: dueDateColor, display: 'flex', alignItems: 'center', fontWeight: 500, gap: 4 }}>
+                  {task.due_date && new Date(task.due_date).toLocaleDateString()}
+                  {task.due_date && taskCycle && <span style={{color: 'var(--text-tertiary)'}}>🔁</span>}
+                  {taskCycle && <span style={{color: 'var(--text-tertiary)'}}>{taskCycle.name}</span>}
                 </span>
               )}
               {(task.alerts || []).map((alert: any, idx: number) => {
@@ -257,15 +265,22 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
                 target="_blank" 
                 rel="noreferrer"
                 style={{ 
-                  display: 'flex', alignItems: 'center', gap: 6, marginTop: 'var(--space-8)', 
-                  padding: 'var(--space-8)', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-md)', 
-                  textDecoration: 'none', color: 'var(--accent-primary)', fontSize: '0.85rem',
-                  minWidth: 0
+                  display: 'flex', alignItems: 'center', gap: 8, marginTop: 'var(--space-8)', 
+                  padding: '4px 8px 4px 4px', background: 'var(--bg-elevated)', borderRadius: '8px', 
+                  textDecoration: 'none', color: 'var(--text-primary)', fontSize: '0.85rem',
+                  minWidth: 0, width: 'fit-content'
                 }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <Link size={14} style={{ flexShrink: 0 }} />
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{task.url}</span>
+                <div style={{ width: 32, height: 32, background: 'var(--border-subtle)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img src={`https://www.google.com/s2/favicons?domain=${task.url}&sz=64`} alt="favicon" style={{ width: 20, height: 20, borderRadius: 4 }} />
+                </div>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200, fontWeight: 500 }}>
+                  {(() => {
+                    try { return new URL(task.url).hostname.replace('www.', ''); }
+                    catch { return task.url; }
+                  })()}
+                </span>
               </a>
             )}
           </div>

@@ -25,7 +25,7 @@ interface SidebarProps {
 }
 
 // Sub-componente para jerarquía infinita
-const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, parentId = undefined, depth = 0 }: any) => {
+const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, getTaskCount, parentId = undefined, depth = 0 }: any) => {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   
   const currentLevelLists = lists.filter((l: any) => l.parentId === parentId);
@@ -43,10 +43,6 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, parentI
             <div 
               className={`ios-list-item ${isActive ? 'active' : ''}`}
               onClick={() => onSelectView(`list_${list.id}`)}
-              style={{
-                color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                fontWeight: isActive ? 600 : 400,
-              }}
             >
               {hasChildren && (
                 <div 
@@ -57,12 +53,18 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, parentI
                 </div>
               )}
               
-              <div className="list-icon" style={{ backgroundColor: list.color, width: 10, height: 10, borderRadius: '50%', marginRight: 10 }} />
-              <span style={{ flex: 1 }}>{list.name}</span>
+              <div className="list-icon" style={{ backgroundColor: list.color }} />
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                <span className="title" style={{ color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)' }}>{list.name}</span>
+                {list.isShared && <span className="subtitle">Esta lista es compartida.</span>}
+              </div>
+              
+              {getTaskCount && <span className="count">{getTaskCount(list.id) || 0}</span>}
+              <ChevronRight size={16} color="var(--text-tertiary)" />
               
               <button 
                 onClick={(e) => { e.stopPropagation(); onAddSublist(list.id); }}
-                style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', opacity: 0.5, padding: 4 }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', opacity: 0.5, padding: 4, marginLeft: 8 }}
                 title="Añadir Sublista"
               >
                 <Plus size={14} />
@@ -75,6 +77,8 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, parentI
                 currentView={currentView} 
                 onSelectView={onSelectView} 
                 onAddSublist={onAddSublist}
+                onAddSublist={onAddSublist}
+                getTaskCount={getTaskCount}
                 parentId={list.id} 
                 depth={depth + 1} 
               />
@@ -286,6 +290,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
             return (
               <div 
                 key={list.id}
+                className="ios-smart-card"
                 onClick={() => {
                   if (isEditMode) {
                     toggleSmartList(list.id);
@@ -294,21 +299,15 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                   }
                 }}
                 style={{
-                  background: currentView === list.id ? 'var(--bg-elevated)' : 'var(--bg-surface)',
-                  border: currentView === list.id ? `1px solid ${list.color}` : '1px solid var(--border-subtle)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: 'var(--space-12)',
-                  cursor: 'pointer',
-                  position: 'relative',
+                  backgroundColor: list.color,
                   opacity: isEditMode && !smartListVisibility[list.id] ? 0.5 : 1,
-                  transition: 'all 0.2s',
                 }}
               >
                 {isEditMode && (
-                  <div style={{ position: 'absolute', top: 8, right: 8 }}>
+                  <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 10 }}>
                     <div style={{ 
                       width: 18, height: 18, borderRadius: '50%', 
-                      border: smartListVisibility[list.id] ? 'none' : '1px solid var(--border-focus)',
+                      border: smartListVisibility[list.id] ? 'none' : '1px solid rgba(255,255,255,0.5)',
                       background: smartListVisibility[list.id] ? 'var(--accent-primary)' : 'transparent',
                       display: 'flex', alignItems: 'center', justifyContent: 'center'
                     }}>
@@ -316,13 +315,11 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                     </div>
                   </div>
                 )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                  <div style={{ background: list.color, width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Icon size={14} color="white" />
-                  </div>
-                  {!isEditMode && <span style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-primary)' }}>{getTaskCount(list.id)}</span>}
+                <div className="icon-circle">
+                  <Icon size={16} color={list.color} />
                 </div>
-                <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{list.name}</span>
+                {!isEditMode && <span className="count">{getTaskCount(list.id)}</span>}
+                <h3>{list.name}</h3>
               </div>
             );
           }))}
@@ -330,12 +327,13 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
 
         {/* MIS LISTAS */}
         <div className="categories-section" style={{ flexShrink: 0 }}>
-          <div className="section-header">Mis Listas</div>
+          <div className="section-header">Mis listas</div>
           <div className="ios-list-block">
             <ListHierarchy 
               lists={lists} 
               currentView={currentView} 
-              onSelectView={onSelectView} 
+              onSelectView={onSelectView}
+              getTaskCount={(id: string) => Object.values(tasks || {}).filter(t => !t.deleted_at && !t.completed_at && t.category_id === id).length}
               onAddSublist={(pId: string) => { setEditingListId(undefined); setParentListId(pId); setIsListConfigOpen(true); }} 
             />
           </div>
