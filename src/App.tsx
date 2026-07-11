@@ -25,6 +25,7 @@ function App() {
   const [mobileView, setMobileView] = useState<'sidebar' | 'content'>('sidebar');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [defaultSectionId, setDefaultSectionId] = useState<string | undefined>(undefined);
   const [zenModeTaskId, setZenModeTaskId] = useState<string | null>(null);
   const hasHydrated = useAppStore((state) => state.hasHydrated);
 
@@ -191,7 +192,7 @@ function App() {
           {navView === 'HOME' && (
             <MainContent
               currentView={currentView}
-              onOpenNewTask={() => { setEditingTaskId(null); setIsDrawerOpen(true); }}
+              onOpenNewTask={(sectionId) => { setEditingTaskId(null); setDefaultSectionId(sectionId); setIsDrawerOpen(true); }}
               onOpenZenMode={(taskId) => setZenModeTaskId(taskId)}
               onEditTask={(taskId) => { setEditingTaskId(taskId); setIsDrawerOpen(true); }}
               onBackToSidebar={() => setMobileView('sidebar')}
@@ -205,10 +206,11 @@ function App() {
 
       <TaskDrawer
         isOpen={isDrawerOpen}
-        onClose={() => { setIsDrawerOpen(false); setEditingTaskId(null); }}
+        onClose={() => { setIsDrawerOpen(false); setEditingTaskId(null); setDefaultSectionId(undefined); }}
         defaultCategoryId={
           currentView.startsWith('list_') ? currentView.replace('list_', '') : undefined
         }
+        defaultSectionId={defaultSectionId}
         taskId={editingTaskId || undefined}
       />
 

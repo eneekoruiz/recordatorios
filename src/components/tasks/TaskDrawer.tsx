@@ -10,10 +10,11 @@ interface TaskDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   defaultCategoryId?: string;
+  defaultSectionId?: string;
   taskId?: string;
 }
 
-export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskDrawerProps) {
+export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionId, taskId }: TaskDrawerProps) {
   const addTask = useAppStore(state => state.addTask);
   const updateTask = useAppStore(state => state.updateTask);
   const cycles = useAppStore(state => state.cycles);
@@ -27,7 +28,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
   const [alerts, setAlerts] = useState<import('../../models/Task').AlertDef[]>([]);
   const [isListening, setIsListening] = useState(false);
   const [blockedBy, setBlockedBy] = useState<string[]>([]);
-  const [sectionId, setSectionId] = useState<string | undefined>(undefined);
+  const [sectionId, setSectionId] = useState<string | undefined>(defaultSectionId);
   const [cardTimeOpen, setCardTimeOpen] = useState(true);
   const [cardRepeatOpen, setCardRepeatOpen] = useState(false);
   const [cardReqOpen, setCardReqOpen] = useState(false);
@@ -130,11 +131,13 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
         setCardDetailsOpen(task.priority !== 'none' || !!task.flagged || !!task.url || !!task.image);
         setCardFinanceOpen(!!task.isDetailed);
       } else {
+        // Nueva tarea
         setTitle('');
         setNotes('');
+        setCategory(defaultCategoryId || 'inbox');
+        setSectionId(defaultSectionId);
         setCycleId(undefined);
         setDueDate(new Date());
-        setCategory(defaultCategoryId || 'inbox');
         setType('task');
         setAlerts([]);
         setBlockedBy([]);

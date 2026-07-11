@@ -15,9 +15,10 @@ interface TaskCardProps {
   onOpenZenMode: (id: string) => void;
   onEdit: (id: string) => void;
   index: number;
+  showListName?: boolean;
 }
 
-export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, index }: TaskCardProps) {
+export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, index, showListName = true }: TaskCardProps) {
   const { cycles, tasks, nestTask, addDependency, lists } = useAppStore();
   const taskCycle = cycles.find(c => c.id === task.cycle_id);
   const taskList = lists?.find(l => l.id === task.categoryId);
@@ -219,7 +220,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
             </div>
             
             <div style={{ display: 'flex', gap: 'var(--space-8)', marginTop: '2px', alignItems: 'center', flexWrap: 'wrap' }}>
-              {taskList && (
+              {showListName && taskList && (
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', fontWeight: 500 }}>
                   {taskList.name}
                 </span>
