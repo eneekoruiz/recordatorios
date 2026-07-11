@@ -298,10 +298,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           )}
           
           {/* Right: Actions aligned to the right */}
-          <div className="header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginLeft: 'auto' }}>
+          <div className="header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             {!isSmartView && currentView !== 'TRASH' && (
-              <div style={{ display: 'flex', alignItems: 'center', marginRight: 12, gap: 8 }}>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Mostrar completados</span>
+              <div style={{ display: 'flex', alignItems: 'center', marginRight: isMobile ? 4 : 12, gap: 8 }}>
+                {!isMobile && <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Mostrar completados</span>}
                 <label className="switch" title="Mostrar Completados">
                   <input type="checkbox" checked={showCompleted} onChange={e => setShowCompleted(e.target.checked)} />
                   <span className="slider round"></span>

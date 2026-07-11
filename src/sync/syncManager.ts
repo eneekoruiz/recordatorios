@@ -135,19 +135,12 @@ class SyncManager {
   }
 
   private async pull(token: string) {
-    // Get highest updatedAt from local state to use as token
     const state = useAppStore.getState();
-    let maxUpdatedAt = 0;
-    
-    Object.values(state.tasks).forEach(t => {
-      if (t.updated_at) {
-        const d = new Date(t.updated_at).getTime();
-        if (d > maxUpdatedAt) maxUpdatedAt = d;
-      }
-    });
+    const tokenKey = 'sync_token_' + (state as any).userId;
+    const lastToken = localStorage.getItem(tokenKey) || '0';
 
     const url = new URL(PULL_URL);
-    url.searchParams.append('lastToken', maxUpdatedAt.toString());
+    url.searchParams.append('lastToken', lastToken);
 
     const response = await fetch(url.toString(), {
       headers: {
@@ -162,8 +155,10 @@ class SyncManager {
     if (data.tasks && Array.isArray(data.tasks)) {
       data.tasks.forEach((serverTask: TaskItem) => {
         const localTask = state.tasks[serverTask.id];
-        // Last Write Wins
-        if (!localTask || new Date(serverTask.updated_at).getTime() > new Date(localTask.updated_at).getTime()) {
+        // Last Write Wins (Version-based first, fallback to timestamp)
+        if (!localTask || 
+            (serverTask.version || 0) > (localTask.version || 0) || 
+            ((serverTask.version || 0) === (localTask.version || 0) && new Date(serverTask.updated_at).getTime() > new Date(localTask.updated_at).getTime())) {
            state.updateTaskRaw({ ...serverTask, _is_dirty: false });
         }
       });
@@ -201,6 +196,10 @@ class SyncManager {
           state.updateCycle(serverCycle.id, { ...serverCycle, _is_dirty: false });
         }
       });
+    }
+
+    if (data.serverTime) {
+      localStorage.setItem(tokenKey, data.serverTime.toString());
     }
   }
 }

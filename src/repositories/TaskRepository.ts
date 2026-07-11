@@ -29,6 +29,7 @@ export class TaskRepository {
     return {
       ...existingTask,
       ...updates,
+      version: (existingTask.version || 1) + 1,
       updated_at: new Date().toISOString(),
       _is_dirty: true 
     };
