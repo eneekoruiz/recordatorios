@@ -386,14 +386,14 @@ export const useAppStore = create<AppState>()(
         
         const grouped: Record<string, TaskItem[]> = {};
         
-        // 1. Pre-initialize defined manual sections for this list so empty sections are visible
+        // 1. Initialize no_section key FIRST so uncategorized tasks appear at the top
+        grouped['no_section'] = [];
+        
+        // 2. Pre-initialize defined manual sections for this list so empty sections are visible
         const sectionsForList = (listSections || []).filter(s => s.listId === listId);
         for (const sec of sectionsForList) {
           grouped[`section_${sec.id}`] = [];
         }
-        
-        // 2. Initialize no_section key
-        grouped['no_section'] = [];
 
         for (const task of filtered) {
           let groupKey = '';
