@@ -594,7 +594,7 @@ export const useAppStore = create<AppState>()(
     {
       name: 'reminders-storage',
       storage: createJSONStorage(() => idbStorage),
-      version: 4,
+      version: 5,
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },
@@ -665,6 +665,27 @@ export const useAppStore = create<AppState>()(
           const dirtyCycles = (state.cycles || []).map((c: any) => ({ ...c, _is_dirty: true, version: c.version || 1 }));
           const dirtyLists = (state.lists || []).map((l: any) => ({ ...l, _is_dirty: true, version: l.version || 1 }));
           state = { ...state, tasks: dirtyTasks, cycles: dirtyCycles, lists: dirtyLists };
+        }
+        
+        if (version < 5) {
+          // Migration v4 -> v5: Strip default cycle_day assigned during v1->v2 migration
+          // Tasks that have no completionHistory were never used as recurring tasks
+          // and had cycle_id='cycle_day' set by the buggy default migration.
+          const fixedTasks: Record<string, TaskItem> = {};
+          if (state.tasks) {
+            Object.entries(state.tasks).forEach(([id, t]: [string, any]) => {
+              const isDefaultCycle = t.cycle_id === 'cycle_day';
+              const hasRecurringHistory = t.completionHistory && t.completionHistory.length > 0;
+              if (isDefaultCycle && !hasRecurringHistory) {
+                // Remove the default-assigned cycle_id — task becomes a one-off
+                const { cycle_id, ...rest } = t;
+                fixedTasks[id] = { ...rest, cycle_id: undefined, _is_dirty: true };
+              } else {
+                fixedTasks[id] = t;
+              }
+            });
+          }
+          state = { ...state, tasks: fixedTasks };
         }
         
         return state as AppState;
