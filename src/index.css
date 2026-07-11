@@ -157,8 +157,7 @@ body {
 .main-container {
   flex: 1;
   height: 100dvh;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: hidden;
   position: relative;
 
   /* Scrollbar — Firefox */
