@@ -180,6 +180,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const [confirmProps, setConfirmProps] = useState({ title: '', message: '', onConfirm: () => {} });
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [editingSectionName, setEditingSectionName] = useState('');
+  const [sectionMenuId, setSectionMenuId] = useState<string | null>(null);
 
   const startEditingSection = useCallback((e: React.MouseEvent, sectionId: string, currentName: string) => {
     e.stopPropagation();
@@ -544,31 +545,80 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                     </h3>
                   )}
                   {isCustomSection && (
-                    <>
+                    <div style={{ position: 'relative' }}>
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleAddSection(data.sectionId);
-                          if (collapsed[data.category]) toggleCategory(data.category);
+                          setSectionMenuId(sectionMenuId === data.sectionId ? null : data.sectionId!);
                         }}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5, padding: 4 }}
-                        title="Añadir Sub-sección"
+                        title="Opciones de sección"
                       >
-                        <Plus size={16} color="var(--text-primary)" />
+                        <MoreHorizontal size={16} color="var(--text-primary)" />
                       </button>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (confirm('¿Seguro que quieres borrar esta sección? Las tareas no se borrarán, solo quedarán sin sección.')) {
-                            deleteListSection(data.sectionId!);
-                          }
-                        }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5, padding: 4, marginLeft: 4, color: 'var(--accent-red)' }}
-                        title="Eliminar Sección"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </>
+                      
+                      {sectionMenuId === data.sectionId && (
+                        <>
+                          <div 
+                            style={{ position: 'fixed', inset: 0, zIndex: 90 }} 
+                            onClick={(e) => { e.stopPropagation(); setSectionMenuId(null); }}
+                          />
+                          <div 
+                            className="dark-dropdown-bg"
+                            style={{ 
+                              position: 'absolute', 
+                              right: 0, 
+                              top: '100%', 
+                              zIndex: 100,
+                              background: 'var(--bg-surface-glass)', 
+                              backdropFilter: 'blur(24px)',
+                              WebkitBackdropFilter: 'blur(24px)',
+                              borderRadius: 'var(--radius-md)', 
+                              border: '1px solid var(--border-subtle)', 
+                              boxShadow: 'var(--shadow-lg)', 
+                              padding: '4px',
+                              minWidth: '160px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: 2
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              onClick={() => {
+                                setSectionMenuId(null);
+                                onOpenNewTask(data.sectionId);
+                              }}
+                              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 4, fontSize: '0.85rem' }}
+                            >
+                              <Plus size={14} /> Añadir tarea
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSectionMenuId(null);
+                                handleAddSection(data.sectionId);
+                                if (collapsed[data.category]) toggleCategory(data.category);
+                              }}
+                              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 4, fontSize: '0.85rem' }}
+                            >
+                              <FolderPlus size={14} /> Añadir sub-sección
+                            </button>
+                            <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
+                            <button
+                              onClick={() => {
+                                setSectionMenuId(null);
+                                if (confirm('¿Seguro que quieres borrar esta sección? Las tareas no se borrarán, solo quedarán sin sección.')) {
+                                  deleteListSection(data.sectionId!);
+                                }
+                              }}
+                              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--accent-red)', textAlign: 'left', cursor: 'pointer', borderRadius: 4, fontSize: '0.85rem' }}
+                            >
+                              <Trash2 size={14} /> Eliminar sección
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   )}
                 </div>
                 {isCustomSection && dragOverSectionId === data.sectionId && (
