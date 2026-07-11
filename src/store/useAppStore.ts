@@ -358,9 +358,10 @@ export const useAppStore = create<AppState>()(
         const { tasks } = get();
         const filtered = Object.values(tasks).filter(t => {
           if (t.deleted_at) return false;
+          const taskCat = t.categoryId || (t as any).category_id;
           const matchesList = listId === 'inbox' 
-            ? (t.categoryId === 'inbox' || !t.categoryId)
-            : t.categoryId === listId;
+            ? (taskCat === 'inbox' || !taskCat)
+            : taskCat === listId;
           return matchesList && (includeCompleted || t.status === 'pending' || temporarilyShowIds.includes(t.id));
         });
         
