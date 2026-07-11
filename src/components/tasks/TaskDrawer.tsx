@@ -66,6 +66,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
   const [quantity, setQuantity] = useState<number>(1);
   const [brand, setBrand] = useState('');
   const [duration, setDuration] = useState<number | ''>('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Suggested chips purely for visual feedback
   const [suggestedChips, setSuggestedChips] = useState<{type: 'time'|'date'|'cycle', label: string}[]>([]);
