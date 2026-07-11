@@ -1,9 +1,12 @@
 import { useAppStore } from '../store/useAppStore';
 import type { TaskItem } from '../models/Task';
 
-const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://localhost:3001');
-const PULL_URL = `${API_BASE}/api/sync/pull`;
-const PUSH_URL = `${API_BASE}/api/sync/push`;
+// Always use relative URLs so they work on any domain (avoids ERR_NAME_NOT_RESOLVED from stale VITE_API_URL)
+const isDev = import.meta.env.DEV;
+const API_BASE = isDev ? (import.meta.env.VITE_API_URL || 'http://localhost:3001') : '';
+const PULL_URL = `/api/sync/pull`;
+const PUSH_URL = `/api/sync/push`;
+const LIVE_URL = isDev ? `${API_BASE}/api/sync/live` : `/api/sync/live`;
 const SYNC_INTERVAL_MS = 30 * 1000; // 30 seconds
 
 class SyncManager {
@@ -54,7 +57,7 @@ class SyncManager {
       this.eventSource.close();
     }
 
-    const url = `${API_BASE}/api/sync/live?token=${encodeURIComponent(token)}`;
+    const url = `${LIVE_URL}?token=${encodeURIComponent(token)}`;
     this.eventSource = new EventSource(url);
 
     this.eventSource.onmessage = (event) => {
@@ -153,7 +156,12 @@ class SyncManager {
     
     // Upsert pulled data into Zustand
     if (data.tasks && Array.isArray(data.tasks)) {
-      data.tasks.forEach((serverTask: TaskItem) => {
+      data.tasks.forEach((rawTask: any) => {
+        // Normalize legacy snake_case fields from server payload
+        const serverTask: TaskItem = {
+          ...rawTask,
+          categoryId: rawTask.categoryId || rawTask.category_id || undefined,
+        };
         const localTask = state.tasks[serverTask.id];
         // Last Write Wins (Version-based first, fallback to timestamp)
         if (!localTask || 
