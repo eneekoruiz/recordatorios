@@ -71,6 +71,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
               <ChevronRight size={16} color="var(--text-tertiary)" />
               
               <button 
+                className="list-action-btn"
                 onClick={(e) => { 
                   e.stopPropagation(); 
                   if (activeMenuId === list.id) {
@@ -85,7 +86,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                     setActiveMenuId(list.id);
                   }
                 }}
-                style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', opacity: 0.5, padding: 4, marginLeft: 8 }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 4, marginLeft: 8 }}
                 title="Acciones de Lista"
               >
                 <MoreHorizontal size={14} />
@@ -218,6 +219,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
 
   const [isCyclesOpen, setIsCyclesOpen] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isEditCyclesMode, setIsEditCyclesMode] = useState(false);
   
   const [isListConfigOpen, setIsListConfigOpen] = useState(false);
   const [isCycleModalOpen, setIsCycleModalOpen] = useState(false);
@@ -366,7 +368,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
 
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: '1fr 1fr', 
+          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', 
           gap: 'var(--space-8)', 
           padding: '0 var(--space-12)',
           marginBottom: 'var(--space-16)'
@@ -411,7 +413,16 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 <div className="icon-circle">
                   <Icon size={16} color={list.color} />
                 </div>
-                {!isEditMode && <span className="count">{getTaskCount(list.id)}</span>}
+                {!isEditMode && (
+                  <span 
+                    className="count" 
+                    style={{ 
+                      fontSize: getTaskCount(list.id) >= 100 ? '1.4rem' : getTaskCount(list.id) >= 10 ? '1.7rem' : '2rem' 
+                    }}
+                  >
+                    {getTaskCount(list.id)}
+                  </span>
+                )}
                 <h3>{list.name}</h3>
               </div>
             );
@@ -427,10 +438,11 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 var(--space-12)', marginBottom: 'var(--space-8)' }}>
                 <span className="section-header" style={{ margin: 0, padding: 0 }}>ANCLADAS</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-8)', padding: '0 var(--space-12)', marginBottom: 'var(--space-16)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 'var(--space-8)', padding: '0 var(--space-12)', marginBottom: 'var(--space-16)' }}>
                 {pinnedLists.map(list => {
                   const isActive = currentView === `list_${list.id}`;
                   const count = Object.values(tasks || {}).filter(t => !t.deleted_at && !isTaskCompleted(t) && (t.categoryId === list.id || (t as any).category_id === list.id)).length;
+                  const countFontSize = count >= 100 ? '1.4rem' : count >= 10 ? '1.7rem' : '2rem';
                   return (
                     <div
                       key={list.id}
@@ -441,7 +453,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                       <div className="icon-circle">
                         <span style={{ fontSize: 14 }}>📌</span>
                       </div>
-                      <span className="count">{count}</span>
+                      <span className="count" style={{ fontSize: countFontSize }}>{count}</span>
                       <h3>{list.name}</h3>
                     </div>
                   );
@@ -491,7 +503,13 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         <div style={{ marginTop: 'var(--space-16)' }}>
           <div className="section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span>Ciclos temporales</span>
-            <div style={{ display: 'flex', gap: 4 }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <button 
+                onClick={() => setIsEditCyclesMode(!isEditCyclesMode)}
+                style={{ background: 'transparent', border: 'none', color: isEditCyclesMode ? 'var(--accent-primary)' : 'var(--text-tertiary)', fontSize: '0.85rem', cursor: 'pointer' }}
+              >
+                {isEditCyclesMode ? 'Hecho' : 'Editar'}
+              </button>
               <button 
                 className="btn-icon"
                 style={{ padding: 4, cursor: 'pointer' }}
@@ -503,9 +521,9 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
             </div>
           </div>
 
-          {cycles.filter(c => c.isPinned && cycleVisibility[c.id]).length === 0 && (
+          {cycles.filter(c => c.isPinned && (cycleVisibility[c.id] || isEditCyclesMode)).length === 0 && (
             <div style={{ padding: '8px 12px', color: 'var(--text-tertiary)', fontSize: '0.82rem', fontStyle: 'italic' }}>
-              Se activarán al crear tareas con frecuencia
+              No hay ciclos visibles. Edita para activarlos.
             </div>
           )}
 
@@ -516,34 +534,43 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               const isActive = currentView === cycle.id;
               const taskCount = Object.values(tasks || {}).filter(t => !t.deleted_at && !isTaskCompleted(t) && t.cycle_id === cycle.id).length;
               
-              // Auto-show if has tasks
-              const hasTasksForCycle = Object.values(tasks || {}).some(t => !t.deleted_at && t.cycle_id === cycle.id);
-              const shouldShow = isVisible || hasTasksForCycle;
+              // Si el usuario desactivó explícitamente el ciclo, no lo mostramos a menos que esté en modo edición
+              if (!isVisible && !isEditCyclesMode) return null;
               
-              if (!shouldShow) return null;
               return (
                 <div 
                   key={cycle.id}
                   className={`ios-list-item ${isActive ? 'active' : ''}`}
-                  style={{ position: 'relative' }}
+                  style={{ position: 'relative', opacity: isEditCyclesMode && !isVisible ? 0.5 : 1 }}
                 >
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }} onClick={() => onSelectView(cycle.id)}>
+                  <div 
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, cursor: isEditCyclesMode ? 'default' : 'pointer' }} 
+                    onClick={() => {
+                      if (!isEditCyclesMode) {
+                        onSelectView(cycle.id);
+                      } else {
+                        toggleCycleVisibility(cycle.id);
+                      }
+                    }}
+                  >
                     <div className="list-icon" style={{ backgroundColor: '#8e8e93', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Icon size={12} color="white" />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
                       <span className="title" style={{ color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)' }}>{cycle.name}</span>
                     </div>
-                    <span className="count">{taskCount}</span>
-                    <ChevronRight size={16} color="var(--text-tertiary)" />
+                    {!isEditCyclesMode && <span className="count">{taskCount}</span>}
+                    {!isEditCyclesMode && <ChevronRight size={16} color="var(--text-tertiary)" />}
                   </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); toggleCycleVisibility(cycle.id); }}
-                    title={isVisible ? 'Ocultar ciclo' : 'Mostrar ciclo'}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', opacity: 0.5, padding: 4, marginLeft: 4 }}
-                  >
-                    {isVisible ? <PinOff size={12} /> : <Pin size={12} />}
-                  </button>
+                  {isEditCyclesMode && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleCycleVisibility(cycle.id); }}
+                      title={isVisible ? 'Desactivar ciclo' : 'Activar ciclo'}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: isVisible ? 'var(--accent-primary)' : 'var(--text-tertiary)', padding: 4, marginLeft: 4 }}
+                    >
+                      {isVisible ? <Check size={14} /> : <Plus size={14} />}
+                    </button>
+                  )}
                 </div>
               );
             })}

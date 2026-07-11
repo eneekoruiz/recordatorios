@@ -546,3 +546,22 @@ input:checked + .slider::before {
   background: var(--bg-hover);
 }
 
+/* Actions Button - Clean layout helper */
+.ios-list-item .list-action-btn {
+  opacity: 0.3;
+  transition: opacity 0.2s ease;
+  flex-shrink: 0;
+}
+
+@media (hover: hover) {
+  .ios-list-item .list-action-btn {
+    opacity: 0;
+  }
+  .ios-list-item:hover .list-action-btn {
+    opacity: 0.6;
+  }
+  .ios-list-item:hover .list-action-btn:hover {
+    opacity: 1;
+  }
+}
+
