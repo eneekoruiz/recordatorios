@@ -116,20 +116,23 @@ body {
 ======================================================== */
 .app-container {
   display: flex;
-  min-height: 100vh;
+  min-height: 100dvh;
+  height: 100dvh;
   width: 100%;
   background: var(--bg-base);
+  overflow: hidden;
 }
 
 /* ---------- Sidebar ---------- */
 .sidebar-container {
   width: 280px;
-  height: 100vh;
+  height: 100dvh;
   position: sticky;
   top: 0;
   flex-shrink: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
   border-right: 1px solid var(--border-subtle);
   background: var(--bg-surface-glass);
 
@@ -153,8 +156,9 @@ body {
 /* ---------- Main ---------- */
 .main-container {
   flex: 1;
-  min-height: 100vh;
+  height: 100dvh;
   overflow-y: auto;
+  overscroll-behavior: contain;
   position: relative;
 
   /* Scrollbar — Firefox */

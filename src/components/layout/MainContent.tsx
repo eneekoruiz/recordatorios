@@ -216,8 +216,15 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       let headerDepth = 0;
 
       if (!isListView) {
-        const catObj = lists?.find(l => l.id === categoryOrCycle);
-        if (catObj) color = catObj.color;
+        // In cycle view, the category key is a list id — resolve to name
+        if (categoryOrCycle === 'inbox' || categoryOrCycle === 'undefined' || !categoryOrCycle) {
+          headerTitle = 'Sin lista';
+          color = '#8e8e93';
+        } else {
+          const catObj = lists?.find(l => l.id === categoryOrCycle);
+          if (catObj) { headerTitle = catObj.name; color = catObj.color; }
+          else { headerTitle = 'Sin lista'; color = '#8e8e93'; }
+        }
       } else {
         color = currentList?.color || color;
         if (categoryOrCycle.startsWith('section_')) {
@@ -288,7 +295,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
 
   return (
-    <main className="main-content" ref={parentRef} style={{ overflowY: 'auto', height: '100%', WebkitOverflowScrolling: 'touch' }}>
+    <main className="main-content" ref={parentRef} style={{ overflowY: 'auto', height: '100%', WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', scrollPaddingTop: 0 }}>
       {/* Header */}
       <header className="content-header" style={{ padding: 'var(--space-16) 0 var(--space-16)', display: 'flex', flexDirection: 'column', gap: 'var(--space-12)', flexShrink: 0 }}>
         
