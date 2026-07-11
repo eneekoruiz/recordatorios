@@ -90,7 +90,7 @@ app.post('/api/auth/login', async (req, res) => {
 
 // --- SYNC ---
 app.post('/api/sync/push', authenticateToken, async (req, res) => {
-  const { tasks, cycles, lists } = req.body;
+  const { tasks, cycles, lists, listSections } = req.body;
   const userId = req.user.id;
 
   try {
@@ -145,6 +145,25 @@ app.post('/api/sync/push', authenticateToken, async (req, res) => {
       }
     }
 
+    // Secciones de lista
+    if (listSections && listSections.length > 0) {
+      for (const s of listSections) {
+        if (!s || !s.id) continue;
+        let delAt = null;
+        if (s.deleted_at) {
+          const parsed = new Date(s.deleted_at);
+          if (!isNaN(parsed.getTime())) delAt = parsed;
+        }
+        transaction.push(
+          prisma.listSection.upsert({
+            where: { id: s.id },
+            update: { payload: s, deletedAt: delAt },
+            create: { id: s.id, userId, payload: s, deletedAt: delAt }
+          })
+        );
+      }
+    }
+
     await prisma.$transaction(transaction);
     res.json({ success: true });
 
@@ -179,10 +198,15 @@ app.get('/api/sync/pull', authenticateToken, async (req, res) => {
       where: { userId, updatedAt: { gt: lastDate } }
     });
 
+    const listSections = await prisma.listSection.findMany({
+      where: { userId, updatedAt: { gt: lastDate } }
+    });
+
     res.json({
       tasks: tasks.map(t => t.payload),
       cycles: cycles.map(c => c.payload),
       lists: lists.map(l => l.payload),
+      listSections: listSections.map(s => s.payload),
       serverTime: Date.now()
     });
   } catch (error) {

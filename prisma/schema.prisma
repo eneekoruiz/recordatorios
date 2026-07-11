@@ -9,13 +9,14 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  tasks     Task[]
-  cycles    Cycle[]
-  lists     List[]
-  createdAt DateTime @default(now())
+  id           String        @id @default(uuid())
+  email        String        @unique
+  password     String
+  tasks        Task[]
+  cycles       Cycle[]
+  lists        List[]
+  listSections ListSection[]
+  createdAt    DateTime      @default(now())
 }
 
 model Task {
@@ -37,6 +38,15 @@ model Cycle {
 }
 
 model List {
+  id          String   @id
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payload     Json
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+}
+
+model ListSection {
   id          String   @id
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
