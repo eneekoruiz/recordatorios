@@ -12,7 +12,8 @@ import {
   MoreHorizontal,
   Inbox,
   Pin,
-  PinOff
+  PinOff,
+  Edit3
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -99,23 +100,17 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                     onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); setMenuCoords(null); }} 
                   />
                   <div 
-                    style={{
+                    className="ios-dropdown-menu"
+                    style={{ 
                       position: 'absolute',
                       top: menuCoords.top + 4,
                       left: menuCoords.left,
-                      background: 'var(--bg-surface)',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: '10px',
-                      boxShadow: 'var(--shadow-lg)',
-                      zIndex: 99999,
-                      padding: '4px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      minWidth: 140
+                      zIndex: 99999
                     }}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button 
+                      className="ios-dropdown-item"
                       onClick={() => {
                         setActiveMenuId(null);
                         setMenuCoords(null);
@@ -129,30 +124,28 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                       {list.isPinned ? 'Desanclar Lista' : 'Anclar Lista'}
                     </button>
                     <button 
+                      className="ios-dropdown-item"
                       onClick={() => {
                         setActiveMenuId(null);
                         setMenuCoords(null);
                         onAddSublist(list.id);
                       }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                     >
-                      <Plus size={14} /> Añadir Sublista
+                      <Plus size={16} /> Añadir Sublista
                     </button>
                     <button 
+                      className="ios-dropdown-item"
                       onClick={() => {
                         setActiveMenuId(null);
                         setMenuCoords(null);
                         onEditList(list.id);
                       }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                     >
-                      <span style={{ fontSize: 12 }}>✏️</span> Editar Lista
+                      <Edit3 size={16} /> Editar Lista
                     </button>
+                    <div className="ios-dropdown-divider" />
                     <button 
+                      className="ios-dropdown-item danger"
                       onClick={() => {
                         if (confirm(`¿Seguro que quieres borrar la lista "${list.name}" y sus sublistas?`)) {
                           removeList(list.id);
@@ -160,11 +153,8 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                         setActiveMenuId(null);
                         setMenuCoords(null);
                       }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--accent-red)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                     >
-                      <Trash2 size={14} /> Eliminar Lista
+                      <Trash2 size={16} /> Eliminar Lista
                     </button>
                   </div>
                 </>,
@@ -289,56 +279,42 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
             />
           )}
           {isProfileOpen && (
-            <motion.div 
-              key="sidebar-dropdown"
+              <motion.div 
+                key="sidebar-dropdown"
                 initial={{ opacity: 0, scale: 0.95, y: -10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: -10 }}
                 transition={{ duration: 0.15 }}
-                className="dark-dropdown-bg"
+                className="ios-dropdown-menu"
                 style={{ 
                   position: 'absolute', 
                   top: '100%', 
                   left: 0, 
                   right: 0, 
                   marginTop: 'var(--space-8)', 
-                  background: 'var(--bg-surface-glass)', 
-                  backdropFilter: 'blur(24px)',
-                  WebkitBackdropFilter: 'blur(24px)',
-                  borderRadius: 'var(--radius-lg)', 
-                  border: '1px solid var(--border-subtle)', 
-                  boxShadow: 'var(--shadow-lg)', 
-                  padding: 'var(--space-8)', 
-                  zIndex: 100,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 'var(--space-4)'
+                  zIndex: 100
                 }}
                 onClick={(e) => e.stopPropagation()}
               >
                 <div 
-                  className="nav-item profile-nav-item"
+                  className="ios-dropdown-item"
                   onClick={() => { onSelectView('DATA'); setIsProfileOpen(false); }}
-                  style={{ padding: 'var(--space-12) var(--space-16)' }}
                 >
                   <Download size={16} /> Importar / Exportar
                 </div>
                 <div 
-                  className="nav-item profile-nav-item"
+                  className="ios-dropdown-item"
                   onClick={() => { onSelectView('ANALYTICS'); setIsProfileOpen(false); }}
-                  style={{ padding: 'var(--space-12) var(--space-16)' }}
                 >
                   <BarChart size={16} /> Estadísticas
                 </div>
-                <div style={{ height: 1, background: 'var(--border-subtle)', margin: '8px 0' }} />
-                <div style={{ height: 1, background: 'var(--border-subtle)', margin: '8px 0' }} />
+                <div className="ios-dropdown-divider" />
                 <div 
-                  className="nav-item profile-nav-item"
+                  className="ios-dropdown-item danger"
                   onClick={() => {
                     useAppStore.getState().logout();
                     setIsProfileOpen(false);
                   }}
-                  style={{ color: 'var(--accent-red)', padding: 'var(--space-12) var(--space-16)' }}
                 >
                   <LogOut size={16} /> Cerrar Sesión
                 </div>

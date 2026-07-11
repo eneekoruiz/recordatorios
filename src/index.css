@@ -564,3 +564,63 @@ input:checked + .slider::before {
   }
 }
 
+/* ========================================================
+   UNIFIED DROPDOWN MENUS
+======================================================== */
+.ios-dropdown-menu {
+  background: var(--bg-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 180px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .ios-dropdown-menu {
+    background: #1c1c1e;
+    border: 1px solid #333;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  }
+}
+
+.ios-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.ios-dropdown-item:hover {
+  background: var(--bg-hover);
+}
+
+.ios-dropdown-item.danger {
+  color: var(--accent-red);
+}
+
+.ios-dropdown-item.danger svg {
+  color: var(--accent-red);
+}
+
+.ios-dropdown-item svg {
+  color: var(--text-secondary);
+}
+
+.ios-dropdown-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 4px 0;
+}

@@ -13,6 +13,7 @@ interface TaskDrawerProps {
   defaultSectionId?: string;
   taskId?: string;
 }
+import { CustomSelect } from '../ui/CustomSelect';
 
 export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionId, taskId }: TaskDrawerProps) {
   const addTask = useAppStore(state => state.addTask);
@@ -521,32 +522,30 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
               <div className="details-group" style={{ marginBottom: '20px' }}>
                 <div className="detail-row" style={{ padding: '12px 0' }}>
                   <span className="detail-label">Mover a Lista</span>
-                  <select 
+                  <CustomSelect 
                     className="detail-select"
                     value={category}
-                    onChange={e => setCategory(e.target.value)}
-                    style={{ width: 'auto', textAlign: 'right', border: 'none', background: 'transparent' }}
-                  >
-                    {useAppStore.getState().lists?.map(list => (
-                      <option key={list.id} value={list.id}>{list.name}</option>
-                    ))}
-                    <option value="inbox">Bandeja de Entrada</option>
-                  </select>
+                    onChange={val => setCategory(val)}
+                    options={[
+                      ...(useAppStore.getState().lists?.map(list => ({ value: list.id, label: list.name })) || []),
+                      { value: 'inbox', label: 'Bandeja de Entrada' }
+                    ]}
+                  />
                 </div>
                 
                 <div className="divider"></div>
                 
                 <div className="detail-row" style={{ padding: '12px 0' }}>
                   <span className="detail-label">Tipo de Recordatorio</span>
-                  <select 
+                  <CustomSelect 
                     className="detail-select"
                     value={type}
-                    onChange={e => setType(e.target.value as 'task' | 'log')}
-                    style={{ width: 'auto', textAlign: 'right', border: 'none', background: 'transparent' }}
-                  >
-                    <option value="task">Acción (Checklist)</option>
-                    <option value="log">Registro (Historial)</option>
-                  </select>
+                    onChange={val => setType(val as 'task' | 'log')}
+                    options={[
+                      { value: 'task', label: 'Acción (Checklist)' },
+                      { value: 'log', label: 'Registro (Historial)' }
+                    ]}
+                  />
                 </div>
               </div>
 
@@ -676,27 +675,26 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                   <div className="section-card-content">
                     <div className="detail-row" style={{ padding: '8px 0' }}>
                       <span className="detail-label">Repetir (Ciclo)</span>
-                      <select 
+                      <CustomSelect
                         className="detail-select"
                         value={cycleId || ''}
-                        onChange={e => setCycleId(e.target.value || undefined)}
-                      >
-                        <option value="">Nunca</option>
-                        {cycles.map(cycle => (
-                          <option key={cycle.id} value={cycle.id}>{cycle.name}</option>
-                        ))}
-                      </select>
+                        onChange={val => setCycleId(val || undefined)}
+                        options={[
+                          { value: '', label: 'Nunca' },
+                          ...cycles.map(c => ({ value: c.id, label: c.name }))
+                        ]}
+                      />
                     </div>
                     
                     <div className="divider"></div>
                     
                     <div className="detail-row" style={{ padding: '8px 0' }}>
                       <span className="detail-label">Sección de Lista</span>
-                      <select 
+                      <CustomSelect 
                         className="detail-select"
                         value={sectionId || ''}
-                        onChange={async e => {
-                          if (e.target.value === 'new') {
+                        onChange={async val => {
+                          if (val === 'new') {
                             const name = prompt('Nombre de la nueva sección:');
                             if (name && name.trim()) {
                               const newId = crypto.randomUUID();
@@ -708,16 +706,15 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                               setSectionId(newId);
                             }
                           } else {
-                            setSectionId(e.target.value || undefined);
+                            setSectionId(val || undefined);
                           }
                         }}
-                      >
-                        <option value="">Automática / General</option>
-                        {availableSections.map(sec => (
-                          <option key={sec.id} value={sec.id}>{sec.name}</option>
-                        ))}
-                        <option value="new">+ Añadir nueva sección...</option>
-                      </select>
+                        options={[
+                          { value: '', label: 'Sin sección' },
+                          ...availableSections.map(s => ({ value: s.id, label: s.name })),
+                          { value: 'new', label: '+ Crear nueva sección' }
+                        ]}
+                      />
                     </div>
 
                     <div className="divider"></div>
@@ -971,21 +968,20 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                       </div>
                     )}
 
-                    <select 
+                    <CustomSelect 
                       className="detail-select"
                       value=""
-                      onChange={e => {
-                        if (e.target.value && !blockedBy.includes(e.target.value)) {
-                          setBlockedBy([...blockedBy, e.target.value]);
+                      onChange={val => {
+                        if (val && !blockedBy.includes(val)) {
+                          setBlockedBy([...blockedBy, val]);
                         }
                       }}
-                      style={{ width: '100%', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', borderRadius: 6, padding: 8, textAlign: 'left' }}
-                    >
-                      <option value="">+ Añadir tarea bloqueadora (requisito)...</option>
-                      {availableTasks.filter(t => !blockedBy.includes(t.id)).map(t => (
-                        <option key={t.id} value={t.id}>{t.title}</option>
-                      ))}
-                    </select>
+                      placeholder="+ Añadir tarea bloqueadora (requisito)..."
+                      options={[
+                        { value: '', label: '+ Añadir tarea bloqueadora (requisito)...' },
+                        ...availableTasks.filter(t => !blockedBy.includes(t.id)).map(t => ({ value: t.id, label: t.title }))
+                      ]}
+                    />
                   </div>
                 )}
               </div>
@@ -1007,17 +1003,17 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                   <div className="section-card-content">
                     <div className="detail-row" style={{ padding: '8px 0' }}>
                       <span className="detail-label">Prioridad</span>
-                      <select 
+                      <CustomSelect 
                         className="detail-select"
                         value={priority}
-                        onChange={e => setPriority(e.target.value as any)}
-                        style={{ border: 'none', background: 'transparent' }}
-                      >
-                        <option value="none">Ninguna</option>
-                        <option value="low">Baja</option>
-                        <option value="medium">Media</option>
-                        <option value="high">Alta</option>
-                      </select>
+                        onChange={val => setPriority(val as any)}
+                        options={[
+                          { value: 'none', label: 'Ninguna' },
+                          { value: 'low', label: 'Baja' },
+                          { value: 'medium', label: 'Media' },
+                          { value: 'high', label: 'Alta' }
+                        ]}
+                      />
                     </div>
 
                     <div className="divider"></div>
