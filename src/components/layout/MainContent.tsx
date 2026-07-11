@@ -62,11 +62,19 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     switch (currentView) {
       case 'smart_today': {
         const today = new Date().toISOString().split('T')[0];
-        filteredTasks = validTasks.filter(t => new Date(t.dueDate as string).toISOString().split('T')[0] === today);
+        filteredTasks = validTasks.filter(t => {
+          if (!t.dueDate) return false;
+          const d = new Date(t.dueDate);
+          return !isNaN(d.getTime()) && d.toISOString().split('T')[0] === today;
+        });
         break;
       }
       case 'smart_scheduled':
-        filteredTasks = validTasks.filter(t => new Date(t.dueDate as string) > new Date());
+        filteredTasks = validTasks.filter(t => {
+          if (!t.dueDate) return false;
+          const d = new Date(t.dueDate);
+          return !isNaN(d.getTime()) && d > new Date();
+        });
         break;
       case 'smart_all':
         filteredTasks = validTasks;
