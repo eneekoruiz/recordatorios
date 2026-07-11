@@ -465,7 +465,17 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
 
         {/* MIS LISTAS */}
         <div className="categories-section" style={{ flexShrink: 0 }}>
-          <div className="section-header">Mis listas</div>
+          <div className="section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>Mis listas</span>
+            <button 
+              className="btn-icon"
+              style={{ padding: 4, cursor: 'pointer' }}
+              title="Añadir lista"
+              onClick={handleAddList}
+            >
+              <Plus size={14} color="var(--text-tertiary)" />
+            </button>
+          </div>
           <div className="ios-list-block">
             {/* Bandeja de entrada */}
             <div 
@@ -496,6 +506,23 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               onAddSublist={(pId: string) => { setEditingListId(undefined); setParentListId(pId); setIsListConfigOpen(true); }} 
               onEditList={(listId: string) => { setEditingListId(listId); setParentListId(undefined); setIsListConfigOpen(true); }}
             />
+
+            {/* Recién eliminado */}
+            <div 
+              className={`ios-list-item ${currentView === 'TRASH' ? 'active' : ''}`}
+              onClick={() => onSelectView('TRASH')}
+            >
+              <div className="list-icon" style={{ backgroundColor: '#8e8e93', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Trash2 size={12} color="white" />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                <span className="title" style={{ color: currentView === 'TRASH' ? 'var(--accent-primary)' : 'var(--text-primary)' }}>Recién eliminado</span>
+              </div>
+              <span className="count">
+                {Object.values(tasks || {}).filter(t => t.deleted_at).length}
+              </span>
+              <ChevronRight size={16} color="var(--text-tertiary)" />
+            </div>
           </div>
         </div>
 
@@ -504,6 +531,21 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
           <div className="section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span>Ciclos temporales</span>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              {isEditCyclesMode && (
+                <button
+                  onClick={() => {
+                    const allVisible = cycles.every(c => cycleVisibility[c.id]);
+                    const nextVisibility: Record<string, boolean> = {};
+                    cycles.forEach(c => {
+                      nextVisibility[c.id] = !allVisible;
+                    });
+                    useAppStore.setState({ cycleVisibility: nextVisibility });
+                  }}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', fontSize: '0.82rem', cursor: 'pointer' }}
+                >
+                  {cycles.every(c => cycleVisibility[c.id]) ? 'Ocultar todos' : 'Mostrar todos'}
+                </button>
+              )}
               <button 
                 onClick={() => setIsEditCyclesMode(!isEditCyclesMode)}
                 style={{ background: 'transparent', border: 'none', color: isEditCyclesMode ? 'var(--accent-primary)' : 'var(--text-tertiary)', fontSize: '0.85rem', cursor: 'pointer' }}
@@ -577,32 +619,6 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
           </div>
         </div>
 
-      </div>
-      
-      {/* BOTTOM FIXED FOOTER */}
-      <div style={{
-        padding: '12px 16px',
-        borderTop: '1px solid var(--border-subtle)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        background: 'var(--bg-base)',
-        flexShrink: 0
-      }}>
-        <div 
-          onClick={() => onSelectView('TRASH')}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, color: currentView === 'TRASH' ? 'var(--accent-primary)' : 'var(--text-tertiary)', cursor: 'pointer', fontSize: '0.95rem', fontWeight: 500 }}
-        >
-          <Trash2 size={20} />
-          <span>Recién eliminado</span>
-        </div>
-        <button 
-          onClick={handleAddList}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '1rem', fontWeight: 600, padding: 0 }}
-        >
-          <Plus size={22} />
-          <span>Añadir lista</span>
-        </button>
       </div>
       
       {/* MODALS (OUTSIDE SCROLL) */}

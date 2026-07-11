@@ -226,7 +226,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
               {(task.dueDate || taskCycle) && (
                 <span style={{ fontSize: '0.85rem', color: dueDateColor, display: 'flex', alignItems: 'center', fontWeight: 500, gap: 4 }}>
                   {task.dueDate && new Date(task.dueDate).toLocaleDateString()}
-                  {task.dueDate && taskCycle && <span style={{color: 'var(--text-tertiary)'}}>🔁</span>}
+                  {task.dueDate && taskCycle && <Repeat size={12} style={{ color: 'var(--text-tertiary)' }} />}
                   {taskCycle && <span style={{color: 'var(--text-tertiary)'}}>{taskCycle.name}</span>}
                 </span>
               )}
