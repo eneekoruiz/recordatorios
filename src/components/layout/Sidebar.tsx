@@ -314,13 +314,6 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                   <BarChart size={16} /> Estadísticas
                 </div>
                 <div style={{ height: 1, background: 'var(--border-subtle)', margin: '8px 0' }} />
-                <div 
-                  className="nav-item profile-nav-item"
-                  onClick={() => { onSelectView('TRASH'); setIsProfileOpen(false); }}
-                  style={{ color: 'var(--accent-red)', padding: 'var(--space-12) var(--space-16)' }}
-                >
-                  <Trash2 size={16} /> Papelera
-                </div>
                 <div style={{ height: 1, background: 'var(--border-subtle)', margin: '8px 0' }} />
                 <div 
                   className="nav-item profile-nav-item"
@@ -440,14 +433,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               onEditList={(listId: string) => { setEditingListId(listId); setParentListId(undefined); setIsListConfigOpen(true); }}
             />
           </div>
-          <button 
-            className="add-list-btn" 
-            onClick={handleAddList}
-            style={{ marginTop: 'var(--space-8)', width: '100%' }}
-          >
-            <Plus size={16} />
-            Nueva Lista Raíz
-          </button>
+          </div>
         </div>
 
         {/* CICLOS TEMPORALES */}
@@ -492,6 +478,32 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
           </div>
         </div>
 
+      </div>
+      
+      {/* BOTTOM FIXED FOOTER */}
+      <div style={{
+        padding: '12px 16px',
+        borderTop: '1px solid var(--border-subtle)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        background: 'var(--bg-base)',
+        flexShrink: 0
+      }}>
+        <div 
+          onClick={() => onSelectView('TRASH')}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, color: currentView === 'TRASH' ? 'var(--accent-primary)' : 'var(--text-tertiary)', cursor: 'pointer', fontSize: '0.95rem', fontWeight: 500 }}
+        >
+          <Trash2 size={20} />
+          <span>Recién eliminado</span>
+        </div>
+        <button 
+          onClick={handleAddList}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '1rem', fontWeight: 600, padding: 0 }}
+        >
+          <Plus size={22} />
+          <span>Añadir lista</span>
+        </button>
       </div>
       
       {/* MODALS (OUTSIDE SCROLL) */}

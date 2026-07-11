@@ -12,28 +12,27 @@ interface ListConfigModalProps {
 }
 
 const COLORS = [
-  '#0a84ff', // Blue
-  '#30d158', // Green
-  '#ff9f0a', // Orange
-  '#ff375f', // Red
-  '#bf5af2', // Purple
-  '#ffd60a', // Yellow
-  '#5e5ce6', // Indigo
-  '#8e8e93', // Gray
+  // IOS Default & Primaries
+  '#0a84ff', '#30d158', '#ff9f0a', '#ff375f', '#bf5af2', '#ffd60a', '#5e5ce6', '#8e8e93',
+  // Pastels & Soft Tones
+  '#A2D2FF', '#BDE0FE', '#FFAFCC', '#FFC8DD', '#CDB4DB', '#F4A261', '#E9C46A', '#2A9D8F',
+  // Darks & Muted
+  '#264653', '#1D3557', '#457B9D', '#E63946', '#6D6875', '#B5838D', '#E5989B', '#4A4E69'
 ];
 
+import { 
+  ShoppingCart, Briefcase, Heart, Book, Coffee, CheckSquare, Plane, Music, Video, Zap, Home,
+  Gamepad2, Dumbbell, Palette, GraduationCap, Code, Scissors, Camera, Utensils, Droplets, Flame, Sun, Moon,
+  Star, Trophy, Car, Bike, Train, Ticket, Glasses, Headphones, Watch, Shield, Key, Lock, Bell
+} from 'lucide-react';
+
 const ICONS: Record<string, any> = {
-  'list': CheckSquare,
-  'cart': ShoppingCart,
-  'briefcase': Briefcase,
-  'heart': Heart,
-  'book': Book,
-  'coffee': Coffee,
-  'plane': Plane,
-  'music': Music,
-  'video': Video,
-  'zap': Zap,
-  'home': Home
+  'list': CheckSquare, 'cart': ShoppingCart, 'briefcase': Briefcase, 'heart': Heart, 'book': Book,
+  'coffee': Coffee, 'plane': Plane, 'music': Music, 'video': Video, 'zap': Zap, 'home': Home,
+  'gamepad': Gamepad2, 'dumbbell': Dumbbell, 'palette': Palette, 'cap': GraduationCap, 'code': Code,
+  'scissors': Scissors, 'camera': Camera, 'food': Utensils, 'water': Droplets, 'fire': Flame, 'sun': Sun,
+  'moon': Moon, 'star': Star, 'trophy': Trophy, 'car': Car, 'bike': Bike, 'train': Train, 'ticket': Ticket,
+  'glasses': Glasses, 'headphones': Headphones, 'watch': Watch, 'shield': Shield, 'key': Key, 'lock': Lock, 'bell': Bell
 };
 
 export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfigModalProps) {
@@ -47,6 +46,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
   const [color, setColor] = useState(COLORS[0]);
   const [icon, setIcon] = useState('list');
   const [isFinancial, setIsFinancial] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -55,11 +55,13 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
         setColor(existingList.color);
         setIcon(existingList.icon || 'list');
         setIsFinancial(!!existingList.isFinancial);
+        setShowCompleted(!!existingList.showCompleted);
       } else {
         setName('');
-        setColor(COLORS[Math.floor(Math.random() * COLORS.length)]);
+        setColor(COLORS[Math.floor(Math.random() * 8)]); // Random from first 8
         setIcon('list');
         setIsFinancial(false);
+        setShowCompleted(false);
       }
     }
   }, [isOpen, existingList]);
@@ -74,7 +76,8 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
         name: name.trim(),
         color,
         icon,
-        isFinancial
+        isFinancial,
+        showCompleted
       });
     } else {
       const newId = name.trim().toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
@@ -84,7 +87,8 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
         name: name.trim(),
         color,
         icon,
-        isFinancial
+        isFinancial,
+        showCompleted
       });
     }
     onClose();
@@ -183,6 +187,18 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
               </div>
               <label className="switch">
                 <input type="checkbox" checked={isFinancial} onChange={e => setIsFinancial(e.target.checked)} />
+                <span className="slider round"></span>
+              </label>
+            </div>
+
+            {/* Show Completed */}
+            <div className="detail-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-base)', padding: '16px', borderRadius: 'var(--radius-lg)' }}>
+              <div>
+                <span style={{ fontWeight: 600, display: 'block', color: 'var(--text-primary)' }}>Mostrar Completados</span>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>Mantiene visibles las tareas terminadas</span>
+              </div>
+              <label className="switch">
+                <input type="checkbox" checked={showCompleted} onChange={e => setShowCompleted(e.target.checked)} />
                 <span className="slider round"></span>
               </label>
             </div>
