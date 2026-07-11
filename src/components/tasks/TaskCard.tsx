@@ -84,20 +84,26 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
       
       {/* Fondos de Swipe */}
       <motion.div className="swipe-background left" style={{ bottom: 16, opacity: leftOpacity }}>
-        <motion.div style={{ scale: leftScale }}><CheckCircle color="white" /></motion.div>
+        <motion.div style={{ scale: leftScale, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <CheckCircle color="white" size={22} />
+          <motion.span style={{ color: 'white', fontWeight: 600, fontSize: '0.9rem', opacity: leftOpacity }}>Completar</motion.span>
+        </motion.div>
       </motion.div>
       <motion.div className="swipe-background right" style={{ bottom: 16, opacity: rightOpacity }}>
-        <motion.div style={{ scale: rightScale }}><Trash2 color="white" /></motion.div>
+        <motion.div style={{ scale: rightScale, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <motion.span style={{ color: 'white', fontWeight: 600, fontSize: '0.9rem', opacity: rightOpacity }}>Eliminar</motion.span>
+          <Trash2 color="white" size={22} />
+        </motion.div>
       </motion.div>
 
       {/* Tarjeta Principal */}
       <motion.div 
         onContextMenu={handleContextMenu}
         drag="x"
-        style={{ x }}
-        dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.7}
-        dragTransition={{ bounceStiffness: 400, bounceDamping: 25 }}
+        style={{ x, cursor: 'grab' }}
+        dragConstraints={{ left: -130, right: 130 }}
+        dragElastic={0.15}
+        dragTransition={{ bounceStiffness: 600, bounceDamping: 30 }}
         onDragEnd={(_, info) => handleSwipeEnd(info.offset.x)}
         whileTap={{ scale: 0.98 }}
         initial={{ opacity: 0, y: 20 }}

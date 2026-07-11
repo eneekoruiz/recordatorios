@@ -10,7 +10,9 @@ import {
   Trash2,
   Download,
   MoreHorizontal,
-  Inbox
+  Inbox,
+  Pin,
+  PinOff
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -31,7 +33,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [menuCoords, setMenuCoords] = useState<{ top: number; left: number } | null>(null);
-  const { removeList } = useAppStore();
+  const { removeList, updateList } = useAppStore();
   
   const currentLevelLists = lists.filter((l: any) => l.parentId === parentId && l.id !== 'user_preferences_smart_lists');
   if (currentLevelLists.length === 0) return null;
@@ -116,6 +118,19 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                       onClick={() => {
                         setActiveMenuId(null);
                         setMenuCoords(null);
+                        updateList(list.id, { isPinned: !list.isPinned });
+                      }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                      {list.isPinned ? <PinOff size={14} /> : <Pin size={14} />}
+                      {list.isPinned ? 'Desanclar Lista' : 'Anclar Lista'}
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setActiveMenuId(null);
+                        setMenuCoords(null);
                         onAddSublist(list.id);
                       }}
                       style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
@@ -176,7 +191,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
 };
 
 export function Sidebar({ currentView, onSelectView }: SidebarProps) {
-  const { lists, cycles, smartListVisibility, toggleSmartList, tasks } = useAppStore();
+  const { lists, cycles, smartListVisibility, toggleSmartList, tasks, cycleVisibility, toggleCycleVisibility, updateList } = useAppStore();
   
   const getTaskCount = (listId: string) => {
     const all = Object.values(tasks || {}).filter(t => !t.deleted_at);
@@ -403,6 +418,39 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
           }))}
         </div>
 
+        {/* LISTAS ANCLADAS */}
+        {(() => {
+          const pinnedLists = lists.filter(l => l.isPinned && l.id !== 'user_preferences_smart_lists');
+          if (pinnedLists.length === 0) return null;
+          return (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 var(--space-12)', marginBottom: 'var(--space-8)' }}>
+                <span className="section-header" style={{ margin: 0, padding: 0 }}>ANCLADAS</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-8)', padding: '0 var(--space-12)', marginBottom: 'var(--space-16)' }}>
+                {pinnedLists.map(list => {
+                  const isActive = currentView === `list_${list.id}`;
+                  const count = Object.values(tasks || {}).filter(t => !t.deleted_at && !isTaskCompleted(t) && (t.categoryId === list.id || (t as any).category_id === list.id)).length;
+                  return (
+                    <div
+                      key={list.id}
+                      className="ios-smart-card"
+                      onClick={() => onSelectView(`list_${list.id}`)}
+                      style={{ backgroundColor: list.color, outline: isActive ? '2px solid white' : 'none', outlineOffset: -2 }}
+                    >
+                      <div className="icon-circle">
+                        <span style={{ fontSize: 14 }}>📌</span>
+                      </div>
+                      <span className="count">{count}</span>
+                      <h3>{list.name}</h3>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          );
+        })()}
+
         {/* MIS LISTAS */}
         <div className="categories-section" style={{ flexShrink: 0 }}>
           <div className="section-header">Mis listas</div>
@@ -443,38 +491,59 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         <div style={{ marginTop: 'var(--space-16)' }}>
           <div className="section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span>Ciclos temporales</span>
-            <button 
-              className="btn-icon"
-              style={{ padding: 4, cursor: 'pointer' }}
-              title="Nuevo Ciclo"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsCycleModalOpen(true);
-              }}
-            >
-              <Plus size={14} color="var(--text-tertiary)" />
-            </button>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button 
+                className="btn-icon"
+                style={{ padding: 4, cursor: 'pointer' }}
+                title="Nuevo Ciclo"
+                onClick={(e) => { e.stopPropagation(); setIsCycleModalOpen(true); }}
+              >
+                <Plus size={14} color="var(--text-tertiary)" />
+              </button>
+            </div>
           </div>
+
+          {cycles.filter(c => c.isPinned && cycleVisibility[c.id]).length === 0 && (
+            <div style={{ padding: '8px 12px', color: 'var(--text-tertiary)', fontSize: '0.82rem', fontStyle: 'italic' }}>
+              Se activarán al crear tareas con frecuencia
+            </div>
+          )}
 
           <div className="ios-list-block">
             {cycles.filter(c => c.isPinned).map(cycle => {
+              const isVisible = !!cycleVisibility[cycle.id];
               const Icon = getCycleIcon(cycle.icon);
               const isActive = currentView === cycle.id;
               const taskCount = Object.values(tasks || {}).filter(t => !t.deleted_at && !isTaskCompleted(t) && t.cycle_id === cycle.id).length;
+              
+              // Auto-show if has tasks
+              const hasTasksForCycle = Object.values(tasks || {}).some(t => !t.deleted_at && t.cycle_id === cycle.id);
+              const shouldShow = isVisible || hasTasksForCycle;
+              
+              if (!shouldShow) return null;
               return (
                 <div 
                   key={cycle.id}
                   className={`ios-list-item ${isActive ? 'active' : ''}`}
-                  onClick={() => onSelectView(cycle.id)}
+                  style={{ position: 'relative' }}
                 >
-                  <div className="list-icon" style={{ backgroundColor: '#8e8e93', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Icon size={12} color="white" />
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }} onClick={() => onSelectView(cycle.id)}>
+                    <div className="list-icon" style={{ backgroundColor: '#8e8e93', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Icon size={12} color="white" />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                      <span className="title" style={{ color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)' }}>{cycle.name}</span>
+                    </div>
+                    <span className="count">{taskCount}</span>
+                    <ChevronRight size={16} color="var(--text-tertiary)" />
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-                    <span className="title" style={{ color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)' }}>{cycle.name}</span>
-                  </div>
-                  <span className="count">{taskCount}</span>
-                  <ChevronRight size={16} color="var(--text-tertiary)" />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleCycleVisibility(cycle.id); }}
+                    title={isVisible ? 'Ocultar ciclo' : 'Mostrar ciclo'}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', opacity: 0.5, padding: 4, marginLeft: 4 }}
+                  >
+                    {isVisible ? <PinOff size={12} /> : <Pin size={12} />}
+                  </button>
                 </div>
               );
             })}
