@@ -351,16 +351,17 @@ export const useAppStore = create<AppState>()(
         const validCycles = cycles.filter(c => c.daysValue <= targetCycle.daysValue).map(c => c.id);
 
         // Only show tasks with an explicit cycle_id — no date-based fallback for inbox tasks
+        const grouped: Record<string, TaskItem[]> = {};
         Object.values(tasks)
           .filter(t => !t.deleted_at && (includeCompleted || !isTaskCompleted(t) || temporarilyShowIds.includes(t.id)))
           .filter(t => {
             if (!t.cycle_id) return false; // Tasks without a cycle never appear in cycle views
             return validCycles.includes(t.cycle_id as string);
           })
-          .filter(t => includeCompleted || temporarilyShowIds.includes(t.id) || !isCompletedInCurrentPeriod(t, cycles)) // Si ya se hizo, no la mostramos en pendientes de la cascada
+          .filter(t => includeCompleted || temporarilyShowIds.includes(t.id) || !isCompletedInCurrentPeriod(t, cycles))
           .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
           .forEach(t => {
-            const listId = t.categoryId;
+            const listId = t.categoryId || (t as any).category_id || 'inbox';
             if (!grouped[listId]) grouped[listId] = [];
             grouped[listId].push(t);
           });
