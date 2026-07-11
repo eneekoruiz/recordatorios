@@ -13,7 +13,7 @@ import {
   Inbox
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAppStore } from '../../store/useAppStore';
+import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
 import { getCycleIcon } from '../../constants/icons';
 import { ListConfigModal } from './ListConfigModal';
@@ -180,7 +180,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   
   const getTaskCount = (listId: string) => {
     const all = Object.values(tasks || {}).filter(t => !t.deleted_at);
-    const active = all.filter(t => t.status !== 'completed');
+    const active = all.filter(t => !isTaskCompleted(t));
     const todayStr = new Date().toDateString();
     
     switch (listId) {
@@ -193,7 +193,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
       case 'smart_flagged': 
         return active.filter(t => t.priority === 3).length;
       case 'smart_completed': 
-        return all.filter(t => t.status === 'completed').length;
+        return all.filter(t => isTaskCompleted(t)).length;
       default: 
         return 0;
     }
@@ -420,7 +420,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               </div>
               <span className="count">
                 {Object.values(tasks || {}).filter(t => {
-                  if (t.deleted_at || t.status === 'completed') return false;
+                  if (t.deleted_at || isTaskCompleted(t)) return false;
                   const catId = t.categoryId || (t as any).category_id;
                   return catId === 'inbox' || !catId;
                 }).length}
@@ -432,7 +432,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               lists={lists} 
               currentView={currentView} 
               onSelectView={onSelectView}
-              getTaskCount={(id: string) => Object.values(tasks || {}).filter(t => !t.deleted_at && t.status !== 'completed' && (t.categoryId === id || (t as any).category_id === id)).length}
+              getTaskCount={(id: string) => Object.values(tasks || {}).filter(t => !t.deleted_at && !isTaskCompleted(t) && (t.categoryId === id || (t as any).category_id === id)).length}
               onAddSublist={(pId: string) => { setEditingListId(undefined); setParentListId(pId); setIsListConfigOpen(true); }} 
               onEditList={(listId: string) => { setEditingListId(listId); setParentListId(undefined); setIsListConfigOpen(true); }}
             />
@@ -460,7 +460,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
             {cycles.filter(c => c.isPinned).map(cycle => {
               const Icon = getCycleIcon(cycle.icon);
               const isActive = currentView === cycle.id;
-              const taskCount = Object.values(tasks || {}).filter(t => !t.deleted_at && t.status !== 'completed' && t.cycle_id === cycle.id).length;
+              const taskCount = Object.values(tasks || {}).filter(t => !t.deleted_at && !isTaskCompleted(t) && t.cycle_id === cycle.id).length;
               return (
                 <div 
                   key={cycle.id}
