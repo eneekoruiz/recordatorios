@@ -507,7 +507,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               onEditList={(listId: string) => { setEditingListId(listId); setParentListId(undefined); setIsListConfigOpen(true); }}
             />
 
-            {/* Recién eliminado */}
+            {/* Papelera */}
             <div 
               className={`ios-list-item ${currentView === 'TRASH' ? 'active' : ''}`}
               onClick={() => onSelectView('TRASH')}
@@ -516,7 +516,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 <Trash2 size={12} color="white" />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-                <span className="title" style={{ color: currentView === 'TRASH' ? 'var(--accent-primary)' : 'var(--text-primary)' }}>Recién eliminado</span>
+                <span className="title" style={{ color: currentView === 'TRASH' ? 'var(--accent-primary)' : 'var(--text-primary)' }}>Papelera</span>
               </div>
               <span className="count">
                 {Object.values(tasks || {}).filter(t => t.deleted_at).length}
