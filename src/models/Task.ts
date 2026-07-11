@@ -20,6 +20,9 @@ export interface CustomList {
   icon?: string; // Lucide icon name
   isFinancial?: boolean; // Habilita campos de coste y modo financiero en tareas
   showCompleted?: boolean; // Persist preference to show completed tasks for this list
+  isPinned?: boolean; // Pinned lists appear as large cards at the top of sidebar
+  updated_at?: string;
+  _is_dirty?: boolean;
 }
 
 export interface ListSection {

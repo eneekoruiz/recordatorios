@@ -31,8 +31,10 @@ interface AppState {
   lists: CustomList[];
   listSections: ListSection[];
   smartListVisibility: Record<string, boolean>;
+  cycleVisibility: Record<string, boolean>;
   
   toggleSmartList: (listId: string) => void;
+  toggleCycleVisibility: (cycleId: string) => void;
   
   addTask: (task: Partial<TaskItem>) => void;
   updateTaskRaw: (task: TaskItem) => void; // Para uso interno y SyncProvider
@@ -92,6 +94,7 @@ export const useAppStore = create<AppState>()(
         smart_flagged: true,
         smart_completed: false
       },
+      cycleVisibility: {},  // All hidden by default; auto-activates when a task with that cycle_id is created
 
       setToken: (token, userId) => set({ token, userId }),
       hasHydrated: false,
@@ -125,13 +128,26 @@ export const useAppStore = create<AppState>()(
         };
       }),
 
+      toggleCycleVisibility: (cycleId) => set((state) => ({
+        cycleVisibility: {
+          ...state.cycleVisibility,
+          [cycleId]: !state.cycleVisibility[cycleId]
+        }
+      })),
+
       addTask: (payload) => set((state) => {
         const newTask = TaskRepository.create(payload);
+        // Auto-activate the cycle view when a task with a cycle_id is first created
+        let newCycleVisibility = state.cycleVisibility;
+        if (newTask.cycle_id && !state.cycleVisibility[newTask.cycle_id]) {
+          newCycleVisibility = { ...state.cycleVisibility, [newTask.cycle_id]: true };
+        }
         return { 
           tasks: { 
             ...state.tasks, 
             [newTask.id]: newTask 
-          } 
+          },
+          cycleVisibility: newCycleVisibility
         };
       }),
 
@@ -334,20 +350,11 @@ export const useAppStore = create<AppState>()(
 
         const validCycles = cycles.filter(c => c.daysValue <= targetCycle.daysValue).map(c => c.id);
 
-        // Utilizamos la lógica centralizada de TaskService
-        const grouped: Record<string, TaskItem[]> = {};
+        // Only show tasks with an explicit cycle_id — no date-based fallback for inbox tasks
         Object.values(tasks)
           .filter(t => !t.deleted_at && (includeCompleted || !isTaskCompleted(t) || temporarilyShowIds.includes(t.id)))
           .filter(t => {
-            // Regla: Hereda tareas de su propio ciclo Y de cualquier ciclo más corto.
-            // NUEVO: Si no tiene ciclo (One-off), evaluamos por dueDate.
-            if (!t.cycle_id) {
-              const now = new Date();
-              const taskDate = new Date(t.dueDate);
-              const diffTime = taskDate.getTime() - now.getTime();
-              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-              return diffDays <= targetCycle.daysValue;
-            }
+            if (!t.cycle_id) return false; // Tasks without a cycle never appear in cycle views
             return validCycles.includes(t.cycle_id as string);
           })
           .filter(t => includeCompleted || temporarilyShowIds.includes(t.id) || !isCompletedInCurrentPeriod(t, cycles)) // Si ya se hizo, no la mostramos en pendientes de la cascada
@@ -600,6 +607,10 @@ export const useAppStore = create<AppState>()(
         smartListVisibility: {
           ...currentState.smartListVisibility,
           ...(persistedState.smartListVisibility || {})
+        },
+        cycleVisibility: {
+          ...currentState.cycleVisibility,
+          ...(persistedState.cycleVisibility || {})
         }
       }),
       migrate: (persistedState: any, version: number) => {
