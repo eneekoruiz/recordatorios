@@ -470,7 +470,7 @@ export const useAppStore = create<AppState>()(
           
           let title = trimmed;
           let categoryId = 'inbox';
-          let cycle_id = 'cycle_day';
+          let cycle_id: string | undefined = undefined;
 
           // Extract category: @Categoria
           const catMatch = title.match(/@(\w+)/);
@@ -594,7 +594,7 @@ export const useAppStore = create<AppState>()(
     {
       name: 'reminders-storage',
       storage: createJSONStorage(() => idbStorage),
-      version: 5,
+      version: 6,
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },
@@ -668,18 +668,41 @@ export const useAppStore = create<AppState>()(
         }
         
         if (version < 5) {
-          // Migration v4 -> v5: Strip default cycle_day assigned during v1->v2 migration
-          // Tasks that have no completionHistory were never used as recurring tasks
-          // and had cycle_id='cycle_day' set by the buggy default migration.
           const fixedTasks: Record<string, TaskItem> = {};
           if (state.tasks) {
             Object.entries(state.tasks).forEach(([id, t]: [string, any]) => {
               const isDefaultCycle = t.cycle_id === 'cycle_day';
               const hasRecurringHistory = t.completionHistory && t.completionHistory.length > 0;
               if (isDefaultCycle && !hasRecurringHistory) {
-                // Remove the default-assigned cycle_id — task becomes a one-off
                 const { cycle_id, ...rest } = t;
                 fixedTasks[id] = { ...rest, cycle_id: undefined, _is_dirty: true };
+              } else {
+                fixedTasks[id] = t;
+              }
+            });
+          }
+          state = { ...state, tasks: fixedTasks };
+        }
+
+        if (version < 6) {
+          // Migration v5 -> v6: Correctly clean tasks with buggy default cycle_id.
+          // In order to push the update to the server and make it stick, we MUST
+          // increment the task version, set updatedAt to now, and flag as dirty.
+          const fixedTasks: Record<string, TaskItem> = {};
+          const nowStr = new Date().toISOString();
+          if (state.tasks) {
+            Object.entries(state.tasks).forEach(([id, t]: [string, any]) => {
+              const isDefaultCycle = t.cycle_id === 'cycle_day';
+              const hasRecurringHistory = t.completionHistory && t.completionHistory.length > 0;
+              if (isDefaultCycle && !hasRecurringHistory) {
+                const { cycle_id, ...rest } = t;
+                fixedTasks[id] = { 
+                  ...rest, 
+                  cycle_id: undefined, 
+                  version: (t.version || 1) + 1,
+                  updated_at: nowStr,
+                  _is_dirty: true 
+                };
               } else {
                 fixedTasks[id] = t;
               }

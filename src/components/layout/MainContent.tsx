@@ -202,9 +202,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     
     // Up Next (Solo en el ciclo más corto, e.g. cycle_day)
     if (currentCycle && currentCycle.daysValue === 1 && smartTasks.length > 0) {
-      flat.push({ type: 'header', title: 'Up Next (Priorizado)', category: 'smart', color: '#0a84ff' });
-      if (!collapsed['smart']) {
-        smartTasks.slice(0, 2).forEach(task => flat.push({ type: 'task', task, depth: 0 }));
+      const prioritizedTasks = smartTasks.filter(t => t.flagged || t.priority === 'high' || t.priority === 'medium');
+      if (prioritizedTasks.length > 0) {
+        flat.push({ type: 'header', title: 'Up Next (Priorizado)', category: 'smart', color: '#0a84ff' });
+        if (!collapsed['smart']) {
+          prioritizedTasks.slice(0, 2).forEach(task => flat.push({ type: 'task', task, depth: 0 }));
+        }
       }
     }
 

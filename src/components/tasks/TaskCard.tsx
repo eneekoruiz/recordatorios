@@ -246,9 +246,6 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
                   </span>
                 );
               })}
-              <span className="text-muted" style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 4 }}>
-                {taskCycle ? taskCycle.name : 'Personalizado'}
-              </span>
             </div>
 
             {task.isDetailed && (

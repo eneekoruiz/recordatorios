@@ -44,8 +44,8 @@ export function detectFormatAndParse(input: string, currentStoreData: { cycles: 
             title,
             type: 'task',
             categoryId: 'inbox',
-            cycle_id: 'cycle_day',
-            dueDate: new Date().toString().toString(),
+            cycle_id: undefined,
+            dueDate: new Date().toISOString(),
             alerts: [],
             blockedBy: []
           }));
@@ -62,7 +62,7 @@ export function detectFormatAndParse(input: string, currentStoreData: { cycles: 
     if (!title || title.startsWith('//')) return;
 
     let categoryId = 'inbox';
-    let cycle_id = 'cycle_day';
+    let cycle_id: string | undefined = undefined;
     const alerts: import('../models/Task').AlertDef[] = [];
 
     // Parse category @
