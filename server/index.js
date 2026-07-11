@@ -99,11 +99,19 @@ app.post('/api/sync/push', authenticateToken, async (req, res) => {
     // Tareas
     if (tasks && tasks.length > 0) {
       for (const t of tasks) {
+        if (!t || !t.id) continue;
+        let delAt = null;
+        if (t.deleted_at) {
+          const parsed = new Date(t.deleted_at);
+          if (!isNaN(parsed.getTime())) {
+            delAt = parsed;
+          }
+        }
         transaction.push(
           prisma.task.upsert({
             where: { id: t.id },
-            update: { payload: t, deletedAt: t.deleted_at ? new Date(t.deleted_at) : null },
-            create: { id: t.id, userId, payload: t, deletedAt: t.deleted_at ? new Date(t.deleted_at) : null }
+            update: { payload: t, deletedAt: delAt },
+            create: { id: t.id, userId, payload: t, deletedAt: delAt }
           })
         );
       }
@@ -112,6 +120,7 @@ app.post('/api/sync/push', authenticateToken, async (req, res) => {
     // Ciclos
     if (cycles && cycles.length > 0) {
       for (const c of cycles) {
+        if (!c || !c.id) continue;
         transaction.push(
           prisma.cycle.upsert({
             where: { id: c.id },
@@ -125,6 +134,7 @@ app.post('/api/sync/push', authenticateToken, async (req, res) => {
     // Listas (CustomLists)
     if (lists && lists.length > 0) {
       for (const l of lists) {
+        if (!l || !l.id) continue;
         transaction.push(
           prisma.list.upsert({
             where: { id: l.id },

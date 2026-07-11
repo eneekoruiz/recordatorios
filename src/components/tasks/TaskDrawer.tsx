@@ -350,7 +350,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
       description: notes || undefined,
       cycle_id: cycleId,
       blockedBy: finalBlockedBy,
-      dueDate: dueDate.toISOString(),
+      dueDate: hasDate ? dueDate.toISOString() : undefined,
       alerts,
       sectionId,
       url: url || undefined,

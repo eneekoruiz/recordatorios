@@ -20,13 +20,13 @@ interface TaskCardProps {
 export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, index }: TaskCardProps) {
   const { cycles, tasks, nestTask, addDependency, lists } = useAppStore();
   const taskCycle = cycles.find(c => c.id === task.cycle_id);
-  const taskList = lists?.find(l => l.id === task.category_id);
+  const taskList = lists?.find(l => l.id === task.categoryId);
 
   let dueDateColor = 'var(--text-secondary)';
-  if (task.due_date) {
+  if (task.dueDate) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const due = new Date(task.due_date);
+    const due = new Date(task.dueDate);
     due.setHours(0, 0, 0, 0);
     if (due < today) dueDateColor = 'var(--accent-red)';
     else if (due.getTime() === today.getTime()) dueDateColor = 'var(--accent-orange)';
@@ -116,7 +116,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
           alignItems: 'center', 
           padding: '12px 16px', 
           zIndex: 2,
-          background: 'transparent',
+          background: 'var(--bg-surface)',
           opacity: isBlocked ? 0.6 : 1,
           pointerEvents: isBlocked ? 'none' : 'auto',
           border: 'none',
@@ -217,10 +217,10 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
                   {taskList.name}
                 </span>
               )}
-              {(task.due_date || taskCycle) && (
+              {(task.dueDate || taskCycle) && (
                 <span style={{ fontSize: '0.85rem', color: dueDateColor, display: 'flex', alignItems: 'center', fontWeight: 500, gap: 4 }}>
-                  {task.due_date && new Date(task.due_date).toLocaleDateString()}
-                  {task.due_date && taskCycle && <span style={{color: 'var(--text-tertiary)'}}>🔁</span>}
+                  {task.dueDate && new Date(task.dueDate).toLocaleDateString()}
+                  {task.dueDate && taskCycle && <span style={{color: 'var(--text-tertiary)'}}>🔁</span>}
                   {taskCycle && <span style={{color: 'var(--text-tertiary)'}}>{taskCycle.name}</span>}
                 </span>
               )}
