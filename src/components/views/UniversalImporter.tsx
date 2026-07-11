@@ -78,7 +78,9 @@ export function UniversalImporter() {
       display: 'flex', 
       flexDirection: 'column', 
       gap: 'var(--space-32)',
-      width: '100%' 
+      width: '100%',
+      height: '100%',
+      overflowY: 'auto'
     }}>
       <header>
         <h1 className="text-display" style={{ marginBottom: 'var(--space-8)' }}>Importar y Exportar</h1>
