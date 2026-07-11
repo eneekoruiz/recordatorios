@@ -13,7 +13,7 @@ import { ListConfigModal } from './ListConfigModal';
 
 interface MainContentProps {
   currentView: string;
-  onOpenNewTask: () => void;
+  onOpenNewTask: (sectionId?: string) => void;
   onOpenZenMode: (taskId: string) => void;
   onEditTask?: (taskId: string) => void;
   onBackToSidebar?: () => void;
@@ -22,6 +22,7 @@ interface MainContentProps {
 
 type VirtualItemType = 
   | { type: 'header', title: string, category: string, color: string, sectionId?: string, depth: number }
+  | { type: 'empty-section', title: string, category: string, color: string, sectionId?: string, depth: number }
   | { type: 'task', task: TaskItem, depth: number };
 
 const SMART_COLORS: Record<string, string> = {
@@ -212,13 +213,13 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     }
 
     // Categorías (Si estamos en ciclo) o Ciclos (Si estamos en Lista)
-    Object.entries(groupedTasks).forEach(([categoryOrCycle, categoryTasks]) => {
-      let color = '#34c759'; // Default
-      let originalSectionId: string | undefined;
-      let headerTitle = categoryOrCycle;
-      let headerDepth = 0;
+    if (!isListView) {
+      Object.entries(groupedTasks).forEach(([categoryOrCycle, categoryTasks]) => {
+        let color = '#34c759'; // Default
+        let originalSectionId: string | undefined;
+        let headerTitle = categoryOrCycle;
+        let headerDepth = 0;
 
-      if (!isListView) {
         // In cycle view, the category key is a list id — resolve to name
         if (categoryOrCycle === 'inbox' || categoryOrCycle === 'undefined' || !categoryOrCycle) {
           headerTitle = 'Sin lista';
@@ -228,40 +229,70 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           if (catObj) { headerTitle = catObj.name; color = catObj.color; }
           else { headerTitle = 'Sin lista'; color = '#8e8e93'; }
         }
-      } else {
-        color = currentList?.color || color;
-        if (categoryOrCycle.startsWith('section_')) {
-          const sectionId = categoryOrCycle.replace('section_', '');
-          const sec = listSections?.find(s => s.id === sectionId);
-          if (sec) {
-            originalSectionId = sec.id;
-            headerTitle = sec.name;
-            // Calculate depth
-            let currentSec = sec;
-            while (currentSec?.parentId) {
-              headerDepth++;
-              currentSec = listSections?.find(s => s.id === currentSec?.parentId);
-            }
-          }
-        } else if (categoryOrCycle.startsWith('cycle_')) {
-          const cycleId = categoryOrCycle.replace('cycle_', '');
-          headerTitle = cycles.find(c => c.id === cycleId)?.name || 'Ciclo';
+        
+        flat.push({ type: 'header', title: headerTitle, category: categoryOrCycle, color, sectionId: originalSectionId, depth: headerDepth });
+        
+        if (!collapsed[categoryOrCycle]) {
+          const roots = categoryTasks.filter(t => !t.parentId);
+          const processNode = (task: TaskItem, depth: number) => {
+            flat.push({ type: 'task', task, depth });
+            const children = categoryTasks.filter(t => t.parentId === task.id);
+            children.forEach(c => processNode(c, depth + 1));
+          };
+          roots.forEach(r => processNode(r, 0));
+        }
+      });
+    } else {
+      // isListView
+      const color = currentList?.color || '#34c759';
+      
+      // 1. Uncategorized (no_section)
+      if (groupedTasks['no_section'] && groupedTasks['no_section'].length > 0) {
+        if (!collapsed['no_section']) {
+          const roots = groupedTasks['no_section'].filter(t => !t.parentId);
+          const processNode = (task: TaskItem, depth: number) => {
+            flat.push({ type: 'task', task, depth });
+            const children = groupedTasks['no_section'].filter(t => t.parentId === task.id);
+            children.forEach(c => processNode(c, depth + 1));
+          };
+          roots.forEach(r => processNode(r, 0));
         }
       }
+
+      // 2. Sections Hierarchy
+      const sectionsForList = (listSections || []).filter(s => s.listId === currentList?.id && !s.deleted_at);
       
-      if (categoryOrCycle !== 'no_section') {
-        flat.push({ type: 'header', title: headerTitle, category: categoryOrCycle, color, sectionId: originalSectionId, depth: headerDepth });
-      }
-      if (!collapsed[categoryOrCycle]) {
-        const roots = categoryTasks.filter(t => !t.parentId);
-        const processNode = (task: TaskItem, depth: number) => {
-          flat.push({ type: 'task', task, depth });
-          const children = categoryTasks.filter(t => t.parentId === task.id);
-          children.forEach(c => processNode(c, depth + 1));
-        };
-        roots.forEach(r => processNode(r, 0));
-      }
-    });
+      const processSection = (secId: string, depth: number) => {
+        const sec = sectionsForList.find(s => s.id === secId);
+        if (!sec) return;
+        
+        const categoryKey = `section_${sec.id}`;
+        flat.push({ type: 'header', title: sec.name, category: categoryKey, color, sectionId: sec.id, depth });
+        
+        if (!collapsed[categoryKey]) {
+          const categoryTasks = groupedTasks[categoryKey] || [];
+          if (categoryTasks.length === 0) {
+            flat.push({ type: 'empty-section', title: 'Aquí no hay tareas', category: categoryKey, color, sectionId: sec.id, depth });
+          } else {
+            const roots = categoryTasks.filter(t => !t.parentId);
+            const processNode = (task: TaskItem, depthLevel: number) => {
+              flat.push({ type: 'task', task, depth: depthLevel });
+              const children = categoryTasks.filter(t => t.parentId === task.id);
+              children.forEach(c => processNode(c, depthLevel + 1));
+            };
+            roots.forEach(r => processNode(r, depth));
+          }
+          
+          // Children sections
+          const childSections = sectionsForList.filter(s => s.parentId === sec.id);
+          childSections.forEach(child => processSection(child.id, depth + 1));
+        }
+      };
+
+      // Start with root sections
+      const rootSections = sectionsForList.filter(s => !s.parentId);
+      rootSections.forEach(rs => processSection(rs.id, 0));
+    }
 
     return flat;
   }, [groupedTasks, smartTasks, currentCycle, collapsed, isListView, lists, listSections, currentList]);
@@ -283,17 +314,15 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     <TaskCard 
       key={task.id}
       task={task}
-      virtualStyle={{
-        ...virtualStyle,
-        paddingLeft: `calc(${depth * 32}px)`
-      }}
+      virtualStyle={{...virtualStyle, paddingLeft: `calc(16px + ${depth * 24}px)` }}
       onToggle={handleToggleTask}
-      onDelete={deleteTask}
+      onDelete={id => updateTask(id, { deleted_at: new Date().toISOString() })}
       onOpenZenMode={onOpenZenMode}
       onEdit={onEditTask || (() => {})}
       index={index}
+      showListName={!isListView}
     />
-  ), [handleToggleTask, deleteTask, onOpenZenMode, onEditTask]);
+  ), [handleToggleTask, updateTask, onOpenZenMode, onEditTask, isListView]);
 
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
 
@@ -367,7 +396,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 <FolderPlus size={20} />
               </button>
             )}
-            <button className="icon-btn" onClick={onOpenNewTask} title="Añadir Tarea"><Plus size={24} /></button>
+            <button className="icon-btn" onClick={() => onOpenNewTask()} title="Añadir Tarea"><Plus size={24} /></button>
           </div>
         </div>
 
@@ -547,6 +576,42 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 )}
               </div>
             );
+          } else if (data.type === 'empty-section') {
+            return (
+              <div 
+                key={virtualItem.key}
+                style={{ 
+                  ...virtualStyle, 
+                  paddingLeft: `calc(16px + ${data.depth * 24}px)`,
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+              >
+                <button 
+                  onClick={() => {
+                    onOpenNewTask(data.sectionId);
+                  }}
+                  className="empty-section-btn"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    background: 'transparent',
+                    border: '1px dashed var(--border-subtle)',
+                    color: 'var(--text-tertiary)',
+                    borderRadius: 8,
+                    padding: '8px 16px',
+                    cursor: 'pointer',
+                    width: '100%',
+                    maxWidth: 300,
+                    fontSize: '0.9rem',
+                  }}
+                >
+                  <Plus size={16} />
+                  {data.title}
+                </button>
+              </div>
+            );
           } else {
             return renderTask(data.task, virtualStyle, virtualItem.index, data.depth);
           }
@@ -566,7 +631,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         listId={currentList?.id} 
       />
 
-      <button className="fab" onClick={onOpenNewTask}>
+      <button className="fab" onClick={() => onOpenNewTask()} title="Añadir Tarea">
         <Plus size={24} />
       </button>
       <ConfirmModal
