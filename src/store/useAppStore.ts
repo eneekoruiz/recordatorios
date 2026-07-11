@@ -361,13 +361,18 @@ export const useAppStore = create<AppState>()(
       },
 
       getTasksByList: (listId, includeCompleted = false, temporarilyShowIds = []) => {
-        const { tasks } = get();
+        const { tasks, lists } = get();
+        const validListIds = new Set(lists.map(l => l.id));
         const filtered = Object.values(tasks).filter(t => {
           if (t.deleted_at) return false;
           const taskCat = t.categoryId || (t as any).category_id;
+          // If the task claims to be in a list that doesn't exist, treat it as inbox
+          const effectiveCat = (taskCat && taskCat !== 'inbox' && !validListIds.has(taskCat)) 
+            ? undefined 
+            : taskCat;
           const matchesList = listId === 'inbox' 
-            ? (taskCat === 'inbox' || !taskCat)
-            : taskCat === listId;
+            ? (effectiveCat === 'inbox' || !effectiveCat)
+            : effectiveCat === listId;
           return matchesList && (includeCompleted || !isTaskCompleted(t) || temporarilyShowIds.includes(t.id));
         });
         
