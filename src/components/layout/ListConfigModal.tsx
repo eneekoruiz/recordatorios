@@ -44,8 +44,6 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
   const [name, setName] = useState('');
   const [color, setColor] = useState(COLORS[0]);
   const [icon, setIcon] = useState('list');
-  const [isFinancial, setIsFinancial] = useState(false);
-  const [showCompleted, setShowCompleted] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -53,14 +51,10 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
         setName(existingList.name);
         setColor(existingList.color);
         setIcon(existingList.icon || 'list');
-        setIsFinancial(!!existingList.isFinancial);
-        setShowCompleted(!!existingList.showCompleted);
       } else {
         setName('');
         setColor(COLORS[Math.floor(Math.random() * 8)]); // Random from first 8
         setIcon('list');
-        setIsFinancial(false);
-        setShowCompleted(false);
       }
     }
   }, [isOpen, existingList]);
@@ -74,9 +68,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
       updateList(existingList.id, {
         name: name.trim(),
         color,
-        icon,
-        isFinancial,
-        showCompleted
+        icon
       });
     } else {
       const newId = name.trim().toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
@@ -86,8 +78,8 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
         name: name.trim(),
         color,
         icon,
-        isFinancial,
-        showCompleted
+        isFinancial: false,
+        showCompleted: false
       });
     }
     onClose();
@@ -178,31 +170,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
               </div>
             </div>
 
-            {/* Financial Mode */}
-            <div className="detail-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-base)', padding: '16px', borderRadius: 'var(--radius-lg)' }}>
-              <div>
-                <span style={{ fontWeight: 600, display: 'block', color: 'var(--text-primary)' }}>Modo Financiero</span>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>Habilita campos de coste en esta lista</span>
-              </div>
-              <label className="switch">
-                <input type="checkbox" checked={isFinancial} onChange={e => setIsFinancial(e.target.checked)} />
-                <span className="slider round"></span>
-              </label>
             </div>
-
-            {/* Show Completed */}
-            <div className="detail-row" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-base)', padding: '16px', borderRadius: 'var(--radius-lg)' }}>
-              <div>
-                <span style={{ fontWeight: 600, display: 'block', color: 'var(--text-primary)' }}>Mostrar Completados</span>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>Mantiene visibles las tareas terminadas</span>
-              </div>
-              <label className="switch">
-                <input type="checkbox" checked={showCompleted} onChange={e => setShowCompleted(e.target.checked)} />
-                <span className="slider round"></span>
-              </label>
-            </div>
-
-          </div>
           
           <div className="prompt-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--border-subtle)' }}>
             <button className="cancel-btn" onClick={onClose} style={{ padding: '10px 16px', background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontWeight: 500, cursor: 'pointer', margin: 0 }}>Cancelar</button>
