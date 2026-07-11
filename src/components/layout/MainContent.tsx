@@ -359,30 +359,31 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 {isMenuOpen && (
                   <>
                     <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setIsMenuOpen(false)} />
-                    <div style={{ 
-                      position: 'absolute', right: 0, top: '100%', marginTop: 8, 
-                      background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', 
-                      borderRadius: 'var(--radius-lg)', padding: '8px 0', minWidth: 200, 
-                      boxShadow: '0 8px 24px rgba(0,0,0,0.1)', zIndex: 100 
-                    }}>
+                    <div 
+                      className="ios-dropdown-menu"
+                      style={{ 
+                        position: 'absolute', right: 0, top: '100%', marginTop: 8, 
+                        zIndex: 100 
+                      }}
+                    >
                       <button 
+                        className="ios-dropdown-item"
                         onClick={() => { updateList(currentList.id, { showCompleted: !currentList.showCompleted }); setIsMenuOpen(false); }}
-                        style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '12px 16px', background: 'transparent', border: 'none', textAlign: 'left', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.95rem' }}
                       >
                         <input type="checkbox" checked={!!currentList.showCompleted} readOnly style={{ marginRight: 12, pointerEvents: 'none' }} />
                         Mostrar Completados
                       </button>
                       <button 
+                        className="ios-dropdown-item"
                         onClick={() => { updateList(currentList.id, { isFinancial: !currentList.isFinancial }); setIsMenuOpen(false); }}
-                        style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '12px 16px', background: 'transparent', border: 'none', textAlign: 'left', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.95rem' }}
                       >
                         <input type="checkbox" checked={!!currentList.isFinancial} readOnly style={{ marginRight: 12, pointerEvents: 'none' }} />
                         Modo Financiero
                       </button>
-                      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
+                      <div className="ios-dropdown-divider" />
                       <button 
+                        className="ios-dropdown-item"
                         onClick={() => { setIsListConfigOpen(true); setIsMenuOpen(false); }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '12px 16px', background: 'transparent', border: 'none', textAlign: 'left', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.95rem' }}
                       >
                         <Settings size={16} />
                         Personalizar Lista
@@ -564,56 +565,45 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                             onClick={(e) => { e.stopPropagation(); setSectionMenuId(null); }}
                           />
                           <div 
-                            className="dark-dropdown-bg"
+                            className="ios-dropdown-menu"
                             style={{ 
                               position: 'absolute', 
                               right: 0, 
                               top: '100%', 
-                              zIndex: 100,
-                              background: 'var(--bg-surface-glass)', 
-                              backdropFilter: 'blur(24px)',
-                              WebkitBackdropFilter: 'blur(24px)',
-                              borderRadius: 'var(--radius-md)', 
-                              border: '1px solid var(--border-subtle)', 
-                              boxShadow: 'var(--shadow-lg)', 
-                              padding: '4px',
-                              minWidth: '160px',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: 2
+                              zIndex: 100
                             }}
                             onClick={(e) => e.stopPropagation()}
                           >
                             <button
+                              className="ios-dropdown-item"
                               onClick={() => {
                                 setSectionMenuId(null);
                                 onOpenNewTask(data.sectionId);
                               }}
-                              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 4, fontSize: '0.85rem' }}
                             >
-                              <Plus size={14} /> Añadir tarea
+                              <Plus size={16} /> Añadir tarea
                             </button>
                             <button
+                              className="ios-dropdown-item"
                               onClick={() => {
                                 setSectionMenuId(null);
                                 handleAddSection(data.sectionId);
                                 if (collapsed[data.category]) toggleCategory(data.category);
                               }}
-                              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 4, fontSize: '0.85rem' }}
                             >
-                              <FolderPlus size={14} /> Añadir sub-sección
+                              <FolderPlus size={16} /> Añadir sub-sección
                             </button>
-                            <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
+                            <div className="ios-dropdown-divider" />
                             <button
+                              className="ios-dropdown-item danger"
                               onClick={() => {
                                 setSectionMenuId(null);
                                 if (confirm('¿Seguro que quieres borrar esta sección? Las tareas no se borrarán, solo quedarán sin sección.')) {
                                   deleteListSection(data.sectionId!);
                                 }
                               }}
-                              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--accent-red)', textAlign: 'left', cursor: 'pointer', borderRadius: 4, fontSize: '0.85rem' }}
                             >
-                              <Trash2 size={14} /> Eliminar sección
+                              <Trash2 size={16} /> Eliminar sección
                             </button>
                           </div>
                         </>

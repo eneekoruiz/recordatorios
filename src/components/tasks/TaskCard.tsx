@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
-import { CheckCircle, Trash2, GripVertical, Play, Lock, Link2, Flag, MapPin, Link, Image as ImageIcon, X, Info, MoreHorizontal, Repeat } from 'lucide-react';
+import { CheckCircle, Trash2, GripVertical, Play, Lock, Link2, Flag, MapPin, Link, Image as ImageIcon, X, Info, MoreHorizontal, Repeat, Edit3 } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
@@ -324,23 +324,17 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
               onClick={(e) => { e.stopPropagation(); setShowMenu(false); }} 
             />
             <div 
+              className="ios-dropdown-menu"
               style={{
                 position: 'absolute',
                 top: menuPos.y + 4,
                 left: menuPos.x,
-                background: 'var(--bg-surface)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: '10px',
-                boxShadow: 'var(--shadow-lg)',
-                zIndex: 99999,
-                padding: '4px',
-                display: 'flex',
-                flexDirection: 'column',
-                minWidth: 150
+                zIndex: 99999
               }}
               onClick={(e) => e.stopPropagation()}
             >
               <button 
+                className="ios-dropdown-item"
                 onClick={async () => {
                   setShowMenu(false);
                   
@@ -360,26 +354,23 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
                   
                   onOpenZenMode(task.id);
                 }}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--accent-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%', fontWeight: 600 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                style={{ color: 'var(--accent-primary)', fontWeight: 600 }}
               >
-                <Play size={14} fill="currentColor" /> Empezar ya
+                <Play size={16} fill="currentColor" /> Empezar ya
               </button>
 
               <button 
+                className="ios-dropdown-item"
                 onClick={() => {
                   setShowMenu(false);
                   onEdit(task.id);
                 }}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
-                <span style={{ fontSize: 12 }}>✏️</span> Editar recordatorio
+                <Edit3 size={16} /> Editar recordatorio
               </button>
 
               <button 
+                className="ios-dropdown-item"
                 onClick={async () => {
                   setShowMenu(false);
                   const query = await usePromptStore.getState().openPrompt(
@@ -412,25 +403,22 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
                     }
                   }
                 }}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
                 <Link2 size={16} /> Bloquear con otra tarea
               </button>
 
+              <div className="ios-dropdown-divider" />
+              
               <button 
+                className="ios-dropdown-item danger"
                 onClick={() => {
                   setShowMenu(false);
                   if (confirm('¿Seguro que quieres eliminar este recordatorio?')) {
                     onDelete(task.id);
                   }
                 }}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--accent-red)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
-                <Trash2 size={14} /> Eliminar
+                <Trash2 size={16} /> Eliminar
               </button>
             </div>
           </>,
