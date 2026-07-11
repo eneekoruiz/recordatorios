@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useCallback } from 'react';
 import { Plus, ChevronDown, Sparkles, FolderPlus, Settings, Trash2, MoreHorizontal } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useAppStore } from '../../store/useAppStore';
+import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
 import type { TaskItem } from '../../models/Task';
 import { TaskCard } from '../tasks/TaskCard';
@@ -56,7 +56,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     const allTasks = Object.values(tasks).filter(t => !t.deleted_at);
     const validTasks = includeCompleted 
       ? allTasks 
-      : allTasks.filter(t => t.status === 'pending' || temporarilyShowIds.includes(t.id));
+      : allTasks.filter(t => !isTaskCompleted(t) || temporarilyShowIds.includes(t.id));
     let filteredTasks: TaskItem[] = [];
 
     switch (currentView) {
@@ -75,14 +75,15 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         filteredTasks = validTasks.filter(t => t.flagged);
         break;
       case 'smart_completed':
-        filteredTasks = allTasks.filter(t => t.status === 'completed'); // always completed
+        filteredTasks = allTasks.filter(t => isTaskCompleted(t)); // always completed
         break;
     }
 
     // Agrupar por lista a la que pertenecen
     const grouped: Record<string, TaskItem[]> = {};
     filteredTasks.forEach(task => {
-      const listName = lists?.find(l => l.id === task.categoryId)?.name || 'Sin Lista';
+      const catId = task.categoryId || (task as any).category_id;
+      const listName = lists?.find(l => l.id === catId)?.name || 'Sin Lista';
       if (!grouped[listName]) grouped[listName] = [];
       grouped[listName].push(task);
     });
@@ -94,7 +95,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const handleToggleTask = useCallback((id: string, forceReverse?: boolean) => {
     const task = tasks[id];
     if (task) {
-      const willBeCompleted = task.status !== 'completed';
+      const willBeCompleted = !isTaskCompleted(task);
       if (willBeCompleted) {
         setRecentlyCompletedIds(prev => [...prev, id]);
         setTimeout(() => {
@@ -533,11 +534,13 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           }
         })}
 
-        {flattenedData.length === 0 && (
-          <EmptyState />
-        )}
-
       </div>
+
+      {flattenedData.length === 0 && (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <EmptyState />
+        </div>
+      )}
 
       <ListConfigModal 
         isOpen={isListConfigOpen} 

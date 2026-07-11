@@ -5,6 +5,12 @@ import type { TaskItem, CustomCycle, CustomList, ListSection } from '../models/T
 import { TaskRepository } from '../repositories/TaskRepository';
 import { isCompletedInCurrentPeriod, wouldCreateDependencyCycle } from '../services/TaskService';
 
+export const isTaskCompleted = (t: any) => {
+  // Only treat as completed if status is explicitly 'completed' or has a completed_at timestamp.
+  // We do NOT use completionHistory here because recurring tasks accumulate history but reset to 'pending'.
+  return t.status === 'completed' || !!t.completed_at;
+};
+
 const INITIAL_LISTS: CustomList[] = [
   { id: 'compras', name: 'Compras', color: '#ff9500' },
   { id: 'care', name: 'Care', color: '#af52de' },
@@ -146,7 +152,7 @@ export const useAppStore = create<AppState>()(
         const isOneOff = !existingTask.cycle_id;
         
         // Auto-detect reverse if already completed or if forceReverse is explicitly passed
-        const shouldReverse = forceReverse || existingTask.status === 'completed';
+        const shouldReverse = forceReverse || isTaskCompleted(existingTask);
         
         if (shouldReverse) {
           const newHistory = [...(existingTask.completionHistory || [])];
@@ -331,7 +337,7 @@ export const useAppStore = create<AppState>()(
         // Utilizamos la lógica centralizada de TaskService
         const grouped: Record<string, TaskItem[]> = {};
         Object.values(tasks)
-          .filter(t => !t.deleted_at && (includeCompleted || t.status !== 'completed' || temporarilyShowIds.includes(t.id)))
+          .filter(t => !t.deleted_at && (includeCompleted || !isTaskCompleted(t) || temporarilyShowIds.includes(t.id)))
           .filter(t => {
             // Regla: Hereda tareas de su propio ciclo Y de cualquier ciclo más corto.
             // NUEVO: Si no tiene ciclo (One-off), evaluamos por dueDate.
@@ -362,7 +368,7 @@ export const useAppStore = create<AppState>()(
           const matchesList = listId === 'inbox' 
             ? (taskCat === 'inbox' || !taskCat)
             : taskCat === listId;
-          return matchesList && (includeCompleted || t.status === 'pending' || temporarilyShowIds.includes(t.id));
+          return matchesList && (includeCompleted || !isTaskCompleted(t) || temporarilyShowIds.includes(t.id));
         });
         
         const grouped: Record<string, TaskItem[]> = {};
