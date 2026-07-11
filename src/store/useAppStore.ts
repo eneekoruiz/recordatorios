@@ -369,7 +369,7 @@ export const useAppStore = create<AppState>()(
       },
 
       getTasksByList: (listId, includeCompleted = false, temporarilyShowIds = []) => {
-        const { tasks, lists } = get();
+        const { tasks, lists, listSections } = get();
         const validListIds = new Set(lists.map(l => l.id));
         const filtered = Object.values(tasks).filter(t => {
           if (t.deleted_at) return false;
@@ -385,10 +385,22 @@ export const useAppStore = create<AppState>()(
         });
         
         const grouped: Record<string, TaskItem[]> = {};
+        
+        // 1. Pre-initialize defined manual sections for this list so empty sections are visible
+        const sectionsForList = (listSections || []).filter(s => s.listId === listId);
+        for (const sec of sectionsForList) {
+          grouped[`section_${sec.id}`] = [];
+        }
+        
+        // 2. Initialize no_section key
+        grouped['no_section'] = [];
+
         for (const task of filtered) {
           let groupKey = '';
           if (task.sectionId) {
             groupKey = `section_${task.sectionId}`;
+          } else if (task.cycle_id) {
+            groupKey = `cycle_${task.cycle_id}`;
           } else {
             groupKey = 'no_section';
           }
@@ -396,6 +408,12 @@ export const useAppStore = create<AppState>()(
           if (!grouped[groupKey]) grouped[groupKey] = [];
           grouped[groupKey].push(task);
         }
+        
+        // Clean empty no_section to keep UI clean
+        if (grouped['no_section'].length === 0) {
+          delete grouped['no_section'];
+        }
+        
         return grouped;
       },
 
