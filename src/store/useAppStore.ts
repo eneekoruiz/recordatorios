@@ -575,7 +575,7 @@ export const useAppStore = create<AppState>()(
     {
       name: 'reminders-storage',
       storage: createJSONStorage(() => idbStorage),
-      version: 3,
+      version: 4,
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },
@@ -629,6 +629,19 @@ export const useAppStore = create<AppState>()(
             };
           });
           state = { ...state, cycles: migratedCycles, lists: state.lists || INITIAL_LISTS };
+        }
+
+        if (version < 4) {
+          // Migración v3 -> v4: Forzar sync de datos heredados marcándolos como dirty
+          const dirtyTasks: Record<string, TaskItem> = {};
+          if (state.tasks) {
+            Object.entries(state.tasks).forEach(([id, t]: [string, any]) => {
+              dirtyTasks[id] = { ...t, _is_dirty: true, version: t.version || 1 };
+            });
+          }
+          const dirtyCycles = (state.cycles || []).map((c: any) => ({ ...c, _is_dirty: true, version: c.version || 1 }));
+          const dirtyLists = (state.lists || []).map((l: any) => ({ ...l, _is_dirty: true, version: l.version || 1 }));
+          state = { ...state, tasks: dirtyTasks, cycles: dirtyCycles, lists: dirtyLists };
         }
         
         return state as AppState;

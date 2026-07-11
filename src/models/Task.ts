@@ -19,6 +19,7 @@ export interface CustomList {
   color: string;
   icon?: string; // Lucide icon name
   isFinancial?: boolean; // Habilita campos de coste y modo financiero en tareas
+  showCompleted?: boolean; // Persist preference to show completed tasks for this list
 }
 
 export interface ListSection {

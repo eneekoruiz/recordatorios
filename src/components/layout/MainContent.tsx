@@ -86,7 +86,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     return grouped;
   }, [currentView, tasks, lists]);
 
-  const [showCompleted, setShowCompleted] = useState(false);
+  const resolvedShowCompleted = isListView ? !!currentList?.showCompleted : false;
 
   const handleToggleTask = useCallback((id: string, forceReverse?: boolean) => {
     const task = tasks[id];
@@ -108,10 +108,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     if (currentView === 'TRASH') {
       return { 'Papelera': Object.values(tasks).filter(t => t.deleted_at) };
     }
-    if (isSmartView) return getTasksForSmartView(showCompleted, recentlyCompletedIds);
-    if (isListView) return getTasksByList(currentView.replace('list_', ''), showCompleted, recentlyCompletedIds);
-    return getTasksByCycle(currentView, showCompleted, recentlyCompletedIds);
-  }, [currentView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, showCompleted, recentlyCompletedIds]);
+    if (isSmartView) return getTasksForSmartView(resolvedShowCompleted, recentlyCompletedIds);
+    if (isListView) return getTasksByList(currentView.replace('list_', ''), resolvedShowCompleted, recentlyCompletedIds);
+    return getTasksByCycle(currentView, resolvedShowCompleted, recentlyCompletedIds);
+  }, [currentView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, resolvedShowCompleted, recentlyCompletedIds]);
     
   const smartTasks = useMemo(() => currentView === 'cycle_day' ? getSmartSortTasks() : [], [currentView, getSmartSortTasks]);
 
@@ -299,15 +299,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           
           {/* Right: Actions aligned to the right */}
           <div className="header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            {!isSmartView && currentView !== 'TRASH' && (
-              <div style={{ display: 'flex', alignItems: 'center', marginRight: isMobile ? 4 : 12, gap: 8 }}>
-                {!isMobile && <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Mostrar completados</span>}
-                <label className="switch" title="Mostrar Completados">
-                  <input type="checkbox" checked={showCompleted} onChange={e => setShowCompleted(e.target.checked)} />
-                  <span className="slider round"></span>
-                </label>
-              </div>
-            )}
             {isListView && currentList && (
               <button className="icon-btn" onClick={() => setIsListConfigOpen(true)} title="Configurar Lista">
                 <Settings size={20} />
