@@ -433,7 +433,6 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               onEditList={(listId: string) => { setEditingListId(listId); setParentListId(undefined); setIsListConfigOpen(true); }}
             />
           </div>
-          </div>
         </div>
 
         {/* CICLOS TEMPORALES */}
