@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo, useCallback } from 'react';
-import { Plus, ChevronDown, Sparkles, FolderPlus, Settings, Trash2 } from 'lucide-react';
+import { Plus, ChevronDown, Sparkles, FolderPlus, Settings, Trash2, MoreHorizontal } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useAppStore } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
@@ -35,13 +35,16 @@ const SMART_COLORS: Record<string, string> = {
 export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditTask, onBackToSidebar, isMobile }: MainContentProps) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   
-  const { getTasksByCycle, getTasksByList, getSmartSortTasks, toggleTask, deleteTask, cycles, updateCycle, deleteCycle, lists, addListSection, updateListSection, updateTaskSection, listSections, tasks } = useAppStore();
+  const { getTasksByCycle, getTasksByList, getSmartSortTasks, toggleTask, deleteTask, cycles, updateCycle, deleteCycle, lists, addListSection, updateListSection, updateTaskSection, listSections, tasks, updateList } = useAppStore();
 
   const currentCycle = useMemo(() => cycles.find(c => c.id === currentView), [cycles, currentView]);
   const currentList = useMemo(() => lists?.find(l => `list_${l.id}` === currentView), [lists, currentView]);
   
   const isListView = currentView.startsWith('list_');
   const isSmartView = currentView.startsWith('smart_');
+
+  // Menu state
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Estados para la edición de ciclos in-place
   const [isEditingCycle, setIsEditingCycle] = useState(false);
@@ -298,11 +301,47 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           )}
           
           {/* Right: Actions aligned to the right */}
-          <div className="header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <div className="header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap', justifyContent: 'flex-end', position: 'relative' }}>
             {isListView && currentList && (
-              <button className="icon-btn" onClick={() => setIsListConfigOpen(true)} title="Configurar Lista">
-                <Settings size={20} />
-              </button>
+              <div style={{ position: 'relative' }}>
+                <button className="icon-btn" onClick={() => setIsMenuOpen(!isMenuOpen)} title="Opciones de Lista">
+                  <MoreHorizontal size={20} />
+                </button>
+                {isMenuOpen && (
+                  <>
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setIsMenuOpen(false)} />
+                    <div style={{ 
+                      position: 'absolute', right: 0, top: '100%', marginTop: 8, 
+                      background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', 
+                      borderRadius: 'var(--radius-lg)', padding: '8px 0', minWidth: 200, 
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.1)', zIndex: 100 
+                    }}>
+                      <button 
+                        onClick={() => { updateList(currentList.id, { showCompleted: !currentList.showCompleted }); setIsMenuOpen(false); }}
+                        style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '12px 16px', background: 'transparent', border: 'none', textAlign: 'left', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.95rem' }}
+                      >
+                        <input type="checkbox" checked={!!currentList.showCompleted} readOnly style={{ marginRight: 12, pointerEvents: 'none' }} />
+                        Mostrar Completados
+                      </button>
+                      <button 
+                        onClick={() => { updateList(currentList.id, { isFinancial: !currentList.isFinancial }); setIsMenuOpen(false); }}
+                        style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '12px 16px', background: 'transparent', border: 'none', textAlign: 'left', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.95rem' }}
+                      >
+                        <input type="checkbox" checked={!!currentList.isFinancial} readOnly style={{ marginRight: 12, pointerEvents: 'none' }} />
+                        Modo Financiero
+                      </button>
+                      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
+                      <button 
+                        onClick={() => { setIsListConfigOpen(true); setIsMenuOpen(false); }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '12px 16px', background: 'transparent', border: 'none', textAlign: 'left', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.95rem' }}
+                      >
+                        <Settings size={16} />
+                        Personalizar Lista
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             )}
             {isListView && (
               <button className="icon-btn" onClick={() => handleAddSection()} title="Añadir Sección Raíz">
