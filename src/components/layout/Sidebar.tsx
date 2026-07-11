@@ -185,9 +185,9 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
     
     switch (listId) {
       case 'smart_today': 
-        return active.filter(t => t.due_date && new Date(t.due_date).toDateString() === todayStr).length;
+        return active.filter(t => t.dueDate && new Date(t.dueDate).toDateString() === todayStr).length;
       case 'smart_scheduled': 
-        return active.filter(t => t.due_date && new Date(t.due_date) > new Date()).length;
+        return active.filter(t => t.dueDate && new Date(t.dueDate) > new Date()).length;
       case 'smart_all': 
         return active.length;
       case 'smart_flagged': 
@@ -428,7 +428,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               lists={lists} 
               currentView={currentView} 
               onSelectView={onSelectView}
-              getTaskCount={(id: string) => Object.values(tasks || {}).filter(t => !t.deleted_at && !t.completed_at && t.category_id === id).length}
+              getTaskCount={(id: string) => Object.values(tasks || {}).filter(t => !t.deleted_at && !t.completed_at && t.categoryId === id).length}
               onAddSublist={(pId: string) => { setEditingListId(undefined); setParentListId(pId); setIsListConfigOpen(true); }} 
               onEditList={(listId: string) => { setEditingListId(listId); setParentListId(undefined); setIsListConfigOpen(true); }}
             />

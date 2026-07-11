@@ -139,7 +139,7 @@ class SyncManager {
     const tokenKey = 'sync_token_' + (state as any).userId;
     const lastToken = localStorage.getItem(tokenKey) || '0';
 
-    const url = new URL(PULL_URL);
+    const url = new URL(PULL_URL, window.location.origin);
     url.searchParams.append('lastToken', lastToken);
 
     const response = await fetch(url.toString(), {
