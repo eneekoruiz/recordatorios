@@ -172,7 +172,8 @@ app.get('/api/sync/pull', authenticateToken, async (req, res) => {
     res.json({
       tasks: tasks.map(t => t.payload),
       cycles: cycles.map(c => c.payload),
-      lists: lists.map(l => l.payload)
+      lists: lists.map(l => l.payload),
+      serverTime: Date.now()
     });
   } catch (error) {
     console.error('Pull error:', error);
