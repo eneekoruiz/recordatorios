@@ -291,15 +291,14 @@ export const useAppStore = create<AppState>()(
       })),
 
       addListSection: (section) => set((state) => ({
-        listSections: [...(state.listSections || []), section]
+        listSections: [...(state.listSections || []), { ...section, _is_dirty: true, updated_at: new Date().toISOString() }]
       })),
 
       updateListSection: (id, name) => set((state) => ({
-        listSections: (state.listSections || []).map(s => s.id === id ? { ...s, name } : s)
+        listSections: (state.listSections || []).map(s => s.id === id ? { ...s, name, _is_dirty: true, updated_at: new Date().toISOString() } : s)
       })),
 
       deleteListSection: (id) => set((state) => {
-        // Al borrar una sección, las tareas de esa sección quedan sin ella
         const updatedTasks = { ...state.tasks };
         let changed = false;
         for (const taskId in updatedTasks) {
@@ -309,7 +308,7 @@ export const useAppStore = create<AppState>()(
           }
         }
         return {
-          listSections: (state.listSections || []).filter(s => s.id !== id),
+          listSections: (state.listSections || []).map(s => s.id === id ? { ...s, deleted_at: new Date().toISOString(), _is_dirty: true, updated_at: new Date().toISOString() } : s),
           tasks: changed ? updatedTasks : state.tasks
         };
       }),
@@ -390,7 +389,7 @@ export const useAppStore = create<AppState>()(
         grouped['no_section'] = [];
         
         // 2. Pre-initialize defined manual sections for this list so empty sections are visible
-        const sectionsForList = (listSections || []).filter(s => s.listId === listId);
+        const sectionsForList = (listSections || []).filter(s => s.listId === listId && !s.deleted_at);
         for (const sec of sectionsForList) {
           grouped[`section_${sec.id}`] = [];
         }

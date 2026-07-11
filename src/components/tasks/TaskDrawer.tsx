@@ -444,9 +444,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, taskId }: TaskD
             aria-modal="true"
             aria-labelledby="drawer-title"
             key="drawer"
-            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+            initial={{ opacity: 0, scale: 0.95, y: '100%' }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 15 }}
+            exit={{ opacity: 0, scale: 0.95, y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="drawer"
             onClick={(e) => e.stopPropagation()}

@@ -105,8 +105,9 @@ class SyncManager {
     const tasks = Object.values(state.tasks).filter(t => t._is_dirty);
     const cycles = state.cycles.filter((c: any) => c._is_dirty);
     const lists = state.lists.filter((l: any) => l._is_dirty);
+    const listSections = (state.listSections || []).filter((s: any) => s._is_dirty);
 
-    if (tasks.length === 0 && cycles.length === 0 && lists.length === 0) return;
+    if (tasks.length === 0 && cycles.length === 0 && lists.length === 0 && listSections.length === 0) return;
 
     // Send payload to backend
     const response = await fetch(PUSH_URL, {
@@ -115,7 +116,7 @@ class SyncManager {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ tasks, cycles, lists })
+      body: JSON.stringify({ tasks, cycles, lists, listSections })
     });
 
     if (!response.ok) throw new Error('Push failed');
@@ -134,6 +135,14 @@ class SyncManager {
       lists.forEach((l: any) => {
         state.updateList(l.id, { _is_dirty: false });
       });
+    }
+
+    if (listSections.length > 0) {
+      const allSections = state.listSections || [];
+      const newSections = allSections.map((s: any) => 
+        listSections.find((dirty: any) => dirty.id === s.id) ? { ...s, _is_dirty: false } : s
+      );
+      useAppStore.setState({ listSections: newSections });
     }
   }
 
@@ -206,6 +215,21 @@ class SyncManager {
       });
     }
 
+    // Ingest listSections
+    if (data.listSections && Array.isArray(data.listSections)) {
+      data.listSections.forEach((serverSection: any) => {
+        const currentSections = useAppStore.getState().listSections || [];
+        const localSection = currentSections.find(s => s.id === serverSection.id);
+        if (!localSection) {
+          useAppStore.setState({ listSections: [...currentSections, { ...serverSection, _is_dirty: false }] });
+        } else if (!localSection.updated_at || new Date(serverSection.updated_at).getTime() > new Date(localSection.updated_at).getTime()) {
+          useAppStore.setState({
+            listSections: currentSections.map(s => s.id === serverSection.id ? { ...serverSection, _is_dirty: false } : s)
+          });
+        }
+      });
+    }
+
     if (data.serverTime) {
       localStorage.setItem(tokenKey, data.serverTime.toString());
     }
@@ -219,8 +243,9 @@ useAppStore.subscribe((state) => {
   const hasDirtyTasks = Object.values(state.tasks).some(t => t._is_dirty);
   const hasDirtyCycles = state.cycles.some((c: any) => c._is_dirty);
   const hasDirtyLists = state.lists.some((l: any) => l._is_dirty);
+  const hasDirtySections = (state.listSections || []).some((s: any) => s._is_dirty);
 
-  if (hasDirtyTasks || hasDirtyCycles || hasDirtyLists) {
+  if (hasDirtyTasks || hasDirtyCycles || hasDirtyLists || hasDirtySections) {
     syncManager.triggerDebouncedSync();
   }
 });

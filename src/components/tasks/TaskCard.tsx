@@ -100,6 +100,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
       <motion.div 
         onContextMenu={handleContextMenu}
         drag="x"
+        dragSnapToOrigin={true}
         style={{ x, cursor: 'grab' }}
         dragConstraints={{ left: -130, right: 130 }}
         dragElastic={0.15}
