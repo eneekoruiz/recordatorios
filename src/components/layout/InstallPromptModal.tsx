@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, X, AlertCircle } from 'lucide-react';
+import { Download, AlertCircle } from 'lucide-react';
 
 export function InstallPromptModal() {
   const [isOpen, setIsOpen] = useState(false);

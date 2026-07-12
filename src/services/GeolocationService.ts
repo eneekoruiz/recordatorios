@@ -109,7 +109,7 @@ export class GeolocationService {
           requireInteraction: true
         });
       }
-    } catch (e) {
+    } catch {
       // Error silencioso en background
     }
   }

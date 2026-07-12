@@ -36,7 +36,7 @@ const SMART_COLORS: Record<string, string> = {
 export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditTask, onBackToSidebar, isMobile }: MainContentProps) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   
-  const { getTasksByCycle, getTasksByList, getSmartSortTasks, toggleTask, deleteTask, cycles, updateCycle, deleteCycle, lists, addListSection, updateListSection, updateTaskSection, listSections, tasks, updateList, updateTask } = useAppStore();
+  const { getTasksByCycle, getTasksByList, getSmartSortTasks, toggleTask, cycles, updateCycle, deleteCycle, lists, addListSection, updateListSection, deleteListSection, updateTaskSection, listSections, tasks, updateList, updateTask } = useAppStore();
 
   const currentCycle = useMemo(() => cycles.find(c => c.id === currentView), [cycles, currentView]);
   const currentList = useMemo(() => lists?.find(l => `list_${l.id}` === currentView), [lists, currentView]);
@@ -139,6 +139,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     return sum;
   }, [groupedTasks]);
 
+  const visibleTasks = useMemo(() => Object.values(groupedTasks).flat(), [groupedTasks]);
+  const activeVisibleCount = useMemo(() => visibleTasks.filter(t => !isTaskCompleted(t)).length, [visibleTasks]);
+  const completedVisibleCount = useMemo(() => visibleTasks.filter(t => isTaskCompleted(t)).length, [visibleTasks]);
+
   const toggleCategory = useCallback((cat: string) => {
     setCollapsed(prev => ({ ...prev, [cat]: !prev[cat] }));
   }, []);
@@ -217,7 +221,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     if (!isListView) {
       Object.entries(groupedTasks).forEach(([categoryOrCycle, categoryTasks]) => {
         let color = '#34c759'; // Default
-        let originalSectionId: string | undefined;
         let headerTitle = categoryOrCycle;
         let headerDepth = 0;
 
@@ -231,7 +234,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           else { headerTitle = 'Sin lista'; color = '#8e8e93'; }
         }
         
-        flat.push({ type: 'header', title: headerTitle, category: categoryOrCycle, color, sectionId: originalSectionId, depth: headerDepth });
+        flat.push({ type: 'header', title: headerTitle, category: categoryOrCycle, color, depth: headerDepth });
         
         if (!collapsed[categoryOrCycle]) {
           const roots = categoryTasks.filter(t => !t.parentId);
@@ -404,6 +407,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
         {/* Línea del Título (Debajo del Top Bar) */}
         <div style={{ width: '100%' }}>
+          <div className="content-kicker">
+            <Sparkles size={14} />
+            {isSmartView ? 'Vista inteligente' : isListView ? 'Lista activa' : currentView === 'TRASH' ? 'Archivo de seguridad' : 'Ciclo temporal'}
+          </div>
           <h1 className="text-display" style={{ 
             fontSize: '2.2rem', 
             fontWeight: 750,
@@ -446,7 +453,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             )}
           </h1>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-12)', marginTop: 'var(--space-8)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-12)', marginTop: 'var(--space-8)', flexWrap: 'wrap' }}>
             <p className="text-secondary" style={{ margin: 0 }}>
               {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
             </p>
@@ -463,8 +470,14 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             )}
           </div>
 
+          <div className="content-stats">
+            <span className="stat-chip"><strong>{activeVisibleCount}</strong> pendientes</span>
+            <span className="stat-chip"><strong>{completedVisibleCount}</strong> completadas</span>
+            <span className="stat-chip"><strong>{visibleTasks.length}</strong> visibles</span>
+          </div>
+
           {totalCost > 0 && (
-            <div style={{ marginTop: 12, display: 'inline-block', background: 'var(--accent-glow)', color: 'var(--accent-primary)', padding: '6px 12px', borderRadius: 8, fontWeight: 600 }}>
+            <div style={{ marginTop: 12, display: 'inline-block', background: 'var(--accent-glow)', color: 'var(--accent-primary)', padding: '6px 12px', borderRadius: 999, fontWeight: 700, border: '1px solid rgba(37,99,235,0.12)' }}>
               Total Estimado: ${totalCost.toFixed(2)}
             </div>
           )}
@@ -498,7 +511,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 style={{ 
                   ...virtualStyle, 
                   borderBottom: `1px solid var(--border-subtle)`,
-                  paddingLeft: `calc(12px + ${data.depth * 24}px)` // Indent sub-sections
+                  paddingLeft: `calc(12px + ${data.depth * 24}px)`, // Indent sub-sections
+                  outline: isDraggingOver ? `2px solid ${data.color}` : undefined,
+                  background: isDraggingOver ? `${data.color}14` : undefined
                 }}
                 onClick={() => toggleCategory(data.category)}
                 onDragOver={isCustomSection ? (e) => { e.preventDefault(); setDragOverSectionId(data.sectionId!); } : undefined}

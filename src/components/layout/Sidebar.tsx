@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
-import { usePromptStore } from '../../store/usePromptStore';
 import { getCycleIcon } from '../../constants/icons';
 import { ListConfigModal } from './ListConfigModal';
 import { CycleConfigModal } from './CycleConfigModal';
@@ -182,7 +181,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
 };
 
 export function Sidebar({ currentView, onSelectView }: SidebarProps) {
-  const { lists, cycles, smartListVisibility, toggleSmartList, tasks, cycleVisibility, toggleCycleVisibility, updateList } = useAppStore();
+  const { lists, cycles, smartListVisibility, toggleSmartList, tasks, cycleVisibility, toggleCycleVisibility } = useAppStore();
   
   const getTaskCount = (listId: string) => {
     const all = Object.values(tasks || {}).filter(t => !t.deleted_at);
@@ -207,7 +206,6 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
 
   const user = { name: 'Eneko Ruiz', email: localStorage.getItem('userEmail') || 'eneko@ejemplo.com' };
 
-  const [isCyclesOpen, setIsCyclesOpen] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isEditCyclesMode, setIsEditCyclesMode] = useState(false);
   
@@ -609,7 +607,6 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         onClose={() => setIsCycleModalOpen(false)}
         onSuccess={(id) => {
           setIsCycleModalOpen(false);
-          setIsCyclesOpen(true);
           onSelectView(id);
         }}
       />

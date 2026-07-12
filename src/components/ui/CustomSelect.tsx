@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDown, Check } from 'lucide-react';
 
 interface Option {
@@ -15,99 +16,104 @@ interface CustomSelectProps {
   className?: string;
 }
 
-export function CustomSelect({ value, onChange, options, placeholder = 'Seleccionar...', className = '' }: CustomSelectProps) {
+export function CustomSelect({ value, onChange, options, placeholder = 'Seleccionar…', className = '' }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [coords, setCoords] = useState({ x: 0, y: 0, width: 0 });
+  const [coords, setCoords] = useState({ x: 0, y: 0, width: 0, openUp: false });
   const buttonRef = useRef<HTMLButtonElement>(null);
-
-  const selectedOption = options.find(o => o.value === value);
+  const selectedOption = useMemo(() => options.find(option => option.value === value), [options, value]);
 
   const handleToggle = () => {
     if (!isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
+      const estimatedHeight = Math.min(options.length * 46 + 16, 316);
       setCoords({
-        x: rect.left,
-        y: rect.bottom + 4,
-        width: rect.width
+        x: Math.max(12, Math.min(rect.left, window.innerWidth - Math.max(rect.width, 220) - 12)),
+        y: rect.bottom + 8,
+        width: rect.width,
+        openUp: rect.bottom + estimatedHeight > window.innerHeight - 12
       });
     }
-    setIsOpen(!isOpen);
+    setIsOpen(current => !current);
   };
 
   useEffect(() => {
-    const handleScroll = () => setIsOpen(false);
-    if (isOpen) {
-      window.addEventListener('scroll', handleScroll, true);
-    }
-    return () => window.removeEventListener('scroll', handleScroll, true);
+    if (!isOpen) return;
+    const close = () => setIsOpen(false);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close();
+    };
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [isOpen]);
 
   return (
     <>
-      <button 
+      <button
         ref={buttonRef}
-        type="button" 
+        type="button"
         onClick={handleToggle}
         className={`custom-select-trigger ${className}`}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'flex-end',
-          gap: '8px',
-          background: 'transparent',
-          border: 'none',
-          color: selectedOption ? 'var(--text-secondary)' : 'var(--text-tertiary)',
-          fontSize: '1rem',
-          cursor: 'pointer',
-          padding: 0,
-          fontFamily: 'inherit',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis'
-        }}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
       >
-        <span>{selectedOption ? selectedOption.label : placeholder}</span>
-        <ChevronDown size={14} style={{ opacity: 0.5 }} />
+        <span>{selectedOption?.label || placeholder}</span>
+        <ChevronDown size={15} aria-hidden="true" className={isOpen ? 'is-open' : ''} />
       </button>
 
-      {isOpen && createPortal(
-        <>
-          <div 
-            style={{ position: 'fixed', inset: 0, zIndex: 99998 }}
-            onClick={(e) => { e.stopPropagation(); setIsOpen(false); }}
-          />
-          <div 
-            className="ios-dropdown-menu"
-            style={{
-              position: 'fixed',
-              top: coords.y,
-              right: window.innerWidth - coords.x - coords.width,
-              minWidth: Math.max(coords.width, 180),
-              zIndex: 99999,
-              maxHeight: '300px',
-              overflowY: 'auto'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {options.map(opt => (
-              <button
-                key={opt.value}
-                className="ios-dropdown-item"
-                style={{ 
-                  justifyContent: 'space-between',
-                  background: value === opt.value ? 'var(--bg-hover)' : 'transparent'
-                }}
-                onClick={() => {
-                  onChange(opt.value);
-                  setIsOpen(false);
+      {createPortal(
+        <AnimatePresence>
+          {isOpen && (
+            <>
+              <motion.div className="select-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }} onClick={() => setIsOpen(false)} />
+              <motion.div
+                className="ios-dropdown-menu premium-select-menu"
+                role="listbox"
+                aria-label={placeholder}
+                initial={{ opacity: 0, y: coords.openUp ? 8 : -8, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: coords.openUp ? 8 : -8, scale: 0.97 }}
+                transition={{ type: 'spring', stiffness: 480, damping: 34 }}
+                style={{
+                  position: 'fixed',
+                  left: coords.x,
+                  top: coords.openUp ? 'auto' : coords.y,
+                  bottom: coords.openUp ? window.innerHeight - coords.y + 12 : 'auto',
+                  minWidth: Math.max(coords.width, 220),
+                  zIndex: 100002
                 }}
               >
-                <span>{opt.label}</span>
-                {value === opt.value && <Check size={14} className="check-icon" />}
-              </button>
-            ))}
-          </div>
-        </>,
+                <div className="select-sheet-handle" aria-hidden="true" />
+                {options.map(option => {
+                  const selected = value === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      className="ios-dropdown-item"
+                      onClick={() => {
+                        navigator.vibrate?.(12);
+                        onChange(option.value);
+                        setIsOpen(false);
+                      }}
+                    >
+                      <span>{option.label}</span>
+                      {selected && <Check size={16} className="check-icon" aria-hidden="true" />}
+                    </button>
+                  );
+                })}
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>,
         document.body
       )}
     </>
