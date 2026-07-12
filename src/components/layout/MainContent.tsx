@@ -513,7 +513,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                   borderBottom: `1px solid var(--border-subtle)`,
                   paddingLeft: `calc(12px + ${data.depth * 24}px)`, // Indent sub-sections
                   outline: isDraggingOver ? `2px solid ${data.color}` : undefined,
-                  background: isDraggingOver ? `${data.color}14` : undefined
+                  background: isDraggingOver ? `${data.color}14` : undefined,
+                  zIndex: sectionMenuId === data.sectionId ? 50 : undefined
                 }}
                 onClick={() => toggleCategory(data.category)}
                 onDragOver={isCustomSection ? (e) => { e.preventDefault(); setDragOverSectionId(data.sectionId!); } : undefined}
