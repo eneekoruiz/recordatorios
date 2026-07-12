@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Clock, Mic, MicOff, Settings2, Calendar as CalendarIcon, Repeat, Link2, PlusCircle, Flag, MapPin, Link, Image as ImageIcon, ChevronDown, Search } from 'lucide-react';
+import { X, Clock, Mic, MicOff, Settings2, Calendar as CalendarIcon, Repeat, Link2, PlusCircle, MapPin, ChevronDown, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 import { parseNaturalLanguage } from '../../utils/nlp';
@@ -68,7 +68,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   const [quantity, setQuantity] = useState<number>(1);
   const [brand, setBrand] = useState('');
   const [duration, setDuration] = useState<number | ''>('');
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [, setShowAdvanced] = useState(false);
 
   // Suggested chips purely for visual feedback
   const [suggestedChips, setSuggestedChips] = useState<{type: 'time'|'date'|'cycle', label: string}[]>([]);
@@ -142,7 +142,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setType('task');
         setAlerts([]);
         setBlockedBy([]);
-        setSectionId(undefined);
+        setSectionId(defaultSectionId);
         setFlagged(false);
         setPriority('none');
         setLocationName('');
@@ -169,7 +169,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setCardFinanceOpen(false);
       }
     }
-  }, [isOpen, taskId, task, defaultCategoryId]);
+  }, [isOpen, taskId, task, defaultCategoryId, defaultSectionId]);
 
   useEffect(() => {
     if (isOpen && defaultCategoryId) {
@@ -221,7 +221,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
       setCycleId(undefined);
       setDueDate(new Date());
     }
-  }, [title]);
+  }, [title, alerts, cycles]);
 
   const saveHomeLocation = (loc: { lat: number; lng: number; address: string }) => {
     localStorage.setItem('home_location', JSON.stringify(loc));

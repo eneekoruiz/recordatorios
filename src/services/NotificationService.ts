@@ -39,7 +39,7 @@ export class NotificationService {
       this.hasPermission = permission === 'granted';
       this.permissionDenied = permission === 'denied';
       return this.hasPermission;
-    } catch (error) {
+    } catch {
       // Silencioso
       this.permissionDenied = true;
       return false; // Zero crashes
@@ -53,7 +53,7 @@ export class NotificationService {
     this.intervalId = window.setInterval(() => {
       try {
         this.checkAndFireAlerts(getPendingAlerts());
-      } catch (e) {
+      } catch {
         // Silencioso
       }
     }, 60000);
@@ -61,7 +61,7 @@ export class NotificationService {
     // Ejecución inicial segura
     try {
       this.checkAndFireAlerts(getPendingAlerts());
-    } catch(e) {}
+    } catch {}
   }
 
   public stopScheduler() {
@@ -99,7 +99,7 @@ export class NotificationService {
         window.focus(); 
         notification.close();
       };
-    } catch (error) {
+    } catch {
       // Silencioso
     }
   }

@@ -616,7 +616,8 @@ export const useAppStore = create<AppState>()(
         state?.setHasHydrated(true);
       },
       partialize: (state) => {
-        const { hasHydrated, ...rest } = state;
+        const rest = { ...state };
+        delete (rest as Partial<AppState>).hasHydrated;
         return rest;
       },
       merge: (persistedState: any, currentState: any) => ({
@@ -640,9 +641,9 @@ export const useAppStore = create<AppState>()(
           if (state.tasks) {
             Object.entries(state.tasks).forEach(([id, t]: [string, any]) => {
               let cycle_id = 'cycle_day';
-              if (t.frequencyLevel === 'weekly') cycleId = 'cycle_week';
-              if (t.frequencyLevel === 'monthly') cycleId = 'cycle_month';
-              if (t.frequencyLevel === 'yearly') cycleId = 'cycle_year';
+              if (t.frequencyLevel === 'weekly') cycle_id = 'cycle_week';
+              if (t.frequencyLevel === 'monthly') cycle_id = 'cycle_month';
+              if (t.frequencyLevel === 'yearly') cycle_id = 'cycle_year';
               
               const migratedTask: any = {
                 ...t,
@@ -691,8 +692,7 @@ export const useAppStore = create<AppState>()(
               const isDefaultCycle = t.cycle_id === 'cycle_day';
               const hasRecurringHistory = t.completionHistory && t.completionHistory.length > 0;
               if (isDefaultCycle && !hasRecurringHistory) {
-                const { cycle_id, ...rest } = t;
-                fixedTasks[id] = { ...rest, cycle_id: undefined, _is_dirty: true };
+                fixedTasks[id] = { ...t, cycle_id: undefined, _is_dirty: true };
               } else {
                 fixedTasks[id] = t;
               }
@@ -712,9 +712,8 @@ export const useAppStore = create<AppState>()(
               const isDefaultCycle = t.cycle_id === 'cycle_day';
               const hasRecurringHistory = t.completionHistory && t.completionHistory.length > 0;
               if (isDefaultCycle && !hasRecurringHistory) {
-                const { cycle_id, ...rest } = t;
                 fixedTasks[id] = { 
-                  ...rest, 
+                  ...t,
                   cycle_id: undefined, 
                   version: (t.version || 1) + 1,
                   updated_at: nowStr,

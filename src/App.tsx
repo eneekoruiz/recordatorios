@@ -29,6 +29,16 @@ function App() {
   const [zenModeTaskId, setZenModeTaskId] = useState<string | null>(null);
   const hasHydrated = useAppStore((state) => state.hasHydrated);
 
+  // IndexedDB can be unavailable in privacy/restricted contexts. Never strand the
+  // user behind an infinite loader: continue with the safe in-memory defaults.
+  useEffect(() => {
+    if (hasHydrated) return;
+    const hydrationGuard = window.setTimeout(() => {
+      useAppStore.getState().setHasHydrated(true);
+    }, 2200);
+    return () => window.clearTimeout(hydrationGuard);
+  }, [hasHydrated]);
+
   const navStack = useNavigation((state) => state.stack);
   const navView = useNavigation((state) => state.currentView());
   const { push: navPush, pop: navPop, reset: navReset } = useNavigation();

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
-import { CheckCircle, Trash2, GripVertical, Play, Lock, Link2, Flag, MapPin, Link, Image as ImageIcon, X, Info, MoreHorizontal, Repeat, Edit3 } from 'lucide-react';
+import { CheckCircle, Trash2, GripVertical, Play, Lock, Link2, Flag, MapPin, Image as ImageIcon, MoreHorizontal, Repeat, Edit3 } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
 import { isCompletedInCurrentPeriod } from '../../services/TaskService';
+import { ConfirmModal } from '../ui/ConfirmModal';
 
 interface TaskCardProps {
   task: TaskItem;
@@ -34,6 +35,8 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
   }
   const [isDragOver, setIsDragOver] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
   
   const [menuPos, setMenuPos] = useState({ x: 0, y: 0 });
 
@@ -61,9 +64,17 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
     }
   };
 
+  const notify = (message: string) => {
+    setFeedback(message);
+    window.setTimeout(() => setFeedback(null), 2400);
+  };
+
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
-    setMenuPos({ x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY });
+    setMenuPos({
+      x: Math.max(12, Math.min(e.clientX, window.innerWidth - 236)),
+      y: Math.max(12, Math.min(e.clientY, window.innerHeight - 220))
+    });
     setShowMenu(true);
   };
 
@@ -102,7 +113,6 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
         onContextMenu={handleContextMenu}
         drag="x"
         dragSnapToOrigin={true}
-        style={{ x, cursor: 'grab' }}
         dragConstraints={{ left: -130, right: 130 }}
         dragElastic={0.15}
         dragTransition={{ bounceStiffness: 600, bounceDamping: 30 }}
@@ -118,6 +128,8 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
         }}
         className="surface-card ios-task-row"
         style={{ 
+          x,
+          cursor: 'grab',
           position: 'relative', 
           height: '100%', 
           display: 'flex', 
@@ -130,7 +142,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
           border: 'none',
           borderBottom: '1px solid var(--border-subtle)',
           borderRadius: 0,
-          boxShadow: 'none'
+          boxShadow: isDragOver ? `0 0 0 2px var(--accent-primary), var(--shadow-md)` : 'none'
         }}
       >
         
@@ -302,8 +314,8 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
                 } else {
                   const rect = e.currentTarget.getBoundingClientRect();
                   setMenuPos({
-                    x: rect.left + window.scrollX - 120,
-                    y: rect.bottom + window.scrollY
+                    x: Math.max(12, Math.min(rect.right - 220, window.innerWidth - 232)),
+                    y: Math.min(rect.bottom + 8, window.innerHeight - 220)
                   });
                   setShowMenu(true);
                 }
@@ -326,7 +338,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
             <div 
               className="ios-dropdown-menu"
               style={{
-                position: 'absolute',
+                position: 'fixed',
                 top: menuPos.y + 4,
                 left: menuPos.x,
                 zIndex: 99999
@@ -386,10 +398,10 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
                     );
                     
                     if (matching.length === 0) {
-                      alert("No se encontró ninguna tarea pendiente con ese nombre.");
+                      notify('No encontramos ninguna tarea pendiente con ese nombre.');
                     } else if (matching.length === 1) {
                       addDependency(task.id, matching[0].id);
-                      alert(`Vinculado: Esta tarea ahora depende de "${matching[0].title}".`);
+                      notify('Tarea vinculada correctamente.');
                     } else {
                       const listString = matching.map((t, idx) => `${idx + 1}. ${t.title}`).join('\n');
                       const selectIdxStr = await usePromptStore.getState().openPrompt(
@@ -398,7 +410,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
                       const selectIdx = Number(selectIdxStr) - 1;
                       if (selectIdx >= 0 && selectIdx < matching.length) {
                         addDependency(task.id, matching[selectIdx].id);
-                        alert(`Vinculado: Esta tarea ahora depende de "${matching[selectIdx].title}".`);
+                        notify('Tarea vinculada correctamente.');
                       }
                     }
                   }
@@ -413,9 +425,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
                 className="ios-dropdown-item danger"
                 onClick={() => {
                   setShowMenu(false);
-                  if (confirm('¿Seguro que quieres eliminar este recordatorio?')) {
-                    onDelete(task.id);
-                  }
+                  setIsDeleteConfirmOpen(true);
                 }}
               >
                 <Trash2 size={16} /> Eliminar
@@ -425,6 +435,32 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
           document.body
         )}
       </motion.div>
+
+      <ConfirmModal
+        isOpen={isDeleteConfirmOpen}
+        title="Eliminar recordatorio"
+        message={'“' + task.title + '” se moverá a la papelera. Podrás recuperarlo más adelante.'}
+        confirmText="Mover a papelera"
+        onCancel={() => setIsDeleteConfirmOpen(false)}
+        onConfirm={() => {
+          setIsDeleteConfirmOpen(false);
+          onDelete(task.id);
+          notify('Recordatorio movido a la papelera');
+        }}
+      />
+
+      {feedback && createPortal(
+        <motion.div
+          className="premium-toast"
+          role="status"
+          initial={{ opacity: 0, y: 14, x: '-50%' }}
+          animate={{ opacity: 1, y: 0, x: '-50%' }}
+          transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+        >
+          {feedback}
+        </motion.div>,
+        document.body
+      )}
     </div>
   );
 });

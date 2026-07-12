@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Zap, CheckCircle, Play, ArrowRight } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
@@ -12,77 +12,40 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
-  
+
   const { tasks, cycles, toggleTask } = useAppStore();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Global keydown listener
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setIsOpen(prev => !prev);
+  const allTasks = useMemo(
+    () => Object.values(tasks).filter(t => !t.deleted_at && t.status === 'pending'),
+    [tasks]
+  );
+
+  const results = useMemo(() => {
+    const nextResults: any[] = [];
+    const q = query.toLowerCase();
+
+    if ('brain dump'.includes(q) || 'nueva'.includes(q)) {
+      nextResults.push({ type: 'action', id: 'brain_dump', title: 'Abrir Brain Dump', icon: <Zap size={16} color="var(--accent-primary)" /> });
+    }
+
+    cycles.forEach(c => {
+      if (c.name.toLowerCase().includes(q)) {
+        nextResults.push({ type: 'cycle', id: c.id, title: 'Ir a ' + c.name, icon: <Search size={14} color="var(--text-tertiary)" /> });
       }
-      
-      if (isOpen) {
-        if (e.key === 'Escape') setIsOpen(false);
-        if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          setSelectedIndex(prev => Math.min(prev + 1, results.length - 1));
-        }
-        if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          setSelectedIndex(prev => Math.max(prev - 1, 0));
-        }
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          const selected = results[selectedIndex];
-          if (selected) executeAction(selected);
-        }
+    });
+
+    allTasks.forEach(t => {
+      if (t.title.toLowerCase().includes(q)) {
+        nextResults.push({ type: 'task_flow', id: t.id, title: 'Modo Flow: ' + t.title, icon: <Play size={16} /> });
+        nextResults.push({ type: 'task_complete', id: t.id, title: 'Completar: ' + t.title, icon: <CheckCircle size={16} color="var(--accent-green)" /> });
       }
-    };
+    });
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, query, selectedIndex]);
+    return nextResults;
+  }, [allTasks, cycles, query]);
 
-  // Focus input when opened
-  useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 50);
-      setQuery('');
-      setSelectedIndex(0);
-    }
-  }, [isOpen]);
-
-  const allTasks = Object.values(tasks).filter(t => !t.deleted_at && t.status === 'pending');
-  
-  // Fuzzy search logic
-  const results: any[] = [];
-  
-  const q = query.toLowerCase();
-
-  // 1. Core Actions
-  if ('brain dump'.includes(q) || 'nueva'.includes(q)) {
-    results.push({ type: 'action', id: 'brain_dump', title: 'Abrir Brain Dump', icon: <Zap size={16} color="var(--accent-primary)" /> });
-  }
-  
-  // 2. Cycles Navigation
-  cycles.forEach(c => {
-    if (c.name.toLowerCase().includes(q)) {
-      results.push({ type: 'cycle', id: c.id, title: `Ir a ${c.name}`, icon: <Search size={14} color="var(--text-tertiary)" /> });
-    }
-  });
-
-  // 3. Task Actions (Play or Complete)
-  allTasks.forEach(t => {
-    if (t.title.toLowerCase().includes(q)) {
-      results.push({ type: 'task_flow', id: t.id, title: `Modo Flow: ${t.title}`, icon: <Play size={16} /> });
-      results.push({ type: 'task_complete', id: t.id, title: `Completar: ${t.title}`, icon: <CheckCircle size={16} color="var(--accent-green)" /> });
-    }
-  });
-
-  const executeAction = (action: any) => {
+  const executeAction = useCallback((action: any) => {
     switch (action.type) {
       case 'action':
         if (action.id === 'brain_dump') onSelectView('BRAIN_DUMP');
@@ -98,12 +61,49 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
         break;
     }
     setIsOpen(false);
-  };
+  }, [onOpenZenMode, onSelectView, toggleTask]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsOpen(prev => !prev);
+      }
+
+      if (isOpen) {
+        if (e.key === 'Escape') setIsOpen(false);
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setSelectedIndex(prev => Math.min(prev + 1, Math.max(results.length - 1, 0)));
+        }
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setSelectedIndex(prev => Math.max(prev - 1, 0));
+        }
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const selected = results[selectedIndex];
+          if (selected) executeAction(selected);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [executeAction, isOpen, results, selectedIndex]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => inputRef.current?.focus(), 50);
+      setQuery('');
+      setSelectedIndex(0);
+    }
+  }, [isOpen]);
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div 
+        <motion.div
           className="command-palette-overlay"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -122,7 +122,7 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
             paddingTop: '15vh'
           }}
         >
-          <motion.div 
+          <motion.div
             initial={{ scale: 0.95, y: -20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.95, y: -20 }}
@@ -141,7 +141,7 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
           >
             <div style={{ display: 'flex', alignItems: 'center', padding: 'var(--space-16) var(--space-24)', borderBottom: '1px solid var(--border-subtle)' }}>
               <Search size={20} color="var(--text-tertiary)" />
-              <input 
+              <input
                 ref={inputRef}
                 value={query}
                 onChange={e => { setQuery(e.target.value); setSelectedIndex(0); }}
@@ -160,8 +160,8 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
               {results.slice(0, 15).map((result, idx) => {
                 const isSelected = idx === selectedIndex;
                 return (
-                  <div 
-                    key={`${result.type}_${result.id}`}
+                  <div
+                    key={result.type + '_' + result.id}
                     onMouseEnter={() => setSelectedIndex(idx)}
                     onClick={() => executeAction(result)}
                     style={{

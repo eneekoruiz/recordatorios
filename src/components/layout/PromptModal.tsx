@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Sparkles, X } from 'lucide-react';
 import { usePromptStore } from '../../store/usePromptStore';
 
 export function PromptModal() {
@@ -8,73 +9,53 @@ export function PromptModal() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      setInputValue('');
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
-  }, [isOpen]);
+    if (!isOpen) return;
+    setInputValue('');
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const timer = window.setTimeout(() => inputRef.current?.focus(), 100);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closePrompt(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.clearTimeout(timer);
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, closePrompt]);
 
-  const handleSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    closePrompt(inputValue);
-  };
-
-  const handleCancel = () => {
-    closePrompt(null);
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    closePrompt(inputValue.trim());
   };
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          style={{ 
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-            background: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(10px)', pointerEvents: 'auto'
-          }}
-          onClick={handleCancel}
-        >
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            className="surface-card"
-            style={{ 
-              width: '100%', maxWidth: 400, padding: 24, 
-              background: 'var(--bg-base)', border: '1px solid var(--border-focus)',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: '1.25rem' }}>{title}</h3>
+        <motion.div className="premium-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }} onClick={() => closePrompt(null)}>
+          <motion.section className="premium-sheet prompt-sheet" role="dialog" aria-modal="true"
+            aria-labelledby="prompt-title" initial={{ opacity: 0, y: 36, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 24, scale: 0.97 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 32, mass: 0.82 }}
+            onClick={(event) => event.stopPropagation()}>
+            <div className="premium-sheet-icon accent" aria-hidden="true"><Sparkles size={22} /></div>
+            <button className="premium-sheet-close" onClick={() => closePrompt(null)} aria-label="Cerrar"><X size={18} /></button>
+            <div className="premium-sheet-copy">
+              <span className="premium-eyebrow">Acción rápida</span>
+              <h2 id="prompt-title">{title}</h2>
+            </div>
             <form onSubmit={handleSubmit}>
-              <input 
-                ref={inputRef}
-                type="text"
-                value={inputValue}
-                onChange={e => setInputValue(e.target.value)}
-                placeholder={placeholder || 'Escribe aquí...'}
-                style={{
-                  width: '100%',
-                  padding: 12,
-                  borderRadius: 8,
-                  border: '1px solid var(--border-focus)',
-                  background: 'var(--bg-surface)',
-                  color: 'var(--text-primary)',
-                  marginBottom: 24,
-                  outline: 'none',
-                  fontSize: '1rem'
-                }}
-              />
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-                <button type="button" onClick={handleCancel} className="cancel-btn">Cancelar</button>
-                <button type="submit" className="save-btn">Aceptar</button>
+              <input ref={inputRef} className="premium-input" value={inputValue}
+                onChange={(event) => setInputValue(event.target.value)}
+                placeholder={placeholder || 'Escribe aquí…'} aria-label={title} />
+              <div className="premium-sheet-actions">
+                <button type="button" className="premium-button secondary" onClick={() => closePrompt(null)}>Cancelar</button>
+                <button type="submit" className="premium-button accent" disabled={!inputValue.trim()}>Aceptar</button>
               </div>
             </form>
-          </motion.div>
+          </motion.section>
         </motion.div>
       )}
     </AnimatePresence>
