@@ -13,7 +13,8 @@ import {
   Inbox,
   Pin,
   PinOff,
-  Edit3
+  Edit3,
+  Settings
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -181,7 +182,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
 };
 
 export function Sidebar({ currentView, onSelectView }: SidebarProps) {
-  const { lists, cycles, smartListVisibility, toggleSmartList, tasks, cycleVisibility, toggleCycleVisibility } = useAppStore();
+  const { lists, cycles, smartListVisibility, toggleSmartList, tasks, cycleVisibility, toggleCycleVisibility, globalCyclesEnabled, toggleGlobalCycles } = useAppStore();
   
   const getTaskCount = (listId: string) => {
     const all = Object.values(tasks || {}).filter(t => !t.deleted_at);
@@ -237,6 +238,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
           padding: 'var(--space-8) var(--space-4)',
           borderRadius: 'var(--radius-md)',
           transition: 'background 0.2s',
+          zIndex: 100
         }}
       >
         <div className="avatar" style={{
@@ -305,6 +307,12 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                   onClick={() => { onSelectView('ANALYTICS'); setIsProfileOpen(false); }}
                 >
                   <BarChart size={16} /> Estadísticas
+                </div>
+                <div 
+                  className="ios-dropdown-item"
+                  onClick={() => { toggleGlobalCycles(); setIsProfileOpen(false); }}
+                >
+                  <Settings size={16} /> {globalCyclesEnabled ? 'Ocultar Ciclos' : 'Mostrar Ciclos'}
                 </div>
                 <div className="ios-dropdown-divider" />
                 <div 
@@ -501,9 +509,10 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         </div>
 
         {/* CICLOS TEMPORALES */}
-        <div style={{ marginTop: 'var(--space-16)' }}>
-          <div className="section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span>Ciclos temporales</span>
+        {globalCyclesEnabled && (
+          <div style={{ marginTop: 'var(--space-16)' }}>
+            <div className="section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>Ciclos temporales</span>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
               {isEditCyclesMode && (
                 <button
@@ -592,6 +601,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
             })}
           </div>
         </div>
+        )}
 
       </div>
       

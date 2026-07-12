@@ -35,6 +35,8 @@ interface AppState {
   
   toggleSmartList: (listId: string) => void;
   toggleCycleVisibility: (cycleId: string) => void;
+  globalCyclesEnabled: boolean;
+  toggleGlobalCycles: () => void;
   
   addTask: (task: Partial<TaskItem>) => void;
   updateTaskRaw: (task: TaskItem) => void; // Para uso interno y SyncProvider
@@ -95,10 +97,13 @@ export const useAppStore = create<AppState>()(
         smart_completed: false
       },
       cycleVisibility: {},  // All hidden by default; auto-activates when a task with that cycle_id is created
+      globalCyclesEnabled: true,
 
       setToken: (token, userId) => set({ token, userId }),
       hasHydrated: false,
       setHasHydrated: (val) => set({ hasHydrated: val }),
+
+      toggleGlobalCycles: () => set((state) => ({ globalCyclesEnabled: !state.globalCyclesEnabled })),
 
       toggleSmartList: (listId) => set((state) => {
         const newVisibility = {
@@ -139,7 +144,7 @@ export const useAppStore = create<AppState>()(
         const newTask = TaskRepository.create(payload);
         // Auto-activate the cycle view when a task with a cycle_id is first created
         let newCycleVisibility = state.cycleVisibility;
-        if (newTask.cycle_id && !state.cycleVisibility[newTask.cycle_id]) {
+        if (newTask.cycle_id && state.cycleVisibility[newTask.cycle_id] === undefined) {
           newCycleVisibility = { ...state.cycleVisibility, [newTask.cycle_id]: true };
         }
         return { 

@@ -770,11 +770,11 @@ button { -webkit-tap-highlight-color: transparent; }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg-base: #11131a;
-    --bg-surface: rgba(24, 27, 36, 0.92);
-    --bg-surface-glass: rgba(23, 26, 34, 0.70);
-    --bg-elevated: rgba(35, 39, 51, 0.82);
-    --bg-card: rgba(27, 30, 40, 0.84);
+    --bg-base: #1c1c1e;
+    --bg-surface: rgba(28, 28, 30, 0.92);
+    --bg-surface-glass: rgba(28, 28, 30, 0.70);
+    --bg-elevated: rgba(44, 44, 46, 0.82);
+    --bg-card: rgba(38, 38, 40, 0.84);
     --bg-hover: rgba(255, 255, 255, 0.07);
     --bg-pressed: rgba(255, 255, 255, 0.11);
     --accent-primary: #6ea8ff;
