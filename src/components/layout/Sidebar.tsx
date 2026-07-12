@@ -376,30 +376,31 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                   }
                 }}
                 style={{
-                  backgroundColor: list.color,
                   opacity: isEditMode && !smartListVisibility[list.id] ? 0.5 : 1,
                 }}
               >
                 {isEditMode && (
-                  <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 10 }}>
+                  <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 10 }}>
                     <div style={{ 
-                      width: 18, height: 18, borderRadius: '50%', 
-                      border: smartListVisibility[list.id] ? 'none' : '1px solid rgba(255,255,255,0.5)',
+                      width: 20, height: 20, borderRadius: '50%', 
+                      border: smartListVisibility[list.id] ? 'none' : '1px solid var(--border-focus)',
                       background: smartListVisibility[list.id] ? 'var(--accent-primary)' : 'transparent',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: smartListVisibility[list.id] ? '0 0 10px var(--accent-glow)' : 'none'
                     }}>
                       {smartListVisibility[list.id] && <Check size={12} color="white" />}
                     </div>
                   </div>
                 )}
-                <div className="icon-circle">
-                  <Icon size={16} color={list.color} />
+                <div className="icon-circle" style={{ backgroundColor: `${list.color}15`, boxShadow: `0 4px 12px ${list.color}20`, border: `1px solid ${list.color}30` }}>
+                  <Icon size={18} color={list.color} />
                 </div>
                 {!isEditMode && (
                   <span 
                     className="count" 
                     style={{ 
-                      fontSize: getTaskCount(list.id) >= 100 ? '1.4rem' : getTaskCount(list.id) >= 10 ? '1.7rem' : '2rem' 
+                      fontSize: getTaskCount(list.id) >= 100 ? '1.4rem' : getTaskCount(list.id) >= 10 ? '1.7rem' : '2rem',
+                      color: list.color
                     }}
                   >
                     {getTaskCount(list.id)}
@@ -430,12 +431,14 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                       key={list.id}
                       className="ios-smart-card"
                       onClick={() => onSelectView(`list_${list.id}`)}
-                      style={{ backgroundColor: list.color, outline: isActive ? '2px solid white' : 'none', outlineOffset: -2 }}
+                      style={{ 
+                        boxShadow: isActive ? '0 0 0 2px var(--accent-primary)' : undefined 
+                      }}
                     >
-                      <div className="icon-circle">
-                        <span style={{ fontSize: 14 }}>📌</span>
+                      <div className="icon-circle" style={{ backgroundColor: `${list.color}15`, boxShadow: `0 4px 12px ${list.color}20`, border: `1px solid ${list.color}30` }}>
+                        <span style={{ fontSize: 16 }}>📌</span>
                       </div>
-                      <span className="count" style={{ fontSize: countFontSize }}>{count}</span>
+                      <span className="count" style={{ fontSize: countFontSize, color: list.color }}>{count}</span>
                       <h3>{list.name}</h3>
                     </div>
                   );
