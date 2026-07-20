@@ -220,7 +220,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
                 opacity: isCompletedPeriod ? 0.6 : 1,
                 wordBreak: 'break-word',
                 display: '-webkit-box',
-                WebkitLineClamp: 3,
+                WebkitLineClamp: 6,
                 WebkitBoxOrient: 'vertical',
                 overflow: 'hidden'
               }}>
