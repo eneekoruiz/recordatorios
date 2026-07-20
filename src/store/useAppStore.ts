@@ -429,7 +429,7 @@ export const useAppStore = create<AppState>()(
 
         const scoredTasks = tasksArray.map(task => {
           let score = 0;
-          if (task.alerts.length > 0) {
+          if (task.alerts && task.alerts.length > 0) {
             let closestDiff = 999;
             task.alerts.forEach(alert => {
               if (alert.type === 'at_time' && alert.time) {

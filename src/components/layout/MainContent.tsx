@@ -315,18 +315,30 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   });
 
   const renderTask = useCallback((task: TaskItem, virtualStyle: React.CSSProperties, index: number, depth: number) => (
-    <TaskCard 
+    <div
       key={task.id}
-      task={task}
-      virtualStyle={{...virtualStyle, paddingLeft: `calc(16px + ${depth * 24}px)` }}
-      onToggle={handleToggleTask}
-      onDelete={id => updateTask(id, { deleted_at: new Date().toISOString() })}
-      onOpenZenMode={onOpenZenMode}
-      onEdit={onEditTask || (() => {})}
-      index={index}
-      showListName={!isListView}
-    />
-  ), [handleToggleTask, updateTask, onOpenZenMode, onEditTask, isListView]);
+      ref={virtualizer.measureElement}
+      data-index={index}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        transform: `translateY(${virtualStyle.top}px)`
+      }}
+    >
+      <TaskCard 
+        task={task}
+        virtualStyle={{ paddingLeft: `calc(16px + ${depth * 24}px)` }}
+        onToggle={handleToggleTask}
+        onDelete={id => updateTask(id, { deleted_at: new Date().toISOString() })}
+        onOpenZenMode={onOpenZenMode}
+        onEdit={onEditTask || (() => {})}
+        index={index}
+        showListName={!isListView}
+      />
+    </div>
+  ), [handleToggleTask, updateTask, onOpenZenMode, onEditTask, isListView, virtualizer]);
 
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
 
@@ -507,6 +519,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             return (
               <div 
                 key={virtualItem.key}
+                ref={virtualizer.measureElement}
+                data-index={virtualItem.index}
                 className="group-header"
                 style={{ 
                   ...virtualStyle, 
@@ -636,6 +650,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             return (
               <div 
                 key={virtualItem.key}
+                ref={virtualizer.measureElement}
+                data-index={virtualItem.index}
                 style={{ 
                   ...virtualStyle, 
                   paddingLeft: `calc(16px + ${data.depth * 24}px)`,
