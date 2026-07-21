@@ -1420,3 +1420,9 @@ html, body {
   box-sizing: border-box;
 }
 
+
+.main-content, #main-scroll-area {
+  overflow-x: hidden !important;
+  max-width: 100%;
+}
+
