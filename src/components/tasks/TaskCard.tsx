@@ -132,20 +132,21 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
         }
       }}
     >
-      
-      {/* Fondos de Swipe */}
-      <motion.div className="swipe-background left" style={{ bottom: 0, opacity: leftOpacity, display: isDraggingX ? 'flex' : 'none' }}>
-        <motion.div style={{ scale: leftScale, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <CheckCircle color="white" size={22} />
-          <motion.span style={{ color: 'white', fontWeight: 600, fontSize: '0.9rem', opacity: leftOpacity }}>Completar</motion.span>
-        </motion.div>
-      </motion.div>
-      <motion.div className="swipe-background right" style={{ bottom: 0, opacity: rightOpacity, display: isDraggingX ? 'flex' : 'none' }}>
-        <motion.div style={{ scale: rightScale, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <motion.span style={{ color: 'white', fontWeight: 600, fontSize: '0.9rem', opacity: rightOpacity }}>Eliminar</motion.span>
-          <Trash2 color="white" size={22} />
-        </motion.div>
-      </motion.div>
+      {/* Fondos de Swipe Fijos (Siempre detrás, sin opacity vinculada al drag) */}
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'space-between', zIndex: 0, borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+        {/* Left Side (Completar - Verde) */}
+        <div style={{ flex: 1, background: 'var(--accent-green)', display: 'flex', alignItems: 'center', padding: '0 24px' }}>
+          <motion.div style={{ scale: leftScale, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <CheckCircle color="white" size={24} />
+          </motion.div>
+        </div>
+        {/* Right Side (Eliminar - Rojo) */}
+        <div style={{ flex: 1, background: 'var(--accent-red)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 24px' }}>
+          <motion.div style={{ scale: rightScale, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Trash2 color="white" size={24} />
+          </motion.div>
+        </div>
+      </div>
 
       {/* Tarjeta Principal */}
       <motion.div 
@@ -154,26 +155,18 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
         drag="x"
         dragSnapToOrigin={true}
         dragConstraints={{ left: -130, right: 130 }}
-        dragElastic={0.15}
-        dragTransition={{ bounceStiffness: 600, bounceDamping: 30 }}
+        dragElastic={0.08}
+        dragTransition={{ bounceStiffness: 400, bounceDamping: 25 }}
         onDragEnd={(_, info) => handleSwipeEnd(info.offset.x)}
         className="ios-task-row"
         style={{ 
           x,
           cursor: 'grab',
-          position: 'relative', 
-          height: '100%', 
-          display: 'flex', 
-          alignItems: 'center', 
-          padding: '12px 16px', 
-          zIndex: 2,
-          background: 'var(--bg-base)',
-          opacity: isBlocked ? 0.6 : 1,
-          pointerEvents: isBlocked ? 'none' : 'auto',
-          border: 'none',
-          borderBottom: '1px solid var(--border-subtle)',
-          borderRadius: 0,
-          boxShadow: isDragOver ? `0 0 0 2px var(--accent-primary)` : 'none'
+          position: 'relative',
+          zIndex: 10,
+          background: 'var(--bg-elevated)',
+          borderBottom: '0.5px solid var(--border-subtle)',
+          boxShadow: isDragOver ? '0 0 0 2px var(--accent-blue)' : 'none'
         }}
       >
         
@@ -271,10 +264,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
                     textDecoration: isCompletedPeriod ? 'line-through' : 'none', 
                     opacity: isCompletedPeriod ? 0.6 : 1,
                     wordBreak: 'break-word',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 6,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
+                    whiteSpace: 'pre-wrap',
                     cursor: 'text'
                   }}>
                   {task.title}
@@ -304,10 +294,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
                       fontSize: '0.85rem',
                       color: 'var(--text-secondary)',
                       wordBreak: 'break-word',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 3,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
+                      whiteSpace: 'pre-wrap',
                       cursor: 'text'
                     }}>
                     {task.description || (isEditingTitle ? 'Añadir nota...' : '')}
@@ -329,26 +316,10 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
                   {taskCycle && <span style={{color: 'var(--text-tertiary)'}}>{taskCycle.name}</span>}
                 </span>
               )}
-              {(task.alerts || []).map((alert: any, idx: number) => {
-                const isCompleted = task.completedAlerts?.includes(alert.id);
-                const label = alert.type === 'at_time' ? alert.time : `-${alert.offsetMinutes}m`;
-                return (
-                  <span 
-                    key={alert.id || idx} 
-                    className="time-pill"
-                    style={{ 
-                      textDecoration: isCompleted ? 'line-through' : 'none',
-                      opacity: isCompleted ? 0.5 : 1
-                    }}
-                  >
-                    {label}
-                  </span>
-                );
-              })}
             </div>
 
             {task.isDetailed && (
-              <div style={{ display: 'flex', gap: 'var(--space-8)', marginTop: 'var(--space-4)', alignItems: 'center', fontSize: '0.85rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 'var(--space-8)', marginTop: 'var(--space-4)', alignItems: 'center', fontSize: '13px', flexWrap: 'wrap' }}>
                 {task.price !== undefined && (
                   <span style={{ color: 'var(--accent-green)', fontWeight: 600 }}>${task.price.toFixed(2)} {task.quantity ? `x ${task.quantity}` : ''}</span>
                 )}
@@ -369,17 +340,15 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
                 target="_blank" 
                 rel="noreferrer"
                 style={{ 
-                  display: 'flex', alignItems: 'center', gap: 8, marginTop: 'var(--space-8)', 
-                  padding: '4px 8px 4px 4px', background: 'var(--bg-elevated)', borderRadius: '8px', 
-                  textDecoration: 'none', color: 'var(--text-primary)', fontSize: '0.85rem',
-                  minWidth: 0, width: 'fit-content'
+                  display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 'var(--space-8)', 
+                  textDecoration: 'none', color: 'var(--accent-primary)', fontSize: '13px', fontWeight: 500,
+                  width: 'fit-content',
+                  wordBreak: 'break-all'
                 }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <div style={{ width: 32, height: 32, background: 'var(--border-subtle)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <img src={`https://www.google.com/s2/favicons?domain=${task.url}&sz=64`} alt="favicon" style={{ width: 20, height: 20, borderRadius: 4 }} />
-                </div>
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200, fontWeight: 500 }}>
+                <Link2 size={14} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>
                   {(() => {
                     try { return new URL(task.url).hostname.replace('www.', ''); }
                     catch { return task.url; }
@@ -394,16 +363,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
               className="btn-icon" 
               onClick={(e) => {
                 e.stopPropagation();
-                if (showMenu) {
-                  setShowMenu(false);
-                } else {
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  setMenuPos({
-                    x: Math.max(12, Math.min(rect.right - 220, window.innerWidth - 232)),
-                    y: Math.min(rect.bottom + 8, window.innerHeight - 220)
-                  });
-                  setShowMenu(true);
-                }
+                setShowMenu(true);
               }}
               style={{ background: 'var(--border-subtle)', color: 'var(--text-secondary)' }}
               title="Acciones"
@@ -413,112 +373,86 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
           )}
         </div>
 
-        {/* Action Menu (Context Menu) */}
-        {showMenu && createPortal(
-          <>
-            <div 
-              style={{ position: 'fixed', inset: 0, zIndex: 99998 }} 
-              onClick={(e) => { e.stopPropagation(); setShowMenu(false); }} 
-            />
-            <div 
-              className="ios-dropdown-menu"
-              style={{
-                position: 'fixed',
-                top: menuPos.y + 4,
-                left: menuPos.x,
-                zIndex: 99999
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button 
-                className="ios-dropdown-item"
-                onClick={async () => {
-                  setShowMenu(false);
-                  
-                  let taskDuration = task.duration;
-                  if (!taskDuration) {
-                    const input = await usePromptStore.getState().openPrompt(
-                      "Introduce la duración de la tarea (en minutos):",
-                      "Ej: 25"
-                    );
-                    if (input && !isNaN(Number(input)) && Number(input) > 0) {
-                      taskDuration = Number(input);
-                      useAppStore.getState().updateTask(task.id, { duration: taskDuration });
-                    } else {
-                      return;
-                    }
-                  }
-                  
-                  onOpenZenMode(task.id);
-                }}
-                style={{ color: 'var(--accent-primary)', fontWeight: 600 }}
-              >
-                <Play size={16} fill="currentColor" /> Empezar ya
-              </button>
-
-              <button 
-                className="ios-dropdown-item"
-                onClick={() => {
-                  setShowMenu(false);
-                  onEdit(task.id);
-                }}
-              >
-                <Edit3 size={16} /> Editar recordatorio
-              </button>
-
-              <button 
-                className="ios-dropdown-item"
-                onClick={async () => {
-                  setShowMenu(false);
-                  const query = await usePromptStore.getState().openPrompt(
-                    "Esta tarea dependerá de otra. Escribe el nombre de la tarea bloqueadora para buscarla:"
-                  );
-                  if (query) {
-                    const allTasks = Object.values(useAppStore.getState().tasks);
-                    const matching = allTasks.filter(t => 
-                      t.title.toLowerCase().includes(query.toLowerCase()) && 
-                      t.id !== task.id &&
-                      t.status === 'pending' &&
-                      !t.deleted_at
-                    );
-                    
-                    if (matching.length === 0) {
-                      notify('No encontramos ninguna tarea pendiente con ese nombre.');
-                    } else if (matching.length === 1) {
-                      addDependency(task.id, matching[0].id);
-                      notify('Tarea vinculada correctamente.');
-                    } else {
-                      const listString = matching.map((t, idx) => `${idx + 1}. ${t.title}`).join('\n');
-                      const selectIdxStr = await usePromptStore.getState().openPrompt(
-                        `Elige el número de la tarea de la que dependerá:\n\n${listString}`
-                      );
-                      const selectIdx = Number(selectIdxStr) - 1;
-                      if (selectIdx >= 0 && selectIdx < matching.length) {
-                        addDependency(task.id, matching[selectIdx].id);
-                        notify('Tarea vinculada correctamente.');
-                      }
-                    }
-                  }
-                }}
-              >
-                <Link2 size={16} /> Bloquear con otra tarea
-              </button>
-
-              <div className="ios-dropdown-divider" />
+        {/* Bottom Sheet Nativo de iOS */}
+        <AnimatePresence>
+          {showMenu && createPortal(
+            <>
+              {/* Backdrop Oscuro */}
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                style={{ 
+                  position: 'fixed', 
+                  inset: 0, 
+                  zIndex: 999998, 
+                  background: 'rgba(0,0,0,0.3)', 
+                  backdropFilter: 'blur(3px)',
+                  WebkitBackdropFilter: 'blur(3px)'
+                }} 
+                onClick={(e) => { e.stopPropagation(); setShowMenu(false); }} 
+              />
               
-              <button 
-                className="ios-dropdown-item danger"
-                onClick={() => {
-                  setShowMenu(false);
-                  setIsDeleteConfirmOpen(true);
+              {/* Action Sheet Modal */}
+              <motion.div
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                style={{
+                  position: 'fixed',
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  zIndex: 999999,
+                  background: 'var(--bg-elevated)',
+                  backdropFilter: 'blur(25px)',
+                  WebkitBackdropFilter: 'blur(25px)',
+                  padding: '24px 24px max(24px, env(safe-area-inset-bottom))',
+                  borderTopLeftRadius: '24px',
+                  borderTopRightRadius: '24px',
+                  boxShadow: '0 -10px 40px rgba(0,0,0,0.1)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px'
                 }}
+                onClick={(e) => e.stopPropagation()}
               >
-                <Trash2 size={16} /> Eliminar
-              </button>
-            </div>
-          </>,
-          document.body
-        )}
+                {/* Drag Handle (Cosmético) */}
+                <div style={{ 
+                  width: '40px', 
+                  height: '5px', 
+                  borderRadius: '5px', 
+                  background: 'var(--border-color)', 
+                  alignSelf: 'center', 
+                  marginBottom: '12px' 
+                }} />
+                
+                <button className="ios-sheet-btn" onClick={() => { setShowMenu(false); onEdit(task.id); }}>
+                  <Edit3 size={20} />
+                  <span>Editar Detalles</span>
+                </button>
+                <button className="ios-sheet-btn" onClick={() => { setShowMenu(false); onOpenZenMode(task.id); }}>
+                  <Sparkles size={20} />
+                  <span>Modo Zen</span>
+                </button>
+                <button className="ios-sheet-btn" onClick={() => { setShowMenu(false); addDependency(task.id); notify('Selecciona la tarea bloqueadora'); }}>
+                  <Link2 size={20} />
+                  <span>Añadir Dependencia</span>
+                </button>
+                
+                <div style={{ height: '0.5px', background: 'var(--border-subtle)', margin: '8px 0' }} />
+                
+                <button className="ios-sheet-btn danger" onClick={() => { setShowMenu(false); setIsDeleteConfirmOpen(true); }}>
+                  <Trash2 size={20} />
+                  <span>Eliminar Tarea</span>
+                </button>
+              </motion.div>
+            </>,
+            document.body
+          )}
+        </AnimatePresence>
       </motion.div>
 
       <ConfirmModal
