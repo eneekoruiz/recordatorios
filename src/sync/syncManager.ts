@@ -4,9 +4,9 @@ import type { TaskItem } from '../models/Task';
 // Always use relative URLs so they work on any domain (avoids ERR_NAME_NOT_RESOLVED from stale VITE_API_URL)
 const isDev = import.meta.env.DEV;
 const API_BASE = isDev ? (import.meta.env.VITE_API_URL || 'http://localhost:3001') : '';
-const PULL_URL = `/api/sync/pull`;
-const PUSH_URL = `/api/sync/push`;
-const LIVE_URL = isDev ? `${API_BASE}/api/sync/live` : `/api/sync/live`;
+const PULL_URL = `${API_BASE}/api/sync/pull`;
+const PUSH_URL = `${API_BASE}/api/sync/push`;
+const LIVE_URL = `${API_BASE}/api/sync/live`;
 const SYNC_INTERVAL_MS = 30 * 1000; // 30 seconds
 
 class SyncManager {
