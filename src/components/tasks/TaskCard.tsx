@@ -132,20 +132,20 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
         }
       }}
     >
-      {/* Fondos de Swipe Fijos (Siempre detrás, sin opacity vinculada al drag) */}
+      {/* Fondos de Swipe Fijos (Se revelan gradualmente con el drag) */}
       <div style={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'space-between', zIndex: 0, borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
         {/* Left Side (Completar - Verde) */}
-        <div style={{ flex: 1, background: 'var(--accent-green)', display: 'flex', alignItems: 'center', padding: '0 24px' }}>
+        <motion.div style={{ flex: 1, background: 'var(--accent-green)', display: 'flex', alignItems: 'center', padding: '0 24px', opacity: leftOpacity }}>
           <motion.div style={{ scale: leftScale, display: 'flex', alignItems: 'center', gap: 8 }}>
             <CheckCircle color="white" size={24} />
           </motion.div>
-        </div>
+        </motion.div>
         {/* Right Side (Eliminar - Rojo) */}
-        <div style={{ flex: 1, background: 'var(--accent-red)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 24px' }}>
+        <motion.div style={{ flex: 1, background: 'var(--accent-red)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 24px', opacity: rightOpacity }}>
           <motion.div style={{ scale: rightScale, display: 'flex', alignItems: 'center', gap: 8 }}>
             <Trash2 color="white" size={24} />
           </motion.div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Tarjeta Principal */}
