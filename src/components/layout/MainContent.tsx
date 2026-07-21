@@ -339,7 +339,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   return (
     <main className="main-content" ref={parentRef} style={{ overflowY: 'auto', height: '100%', WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', scrollPaddingTop: 0 }}>
       {/* Header */}
-      <header className="content-header" style={{ padding: 'var(--space-16) 16px', display: 'flex', flexDirection: 'column', gap: 'var(--space-12)', flexShrink: 0, position: 'sticky', top: 0, zIndex: 90, background: 'rgba(248,249,252,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', margin: '0 -16px', borderBottom: '1px solid var(--border-subtle)' }}>
+      <header className="content-header" style={{ padding: 'var(--space-16) 16px', display: 'flex', flexDirection: 'column', gap: 'var(--space-12)', flexShrink: 0, position: 'sticky', top: 0, zIndex: 90, background: 'rgba(248,249,252,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', margin: '0', borderBottom: '1px solid var(--border-subtle)' }}>
         
         {/* Top Bar (Barra Superior de Navegación) */}
         <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -504,6 +504,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             left: 0,
             width: '100%',
             transform: `translateY(${virtualItem.start}px)`,
+            zIndex: data.type === 'section' || data.type === 'header' ? 10 : 1,
           };
 
           if (data.type === 'header') {
