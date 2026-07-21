@@ -1,0 +1,163 @@
+
+
+===NEW CSV===
+
+List Name,Title,Notes,Due Date,Is Completed,Priority,Recurrence,Creation Date,ID,Completion Date,Modification Date	
+Care,Pedirle analítica a la médica,,2026-05-28T22:00:00.000Z,true,None,,2025-05-21T09:57:13.458Z,37A28C2A-EEC9-4EAE-A71D-E2AAD709539E,2026-06-02T09:25:42.835Z,2026-06-02T09:25:42.837Z	
+Care,Poner morritos hacia la izquierda derecha izquierda derecha para hacer pómulos,,,false,None,,2026-06-19T14:30:45.611Z,7C207143-96BC-4446-9684-E9E540919C4D,,2026-06-27T21:39:18.491Z	
+Care,[D] Lavar rostro. ,Usa un limpiador facial adecuado para tu tipo de piel (preferiblemente suave y sin sulfatos).,,false,None,,2025-10-27T09:55:42.289Z,1656EE4B-D56B-4112-A45F-6A8A214BCDE2,,2025-10-27T10:15:02.332Z	
+Care,[D] Aplicar tónico facial. ,Utiliza un tónico sin alcohol para equilibrar el pH de la piel y prepararla para los siguientes pasos.,,false,None,,2025-10-27T09:55:50.640Z,F90A7E08-609F-4904-A794-1A0B5EADB91D,,2025-10-27T10:15:02.332Z	
+Care,[D] Aplicar sérum. ,"Emplea un sérum hidratante o con principios activos específicos según tus necesidades (por ejemplo, ácido hialurónico, vitamina C, niacinamida, etc.).",,false,None,,2025-10-27T09:55:56.974Z,78EF3559-F48F-4D34-9452-2D55223DAE0B,,2025-10-27T10:14:31.757Z	
+Care,[D] Aplicar contorno de ojos. ,,,false,None,,2025-10-27T09:56:04.943Z,C19CA53B-4C11-44E5-866C-8C1B6968B4FF,,2025-10-27T10:15:11.116Z	
+Care,[D] Aplicar crema hidratante. ,Usa una crema adaptada a tu tipo de piel para mantener la barrera cutánea.,,false,None,,2025-10-27T09:56:11.388Z,5759EC61-A28D-4294-89D2-1B2FB667BAA5,,2025-10-27T10:15:14.030Z	
+Care,[D] Aplicar protector solar. ,Usa FPS 50 incluso si no sales de casa	 reaplica si estás al sol o frente a pantallas mucho tiempo.,,false,None,,2025-10-27T09:56:19.121Z,A2ACC6E7-E94B-4552-87C8-A663377882DB,,2025-10-27T10:15:18.538Z
+Care,[D] Banda facial reafirmante. ,Coloca la banda desde la barbilla hacia arriba y ajústala con el velcro	 mantenla puesta entre 15 y 30 minutos para ayudar a definir el contorno facial.,,false,None,,2025-10-27T09:56:24.794Z,2F32F71A-B1D6-4B96-AC82-A00ECCE3E506,,2025-10-27T10:15:24.196Z
+Care,[D] Cuidado labial. ,Aplica bálsamo o aceite labial para mantener los labios suaves e hidratados.,,false,None,,2025-10-27T09:56:30.715Z,6E9C85B7-0B80-485A-894A-9BC15D1FDD88,,2025-10-27T10:15:31.664Z	
+Care,[D] Crema de noche o tratamiento específico.,"Finaliza con una crema más nutritiva o un tratamiento nocturno según tus necesidades (retinoides, ácido glicólico, etc.).",,false,None,,2025-10-27T09:56:45.623Z,D3C8F255-6D49-4890-B6CD-793A4686AABC,,2025-11-17T07:03:27.783Z	
+Care,[S] Cepillado en seco corporal. ,"Antes de ducharte, con un cepillo de cerdas naturales. Comienza por los pies y sube en dirección al corazón. Mejora la circulación y exfolia.",,false,None,,2025-10-27T10:00:36.094Z,480F5ADC-4990-4E70-A19E-542570607A5A,,2025-10-27T10:16:23.161Z	
+Care,[S] Exfoliar el rostro. ,"Antes del lavado facial. Mezcla café, azúcar y yogur natural o miel. Aplica suavemente con movimientos circulares y aclara.",,false,None,,2025-10-27T10:00:41.910Z,2033FF4A-E739-4E8E-A2F5-679478D9C217,,2025-10-27T10:16:40.476Z	
+Care,[D] Lavar rostro.,Usa un limpiador facial adecuado para tu tipo de piel (preferiblemente suave y sin sulfatos).,,false,None,,2025-10-27T09:56:52.606Z,04306F56-BED9-4DEB-906B-1494E2FBEBDF,,2026-06-18T21:51:08.649Z	
+Care,[S] Aplicar mascarilla facial.,"Prepara una mezcla con yogur, miel y avena. Aplica en el rostro durante 15–20 minutos y aclara. Aporta nutrición e ilumina. Si no tienes, hay muchísimas combinaciones con miel (canela, zumo de limón…) y se pueden hacer varias según el objetivo ",,false,None,,2025-10-27T10:00:51.603Z,531D61B9-AEBF-4BE3-8871-5A897F198932,,2026-06-18T21:52:45.179Z	
+Care,[D] Aplicar tónico facial. ,,,false,None,,2025-10-27T09:56:56.796Z,A0E21DF0-E0C8-40EE-B192-BAC3CF422D42,,2025-10-27T10:16:56.951Z	
+Care,[D] Aplicar sérum. ,"Emplea un sérum hidratante o con principios activos específicos según tus necesidades (por ejemplo, ácido hialurónico, vitamina C, niacinamida, etc.).",,false,None,,2025-10-27T09:57:01.075Z,15278402-BBD0-4E06-BD9F-D07110A82F94,,2025-10-27T10:17:01.062Z	
+Care,[D] Aplicar crema facial hidratante. ,Usa Nivea para rostro y cuello después de lavarte. Aplica con movimientos ascendentes y suaves.,,false,None,,2025-10-27T09:57:05.610Z,B577AF53-35C1-47DC-90AB-EFC9548CB801,,2025-10-27T10:17:04.905Z	
+Care,[D] Aplicar protector solar facial. ,Muy importante por la mañana. Usa uno con SPF adecuado incluso si está nublado. Evita manchas y envejecimiento.,,false,None,,2025-10-27T10:01:35.369Z,7076F31F-57E2-4E36-B6B4-1733E5762D64,,2025-10-27T10:17:09.251Z	
+Care,[D] Piedra de alumbre en axilas y cuello. ,Humedece la piedra ligeramente y pásala por las axilas y cuello.,,false,None,,2025-10-27T10:01:41.926Z,A00DAD1E-36E1-48E4-B208-76A4A50F1D6F,,2025-10-27T10:17:12.578Z	
+Care,[D] Aplicar desodorante corporal. ,Usa tu desodorante habitual si quieres un extra además de la piedra de alumbre.,,false,None,,2025-10-27T10:01:49.216Z,E47D5418-0749-42DA-91CB-23DFBF03D6FC,,2025-10-27T10:17:17.453Z	
+Care,[S] Exfoliar el cuerpo. ,"Durante la ducha. Mezcla casera: café molido, azúcar y un poco de aceite. Masajea con movimientos circulares y aclara.",,false,None,,2025-10-27T10:01:55.915Z,B6CA8C02-E69A-4615-AA70-CB54B2F36C68,,2025-10-27T10:17:21.464Z	
+Care,[S] Piedra pómez. ,"Durante la ducha, tras remojar bien los pies. Frota con suavidad sobre talones y zonas duras para eliminar piel muerta.",,false,None,,2025-10-27T10:02:04.546Z,82E8736D-AC21-42A1-95ED-EDA20508A52F,,2025-10-27T10:17:24.526Z	
+Care,[D] Aplicar crema corporal. ,"Usa la misma Nivea en brazos, torso y piernas. Ideal después de la ducha para sellar la hidratación.",,false,None,,2025-10-27T10:02:12.326Z,45010856-957F-4818-B3EB-4B925A93CFE0,,2025-10-27T10:17:28.804Z	
+Care,[S] Baño de pies. ,"Llena un recipiente con agua caliente, sal y piel de cítricos (naranja/limón). Deja los pies 10–15 minutos.",,false,None,,2025-10-27T10:02:19.104Z,24055BB7-06A1-4169-8A21-B720240D35FF,,2025-10-27T10:17:31.972Z	
+Care,[S] Estiramientos conscientes. ,"Dedica 5 a 10 minutos a estirar cuello, espalda, brazos y piernas con respiración profunda.",,false,None,,2025-10-27T10:02:27.187Z,B153811B-4D67-4E42-B6EB-23DBE6A63300,,2025-10-27T10:17:36.410Z	
+Care,[D] Aplicar crema en los pies. ,Idealmente por la noche o tras ducharte.,,false,None,,2025-10-27T10:02:34.533Z,11BAE11F-C65E-42AF-ACE0-D4DCE262C68E,,2025-10-27T10:17:40.536Z	
+Care,[D] Aplicar crema en las manos. ,"Aplica una cantidad pequeña, especialmente después de lavarlas o antes de dormir.",,false,None,,2025-10-27T10:02:46.535Z,3591195D-7809-4C0D-88EF-4AD3DE100B61,,2025-10-27T10:17:44.913Z	
+Care,[D] Banda reafirmante facial. ,"Coloca la banda desde la barbilla hasta la cabeza, ajustando con el velcro. Déjala actuar 10–15 minutos después de la ducha.",,false,None,,2025-10-27T10:02:55.244Z,5A5F912C-DB98-4AB3-A284-C56335F7E029,,2025-10-27T10:17:48.190Z	
+Care,[M] Baño de vapor facial. ,"Hierve agua con manzanilla, menta o romero. Cubre tu cabeza con una toalla e inhala el vapor a 20 cm del bol durante 5–10 minutos. Abre los poros.",,false,None,,2025-10-27T10:05:04.150Z,C915912A-65FB-42F5-BD64-DE5185819F68,,2025-11-15T13:34:45.652Z	
+Care,[M] Mascarilla capilar casera. ,"Mezcla aceite de coco, romero y un poco de café. Aplica en medios y puntas, envuelve con gorro y deja actuar 30 minutos. Luego lava.",,false,None,,2025-10-27T10:08:40.078Z,C0494888-AC78-4728-ABCC-13D89EB9DC69,,2025-11-15T13:37:31.527Z	
+Care,[M] Aplicar mascarilla facial casera. ,"Mezcla yogur, miel y avena. Aplica 15–20 minutos y aclara.",,false,None,,2025-10-27T10:05:54.687Z,C40B2138-2B20-46D5-90EC-AC357A3F371A,,2025-11-15T13:37:44.586Z	
+Care,[S] Baño de pies. ,"Llena un recipiente con agua caliente, sal y piel de cítricos.",,false,None,,2025-10-27T10:07:33.243Z,898ACA7B-E1EB-4D6A-A390-97F6FF394EE3,,2025-11-15T13:37:44.586Z	
+Care,[M] Masaje de pies. ,"Después del baño de pies, usa crema o aceite y masajea planta, talón y dedos.",,false,None,,2025-10-27T10:07:41.293Z,E5234A9B-55AC-4FEE-98E8-7DBE82E8B713,,2025-11-15T13:37:38.574Z	
+Care,[S] Cepillado en seco corporal. ,"Antes de ducharte, con un cepillo de cerdas naturales.",,false,None,,2025-10-27T10:07:02.894Z,232B8192-708C-479F-BF6F-39E3A9934051,,2025-11-15T13:35:21.695Z	
+Care,[S] Exfoliar el rostro. ,"Antes del lavado facial. Mezcla café, azúcar y yogur natural o miel.",,false,None,,2025-10-27T10:05:38.299Z,91A3723A-F529-4468-96B6-D8FFC5C7C2BE,,2025-11-15T13:36:46.455Z	
+Care,[D] Lavar el rostro. ,"Usa un limpiador facial suave, como el de EROSKI.",,false,None,,2025-10-27T10:05:46.555Z,7605396D-591A-48E5-B60E-D4E89225509E,,2025-11-15T13:36:32.303Z	
+Care,[S] Exfoliar el cuerpo. ,"Durante la ducha, mezcla casera de café, azúcar y aceite.",,false,None,,2025-10-27T10:07:10.438Z,92B719D6-2342-4E5A-8B9B-0E9AB89775B5,,2025-11-15T13:36:41.686Z	
+Care,[S] Piedra pómez. ,"Durante la ducha, tras remojar bien los pies.",,false,None,,2025-10-27T10:07:16.931Z,9A39C879-8BF9-4785-A303-30844E85DB7A,,2025-11-15T13:37:12.869Z	
+Care,[D] Aplicar crema en los pies., Idealmente por la noche o tras ducharte.,,false,None,,2025-10-27T10:07:58.671Z,5EEE2C7F-BD5F-4F89-A300-C84D8AAB91A2,,2025-11-15T13:37:12.869Z	
+Care,[D] Aplicar tónico facial. ,Puedes usar agua de rosas o tónico sin alcohol.,,false,None,,2025-10-27T10:06:02.506Z,7A500C61-5998-4DA1-B170-CE5A957A0F7F,,2025-10-27T10:23:04.758Z	
+Care,[D] Aplicar crema facial hidratante. ,Usa Nivea para rostro y cuello.,,false,None,,2025-10-27T10:06:12.254Z,D307211A-EAE1-44CD-8F51-3F705DA5B841,,2025-10-27T10:23:04.758Z	
+Care,[D] Aplicar protector solar facial. ,Muy importante por la mañana.,,false,None,,2025-10-27T10:06:24.239Z,DAA137C9-3401-446C-B78C-77BB1DFAAAF5,,2025-10-27T10:23:04.758Z	
+Care,[D] Piedra de alumbre en axilas y cuello. ,Humedece la piedra ligeramente y pásala por las axilas y cuello.,,false,None,,2025-10-27T10:06:34.000Z,094BA9D4-C8CD-4CEB-943D-913770BBA11F,,2025-10-27T10:23:04.758Z	
+Care,[D] Aplicar desodorante corporal. ,,,false,None,,2025-10-27T10:06:43.443Z,D0102218-51EB-477B-ADAB-E771F47F92DF,,2025-10-27T10:23:04.758Z	
+Care,[D] Aplicar crema corporal. ,"Usa Nivea en brazos, torso y piernas.",,false,None,,2025-10-27T10:07:25.916Z,948D7023-E52D-463F-80D3-8059C3846F3E,,2025-10-27T10:23:04.758Z	
+Care,[D] Aplicar crema en las manos. ,"Aplica una cantidad pequeña, especialmente después de lavarlas o antes de dormir.",,false,None,,2025-10-27T10:08:06.239Z,E3F3BDC4-38D0-42C1-82AA-1104374D0B11,,2025-10-27T10:23:04.758Z	
+Care,[M] Cuidado especial de manos. ,Aplica una capa generosa de crema y ponte guantes de algodón durante 20 minutos.,,false,None,,2025-10-27T10:08:13.112Z,2668F45A-1E1D-4577-9B01-EB6FA54D00C9,,2025-10-27T10:23:12.516Z	
+Care,[D] Banda reafirmante facial. ,"Coloca la banda desde la barbilla hasta la cabeza, ajustando con el velcro. Déjala actuar 10–15 minutos después de la ducha.",,false,None,,2025-10-27T10:08:51.244Z,5D44A5F8-9A76-4567-B6B2-A74422517986,,2025-11-15T13:37:59.530Z	
+Care,[M] Cortar uñas de los pies. ,"Hazlo después del baño, cuando están blandas.",,false,None,,2025-10-27T10:07:50.597Z,FA3A8690-E131-460F-BF31-904C69D76CBD,,2025-11-15T13:38:06.575Z	
+Care,[M] Cortar uñas de las manos. ,Hazlo tras una ducha o después del cuidado especial.,,false,None,,2025-10-27T10:08:25.102Z,8F3AB490-CD48-428E-A5D9-6C86E7E201E8,,2025-11-15T13:38:06.575Z	
+Care,Piedra de alumbre,,,false,None,,2025-11-17T07:03:33.858Z,EA2FB6A0-DCDB-4BF8-B0F6-305BD60BFF71,,2025-11-17T07:03:33.858Z	
+Care,Desodorante,,,false,None,,2025-11-17T07:03:41.451Z,CAE35865-256E-436A-9139-090A553527AF,,2025-11-17T07:03:41.451Z	
+Care,Perfume,,,false,None,,2025-11-17T07:03:44.733Z,CC80A55F-1372-4A44-B176-3A14D4B5DBBD,,2025-11-17T07:03:44.733Z	
+Care,Pedirle analítica a la médica,,,true,None,,2026-06-02T09:26:08.192Z,C0B6E980-7209-4065-B439-07E8E04D7AE2,2026-06-05T16:50:36.128Z,2026-06-05T16:50:36.129Z
+
+===NEW CSV===
+
+List NameTitle	Notes	Due Date	Is Completed	Priority	Recurrence	Creation Date	ID	Completion Date	Modification Date
+Compra	Pendientes Swarosky			FALSE	None		2025-07-28T07:11:38.248Z	1655339B-CA09-4648-B760-1DEB3E9A565D		2026-02-01T19:26:56.910Z
+Compra	Depiladora afeitadora máquina buena			FALSE	High (1)		2025-06-01T10:03:23.007Z	CAA49DAF-C5B0-4884-B71C-D91FAF28422C		2026-02-01T19:26:56.910Z
+Compra	Me falta de los ahorros			FALSE	Medium (5)		2025-05-04T13:41:22.103Z	DF3DD01B-BAC0-4F94-BBF7-4373092E1B26		2026-03-16T07:46:51.692Z
+Compra	Cosas de 100e —> 200€	-Perfume 100
+-Pantalla/bateria 100		FALSE	None		2025-05-04T13:43:13.697Z	7DAE071D-E5A9-488B-9B34-229E114F4FF8		2026-03-16T07:46:51.692Z
+Compra	Cosas de 50e —> 100€	-Indus 50
+-Bazar chino 50		FALSE	None		2025-05-04T13:43:13.697Z	8185411F-3332-4A33-A360-D266B7F0787C		2026-03-16T07:46:51.692Z
+Compra	Cosas de 20e —> 105€ (una de 25)	-Mugi 20
+-Axe 20
+-Piedras 20
+-Chicles 20
+-Alcohol (Negrita 2L) 25		FALSE	None		2025-05-04T13:43:13.697Z	C4F17959-60BE-49C4-B21B-86631BA9543B		2025-10-27T10:22:52.137Z
+Compra	Cosas de 10e —> 65€	-Deli 10
+-Gas 10
+-Pelu 15
+-Recambio cepillo 30		FALSE	None		2025-05-04T13:43:13.697Z	0F7FE4C0-B49F-44DC-BE88-9088AD9BD58A		2025-10-27T10:22:52.137Z
+Compra	Peluquería	15 e		FALSE	None		2025-05-16T07:37:58.437Z	E5763130-37A3-4E89-94EC-BA8A3AB45C9E		2025-10-27T10:24:18.234Z
+Compra	Tabaco	50 e		FALSE	None		2025-05-16T07:38:44.865Z	CF2B2686-CA7C-4349-8B18-A78C88406000		2025-10-27T10:24:18.234Z
+Compra	Masaje o fisio	50 e		FALSE	None		2025-05-16T11:31:46.920Z	F571F6FA-4CF1-4711-8EB0-D043D4EB3329		2026-02-01T19:21:07.758Z
+Compra	Spotify	6 e		FALSE	None		2025-05-16T11:34:40.763Z	37B05D5E-81F4-43D3-B0E5-97B5C3F278ED		2025-10-27T10:24:18.234Z
+Compra	iCloud	10 e		FALSE	None		2025-05-16T11:35:06.523Z	982C5CCF-D232-482E-AB34-3C6246360D9C		2025-10-27T10:24:18.234Z
+Compra	TOTAL:  131€			FALSE	None		2025-05-16T11:35:28.707Z	6B480379-C361-49DA-8203-EAE5AC37BACB		2026-02-01T19:21:30.716Z
+Compra	Sábanas 2 pares invierno/ 2 pares verano algodon	100 e		FALSE	None		2025-05-29T05:46:42.181Z	E67C3C35-1707-447A-96A0-42841800134B		2026-02-01T19:16:08.537Z
+Compra	Renovar ropa de casa, pijamas, calcetines de casa calentitos	100 e		FALSE	None		2025-05-29T05:54:17.574Z	C2BAAD01-1247-4711-85D8-F626EDBEA5CE		2026-02-01T19:16:23.621Z
+Compra	Perfume	100e		FALSE	High (1)		2025-05-16T07:44:34.368Z	75277EE9-4819-4D03-A8ED-9674724A21DD		2025-10-27T10:25:35.535Z
+Compra	Skin-care	TOTAL:		FALSE	High (1)		2025-05-17T17:08:19.964Z	511E3580-608E-490E-BCDA-07A705FDEC77		2025-11-25T07:46:05.240Z
+Compra	Jabón facial 5 e			FALSE	None		2025-05-17T17:08:32.427Z	497FB407-B921-46E0-BC73-68036EDC0E14		2025-10-27T10:25:35.535Z
+Compra	Tónico			FALSE	None		2025-11-25T07:45:29.837Z	42546721-451A-4B01-97A0-8E07DBE85184		2025-11-25T07:45:29.837Z
+Compra	Sérum			FALSE	None		2025-11-25T07:45:36.839Z	4726F354-9671-43DF-86C4-D48A86246400		2025-11-25T07:45:36.839Z
+Compra	Bálsamo labial			FALSE	None		2025-11-25T07:45:39.447Z	228F9DE6-2883-48A3-91A3-AF1889ECEBF8		2025-11-25T07:45:39.447Z
+Compra	Jabón sin ph			FALSE	None		2025-11-25T07:45:42.957Z	8D0F2401-F974-4EDF-895E-430E01A157F6		2025-11-25T07:45:58.190Z
+Compra	Recambio de afeitar máquina o lo que sea			FALSE	None		2025-11-15T12:20:58.743Z	FF29CBD8-4373-4888-A524-71F5E9FA9531		2025-11-25T07:46:05.240Z
+Compra	Axe	30e		FALSE	Medium (5)		2025-05-16T07:44:37.815Z	4F914721-A11D-48F8-B6A1-61ADB084105C		2025-11-25T07:46:05.240Z
+Compra	Aceites esenciales			FALSE	None		2025-11-25T07:45:50.680Z	0742C408-A9B4-44C2-BE69-194E6FD24F52		2025-11-25T07:45:50.680Z
+Compra	Mugí	150 e		FALSE	Medium (5)		2025-05-18T09:50:06.565Z	6F68CD09-2950-4434-B253-0F277E881146		2025-10-27T10:25:35.535Z
+Compra	Plantilla de pie ortopédica a medida	50 e		FALSE	Low (9)		2025-05-17T17:01:55.655Z	16ED7CB3-280E-4539-84CD-02D1349D40DF		2025-10-27T10:25:35.535Z
+Compra	LIMPIEZA Y BLANQUEAMIENTO DE LAPIZ	150 e		FALSE	None		2025-05-21T18:48:55.807Z	0F024C2B-34B5-4789-AD43-F0C42471D055		2026-01-27T16:45:14.110Z
+Compra	Zapatillas 200 e			FALSE	None		2025-12-17T12:48:42.678Z	562D8C3C-3777-4CD0-A5B1-F6EDA8A02512		2026-02-01T19:13:30.928Z
+Compra	Shox			TRUE	None		2025-12-17T12:50:01.477Z	C463C41F-F234-41BF-8552-CBE6C5A3CFAB	2026-01-27T16:39:18.490Z	2026-01-27T16:45:14.110Z
+Compra	Botas marrones claro			FALSE	None		2025-12-17T12:50:01.478Z	04748ABE-E739-4972-A1DF-6A2DC5C77D7D		2026-01-27T16:45:14.110Z
+Compra	Air force 1			TRUE	None		2025-12-17T12:50:01.478Z	560142EC-9BE7-497A-ACEE-46E2761BEEB4	2026-01-27T16:39:12.383Z	2026-01-27T16:45:14.110Z
+Compra	Globe			FALSE	None		2025-12-17T12:50:01.477Z	635077CF-0703-41DA-A951-E1CDCB1FDAC1		2026-01-27T16:45:14.110Z
+Compra	Air 90			FALSE	None		2025-12-17T12:50:01.478Z	30FB600E-0EF6-48C3-8AA0-934C74F1C763		2026-01-27T16:45:14.110Z
+Compra	Newbalance			TRUE	None		2025-12-17T12:53:34.655Z	AE81D228-845B-43E5-82EF-47B8A91BC449	2026-02-05T21:34:31.164Z	2026-02-05T21:34:31.165Z
+Compra	Tn			TRUE	None		2025-12-17T12:53:44.717Z	418D7526-9CB2-43D9-921F-F070F215B17E	2026-02-05T21:34:31.638Z	2026-02-05T21:34:31.638Z
+Compra	AliExpress 60e			FALSE	None		2025-05-31T10:39:23.628Z	000E8A3B-988E-4806-A292-7046676FCF01		2026-02-01T19:17:21.284Z
+Compra	Oral B 12 Cabezales (minimo) ALIEXPRESS 15 e	50 e		FALSE	High (1)		2025-05-18T09:51:56.746Z	D43284F2-762F-4194-9F18-FD7BA4BC362B		2026-02-01T19:17:02.239Z
+Compra	Paquetes de silicona y antipolillas con perfume	10 e		FALSE	None		2025-08-17T16:06:35.323Z	40F4AA47-FD9B-46A9-A333-7657E4A145B1		2026-02-01T19:13:30.928Z
+Compra	Wonderboom para llevarlo a sitios			FALSE	None		2025-05-04T13:59:44.277Z	11BE1FE8-68EC-48A0-869F-880A00817B5B		2025-10-27T10:26:27.233Z
+Compra	Piano + banqueta y sillín + micrófono profesional			FALSE	None		2025-05-04T14:36:18.065Z	DB431A9E-89B3-452F-A90D-403ADEB5ADE9		2025-10-27T10:26:27.235Z
+Compra	Mochila con una red transpirable y un espacio entre la espalda y la mochila para el sudor (como en caravanas oiartzun)			FALSE	None		2025-05-04T14:00:54.980Z	9FDAD7A8-7927-441F-BD34-1DA96ADAB4E4		2025-10-27T10:26:27.234Z
+Compra	Jagger 3L			FALSE	None		2025-05-04T14:36:49.687Z	33E12339-7BAF-4398-9443-3EE190F54009		2025-10-27T10:26:27.235Z
+Compra	Airtags 4 por 100e			FALSE	None		2025-05-04T14:37:02.200Z	E63BB72E-9A88-45E9-93C4-0895A465D3C9		2025-10-27T10:26:27.235Z
+Compra	Cosas para hacer masaje			FALSE	Medium (5)		2025-05-04T14:30:37.784Z	F70B91F6-FB87-4DBE-B476-40CE22EF4ED1		2025-10-27T10:26:27.235Z
+Compra	Masajeador de cuello hombros espalda de amasamiento 4D			FALSE	None		2025-05-04T14:31:19.736Z	82C2AD53-B3AA-4553-8E9D-41ED66339F87		2025-10-27T10:26:27.234Z
+Compra	Pistola de masaje			TRUE	None		2025-05-04T14:31:19.736Z	FECF98DB-6957-4B68-B92E-9F6A710D7897	2025-10-11T09:29:18.297Z	2025-10-27T10:26:27.234Z
+Compra	Más cosas que se ocurran			FALSE	None		2025-05-04T14:31:19.736Z	F38FF5EE-FF06-41F9-8697-34AF23B6D5E5		2025-10-27T10:26:27.234Z
+Compra	Manos vibradoras			FALSE	None		2025-10-20T15:14:51.413Z	857FA930-E07B-42B5-905B-10BFD6CA33C1		2025-10-27T10:26:27.235Z
+Compra	Manta de abalorios			FALSE	None		2025-05-31T10:03:16.100Z	5CFEFEE4-EA0C-495D-90E1-4774B140D94F		2025-10-27T10:26:27.234Z
+Compra	Manta de calor sanadora			FALSE	None		2025-06-15T12:00:32.610Z	4279B23D-D01F-44DE-858F-E9877C194839		2025-10-27T10:26:27.234Z
+Compra	Aceites calor frío etc			FALSE	None		2025-05-31T10:04:27.569Z	5064F0D0-4FE7-4C03-846B-A7CDEF88B19F		2025-10-27T10:26:27.235Z
+Compra	Ropa			FALSE	Low (9)		2025-05-04T13:58:11.952Z	067B8B6A-D00D-4903-973F-C5161F6E0192		2025-10-27T10:26:27.234Z
+Compra	Nike Tailwind			FALSE	None		2025-05-04T14:03:28.522Z	A26544E6-8F4A-487C-9260-1F93705096E7		2025-10-27T10:26:27.234Z
+Compra	Abrigo Nike			FALSE	None		2025-05-04T14:03:28.522Z	8E51921C-06A7-4423-878A-722703A28BA4		2025-10-27T10:26:27.234Z
+Compra	Un par de cinturones guapos			FALSE	None		2025-05-04T14:03:28.522Z	C0FA3993-A10D-45B2-B81A-6926E2BB2B47		2025-10-27T10:26:27.234Z
+Compra	Antiarrugas de zapatos			FALSE	None		2025-05-04T14:03:28.522Z	51B18AA9-290B-4529-B453-A4B0033762F0		2025-10-27T10:26:27.234Z
+Compra	Chanclas de marca talla 43			FALSE	None		2025-05-04T14:03:28.522Z	5B0F965F-5F47-428D-A5D4-8556627FFEF9		2025-10-27T10:26:27.234Z
+Compra	Nike zoom 2k			FALSE	None		2025-05-04T14:03:28.522Z	5D7CE5DF-9485-4F84-8650-2A762CAD30A1		2025-10-27T10:26:27.234Z
+Compra	Chaqueta reflectante			FALSE	None		2025-05-04T14:03:28.522Z	EE3208EB-1B30-4E46-8ACA-94D0C0D436F2		2025-10-27T10:26:27.234Z
+Compra	Nike Tkno			FALSE	None		2025-05-04T14:03:28.523Z	1EF26765-F141-45B0-9FC9-8C4425C4392F		2025-10-27T10:26:27.234Z
+Compra	Gorro Carhartt			FALSE	None		2025-05-04T14:03:28.523Z	97E2F56A-7DC5-4B05-8522-F927AE601B1F		2025-10-27T10:26:27.234Z
+Compra	Unas merrel o así para el monte			TRUE	None		2025-05-04T14:03:28.523Z	D3C3EED8-DCC7-4C5C-8F70-F05943D0AB95	2025-06-11T10:45:15.566Z	2025-10-27T10:26:27.235Z
+Compra	Calzoncillos guapísimos y buenos			TRUE	None		2025-05-04T14:03:28.523Z	EADAF8C0-A4D5-400A-908A-7A93D6B713E0	2025-06-11T10:51:23.917Z	2025-10-27T10:26:27.235Z
+Compra	Renovar todos los calcetines a unos buenos y comprarlos de la misma marca			TRUE	None		2025-05-04T14:03:28.523Z	A36AA7C2-AA07-4F1D-86B3-E842925FE8E6	2025-06-11T10:51:27.642Z	2025-10-27T10:26:27.234Z
+Compra	Acuario			FALSE	Low (9)		2025-05-04T14:34:58.100Z	C68398A7-988C-470F-8765-A625E24C7047		2025-10-27T10:26:27.234Z
+Compra	Pecera enorme			FALSE	None		2025-05-04T14:35:03.387Z	A14223EF-BC1F-4E36-BA30-9414468FCCE8		2025-10-27T10:26:27.234Z
+Compra	Bomba sumergible			FALSE	None		2025-05-04T14:35:21.291Z	B46CDE0C-F8C8-4B26-84D7-2172CB23C634		2025-10-27T10:26:27.234Z
+Compra	Calentador			FALSE	None		2025-05-04T14:35:21.291Z	7F0FC099-CE49-48B3-B77F-C3245373A917		2025-10-27T10:26:27.233Z
+Compra	Termómetro agua			FALSE	None		2025-05-04T14:35:47.451Z	9960BD8D-8D99-4C77-9C25-B1B52D0C8D0B		2025-10-27T10:26:27.234Z
+Compra	Alimentador de peces automático			FALSE	None		2025-05-04T14:36:00.198Z	E477EF24-F6D5-45CA-B7B5-757DE9737DE3		2025-10-27T10:26:27.234Z
+Compra	Lorea	100 e		TRUE	None		2026-01-02T06:46:52.255Z	F2B30CBE-48C0-4423-9CFE-DEA400EA0A54	2026-01-27T16:38:58.452Z	2026-01-27T16:38:58.453Z
+Compra	Ropa interior 100 e			FALSE	None		2026-02-01T19:17:41.656Z	22E9B59F-5F1B-40F7-8161-5547EF7B2946		2026-02-01T19:17:53.271Z
+Compra	5-10 Calzoncillos CK MIRAVIA	50 e		FALSE	Medium (5)		2025-05-18T10:53:02.731Z	BA03BBCA-65B9-4A26-BEAD-EBBD6292E5AC		2026-02-01T19:17:53.271Z
+Compra	10-20 Pares de calcetines marca MIRAVIA 20 e	50 e		FALSE	Medium (5)		2025-05-18T10:53:59.375Z	4FE2CE15-EFDE-4551-8D51-AEA4065233AC		2026-02-01T19:17:46.852Z
+Compra	La perla 10 sesiones 300 e			FALSE	None		2026-02-01T19:18:48.384Z	8E13FDCA-B91C-40EA-A660-A3FC883BE649		2026-02-01T19:18:48.384Z
+Compra	TOTAL: 1360			FALSE	None		2026-02-01T19:18:24.051Z	6626DC52-47C8-4F74-93F3-890CB20DE037		2026-02-01T19:18:53.929Z
+Compra	Tarjeta regalo Apple	25 e		TRUE	None		2026-03-16T07:46:28.056Z	D9150B06-37FA-4133-9A3C-348ACD630C0F	2026-04-08T08:07:28.034Z	2026-04-08T08:07:28.035Z
+Compra	Perfume shein	25 e		TRUE	None		2026-03-16T07:48:53.879Z	C2ABBCF8-D713-4807-902B-21AAFE5FC85A	2026-03-16T20:20:22.263Z	2026-03-16T20:20:22.264Z
+Compra	Papel para sacar de manera fácil para el cajón de la mesilla			FALSE	None		2026-06-05T14:57:54.548Z	984B1A5E-8B45-46C7-8903-7D7B51284721		2026-06-05T14:57:54.548Z
+Compra	Celo doble cara			TRUE	None		2026-06-05T14:57:56.739Z	F2FCF761-5CE5-4B90-9FE0-9A14A6D727E8	2026-06-05T14:58:00.997Z	2026-06-05T14:59:11.368Z
+Compra	El oro verde, sobre todo el mechero que tiene un hueco y se abre por abajo			FALSE	None		2026-07-02T21:03:53.630Z	2B360D11-C287-4874-9117-A2F72497598B		2026-07-02T21:03:53.630Z
+Compra	AMAZON			TRUE	None		2026-06-05T14:57:56.739Z	66798760-B7B2-4257-9412-1164C32AB4F7	2026-06-05T14:57:57.582Z	2026-06-05T14:59:11.368Z
+Compra	Ventilador con gancho mejor si es enchufable y con pilas con un brazo articulado de estos para poder engancharlo en el cabezal de la cama y moverlo a mi gusto			FALSE	None		2026-06-05T14:57:56.739Z	85D1E5FD-DB3C-48E9-AE46-E4621BD856FD		2026-06-05T14:59:11.368Z
+Compra	protector de sillón acolchado todo esto para la buena bici			FALSE	None		2026-06-05T14:57:56.739Z	BCD9F923-2DFD-4320-8117-EF5E0BD9EB36		2026-06-05T14:59:11.368Z
+Compra	El oro verde, sobre todo incluido el mechero que se abre por abajo para meter la droga			FALSE	None		2025-05-04T14:07:31.790Z	D404D73E-F08D-4FA5-B73A-F5EE89EFC134		2026-07-02T21:03:19.213Z
+Compra	El oro verde, sobre todo incluido el mechero que se abre por abajo para meter la droga			FALSE	None		2025-05-04T14:07:31.790Z	E3FF8089-FB6E-4CC7-ADA5-BEC2949C70DE		2026-07-02T21:03:22.282Z
+Compra	El oro verde, sobre todo incluido el mechero que se abre por abajo para meter la droga			FALSE	None		2025-05-04T14:07:31.790Z	755248F5-48D3-430E-A0F3-1432BCFFB3CF		2026-07-02T21:03:24.316Z
+Compra	El oro verde, sobre todo incluido el mechero que se abre por abajo para meter la droga			FALSE	None		2025-05-04T14:07:31.790Z	4C36D198-6BA1-4F20-A19A-053000015B48		2026-07-02T21:03:28.193Z
+Compra	El oro verde, sobre todo incluido el mechero que se abre por abajo para meter la droga			FALSE	None		2025-05-04T14:07:31.790Z	14F13D60-5FE4-4A9E-B428-A0B3DF04148D		2026-07-02T21:03:32.785Z

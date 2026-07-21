@@ -120,15 +120,6 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
         dragElastic={0.15}
         dragTransition={{ bounceStiffness: 600, bounceDamping: 30 }}
         onDragEnd={(_, info) => handleSwipeEnd(info.offset.x)}
-        whileTap={{ scale: 0.98 }}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ 
-          type: 'spring', 
-          stiffness: 400, 
-          damping: 25, 
-          delay: Math.min(index * 0.05, 0.5)
-        }}
         className="ios-task-row"
         style={{ 
           x,
