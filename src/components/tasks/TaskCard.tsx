@@ -163,9 +163,15 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
           x,
           cursor: 'grab',
           position: 'relative',
+          minHeight: '60px', 
+          display: 'flex', 
+          alignItems: 'center', 
+          padding: '12px 16px', 
           zIndex: 10,
           background: 'var(--bg-elevated)',
           borderBottom: '0.5px solid var(--border-subtle)',
+          opacity: isBlocked ? 0.6 : 1,
+          pointerEvents: isBlocked ? 'none' : 'auto',
           boxShadow: isDragOver ? '0 0 0 2px var(--accent-blue)' : 'none'
         }}
       >
@@ -238,7 +244,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
               {isBlocked && <Lock size={16} color="var(--accent-red)" />}
               
               {/* Badges UI de Prioridad en lugar de "!!!" */}
-              {task.priority && task.priority !== 'none' && (
+              {task.priority && task.priority !== 'none' && task.priority !== 0 && task.priority !== '0' && (
                 <span className={`priority-badge ${task.priority}`}>
                   {task.priority === 'low' ? '!' : task.priority === 'medium' ? '!!' : '!!!'}
                 </span>
