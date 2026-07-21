@@ -407,7 +407,7 @@ input:checked + .slider::before {
 
   /* Content padding reduction */
   .main-content {
-    padding: 16px;
+    padding: 16px 0;
   }
 
   /* FAB repositioning */
@@ -766,7 +766,7 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 @media (max-width: 768px) {
-  .main-content { padding: 14px 14px 104px !important; }
+  .main-content { padding: 14px 0 104px !important; }
   .fab {
     bottom: max(22px, env(safe-area-inset-bottom)) !important;
     right: max(18px, env(safe-area-inset-right)) !important;

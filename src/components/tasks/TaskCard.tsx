@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion';
 import { CheckCircle, Trash2, GripVertical, Play, Lock, Link2, Flag, MapPin, Image as ImageIcon, MoreHorizontal, Repeat, Edit3 } from 'lucide-react';
@@ -36,9 +36,36 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
   const [isDragOver, setIsDragOver] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState({ x: 0, y: 0 });
   const [feedback, setFeedback] = useState<string | null>(null);
   
-  const [menuPos, setMenuPos] = useState({ x: 0, y: 0 });
+  // Inline editing state
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitle, setEditTitle] = useState(task.title || '');
+  const [isEditingNote, setIsEditingNote] = useState(false);
+  const [editNote, setEditNote] = useState(task.description || '');
+  const updateTask = useAppStore(state => state.updateTask);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Sync state if task changes externally
+  useEffect(() => {
+    setEditTitle(task.title || '');
+    setEditNote(task.description || '');
+  }, [task.title, task.description]);
+
+  const handleTitleSubmit = () => {
+    setIsEditingTitle(false);
+    if (editTitle.trim() !== task.title) {
+      updateTask(task.id, { title: editTitle.trim() });
+    }
+  };
+
+  const handleNoteSubmit = () => {
+    setIsEditingNote(false);
+    if (editNote.trim() !== (task.description || '')) {
+      updateTask(task.id, { description: editNote.trim() });
+    }
+  };
 
   // Bloqueado si alguna dependencia sigue pendiente
   const isBlocked = task.blockedBy && task.blockedBy.some(id => tasks[id] && tasks[id].status === 'pending');
@@ -60,6 +87,15 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
       if (navigator.vibrate) navigator.vibrate(50);
       onDelete(task.id);
     } else if (offset < -50) {
+      if (cardRef.current) {
+        const rect = cardRef.current.getBoundingClientRect();
+        setMenuPos({
+          x: Math.max(12, Math.min(rect.right - 220, window.innerWidth - 232)),
+          y: Math.min(rect.bottom + 8, window.innerHeight - 220)
+        });
+      } else {
+        setMenuPos({ x: window.innerWidth - 232, y: window.innerHeight / 2 });
+      }
       setShowMenu(true);
     }
   };
@@ -113,6 +149,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
 
       {/* Tarjeta Principal */}
       <motion.div 
+        ref={cardRef}
         onContextMenu={handleContextMenu}
         drag="x"
         dragSnapToOrigin={true}
@@ -203,8 +240,8 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
         })()}
         
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: 0, gap: 'var(--space-12)' }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-8)', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-8)' }}>
               {isBlocked && <Lock size={16} color="var(--accent-red)" />}
               
               {/* Badges UI de Prioridad en lugar de "!!!" */}
@@ -214,24 +251,70 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
                 </span>
               )}
 
-              <span style={{ 
-                fontSize: '1rem',
-                fontWeight: 500,
-                color: 'var(--text-primary)',
-                textDecoration: isCompletedPeriod ? 'line-through' : 'none', 
-                opacity: isCompletedPeriod ? 0.6 : 1,
-                wordBreak: 'break-word',
-                display: '-webkit-box',
-                WebkitLineClamp: 6,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden'
-              }}>
-                {task.title}
-              </span>
+              {isEditingTitle ? (
+                <input 
+                  type="text" 
+                  value={editTitle} 
+                  autoFocus 
+                  onChange={e => setEditTitle(e.target.value)}
+                  onBlur={handleTitleSubmit}
+                  onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                  style={{ fontSize: '1rem', fontWeight: 500, width: '100%', border: 'none', background: 'transparent', outline: 'none', color: 'var(--text-primary)', padding: 0 }}
+                />
+              ) : (
+                <span 
+                  onClick={() => setIsEditingTitle(true)}
+                  style={{ 
+                    fontSize: '1rem',
+                    fontWeight: 500,
+                    color: 'var(--text-primary)',
+                    textDecoration: isCompletedPeriod ? 'line-through' : 'none', 
+                    opacity: isCompletedPeriod ? 0.6 : 1,
+                    wordBreak: 'break-word',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 6,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    cursor: 'text'
+                  }}>
+                  {task.title}
+                </span>
+              )}
               {task.flagged && <Flag size={14} color="var(--accent-orange)" fill="var(--accent-orange)" />}
               {task.locationName && <MapPin size={14} color="var(--accent-blue)" />}
               {task.image && <ImageIcon size={14} color="var(--text-tertiary)" />}
             </div>
+            
+            {/* Notas (Description) */}
+            {(task.description || isEditingNote || isEditingTitle) && (
+              <div style={{ marginTop: 2 }}>
+                {isEditingNote ? (
+                  <textarea 
+                    value={editNote} 
+                    autoFocus 
+                    placeholder="Añadir nota..."
+                    onChange={e => setEditNote(e.target.value)}
+                    onBlur={handleNoteSubmit}
+                    style={{ fontSize: '0.85rem', width: '100%', border: 'none', background: 'transparent', outline: 'none', color: 'var(--text-secondary)', padding: 0, resize: 'none', minHeight: '40px' }}
+                  />
+                ) : (
+                  <span 
+                    onClick={() => setIsEditingNote(true)}
+                    style={{ 
+                      fontSize: '0.85rem',
+                      color: 'var(--text-secondary)',
+                      wordBreak: 'break-word',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      cursor: 'text'
+                    }}>
+                    {task.description || (isEditingTitle ? 'Añadir nota...' : '')}
+                  </span>
+                )}
+              </div>
+            )}
             
             <div style={{ display: 'flex', gap: 'var(--space-8)', marginTop: '2px', alignItems: 'center', flexWrap: 'wrap' }}>
               {showListName && taskList && (
