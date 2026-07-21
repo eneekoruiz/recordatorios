@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, useMotionValue, useTransform } from 'framer-motion';
+import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion';
 import { CheckCircle, Trash2, GripVertical, Play, Lock, Link2, Flag, MapPin, Image as ImageIcon, MoreHorizontal, Repeat, Edit3 } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore } from '../../store/useAppStore';
@@ -163,13 +163,17 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
           const percentage = totalAlerts > 1 ? (completedAlerts / totalAlerts) * 100 : 0;
           
           return (
-            <button 
+            <motion.button 
               className="checkbox" 
               aria-label="Completar tarea"
               disabled={isBlocked}
-              onClick={() => {
+              whileTap={{ scale: 0.85 }}
+              whileHover={{ scale: 1.1 }}
+              transition={{ type: "spring", stiffness: 400, damping: 17 }}
+              onClick={(e) => {
+                e.stopPropagation();
                 if (isBlocked) return;
-                if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+                if (navigator.vibrate) navigator.vibrate([20, 30, 20]);
                 onToggle(task.id, isCompletedPeriod || isPartial);
               }}
               style={{
@@ -183,20 +187,24 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
                   : isPartial 
                     ? `conic-gradient(var(--accent-primary) ${percentage}%, var(--border-subtle) ${percentage}%)`
                     : 'transparent',
-                transition: 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0
               }}
-              onMouseEnter={(e) => { 
-                e.currentTarget.style.transform = 'scale(1.1)'; 
-              }}
-              onMouseLeave={(e) => { 
-                e.currentTarget.style.transform = 'scale(1)'; 
-              }}
             >
               {isPartial && !isCompletedPeriod && <div style={{ width: 20, height: 20, background: 'var(--bg-surface)', borderRadius: '50%' }}></div>}
-              {isCompletedPeriod && <CheckCircle size={16} color="white" />}
-            </button>
+              <AnimatePresence>
+                {isCompletedPeriod && (
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                  >
+                    <CheckCircle size={16} color="white" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.button>
           );
         })()}
         

@@ -1392,3 +1392,13 @@ button:disabled {
   .auth-stage { padding-bottom: max(28px, env(safe-area-inset-bottom)) !important; }
   .auth-card, .auth-hero-panel { overflow: hidden; }
 }
+
+/* Layout fixes for mobile gap */
+html, body, #root, .app-container {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+* {
+  max-width: 100%;
+}
+
