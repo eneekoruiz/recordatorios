@@ -78,10 +78,13 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
     setShowMenu(true);
   };
 
+  // Only show swipe backgrounds if dragging (x != 0)
+  const isDraggingX = useTransform(x, (val) => val !== 0);
+  
   return (
     <div 
       className="task-item-wrapper" 
-      style={{ ...virtualStyle, paddingBottom: 16 }}
+      style={{ ...virtualStyle, overflow: 'hidden' }}
       onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
       onDragLeave={() => setIsDragOver(false)}
       onDrop={(e) => {
@@ -95,13 +98,13 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
     >
       
       {/* Fondos de Swipe */}
-      <motion.div className="swipe-background left" style={{ bottom: 16, opacity: leftOpacity }}>
+      <motion.div className="swipe-background left" style={{ bottom: 0, opacity: leftOpacity, display: isDraggingX ? 'flex' : 'none' }}>
         <motion.div style={{ scale: leftScale, display: 'flex', alignItems: 'center', gap: 8 }}>
           <CheckCircle color="white" size={22} />
           <motion.span style={{ color: 'white', fontWeight: 600, fontSize: '0.9rem', opacity: leftOpacity }}>Completar</motion.span>
         </motion.div>
       </motion.div>
-      <motion.div className="swipe-background right" style={{ bottom: 16, opacity: rightOpacity }}>
+      <motion.div className="swipe-background right" style={{ bottom: 0, opacity: rightOpacity, display: isDraggingX ? 'flex' : 'none' }}>
         <motion.div style={{ scale: rightScale, display: 'flex', alignItems: 'center', gap: 8 }}>
           <motion.span style={{ color: 'white', fontWeight: 600, fontSize: '0.9rem', opacity: rightOpacity }}>Eliminar</motion.span>
           <Trash2 color="white" size={22} />
@@ -126,7 +129,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
           damping: 25, 
           delay: Math.min(index * 0.05, 0.5)
         }}
-        className="surface-card ios-task-row"
+        className="ios-task-row"
         style={{ 
           x,
           cursor: 'grab',
@@ -136,13 +139,13 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
           alignItems: 'center', 
           padding: '12px 16px', 
           zIndex: 2,
-          background: 'var(--bg-surface)',
+          background: 'var(--bg-base)',
           opacity: isBlocked ? 0.6 : 1,
           pointerEvents: isBlocked ? 'none' : 'auto',
           border: 'none',
           borderBottom: '1px solid var(--border-subtle)',
           borderRadius: 0,
-          boxShadow: isDragOver ? `0 0 0 2px var(--accent-primary), var(--shadow-md)` : 'none'
+          boxShadow: isDragOver ? `0 0 0 2px var(--accent-primary)` : 'none'
         }}
       >
         
