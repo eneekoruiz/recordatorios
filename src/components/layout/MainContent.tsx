@@ -414,8 +414,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         {/* Línea del Título (Debajo del Top Bar) */}
         <div style={{ width: '100%' }}>
           <h1 className="text-display" style={{ 
-            fontSize: '2.2rem', 
-            fontWeight: 750,
+            fontSize: '34px', 
+            fontWeight: 700,
+            letterSpacing: '-0.5px',
             color: isSmartView ? SMART_COLORS[currentView] : isListView && currentList ? currentList.color : 'var(--text-primary)',
             display: 'flex', alignItems: 'center', margin: 0,
             padding: 0
@@ -561,9 +562,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                       style={{ 
                         cursor: isCustomSection ? 'text' : 'pointer',
                         textTransform: 'uppercase',
-                        fontWeight: 800,
-                        color: '#000',
-                        fontSize: '1rem',
+                        fontWeight: 600,
+                        color: 'var(--text-tertiary)',
+                        fontSize: '13px',
+                        letterSpacing: '0.5px',
                         margin: 0
                       }}
                       title={isCustomSection ? "Doble click para editar" : ""}
