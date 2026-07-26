@@ -626,7 +626,6 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 .sidebar-container {
-  width: 320px !important;
   border-right: 1px solid var(--border-subtle) !important;
   background: var(--bg-surface-glass) !important;
   backdrop-filter: blur(40px) saturate(200%) !important;
@@ -1312,36 +1311,63 @@ button:disabled {
   .auth-card, .auth-hero-panel { overflow: hidden; }
 }
 
-/* Layout fixes for mobile gap */
-html, body, #root, .app-container {
-  max-width: 100%;
-  overflow-x: hidden;
-}
-* {
-  max-width: 100%;
-}
+/* ========================================================
+   MOBILE LAYOUT — Full-screen panels
+======================================================== */
+@media (max-width: 768px) {
+  /* On mobile, each panel takes full viewport width. Only one is visible at a time. */
+  .app-container {
+    width: 100vw;
+    overflow: hidden;
+  }
 
+  /* Default: show sidebar, hide main */
+  .app-container .sidebar-container {
+    width: 100vw !important;
+    min-width: 100vw;
+    display: block;
+  }
+  .app-container .main-container {
+    display: none;
+  }
+
+  /* When showing content panel */
+  .app-container.mobile-content .sidebar-container {
+    display: none;
+  }
+  .app-container.mobile-content .main-container {
+    display: block;
+    width: 100vw;
+    min-width: 100vw;
+  }
+
+  /* mobile-sidebar class explicitly shows sidebar */
+  .app-container.mobile-sidebar .sidebar-container {
+    display: block;
+    width: 100vw !important;
+    min-width: 100vw;
+  }
+  .app-container.mobile-sidebar .main-container {
+    display: none;
+  }
+}
 
 /* Enforce strict layout boundaries */
 html, body {
-  max-width: 100vw;
-  overflow-x: hidden !important;
+  overflow-x: hidden;
   width: 100%;
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
 }
-#root, .app-container {
-  max-width: 100vw;
-  overflow-x: hidden !important;
+#root {
+  overflow-x: hidden;
   width: 100%;
 }
-* {
+*, *::before, *::after {
   box-sizing: border-box;
 }
 
-
 .main-content, #main-scroll-area {
-  overflow-x: hidden !important;
-  max-width: 100%;
+  overflow-x: hidden;
 }
-
