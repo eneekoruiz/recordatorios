@@ -192,8 +192,8 @@ export const TaskCard = React.memo(function TaskCard({
         <motion.button
           aria-label={isCompletedPeriod ? 'Marcar como pendiente' : 'Completar tarea'}
           disabled={!!isBlocked}
-          whileTap={{ scale: 0.78 }}
-          transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+          whileTap={{ scale: 0.6 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 15 }}
           onClick={(e) => {
             e.stopPropagation();
             if (isBlocked) return;
@@ -394,21 +394,22 @@ export const TaskCard = React.memo(function TaskCard({
                 onClick={() => setShowMenu(false)}
               />
 
-              {/* Sheet */}
-              <motion.div
-                initial={{ y: '100%' }}
-                animate={{ y: 0 }}
-                exit={{ y: '100%' }}
-                transition={{ type: 'spring', damping: 30, stiffness: 320, mass: 0.9 }}
-                style={{
-                  position: 'fixed', bottom: 0, left: 0, right: 0,
-                  zIndex: 99999,
-                  paddingBottom: 'max(20px, env(safe-area-inset-bottom))',
-                  padding: '0 12px max(20px, env(safe-area-inset-bottom))',
-                }}
-                onClick={e => e.stopPropagation()}
-              >
-                {/* Task header card */}
+              {/* Centered Container for Popover */}
+              <div style={{ 
+                position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', 
+                justifyContent: 'center', zIndex: 99999, pointerEvents: 'none', padding: 20 
+              }}>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: 15 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 15 }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 400 }}
+                  style={{
+                    width: '100%', maxWidth: 320, pointerEvents: 'auto',
+                    display: 'flex', flexDirection: 'column'
+                  }}
+                  onClick={e => e.stopPropagation()}
+                >
                 <div style={{
                   background: 'var(--bg-elevated)',
                   backdropFilter: 'blur(30px)',
@@ -418,12 +419,6 @@ export const TaskCard = React.memo(function TaskCard({
                   marginBottom: 10,
                   border: '0.5px solid var(--border-subtle)',
                 }}>
-                  {/* Handle */}
-                  <div style={{
-                    width: 36, height: 4, borderRadius: 2,
-                    background: 'var(--border-color)',
-                    margin: '0 auto 14px'
-                  }} />
                   <p style={{
                     margin: 0, fontSize: '0.95rem', fontWeight: 600,
                     color: 'var(--text-primary)', textAlign: 'center',
