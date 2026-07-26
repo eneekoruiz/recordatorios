@@ -23,10 +23,11 @@ interface TaskCardProps {
   showListName?: boolean;
   isFirstInSection?: boolean;
   isLastInSection?: boolean;
+  previousTaskId?: string;
 }
 
 export const TaskCard = React.memo(function TaskCard({
-  task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, index, showListName = true, isFirstInSection, isLastInSection
+  task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, index, showListName = true, isFirstInSection, isLastInSection, previousTaskId
 }: TaskCardProps) {
   const { cycles, tasks, nestTask, lists } = useAppStore();
   const taskCycle = cycles.find(c => c.id === task.cycle_id);
@@ -106,6 +107,11 @@ export const TaskCard = React.memo(function TaskCard({
   return (
     <div
       className="task-item-wrapper"
+      draggable={!isEditingNote && !isEditingTitle}
+      onDragStart={(e) => {
+        e.dataTransfer.setData('text/plain', task.id);
+        e.dataTransfer.effectAllowed = 'move';
+      }}
       style={{ ...virtualStyle, position: 'relative', overflow: 'hidden' }}
       onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
       onDragLeave={() => setIsDragOver(false)}
@@ -170,12 +176,12 @@ export const TaskCard = React.memo(function TaskCard({
           margin: 0,
           width: '100%',
           background: 'var(--bg-elevated)',
-          borderTopLeftRadius: 0,
-          borderTopRightRadius: 0,
-          borderBottomLeftRadius: 0,
-          borderBottomRightRadius: 0,
+          borderTopLeftRadius: isFirstInSection ? 10 : 0,
+          borderTopRightRadius: isFirstInSection ? 10 : 0,
+          borderBottomLeftRadius: isLastInSection ? 10 : 0,
+          borderBottomRightRadius: isLastInSection ? 10 : 0,
           opacity: isBlocked ? 0.5 : 1,
-          pointerEvents: isBlocked ? 'none' : 'auto',
+          pointerEvents: 'auto',
           touchAction: 'pan-y',
           outline: isDragOver ? '2px solid var(--accent-blue)' : undefined,
           cursor: 'default',
@@ -292,6 +298,7 @@ export const TaskCard = React.memo(function TaskCard({
                 />
               ) : (
                 <span
+                  onPointerDownCapture={(e) => { e.stopPropagation(); }}
                   onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditingNote(true); }}
                   style={{
                     fontSize: '0.85rem', color: 'var(--text-secondary)',
@@ -350,8 +357,20 @@ export const TaskCard = React.memo(function TaskCard({
             }}
             aria-label="Más opciones"
           >
-            <ChevronRight size={18} color="var(--text-tertiary)" />
+            <MoreHorizontal size={18} color="var(--text-tertiary)" />
           </button>
+        )}
+
+        {/* Separador interno estilo Apple (no llega al borde izquierdo) */}
+        {!isLastInSection && (
+          <div style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 54, // Empieza después del icono del check
+            right: 0,
+            height: '0.5px',
+            background: 'var(--border-subtle)'
+          }} />
         )}
       </motion.div>
 
@@ -438,6 +457,26 @@ export const TaskCard = React.memo(function TaskCard({
                     label="Editar detalles"
                     onClick={() => { setShowMenu(false); onEdit(task.id); }}
                   />
+                  {previousTaskId && !task.parentId && (
+                    <>
+                      <div style={{ height: '0.5px', background: 'var(--border-subtle)', marginLeft: 54 }} />
+                      <ActionRow
+                        icon={<ChevronRight size={20} color="var(--accent-primary)" />}
+                        label="Sangrar recordatorio"
+                        onClick={() => { setShowMenu(false); nestTask(task.id, previousTaskId); }}
+                      />
+                    </>
+                  )}
+                  {task.parentId && (
+                    <>
+                      <div style={{ height: '0.5px', background: 'var(--border-subtle)', marginLeft: 54 }} />
+                      <ActionRow
+                        icon={<ChevronRight size={20} style={{ transform: 'rotate(180deg)' }} color="var(--accent-primary)" />}
+                        label="Extraer recordatorio"
+                        onClick={() => { setShowMenu(false); nestTask(task.id, undefined); }}
+                      />
+                    </>
+                  )}
                   <div style={{ height: '0.5px', background: 'var(--border-subtle)', marginLeft: 54 }} />
                   <ActionRow
                     icon={<Play size={20} color="var(--accent-green)" />}

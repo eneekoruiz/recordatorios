@@ -23,9 +23,10 @@ interface MainContentProps {
 }
 
 type VirtualItemType = 
+  | { type: 'page-header' }
   | { type: 'header', title: string, category: string, color: string, sectionId?: string, depth: number }
   | { type: 'empty-section', title: string, category: string, color: string, sectionId?: string, depth: number }
-  | { type: 'task', task: TaskItem, depth: number };
+  | { type: 'task', task: TaskItem, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean };
 
 const SMART_COLORS: Record<string, string> = {
   'smart_today': 'var(--accent-blue)',
@@ -359,7 +360,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     overscan: 8,
   });
 
-  const renderTask = useCallback((task: TaskItem, virtualStyle: React.CSSProperties, index: number, depth: number, isFirst: boolean, isLast: boolean) => (
+  const renderTask = useCallback((task: TaskItem, virtualStyle: React.CSSProperties, index: number, depth: number, isFirst: boolean, isLast: boolean, previousTaskId?: string) => (
     <div
       key={task.id}
       ref={virtualizer.measureElement}
@@ -377,6 +378,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         showListName={!isListView}
         isFirstInSection={isFirst}
         isLastInSection={isLast}
+        previousTaskId={previousTaskId}
       />
     </div>
   ), [handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, isListView, virtualizer]);
@@ -417,7 +419,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           if (data.type === 'page-header') {
             return (
               <div key="page-header" ref={virtualizer.measureElement} data-index={virtualItem.index} style={{...virtualStyle, zIndex: 20}}>
-                <header className="content-header" style={{ padding: '0 0 16px 0', display: 'flex', flexDirection: 'column', gap: '16px', flexShrink: 0, margin: '0', borderBottom: 'none' }}>
+                <header className="content-header" style={{ padding: '12px 16px 20px 16px', display: 'flex', flexDirection: 'column', gap: '16px', flexShrink: 0, margin: '0', borderBottom: 'none' }}>
         
         {/* Top Bar (Barra Superior de Navegación) */}
         <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -559,9 +561,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           )}
 
           {(() => {
-            const listName = currentList?.name?.toLowerCase() || '';
-            const isTargetList = ['diaria', 'semanal', 'mensual', 'diario', 'rutina', 'limpieza'].some(word => listName.includes(word));
-            if (currentView === 'CYCLE' || isTargetList) {
+            if (currentCycle) {
               return (
                 <div className="content-stats" style={{ marginTop: 'var(--space-8)' }}>
                   <span className="stat-chip"><strong>{activeVisibleCount}</strong> pendientes</span>
@@ -762,7 +762,14 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               </div>
             );
           } else {
-            return renderTask(data.task, virtualStyle, virtualItem.index, data.depth, !!data.isFirstInSection, !!data.isLastInSection);
+            let prevId;
+            if (virtualItem.index > 0) {
+              const prevData = flattenedData[virtualItem.index - 1];
+              if (prevData.type === 'task') {
+                prevId = prevData.task.id;
+              }
+            }
+            return renderTask(data.task, virtualStyle, virtualItem.index, data.depth, !!data.isFirstInSection, !!data.isLastInSection, prevId);
           }
         })}
 
