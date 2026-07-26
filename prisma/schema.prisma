@@ -44,6 +44,14 @@ model List {
   payload     Json
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime?
+  sharedLinks SharedLink[]
+}
+
+model SharedLink {
+  id        String   @id @default(uuid())
+  listId    String
+  list      List     @relation(fields: [listId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 }
 
 model ListSection {

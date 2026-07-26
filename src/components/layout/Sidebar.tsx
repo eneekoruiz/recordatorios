@@ -630,8 +630,23 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
       />
       
       {/* Version Checker */}
-      <div style={{ padding: '8px', textAlign: 'center', fontSize: '0.65rem', color: 'var(--text-tertiary)', opacity: 0.7, fontWeight: 600 }}>
-        v1.0.7 (Apple Style & Fixes)
+      <div 
+        onClick={() => {
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+              for(let registration of registrations) {
+                registration.unregister();
+              }
+            });
+          }
+          caches.keys().then((names) => {
+            for (let name of names) caches.delete(name);
+          });
+          setTimeout(() => window.location.reload(), 500);
+        }}
+        style={{ padding: '16px 8px', textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-tertiary)', opacity: 0.8, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}
+      >
+        v1.0.8 (Click para forzar actualización)
       </div>
     </aside>
   );

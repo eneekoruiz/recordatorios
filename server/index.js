@@ -251,6 +251,41 @@ app.get('/api/sync/live', (req, res) => {
   }
 });
 
+// --- SHARE ---
+app.post('/api/share/generate', authenticateToken, async (req, res) => {
+  const { listId } = req.body;
+  const userId = req.user.id;
+  try {
+    const list = await prisma.list.findUnique({ where: { id: listId } });
+    if (!list || list.userId !== userId) return res.status(403).json({ error: 'No tienes permiso para compartir esta lista' });
+    const link = await prisma.sharedLink.create({ data: { listId } });
+    res.json({ token: link.id });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error generating link' });
+  }
+});
+
+app.get('/api/share/:token', authenticateToken, async (req, res) => {
+  const { token } = req.params;
+  try {
+    const link = await prisma.sharedLink.findUnique({ where: { id: token }, include: { list: true } });
+    if (!link) return res.status(404).json({ error: 'Link no encontrado' });
+
+    // Cargar todas las tareas y secciones del dueño y filtrar en memoria por seguridad (evita bugs de JSON querying)
+    const allTasks = await prisma.task.findMany({ where: { userId: link.list.userId, deletedAt: null } });
+    const allSections = await prisma.listSection.findMany({ where: { userId: link.list.userId, deletedAt: null } });
+    
+    const tasks = allTasks.filter(t => t.payload && t.payload.listId === link.listId).map(t => t.payload);
+    const sections = allSections.filter(s => s.payload && s.payload.listId === link.listId).map(s => s.payload);
+
+    res.json({ list: link.list.payload, tasks, sections });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error getting shared list' });
+  }
+});
+
 // START
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
