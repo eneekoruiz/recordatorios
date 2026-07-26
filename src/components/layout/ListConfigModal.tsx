@@ -22,7 +22,7 @@ const COLORS = [
 import { 
   ShoppingCart, Briefcase, Heart, Book, Coffee, CheckSquare, Plane, Music, Video, Zap, Home,
   Gamepad2, Dumbbell, Palette, GraduationCap, Code, Scissors, Camera, Utensils, Droplets, Flame, Sun, Moon,
-  Star, Trophy, Car, Bike, Train, Ticket, Glasses, Headphones, Watch, Shield, Key, Lock, Bell
+  Star, Trophy, Car, Bike, Train, Ticket, Glasses, Headphones, Watch, Shield, Key, Lock, Bell, Check
 } from 'lucide-react';
 
 const ICONS: Record<string, any> = {
@@ -44,6 +44,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
   const [name, setName] = useState('');
   const [color, setColor] = useState(COLORS[0]);
   const [icon, setIcon] = useState('list');
+  const [isFocused, setIsFocused] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -87,94 +88,216 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
 
   return createPortal(
     <AnimatePresence>
-      <div className="prompt-overlay" onClick={onClose} style={{ zIndex: 1000 }}>
+      <div className="prompt-overlay" onClick={onClose} style={{ zIndex: 1000, position: 'fixed', inset: 0, display: 'grid', placeItems: 'center' }}>
         <motion.div 
-          className="prompt-modal"
+          className="list-config-modal"
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           onClick={e => e.stopPropagation()}
-          style={{ maxWidth: 500 }}
         >
-          <div className="prompt-header">
-            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-primary)' }}>{existingList ? 'Editar Lista' : (parentId ? 'Nueva Lista Anidada' : 'Nueva Lista')}</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+              {existingList ? 'Editar Lista' : (parentId ? 'Nueva Lista Anidada' : 'Nueva Lista')}
+            </h3>
+            <button 
+              onClick={onClose}
+              style={{
+                width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.08)',
+                border: 'none', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', cursor: 'pointer', transition: 'background 0.15s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.16)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+              aria-label="Cerrar modal"
+            >
+              ✕
+            </button>
           </div>
           
-          <div className="prompt-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-24)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             
             {/* Header Preview */}
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 'var(--space-8)' }}>
-              <div style={{
-                width: 80, height: 80, borderRadius: '50%', background: color,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: `0 8px 24px ${color}40`
-              }}>
+            <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0 8px' }}>
+              <motion.div 
+                animate={{ backgroundColor: color, boxShadow: `0 12px 32px ${color}55, inset 0 2px 4px rgba(255,255,255,0.4)` }}
+                transition={{ duration: 0.2 }}
+                style={{
+                  width: 76, 
+                  height: 76, 
+                  borderRadius: '50%', 
+                  background: color,
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  boxShadow: `0 12px 32px ${color}55, inset 0 2px 4px rgba(255,255,255,0.4)`
+                }}
+              >
                 {(() => {
                   const IconComp = ICONS[icon] || CheckSquare;
-                  return <IconComp size={40} color="white" />;
+                  return <IconComp size={36} color="white" />;
                 })()}
-              </div>
+              </motion.div>
             </div>
 
-            <div className="input-group">
+            {/* Title Input */}
+            <div style={{ width: '100%' }}>
               <input 
                 type="text" 
                 value={name} 
                 onChange={e => setName(e.target.value)}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
                 placeholder="Nombre de la lista" 
                 autoFocus
-                className="title-input"
-                style={{ textAlign: 'center', fontSize: '1.25rem', padding: '12px' }}
+                style={{
+                  background: isFocused ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.06)',
+                  border: isFocused ? `1px solid ${color}` : '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: 16,
+                  padding: '14px 18px',
+                  fontSize: '1.2rem',
+                  fontWeight: 600,
+                  color: 'var(--text-primary)',
+                  textAlign: 'center',
+                  width: '100%',
+                  outline: 'none',
+                  boxShadow: isFocused ? `0 0 0 4px ${color}33, 0 8px 20px rgba(0,0,0,0.2)` : 'none',
+                  transition: 'all 0.2s ease'
+                }}
               />
             </div>
 
             {/* Colors */}
             <div>
-              <span className="detail-label" style={{ display: 'block', marginBottom: 8, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Color</span>
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginTop: 8 }}>
-                {COLORS.map(c => (
-                  <button 
-                    key={c}
-                    onClick={() => setColor(c)}
-                    style={{
-                      width: 36, height: 36, borderRadius: '50%', background: c, border: 'none',
-                      outline: color === c ? '3px solid var(--border-focus)' : 'none',
-                      outlineOffset: 2, cursor: 'pointer'
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Icons */}
-            <div>
-              <span className="detail-label" style={{ display: 'block', marginBottom: 8, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Icono</span>
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginTop: 8, background: 'var(--bg-base)', padding: 16, borderRadius: 'var(--radius-lg)' }}>
-                {Object.keys(ICONS).map(k => {
-                  const IconComp = ICONS[k];
+              <span style={{ display: 'block', marginBottom: 10, fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.02em', textTransform: 'uppercase' }}>Color</span>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+                {COLORS.map(c => {
+                  const isSelected = color === c;
                   return (
-                    <button
-                      key={k}
-                      onClick={() => setIcon(k)}
+                    <button 
+                      key={c}
+                      onClick={() => setColor(c)}
                       style={{
-                        width: 44, height: 44, borderRadius: '50%',
-                        background: icon === k ? 'var(--border-focus)' : 'transparent',
-                        border: 'none', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        width: 38, 
+                        height: 38, 
+                        borderRadius: '50%', 
+                        background: c, 
+                        border: isSelected ? '2px solid white' : '2px solid transparent',
+                        outline: isSelected ? `2px solid ${c}` : 'none',
+                        outlineOffset: 2, 
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: isSelected ? `0 4px 12px ${c}66` : '0 2px 6px rgba(0,0,0,0.15)',
+                        transition: 'all 0.15s ease',
+                        transform: isSelected ? 'scale(1.08)' : 'scale(1)'
                       }}
                     >
-                      <IconComp size={20} color={icon === k ? 'white' : 'var(--text-secondary)'} />
+                      {isSelected && <Check size={18} color="white" strokeWidth={3} style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }} />}
                     </button>
                   );
                 })}
               </div>
             </div>
 
+            {/* Icons */}
+            <div>
+              <span style={{ display: 'block', marginBottom: 10, fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.02em', textTransform: 'uppercase' }}>Icono</span>
+              <div style={{ 
+                background: 'rgba(255,255,255,0.03)', 
+                border: '1px solid rgba(255,255,255,0.08)', 
+                borderRadius: 20, 
+                padding: 16, 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fill, minmax(44px, 1fr))', 
+                gap: 10, 
+                maxHeight: 180, 
+                overflowY: 'auto',
+                scrollbarWidth: 'thin'
+              }}>
+                {Object.keys(ICONS).map(k => {
+                  const IconComp = ICONS[k];
+                  const isActive = icon === k;
+                  return (
+                    <button
+                      key={k}
+                      onClick={() => setIcon(k)}
+                      style={{
+                        width: 44, 
+                        height: 44, 
+                        borderRadius: '50%',
+                        background: isActive ? color : 'rgba(255,255,255,0.05)',
+                        border: isActive ? `1px solid rgba(255,255,255,0.3)` : '1px solid transparent', 
+                        cursor: 'pointer',
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        boxShadow: isActive ? `0 4px 12px ${color}50` : 'none',
+                        transition: 'all 0.15s ease',
+                        transform: isActive ? 'scale(1.05)' : 'scale(1)'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                      }}
+                    >
+                      <IconComp size={22} color={isActive ? 'white' : 'var(--text-secondary)'} />
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+
+          </div>
           
-          <div className="prompt-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--border-subtle)' }}>
-            <button className="cancel-btn" onClick={onClose} style={{ padding: '10px 16px', background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontWeight: 500, cursor: 'pointer', margin: 0 }}>Cancelar</button>
-            <button className="save-btn" onClick={handleSave} disabled={!name.trim()} style={{ padding: '10px 24px', background: 'var(--accent-primary)', border: 'none', borderRadius: 10, color: 'white', fontWeight: 600, cursor: (!name.trim()) ? 'not-allowed' : 'pointer', opacity: (!name.trim()) ? 0.5 : 1, margin: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 'auto', paddingTop: 8 }}>
+            <button 
+              onClick={onClose} 
+              style={{ 
+                padding: '12px 20px', 
+                background: 'rgba(255,255,255,0.08)', 
+                border: '1px solid rgba(255,255,255,0.12)', 
+                borderRadius: 14,
+                color: 'var(--text-primary)', 
+                fontWeight: 600, 
+                fontSize: '0.95rem',
+                cursor: 'pointer', 
+                transition: 'all 0.15s ease',
+                margin: 0
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.14)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+            >
+              Cancelar
+            </button>
+            <button 
+              onClick={handleSave} 
+              disabled={!name.trim()} 
+              style={{ 
+                padding: '12px 28px', 
+                background: name.trim() ? color : 'rgba(255,255,255,0.1)', 
+                border: 'none', 
+                borderRadius: 14, 
+                color: name.trim() ? 'white' : 'var(--text-tertiary)', 
+                fontWeight: 650, 
+                fontSize: '0.95rem',
+                cursor: (!name.trim()) ? 'not-allowed' : 'pointer', 
+                opacity: (!name.trim()) ? 0.5 : 1, 
+                boxShadow: name.trim() ? `0 4px 16px ${color}50` : 'none',
+                transition: 'all 0.2s ease',
+                transform: name.trim() ? 'scale(1)' : 'none',
+                margin: 0
+              }}
+              onMouseEnter={(e) => {
+                if (name.trim()) e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={(e) => {
+                if (name.trim()) e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
               {existingList ? 'Guardar' : 'Crear'}
             </button>
           </div>

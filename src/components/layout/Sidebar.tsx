@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   ChevronRight, 
@@ -41,6 +41,23 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
   const wasLongPressedRef = useRef(false);
+
+  useEffect(() => {
+    if (!activeMenuId) return;
+    const handleScroll = (e: Event) => {
+      if (e.target instanceof HTMLElement && e.target.closest('.ios-dropdown-menu')) {
+        return;
+      }
+      setActiveMenuId(null);
+      setMenuCoords(null);
+    };
+    window.addEventListener('scroll', handleScroll, true);
+    window.addEventListener('close-list-menus', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('close-list-menus', handleScroll);
+    };
+  }, [activeMenuId]);
   
   const currentLevelLists = lists.filter((l: any) => l.parentId === parentId && l.id !== 'user_preferences_smart_lists');
   if (currentLevelLists.length === 0) return null;
@@ -359,7 +376,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   };
 
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" onScroll={() => window.dispatchEvent(new Event('close-list-menus'))}>
       {/* 1. USER PROFILE */}
       <div 
         className="user-profile" 
@@ -477,7 +494,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
       </div>
 
       {/* 3. SCROLLABLE AREA */}
-      <div className="sidebar-scroll-area">
+      <div className="sidebar-scroll-area" onScroll={() => window.dispatchEvent(new Event('close-list-menus'))}>
         
         {/* SMART LISTS GRID */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 var(--space-12)', marginBottom: 'var(--space-8)' }}>
