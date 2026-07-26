@@ -84,7 +84,7 @@ export function NavigationFrame({
                 background: 'var(--bg-surface, #fafafa)',
                 position: 'sticky',
                 top: 0,
-                zIndex: 10,
+                zIndex: 500,
               }}
             >
               <button

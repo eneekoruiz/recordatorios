@@ -289,8 +289,9 @@
 /* ========================================================
    CATEGORY GROUPS & HEADERS
 ======================================================== */
-.category-group {
-  margin-bottom: var(--space-32);
+.category-group,
+.section-container {
+  margin-bottom: 16px !important;
 }
 
 .group-header {
@@ -361,7 +362,7 @@
 ======================================================== */
 .task-item-wrapper {
   position: relative;
-  margin-bottom: 8px;
+  margin-bottom: 0px !important;
 }
 
 .swipe-background {
@@ -715,7 +716,7 @@
   color: var(--accent-primary);
 }
 
-.task-item-wrapper { margin-bottom: 12px; }
+.task-item-wrapper { margin-bottom: 0px !important; }
 .swipe-background {
   border-radius: 20px;
   overflow: hidden;
