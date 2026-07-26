@@ -200,6 +200,11 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         return active.filter(t => t.priority === 3).length;
       case 'smart_completed': 
         return all.filter(t => isTaskCompleted(t)).length;
+      case 'smart_overdue': {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return active.filter(t => t.dueDate && new Date(t.dueDate) < today).length;
+      }
       default: 
         return 0;
     }

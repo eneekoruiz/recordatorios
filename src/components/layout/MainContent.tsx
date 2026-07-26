@@ -30,7 +30,8 @@ const SMART_COLORS: Record<string, string> = {
   'smart_scheduled': 'var(--accent-red)',
   'smart_all': 'var(--text-secondary)',
   'smart_flagged': 'var(--accent-orange)',
-  'smart_completed': 'var(--text-tertiary)'
+  'smart_completed': 'var(--text-tertiary)',
+  'smart_overdue': 'var(--accent-red)'
 };
 
 export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditTask, onBackToSidebar, isMobile }: MainContentProps) {
@@ -86,6 +87,17 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       case 'smart_completed':
         filteredTasks = allTasks.filter(t => isTaskCompleted(t)); // always completed
         break;
+      case 'smart_overdue': {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        filteredTasks = validTasks.filter(t => {
+          if (!t.dueDate) return false;
+          const d = new Date(t.dueDate);
+          d.setHours(0, 0, 0, 0);
+          return !isNaN(d.getTime()) && d < today;
+        });
+        break;
+      }
     }
 
     // Agrupar por lista a la que pertenecen
@@ -154,7 +166,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         'smart_scheduled': 'Programado',
         'smart_all': 'Todos',
         'smart_flagged': 'Destacado',
-        'smart_completed': 'Terminado'
+        'smart_completed': 'Terminado',
+        'smart_overdue': 'Retrasados'
       };
       return names[currentView] || currentView;
     }
@@ -308,8 +321,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     count: flattenedData.length,
     getScrollElement: () => parentRef.current,
     estimateSize: (index) => {
-      // Cabecera ~ 60px, Tarea ~ 80px
-      return flattenedData[index].type === 'header' ? 60 : 86;
+      // Cabecera ~ 50px, Tarea ~ 86px
+      return flattenedData[index].type === 'header' ? 50 : 86;
     },
     overscan: 5,
   });
