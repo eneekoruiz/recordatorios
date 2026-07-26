@@ -178,7 +178,7 @@ function App() {
 
   if (isWidgetMode) {
     return (
-      <div style={{ background: 'transparent', height: '100vh', width: '100vw' }}>
+      <div style={{ background: 'transparent', height: '100vh', width: '100%' }}>
         <WidgetDashboard />
       </div>
     );
