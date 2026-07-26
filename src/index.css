@@ -507,7 +507,7 @@ input:checked + .slider::before {
    UNIFIED DROPDOWN MENUS
 ======================================================== */
 .ios-dropdown-menu {
-  background: var(--bg-surface-glass, rgba(255, 255, 255, 0.85));
+  background: var(--bg-surface-glass, rgba(255, 255, 255, 0.98));
   backdrop-filter: blur(30px) saturate(190%);
   -webkit-backdrop-filter: blur(30px) saturate(190%);
   border-radius: 14px;
@@ -522,7 +522,7 @@ input:checked + .slider::before {
 
 @media (prefers-color-scheme: dark) {
   .ios-dropdown-menu {
-    background: rgba(30, 30, 34, 0.82);
+    background: rgba(30, 30, 34, 0.98);
     border: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3);
   }

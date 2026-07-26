@@ -167,9 +167,25 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setCardReqOpen(true);
         setCardDetailsOpen(true);
         setCardFinanceOpen(true);
+        setCycleId(undefined);
       }
     }
-  }, [isOpen, taskId, task, defaultCategoryId, defaultSectionId]);
+  }, [isOpen, taskId, tasks, defaultCategoryId, defaultSectionId]);
+
+  const drawerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handlePointerDown = (e: PointerEvent) => {
+      // Allow click to pass through to the task but close the drawer
+      if (drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
+        // Need a slight delay to ensure the event isn't swallowed by react tearing down the UI
+        setTimeout(() => onClose(), 10);
+      }
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (isOpen && defaultCategoryId) {
@@ -444,6 +460,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
       {isOpen && (
         <div className="drawer-overlay" onClick={onClose}>
           <motion.div 
+            ref={drawerRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="drawer-title"
