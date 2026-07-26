@@ -100,6 +100,22 @@ export const useAppStore = create<AppState>()(
       globalCyclesEnabled: true,
 
       setToken: (token, userId) => set({ token, userId }),
+      logout: () => {
+        // Clear sync token from localStorage before wiping state
+        const currentUserId = useAppStore.getState().userId;
+        const currentToken = useAppStore.getState().token;
+        if (currentUserId) localStorage.removeItem('sync_token_' + currentUserId);
+        if (currentToken) localStorage.removeItem('sync_token_' + currentToken.slice(-16));
+        localStorage.removeItem('sync_token_null');
+        set({
+          token: null,
+          userId: null,
+          tasks: {},
+          lists: INITIAL_LISTS,
+          cycles: INITIAL_CYCLES,
+          listSections: [],
+        });
+      },
       hasHydrated: false,
       setHasHydrated: (val) => set({ hasHydrated: val }),
 

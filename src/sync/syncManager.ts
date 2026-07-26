@@ -148,7 +148,15 @@ class SyncManager {
 
   private async pull(token: string) {
     const state = useAppStore.getState();
-    const tokenKey = 'sync_token_' + (state as any).userId;
+    // Use userId if available; fall back to a hash of the token itself to avoid
+    // all devices sharing a single 'sync_token_null' key and missing all server data.
+    const resolvedUserId = (state as any).userId || token.slice(-16);
+    const tokenKey = 'sync_token_' + resolvedUserId;
+    // If the stored key was previously null-based, reset it so we do a full pull
+    const legacyKey = 'sync_token_null';
+    if (localStorage.getItem(legacyKey)) {
+      localStorage.removeItem(legacyKey);
+    }
     const lastToken = localStorage.getItem(tokenKey) || '0';
 
     const url = new URL(PULL_URL, window.location.origin);
@@ -231,7 +239,8 @@ class SyncManager {
     }
 
     if (data.serverTime) {
-      localStorage.setItem(tokenKey, data.serverTime.toString());
+      const resolvedUserIdForSave = (useAppStore.getState() as any).userId || token.slice(-16);
+      localStorage.setItem('sync_token_' + resolvedUserIdForSave, data.serverTime.toString());
     }
   }
 }
