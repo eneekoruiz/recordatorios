@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion';
-import { CheckCircle, Trash2, GripVertical, Play, Lock, Link2, Flag, MapPin, Image as ImageIcon, MoreHorizontal, Repeat, Edit3 } from 'lucide-react';
+import { CheckCircle, Trash2, GripVertical, Play, Lock, Link2, Flag, MapPin, Image as ImageIcon, MoreHorizontal, Repeat, Edit3, Sparkles } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
@@ -47,11 +47,11 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
   const updateTask = useAppStore(state => state.updateTask);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Sync state if task changes externally
+  // Sync state if task changes externally, but ONLY if we are not currently editing
   useEffect(() => {
-    setEditTitle(task.title || '');
-    setEditNote(task.description || '');
-  }, [task.title, task.description]);
+    if (!isEditingTitle) setEditTitle(task.title || '');
+    if (!isEditingNote) setEditNote(task.description || '');
+  }, [task.title, task.description, isEditingTitle, isEditingNote]);
 
   const handleTitleSubmit = () => {
     setIsEditingTitle(false);
@@ -133,7 +133,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
       }}
     >
       {/* Fondos de Swipe Fijos (Se revelan gradualmente con el drag) */}
-      <div style={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'space-between', zIndex: 0, borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'space-between', zIndex: 0, overflow: 'hidden' }}>
         {/* Left Side (Completar - Verde) */}
         <motion.div style={{ flex: 1, background: 'var(--accent-green)', display: 'flex', alignItems: 'center', padding: '0 24px', opacity: leftOpacity }}>
           <motion.div style={{ scale: leftScale, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -176,14 +176,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
         }}
       >
         
-        {/* Grip para Drag & Drop */}
-        <div 
-          draggable
-          onDragStart={(e) => e.dataTransfer.setData('text/plain', task.id)}
-          style={{ cursor: 'grab', marginRight: 'var(--space-8)', color: 'var(--text-tertiary)' }}
-        >
-          <GripVertical size={16} />
-        </div>
+
 
         {/* Checkbox con progreso parcial */}
         {(() => {
