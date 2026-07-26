@@ -73,34 +73,20 @@ export function EmptyState({
         transition={{ duration: 0.5, delay: 0, ease: [0.22, 1, 0.36, 1] }}
         style={{ position: 'relative', marginBottom: 'var(--space-24)' }}
       >
-        {/* Animated background glow */}
-        <motion.div
-          animate={{ 
-            scale: [1, 1.2, 1],
-            opacity: [0.3, 0.6, 0.3]
-          }}
-          transition={{ 
-            duration: 4, 
-            repeat: Infinity,
-            ease: "easeInOut" 
-          }}
+        {/* Static background glow */}
+        <div
           style={{
             position: 'absolute',
             inset: -20,
             background: 'radial-gradient(circle, var(--accent-glow) 0%, transparent 70%)',
             borderRadius: '50%',
+            opacity: 0.35,
             zIndex: 0
           }}
         />
         
-        {/* Floating icon */}
-        <motion.div
-          animate={{ y: [0, -6, 0] }}
-          transition={{ 
-            duration: 3, 
-            repeat: Infinity,
-            ease: "easeInOut" 
-          }}
+        {/* Static icon */}
+        <div
           style={{
             position: 'relative',
             zIndex: 1,
@@ -116,7 +102,7 @@ export function EmptyState({
           }}
         >
           {resolvedIcon}
-        </motion.div>
+        </div>
       </motion.div>
 
       <motion.h3 

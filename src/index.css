@@ -1323,7 +1323,7 @@ button:disabled {
     padding-inline: 20px !important;
   }
   .content-stats {
-    flex-wrap: nowrap !important;
+    flex-wrap: wrap !important;
     max-width: 100%;
     overflow-x: auto;
     padding-bottom: 4px;
@@ -1497,4 +1497,30 @@ html, body {
 
 .main-content, #main-scroll-area {
   overflow-x: hidden;
+}
+
+/* Stat Pills Responsiveness */
+.content-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 0 12px;
+  box-sizing: border-box;
+}
+
+.stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: var(--bg-surface, #1c1c1e);
+  border: 1px solid var(--border-subtle, rgba(255,255,255,0.1));
+  border-radius: var(--radius-full, 9999px);
+  font-size: 0.8rem;
+  color: var(--text-secondary, #aeaeb2);
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }

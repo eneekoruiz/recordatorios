@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   ChevronRight, 
@@ -38,6 +38,10 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
   const removeList = useAppStore((state) => state.removeList);
   const updateList = useAppStore((state) => state.updateList);
   
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const wasLongPressedRef = useRef(false);
+  
   const currentLevelLists = lists.filter((l: any) => l.parentId === parentId && l.id !== 'user_preferences_smart_lists');
   if (currentLevelLists.length === 0) return null;
 
@@ -47,18 +51,100 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
         const hasChildren = lists.some((l: any) => l.parentId === list.id);
         const isExpanded = expanded[list.id];
         const isActive = currentView === `list_${list.id}`;
+        const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+        const mobileItemStyle = {
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: '12px 16px',
+          minHeight: 48,
+          fontSize: '1rem',
+          background: 'transparent',
+          border: 'none',
+          color: 'var(--text-primary)',
+          textAlign: 'left' as const,
+          cursor: 'pointer',
+          borderRadius: 10,
+          width: '100%'
+        };
 
         return (
           <div key={list.id} style={{ position: 'relative' }}>
             <motion.div 
               layoutId={"list-item-" + list.id}
               className={`ios-list-item ${isActive ? 'active' : ''}`}
-              onClick={() => onSelectView(`list_${list.id}`)}
+              onClick={() => {
+                if (wasLongPressedRef.current) {
+                  wasLongPressedRef.current = false;
+                  return;
+                }
+                onSelectView(`list_${list.id}`);
+              }}
+              onPointerDown={(e) => {
+                if (e.button !== 0 && e.button !== undefined) return;
+                pointerStartRef.current = { x: e.clientX, y: e.clientY };
+                wasLongPressedRef.current = false;
+                if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                const clientX = e.clientX;
+                const clientY = e.clientY;
+                const target = e.currentTarget;
+                longPressTimerRef.current = setTimeout(() => {
+                  wasLongPressedRef.current = true;
+                  if (navigator.vibrate) {
+                    try { navigator.vibrate([8]); } catch (err) {}
+                  }
+                  const rect = target.getBoundingClientRect();
+                  setMenuCoords({
+                    top: clientY || rect.bottom,
+                    left: clientX || rect.left
+                  });
+                  setActiveMenuId(list.id);
+                }, 400);
+              }}
+              onPointerMove={(e) => {
+                if (!pointerStartRef.current || !longPressTimerRef.current) return;
+                const dx = Math.abs(e.clientX - pointerStartRef.current.x);
+                const dy = Math.abs(e.clientY - pointerStartRef.current.y);
+                if (dx > 10 || dy > 10) {
+                  clearTimeout(longPressTimerRef.current);
+                  longPressTimerRef.current = null;
+                }
+              }}
+              onPointerUp={() => {
+                if (longPressTimerRef.current) {
+                  clearTimeout(longPressTimerRef.current);
+                  longPressTimerRef.current = null;
+                }
+              }}
+              onPointerCancel={() => {
+                if (longPressTimerRef.current) {
+                  clearTimeout(longPressTimerRef.current);
+                  longPressTimerRef.current = null;
+                }
+              }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (longPressTimerRef.current) {
+                  clearTimeout(longPressTimerRef.current);
+                  longPressTimerRef.current = null;
+                }
+                wasLongPressedRef.current = true;
+                if (navigator.vibrate) {
+                  try { navigator.vibrate([8]); } catch (err) {}
+                }
+                setMenuCoords({
+                  top: e.clientY,
+                  left: e.clientX
+                });
+                setActiveMenuId(list.id);
+              }}
               style={{ position: 'relative', transition: 'background-color 150ms ease' }}
             >
               {hasChildren && (
                 <div 
                   onClick={(e) => { e.stopPropagation(); setExpanded(p => ({...p, [list.id]: !p[list.id]})); }}
+                  onPointerDown={(e) => e.stopPropagation()}
                   style={{ position: 'absolute', left: -16, padding: 4, cursor: 'pointer', color: 'var(--text-tertiary)' }}
                 >
                   {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -90,6 +176,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                     setActiveMenuId(list.id);
                   }
                 }}
+                onPointerDown={(e) => e.stopPropagation()}
                 style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 4, marginLeft: 8 }}
                 title="Acciones de Lista"
               >
@@ -99,19 +186,42 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
               {activeMenuId === list.id && menuCoords && createPortal(
                 <>
                   <div 
-                    style={{ position: 'fixed', inset: 0, zIndex: 99998 }} 
+                    style={{ position: 'fixed', inset: 0, zIndex: 99998, background: isMobile ? 'rgba(0,0,0,0.4)' : 'transparent' }} 
                     onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); setMenuCoords(null); }} 
                   />
-                  <div 
-                    className="ios-dropdown-menu"
-                    style={{ 
+                  <motion.div 
+                    initial={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.95 }}
+                    animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1 }}
+                    exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                    className={isMobile ? undefined : "ios-dropdown-menu"}
+                    style={isMobile ? { 
+                      position: 'fixed',
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      zIndex: 99999,
+                      background: 'var(--bg-elevated, #2c2c2e)',
+                      borderTop: '1px solid var(--border-subtle, rgba(255,255,255,0.1))',
+                      borderRadius: '20px 20px 0 0',
+                      padding: '16px 16px max(24px, env(safe-area-inset-bottom))',
+                      boxShadow: '0 -10px 40px rgba(0,0,0,0.5)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 8,
+                      maxHeight: '80vh',
+                      overflowY: 'auto'
+                    } : { 
                       position: 'fixed',
                       top: menuCoords.top + 4,
-                      left: menuCoords.left,
+                      left: Math.max(12, Math.min(menuCoords.left, window.innerWidth - 220)),
                       zIndex: 99999
                     }}
                     onClick={(e) => e.stopPropagation()}
                   >
+                    {isMobile && (
+                      <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border-subtle, rgba(255,255,255,0.2))', margin: '0 auto 12px', flexShrink: 0 }} />
+                    )}
                     <button 
                       className="ios-dropdown-item"
                       onClick={() => {
@@ -119,7 +229,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                         setMenuCoords(null);
                         updateList(list.id, { isPinned: !list.isPinned });
                       }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
+                      style={isMobile ? mobileItemStyle : { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
                       onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
                       onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                     >
@@ -133,8 +243,11 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                         setMenuCoords(null);
                         onAddSublist(list.id);
                       }}
+                      style={isMobile ? mobileItemStyle : undefined}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                     >
-                      <Plus size={16} /> Añadir Sublista
+                      <Plus size={16} /> Nueva lista anidada
                     </button>
                     <button 
                       className="ios-dropdown-item"
@@ -143,23 +256,29 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                         setMenuCoords(null);
                         onEditList(list.id);
                       }}
+                      style={isMobile ? mobileItemStyle : undefined}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                     >
                       <Edit3 size={16} /> Editar Lista
                     </button>
-                    <div className="ios-dropdown-divider" />
+                    <div className="ios-dropdown-divider" style={isMobile ? { margin: '4px 0', borderTop: '1px solid var(--border-subtle, rgba(255,255,255,0.1))' } : undefined} />
                     <button 
                       className="ios-dropdown-item danger"
                       onClick={() => {
-                        if (confirm(`¿Seguro que quieres borrar la lista "${list.name}" y sus sublistas?`)) {
+                        if (confirm(`¿Seguro que quieres borrar la lista "${list.name}" y sus listas anidadas?`)) {
                           removeList(list.id);
                         }
                         setActiveMenuId(null);
                         setMenuCoords(null);
                       }}
+                      style={isMobile ? { ...mobileItemStyle, color: 'var(--accent-danger, #ff3b30)' } : undefined}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                     >
                       <Trash2 size={16} /> Eliminar Lista
                     </button>
-                  </div>
+                  </motion.div>
                 </>,
                 document.body
               )}

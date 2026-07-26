@@ -969,7 +969,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                                   if (collapsed[data.category]) toggleCategory(data.category);
                                 }}
                               >
-                                <FolderPlus size={16} /> Añadir sub-sección
+                                <FolderPlus size={16} /> Añadir sección anidada
                               </button>
                               <div className="ios-dropdown-divider" />
                               <button
@@ -1050,14 +1050,14 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           }
         })}
 
-      </div>
-      </div>
-
-      {(flattenedData.length === 0 || (flattenedData.length === 1 && flattenedData[0].type === 'page-header')) && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <EmptyState {...emptyStateProps} />
         </div>
-      )}
+
+        {(flattenedData.length === 0 || (flattenedData.length === 1 && flattenedData[0].type === 'page-header')) && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 220px)', width: '100%' }}>
+            <EmptyState {...emptyStateProps} />
+          </div>
+        )}
+      </div>
 
       <ListConfigModal 
         isOpen={isListConfigOpen} 
