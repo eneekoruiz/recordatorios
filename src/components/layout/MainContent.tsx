@@ -382,9 +382,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
 
   return (
-    <main className="main-content" ref={parentRef} style={{ overflowY: 'auto', height: '100%', minHeight: 0, WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', scrollPaddingTop: 0 }}>
+    <main className="main-content" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Header */}
-      <header className="content-header" style={{ padding: '24px clamp(20px, 4vw, 40px) 16px clamp(20px, 4vw, 40px)', display: 'flex', flexDirection: 'column', gap: '16px', flexShrink: 0, margin: '0', borderBottom: 'none' }}>
+      <header className="content-header" style={{ padding: '0 0 16px 0', display: 'flex', flexDirection: 'column', gap: '16px', flexShrink: 0, margin: '0', borderBottom: 'none' }}>
         
         {/* Top Bar (Barra Superior de Navegación) */}
         <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -544,10 +544,14 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         </div>
       </header>
 
-      {/* Lista Virtualizada */}
-      <div className="tasks-container" style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
-        
-        {virtualizer.getVirtualItems().map((virtualItem) => {
+      {/* Contenedor de Scroll Dedicado para Virtualizer */}
+      <div 
+        ref={parentRef}
+        style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', minHeight: 0, width: '100%', paddingBottom: '120px' }}
+      >
+        <div className="tasks-container" style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+          
+          {virtualizer.getVirtualItems().map((virtualItem) => {
           const data = flattenedData[virtualItem.index];
           
           const virtualStyle: React.CSSProperties = {
@@ -647,8 +651,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                             className="ios-dropdown-menu"
                             style={{ 
                               position: 'absolute', 
-                              right: 0, 
+                              left: '0', 
                               top: '100%', 
+                              marginTop: '8px',
                               zIndex: 100
                             }}
                             onClick={(e) => e.stopPropagation()}
@@ -738,6 +743,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           }
         })}
 
+      </div>
       </div>
 
       {flattenedData.length === 0 && (
