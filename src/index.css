@@ -5,7 +5,7 @@
 ======================================================== */
 :root {
   /* Color Palette — Light Theme (Glassmorphism & Pearl) */
-  --bg-base: #f2f2f7;
+  --bg-base: #ffffff;
   --bg-surface: rgba(255, 255, 255, 0.7);
   --bg-surface-glass: rgba(255, 255, 255, 0.55);
   --bg-elevated: #ffffff;
@@ -91,7 +91,7 @@ body {
    GLASSMORPHISM UTILITIES
 ======================================================== */
 .glass-header {
-  background: rgba(242, 242, 247, 0.85);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   border-bottom: 0.5px solid var(--border-subtle);
