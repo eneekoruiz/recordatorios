@@ -14,7 +14,8 @@ import {
   Pin,
   PinOff,
   Edit3,
-  Settings
+  Settings,
+  RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -611,6 +612,43 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         </div>
         )}
 
+      </div>
+      
+      <div style={{ padding: '20px 16px' }}>
+        <button
+          onClick={() => {
+            // Attempt to unregister service workers to force clean reload
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                  registration.unregister();
+                }
+                window.location.reload();
+              });
+            } else {
+              window.location.reload();
+            }
+          }}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            background: 'var(--bg-surface)',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: '10px',
+            padding: '10px 16px',
+            fontWeight: 600,
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+          }}
+        >
+          <RefreshCw size={16} />
+          Forzar Actualización
+        </button>
       </div>
       
       {/* MODALS (OUTSIDE SCROLL) */}
