@@ -237,7 +237,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
   // 1. Flatten Data para Virtualización (QA Performance Optimization)
   const flattenedData = useMemo(() => {
-    const flat: VirtualItemType[] = [];
+    const flat: VirtualItemType[] = [{ type: 'page-header' }];
     
     // Up Next (Solo en el ciclo más corto, e.g. cycle_day)
     if (currentCycle && currentCycle.daysValue === 1 && smartTasks.length > 0) {
@@ -350,7 +350,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     getScrollElement: () => parentRef.current,
     estimateSize: (index) => {
       const item = flattenedData[index];
-      if (item.type === 'header') return 72; // Increased for Apple-style top margin / spacing
+      if (item.type === 'page-header') return 160;
+      if (item.type === 'header') return 48; // Increased for Apple-style top margin / spacing
       if (item.type === 'empty-section') return 44;
       return 52; // task cards height in Apple style (compact)
     },
@@ -384,7 +385,31 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   return (
     <main className="main-content" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Header */}
-      <header className="content-header" style={{ padding: '0 0 16px 0', display: 'flex', flexDirection: 'column', gap: '16px', flexShrink: 0, margin: '0', borderBottom: 'none' }}>
+      
+
+      {/* Contenedor de Scroll Dedicado para Virtualizer */}
+      <div 
+        ref={parentRef}
+        style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', minHeight: 0, width: '100%', paddingBottom: '120px' }}
+      >
+        <div className="tasks-container" style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+          
+          {virtualizer.getVirtualItems().map((virtualItem) => {
+          const data = flattenedData[virtualItem.index];
+          
+          const virtualStyle: React.CSSProperties = {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            transform: `translateY(${virtualItem.start}px)`,
+            zIndex: data.type === 'section' || data.type === 'header' ? 10 : 1,
+          };
+
+          if (data.type === 'page-header') {
+            return (
+              <div key="page-header" ref={virtualizer.measureElement} data-index={virtualItem.index} style={{...virtualStyle, zIndex: 20}}>
+                <header className="content-header" style={{ padding: '0 0 16px 0', display: 'flex', flexDirection: 'column', gap: '16px', flexShrink: 0, margin: '0', borderBottom: 'none' }}>
         
         {/* Top Bar (Barra Superior de Navegación) */}
         <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -543,27 +568,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           )}
         </div>
       </header>
-
-      {/* Contenedor de Scroll Dedicado para Virtualizer */}
-      <div 
-        ref={parentRef}
-        style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', minHeight: 0, width: '100%', paddingBottom: '120px' }}
-      >
-        <div className="tasks-container" style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
-          
-          {virtualizer.getVirtualItems().map((virtualItem) => {
-          const data = flattenedData[virtualItem.index];
-          
-          const virtualStyle: React.CSSProperties = {
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            transform: `translateY(${virtualItem.start}px)`,
-            zIndex: data.type === 'section' || data.type === 'header' ? 10 : 1,
-          };
-
-          if (data.type === 'header') {
+              </div>
+            );
+          } else if (data.type === 'header') {
             const isCustomSection = data.sectionId !== undefined;
             const sectionId = data.sectionId;
             const isDraggingOver = dragOverSectionId === sectionId && isCustomSection;
