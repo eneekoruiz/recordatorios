@@ -177,7 +177,7 @@ function App() {
       <div className="main-container">
         <NavigationFrame
           isMobile={isMobile}
-          canGoBack={navView !== 'HOME' && (navStack.length > 1 || (isMobile && mobileView === 'content'))}
+          canGoBack={(navView !== 'HOME' && navStack.length > 1) || (isMobile && mobileView === 'content')}
           onBack={handleBack}
           viewKey={navView}
           backLabel={navStack.length > 1 ? 'Volver' : 'Listas'}

@@ -556,7 +556,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             onOpenZenMode={onOpenZenMode}
             onEdit={onEditTask || NOOP}
             index={index}
-            showListName={!isListView}
+            showListName={isSmartView || currentView === 'cycles'}
             isFirstInSection={isFirst}
             isLastInSection={isLast}
             previousTaskId={previousTaskId}
