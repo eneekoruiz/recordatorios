@@ -245,12 +245,12 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
 
               {isEditingTitle ? (
                 <input 
-                  type="text" 
                   value={editTitle} 
                   autoFocus 
                   onChange={e => setEditTitle(e.target.value)}
                   onBlur={handleTitleSubmit}
                   onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                  onPointerDownCapture={e => e.stopPropagation()}
                   style={{ fontSize: '1rem', fontWeight: 500, width: '100%', border: 'none', background: 'transparent', outline: 'none', color: 'var(--text-primary)', padding: 0 }}
                 />
               ) : (
@@ -284,6 +284,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
                     placeholder="Añadir nota..."
                     onChange={e => setEditNote(e.target.value)}
                     onBlur={handleNoteSubmit}
+                    onPointerDownCapture={e => e.stopPropagation()}
                     style={{ fontSize: '0.85rem', width: '100%', border: 'none', background: 'transparent', outline: 'none', color: 'var(--text-secondary)', padding: 0, resize: 'none', minHeight: '40px' }}
                   />
                 ) : (
