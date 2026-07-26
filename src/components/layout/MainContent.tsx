@@ -384,14 +384,21 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
 
   return (
-    <main className="main-content" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <main className="main-content" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
       {/* Header */}
       
 
       {/* Contenedor de Scroll Dedicado para Virtualizer */}
       <div 
         ref={parentRef}
-        style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', minHeight: 0, width: '100%', paddingBottom: '120px' }}
+        style={{ 
+          position: 'absolute', 
+          top: 0, left: 0, right: 0, 
+          bottom: 0,
+          overflowY: 'auto', 
+          WebkitOverflowScrolling: 'touch',
+          paddingBottom: 'max(120px, calc(env(safe-area-inset-bottom) + 100px))'
+        }}
       >
         <div className="tasks-container" style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative', background: 'var(--bg-elevated)' }}>
           
