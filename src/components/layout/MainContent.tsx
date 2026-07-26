@@ -589,11 +589,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                   ...virtualStyle, 
                   borderBottom: 'none',
                   paddingLeft: `calc(16px + ${data.depth * 24}px)`,
-                  paddingTop: 12,
-                  paddingBottom: 4,
+                  height: 48,
+                  display: 'flex',
+                  alignItems: 'center',
                   outline: isDraggingOver ? `2px solid ${data.color}` : undefined,
                   background: isDraggingOver ? `${data.color}14` : undefined,
-                  zIndex: sectionMenuId === data.sectionId ? 50 : undefined
+                  zIndex: sectionMenuId === data.sectionId ? 50 : 10 // ALWAYS above tasks (zIndex 1)
                 }}
                 onClick={() => toggleCategory(data.category)}
                 onDragOver={isCustomSection ? (e) => { e.preventDefault(); setDragOverSectionId(data.sectionId!); } : undefined}

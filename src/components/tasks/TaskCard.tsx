@@ -167,8 +167,8 @@ export const TaskCard = React.memo(function TaskCard({
           display: 'flex',
           alignItems: 'center',
           padding: '8px 16px',
-          margin: '0 16px',
-          width: 'calc(100% - 32px)',
+          margin: 0,
+          width: '100%',
           background: 'var(--bg-elevated)',
           borderTopLeftRadius: isFirstInSection ? 10 : 0,
           borderTopRightRadius: isFirstInSection ? 10 : 0,
@@ -181,18 +181,7 @@ export const TaskCard = React.memo(function TaskCard({
           cursor: 'default',
         }}
       >
-        {/* Apple-style internal separator that doesn't span full width */}
-        {!isLastInSection && (
-          <div style={{
-            position: 'absolute',
-            bottom: 0,
-            right: 0,
-            left: 48, // Starts exactly after the checkbox container
-            height: '1px', // Solid hairline
-            background: 'var(--border-subtle)',
-            zIndex: 0
-          }} />
-        )}
+
         {/* Checkbox */}
         <motion.button
           aria-label={isCompletedPeriod ? 'Marcar como pendiente' : 'Completar tarea'}
