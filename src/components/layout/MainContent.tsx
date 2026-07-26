@@ -331,6 +331,14 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       rootSections.forEach(rs => processSection(rs.id, 0));
     }
 
+    // Identify first and last tasks in sections for Apple-style rounding
+    for (let i = 0; i < flat.length; i++) {
+      if (flat[i].type === 'task') {
+        flat[i].isFirstInSection = (i === 0 || flat[i - 1].type !== 'task');
+        flat[i].isLastInSection = (i === flat.length - 1 || flat[i + 1].type !== 'task');
+      }
+    }
+
     return flat;
   }, [groupedTasks, smartTasks, currentCycle, collapsed, isListView, lists, listSections, currentList]);
 
@@ -342,14 +350,14 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     getScrollElement: () => parentRef.current,
     estimateSize: (index) => {
       const item = flattenedData[index];
-      if (item.type === 'header') return 48;
+      if (item.type === 'header') return 72; // Increased for Apple-style top margin / spacing
       if (item.type === 'empty-section') return 44;
-      return 72; // task cards
+      return 52; // task cards height in Apple style (compact)
     },
     overscan: 8,
   });
 
-  const renderTask = useCallback((task: TaskItem, virtualStyle: React.CSSProperties, index: number, depth: number) => (
+  const renderTask = useCallback((task: TaskItem, virtualStyle: React.CSSProperties, index: number, depth: number, isFirst: boolean, isLast: boolean) => (
     <div
       key={task.id}
       ref={virtualizer.measureElement}
@@ -365,6 +373,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         onEdit={onEditTask || (() => {})}
         index={index}
         showListName={!isListView}
+        isFirstInSection={isFirst}
+        isLastInSection={isLast}
       />
     </div>
   ), [handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, isListView, virtualizer]);
@@ -724,7 +734,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               </div>
             );
           } else {
-            return renderTask(data.task, virtualStyle, virtualItem.index, data.depth);
+            return renderTask(data.task, virtualStyle, virtualItem.index, data.depth, !!data.isFirstInSection, !!data.isLastInSection);
           }
         })}
 

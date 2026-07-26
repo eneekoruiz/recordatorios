@@ -631,7 +631,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
       
       {/* Version Checker */}
       <div style={{ padding: '8px', textAlign: 'center', fontSize: '0.65rem', color: 'var(--text-tertiary)', opacity: 0.7, fontWeight: 600 }}>
-        v1.0.4 (Rediseño Apple, Deshacer y Scroll arreglado)
+        v1.0.5 (Apple Grupos, Carga y Espaciados)
       </div>
     </aside>
   );

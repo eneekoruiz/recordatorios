@@ -21,10 +21,12 @@ interface TaskCardProps {
   onEdit: (id: string) => void;
   index: number;
   showListName?: boolean;
+  isFirstInSection?: boolean;
+  isLastInSection?: boolean;
 }
 
 export const TaskCard = React.memo(function TaskCard({
-  task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, index, showListName = true
+  task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, index, showListName = true, isFirstInSection, isLastInSection
 }: TaskCardProps) {
   const { cycles, tasks, nestTask, lists } = useAppStore();
   const taskCycle = cycles.find(c => c.id === task.cycle_id);
@@ -161,12 +163,15 @@ export const TaskCard = React.memo(function TaskCard({
           x,
           position: 'relative',
           zIndex: 1,
-          minHeight: 60,
+          minHeight: 52,
           display: 'flex',
           alignItems: 'center',
-          padding: '10px 16px',
-          background: 'var(--bg-elevated)',
-          borderBottom: '0.5px solid var(--border-subtle)',
+          padding: '8px 16px',
+          background: 'var(--bg-surface-glass, var(--bg-elevated))',
+          borderTopLeftRadius: isFirstInSection ? 12 : 0,
+          borderTopRightRadius: isFirstInSection ? 12 : 0,
+          borderBottomLeftRadius: isLastInSection ? 12 : 0,
+          borderBottomRightRadius: isLastInSection ? 12 : 0,
           opacity: isBlocked ? 0.5 : 1,
           pointerEvents: isBlocked ? 'none' : 'auto',
           touchAction: 'pan-y',
@@ -174,6 +179,18 @@ export const TaskCard = React.memo(function TaskCard({
           cursor: 'default',
         }}
       >
+        {/* Apple-style internal separator that doesn't span full width */}
+        {!isLastInSection && (
+          <div style={{
+            position: 'absolute',
+            bottom: 0,
+            right: 0,
+            left: 56, // Starts after the checkbox
+            height: '0.5px', // Hairline
+            background: 'var(--border-subtle, rgba(255,255,255,0.1))',
+            zIndex: 0
+          }} />
+        )}
         {/* Checkbox */}
         <motion.button
           aria-label={isCompletedPeriod ? 'Marcar como pendiente' : 'Completar tarea'}
