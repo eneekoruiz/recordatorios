@@ -88,6 +88,23 @@ body {
 }
 
 /* ========================================================
+   GLASSMORPHISM UTILITIES
+======================================================== */
+.glass-header {
+  background: rgba(242, 242, 247, 0.85);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 0.5px solid var(--border-subtle);
+  z-index: 100;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: saturate(180%) blur(24px);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+}
+
+/* ========================================================
    KEYFRAME ANIMATIONS
 ======================================================== */
 @keyframes fadeIn {

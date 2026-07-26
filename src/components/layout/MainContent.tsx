@@ -11,6 +11,7 @@ import { EmptyState } from '../ui/EmptyState';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { getCycleIcon } from '../../constants/icons';
 import { ListConfigModal } from './ListConfigModal';
+import { SMART_LISTS } from '../../constants/smartLists';
 // Settings icon import removed because it was merged into single lucide-react import above
 
 interface MainContentProps {
@@ -384,19 +385,102 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   ), [handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, isListView, virtualizer]);
 
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
+  const smartListInfo = isSmartView ? SMART_LISTS.find(l => l.id === currentView) : null;
+  const SmartIcon = smartListInfo ? smartListInfo.icon : null;
 
   return (
     <main className="main-content" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
-      {/* Header */}
-      
+      {/* Sticky Glass Top Bar */}
+      <header className="glass-header" style={{ position: 'sticky', top: 0, padding: '12px 16px', display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', zIndex: 100 }}>
+        {/* Left: Volver button (only for mobile content view) */}
+        {isMobile && onBackToSidebar && (
+          <button 
+            onClick={onBackToSidebar}
+            style={{
+              background: 'transparent', border: 'none', color: 'var(--accent-primary)',
+              display: 'flex', alignItems: 'center', gap: 4, padding: '8px 0',
+              fontSize: '1.05rem', cursor: 'pointer', fontWeight: 500
+            }}
+          >
+            <ChevronDown size={20} style={{ transform: 'rotate(90deg)', color: 'var(--accent-primary)' }} />
+            <span>Listas</span>
+          </button>
+        )}
+        
+        {/* Dynamic List Title on Top Bar (visible when scrolled or always for style) */}
+        <div style={{ flex: 1, textAlign: 'center', fontWeight: 600, fontSize: '1rem', color: isSmartView ? SMART_COLORS[currentView] : currentList ? currentList.color : 'var(--text-primary)' }}>
+          {/* We could add scroll opacity logic here, but for now it's just the title if mobile */}
+        </div>
+
+        {/* Right: Actions aligned to the right */}
+        <div className="header-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap', justifyContent: 'flex-end', position: 'relative' }}>
+          {isListView && currentList && (
+            <div style={{ position: 'relative' }}>
+              <button className="icon-btn" onClick={() => setIsMenuOpen(!isMenuOpen)} title="Opciones de Lista">
+                <MoreHorizontal size={20} color="var(--accent-primary)" />
+              </button>
+              <AnimatePresence>
+                {isMenuOpen && (
+                  <>
+                    <motion.div 
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                      style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(0,0,0,0.15)' }} 
+                      onClick={() => setIsMenuOpen(false)} 
+                    />
+                    <motion.div 
+                      className="ios-dropdown-menu glass-panel"
+                      initial={{ opacity: 0, scale: 0.92, y: -6, transformOrigin: 'top right' }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.92, y: -6 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                      style={{ 
+                        position: 'absolute', right: 0, top: '100%', marginTop: 10, 
+                        zIndex: 100 
+                      }}
+                    >
+                      <button 
+                        className="ios-dropdown-item"
+                        onClick={() => { updateList(currentList.id, { showCompleted: !currentList.showCompleted }); setIsMenuOpen(false); }}
+                      >
+                        <input type="checkbox" checked={!!currentList.showCompleted} readOnly style={{ marginRight: 12, pointerEvents: 'none', accentColor: 'var(--accent-primary)' }} />
+                        Mostrar Completados
+                      </button>
+                      <button 
+                        className="ios-dropdown-item"
+                        onClick={() => { updateList(currentList.id, { isFinancial: !currentList.isFinancial }); setIsMenuOpen(false); }}
+                      >
+                        <input type="checkbox" checked={!!currentList.isFinancial} readOnly style={{ marginRight: 12, pointerEvents: 'none', accentColor: 'var(--accent-primary)' }} />
+                        Modo Financiero
+                      </button>
+                      <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
+                      <button 
+                        className="ios-dropdown-item"
+                        onClick={() => { setIsListConfigOpen(true); setIsMenuOpen(false); }}
+                      >
+                        <Settings size={16} />
+                        Personalizar Lista
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+          {isListView && (
+            <button className="icon-btn" onClick={() => handleAddSection()} title="Añadir Sección Raíz">
+              <FolderPlus size={20} color="var(--accent-primary)" />
+            </button>
+          )}
+          <button className="icon-btn" onClick={() => onOpenNewTask()} title="Añadir Tarea"><Plus size={22} color="var(--accent-primary)" /></button>
+        </div>
+      </header>
 
       {/* Contenedor de Scroll Dedicado para Virtualizer */}
       <div 
         ref={parentRef}
         style={{ 
-          position: 'absolute', 
-          top: 0, left: 0, right: 0, 
-          bottom: 0,
+          flex: 1,
+          position: 'relative', 
           overflowY: 'auto', 
           WebkitOverflowScrolling: 'touch',
           paddingBottom: 'max(120px, calc(env(safe-area-inset-bottom) + 100px))'
@@ -419,88 +503,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           if (data.type === 'page-header') {
             return (
               <div key="page-header" ref={virtualizer.measureElement} data-index={virtualItem.index} style={{...virtualStyle, zIndex: 20}}>
-                <header className="content-header" style={{ padding: '12px 16px 20px 16px', display: 'flex', flexDirection: 'column', gap: '16px', flexShrink: 0, margin: '0', borderBottom: 'none' }}>
-        
-        {/* Top Bar (Barra Superior de Navegación) */}
-        <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between' }}>
-          {/* Left: Volver button (only for mobile content view) */}
-          {isMobile && onBackToSidebar && (
-            <button 
-              onClick={onBackToSidebar}
-              style={{
-                background: 'transparent', border: 'none', color: 'var(--accent-primary)',
-                display: 'flex', alignItems: 'center', gap: 4, padding: '8px 0',
-                fontSize: '1.05rem', cursor: 'pointer', fontWeight: 500
-              }}
-            >
-              <ChevronDown size={20} style={{ transform: 'rotate(90deg)', color: 'var(--accent-primary)' }} />
-              <span>Listas</span>
-            </button>
-          )}
-          
-          {/* Right: Actions aligned to the right */}
-          <div className="header-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap', justifyContent: 'flex-end', position: 'relative' }}>
-            {isListView && currentList && (
-              <div style={{ position: 'relative' }}>
-                <button className="icon-btn" onClick={() => setIsMenuOpen(!isMenuOpen)} title="Opciones de Lista">
-                  <MoreHorizontal size={20} />
-                </button>
-                <AnimatePresence>
-                  {isMenuOpen && (
-                    <>
-                      <motion.div 
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(0,0,0,0.15)' }} 
-                        onClick={() => setIsMenuOpen(false)} 
-                      />
-                      <motion.div 
-                        className="ios-dropdown-menu"
-                        initial={{ opacity: 0, scale: 0.92, y: -6, transformOrigin: 'top right' }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.92, y: -6 }}
-                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                        style={{ 
-                          position: 'absolute', right: 0, top: '100%', marginTop: 10, 
-                          zIndex: 100 
-                        }}
-                      >
-                        <button 
-                          className="ios-dropdown-item"
-                          onClick={() => { updateList(currentList.id, { showCompleted: !currentList.showCompleted }); setIsMenuOpen(false); }}
-                        >
-                          <input type="checkbox" checked={!!currentList.showCompleted} readOnly style={{ marginRight: 12, pointerEvents: 'none', accentColor: 'var(--accent-primary)' }} />
-                          Mostrar Completados
-                        </button>
-                        <button 
-                          className="ios-dropdown-item"
-                          onClick={() => { updateList(currentList.id, { isFinancial: !currentList.isFinancial }); setIsMenuOpen(false); }}
-                        >
-                          <input type="checkbox" checked={!!currentList.isFinancial} readOnly style={{ marginRight: 12, pointerEvents: 'none', accentColor: 'var(--accent-primary)' }} />
-                          Modo Financiero
-                        </button>
-                        <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
-                        <button 
-                          className="ios-dropdown-item"
-                          onClick={() => { setIsListConfigOpen(true); setIsMenuOpen(false); }}
-                        >
-                          <Settings size={16} />
-                          Personalizar Lista
-                        </button>
-                      </motion.div>
-                    </>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
-            {isListView && (
-              <button className="icon-btn" onClick={() => handleAddSection()} title="Añadir Sección Raíz">
-                <FolderPlus size={20} />
-              </button>
-            )}
-            <button className="icon-btn" onClick={() => onOpenNewTask()} title="Añadir Tarea"><Plus size={22} /></button>
-          </div>
-        </div>
-
+                <header className="content-header" style={{ padding: '0px 16px 20px 16px', display: 'flex', flexDirection: 'column', gap: '16px', flexShrink: 0, margin: '0', borderBottom: 'none' }}>
         {/* Línea del Título (Debajo del Top Bar) */}
         <div style={{ width: '100%' }}>
           <h1 className="text-display" style={{ 
@@ -512,6 +515,17 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             padding: 0
           }}>
             {CycleIcon && <CycleIcon size={32} color="var(--accent-primary)" style={{ marginRight: 12 }} />}
+            {SmartIcon && smartListInfo && (
+              <div style={{
+                marginRight: 12,
+                width: 38, height: 38, borderRadius: '50%',
+                backgroundColor: smartListInfo.color,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: `0 4px 12px ${smartListInfo.color}40`
+              }}>
+                <SmartIcon size={22} color="white" />
+              </div>
+            )}
             
             {isEditingCycle && currentCycle ? (
               <input 

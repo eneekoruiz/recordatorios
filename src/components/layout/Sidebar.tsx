@@ -397,8 +397,8 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                     </div>
                   </div>
                 )}
-                <div className="icon-circle" style={{ backgroundColor: `${list.color}15`, boxShadow: `0 4px 12px ${list.color}20`, border: `1px solid ${list.color}30` }}>
-                  <Icon size={18} color={list.color} />
+                <div className="icon-circle" style={{ backgroundColor: list.color, boxShadow: `0 4px 12px ${list.color}40`, border: 'none' }}>
+                  <Icon size={18} color="white" />
                 </div>
                 {!isEditMode && (
                   <span 
@@ -440,7 +440,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                         boxShadow: isActive ? '0 0 0 2px var(--accent-primary)' : undefined 
                       }}
                     >
-                      <div className="icon-circle" style={{ backgroundColor: `${list.color}15`, boxShadow: `0 4px 12px ${list.color}20`, border: `1px solid ${list.color}30` }}>
+                      <div className="icon-circle" style={{ backgroundColor: list.color, boxShadow: `0 4px 12px ${list.color}40`, border: 'none' }}>
                         <span style={{ fontSize: 16 }}>📌</span>
                       </div>
                       <span className="count" style={{ fontSize: countFontSize, color: list.color }}>{count}</span>
