@@ -366,18 +366,6 @@ input:checked + .slider::before {
   z-index: 50;
 }
 
-/* ========================================================
-   RESPONSIVE — MOBILE FIRST (≤ 768px)
-======================================================== */
-@media (max-width: 768px) {
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 99999;
-}
-
 .prompt-modal {
   background: var(--bg-surface);
   border-radius: var(--radius-xl);
