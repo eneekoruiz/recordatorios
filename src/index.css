@@ -1146,6 +1146,11 @@ button:disabled {
 /* Touch geometry and overflow guardrails. */
 .icon-btn, .btn-icon { min-width: 44px !important; min-height: 44px !important; }
 .ios-list-item { min-height: 52px; }
+.group-header {
+  padding-top: 16px;
+  padding-bottom: 8px;
+  min-height: 50px;
+}
 .ios-list-item .title, .ios-smart-card h3, .content-header h1, .group-header h3 {
   overflow-wrap: anywhere;
 }
