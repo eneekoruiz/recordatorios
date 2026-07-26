@@ -617,16 +617,19 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
       <div style={{ padding: '20px 16px' }}>
         <button
           onClick={() => {
-            // Attempt to unregister service workers to force clean reload
+            const bypassCacheUrl = window.location.origin + window.location.pathname + '?v=' + new Date().getTime();
             if ('serviceWorker' in navigator) {
               navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                const promises = [];
                 for(let registration of registrations) {
-                  registration.unregister();
+                  promises.push(registration.unregister());
                 }
-                window.location.reload();
+                Promise.all(promises).then(() => {
+                  window.location.href = bypassCacheUrl;
+                });
               });
             } else {
-              window.location.reload();
+              window.location.href = bypassCacheUrl;
             }
           }}
           style={{
