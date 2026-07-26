@@ -1180,15 +1180,23 @@ button:disabled {
 }
 .ios-list-item { min-height: 52px; }
 .group-header {
-  padding: 32px 16px 8px 16px;
-  min-height: 72px;
+  padding: 0 16px;
+  min-height: 0 !important;
+  height: auto !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   box-sizing: border-box;
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
-  background: var(--bg-base);
+  background: var(--bg-elevated);
   font-size: 1.15rem;
   font-weight: 700;
   color: var(--accent-primary, #0a84ff);
@@ -1199,7 +1207,7 @@ button:disabled {
 }
 .header-actions { max-width: 100%; }
 .ios-task-row { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
-.task-item-wrapper { contain: layout paint; }
+.task-item-wrapper { background: var(--bg-elevated); }
 
 /* More button on task card (chevron) */
 .task-more-btn {

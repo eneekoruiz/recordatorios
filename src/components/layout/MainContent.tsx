@@ -355,6 +355,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       if (item.type === 'empty-section') return 44;
       return 52; // task cards height in Apple style (compact)
     },
+    measureElement: (el) => el.getBoundingClientRect().height,
     overscan: 8,
   });
 
