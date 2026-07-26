@@ -295,7 +295,11 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
                       color: 'var(--text-secondary)',
                       wordBreak: 'break-word',
                       whiteSpace: 'pre-wrap',
-                      cursor: 'text'
+                      cursor: 'text',
+                      display: 'block',
+                      maxHeight: '150px',
+                      overflowY: 'auto',
+                      scrollbarWidth: 'none'
                     }}>
                     {task.description || (isEditingTitle ? 'Añadir nota...' : '')}
                   </span>
@@ -374,85 +378,87 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
         </div>
 
         {/* Bottom Sheet Nativo de iOS */}
-        <AnimatePresence>
-          {showMenu && createPortal(
-            <>
-              {/* Backdrop Oscuro */}
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                style={{ 
-                  position: 'fixed', 
-                  inset: 0, 
-                  zIndex: 999998, 
-                  background: 'rgba(0,0,0,0.3)', 
-                  backdropFilter: 'blur(3px)',
-                  WebkitBackdropFilter: 'blur(3px)'
-                }} 
-                onClick={(e) => { e.stopPropagation(); setShowMenu(false); }} 
-              />
-              
-              {/* Action Sheet Modal */}
-              <motion.div
-                initial={{ y: '100%' }}
-                animate={{ y: 0 }}
-                exit={{ y: '100%' }}
-                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                style={{
-                  position: 'fixed',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  zIndex: 999999,
-                  background: 'var(--bg-elevated)',
-                  backdropFilter: 'blur(25px)',
-                  WebkitBackdropFilter: 'blur(25px)',
-                  padding: '24px 24px max(24px, env(safe-area-inset-bottom))',
-                  borderTopLeftRadius: '24px',
-                  borderTopRightRadius: '24px',
-                  boxShadow: '0 -10px 40px rgba(0,0,0,0.1)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px'
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* Drag Handle (Cosmético) */}
-                <div style={{ 
-                  width: '40px', 
-                  height: '5px', 
-                  borderRadius: '5px', 
-                  background: 'var(--border-color)', 
-                  alignSelf: 'center', 
-                  marginBottom: '12px' 
-                }} />
+        {createPortal(
+          <AnimatePresence>
+            {showMenu && (
+              <>
+                {/* Backdrop Oscuro */}
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ 
+                    position: 'fixed', 
+                    inset: 0, 
+                    zIndex: 999998, 
+                    background: 'rgba(0,0,0,0.3)', 
+                    backdropFilter: 'blur(3px)',
+                    WebkitBackdropFilter: 'blur(3px)'
+                  }} 
+                  onClick={(e) => { e.stopPropagation(); setShowMenu(false); }} 
+                />
                 
-                <button className="ios-sheet-btn" onClick={() => { setShowMenu(false); onEdit(task.id); }}>
-                  <Edit3 size={20} />
-                  <span>Editar Detalles</span>
-                </button>
-                <button className="ios-sheet-btn" onClick={() => { setShowMenu(false); onOpenZenMode(task.id); }}>
-                  <Sparkles size={20} />
-                  <span>Modo Zen</span>
-                </button>
-                <button className="ios-sheet-btn" onClick={() => { setShowMenu(false); addDependency(task.id); notify('Selecciona la tarea bloqueadora'); }}>
-                  <Link2 size={20} />
-                  <span>Añadir Dependencia</span>
-                </button>
-                
-                <div style={{ height: '0.5px', background: 'var(--border-subtle)', margin: '8px 0' }} />
-                
-                <button className="ios-sheet-btn danger" onClick={() => { setShowMenu(false); setIsDeleteConfirmOpen(true); }}>
-                  <Trash2 size={20} />
-                  <span>Eliminar Tarea</span>
-                </button>
-              </motion.div>
-            </>,
-            document.body
-          )}
-        </AnimatePresence>
+                {/* Action Sheet Modal */}
+                <motion.div
+                  initial={{ y: '100%' }}
+                  animate={{ y: 0 }}
+                  exit={{ y: '100%' }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                  style={{
+                    position: 'fixed',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    zIndex: 999999,
+                    background: 'var(--bg-elevated)',
+                    backdropFilter: 'blur(25px)',
+                    WebkitBackdropFilter: 'blur(25px)',
+                    padding: '24px 24px max(24px, env(safe-area-inset-bottom))',
+                    borderTopLeftRadius: '24px',
+                    borderTopRightRadius: '24px',
+                    boxShadow: '0 -10px 40px rgba(0,0,0,0.1)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px'
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Drag Handle (Cosmético) */}
+                  <div style={{ 
+                    width: '40px', 
+                    height: '5px', 
+                    borderRadius: '5px', 
+                    background: 'var(--border-color)', 
+                    alignSelf: 'center', 
+                    marginBottom: '12px' 
+                  }} />
+                  
+                  <button className="ios-sheet-btn" onClick={() => { setShowMenu(false); onEdit(task.id); }}>
+                    <Edit3 size={20} />
+                    <span>Editar Detalles</span>
+                  </button>
+                  <button className="ios-sheet-btn" onClick={() => { setShowMenu(false); onOpenZenMode(task.id); }}>
+                    <Sparkles size={20} />
+                    <span>Modo Zen</span>
+                  </button>
+                  <button className="ios-sheet-btn" onClick={() => { setShowMenu(false); addDependency(task.id); notify('Selecciona la tarea bloqueadora'); }}>
+                    <Link2 size={20} />
+                    <span>Añadir Dependencia</span>
+                  </button>
+                  
+                  <div style={{ height: '0.5px', background: 'var(--border-subtle)', margin: '8px 0' }} />
+                  
+                  <button className="ios-sheet-btn danger" onClick={() => { setShowMenu(false); setIsDeleteConfirmOpen(true); }}>
+                    <Trash2 size={20} />
+                    <span>Eliminar Tarea</span>
+                  </button>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
       </motion.div>
 
       <ConfirmModal
