@@ -18,8 +18,8 @@ export default defineConfig({
         name: 'Recordatorios Elite',
         short_name: 'Recordatorios',
         description: 'Productividad nivel Staff Engineer',
-        theme_color: '#f4f4f5',
-        background_color: '#f4f4f5',
+        theme_color: '#ffffff',
+        background_color: '#ffffff',
         display: 'standalone',
         icons: [
           {

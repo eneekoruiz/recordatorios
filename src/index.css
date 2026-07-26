@@ -593,7 +593,7 @@ input:checked + .slider::before {
    layer so the product logic remains untouched.
 ======================================================== */
 :root {
-  --bg-base: #f2f2f7;
+  --bg-base: #ffffff;
   --bg-surface: rgba(255, 255, 255, 0.85);
   --bg-surface-glass: rgba(255, 255, 255, 0.75);
   --bg-elevated: #ffffff;
