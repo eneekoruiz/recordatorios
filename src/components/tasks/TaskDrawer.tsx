@@ -170,7 +170,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setCycleId(undefined);
       }
     }
-  }, [isOpen, taskId, tasks, defaultCategoryId, defaultSectionId]);
+  }, [isOpen, taskId, task, defaultCategoryId, defaultSectionId]);
 
   const drawerRef = useRef<HTMLDivElement>(null);
 
