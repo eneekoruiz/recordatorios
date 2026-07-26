@@ -103,6 +103,11 @@ export function NavigationFrame({
             style={{
               width: '100%',
               flex: 1,
+              minHeight: 0,
+              height: '100%',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
             {children}
