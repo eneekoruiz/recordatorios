@@ -610,9 +610,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 style={{ 
                   ...virtualStyle, 
                   borderBottom: 'none',
+                  borderTop: virtualItem.index === 0 ? 'none' : '0.5px solid var(--border-subtle)',
                   paddingLeft: `calc(16px + ${data.depth * 24}px)`,
                   minHeight: virtualItem.index === 0 ? 56 : 76,
-                  paddingTop: virtualItem.index === 0 ? 12 : 32, // More margin top as separator
+                  paddingTop: virtualItem.index === 0 ? 12 : 24, // Reduced from 32 since we have a line now
                   paddingBottom: 12,
                   display: 'flex',
                   alignItems: 'center',
