@@ -589,11 +589,13 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                   ...virtualStyle, 
                   borderBottom: 'none',
                   paddingLeft: `calc(16px + ${data.depth * 24}px)`,
-                  height: 48,
+                  minHeight: 48,
+                  paddingTop: 8,
+                  paddingBottom: 8,
                   display: 'flex',
                   alignItems: 'center',
                   outline: isDraggingOver ? `2px solid ${data.color}` : undefined,
-                  background: isDraggingOver ? `${data.color}14` : undefined,
+                  background: isDraggingOver ? `${data.color}14` : 'var(--bg-elevated)', // Blend with tasks
                   zIndex: sectionMenuId === data.sectionId ? 50 : 10 // ALWAYS above tasks (zIndex 1)
                 }}
                 onClick={() => toggleCategory(data.category)}
