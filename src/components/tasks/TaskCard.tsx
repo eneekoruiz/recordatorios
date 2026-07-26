@@ -521,6 +521,7 @@ export const TaskCard = React.memo(function TaskCard({
                   Cancelar
                 </button>
               </motion.div>
+              </div>
             </>
           )}
         </AnimatePresence>,
