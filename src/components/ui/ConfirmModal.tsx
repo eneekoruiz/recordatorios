@@ -35,36 +35,37 @@ export function ConfirmModal({
     };
   }, [isOpen, onCancel]);
 
-  return (
+  if (!isOpen) return null;
+
+  return createPortal(
     <AnimatePresence>
-      {isOpen && (
-        <motion.div className="premium-overlay" role="presentation"
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          transition={{ duration: 0.18 }} onClick={onCancel}>
-          <motion.section className="premium-sheet confirm-sheet" role="alertdialog"
-            aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-description"
-            initial={{ opacity: 0, y: 34, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 22, scale: 0.97 }}
-            transition={{ type: 'spring', stiffness: 430, damping: 34, mass: 0.82 }}
-            onClick={(event) => event.stopPropagation()}>
-            <div className={`premium-sheet-icon ${tone}`} aria-hidden="true">
-              <AlertTriangle size={22} strokeWidth={2.2} />
-            </div>
-            <button className="premium-sheet-close" onClick={onCancel} aria-label="Cerrar"><X size={18} /></button>
-            <div className="premium-sheet-copy">
-              <h2 id="confirm-title">{title}</h2>
-              <p id="confirm-description">{message}</p>
-            </div>
-            <div className="premium-sheet-actions">
-              <button ref={cancelRef} className="premium-button secondary" onClick={onCancel}>{cancelText}</button>
-              <button className={`premium-button ${tone}`} onClick={() => { navigator.vibrate?.(35); onConfirm(); }}>
-                {confirmText}
-              </button>
-            </div>
-          </motion.section>
-        </motion.div>
-      )}
-    </AnimatePresence>
+      <motion.div className="premium-overlay" role="presentation"
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        transition={{ duration: 0.18 }} onClick={onCancel}
+        style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <motion.section className="premium-sheet confirm-sheet" role="alertdialog"
+          aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-description"
+          initial={{ opacity: 0, y: 34, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 22, scale: 0.97 }}
+          transition={{ type: 'spring', stiffness: 430, damping: 34, mass: 0.82 }}
+          onClick={(event) => event.stopPropagation()}
+          style={{ position: 'relative', width: '100%', maxWidth: '440px', margin: '16px', background: 'var(--bg-surface)', borderRadius: '24px', padding: '24px', boxShadow: '0 24px 48px rgba(0,0,0,0.2)' }}>
+          <div className={`premium-sheet-icon ${tone}`} aria-hidden="true" style={{ marginBottom: '16px' }}>
+            <AlertTriangle size={24} strokeWidth={2} color={tone === 'danger' ? 'var(--accent-red)' : 'var(--accent-primary)'} />
+          </div>
+          <button className="premium-sheet-close" onClick={onCancel} aria-label="Cerrar" style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)' }}><X size={20} /></button>
+          <div className="premium-sheet-copy">
+            <h2 id="confirm-title" style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '8px', color: 'var(--text-primary)' }}>{title}</h2>
+            <p id="confirm-description" style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>{message}</p>
+          </div>
+          <div className="premium-sheet-actions" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '24px' }}>
+            <button ref={cancelRef} className="premium-button secondary" onClick={onCancel} style={{ padding: '12px', borderRadius: '12px', background: 'var(--bg-elevated)', border: 'none', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer' }}>{cancelText}</button>
+            <button className={`premium-button ${tone}`} onClick={onConfirm} style={{ padding: '12px', borderRadius: '12px', background: tone === 'danger' ? 'var(--accent-red)' : 'var(--accent-primary)', border: 'none', color: 'white', fontWeight: 600, cursor: 'pointer' }}>{confirmText}</button>
+          </div>
+        </motion.section>
+      </motion.div>
+    </AnimatePresence>,
+    document.body
   );
 }

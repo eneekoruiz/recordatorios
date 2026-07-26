@@ -5,12 +5,12 @@
 ======================================================== */
 :root {
   /* Color Palette — Light Theme (Glassmorphism & Pearl) */
-  --bg-base: #f8f9fc;
+  --bg-base: #f2f2f7;
   --bg-surface: rgba(255, 255, 255, 0.7);
   --bg-surface-glass: rgba(255, 255, 255, 0.55);
-  --bg-elevated: rgba(255, 255, 255, 0.85);
-  --bg-card: rgba(255, 255, 255, 0.65);
-  --bg-hover: rgba(255, 255, 255, 0.4);
+  --bg-elevated: #ffffff;
+  --bg-card: #ffffff;
+  --bg-hover: rgba(0, 0, 0, 0.04);
 
   --accent-primary: #007aff;
   --accent-blue: #007aff;

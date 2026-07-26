@@ -167,11 +167,11 @@ export const TaskCard = React.memo(function TaskCard({
           display: 'flex',
           alignItems: 'center',
           padding: '8px 16px',
-          background: 'var(--bg-surface-glass, var(--bg-elevated))',
-          borderTopLeftRadius: isFirstInSection ? 12 : 0,
-          borderTopRightRadius: isFirstInSection ? 12 : 0,
-          borderBottomLeftRadius: isLastInSection ? 12 : 0,
-          borderBottomRightRadius: isLastInSection ? 12 : 0,
+          background: 'var(--bg-elevated)',
+          borderTopLeftRadius: isFirstInSection ? 10 : 0,
+          borderTopRightRadius: isFirstInSection ? 10 : 0,
+          borderBottomLeftRadius: isLastInSection ? 10 : 0,
+          borderBottomRightRadius: isLastInSection ? 10 : 0,
           opacity: isBlocked ? 0.5 : 1,
           pointerEvents: isBlocked ? 'none' : 'auto',
           touchAction: 'pan-y',
@@ -185,9 +185,9 @@ export const TaskCard = React.memo(function TaskCard({
             position: 'absolute',
             bottom: 0,
             right: 0,
-            left: 56, // Starts after the checkbox
-            height: '0.5px', // Hairline
-            background: 'var(--border-subtle, rgba(255,255,255,0.1))',
+            left: 48, // Starts exactly after the checkbox container
+            height: '1px', // Solid hairline
+            background: 'var(--border-subtle)',
             zIndex: 0
           }} />
         )}

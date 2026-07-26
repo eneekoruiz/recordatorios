@@ -631,7 +631,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
       
       {/* Version Checker */}
       <div style={{ padding: '8px', textAlign: 'center', fontSize: '0.65rem', color: 'var(--text-tertiary)', opacity: 0.7, fontWeight: 600 }}>
-        v1.0.6 (Virtualizer Nativo y Desplegables)
+        v1.0.7 (Apple Style & Fixes)
       </div>
     </aside>
   );
