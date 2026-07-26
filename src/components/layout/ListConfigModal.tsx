@@ -97,7 +97,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
           style={{ maxWidth: 500 }}
         >
           <div className="prompt-header">
-            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-primary)' }}>{existingList ? 'Editar Lista' : 'Nueva Lista'}</h3>
+            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-primary)' }}>{existingList ? 'Editar Lista' : (parentId ? 'Nueva Lista Anidada' : 'Nueva Lista')}</h3>
           </div>
           
           <div className="prompt-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-24)' }}>
