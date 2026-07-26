@@ -395,13 +395,14 @@ export const useAppStore = create<AppState>()(
         
         // 2. Pre-initialize defined manual sections for this list so empty sections are visible
         const sectionsForList = (listSections || []).filter(s => s.listId === listId && !s.deleted_at);
+        const activeSectionIds = new Set(sectionsForList.map(s => s.id));
         for (const sec of sectionsForList) {
           grouped[`section_${sec.id}`] = [];
         }
 
         for (const task of filtered) {
           let groupKey = '';
-          if (task.sectionId) {
+          if (task.sectionId && activeSectionIds.has(task.sectionId)) {
             groupKey = `section_${task.sectionId}`;
           } else if (task.cycle_id) {
             groupKey = `cycle_${task.cycle_id}`;
