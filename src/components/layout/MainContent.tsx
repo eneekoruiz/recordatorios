@@ -160,7 +160,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     return getTasksByCycle(currentView, resolvedShowCompleted, recentlyCompletedIds);
   }, [currentView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, resolvedShowCompleted, recentlyCompletedIds]);
     
-  const smartTasks = useMemo(() => currentView === 'cycle_day' ? getSmartSortTasks() : [], [currentView, getSmartSortTasks]);
+  const smartTasks = useMemo(() => currentView === 'cycle_day' ? getSmartSortTasks() : [], [currentView, getSmartSortTasks, tasks]);
 
   // Calcular Resumen Financiero Total
   const totalCost = useMemo(() => {
@@ -843,9 +843,13 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             transition={{ type: 'spring', stiffness: 450, damping: 28 }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden', flex: 1 }}>
               <Trash2 size={18} color="var(--accent-red)" style={{ flexShrink: 0 }} />
-              <span style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span style={{ 
+                fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-primary)', 
+                display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', 
+                overflow: 'hidden', wordBreak: 'break-word', whiteSpace: 'normal'
+              }}>
                 Eliminado "{deletedToast.title}"
               </span>
             </div>
