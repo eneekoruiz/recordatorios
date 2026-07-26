@@ -374,7 +374,7 @@ export const TaskCard = React.memo(function TaskCard({
           </div>
 
           {/* Note */}
-          {(task.description || isEditingNote || isEditingTitle) && (
+          {(task.description || isEditingNote || true) && (
             <div style={{ marginTop: 2 }}>
               {isEditingNote ? (
                 <textarea
@@ -400,12 +400,17 @@ export const TaskCard = React.memo(function TaskCard({
                   onPointerDownCapture={(e) => { e.stopPropagation(); }}
                   onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditingNote(true); }}
                   style={{
-                    fontSize: '0.85rem', color: 'var(--text-secondary)',
-                    wordBreak: 'break-word', cursor: 'text', display: 'block',
-                    maxHeight: 100, overflowY: 'auto', scrollbarWidth: 'none'
+                    fontSize: '0.85rem',
+                    color: task.description ? 'var(--text-secondary)' : 'var(--text-tertiary)',
+                    opacity: task.description ? 1 : (isHovered || isEditingTitle ? 0.8 : 0.4),
+                    wordBreak: 'break-word',
+                    cursor: 'text',
+                    display: 'block',
+                    minHeight: (task.description || (!task.completed && !isCompletedPeriod)) ? 24 : 0,
+                    padding: (task.description || (!task.completed && !isCompletedPeriod)) ? '2px 0' : 0
                   }}
                 >
-                  {task.description || (isEditingTitle ? 'Añadir nota...' : '')}
+                  {task.description || (!task.completed && !isCompletedPeriod ? 'Añadir nota...' : '')}
                 </span>
               )}
             </div>
@@ -451,16 +456,36 @@ export const TaskCard = React.memo(function TaskCard({
           <button
             onClick={(e) => { e.stopPropagation(); onToggleExpand?.(); }}
             style={{
-              background: 'transparent', border: 'none', cursor: 'pointer',
-              padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--text-tertiary)', minWidth: 44, minHeight: 44,
-              WebkitTapHighlightColor: 'transparent'
+              background: isExpanded ? 'var(--bg-hover, rgba(142, 142, 147, 0.15))' : 'var(--accent-glow, rgba(10, 132, 255, 0.15))',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-md, 8px)',
+              cursor: 'pointer',
+              padding: '6px 10px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              color: isExpanded ? 'var(--text-secondary)' : 'var(--accent-primary)',
+              fontWeight: 600,
+              fontSize: '0.8rem',
+              minWidth: 44,
+              minHeight: 36,
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+              WebkitTapHighlightColor: 'transparent',
+              flexShrink: 0,
+              marginRight: 4
             }}
             title={isExpanded ? "Contraer subtareas" : "Expandir subtareas"}
             aria-label={isExpanded ? "Contraer subtareas" : "Expandir subtareas"}
           >
-            <motion.div animate={{ rotate: isExpanded ? 0 : -90 }} transition={{ type: 'spring', damping: 20, stiffness: 300 }}>
-              <ChevronDown size={18} />
+            <span>
+              {(() => {
+                if (isExpanded) return 'Contraer';
+                const count = tasks ? Object.values(tasks).filter(t => t && t.parentId === task.id && !t.deleted).length : 0;
+                return count > 0 ? `${count} ${count === 1 ? 'subtarea' : 'subtareas'}` : 'Subtareas';
+              })()}
+            </span>
+            <motion.div style={{ display: 'flex', alignItems: 'center' }} animate={{ rotate: isExpanded ? 0 : -90 }} transition={{ type: 'spring', damping: 20, stiffness: 300 }}>
+              <ChevronDown size={16} />
             </motion.div>
           </button>
         )}
@@ -574,11 +599,52 @@ export const TaskCard = React.memo(function TaskCard({
 
 // ── MenuActions Component ──────────────────────────────────────
 function MenuActions({ task, setContextMenuOpen, onEdit, nestTask, previousTaskId, setIsDeleteConfirmOpen, updateTask }: any) {
+  const addTask = useAppStore(state => state.addTask);
+  const lists = useAppStore(state => state.lists);
+  const [showMoveSubmenu, setShowMoveSubmenu] = useState(false);
+
+  if (showMoveSubmenu) {
+    return (
+      <>
+        <button onClick={() => setShowMoveSubmenu(false)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', width: '100%', border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 600, color: 'var(--accent-primary)' }}>← Volver</button>
+        <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 16px' }} />
+        {lists?.map(list => (
+          <button
+            key={list.id}
+            onClick={() => {
+              updateTask(task.id, { listId: list.id, categoryId: list.id, sectionId: undefined });
+              setContextMenuOpen(false);
+              setShowMoveSubmenu(false);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '10px 16px',
+              width: '100%',
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+              color: 'var(--text-primary)',
+              textAlign: 'left'
+            }}
+            onPointerDown={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
+            onPointerUp={e => { e.currentTarget.style.background = 'transparent'; }}
+            onPointerLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+          >
+            <span style={{ width: 12, height: 12, borderRadius: '50%', background: list.color || 'var(--accent-primary)', flexShrink: 0 }} />
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{list.name}</span>
+          </button>
+        ))}
+      </>
+    );
+  }
+
   return (
     <>
       <ActionRow icon={<Edit3 size={18} />} label="Editar" onClick={() => { setContextMenuOpen(false); onEdit(task.id); }} />
-      <ActionRow icon={<Copy size={18} />} label="Duplicar" onClick={() => { setContextMenuOpen(false); }} />
-      <ActionRow icon={<FolderOpen size={18} />} label="Mover a lista" onClick={() => { setContextMenuOpen(false); }} />
+      <ActionRow icon={<Copy size={18} />} label="Duplicar" onClick={() => { addTask({ ...task, id: crypto.randomUUID(), title: `${task.title} (copia)`, created_at: Date.now(), completed: false, completed_at: undefined }); setContextMenuOpen(false); }} />
+      <ActionRow icon={<FolderOpen size={18} />} label="Mover a lista" onClick={() => { setShowMoveSubmenu(true); }} />
       
       <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 16px' }} />
       
