@@ -145,26 +145,22 @@ function App() {
         height: '100vh',
         width: '100vw',
         background: 'var(--bg-base)',
-        color: 'var(--text-primary)',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       }}>
-        <div style={{
-          width: 40,
-          height: 40,
-          border: '3px solid var(--border-subtle)',
-          borderTop: '3px solid var(--accent-primary)',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-          marginBottom: 16
-        }} />
+        <div className="ios-spinner" />
         <style>{`
+          .ios-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border-subtle, rgba(255,255,255,0.1));
+            border-top: 3px solid var(--accent-primary, #0a84ff);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+          }
           @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
           }
         `}</style>
-        <p style={{ fontSize: '1rem', fontWeight: 500, margin: 0 }}>Tranquilo, ya casi estamos...</p>
-        <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', marginTop: 8 }}>Cargando tus recordatorios...</p>
       </div>
     );
   }
