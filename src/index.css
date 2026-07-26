@@ -127,6 +127,21 @@ body {
   }
 }
 
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton-pulse {
+  background: linear-gradient(
+    90deg,
+    var(--bg-hover) 25%,
+    var(--border-subtle) 50%,
+    var(--bg-hover) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite ease-in-out;
+}
+
 /* ========================================================
    LAYOUT — APP SHELL
 ======================================================== */
@@ -718,8 +733,8 @@ button { -webkit-tap-highlight-color: transparent; }
     --bg-base: #000000;
     --bg-surface: rgba(28, 28, 30, 0.85);
     --bg-surface-glass: rgba(28, 28, 30, 0.75);
-    --bg-elevated: #1C1C1E;
-    --bg-card: #1C1C1E;
+    --bg-elevated: var(--bg-surface-glass);
+    --bg-card: var(--bg-surface-glass);
     --bg-hover: rgba(255, 255, 255, 0.1);
     --bg-pressed: rgba(255, 255, 255, 0.15);
     
@@ -734,9 +749,9 @@ button { -webkit-tap-highlight-color: transparent; }
     
     --text-primary: #FFFFFF;
     --text-secondary: rgba(235, 235, 245, 0.6);
-    --text-tertiary: rgba(235, 235, 245, 0.3);
+    --text-tertiary: rgba(235, 235, 245, 0.45);
     
-    --border-subtle: rgba(84, 84, 88, 0.65);
+    --border-subtle: rgba(255, 255, 255, 0.12);
     --border-focus: rgba(10, 132, 255, 0.4);
     --border-color: rgba(84, 84, 88, 0.3);
     
@@ -913,7 +928,7 @@ button { -webkit-tap-highlight-color: transparent; }
   outline: none;
   transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
-.auth-field input:focus {
+.auth-field input:focus-visible {
   border-color: var(--border-focus);
   background: rgba(255,255,255,0.94);
   box-shadow: 0 0 0 4px var(--accent-glow), 0 12px 30px rgba(20,24,38,0.08);
@@ -959,7 +974,7 @@ button { -webkit-tap-highlight-color: transparent; }
   .auth-hero-panel,
   .auth-card { background: rgba(24,27,36,0.72); border-color: rgba(255,255,255,0.10); }
   .auth-proof-grid span, .auth-field input { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.10); }
-  .auth-field input:focus { background: rgba(255,255,255,0.10); }
+  .auth-field input:focus-visible { background: rgba(255,255,255,0.10); }
 }
 
 /* ========================================================
@@ -969,9 +984,15 @@ button { -webkit-tap-highlight-color: transparent; }
 :where(button, [role="button"], a, input, textarea, select) {
   -webkit-tap-highlight-color: transparent;
 }
+:where(button, [role="button"], a, input, textarea, select):focus:not(:focus-visible) {
+  outline: none !important;
+  box-shadow: none !important;
+}
 :where(button, [role="button"], a, input, textarea, select):focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--accent-primary) 34%, transparent);
-  outline-offset: 3px;
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--border-focus);
+  transition: box-shadow 0.15s ease, outline-offset 0.15s ease;
 }
 button:disabled {
   cursor: not-allowed !important;
@@ -1078,7 +1099,7 @@ button:disabled {
   box-shadow: inset 0 1px 2px rgba(15,23,42,.035);
   transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
 }
-.premium-input:focus {
+.premium-input:focus-visible {
   border-color: var(--border-focus);
   background: var(--bg-surface);
   box-shadow: 0 0 0 4px var(--accent-glow), 0 12px 28px rgba(15,23,42,.07);
@@ -1224,7 +1245,8 @@ button:disabled {
 }
 .header-actions { max-width: 100%; }
 .ios-task-row { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
-.task-item-wrapper { background: var(--bg-elevated); }
+.task-item-wrapper { background: transparent !important; }
+.tasks-container { background: transparent !important; }
 
 /* More button on task card (chevron) */
 .task-more-btn {

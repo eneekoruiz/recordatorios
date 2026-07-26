@@ -29,6 +29,8 @@ type VirtualItemType =
   | { type: 'empty-section', title: string, category: string, color: string, sectionId?: string, depth: number }
   | { type: 'task', task: TaskItem, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean };
 
+const NOOP = () => {};
+
 const SMART_COLORS: Record<string, string> = {
   'smart_today': 'var(--accent-blue)',
   'smart_scheduled': 'var(--accent-red)',
@@ -41,13 +43,136 @@ const SMART_COLORS: Record<string, string> = {
 export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditTask, onBackToSidebar, isMobile }: MainContentProps) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   
-  const { getTasksByCycle, getTasksByList, getSmartSortTasks, toggleTask, cycles, updateCycle, deleteCycle, lists, addListSection, updateListSection, deleteListSection, updateTaskSection, listSections, tasks, updateList, updateTask } = useAppStore();
+  const getTasksByCycle = useAppStore((state) => state.getTasksByCycle);
+  const getTasksByList = useAppStore((state) => state.getTasksByList);
+  const getSmartSortTasks = useAppStore((state) => state.getSmartSortTasks);
+  const toggleTask = useAppStore((state) => state.toggleTask);
+  const cycles = useAppStore((state) => state.cycles);
+  const updateCycle = useAppStore((state) => state.updateCycle);
+  const deleteCycle = useAppStore((state) => state.deleteCycle);
+  const lists = useAppStore((state) => state.lists);
+  const addListSection = useAppStore((state) => state.addListSection);
+  const updateListSection = useAppStore((state) => state.updateListSection);
+  const deleteListSection = useAppStore((state) => state.deleteListSection);
+  const updateTaskSection = useAppStore((state) => state.updateTaskSection);
+  const listSections = useAppStore((state) => state.listSections);
+  const tasks = useAppStore((state) => state.tasks);
+  const updateList = useAppStore((state) => state.updateList);
+  const updateTask = useAppStore((state) => state.updateTask);
+
+  const [isScrolled, setIsScrolled] = useState(false);
 
   const currentCycle = useMemo(() => cycles.find(c => c.id === currentView), [cycles, currentView]);
   const currentList = useMemo(() => lists?.find(l => `list_${l.id}` === currentView), [lists, currentView]);
   
   const isListView = currentView.startsWith('list_');
   const isSmartView = currentView.startsWith('smart_');
+
+  const emptyStateProps = useMemo(() => {
+    const handleNewTask = () => {
+      onOpenNewTask(currentView.startsWith('list_') ? currentView.replace('list_', '') : undefined);
+    };
+
+    switch (currentView) {
+      case 'smart_today':
+        return {
+          title: "Todo al día para hoy",
+          subtitle: "No tienes tareas programadas para el día de hoy. Disfruta tu tiempo o añade algo nuevo.",
+          iconName: "today",
+          ctaText: "Añadir tarea para hoy",
+          onAction: handleNewTask
+        };
+      case 'smart_scheduled':
+        return {
+          title: "Sin tareas programadas",
+          subtitle: "Planifica tus próximos días añadiendo tareas con fecha límite.",
+          iconName: "scheduled",
+          ctaText: "Programar tarea",
+          onAction: handleNewTask
+        };
+      case 'smart_all':
+        return {
+          title: "No hay tareas en absoluto",
+          subtitle: "Tienes todo bajo control. Relájate o añade un nuevo recordatorio.",
+          iconName: "sparkles",
+          ctaText: "Nueva tarea",
+          onAction: handleNewTask
+        };
+      case 'smart_flagged':
+        return {
+          title: "Sin tareas destacadas",
+          subtitle: "Marca tareas importantes con una bandera para tenerlas siempre a la mano.",
+          iconName: "flagged",
+          ctaText: "Añadir tarea destacada",
+          onAction: handleNewTask
+        };
+      case 'smart_completed':
+        return {
+          title: "Sin tareas completadas",
+          subtitle: "A medida que vayas marcando tareas como terminadas, se guardarán aquí.",
+          iconName: "completed",
+          ctaText: undefined,
+          onAction: undefined
+        };
+      case 'smart_overdue':
+        return {
+          title: "¡Todo al día!",
+          subtitle: "Excelente trabajo, no tienes ninguna tarea atrasada o vencida.",
+          iconName: "overdue",
+          ctaText: undefined,
+          onAction: undefined
+        };
+      case 'list_inbox':
+        return {
+          title: "Bandeja de entrada vacía",
+          subtitle: "Todos tus pendientes rápidos están procesados. ¡Gran productividad!",
+          iconName: "inbox",
+          ctaText: "Añadir a bandeja",
+          onAction: () => onOpenNewTask('inbox')
+        };
+      case 'TRASH':
+        return {
+          title: "La papelera está vacía",
+          subtitle: "Cuando elimines tareas o listas, aparecerán aquí antes de borrarse permanentemente.",
+          iconName: "trash",
+          ctaText: undefined,
+          onAction: undefined
+        };
+      case 'cycle_day':
+        return {
+          title: "Día libre de ciclos",
+          subtitle: "No hay tareas activas para tu ciclo diario actual.",
+          iconName: "clock",
+          ctaText: "Crear tarea diaria",
+          onAction: handleNewTask
+        };
+      case 'cycle_week':
+        return {
+          title: "Semana despejada",
+          subtitle: "No hay tareas asignadas para tu ciclo semanal actual.",
+          iconName: "clock",
+          ctaText: "Crear tarea semanal",
+          onAction: handleNewTask
+        };
+      case 'cycle_month':
+      case 'cycle_year':
+        return {
+          title: "Ciclo temporal despejado",
+          subtitle: "No tienes objetivos o recordatorios para este ciclo temporal.",
+          iconName: "clock",
+          ctaText: "Añadir a ciclo",
+          onAction: handleNewTask
+        };
+      default:
+        return {
+          title: `Sin tareas en "${currentList?.name || (currentCycle ? currentCycle.name : 'la lista')}"`,
+          subtitle: "Esta lista está vacía en este momento. Empieza añadiendo tu primer ítem.",
+          iconName: "list",
+          ctaText: "Añadir tarea",
+          onAction: handleNewTask
+        };
+    }
+  }, [currentView, currentList, currentCycle, onOpenNewTask]);
 
   // Menu state
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -275,8 +400,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           const roots = categoryTasks.filter(t => !t.parentId);
           const processNode = (task: TaskItem, depth: number) => {
             flat.push({ type: 'task', task, depth });
-            const children = categoryTasks.filter(t => t.parentId === task.id);
-            children.forEach(c => processNode(c, depth + 1));
+            if (!collapsed[`task_${task.id}`]) {
+              const children = categoryTasks.filter(t => t.parentId === task.id);
+              children.forEach(c => processNode(c, depth + 1));
+            }
           };
           roots.forEach(r => processNode(r, 0));
         }
@@ -291,8 +418,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           const roots = groupedTasks['no_section'].filter(t => !t.parentId);
           const processNode = (task: TaskItem, depth: number) => {
             flat.push({ type: 'task', task, depth });
-            const children = groupedTasks['no_section'].filter(t => t.parentId === task.id);
-            children.forEach(c => processNode(c, depth + 1));
+            if (!collapsed[`task_${task.id}`]) {
+              const children = groupedTasks['no_section'].filter(t => t.parentId === task.id);
+              children.forEach(c => processNode(c, depth + 1));
+            }
           };
           roots.forEach(r => processNode(r, 0));
         }
@@ -316,8 +445,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             const roots = categoryTasks.filter(t => !t.parentId);
             const processNode = (task: TaskItem, depthLevel: number) => {
               flat.push({ type: 'task', task, depth: depthLevel });
-              const children = categoryTasks.filter(t => t.parentId === task.id);
-              children.forEach(c => processNode(c, depthLevel + 1));
+              if (!collapsed[`task_${task.id}`]) {
+                const children = categoryTasks.filter(t => t.parentId === task.id);
+                children.forEach(c => processNode(c, depthLevel + 1));
+              }
             };
             roots.forEach(r => processNode(r, depth));
           }
@@ -355,34 +486,63 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       if (item.type === 'page-header') return 160;
       if (item.type === 'header') return index === 0 ? 56 : 76; // Extra Apple-style spacing between sections
       if (item.type === 'empty-section') return 44;
-      return 52; // task cards height in Apple style (compact)
+      return 80; // task cards height in Apple style (compact)
     },
     measureElement: (el) => el.getBoundingClientRect().height,
     overscan: 8,
   });
 
-  const renderTask = useCallback((task: TaskItem, virtualStyle: React.CSSProperties, index: number, depth: number, isFirst: boolean, isLast: boolean, previousTaskId?: string) => (
-    <div
-      key={task.id}
-      ref={virtualizer.measureElement}
-      data-index={index}
-      style={virtualStyle}
-    >
-      <TaskCard 
-        task={task}
-        virtualStyle={{ paddingLeft: `calc(16px + ${depth * 24}px)` }}
-        onToggle={handleToggleTask}
-        onDelete={handleDeleteTask}
-        onOpenZenMode={onOpenZenMode}
-        onEdit={onEditTask || (() => {})}
-        index={index}
-        showListName={!isListView}
-        isFirstInSection={isFirst}
-        isLastInSection={isLast}
-        previousTaskId={previousTaskId}
-      />
-    </div>
-  ), [handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, isListView, virtualizer]);
+  const renderTask = useCallback((task: TaskItem, virtualStyle: React.CSSProperties, index: number, depth: number, isFirst: boolean, isLast: boolean, previousTaskId?: string) => {
+    const hasChildren = Object.values(tasks).some(t => t.parentId === task.id && !t.deleted_at);
+    const isExpanded = !collapsed[`task_${task.id}`];
+
+    return (
+      <div
+        key={task.id}
+        ref={virtualizer.measureElement}
+        data-index={index}
+        style={virtualStyle}
+      >
+        <div style={{ position: 'relative' }}>
+          {depth > 0 && (
+            <div style={{
+              position: 'absolute', left: 8 + (depth-1)*24, top: 0, bottom: 0, width: 2,
+              background: 'var(--accent-primary)', opacity: Math.max(0.2, 1 - depth*0.2), zIndex: 1
+            }} />
+          )}
+          
+          {hasChildren && (
+            <button
+              onClick={(e) => { e.stopPropagation(); toggleCategory(`task_${task.id}`); }}
+              style={{
+                position: 'absolute', left: 8 + depth * 24, top: 20, zIndex: 2,
+                background: 'var(--bg-elevated, #fff)', border: 'none', cursor: 'pointer', padding: 2, borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              }}
+            >
+              <motion.div animate={{ rotate: isExpanded ? 0 : -90 }} transition={{ type: 'spring', damping: 20, stiffness: 300 }}>
+                <ChevronDown size={12} color="var(--text-secondary)" />
+              </motion.div>
+            </button>
+          )}
+
+          <TaskCard 
+            task={task}
+            virtualStyle={{ paddingLeft: `calc(16px + ${depth * 24}px)` }}
+            onToggle={handleToggleTask}
+            onDelete={handleDeleteTask}
+            onOpenZenMode={onOpenZenMode}
+            onEdit={onEditTask || NOOP}
+            index={index}
+            showListName={!isListView}
+            isFirstInSection={isFirst}
+            isLastInSection={isLast}
+            previousTaskId={previousTaskId}
+          />
+        </div>
+      </div>
+    );
+  }, [tasks, collapsed, toggleCategory, virtualizer, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, isListView]);
 
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
   const smartListInfo = isSmartView ? SMART_LISTS.find(l => l.id === currentView) : null;
@@ -391,7 +551,24 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   return (
     <main className="main-content" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
       {/* Sticky Glass Top Bar */}
-      <header className="glass-header" style={{ position: 'sticky', top: 0, padding: '12px 16px', display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', zIndex: 100 }}>
+      <header 
+        className="glass-header" 
+        style={{ 
+          position: 'sticky', 
+          top: 0, 
+          padding: '12px 16px', 
+          display: 'flex', 
+          width: '100%', 
+          alignItems: 'center', 
+          justifyContent: 'space-between', 
+          zIndex: 100,
+          background: isScrolled ? 'var(--bg-surface-glass)' : 'transparent',
+          borderBottom: isScrolled ? '0.5px solid var(--border-subtle)' : '0.5px solid transparent',
+          backdropFilter: isScrolled ? 'blur(20px) saturate(180%)' : 'none',
+          WebkitBackdropFilter: isScrolled ? 'blur(20px) saturate(180%)' : 'none',
+          transition: 'background 0.25s ease, border-color 0.25s ease, backdrop-filter 0.25s ease, -webkit-backdrop-filter 0.25s ease'
+        }}
+      >
         {/* Left: Volver button (only for mobile content view) */}
         {isMobile && onBackToSidebar && (
           <button 
@@ -407,9 +584,23 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           </button>
         )}
         
-        {/* Dynamic List Title on Top Bar (visible when scrolled or always for style) */}
-        <div style={{ flex: 1, textAlign: 'center', fontWeight: 600, fontSize: '1rem', color: isSmartView ? SMART_COLORS[currentView] : currentList ? currentList.color : 'var(--text-primary)' }}>
-          {/* We could add scroll opacity logic here, but for now it's just the title if mobile */}
+        {/* Dynamic List Title on Top Bar (visible when scrolled) */}
+        <div style={{ 
+          flex: 1, 
+          textAlign: 'center', 
+          fontWeight: 600, 
+          fontSize: '1rem', 
+          color: isSmartView ? SMART_COLORS[currentView] : currentList ? currentList.color : 'var(--text-primary)',
+          opacity: isScrolled ? 1 : 0,
+          transform: isScrolled ? 'translateY(0)' : 'translateY(4px)',
+          transition: 'opacity 0.25s ease, transform 0.25s ease',
+          pointerEvents: isScrolled ? 'auto' : 'none',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          padding: '0 8px'
+        }}>
+          {getTitle()}
         </div>
 
         {/* Right: Actions aligned to the right */}
@@ -478,6 +669,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       {/* Contenedor de Scroll Dedicado para Virtualizer */}
       <div 
         ref={parentRef}
+        onScroll={(e) => {
+          const top = e.currentTarget.scrollTop;
+          setIsScrolled(top > 20);
+        }}
         style={{ 
           flex: 1,
           position: 'relative', 
@@ -503,7 +698,11 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           if (data.type === 'page-header') {
             return (
               <div key="page-header" ref={virtualizer.measureElement} data-index={virtualItem.index} style={{...virtualStyle, zIndex: 20}}>
-                <header className="content-header" style={{ padding: '0px 16px 20px 16px', display: 'flex', flexDirection: 'column', gap: '16px', flexShrink: 0, margin: '0', borderBottom: 'none' }}>
+                <motion.header 
+                  layoutId={currentView.startsWith('list_') ? "list-item-" + currentView.replace('list_', '') : "smart-card-" + currentView}
+                  className="content-header" 
+                  style={{ padding: '0px 16px 20px 16px', display: 'flex', flexDirection: 'column', gap: '16px', flexShrink: 0, margin: '0', borderBottom: 'none' }}
+                >
         {/* Línea del Título (Debajo del Top Bar) */}
         <div style={{ width: '100%' }}>
           <h1 className="text-display" style={{ 
@@ -593,7 +792,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             </div>
           )}
         </div>
-      </header>
+      </motion.header>
               </div>
             );
           } else if (data.type === 'header') {
@@ -791,9 +990,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       </div>
       </div>
 
-      {flattenedData.length === 0 && (
+      {(flattenedData.length === 0 || (flattenedData.length === 1 && flattenedData[0].type === 'page-header')) && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <EmptyState />
+          <EmptyState {...emptyStateProps} />
         </div>
       )}
 

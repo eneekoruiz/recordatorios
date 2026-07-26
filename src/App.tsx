@@ -15,6 +15,7 @@ import { NavigationFrame } from './components/layout/NavigationFrame';
 import { AuthScreen } from './components/auth/AuthScreen';
 import { InstallPromptModal } from './components/layout/InstallPromptModal';
 import { syncManager } from './sync/syncManager';
+import { TaskSkeletonLoader } from './components/ui/TaskSkeletonLoader';
 
 function App() {
   // ── All hooks FIRST (before any conditional returns) ──────────────
@@ -146,21 +147,7 @@ function App() {
         width: '100vw',
         background: 'var(--bg-base)',
       }}>
-        <div className="ios-spinner" />
-        <style>{`
-          .ios-spinner {
-            width: 32px;
-            height: 32px;
-            border: 3px solid var(--border-subtle, rgba(255,255,255,0.1));
-            border-top: 3px solid var(--accent-primary, #0a84ff);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-          }
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
+        <TaskSkeletonLoader />
       </div>
     );
   }

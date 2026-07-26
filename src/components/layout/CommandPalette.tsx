@@ -15,6 +15,7 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
 
   const { tasks, cycles, toggleTask } = useAppStore();
   const inputRef = useRef<HTMLInputElement>(null);
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const allTasks = useMemo(
     () => Object.values(tasks).filter(t => !t.deleted_at && t.status === 'pending'),
@@ -64,6 +65,12 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
   }, [onOpenZenMode, onSelectView, toggleTask]);
 
   useEffect(() => {
+    const handleOpenCommandPalette = () => setIsOpen(true);
+    window.addEventListener('open-command-palette', handleOpenCommandPalette);
+    return () => window.removeEventListener('open-command-palette', handleOpenCommandPalette);
+  }, []);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
@@ -99,6 +106,12 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
       setSelectedIndex(0);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && itemRefs.current[selectedIndex]) {
+      itemRefs.current[selectedIndex]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [selectedIndex, isOpen]);
 
   return (
     <AnimatePresence>
@@ -147,7 +160,7 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
                 onChange={e => { setQuery(e.target.value); setSelectedIndex(0); }}
                 placeholder="Busca tareas, ciclos o acciones..."
                 style={{
-                  flex: 1, background: 'transparent', border: 'none', color: 'white',
+                  flex: 1, background: 'transparent', border: 'none', color: 'var(--text-primary)',
                   fontSize: '1.2rem', padding: '0 var(--space-16)', outline: 'none'
                 }}
               />
@@ -162,6 +175,7 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
                 return (
                   <div
                     key={result.type + '_' + result.id}
+                    ref={el => itemRefs.current[idx] = el}
                     onMouseEnter={() => setSelectedIndex(idx)}
                     onClick={() => executeAction(result)}
                     style={{

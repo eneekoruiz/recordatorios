@@ -5,6 +5,20 @@ import type { TaskItem, CustomCycle, CustomList, ListSection } from '../models/T
 import { TaskRepository } from '../repositories/TaskRepository';
 import { isCompletedInCurrentPeriod, wouldCreateDependencyCycle } from '../services/TaskService';
 
+const optimisticUpdate = (
+  get: () => AppState,
+  set: (fn: (state: AppState) => Partial<AppState>) => void,
+  mutationFn: (state: AppState) => Partial<AppState>
+) => {
+  const previousState = { tasks: get().tasks, lists: get().lists, cycles: get().cycles };
+  try {
+    set(mutationFn);
+  } catch (err) {
+    console.error("Storage persistence error, silently rolling back state:", err);
+    set(() => previousState);
+  }
+};
+
 export const isTaskCompleted = (t: any) => {
   // Only treat as completed if status is explicitly 'completed' or has a completed_at timestamp.
   // We do NOT use completionHistory here because recurring tasks accumulate history but reset to 'pending'.
@@ -121,7 +135,7 @@ export const useAppStore = create<AppState>()(
 
       toggleGlobalCycles: () => set((state) => ({ globalCyclesEnabled: !state.globalCyclesEnabled })),
 
-      toggleSmartList: (listId) => set((state) => {
+      toggleSmartList: (listId) => optimisticUpdate(get, set, (state) => {
         const newVisibility = {
           ...state.smartListVisibility,
           [listId]: !state.smartListVisibility[listId]
@@ -156,7 +170,7 @@ export const useAppStore = create<AppState>()(
         }
       })),
 
-      addTask: (payload) => set((state) => {
+      addTask: (payload) => optimisticUpdate(get, set, (state) => {
         const newTask = TaskRepository.create(payload);
         // Auto-activate the cycle view when a task with a cycle_id is first created
         let newCycleVisibility = state.cycleVisibility;
@@ -172,14 +186,14 @@ export const useAppStore = create<AppState>()(
         };
       }),
 
-      updateTaskRaw: (task) => set((state) => ({
+      updateTaskRaw: (task) => optimisticUpdate(get, set, (state) => ({
         tasks: {
           ...state.tasks,
           [task.id]: task
         }
       })),
 
-      toggleTask: (id, forceReverse?: boolean) => set((state) => {
+      toggleTask: (id, forceReverse?: boolean) => optimisticUpdate(get, set, (state) => {
         const existingTask = state.tasks[id];
         if (!existingTask) return state;
         
@@ -245,7 +259,7 @@ export const useAppStore = create<AppState>()(
         };
       }),
 
-      deleteTask: (id) => set((state) => {
+      deleteTask: (id) => optimisticUpdate(get, set, (state) => {
         const existingTask = state.tasks[id];
         if (!existingTask) return state;
         const deletedTask = TaskRepository.markAsDeleted(existingTask);
@@ -257,7 +271,7 @@ export const useAppStore = create<AppState>()(
         };
       }),
 
-      updateTask: (id, updates) => set((state) => {
+      updateTask: (id, updates) => optimisticUpdate(get, set, (state) => {
         const task = state.tasks[id];
         if (!task) return state;
         const updated = TaskRepository.update(task, updates);
@@ -269,7 +283,7 @@ export const useAppStore = create<AppState>()(
         };
       }),
 
-      addCycle: (cycle) => set((state) => ({
+      addCycle: (cycle) => optimisticUpdate(get, set, (state) => ({
         cycles: [...state.cycles, { 
           ...cycle, 
           _is_dirty: cycle._is_dirty ?? true, 
@@ -277,7 +291,7 @@ export const useAppStore = create<AppState>()(
         }].sort((a, b) => a.daysValue - b.daysValue)
       })),
 
-      updateCycle: (id, updates) => set((state) => ({
+      updateCycle: (id, updates) => optimisticUpdate(get, set, (state) => ({
         cycles: state.cycles.map(c => c.id === id ? { 
           ...c, 
           ...updates, 
@@ -286,11 +300,11 @@ export const useAppStore = create<AppState>()(
         } : c).sort((a, b) => a.daysValue - b.daysValue)
       })),
 
-      deleteCycle: (id) => set((state) => ({
+      deleteCycle: (id) => optimisticUpdate(get, set, (state) => ({
         cycles: state.cycles.filter(c => c.id !== id)
       })),
 
-      addList: (list) => set((state) => ({
+      addList: (list) => optimisticUpdate(get, set, (state) => ({
         lists: [...state.lists, { 
           ...list, 
           _is_dirty: list._is_dirty ?? true, 
@@ -298,7 +312,7 @@ export const useAppStore = create<AppState>()(
         }]
       })),
 
-      updateList: (id, data) => set((state) => ({
+      updateList: (id, data) => optimisticUpdate(get, set, (state) => ({
         lists: state.lists.map(l => l.id === id ? { 
           ...l, 
           ...data, 
@@ -307,7 +321,7 @@ export const useAppStore = create<AppState>()(
         } : l)
       })),
 
-      removeList: (id) => set((state) => ({
+      removeList: (id) => optimisticUpdate(get, set, (state) => ({
         lists: state.lists.filter(l => l.id !== id && l.parentId !== id) // Remove list and its sublists
       })),
 
@@ -319,7 +333,7 @@ export const useAppStore = create<AppState>()(
         listSections: (state.listSections || []).map(s => s.id === id ? { ...s, name, _is_dirty: true, updated_at: new Date().toISOString() } : s)
       })),
 
-      deleteListSection: (id) => set((state) => {
+      deleteListSection: (id) => optimisticUpdate(get, set, (state) => {
         const updatedTasks = { ...state.tasks };
         let changed = false;
         for (const taskId in updatedTasks) {
@@ -334,7 +348,7 @@ export const useAppStore = create<AppState>()(
         };
       }),
 
-      updateTaskSection: (taskId, sectionId) => set((state) => {
+      updateTaskSection: (taskId, sectionId) => optimisticUpdate(get, set, (state) => {
         const task = state.tasks[taskId];
         if (!task) return state;
         return {
@@ -345,7 +359,7 @@ export const useAppStore = create<AppState>()(
         };
       }),
 
-      purgeOldDeletedTasks: () => set((state) => {
+      purgeOldDeletedTasks: () => optimisticUpdate(get, set, (state) => {
         const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
         const now = Date.now();
         const newTasks = { ...state.tasks };
@@ -555,7 +569,7 @@ export const useAppStore = create<AppState>()(
         
         // Update all tasks at once
         if (newTasks.length > 0) {
-          set((state) => {
+          optimisticUpdate(get, set, (state) => {
             const updatedTasks = { ...state.tasks };
             newTasks.forEach(t => { updatedTasks[t.id] = t; });
             return { tasks: updatedTasks };
@@ -563,7 +577,7 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      addDependency: (targetTaskId: string, blockedByTaskId: string) => set((state) => {
+      addDependency: (targetTaskId: string, blockedByTaskId: string) => optimisticUpdate(get, set, (state) => {
         if (targetTaskId === blockedByTaskId) return state; // No auto-bloqueo
         
         const targetTask = state.tasks[targetTaskId];
@@ -592,7 +606,7 @@ export const useAppStore = create<AppState>()(
         return state;
       }),
 
-      removeDependency: (targetTaskId: string, blockedByTaskId: string) => set((state) => {
+      removeDependency: (targetTaskId: string, blockedByTaskId: string) => optimisticUpdate(get, set, (state) => {
         const targetTask = state.tasks[targetTaskId];
         if (!targetTask) return state;
         
@@ -609,7 +623,7 @@ export const useAppStore = create<AppState>()(
         };
       }),
 
-      nestTask: (taskId: string, parentId: string | undefined) => set((state) => {
+      nestTask: (taskId: string, parentId: string | undefined) => optimisticUpdate(get, set, (state) => {
         if (taskId === parentId) return state; // Evitar auto-anidación circular básica
         
         const task = state.tasks[taskId];
