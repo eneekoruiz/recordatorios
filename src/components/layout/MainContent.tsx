@@ -393,7 +393,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         ref={parentRef}
         style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', minHeight: 0, width: '100%', paddingBottom: '120px' }}
       >
-        <div className="tasks-container" style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+        <div className="tasks-container" style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative', background: 'var(--bg-elevated)' }}>
           
           {virtualizer.getVirtualItems().map((virtualItem) => {
           const data = flattenedData[virtualItem.index];
