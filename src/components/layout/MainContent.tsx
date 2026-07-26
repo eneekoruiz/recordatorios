@@ -818,7 +818,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 <div className="content-stats" style={{ marginTop: 'var(--space-8)' }}>
                   <span className="stat-chip"><strong>{activeVisibleCount}</strong> pendientes</span>
                   <span className="stat-chip"><strong>{completedVisibleCount}</strong> completadas</span>
-                  <span className="stat-chip"><strong>{visibleTasks.length}</strong> visibles</span>
                 </div>
               );
             }

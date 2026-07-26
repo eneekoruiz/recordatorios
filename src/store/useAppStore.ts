@@ -92,6 +92,7 @@ interface AppState {
   userId: string | null;
   setToken: (token: string | null, userId: string | null) => void;
   logout: () => void;
+  cleanupDataHygiene: () => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -640,12 +641,44 @@ export const useAppStore = create<AppState>()(
             }
           }
         };
+      }),
+
+      cleanupDataHygiene: () => optimisticUpdate(get, set, (state) => {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const todayTimestamp = now.getTime();
+        
+        const validListIds = new Set(state.lists.map(l => l.id));
+        const cleanedTasks: Record<string, TaskItem> = {};
+        
+        Object.entries(state.tasks).forEach(([id, t]) => {
+          const listId = t.categoryId || (t as any).category_id || (t as any).listId;
+          // Si está en bandeja de entrada ('inbox'), sin listId, o cuyo listId no existe en state.lists ni es un ciclo temporal, se elimina (no se incluye en cleanedTasks)
+          if (!listId || listId === 'inbox' || listId === 'user_preferences_smart_lists' || (!validListIds.has(listId) && !String(listId).startsWith('cycle_'))) {
+            return;
+          }
+          
+          let updatedTask = { ...t };
+          const isCompleted = isTaskCompleted(updatedTask) || (updatedTask as any).completed;
+          // Quitar fecha de tareas retrasadas no completadas ni borradas
+          if (updatedTask.dueDate && !isCompleted && !updatedTask.deleted_at) {
+            const dueDateTimestamp = new Date(updatedTask.dueDate).getTime();
+            if (!isNaN(dueDateTimestamp) && dueDateTimestamp < todayTimestamp) {
+              delete updatedTask.dueDate;
+              updatedTask._is_dirty = true;
+              updatedTask.updated_at = new Date().toISOString();
+            }
+          }
+          cleanedTasks[id] = updatedTask;
+        });
+
+        return { tasks: cleanedTasks };
       })
     }),
     {
       name: 'reminders-storage',
       storage: createJSONStorage(() => idbStorage),
-      version: 6,
+      version: 7,
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },
@@ -759,6 +792,37 @@ export const useAppStore = create<AppState>()(
             });
           }
           state = { ...state, tasks: fixedTasks };
+        }
+
+        if (version < 7) {
+          const now = new Date();
+          now.setHours(0, 0, 0, 0);
+          const todayTimestamp = now.getTime();
+          
+          const validListIds = new Set((state.lists || []).map((l: any) => l.id));
+          const cleanedTasks: Record<string, TaskItem> = {};
+          
+          if (state.tasks) {
+            Object.entries(state.tasks).forEach(([id, t]: [string, any]) => {
+              const listId = t.categoryId || t.category_id || t.listId;
+              if (!listId || listId === 'inbox' || listId === 'user_preferences_smart_lists' || (!validListIds.has(listId) && !String(listId).startsWith('cycle_'))) {
+                return;
+              }
+              
+              let updatedTask = { ...t };
+              const isCompleted = isTaskCompleted(updatedTask) || updatedTask.completed;
+              if (updatedTask.dueDate && !isCompleted && !updatedTask.deleted_at) {
+                const dueDateTimestamp = new Date(updatedTask.dueDate).getTime();
+                if (!isNaN(dueDateTimestamp) && dueDateTimestamp < todayTimestamp) {
+                  delete updatedTask.dueDate;
+                  updatedTask._is_dirty = true;
+                  updatedTask.updated_at = new Date().toISOString();
+                }
+              }
+              cleanedTasks[id] = updatedTask;
+            });
+          }
+          state = { ...state, tasks: cleanedTasks };
         }
         
         return state as AppState;

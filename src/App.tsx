@@ -71,7 +71,7 @@ function App() {
     };
   }, [tasks]); // Re-evaluar cuando cambien las tareas
 
-  // ── Default lists initialization ─────────────────────────────────
+  // ── Default lists initialization & Data Hygiene ──────────────────
   useEffect(() => {
     const lists = useAppStore.getState().lists;
     if (!lists || lists.length === 0) {
@@ -83,6 +83,7 @@ function App() {
       ];
       initial.forEach((l) => useAppStore.getState().addList(l));
     }
+    useAppStore.getState().cleanupDataHygiene();
   }, []);
 
   // ── Sync Manager lifecycle and listeners ──────────────────────────
