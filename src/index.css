@@ -48,17 +48,17 @@
   --radius-full: 9999px;
 
   /* Typography */
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-display: 'Outfit', 'Inter', system-ui, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
 
   /* Shadows & Depth */
-  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.03);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.08);
-  --shadow-xl: 0 24px 64px rgba(0, 0, 0, 0.12);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 24px 64px rgba(0, 0, 0, 0.16);
   --shadow-glow: 0 0 20px rgba(0, 122, 255, 0.35);
 
-  --card-bg: rgba(255, 255, 255, 0.75);
+  --card-bg: rgba(255, 255, 255, 1);
 }
 
 /* ========================================================
@@ -370,60 +370,6 @@ input:checked + .slider::before {
    RESPONSIVE — MOBILE FIRST (≤ 768px)
 ======================================================== */
 @media (max-width: 768px) {
-  /* Stack layout vertically */
-  .app-container {
-    flex-direction: column;
-  }
-
-  /* Sidebar: full-width, non-sticky on mobile */
-  .sidebar-container {
-    width: 100%;
-    height: auto;
-    position: relative;
-    border-right: none;
-    overflow-y: visible;
-  }
-
-  /* Toggle classes for mobile navigation */
-  .app-container.mobile-sidebar .main-container {
-    display: none;
-  }
-
-  .app-container.mobile-sidebar .sidebar-container {
-    width: 100%;
-    height: 100dvh;
-    overflow: hidden;
-  }
-
-  .app-container.mobile-content .sidebar-container {
-    display: none;
-  }
-
-  .app-container.mobile-content .main-container {
-    width: 100%;
-    min-height: 100vh;
-    overflow-y: auto;
-  }
-
-  /* Content padding reduction */
-  .main-content {
-    padding: 16px 0;
-  }
-
-  /* FAB repositioning */
-  .fab {
-    bottom: 32px;
-    right: 32px;
-  }
-}
-
-/* ========================================================
-   CUSTOM PROMPT MODALS
-======================================================== */
-.prompt-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   display: flex;
@@ -631,33 +577,33 @@ input:checked + .slider::before {
 
 
 /* ========================================================
-   LEVEL 100 EXPERIENCE LAYER
+   LEVEL 100 EXPERIENCE LAYER (APPLE NATIVE)
    A premium operational skin for the PWA. Kept as an override
    layer so the product logic remains untouched.
 ======================================================== */
 :root {
-  --bg-base: #f6f3ed;
-  --bg-surface: rgba(255, 255, 255, 0.92);
-  --bg-surface-glass: rgba(255, 255, 255, 0.72);
-  --bg-elevated: rgba(248, 250, 252, 0.92);
-  --bg-card: rgba(255, 255, 255, 0.86);
-  --bg-hover: rgba(18, 24, 38, 0.055);
-  --bg-pressed: rgba(18, 24, 38, 0.095);
-  --accent-primary: #2563eb;
-  --accent-blue: #2563eb;
-  --accent-glow: rgba(37, 99, 235, 0.16);
-  --accent-purple: #7c3aed;
-  --accent-green: #0f9f6e;
-  --accent-red: #e5484d;
-  --accent-orange: #f97316;
-  --accent-yellow: #eab308;
-  --accent-ink: #141826;
-  --text-primary: #141826;
-  --text-secondary: #596173;
-  --text-tertiary: #8b93a3;
-  --border-subtle: rgba(20, 24, 38, 0.09);
-  --border-focus: rgba(37, 99, 235, 0.35);
-  --border-color: rgba(20, 24, 38, 0.12);
+  --bg-base: #f2f2f7;
+  --bg-surface: rgba(255, 255, 255, 0.85);
+  --bg-surface-glass: rgba(255, 255, 255, 0.75);
+  --bg-elevated: #ffffff;
+  --bg-card: #ffffff;
+  --bg-hover: rgba(0, 0, 0, 0.05);
+  --bg-pressed: rgba(0, 0, 0, 0.08);
+  --accent-primary: #007AFF;
+  --accent-blue: #007AFF;
+  --accent-glow: rgba(0, 122, 255, 0.16);
+  --accent-purple: #AF52DE;
+  --accent-green: #34C759;
+  --accent-red: #FF3B30;
+  --accent-orange: #FF9500;
+  --accent-yellow: #FFCC00;
+  --accent-ink: #000000;
+  --text-primary: #000000;
+  --text-secondary: rgba(60, 60, 67, 0.6);
+  --text-tertiary: rgba(60, 60, 67, 0.3);
+  --border-subtle: rgba(60, 60, 67, 0.29);
+  --border-focus: rgba(0, 122, 255, 0.35);
+  --border-color: rgba(60, 60, 67, 0.18);
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
@@ -675,23 +621,11 @@ input:checked + .slider::before {
 html { color-scheme: light dark; }
 
 body {
-  background:
-    radial-gradient(circle at 15% 50%, rgba(0, 122, 255, 0.05), transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(255, 45, 85, 0.04), transparent 25%),
-    linear-gradient(160deg, #f8f9fc 0%, #f1f3f7 100%) !important;
+  background: var(--bg-base) !important;
 }
 
 body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: -1;
-  background-image:
-    linear-gradient(rgba(0, 0, 0, 0.015) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.015) 1px, transparent 1px);
-  background-size: 64px 64px;
-  mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 1) 10%, transparent 80%);
+  display: none;
 }
 
 button, input, textarea, select { font: inherit; }
@@ -704,20 +638,16 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 .sidebar-container {
-  width: 324px !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.62) !important;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.55)),
-    var(--bg-surface-glass) !important;
-  backdrop-filter: blur(28px) saturate(1.25) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(1.25) !important;
-  box-shadow: 18px 0 54px rgba(20, 24, 38, 0.07);
+  width: 320px !important;
+  border-right: 1px solid var(--border-subtle) !important;
+  background: var(--bg-surface-glass) !important;
+  backdrop-filter: blur(40px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(200%) !important;
+  box-shadow: none;
 }
 
 .main-container {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0)),
-    transparent;
+  background: transparent;
 }
 
 .main-content {
@@ -775,30 +705,30 @@ button { -webkit-tap-highlight-color: transparent; }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg-base: #050505;
-    --bg-surface: rgba(18, 18, 18, 0.6);
-    --bg-surface-glass: rgba(15, 15, 15, 0.45);
-    --bg-elevated: rgba(26, 26, 26, 0.75);
-    --bg-card: rgba(22, 22, 22, 0.5);
-    --bg-hover: rgba(255, 255, 255, 0.08);
-    --bg-pressed: rgba(255, 255, 255, 0.12);
+    --bg-base: #000000;
+    --bg-surface: rgba(28, 28, 30, 0.85);
+    --bg-surface-glass: rgba(28, 28, 30, 0.75);
+    --bg-elevated: #1C1C1E;
+    --bg-card: #1C1C1E;
+    --bg-hover: rgba(255, 255, 255, 0.1);
+    --bg-pressed: rgba(255, 255, 255, 0.15);
     
-    --accent-primary: #0a84ff;
-    --accent-blue: #0a84ff;
+    --accent-primary: #0A84FF;
+    --accent-blue: #0A84FF;
     --accent-glow: rgba(10, 132, 255, 0.35);
-    --accent-purple: #bf5af2;
-    --accent-green: #32d74b;
-    --accent-red: #ff453a;
-    --accent-orange: #ff9f0a;
-    --accent-yellow: #ffd60a;
+    --accent-purple: #BF5AF2;
+    --accent-green: #32D74B;
+    --accent-red: #FF453A;
+    --accent-orange: #FF9F0A;
+    --accent-yellow: #FFD60A;
     
-    --text-primary: #ffffff;
-    --text-secondary: rgba(255, 255, 255, 0.65);
-    --text-tertiary: rgba(255, 255, 255, 0.45);
+    --text-primary: #FFFFFF;
+    --text-secondary: rgba(235, 235, 245, 0.6);
+    --text-tertiary: rgba(235, 235, 245, 0.3);
     
-    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-subtle: rgba(84, 84, 88, 0.65);
     --border-focus: rgba(10, 132, 255, 0.4);
-    --border-color: rgba(255, 255, 255, 0.12);
+    --border-color: rgba(84, 84, 88, 0.3);
     
     --card-bg: rgba(22, 22, 22, 0.5);
     --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.4);
@@ -808,24 +738,16 @@ button { -webkit-tap-highlight-color: transparent; }
   }
 
   body {
-    background: 
-      radial-gradient(circle at 15% 50%, rgba(30, 60, 120, 0.08), transparent 40%),
-      radial-gradient(circle at 85% 30%, rgba(120, 30, 80, 0.06), transparent 40%),
-      linear-gradient(180deg, #050505 0%, #0a0a0c 100%) !important;
+    background: var(--bg-base) !important;
   }
   
   body::before {
-    background-image:
-      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-    mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 1) 10%, transparent 80%);
+    display: none;
   }
 
   .sidebar-container {
-    border-right-color: rgba(255, 255, 255, 0.06) !important;
-    background:
-      linear-gradient(180deg, rgba(22, 22, 22, 0.4), rgba(10, 10, 10, 0.3)),
-      var(--bg-surface-glass) !important;
+    border-right-color: var(--border-subtle) !important;
+    background: var(--bg-surface-glass) !important;
   }
 }
 
