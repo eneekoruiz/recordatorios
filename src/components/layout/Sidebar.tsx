@@ -35,7 +35,8 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [menuCoords, setMenuCoords] = useState<{ top: number; left: number } | null>(null);
-  const { removeList, updateList } = useAppStore();
+  const removeList = useAppStore((state) => state.removeList);
+  const updateList = useAppStore((state) => state.updateList);
   
   const currentLevelLists = lists.filter((l: any) => l.parentId === parentId && l.id !== 'user_preferences_smart_lists');
   if (currentLevelLists.length === 0) return null;
@@ -49,10 +50,11 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
 
         return (
           <div key={list.id} style={{ position: 'relative' }}>
-            <div 
+            <motion.div 
+              layoutId={"list-item-" + list.id}
               className={`ios-list-item ${isActive ? 'active' : ''}`}
               onClick={() => onSelectView(`list_${list.id}`)}
-              style={{ position: 'relative' }}
+              style={{ position: 'relative', transition: 'background-color 150ms ease' }}
             >
               {hasChildren && (
                 <div 
@@ -82,8 +84,8 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                   } else {
                     const rect = e.currentTarget.getBoundingClientRect();
                     setMenuCoords({
-                      top: rect.bottom + window.scrollY,
-                      left: rect.left + window.scrollX - 120
+                      top: rect.bottom,
+                      left: rect.left - 120
                     });
                     setActiveMenuId(list.id);
                   }
@@ -103,7 +105,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                   <div 
                     className="ios-dropdown-menu"
                     style={{ 
-                      position: 'absolute',
+                      position: 'fixed',
                       top: menuCoords.top + 4,
                       left: menuCoords.left,
                       zIndex: 99999
@@ -161,7 +163,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                 </>,
                 document.body
               )}
-            </div>
+            </motion.div>
             
             {hasChildren && isExpanded && (
               <ListHierarchy 
@@ -183,7 +185,15 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
 };
 
 export function Sidebar({ currentView, onSelectView }: SidebarProps) {
-  const { lists, cycles, smartListVisibility, toggleSmartList, tasks, cycleVisibility, toggleCycleVisibility, globalCyclesEnabled, toggleGlobalCycles } = useAppStore();
+  const lists = useAppStore((state) => state.lists);
+  const cycles = useAppStore((state) => state.cycles);
+  const smartListVisibility = useAppStore((state) => state.smartListVisibility);
+  const toggleSmartList = useAppStore((state) => state.toggleSmartList);
+  const tasks = useAppStore((state) => state.tasks);
+  const cycleVisibility = useAppStore((state) => state.cycleVisibility);
+  const toggleCycleVisibility = useAppStore((state) => state.toggleCycleVisibility);
+  const globalCyclesEnabled = useAppStore((state) => state.globalCyclesEnabled);
+  const toggleGlobalCycles = useAppStore((state) => state.toggleGlobalCycles);
   
   const getTaskCount = (listId: string) => {
     const all = Object.values(tasks || {}).filter(t => !t.deleted_at);
@@ -337,7 +347,14 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
 
       {/* 2. SEARCH BAR */}
       <div className="search-bar">
-        <input type="text" placeholder="Buscar" />
+        <input 
+          type="text" 
+          placeholder="Buscar" 
+          onFocus={(e) => {
+            window.dispatchEvent(new Event('open-command-palette'));
+            e.target.blur();
+          }}
+        />
       </div>
 
       {/* 3. SCROLLABLE AREA */}
@@ -371,8 +388,9 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               const Icon = list.icon;
             
             return (
-              <div 
+              <motion.div 
                 key={list.id}
+                layoutId={"smart-card-" + list.id}
                 className="ios-smart-card"
                 onClick={() => {
                   if (isEditMode) {
@@ -383,6 +401,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 }}
                 style={{
                   opacity: isEditMode && !smartListVisibility[list.id] ? 0.5 : 1,
+                  transition: 'background-color 150ms ease, opacity 150ms ease'
                 }}
               >
                 {isEditMode && (
@@ -398,9 +417,9 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                     </div>
                   </div>
                 )}
-                <div className="icon-circle" style={{ backgroundColor: list.color, boxShadow: `0 4px 12px ${list.color}40`, border: 'none' }}>
+                <motion.div layoutId={"smart-icon-" + list.id} className="icon-circle" style={{ backgroundColor: list.color, boxShadow: `0 4px 12px ${list.color}40`, border: 'none' }}>
                   <Icon size={18} color="white" />
-                </div>
+                </motion.div>
                 {!isEditMode && (
                   <span 
                     className="count" 
@@ -413,7 +432,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                   </span>
                 )}
                 <h3>{list.name}</h3>
-              </div>
+              </motion.div>
             );
           }))}
         </div>
@@ -433,20 +452,22 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                   const count = Object.values(tasks || {}).filter(t => !t.deleted_at && !isTaskCompleted(t) && (t.categoryId === list.id || (t as any).category_id === list.id)).length;
                   const countFontSize = count >= 100 ? '1.4rem' : count >= 10 ? '1.7rem' : '2rem';
                   return (
-                    <div
+                    <motion.div
                       key={list.id}
+                      layoutId={"smart-card-" + list.id}
                       className="ios-smart-card"
                       onClick={() => onSelectView(`list_${list.id}`)}
                       style={{ 
-                        boxShadow: isActive ? '0 0 0 2px var(--accent-primary)' : undefined 
+                        boxShadow: isActive ? '0 0 0 2px var(--accent-primary)' : undefined,
+                        transition: 'background-color 150ms ease, box-shadow 150ms ease'
                       }}
                     >
-                      <div className="icon-circle" style={{ backgroundColor: list.color, boxShadow: `0 4px 12px ${list.color}40`, border: 'none' }}>
+                      <motion.div layoutId={"smart-icon-" + list.id} className="icon-circle" style={{ backgroundColor: list.color, boxShadow: `0 4px 12px ${list.color}40`, border: 'none' }}>
                         <span style={{ fontSize: 16 }}>📌</span>
-                      </div>
+                      </motion.div>
                       <span className="count" style={{ fontSize: countFontSize, color: list.color }}>{count}</span>
                       <h3>{list.name}</h3>
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>
@@ -469,9 +490,11 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
           </div>
           <div className="ios-list-block">
             {/* Bandeja de entrada */}
-            <div 
+            <motion.div 
+              layoutId="list-item-inbox"
               className={`ios-list-item ${currentView === 'list_inbox' ? 'active' : ''}`}
               onClick={() => onSelectView('list_inbox')}
+              style={{ transition: 'background-color 150ms ease' }}
             >
               <div className="list-icon" style={{ backgroundColor: '#0a84ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Inbox size={12} color="white" />
@@ -487,7 +510,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 }).length}
               </span>
               <ChevronRight size={16} color="var(--text-tertiary)" />
-            </div>
+            </motion.div>
 
             <ListHierarchy 
               lists={lists} 
@@ -499,9 +522,11 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
             />
 
             {/* Papelera */}
-            <div 
+            <motion.div 
+              layoutId="smart-card-TRASH"
               className={`ios-list-item ${currentView === 'TRASH' ? 'active' : ''}`}
               onClick={() => onSelectView('TRASH')}
+              style={{ transition: 'background-color 150ms ease' }}
             >
               <div className="list-icon" style={{ backgroundColor: '#8e8e93', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Trash2 size={12} color="white" />
@@ -513,7 +538,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 {Object.values(tasks || {}).filter(t => t.deleted_at).length}
               </span>
               <ChevronRight size={16} color="var(--text-tertiary)" />
-            </div>
+            </motion.div>
           </div>
         </div>
 
@@ -572,10 +597,11 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               if (!isVisible && !isEditCyclesMode) return null;
               
               return (
-                <div 
+                <motion.div 
                   key={cycle.id}
+                  layoutId={"smart-card-" + cycle.id}
                   className={`ios-list-item ${isActive ? 'active' : ''}`}
-                  style={{ position: 'relative', opacity: isEditCyclesMode && !isVisible ? 0.5 : 1 }}
+                  style={{ position: 'relative', opacity: isEditCyclesMode && !isVisible ? 0.5 : 1, transition: 'background-color 150ms ease' }}
                 >
                   <div 
                     style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, cursor: isEditCyclesMode ? 'default' : 'pointer' }} 
@@ -605,53 +631,13 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                       {isVisible ? <Check size={14} /> : <Plus size={14} />}
                     </button>
                   )}
-                </div>
+                </motion.div>
               );
             })}
           </div>
         </div>
         )}
 
-      </div>
-      
-      <div style={{ padding: '20px 16px' }}>
-        <button
-          onClick={() => {
-            const bypassCacheUrl = window.location.origin + window.location.pathname + '?v=' + new Date().getTime();
-            if ('serviceWorker' in navigator) {
-              navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                const promises = [];
-                for(let registration of registrations) {
-                  promises.push(registration.unregister());
-                }
-                Promise.all(promises).then(() => {
-                  window.location.href = bypassCacheUrl;
-                });
-              });
-            } else {
-              window.location.href = bypassCacheUrl;
-            }
-          }}
-          style={{
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            background: 'var(--bg-surface)',
-            color: 'var(--text-primary)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: '10px',
-            padding: '10px 16px',
-            fontWeight: 600,
-            fontSize: '0.9rem',
-            cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-          }}
-        >
-          <RefreshCw size={16} />
-          Forzar Actualización
-        </button>
       </div>
       
       {/* MODALS (OUTSIDE SCROLL) */}

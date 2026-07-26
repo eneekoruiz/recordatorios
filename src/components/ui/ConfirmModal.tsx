@@ -19,6 +19,7 @@ export function ConfirmModal({
   tone = 'danger', onConfirm, onCancel
 }: ConfirmModalProps) {
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -26,7 +27,32 @@ export function ConfirmModal({
     document.body.style.overflow = 'hidden';
     const focusTimer = window.setTimeout(() => cancelRef.current?.focus(), 80);
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onCancel();
+      if (event.key === 'Escape') {
+        onCancel();
+        return;
+      }
+      
+      if (event.key === 'Tab' && modalRef.current) {
+        const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusableElements.length > 0) {
+          const firstElement = focusableElements[0];
+          const lastElement = focusableElements[focusableElements.length - 1];
+
+          if (event.shiftKey) {
+            if (document.activeElement === firstElement) {
+              lastElement.focus();
+              event.preventDefault();
+            }
+          } else {
+            if (document.activeElement === lastElement) {
+              firstElement.focus();
+              event.preventDefault();
+            }
+          }
+        }
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => {
@@ -45,13 +71,14 @@ export function ConfirmModal({
         transition={{ duration: 0.18 }} onClick={onCancel}
         style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <motion.section className="premium-sheet confirm-sheet" role="alertdialog"
+          ref={modalRef}
           aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-description"
           initial={{ opacity: 0, y: 34, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 22, scale: 0.97 }}
           transition={{ type: 'spring', stiffness: 430, damping: 34, mass: 0.82 }}
           onClick={(event) => event.stopPropagation()}
-          style={{ position: 'relative', width: '100%', maxWidth: '440px', margin: '16px', background: 'var(--bg-surface)', borderRadius: '24px', padding: '24px', boxShadow: '0 24px 48px rgba(0,0,0,0.2)' }}>
+          style={{ position: 'relative', width: '100%', maxWidth: '440px', margin: '16px', background: 'var(--bg-surface)', borderRadius: '24px', padding: '24px', paddingBottom: 'calc(16px + env(safe-area-inset-bottom))', boxShadow: '0 24px 48px rgba(0,0,0,0.2)' }}>
           <div className={`premium-sheet-icon ${tone}`} aria-hidden="true" style={{ marginBottom: '16px' }}>
             <AlertTriangle size={24} strokeWidth={2} color={tone === 'danger' ? 'var(--accent-red)' : 'var(--accent-primary)'} />
           </div>

@@ -20,6 +20,7 @@ export function CustomSelect({ value, onChange, options, placeholder = 'Seleccio
   const [isOpen, setIsOpen] = useState(false);
   const [coords, setCoords] = useState({ x: 0, y: 0, width: 0, openUp: false });
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const selectedOption = useMemo(() => options.find(option => option.value === value), [options, value]);
 
   const handleToggle = () => {
@@ -39,18 +40,41 @@ export function CustomSelect({ value, onChange, options, placeholder = 'Seleccio
   useEffect(() => {
     if (!isOpen) return;
     const close = () => setIsOpen(false);
+    
+    let scrollStartY = window.scrollY;
+    
+    const handleScroll = () => {
+      if (Math.abs(window.scrollY - scrollStartY) > 30) {
+        close();
+      }
+    };
+    
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') close();
+      else if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        setHighlightedIndex(prev => (prev + 1) % options.length);
+      }
+      else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        setHighlightedIndex(prev => (prev - 1 + options.length) % options.length);
+      }
+      else if (event.key === 'Enter' && highlightedIndex >= 0) {
+        event.preventDefault();
+        onChange(options[highlightedIndex].value);
+        close();
+      }
     };
-    window.addEventListener('scroll', close, true);
+    
+    window.addEventListener('scroll', handleScroll, true);
     window.addEventListener('resize', close);
     window.addEventListener('keydown', handleKeyDown);
     return () => {
-      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('scroll', handleScroll, true);
       window.removeEventListener('resize', close);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen]);
+  }, [isOpen, highlightedIndex, options, onChange]);
 
   return (
     <>
@@ -90,8 +114,9 @@ export function CustomSelect({ value, onChange, options, placeholder = 'Seleccio
                 }}
               >
                 <div className="select-sheet-handle" aria-hidden="true" />
-                {options.map(option => {
+                {options.map((option, idx) => {
                   const selected = value === option.value;
+                  const highlighted = highlightedIndex === idx;
                   return (
                     <button
                       key={option.value}
@@ -104,6 +129,8 @@ export function CustomSelect({ value, onChange, options, placeholder = 'Seleccio
                         onChange(option.value);
                         setIsOpen(false);
                       }}
+                      onMouseEnter={() => setHighlightedIndex(idx)}
+                      style={{ background: highlighted ? 'var(--bg-hover)' : 'transparent' }}
                     >
                       <span>{option.label}</span>
                       {selected && <Check size={16} className="check-icon" aria-hidden="true" />}

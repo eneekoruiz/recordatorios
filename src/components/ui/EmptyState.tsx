@@ -1,22 +1,56 @@
 import React from 'react';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Calendar, Clock, Flag, CheckCircle2, AlertCircle, Inbox, Trash2, Folder, Sun } from 'lucide-react';
 import { motion } from 'framer-motion';
+
+const getIconByName = (name?: string, fallbackNode?: React.ReactNode) => {
+  const size = 40;
+  const color = "var(--accent-primary)";
+  const strokeWidth = 1.5;
+  switch (name) {
+    case 'today':
+    case 'sun': return <Sun size={size} color={color} strokeWidth={strokeWidth} />;
+    case 'scheduled':
+    case 'calendar': return <Calendar size={size} color={color} strokeWidth={strokeWidth} />;
+    case 'flagged':
+    case 'flag': return <Flag size={size} color={color} strokeWidth={strokeWidth} />;
+    case 'completed':
+    case 'check': return <CheckCircle2 size={size} color={color} strokeWidth={strokeWidth} />;
+    case 'overdue':
+    case 'alert': return <AlertCircle size={size} color={color} strokeWidth={strokeWidth} />;
+    case 'trash': return <Trash2 size={size} color="var(--text-tertiary)" strokeWidth={strokeWidth} />;
+    case 'inbox': return <Inbox size={size} color={color} strokeWidth={strokeWidth} />;
+    case 'list':
+    case 'folder': return <Folder size={size} color={color} strokeWidth={strokeWidth} />;
+    case 'clock': return <Clock size={size} color={color} strokeWidth={strokeWidth} />;
+    case 'sparkles': return <Sparkles size={size} color={color} strokeWidth={strokeWidth} />;
+    default: return fallbackNode || <Sparkles size={size} color={color} strokeWidth={strokeWidth} />;
+  }
+};
 
 interface EmptyStateProps {
   title?: string;
   message?: string;
+  subtitle?: string;
   icon?: React.ReactNode;
+  iconName?: string;
   actionLabel?: string;
+  ctaText?: string;
   onAction?: () => void;
 }
 
 export function EmptyState({
   title = "No hay recordatorios",
-  message = "Disfruta de la tranquilidad o añade algo nuevo para empezar.",
-  icon = <Sparkles size={40} color="var(--accent-primary)" strokeWidth={1.5} />,
+  message,
+  subtitle,
+  icon,
+  iconName,
   actionLabel,
+  ctaText,
   onAction
 }: EmptyStateProps) {
+  const resolvedMessage = message || subtitle || "Disfruta de la tranquilidad o añade algo nuevo para empezar.";
+  const resolvedCtaText = ctaText || actionLabel;
+  const resolvedIcon = getIconByName(iconName, icon);
   return (
     <motion.div 
       initial={{ opacity: 0, scale: 0.95 }}
@@ -28,12 +62,17 @@ export function EmptyState({
         alignItems: 'center',
         justifyContent: 'center',
         height: '100%',
-        minHeight: '350px',
+        minHeight: '280px',
         padding: 'var(--space-32)',
         textAlign: 'center',
       }}
     >
-      <div style={{ position: 'relative', marginBottom: 'var(--space-24)' }}>
+      <motion.div 
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0, ease: [0.22, 1, 0.36, 1] }}
+        style={{ position: 'relative', marginBottom: 'var(--space-24)' }}
+      >
         {/* Animated background glow */}
         <motion.div
           animate={{ 
@@ -56,9 +95,9 @@ export function EmptyState({
         
         {/* Floating icon */}
         <motion.div
-          animate={{ y: [-4, 4, -4] }}
+          animate={{ y: [0, -6, 0] }}
           transition={{ 
-            duration: 4, 
+            duration: 3, 
             repeat: Infinity,
             ease: "easeInOut" 
           }}
@@ -76,11 +115,15 @@ export function EmptyState({
             border: '1px solid var(--border-subtle)'
           }}
         >
-          {icon}
+          {resolvedIcon}
         </motion.div>
-      </div>
+      </motion.div>
 
-      <h3 style={{
+      <motion.h3 
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+        style={{
         fontSize: '1.35rem',
         fontWeight: 700,
         color: 'var(--text-primary)',
@@ -89,20 +132,27 @@ export function EmptyState({
         letterSpacing: '-0.01em'
       }}>
         {title}
-      </h3>
+      </motion.h3>
       
-      <p style={{
+      <motion.p 
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        style={{
         fontSize: '1rem',
         color: 'var(--text-secondary)',
         maxWidth: 320,
         lineHeight: 1.5,
-        marginBottom: actionLabel && onAction ? 'var(--space-24)' : 0
+        marginBottom: resolvedCtaText && onAction ? 'var(--space-24)' : 0
       }}>
-        {message}
-      </p>
+        {resolvedMessage}
+      </motion.p>
 
-      {actionLabel && onAction && (
+      {resolvedCtaText && onAction && (
         <motion.button
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={onAction}
@@ -122,7 +172,7 @@ export function EmptyState({
             transition: 'background 0.2s'
           }}
         >
-          {actionLabel}
+          {resolvedCtaText}
         </motion.button>
       )}
     </motion.div>

@@ -14,6 +14,7 @@ interface TaskDrawerProps {
   taskId?: string;
 }
 import { CustomSelect } from '../ui/CustomSelect';
+import { ConfirmModal } from '../ui/ConfirmModal';
 
 export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionId, taskId }: TaskDrawerProps) {
   const addTask = useAppStore(state => state.addTask);
@@ -58,6 +59,17 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   });
   const [selectedPreset, setSelectedPreset] = useState<'current' | 'home' | 'work' | 'custom'>('current');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const [showInlineInput, setShowInlineInput] = useState(false);
+  const [inlineInputValue, setInlineInputValue] = useState('');
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [confirmProps, setConfirmProps] = useState({ title: '', message: '', onConfirm: () => {} });
+  const [toast, setToast] = useState<string | null>(null);
+  
+  const showAlert = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  };
   const [searchResults, setSearchResults] = useState<{ lat: string; lon: string; display_name: string }[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [image, setImage] = useState('');
@@ -188,6 +200,24 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   }, [isOpen, onClose]);
 
   useEffect(() => {
+    if (!isOpen) return;
+    const previousActiveElement = document.activeElement as HTMLElement | null;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      if (previousActiveElement && typeof previousActiveElement.focus === 'function') {
+        previousActiveElement.focus();
+      }
+    };
+  }, [isOpen, onClose]);
+
+  useEffect(() => {
     if (isOpen && defaultCategoryId) {
       setCategory(defaultCategoryId);
     }
@@ -206,7 +236,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
       
       // Manejar tiempos
       if (nlp.times.length > 0) {
-        if (navigator.vibrate) navigator.vibrate(20);
+        if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate(20);
         const newAlerts = nlp.times.filter(t => !alerts.find(a => a.time === t)).map(t => ({ id: `alert_${Date.now()}_${t}`, type: 'at_time' as const, time: t }));
         if (newAlerts.length > 0) {
           setAlerts(prev => [...prev, ...newAlerts]);
@@ -251,7 +281,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
 
   const obtenerUbicacionActual = () => {
     if (!navigator.geolocation) {
-      alert('La geolocalización no está soportada por tu navegador.');
+      showAlert('La geolocalización no está soportada por tu navegador.');
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -263,7 +293,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         }
       },
       (err) => {
-        alert(`Error obteniendo coordenadas: ${err.message}`);
+        showAlert(`Error obteniendo coordenadas: ${err.message}`);
       }
     );
   };
@@ -278,25 +308,28 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setLocationLng(homeLocation.lng);
         setLocationAddress(homeLocation.address);
       } else {
-        const confirmSave = confirm('No tienes configurada la ubicación de Casa. ¿Quieres obtener tu ubicación actual y guardarla como Casa?');
-        if (confirmSave) {
-          if (!navigator.geolocation) {
-            alert('Geolocalización no soportada.');
-            return;
+        setConfirmProps({
+          title: 'Configurar Casa',
+          message: 'No tienes configurada la ubicación de Casa. ¿Quieres obtener tu ubicación actual y guardarla como Casa?',
+          onConfirm: () => {
+            if (!navigator.geolocation) {
+              showAlert('Geolocalización no soportada.');
+              return;
+            }
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude, address: 'Casa' };
+                saveHomeLocation(loc);
+                setLocationLat(loc.lat);
+                setLocationLng(loc.lng);
+                setLocationAddress(loc.address);
+              },
+              (err) => showAlert(`Error: ${err.message}`)
+            );
           }
-          navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude, address: 'Casa' };
-              saveHomeLocation(loc);
-              setLocationLat(loc.lat);
-              setLocationLng(loc.lng);
-              setLocationAddress(loc.address);
-            },
-            (err) => alert(`Error: ${err.message}`)
-          );
-        } else {
-          setSelectedPreset('custom');
-        }
+        });
+        setIsConfirmOpen(true);
+        setSelectedPreset('custom'); // reset preset visually until they confirm
       }
     } else if (preset === 'work') {
       if (workLocation) {
@@ -304,25 +337,28 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setLocationLng(workLocation.lng);
         setLocationAddress(workLocation.address);
       } else {
-        const confirmSave = confirm('No tienes configurada la ubicación de Trabajo. ¿Quieres obtener tu ubicación actual y guardarla como Trabajo?');
-        if (confirmSave) {
-          if (!navigator.geolocation) {
-            alert('Geolocalización no soportada.');
-            return;
+        setConfirmProps({
+          title: 'Configurar Trabajo',
+          message: 'No tienes configurada la ubicación de Trabajo. ¿Quieres obtener tu ubicación actual y guardarla como Trabajo?',
+          onConfirm: () => {
+            if (!navigator.geolocation) {
+              showAlert('Geolocalización no soportada.');
+              return;
+            }
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude, address: 'Trabajo' };
+                saveWorkLocation(loc);
+                setLocationLat(loc.lat);
+                setLocationLng(loc.lng);
+                setLocationAddress(loc.address);
+              },
+              (err) => showAlert(`Error: ${err.message}`)
+            );
           }
-          navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude, address: 'Trabajo' };
-              saveWorkLocation(loc);
-              setLocationLat(loc.lat);
-              setLocationLng(loc.lng);
-              setLocationAddress(loc.address);
-            },
-            (err) => alert(`Error: ${err.message}`)
-          );
-        } else {
-          setSelectedPreset('custom');
-        }
+        });
+        setIsConfirmOpen(true);
+        setSelectedPreset('custom'); // reset preset visually until they confirm
       }
     }
   };
@@ -340,7 +376,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
       setSearchResults(data);
     } catch (err) {
       console.error(err);
-      alert('Error al buscar dirección. Por favor inténtalo de nuevo.');
+      showAlert('Error al buscar dirección. Por favor inténtalo de nuevo.');
     } finally {
       setIsSearching(false);
     }
@@ -428,7 +464,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
 
   const toggleListening = () => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      alert('Tu navegador no soporta captura de voz nativa.');
+      showAlert('Tu navegador no soporta captura de voz nativa.');
       return;
     }
 
@@ -456,6 +492,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   };
 
   return createPortal(
+    <>
     <AnimatePresence>
       {isOpen && (
         <div className="drawer-overlay" onClick={onClose}>
@@ -465,16 +502,37 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
             aria-modal="true"
             aria-labelledby="drawer-title"
             key="drawer"
+            layoutId={taskId ? "task-card-shell-" + taskId : undefined}
             initial={{ opacity: 0, scale: 0.95, y: '100%' }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="drawer"
             onClick={(e) => e.stopPropagation()}
+            drag="y"
+            dragConstraints={{ top: 0 }}
+            dragElastic={{ top: 0, bottom: 0.4 }}
+            onDragEnd={(e, info) => {
+              if (info.offset.y > 100 || info.velocity.y > 500) {
+                onClose();
+              }
+            }}
           >
             <div className="drawer-header" role="banner">
               <button className="cancel-btn" onClick={onClose} aria-label={taskId ? 'Cancelar edición' : 'Cancelar creación de tarea'}>Cancelar</button>
-              <h3 id="drawer-title">{taskId ? 'Detalles de Tarea' : 'Nueva Tarea'}</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {taskId && (
+                  <motion.div
+                    layoutId={taskId ? "task-status-" + taskId : undefined}
+                    style={{
+                      width: 14, height: 14, borderRadius: '50%',
+                      background: task?.status === 'completed' ? 'var(--accent-primary)' : 'transparent',
+                      border: '2px solid ' + (task?.status === 'completed' ? 'var(--accent-primary)' : 'var(--border-color)')
+                    }}
+                  />
+                )}
+                <h3 id="drawer-title">{taskId ? 'Detalles de Tarea' : 'Nueva Tarea'}</h3>
+              </div>
               <button className="save-btn" onClick={handleSave} disabled={!title.trim()} aria-label={taskId ? 'Guardar cambios' : 'Guardar nueva tarea'}>
                 {taskId ? 'Aceptar' : 'Añadir'}
               </button>
@@ -484,7 +542,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
               
               <div className="input-group" style={{ marginBottom: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <input 
+                  <motion.input 
+                    layoutId={taskId ? "task-title-" + taskId : undefined}
                     type="text" 
                     className="title-input" 
                     placeholder="Ej: Tomar pastillas mañana a las 5 y a las 8..." 
@@ -579,7 +638,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                   </span>
                   <ChevronDown size={18} style={{ transform: cardTimeOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                 </button>
+                <AnimatePresence>
                 {cardTimeOpen && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ height: { duration: 0.3, ease: [0.22, 1, 0.36, 1] }, opacity: { duration: 0.2 } }} style={{ overflow: 'hidden' }}>
                   <div className="section-card-content">
                     <div className="detail-row" style={{ padding: '8px 0' }}>
                       <span className="detail-label">Fecha</span>
@@ -672,7 +733,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                       </>
                     )}
                   </div>
+                  </motion.div>
                 )}
+                </AnimatePresence>
               </div>
 
               {/* Card 2: Repetición y Ubicación */}
@@ -688,7 +751,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                   </span>
                   <ChevronDown size={18} style={{ transform: cardRepeatOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                 </button>
+                <AnimatePresence>
                 {cardRepeatOpen && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ height: { duration: 0.3, ease: [0.22, 1, 0.36, 1] }, opacity: { duration: 0.2 } }} style={{ overflow: 'hidden' }}>
                   <div className="section-card-content">
                     <div className="detail-row" style={{ padding: '8px 0' }}>
                       <span className="detail-label">Repetir (Ciclo)</span>
@@ -710,28 +775,60 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                       <CustomSelect 
                         className="detail-select"
                         value={sectionId || ''}
-                        onChange={async val => {
+                        onChange={val => {
                           if (val === 'new') {
-                            const name = prompt('Nombre de la nueva sección:');
-                            if (name && name.trim()) {
-                              const newId = crypto.randomUUID();
-                              useAppStore.getState().addListSection({
-                                id: newId,
-                                listId: category,
-                                name: name.trim()
-                              });
-                              setSectionId(newId);
-                            }
+                            setShowInlineInput(true);
+                            setInlineInputValue('');
                           } else {
                             setSectionId(val || undefined);
                           }
                         }}
                         options={[
                           { value: '', label: 'Sin sección' },
-                          ...availableSections.map(s => ({ value: s.id, label: s.name })),
-                          { value: 'new', label: '+ Crear nueva sección' }
+                          { value: 'new', label: '+ Crear nueva sección...' },
+                          ...(useAppStore.getState().listSections
+                              .filter(s => s.listId === category && !s.deleted_at)
+                              .map(s => ({ value: s.id, label: s.name })))
                         ]}
                       />
+                      
+                      {showInlineInput && (
+                        <div style={{ marginTop: '12px', padding: '12px', background: 'var(--bg-elevated)', borderRadius: '8px', border: '1px solid var(--border-subtle)', display: 'flex', gap: '8px', flexDirection: 'column' }}>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>Nueva Sección</span>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <input 
+                              autoFocus
+                              value={inlineInputValue} 
+                              onChange={e => setInlineInputValue(e.target.value)} 
+                              placeholder="Nombre de sección" 
+                              style={{ flex: 1, padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border-subtle)', fontSize: '0.9rem' }}
+                            />
+                            <button 
+                              onClick={() => {
+                                if (inlineInputValue.trim()) {
+                                  const newId = crypto.randomUUID();
+                                  useAppStore.getState().addListSection({
+                                    id: newId,
+                                    listId: category,
+                                    name: inlineInputValue.trim()
+                                  });
+                                  setSectionId(newId);
+                                  setShowInlineInput(false);
+                                }
+                              }}
+                              style={{ background: 'var(--accent-primary)', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 12px', fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              Guardar
+                            </button>
+                            <button 
+                              onClick={() => setShowInlineInput(false)}
+                              style={{ background: 'transparent', color: 'var(--text-secondary)', border: 'none', padding: '6px 8px', cursor: 'pointer' }}
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="divider"></div>
@@ -893,7 +990,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                                     type="button"
                                     onClick={() => {
                                       saveHomeLocation({ lat: locationLat, lng: locationLng, address: locationAddress || 'Casa' });
-                                      alert('Ubicación guardada como Casa');
+                                      showAlert('Ubicación guardada como Casa');
                                     }}
                                     style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: 4, background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer' }}
                                   >
@@ -903,7 +1000,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                                     type="button"
                                     onClick={() => {
                                       saveWorkLocation({ lat: locationLat, lng: locationLng, address: locationAddress || 'Trabajo' });
-                                      alert('Ubicación guardada como Trabajo');
+                                      showAlert('Ubicación guardada como Trabajo');
                                     }}
                                     style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: 4, background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer' }}
                                   >
@@ -937,7 +1034,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                       </div>
                     )}
                   </div>
+                  </motion.div>
                 )}
+                </AnimatePresence>
               </div>
 
               {/* Card 3: Requisitos (Tareas que la bloquean) */}
@@ -953,7 +1052,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                   </span>
                   <ChevronDown size={18} style={{ transform: cardReqOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                 </button>
+                <AnimatePresence>
                 {cardReqOpen && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ height: { duration: 0.3, ease: [0.22, 1, 0.36, 1] }, opacity: { duration: 0.2 } }} style={{ overflow: 'hidden' }}>
                   <div className="section-card-content">
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '4px 0 8px 0', lineHeight: 1.3 }}>
                       Esta tarea estará bloqueada y no se podrá marcar como completada hasta que se finalicen primero los requisitos seleccionados abajo:
@@ -1000,7 +1101,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                       ]}
                     />
                   </div>
+                  </motion.div>
                 )}
+                </AnimatePresence>
               </div>
 
               {/* Card 4: Detalles Adicionales */}
@@ -1016,7 +1119,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                   </span>
                   <ChevronDown size={18} style={{ transform: cardDetailsOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                 </button>
+                <AnimatePresence>
                 {cardDetailsOpen && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ height: { duration: 0.3, ease: [0.22, 1, 0.36, 1] }, opacity: { duration: 0.2 } }} style={{ overflow: 'hidden' }}>
                   <div className="section-card-content">
                     <div className="detail-row" style={{ padding: '8px 0' }}>
                       <span className="detail-label">Prioridad</span>
@@ -1078,7 +1183,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                       </div>
                     )}
                   </div>
+                  </motion.div>
                 )}
+                </AnimatePresence>
               </div>
 
               {/* Card 5: Modo Financiero (Costes) */}
@@ -1095,7 +1202,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                     </span>
                     <ChevronDown size={18} style={{ transform: cardFinanceOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                   </button>
+                  <AnimatePresence>
                   {cardFinanceOpen && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ height: { duration: 0.3, ease: [0.22, 1, 0.36, 1] }, opacity: { duration: 0.2 } }} style={{ overflow: 'hidden' }}>
                     <div className="section-card-content">
                       <div className="detail-row" style={{ padding: '8px 0' }}>
                         <span className="detail-label">Habilitar Detalles</span>
@@ -1151,7 +1260,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                         </>
                       )}
                     </div>
+                    </motion.div>
                   )}
+                  </AnimatePresence>
                 </div>
               )}
 
@@ -1159,7 +1270,32 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
           </motion.div>
         </div>
       )}
-    </AnimatePresence>,
+    </AnimatePresence>
+    <ConfirmModal 
+      isOpen={isConfirmOpen}
+      title={confirmProps.title}
+      message={confirmProps.message}
+      onConfirm={() => { confirmProps.onConfirm(); setIsConfirmOpen(false); }}
+      onCancel={() => setIsConfirmOpen(false)}
+    />
+    <AnimatePresence>
+      {toast && (
+        <motion.div
+          initial={{ opacity: 0, y: 50, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 20, scale: 0.9 }}
+          style={{
+            position: 'fixed', bottom: 'env(safe-area-inset-bottom, 24px)', left: '50%', transform: 'translateX(-50%)',
+            background: 'var(--bg-elevated)', color: 'var(--text-primary)', padding: '12px 24px',
+            borderRadius: '999px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 99999,
+            fontWeight: 500, fontSize: '0.9rem', border: '1px solid var(--border-subtle)'
+          }}
+        >
+          {toast}
+        </motion.div>
+      )}
+    </AnimatePresence>
+    </>,
     document.body
   );
 }

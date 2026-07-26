@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion';
+import { motion, useMotionValue, useTransform, AnimatePresence, useMotionValueEvent } from 'framer-motion';
 import {
   CheckCircle, Trash2, Lock, Link2, Flag, MapPin,
   Image as ImageIcon, MoreHorizontal, Repeat, Edit3,
-  Play, ChevronRight
+  Play, ChevronRight, Copy, FolderOpen, IndentIncrease, IndentDecrease
 } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore } from '../../store/useAppStore';
@@ -29,7 +29,10 @@ interface TaskCardProps {
 export const TaskCard = React.memo(function TaskCard({
   task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, index, showListName = true, isFirstInSection, isLastInSection, previousTaskId
 }: TaskCardProps) {
-  const { cycles, tasks, nestTask, lists } = useAppStore();
+  const cycles = useAppStore(state => state.cycles);
+  const tasks = useAppStore(state => state.tasks);
+  const nestTask = useAppStore(state => state.nestTask);
+  const lists = useAppStore(state => state.lists);
   const taskCycle = cycles.find(c => c.id === task.cycle_id);
   const taskList = lists?.find(l => l.id === task.categoryId);
 
@@ -42,7 +45,21 @@ export const TaskCard = React.memo(function TaskCard({
   }
 
   const [isDragOver, setIsDragOver] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
+  const [contextMenuOpen, setContextMenuOpen] = useState(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [isHovered, setIsHovered] = useState(false);
+  const longPressTimer = useRef<number | null>(null);
+  const touchStartX = useRef<number>(0);
+  const touchStartY = useRef<number>(0);
+  const hasCrossedLeftThreshold = useRef(false);
+  const hasCrossedRightThreshold = useRef(false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -79,17 +96,39 @@ export const TaskCard = React.memo(function TaskCard({
   const rightBgOpacity = useTransform(x, [0, -40, -80], [0, 0.7, 1]);
   const leftIconScale = useTransform(x, [20, 80], [0.6, 1]);
   const rightIconScale = useTransform(x, [-20, -80], [0.6, 1]);
+  const leftIconX = useTransform(x, [0, 100], [-30, 10]);
+  const rightIconX = useTransform(x, [0, -100], [30, -10]);
 
   const SWIPE_COMPLETE_THRESHOLD = 80;
   const SWIPE_DELETE_THRESHOLD = -80;
 
+  useMotionValueEvent(x, "change", (latest) => {
+    if (latest > SWIPE_COMPLETE_THRESHOLD) {
+      if (!hasCrossedLeftThreshold.current) {
+        if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate(5);
+        hasCrossedLeftThreshold.current = true;
+      }
+    } else {
+      hasCrossedLeftThreshold.current = false;
+    }
+
+    if (latest < SWIPE_DELETE_THRESHOLD) {
+      if (!hasCrossedRightThreshold.current) {
+        if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate(5);
+        hasCrossedRightThreshold.current = true;
+      }
+    } else {
+      hasCrossedRightThreshold.current = false;
+    }
+  });
+
   const handleSwipeEnd = useCallback((offsetX: number) => {
     if (offsetX > SWIPE_COMPLETE_THRESHOLD && !isBlocked) {
-      if (navigator.vibrate) navigator.vibrate([30, 40, 30]);
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate([5, 50, 5]);
       // Always toggle: if completed → uncomplete, if pending → complete
       onToggle(task.id, isCompletedPeriod);
     } else if (offsetX < SWIPE_DELETE_THRESHOLD) {
-      if (navigator.vibrate) navigator.vibrate(50);
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate([5, 50, 5]);
       setIsDeleteConfirmOpen(true);
     }
   }, [isBlocked, isCompletedPeriod, onToggle, task.id]);
@@ -107,20 +146,46 @@ export const TaskCard = React.memo(function TaskCard({
   return (
     <div
       className="task-item-wrapper"
-      draggable={!isEditingNote && !isEditingTitle}
-      onDragStart={(e) => {
-        e.dataTransfer.setData('text/plain', task.id);
-        e.dataTransfer.effectAllowed = 'move';
+      style={{ ...virtualStyle, position: 'relative' }}
+      onPointerDown={(e) => {
+        if (e.pointerType === 'mouse') return;
+        touchStartX.current = e.clientX;
+        touchStartY.current = e.clientY;
+        if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
+        longPressTimer.current = window.setTimeout(() => {
+          if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate([10]);
+          setContextMenuPosition({ x: touchStartX.current, y: touchStartY.current });
+          setContextMenuOpen(true);
+        }, 400);
       }}
-      style={{ ...virtualStyle, position: 'relative', overflow: 'hidden' }}
-      onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-      onDragLeave={() => setIsDragOver(false)}
-      onDrop={(e) => {
+      onPointerMove={(e) => {
+        if (!longPressTimer.current) return;
+        const dx = Math.abs(e.clientX - touchStartX.current);
+        const dy = Math.abs(e.clientY - touchStartY.current);
+        if (dx > 10 || dy > 10) {
+          window.clearTimeout(longPressTimer.current);
+          longPressTimer.current = null;
+        }
+      }}
+      onPointerUp={() => {
+        if (longPressTimer.current) {
+          window.clearTimeout(longPressTimer.current);
+          longPressTimer.current = null;
+        }
+      }}
+      onPointerCancel={() => {
+        if (longPressTimer.current) {
+          window.clearTimeout(longPressTimer.current);
+          longPressTimer.current = null;
+        }
+      }}
+      onContextMenu={(e) => {
         e.preventDefault();
-        setIsDragOver(false);
-        const draggedTaskId = e.dataTransfer.getData('text/plain');
-        if (draggedTaskId && draggedTaskId !== task.id) nestTask(draggedTaskId, task.id);
+        setContextMenuPosition({ x: e.clientX, y: e.clientY });
+        setContextMenuOpen(true);
       }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       {/* Fixed swipe action backgrounds */}
       {/* Left = Complete/Uncomplete */}
@@ -130,10 +195,11 @@ export const TaskCard = React.memo(function TaskCard({
           width: '50%',
           background: isCompletedPeriod ? 'var(--accent-orange)' : 'var(--accent-green)',
           display: 'flex', alignItems: 'center', paddingLeft: 24,
-          opacity: leftBgOpacity, zIndex: 0
+          opacity: leftBgOpacity, zIndex: 0,
+          overflow: 'hidden'
         }}
       >
-        <motion.div style={{ scale: leftIconScale }}>
+        <motion.div style={{ scale: leftIconScale, x: leftIconX }}>
           {isCompletedPeriod
             ? <CheckCircle color="white" size={26} style={{ opacity: 0.9 }} />
             : <CheckCircle color="white" size={26} />
@@ -148,10 +214,11 @@ export const TaskCard = React.memo(function TaskCard({
           width: '50%',
           background: 'var(--accent-red)',
           display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 24,
-          opacity: rightBgOpacity, zIndex: 0
+          opacity: rightBgOpacity, zIndex: 0,
+          overflow: 'hidden'
         }}
       >
-        <motion.div style={{ scale: rightIconScale }}>
+        <motion.div style={{ scale: rightIconScale, x: rightIconX }}>
           <Trash2 color="white" size={26} />
         </motion.div>
       </motion.div>
@@ -159,11 +226,12 @@ export const TaskCard = React.memo(function TaskCard({
       {/* Main card — physically slides */}
       <motion.div
         ref={cardRef}
+        layoutId={"task-card-shell-" + task.id}
         drag="x"
         dragSnapToOrigin
         dragConstraints={{ left: -160, right: 160 }}
-        dragElastic={0.05}
-        dragTransition={{ bounceStiffness: 500, bounceDamping: 30 }}
+        dragElastic={0.15}
+        dragTransition={{ bounceStiffness: 600, bounceDamping: 35 }}
         onDragEnd={(_, info) => handleSwipeEnd(info.offset.x)}
         style={{
           x,
@@ -190,48 +258,68 @@ export const TaskCard = React.memo(function TaskCard({
 
         {/* Checkbox */}
         <motion.button
+          layoutId={"task-status-" + task.id}
           aria-label={isCompletedPeriod ? 'Marcar como pendiente' : 'Completar tarea'}
           disabled={!!isBlocked}
-          whileTap={{ scale: 0.6 }}
+          whileTap={{ scale: 0.85 }}
           transition={{ type: 'spring', stiffness: 400, damping: 15 }}
           onClick={(e) => {
             e.stopPropagation();
             if (isBlocked) return;
-            if (navigator.vibrate) navigator.vibrate(15);
+            if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate([8]);
             onToggle(task.id, isCompletedPeriod || isPartial);
           }}
           style={{
-            width: 26, height: 26,
-            borderRadius: '50%',
-            border: isPartial
-              ? 'none'
-              : `2px solid ${isCompletedPeriod ? 'var(--accent-primary)' : 'var(--border-color)'}`,
-            marginRight: 14,
+            width: 44, height: 44,
+            padding: 11,
+            background: 'transparent',
+            border: 'none',
+            marginRight: 2,
             cursor: 'pointer',
             flexShrink: 0,
-            background: isCompletedPeriod
-              ? 'var(--accent-primary)'
-              : isPartial
-                ? `conic-gradient(var(--accent-primary) ${percentage}%, var(--border-subtle) ${percentage}%)`
-                : 'transparent',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
+            position: 'relative',
+            WebkitTapHighlightColor: 'transparent'
           }}
         >
           {isPartial && !isCompletedPeriod && (
-            <div style={{ width: 22, height: 22, background: 'var(--bg-surface)', borderRadius: '50%' }} />
+            <div style={{
+              position: 'absolute',
+              width: 22, height: 22,
+              borderRadius: '50%',
+              background: `conic-gradient(var(--accent-primary) ${percentage}%, var(--border-subtle) ${percentage}%)`
+            }}>
+              <div style={{ position: 'absolute', inset: 2, background: 'var(--bg-surface)', borderRadius: '50%' }} />
+            </div>
           )}
-          <AnimatePresence>
-            {isCompletedPeriod && (
-              <motion.div
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0, opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 500, damping: 22 }}
-              >
-                <CheckCircle size={16} color="white" />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <svg viewBox="0 0 24 24" width={22} height={22} style={{ zIndex: 1, overflow: 'visible' }}>
+            <motion.circle
+              cx="12" cy="12" r="10.5"
+              stroke={isCompletedPeriod ? 'var(--accent-primary)' : 'var(--border-color)'}
+              strokeWidth="1.5"
+              fill="none"
+              style={{ opacity: isPartial ? 0 : 1 }}
+            />
+            <motion.circle
+              cx="12" cy="12" r="10.5"
+              fill="var(--accent-primary)"
+              initial={{ scale: 0 }}
+              animate={{ scale: isCompletedPeriod ? 1 : 0 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 22 }}
+              style={{ transformOrigin: 'center' }}
+            />
+            <motion.path
+              d="M7.5 12.5L10.5 15.5L16.5 9"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: isCompletedPeriod ? 1 : 0 }}
+              transition={{ duration: 0.35, ease: "easeOut" }}
+            />
+          </svg>
         </motion.button>
 
         {/* Content */}
@@ -244,7 +332,8 @@ export const TaskCard = React.memo(function TaskCard({
               </span>
             )}
             {isEditingTitle ? (
-              <input
+              <motion.input
+                layoutId={"task-title-" + task.id}
                 value={editTitle}
                 autoFocus
                 onChange={e => setEditTitle(e.target.value)}
@@ -258,7 +347,11 @@ export const TaskCard = React.memo(function TaskCard({
                 }}
               />
             ) : (
-              <span
+              <motion.span
+                layoutId={"task-title-" + task.id}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
                 onClick={() => setIsEditingTitle(true)}
                 style={{
                   fontSize: '1rem', fontWeight: 500,
@@ -271,7 +364,7 @@ export const TaskCard = React.memo(function TaskCard({
                 }}
               >
                 {task.title}
-              </span>
+              </motion.span>
             )}
             {task.flagged && <Flag size={13} color="var(--accent-orange)" fill="var(--accent-orange)" />}
             {task.locationName && <MapPin size={13} color="var(--accent-blue)" />}
@@ -298,6 +391,10 @@ export const TaskCard = React.memo(function TaskCard({
                 />
               ) : (
                 <span
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
+                  onClick={() => setIsEditingNote(true)}
                   onPointerDownCapture={(e) => { e.stopPropagation(); }}
                   onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditingNote(true); }}
                   style={{
@@ -353,9 +450,23 @@ export const TaskCard = React.memo(function TaskCard({
             className="task-more-btn"
             onClick={(e) => {
               e.stopPropagation();
-              setShowMenu(true);
+              const rect = e.currentTarget.getBoundingClientRect();
+              setContextMenuPosition({ x: rect.right, y: rect.bottom });
+              setContextMenuOpen(true);
             }}
             aria-label="Más opciones"
+            style={{
+              width: 44, height: 44,
+              display: isMobile ? 'none' : 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              opacity: isHovered || contextMenuOpen ? 1 : 0,
+              transition: 'opacity 0.2s ease',
+              WebkitTapHighlightColor: 'transparent'
+            }}
           >
             <MoreHorizontal size={18} color="var(--text-tertiary)" />
           </button>
@@ -363,10 +474,10 @@ export const TaskCard = React.memo(function TaskCard({
 
       </motion.div>
 
-      {/* ── Apple-style Bottom Sheet ── */}
+      {/* ── Context Menu (Bottom Sheet Mobile / Popover Desktop) ── */}
       {createPortal(
         <AnimatePresence>
-          {showMenu && (
+          {contextMenuOpen && (
             <>
               {/* Backdrop */}
               <motion.div
@@ -376,152 +487,66 @@ export const TaskCard = React.memo(function TaskCard({
                 transition={{ duration: 0.18 }}
                 style={{
                   position: 'fixed', inset: 0, zIndex: 99998,
-                  background: 'rgba(0,0,0,0.4)',
-                  backdropFilter: 'blur(4px)',
-                  WebkitBackdropFilter: 'blur(4px)'
+                  background: isMobile ? 'rgba(0,0,0,0.4)' : 'transparent',
+                  backdropFilter: isMobile ? 'blur(40px) saturate(180%)' : 'none',
+                  WebkitBackdropFilter: isMobile ? 'blur(40px) saturate(180%)' : 'none'
                 }}
-                onClick={() => setShowMenu(false)}
+                onClick={() => setContextMenuOpen(false)}
+                onContextMenu={(e) => { e.preventDefault(); setContextMenuOpen(false); }}
               />
 
-              {/* Centered Container for Popover */}
-              <div style={{ 
-                position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', 
-                justifyContent: 'center', zIndex: 99999, pointerEvents: 'none', padding: 20 
-              }}>
+              {/* Menu Container */}
+              {isMobile ? (
+                // MOBILE: Bottom Sheet
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.9, y: 15 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, y: 15 }}
-                  transition={{ type: 'spring', damping: 25, stiffness: 400 }}
+                  initial={{ y: '100%' }}
+                  animate={{ y: 0 }}
+                  exit={{ y: '100%' }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 28 }}
                   style={{
-                    width: '100%', maxWidth: 320, pointerEvents: 'auto',
+                    position: 'fixed', bottom: 0, left: 0, right: 0,
+                    maxHeight: '70vh', zIndex: 99999,
+                    background: 'var(--bg-elevated)',
+                    borderRadius: '14px 14px 0 0',
+                    display: 'flex', flexDirection: 'column',
+                    paddingBottom: 'env(safe-area-inset-bottom)',
+                    boxShadow: '0 -4px 24px rgba(0,0,0,0.1)'
+                  }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0' }}>
+                    <div style={{ width: 36, height: 5, borderRadius: 2.5, background: 'var(--text-tertiary)', opacity: 0.3 }} />
+                  </div>
+                  <div style={{ overflowY: 'auto', padding: '0 16px 16px' }}>
+                    <MenuActions task={task} setContextMenuOpen={setContextMenuOpen} onEdit={onEdit} nestTask={nestTask} previousTaskId={previousTaskId} setIsDeleteConfirmOpen={setIsDeleteConfirmOpen} updateTask={updateTask} />
+                  </div>
+                </motion.div>
+              ) : (
+                // DESKTOP: Floating Popover
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  style={{
+                    position: 'fixed', zIndex: 99999,
+                    top: Math.min(contextMenuPosition.y, window.innerHeight - 350),
+                    left: Math.min(contextMenuPosition.x, window.innerWidth - 220),
+                    width: 220,
+                    background: 'var(--bg-elevated)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    borderRadius: 'var(--radius-md, 12px)',
+                    boxShadow: 'var(--shadow-lg, 0 8px 30px rgba(0,0,0,0.12))',
+                    border: '1px solid var(--border-subtle)',
+                    padding: '8px 0',
                     display: 'flex', flexDirection: 'column'
                   }}
                   onClick={e => e.stopPropagation()}
                 >
-                <div style={{
-                  background: 'var(--bg-elevated)',
-                  backdropFilter: 'blur(30px)',
-                  WebkitBackdropFilter: 'blur(30px)',
-                  borderRadius: 16,
-                  padding: '14px 16px',
-                  marginBottom: 10,
-                  border: '0.5px solid var(--border-subtle)',
-                }}>
-                  <p style={{
-                    margin: 0, fontSize: '0.95rem', fontWeight: 600,
-                    color: 'var(--text-primary)', textAlign: 'center',
-                    lineHeight: 1.35
-                  }}>
-                    {task.title}
-                  </p>
-                  {task.description && (
-                    <p style={{
-                      margin: '6px 0 0', fontSize: '0.82rem',
-                      color: 'var(--text-secondary)', textAlign: 'center',
-                      lineHeight: 1.4
-                    }}>
-                      {task.description}
-                    </p>
-                  )}
-                </div>
-
-                {/* Action buttons group 1 */}
-                <div style={{
-                  background: 'var(--bg-elevated)',
-                  backdropFilter: 'blur(30px)',
-                  WebkitBackdropFilter: 'blur(30px)',
-                  borderRadius: 16,
-                  overflow: 'hidden',
-                  marginBottom: 10,
-                  border: '0.5px solid var(--border-subtle)',
-                }}>
-                  <ActionRow
-                    icon={<Edit3 size={20} color="var(--accent-primary)" />}
-                    label="Editar detalles"
-                    onClick={() => { setShowMenu(false); onEdit(task.id); }}
-                  />
-                  {previousTaskId && !task.parentId && (
-                    <>
-                      <div style={{ height: '0.5px', background: 'var(--border-subtle)', marginLeft: 54 }} />
-                      <ActionRow
-                        icon={<ChevronRight size={20} color="var(--accent-primary)" />}
-                        label="Sangrar recordatorio"
-                        onClick={() => { setShowMenu(false); nestTask(task.id, previousTaskId); }}
-                      />
-                    </>
-                  )}
-                  {task.parentId && (
-                    <>
-                      <div style={{ height: '0.5px', background: 'var(--border-subtle)', marginLeft: 54 }} />
-                      <ActionRow
-                        icon={<ChevronRight size={20} style={{ transform: 'rotate(180deg)' }} color="var(--accent-primary)" />}
-                        label="Extraer recordatorio"
-                        onClick={() => { setShowMenu(false); nestTask(task.id, undefined); }}
-                      />
-                    </>
-                  )}
-                  <div style={{ height: '0.5px', background: 'var(--border-subtle)', marginLeft: 54 }} />
-                  <ActionRow
-                    icon={<Play size={20} color="var(--accent-green)" />}
-                    label="Empezar esta tarea"
-                    sublabel="Cronómetro + modo enfoque"
-                    onClick={() => { setShowMenu(false); onOpenZenMode(task.id); }}
-                  />
-                  <div style={{ height: '0.5px', background: 'var(--border-subtle)', marginLeft: 54 }} />
-                  <ActionRow
-                    icon={
-                      isCompletedPeriod
-                        ? <CheckCircle size={20} color="var(--accent-orange)" />
-                        : <CheckCircle size={20} color="var(--accent-green)" />
-                    }
-                    label={isCompletedPeriod ? 'Marcar como pendiente' : 'Marcar como completado'}
-                    onClick={() => {
-                      setShowMenu(false);
-                      onToggle(task.id, isCompletedPeriod);
-                    }}
-                  />
-                </div>
-
-                {/* Danger group */}
-                <div style={{
-                  background: 'var(--bg-elevated)',
-                  backdropFilter: 'blur(30px)',
-                  WebkitBackdropFilter: 'blur(30px)',
-                  borderRadius: 16,
-                  overflow: 'hidden',
-                  marginBottom: 10,
-                  border: '0.5px solid var(--border-subtle)',
-                }}>
-                  <ActionRow
-                    icon={<Trash2 size={20} color="var(--accent-red)" />}
-                    label="Eliminar recordatorio"
-                    labelColor="var(--accent-red)"
-                    onClick={() => { setShowMenu(false); setIsDeleteConfirmOpen(true); }}
-                  />
-                </div>
-
-                {/* Cancel */}
-                <button
-                  onClick={() => setShowMenu(false)}
-                  style={{
-                    width: '100%',
-                    background: 'var(--bg-elevated)',
-                    backdropFilter: 'blur(30px)',
-                    WebkitBackdropFilter: 'blur(30px)',
-                    border: '0.5px solid var(--border-subtle)',
-                    borderRadius: 16,
-                    padding: '16px',
-                    fontSize: '1.05rem',
-                    fontWeight: 700,
-                    color: 'var(--accent-primary)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Cancelar
-                </button>
-              </motion.div>
-              </div>
+                  <MenuActions task={task} setContextMenuOpen={setContextMenuOpen} onEdit={onEdit} nestTask={nestTask} previousTaskId={previousTaskId} setIsDeleteConfirmOpen={setIsDeleteConfirmOpen} updateTask={updateTask} />
+                </motion.div>
+              )}
             </>
           )}
         </AnimatePresence>,
@@ -556,13 +581,40 @@ export const TaskCard = React.memo(function TaskCard({
   );
 });
 
-// ── Reusable action row for bottom sheet ──────────────────────────────────────
+// ── MenuActions Component ──────────────────────────────────────
+function MenuActions({ task, setContextMenuOpen, onEdit, nestTask, previousTaskId, setIsDeleteConfirmOpen, updateTask }: any) {
+  return (
+    <>
+      <ActionRow icon={<Edit3 size={18} />} label="Editar" onClick={() => { setContextMenuOpen(false); onEdit(task.id); }} />
+      <ActionRow icon={<Copy size={18} />} label="Duplicar" onClick={() => { setContextMenuOpen(false); }} />
+      <ActionRow icon={<FolderOpen size={18} />} label="Mover a lista" onClick={() => { setContextMenuOpen(false); }} />
+      
+      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 16px' }} />
+      
+      {previousTaskId && !task.parentId && (
+        <ActionRow icon={<IndentIncrease size={18} />} label="Sangrar" onClick={() => { setContextMenuOpen(false); nestTask(task.id, previousTaskId); }} />
+      )}
+      {task.parentId && (
+        <ActionRow icon={<IndentDecrease size={18} />} label="Extraer" onClick={() => { setContextMenuOpen(false); nestTask(task.id, undefined); }} />
+      )}
+      
+      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 16px' }} />
+      
+      <ActionRow icon={<Flag size={18} />} label={task.flagged ? "Quitar flag" : "Marcar con flag"} onClick={() => { setContextMenuOpen(false); updateTask(task.id, { flagged: !task.flagged }); }} />
+      
+      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 16px' }} />
+      
+      <ActionRow icon={<Trash2 size={18} color="var(--accent-red)" />} label="Eliminar" labelColor="var(--accent-red)" onClick={() => { setContextMenuOpen(false); setIsDeleteConfirmOpen(true); }} />
+    </>
+  );
+}
+
+// ── Reusable action row for menu ──────────────────────────────────────
 function ActionRow({
-  icon, label, sublabel, onClick, labelColor
+  icon, label, onClick, labelColor
 }: {
   icon: React.ReactNode;
   label: string;
-  sublabel?: string;
   onClick: () => void;
   labelColor?: string;
 }) {
@@ -573,13 +625,14 @@ function ActionRow({
         width: '100%',
         display: 'flex',
         alignItems: 'center',
-        gap: 14,
-        padding: '14px 16px',
+        gap: 12,
+        padding: '0 16px',
         background: 'none',
         border: 'none',
         cursor: 'pointer',
         textAlign: 'left',
         WebkitTapHighlightColor: 'transparent',
+        height: 52,
       }}
       onPointerDown={e => {
         const el = e.currentTarget;
@@ -588,14 +641,12 @@ function ActionRow({
       onPointerUp={e => { e.currentTarget.style.background = 'none'; }}
       onPointerLeave={e => { e.currentTarget.style.background = 'none'; }}
     >
-      <div style={{ width: 38, height: 38, borderRadius: 10, background: 'var(--bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: labelColor || 'var(--text-primary)' }}>
         {icon}
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '1rem', fontWeight: 500, color: labelColor || 'var(--text-primary)' }}>{label}</div>
-        {sublabel && <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', marginTop: 1 }}>{sublabel}</div>}
+      <div style={{ flex: 1, fontSize: '0.95rem', fontWeight: 500, color: labelColor || 'var(--text-primary)' }}>
+        {label}
       </div>
-      <ChevronRight size={16} color="var(--text-tertiary)" />
     </button>
   );
 }
