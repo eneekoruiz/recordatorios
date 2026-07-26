@@ -361,17 +361,6 @@ export const TaskCard = React.memo(function TaskCard({
           </button>
         )}
 
-        {/* Separador interno estilo Apple (no llega al borde izquierdo) */}
-        {!isLastInSection && (
-          <div style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 54, // Empieza después del icono del check
-            right: 0,
-            height: '0.5px',
-            background: 'var(--border-subtle)'
-          }} />
-        )}
       </motion.div>
 
       {/* ── Apple-style Bottom Sheet ── */}
