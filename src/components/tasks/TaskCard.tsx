@@ -4,7 +4,7 @@ import { motion, useMotionValue, useTransform, AnimatePresence, useMotionValueEv
 import {
   CheckCircle, Trash2, Lock, Link2, Flag, MapPin,
   Image as ImageIcon, MoreHorizontal, Repeat, Edit3,
-  Play, ChevronRight, Copy, FolderOpen, IndentIncrease, IndentDecrease
+  Play, ChevronRight, ChevronDown, Copy, FolderOpen, IndentIncrease, IndentDecrease
 } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore } from '../../store/useAppStore';
@@ -24,10 +24,13 @@ interface TaskCardProps {
   isFirstInSection?: boolean;
   isLastInSection?: boolean;
   previousTaskId?: string;
+  hasChildren?: boolean;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
 export const TaskCard = React.memo(function TaskCard({
-  task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, index, showListName = true, isFirstInSection, isLastInSection, previousTaskId
+  task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, index, showListName = true, isFirstInSection, isLastInSection, previousTaskId, hasChildren, isExpanded, onToggleExpand
 }: TaskCardProps) {
   const cycles = useAppStore(state => state.cycles);
   const tasks = useAppStore(state => state.tasks);
@@ -226,11 +229,10 @@ export const TaskCard = React.memo(function TaskCard({
       {/* Main card — physically slides */}
       <motion.div
         ref={cardRef}
-        layoutId={"task-card-shell-" + task.id}
         drag="x"
         dragSnapToOrigin
         dragConstraints={{ left: -160, right: 160 }}
-        dragElastic={0.15}
+        dragElastic={0.8}
         dragTransition={{ bounceStiffness: 600, bounceDamping: 35 }}
         onDragEnd={(_, info) => handleSwipeEnd(info.offset.x)}
         style={{
@@ -444,6 +446,25 @@ export const TaskCard = React.memo(function TaskCard({
           </div>
         </div>
 
+        {/* Subtask Chevron */}
+        {hasChildren && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleExpand?.(); }}
+            style={{
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'var(--text-tertiary)', minWidth: 44, minHeight: 44,
+              WebkitTapHighlightColor: 'transparent'
+            }}
+            title={isExpanded ? "Contraer subtareas" : "Expandir subtareas"}
+            aria-label={isExpanded ? "Contraer subtareas" : "Expandir subtareas"}
+          >
+            <motion.div animate={{ rotate: isExpanded ? 0 : -90 }} transition={{ type: 'spring', damping: 20, stiffness: 300 }}>
+              <ChevronDown size={18} />
+            </motion.div>
+          </button>
+        )}
+
         {/* More button */}
         {!isBlocked && (
           <button
@@ -474,7 +495,7 @@ export const TaskCard = React.memo(function TaskCard({
 
       </motion.div>
 
-      {/* ── Context Menu (Bottom Sheet Mobile / Popover Desktop) ── */}
+      {/* ── Context Menu (Universal Floating Popover) ── */}
       {createPortal(
         <AnimatePresence>
           {contextMenuOpen && (
@@ -487,66 +508,36 @@ export const TaskCard = React.memo(function TaskCard({
                 transition={{ duration: 0.18 }}
                 style={{
                   position: 'fixed', inset: 0, zIndex: 99998,
-                  background: isMobile ? 'rgba(0,0,0,0.4)' : 'transparent',
-                  backdropFilter: isMobile ? 'blur(40px) saturate(180%)' : 'none',
-                  WebkitBackdropFilter: isMobile ? 'blur(40px) saturate(180%)' : 'none'
+                  background: 'transparent', // No dark overlay blocking the view!
                 }}
                 onClick={() => setContextMenuOpen(false)}
                 onContextMenu={(e) => { e.preventDefault(); setContextMenuOpen(false); }}
               />
 
-              {/* Menu Container */}
-              {isMobile ? (
-                // MOBILE: Bottom Sheet
-                <motion.div
-                  initial={{ y: '100%' }}
-                  animate={{ y: 0 }}
-                  exit={{ y: '100%' }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-                  style={{
-                    position: 'fixed', bottom: 0, left: 0, right: 0,
-                    maxHeight: '70vh', zIndex: 99999,
-                    background: 'var(--bg-elevated)',
-                    borderRadius: '14px 14px 0 0',
-                    display: 'flex', flexDirection: 'column',
-                    paddingBottom: 'env(safe-area-inset-bottom)',
-                    boxShadow: '0 -4px 24px rgba(0,0,0,0.1)'
-                  }}
-                  onClick={e => e.stopPropagation()}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0' }}>
-                    <div style={{ width: 36, height: 5, borderRadius: 2.5, background: 'var(--text-tertiary)', opacity: 0.3 }} />
-                  </div>
-                  <div style={{ overflowY: 'auto', padding: '0 16px 16px' }}>
-                    <MenuActions task={task} setContextMenuOpen={setContextMenuOpen} onEdit={onEdit} nestTask={nestTask} previousTaskId={previousTaskId} setIsDeleteConfirmOpen={setIsDeleteConfirmOpen} updateTask={updateTask} />
-                  </div>
-                </motion.div>
-              ) : (
-                // DESKTOP: Floating Popover
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.15 }}
-                  style={{
-                    position: 'fixed', zIndex: 99999,
-                    top: Math.min(contextMenuPosition.y, window.innerHeight - 350),
-                    left: Math.min(contextMenuPosition.x, window.innerWidth - 220),
-                    width: 220,
-                    background: 'var(--bg-elevated)',
-                    backdropFilter: 'blur(20px)',
-                    WebkitBackdropFilter: 'blur(20px)',
-                    borderRadius: 'var(--radius-md, 12px)',
-                    boxShadow: 'var(--shadow-lg, 0 8px 30px rgba(0,0,0,0.12))',
-                    border: '1px solid var(--border-subtle)',
-                    padding: '8px 0',
-                    display: 'flex', flexDirection: 'column'
-                  }}
-                  onClick={e => e.stopPropagation()}
-                >
-                  <MenuActions task={task} setContextMenuOpen={setContextMenuOpen} onEdit={onEdit} nestTask={nestTask} previousTaskId={previousTaskId} setIsDeleteConfirmOpen={setIsDeleteConfirmOpen} updateTask={updateTask} />
-                </motion.div>
-              )}
+              {/* Floating Popover Container */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.15 }}
+                style={{
+                  position: 'fixed', zIndex: 99999,
+                  top: Math.min(contextMenuPosition.y, typeof window !== 'undefined' ? window.innerHeight - 350 : 300),
+                  left: Math.min(contextMenuPosition.x, typeof window !== 'undefined' ? window.innerWidth - 220 : 100),
+                  width: 220,
+                  background: 'var(--bg-elevated)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  borderRadius: 'var(--radius-md, 12px)',
+                  boxShadow: 'var(--shadow-lg, 0 8px 30px rgba(0,0,0,0.12))',
+                  border: '1px solid var(--border-subtle)',
+                  padding: '8px 0',
+                  display: 'flex', flexDirection: 'column'
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                <MenuActions task={task} setContextMenuOpen={setContextMenuOpen} onEdit={onEdit} nestTask={nestTask} previousTaskId={previousTaskId} setIsDeleteConfirmOpen={setIsDeleteConfirmOpen} updateTask={updateTask} />
+              </motion.div>
             </>
           )}
         </AnimatePresence>,

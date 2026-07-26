@@ -1244,8 +1244,20 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 .header-actions { max-width: 100%; }
-.ios-task-row { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
-.task-item-wrapper { background: transparent !important; }
+.ios-task-row {
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  border: none !important;
+  border-bottom: 0.5px solid var(--border-subtle) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  margin-bottom: 0px !important;
+}
+.task-item-wrapper {
+  background: transparent !important;
+  margin-bottom: 0px !important;
+}
 .tasks-container { background: transparent !important; }
 
 /* More button on task card (chevron) */

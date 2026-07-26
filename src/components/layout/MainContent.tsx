@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, ChevronDown, Sparkles, FolderPlus, Settings, Trash2, MoreHorizontal } from 'lucide-react';
+import { Plus, ChevronDown, Sparkles, FolderPlus, Settings, Trash2, MoreHorizontal, Edit3 } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
@@ -42,6 +42,8 @@ const SMART_COLORS: Record<string, string> = {
 
 export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditTask, onBackToSidebar, isMobile }: MainContentProps) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [sectionMenu, setSectionMenu] = useState<{ open: boolean; x: number; y: number; sectionId?: string; sectionName?: string }>({ open: false, x: 0, y: 0 });
+  const sectionTouchTimer = useRef<any>(null);
   
   const getTasksByCycle = useAppStore((state) => state.getTasksByCycle);
   const getTasksByList = useAppStore((state) => state.getTasksByList);
@@ -362,6 +364,41 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
   const [dragOverSectionId, setDragOverSectionId] = useState<string | null>(null);
 
+  const handleRenameSectionMenu = useCallback(async () => {
+    const secId = sectionMenu.sectionId;
+    const secName = sectionMenu.sectionName || '';
+    setSectionMenu({ open: false, x: 0, y: 0 });
+    if (secId) {
+      setEditingSectionId(secId);
+      setEditingSectionName(secName);
+    } else {
+      const newName = await usePromptStore.getState().openPrompt("Renombrar:", secName);
+      if (newName && newName.trim()) {
+        const listToUpdate = lists?.find(l => l.name === secName);
+        if (listToUpdate) updateList(listToUpdate.id, { name: newName.trim() });
+      }
+    }
+  }, [sectionMenu, lists, updateList]);
+
+  const handleAddTaskMenu = useCallback(() => {
+    const secId = sectionMenu.sectionId;
+    setSectionMenu({ open: false, x: 0, y: 0 });
+    onOpenNewTask(secId);
+  }, [sectionMenu, onOpenNewTask]);
+
+  const handleDeleteSectionMenu = useCallback(() => {
+    const secId = sectionMenu.sectionId;
+    setSectionMenu({ open: false, x: 0, y: 0 });
+    if (secId) {
+      setConfirmProps({
+        title: 'Eliminar Sección',
+        message: '¿Seguro que quieres borrar esta sección? Las tareas no se borrarán, solo quedarán sin sección.',
+        onConfirm: () => deleteListSection(secId)
+      });
+      setIsConfirmOpen(true);
+    }
+  }, [sectionMenu, deleteListSection]);
+
   // 1. Flatten Data para Virtualización (QA Performance Optimization)
   const flattenedData = useMemo(() => {
     const flat: VirtualItemType[] = [{ type: 'page-header' }];
@@ -484,9 +521,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     estimateSize: (index) => {
       const item = flattenedData[index];
       if (item.type === 'page-header') return 160;
-      if (item.type === 'header') return index === 0 ? 56 : 76; // Extra Apple-style spacing between sections
+      if (item.type === 'header') return index === 0 ? 48 : 56; // Clean Apple-style spacing with divider line
       if (item.type === 'empty-section') return 44;
-      return 80; // task cards height in Apple style (compact)
+      return 56; // task cards height in Apple style (compact)
     },
     measureElement: (el) => el.getBoundingClientRect().height,
     overscan: 8,
@@ -510,21 +547,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               background: 'var(--accent-primary)', opacity: Math.max(0.2, 1 - depth*0.2), zIndex: 1
             }} />
           )}
-          
-          {hasChildren && (
-            <button
-              onClick={(e) => { e.stopPropagation(); toggleCategory(`task_${task.id}`); }}
-              style={{
-                position: 'absolute', left: 8 + depth * 24, top: 20, zIndex: 2,
-                background: 'var(--bg-elevated, #fff)', border: 'none', cursor: 'pointer', padding: 2, borderRadius: '50%',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-              }}
-            >
-              <motion.div animate={{ rotate: isExpanded ? 0 : -90 }} transition={{ type: 'spring', damping: 20, stiffness: 300 }}>
-                <ChevronDown size={12} color="var(--text-secondary)" />
-              </motion.div>
-            </button>
-          )}
 
           <TaskCard 
             task={task}
@@ -538,6 +560,11 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             isFirstInSection={isFirst}
             isLastInSection={isLast}
             previousTaskId={previousTaskId}
+            {...({
+              hasChildren,
+              isExpanded,
+              onToggleExpand: () => toggleCategory(`task_${task.id}`)
+            } as any)}
           />
         </div>
       </div>
@@ -569,20 +596,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           transition: 'background 0.25s ease, border-color 0.25s ease, backdrop-filter 0.25s ease, -webkit-backdrop-filter 0.25s ease'
         }}
       >
-        {/* Left: Volver button (only for mobile content view) */}
-        {isMobile && onBackToSidebar && (
-          <button 
-            onClick={onBackToSidebar}
-            style={{
-              background: 'transparent', border: 'none', color: 'var(--accent-primary)',
-              display: 'flex', alignItems: 'center', gap: 4, padding: '8px 0',
-              fontSize: '1.05rem', cursor: 'pointer', fontWeight: 500
-            }}
-          >
-            <ChevronDown size={20} style={{ transform: 'rotate(90deg)', color: 'var(--accent-primary)' }} />
-            <span>Listas</span>
-          </button>
-        )}
+        {/* Left spacer to keep center title balanced */}
+        <div style={{ minWidth: 24 }} />
         
         {/* Dynamic List Title on Top Bar (visible when scrolled) */}
         <div style={{ 
@@ -800,6 +815,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             const sectionId = data.sectionId;
             const isDraggingOver = dragOverSectionId === sectionId && isCustomSection;
 
+            const showDivider = virtualItem.index > 0 && flattenedData[virtualItem.index - 1]?.type !== 'page-header';
             return (
               <div 
                 key={virtualItem.key}
@@ -809,13 +825,14 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 style={{ 
                   ...virtualStyle, 
                   borderBottom: 'none',
-                  borderTop: virtualItem.index === 0 ? 'none' : '0.5px solid var(--border-subtle)',
+                  borderTop: 'none',
                   paddingLeft: `calc(16px + ${data.depth * 24}px)`,
-                  minHeight: virtualItem.index === 0 ? 56 : 76,
-                  paddingTop: virtualItem.index === 0 ? 12 : 24, // Reduced from 32 since we have a line now
-                  paddingBottom: 12,
+                  minHeight: showDivider ? 56 : 44,
+                  paddingTop: showDivider ? 16 : 8,
+                  paddingBottom: 8,
                   display: 'flex',
-                  alignItems: 'center',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
                   outline: isDraggingOver ? `2px solid ${data.color}` : undefined,
                   background: isDraggingOver ? `${data.color}14` : 'transparent', // Transparent background as in Apple
                   zIndex: sectionMenuId === data.sectionId ? 50 : 10 // ALWAYS above tasks (zIndex 1)
@@ -829,8 +846,28 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                   const taskId = e.dataTransfer.getData('text/plain');
                   if (taskId) updateTaskSection(taskId, data.sectionId!);
                 } : undefined}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setSectionMenu({ open: true, x: e.clientX, y: e.clientY, sectionId: data.sectionId, sectionName: data.title });
+                }}
+                onPointerDown={(e) => {
+                  if (sectionTouchTimer.current) clearTimeout(sectionTouchTimer.current);
+                  const clientX = e.clientX;
+                  const clientY = e.clientY;
+                  const secId = data.sectionId;
+                  const secTitle = data.title;
+                  sectionTouchTimer.current = setTimeout(() => {
+                    setSectionMenu({ open: true, x: clientX, y: clientY, sectionId: secId, sectionName: secTitle });
+                  }, 400);
+                }}
+                onPointerUp={() => { if (sectionTouchTimer.current) clearTimeout(sectionTouchTimer.current); }}
+                onPointerCancel={() => { if (sectionTouchTimer.current) clearTimeout(sectionTouchTimer.current); }}
+                onPointerMove={() => { if (sectionTouchTimer.current) clearTimeout(sectionTouchTimer.current); }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {showDivider && (
+                  <div className="ios-section-divider" style={{ height: '0.5px', background: 'var(--separator-color, rgba(142, 142, 147, 0.3))', margin: '0 0 12px 0', width: '100%' }} />
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
                   <ChevronDown 
                     size={20} 
                     color="var(--text-tertiary)" 
@@ -1079,6 +1116,51 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             </button>
           </motion.div>
         </AnimatePresence>,
+        document.body
+      )}
+
+      {sectionMenu.open && createPortal(
+        <>
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 999990 }}
+            onClick={() => setSectionMenu({ open: false, x: 0, y: 0 })}
+            onContextMenu={(e) => { e.preventDefault(); setSectionMenu({ open: false, x: 0, y: 0 }); }}
+          />
+          <motion.div
+            className="ios-dropdown-menu glass-panel"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            style={{
+              position: 'fixed',
+              left: Math.min(sectionMenu.x, window.innerWidth - 220),
+              top: Math.min(sectionMenu.y, window.innerHeight - 150),
+              zIndex: 999995,
+              minWidth: 200,
+              boxShadow: '0 12px 36px rgba(0,0,0,0.3)',
+              border: '1px solid var(--border-subtle, rgba(255,255,255,0.15))',
+              borderRadius: 12,
+              background: 'var(--bg-elevated, #1c1c1e)',
+              padding: 6
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button className="ios-dropdown-item" onClick={handleRenameSectionMenu}>
+              <Edit3 size={16} /> Renombrar sección
+            </button>
+            <button className="ios-dropdown-item" onClick={handleAddTaskMenu}>
+              <Plus size={16} /> Añadir tarea aquí
+            </button>
+            {sectionMenu.sectionId && (
+              <>
+                <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
+                <button className="ios-dropdown-item danger" style={{ color: 'var(--accent-red)' }} onClick={handleDeleteSectionMenu}>
+                  <Trash2 size={16} /> Eliminar sección
+                </button>
+              </>
+            )}
+          </motion.div>
+        </>,
         document.body
       )}
     </main>
