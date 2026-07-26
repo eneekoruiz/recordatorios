@@ -628,6 +628,11 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
           onSelectView(id);
         }}
       />
+      
+      {/* Version Checker */}
+      <div style={{ padding: '8px', textAlign: 'center', fontSize: '0.65rem', color: 'var(--text-tertiary)', opacity: 0.7, fontWeight: 600 }}>
+        v1.0.4 (Rediseño Apple, Deshacer y Scroll arreglado)
+      </div>
     </aside>
   );
 }

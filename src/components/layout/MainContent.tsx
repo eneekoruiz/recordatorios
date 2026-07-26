@@ -1,4 +1,6 @@
 import { useState, useRef, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, ChevronDown, Sparkles, FolderPlus, Settings, Trash2, MoreHorizontal } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -52,6 +54,24 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const [isEditingCycle, setIsEditingCycle] = useState(false);
   const [cycleEditName, setCycleEditName] = useState('');
   const [recentlyCompletedIds, setRecentlyCompletedIds] = useState<string[]>([]);
+  const [deletedToast, setDeletedToast] = useState<{ id: string; title: string; timeoutId: number } | null>(null);
+
+  const handleDeleteTask = useCallback((id: string) => {
+    const taskToDelete = tasks[id];
+    if (!taskToDelete) return;
+    
+    updateTask(id, { deleted_at: new Date().toISOString() });
+    
+    if (deletedToast?.timeoutId) {
+      window.clearTimeout(deletedToast.timeoutId);
+    }
+    
+    const timeoutId = window.setTimeout(() => {
+      setDeletedToast(null);
+    }, 5000);
+
+    setDeletedToast({ id, title: taskToDelete.title, timeoutId });
+  }, [tasks, updateTask, deletedToast]);
 
   // Funciones auxiliares para Smart Lists (memoized)
   const getTasksForSmartView = useCallback((includeCompleted = false, temporarilyShowIds: string[] = []) => {
@@ -321,10 +341,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     count: flattenedData.length,
     getScrollElement: () => parentRef.current,
     estimateSize: (index) => {
-      // Cabecera ~ 50px, Tarea ~ 86px
-      return flattenedData[index].type === 'header' ? 50 : 86;
+      const item = flattenedData[index];
+      if (item.type === 'header') return 48;
+      if (item.type === 'empty-section') return 44;
+      return 72; // task cards
     },
-    overscan: 5,
+    overscan: 8,
   });
 
   const renderTask = useCallback((task: TaskItem, virtualStyle: React.CSSProperties, index: number, depth: number) => (
@@ -338,21 +360,21 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         task={task}
         virtualStyle={{ paddingLeft: `calc(16px + ${depth * 24}px)` }}
         onToggle={handleToggleTask}
-        onDelete={id => updateTask(id, { deleted_at: new Date().toISOString() })}
+        onDelete={handleDeleteTask}
         onOpenZenMode={onOpenZenMode}
         onEdit={onEditTask || (() => {})}
         index={index}
         showListName={!isListView}
       />
     </div>
-  ), [handleToggleTask, updateTask, onOpenZenMode, onEditTask, isListView, virtualizer]);
+  ), [handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, isListView, virtualizer]);
 
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
 
   return (
-    <main className="main-content" ref={parentRef} style={{ overflowY: 'auto', height: '100%', WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', scrollPaddingTop: 0 }}>
+    <main className="main-content" ref={parentRef} style={{ overflowY: 'auto', height: '100%', minHeight: 0, WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', scrollPaddingTop: 0 }}>
       {/* Header */}
-      <header className="content-header" style={{ padding: 'var(--space-16) 16px', display: 'flex', flexDirection: 'column', gap: 'var(--space-12)', flexShrink: 0, margin: '0', borderBottom: '1px solid var(--border-subtle)' }}>
+      <header className="content-header" style={{ padding: '24px clamp(20px, 4vw, 40px) 16px clamp(20px, 4vw, 40px)', display: 'flex', flexDirection: 'column', gap: '16px', flexShrink: 0, margin: '0', borderBottom: 'none' }}>
         
         {/* Top Bar (Barra Superior de Navegación) */}
         <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -372,47 +394,53 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           )}
           
           {/* Right: Actions aligned to the right */}
-          <div className="header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap', justifyContent: 'flex-end', position: 'relative' }}>
+          <div className="header-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap', justifyContent: 'flex-end', position: 'relative' }}>
             {isListView && currentList && (
               <div style={{ position: 'relative' }}>
                 <button className="icon-btn" onClick={() => setIsMenuOpen(!isMenuOpen)} title="Opciones de Lista">
                   <MoreHorizontal size={20} />
                 </button>
-                {isMenuOpen && (
-                  <>
-                    <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setIsMenuOpen(false)} />
-                    <div 
-                      className="ios-dropdown-menu"
-                      style={{ 
-                        position: 'absolute', right: 0, top: '100%', marginTop: 8, 
-                        zIndex: 100 
-                      }}
-                    >
-                      <button 
-                        className="ios-dropdown-item"
-                        onClick={() => { updateList(currentList.id, { showCompleted: !currentList.showCompleted }); setIsMenuOpen(false); }}
+                <AnimatePresence>
+                  {isMenuOpen && (
+                    <>
+                      <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setIsMenuOpen(false)} />
+                      <motion.div 
+                        className="ios-dropdown-menu"
+                        initial={{ opacity: 0, scale: 0.92, y: -6, transformOrigin: 'top right' }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.92, y: -6 }}
+                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                        style={{ 
+                          position: 'absolute', right: 0, top: '100%', marginTop: 10, 
+                          zIndex: 100 
+                        }}
                       >
-                        <input type="checkbox" checked={!!currentList.showCompleted} readOnly style={{ marginRight: 12, pointerEvents: 'none' }} />
-                        Mostrar Completados
-                      </button>
-                      <button 
-                        className="ios-dropdown-item"
-                        onClick={() => { updateList(currentList.id, { isFinancial: !currentList.isFinancial }); setIsMenuOpen(false); }}
-                      >
-                        <input type="checkbox" checked={!!currentList.isFinancial} readOnly style={{ marginRight: 12, pointerEvents: 'none' }} />
-                        Modo Financiero
-                      </button>
-                      <div className="ios-dropdown-divider" />
-                      <button 
-                        className="ios-dropdown-item"
-                        onClick={() => { setIsListConfigOpen(true); setIsMenuOpen(false); }}
-                      >
-                        <Settings size={16} />
-                        Personalizar Lista
-                      </button>
-                    </div>
-                  </>
-                )}
+                        <button 
+                          className="ios-dropdown-item"
+                          onClick={() => { updateList(currentList.id, { showCompleted: !currentList.showCompleted }); setIsMenuOpen(false); }}
+                        >
+                          <input type="checkbox" checked={!!currentList.showCompleted} readOnly style={{ marginRight: 12, pointerEvents: 'none', accentColor: 'var(--accent-primary)' }} />
+                          Mostrar Completados
+                        </button>
+                        <button 
+                          className="ios-dropdown-item"
+                          onClick={() => { updateList(currentList.id, { isFinancial: !currentList.isFinancial }); setIsMenuOpen(false); }}
+                        >
+                          <input type="checkbox" checked={!!currentList.isFinancial} readOnly style={{ marginRight: 12, pointerEvents: 'none', accentColor: 'var(--accent-primary)' }} />
+                          Modo Financiero
+                        </button>
+                        <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
+                        <button 
+                          className="ios-dropdown-item"
+                          onClick={() => { setIsListConfigOpen(true); setIsMenuOpen(false); }}
+                        >
+                          <Settings size={16} />
+                          Personalizar Lista
+                        </button>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
               </div>
             )}
             {isListView && (
@@ -420,7 +448,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 <FolderPlus size={20} />
               </button>
             )}
-            <button className="icon-btn" onClick={() => onOpenNewTask()} title="Añadir Tarea"><Plus size={24} /></button>
+            <button className="icon-btn" onClick={() => onOpenNewTask()} title="Añadir Tarea"><Plus size={22} /></button>
           </div>
         </div>
 
@@ -724,6 +752,71 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         title={confirmProps.title}
         message={confirmProps.message}
       />
+
+      {deletedToast && createPortal(
+        <AnimatePresence>
+          <motion.div
+            className="premium-toast"
+            style={{
+              position: 'fixed',
+              bottom: 'max(28px, env(safe-area-inset-bottom))',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              background: 'var(--bg-elevated, #1c1c1e)',
+              backdropFilter: 'blur(35px) saturate(200%)',
+              WebkitBackdropFilter: 'blur(35px) saturate(200%)',
+              border: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.15))',
+              borderRadius: '16px',
+              padding: '12px 20px',
+              boxShadow: '0 12px 36px rgba(0,0,0,0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              zIndex: 999999,
+              pointerEvents: 'auto',
+              minWidth: '280px',
+              maxWidth: '90vw',
+              justifyContent: 'space-between'
+            }}
+            initial={{ opacity: 0, y: 24, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            transition={{ type: 'spring', stiffness: 450, damping: 28 }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
+              <Trash2 size={18} color="var(--accent-red)" style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                Eliminado "{deletedToast.title}"
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                if (deletedToast.timeoutId) window.clearTimeout(deletedToast.timeoutId);
+                updateTask(deletedToast.id, { deleted_at: undefined });
+                setDeletedToast(null);
+              }}
+              style={{
+                background: 'var(--accent-primary)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '999px',
+                padding: '6px 14px',
+                fontSize: '0.9rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                flexShrink: 0,
+                boxShadow: '0 2px 8px rgba(10, 132, 255, 0.3)',
+                transition: 'transform 0.15s ease'
+              }}
+              onPointerDown={e => { e.currentTarget.style.transform = 'scale(0.93)'; }}
+              onPointerUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+            >
+              Deshacer
+            </button>
+          </motion.div>
+        </AnimatePresence>,
+        document.body
+      )}
     </main>
   );
 }

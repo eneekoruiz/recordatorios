@@ -157,13 +157,6 @@ export const TaskCard = React.memo(function TaskCard({
         dragElastic={0.05}
         dragTransition={{ bounceStiffness: 500, bounceDamping: 30 }}
         onDragEnd={(_, info) => handleSwipeEnd(info.offset.x)}
-        draggable
-        onDragStart={(e: any) => {
-          if (e.dataTransfer) {
-            e.dataTransfer.setData('text/plain', task.id);
-            e.dataTransfer.effectAllowed = 'move';
-          }
-        }}
         style={{
           x,
           position: 'relative',
@@ -178,6 +171,7 @@ export const TaskCard = React.memo(function TaskCard({
           pointerEvents: isBlocked ? 'none' : 'auto',
           touchAction: 'pan-y',
           outline: isDragOver ? '2px solid var(--accent-blue)' : undefined,
+          cursor: 'default',
         }}
       >
         {/* Checkbox */}

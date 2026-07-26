@@ -38,7 +38,8 @@ export function NavigationFrame({
     <div
       style={{
         width: '100%',
-        minHeight: '100%',
+        height: '100%',
+        overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -55,6 +56,9 @@ export function NavigationFrame({
             display: 'flex',
             flexDirection: 'column',
             width: '100%',
+            height: '100%',
+            overflow: 'hidden',
+            minHeight: 0,
             flex: 1,
           }}
         >
