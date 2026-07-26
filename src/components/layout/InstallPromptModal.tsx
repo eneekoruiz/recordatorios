@@ -41,7 +41,7 @@ export function InstallPromptModal() {
       // Escritorio u otros
       setInstallInfo({
         title: 'Disponible como App',
-        desc: 'Puedes instalar esta web como aplicación nativa desde el menú de tu navegador para usarla offline y sin distracciones.',
+        desc: 'Abre el menú de tu navegador (los tres puntos en la esquina superior derecha) y selecciona "Instalar aplicación" o "Añadir a pantalla de inicio".',
       });
     }
 

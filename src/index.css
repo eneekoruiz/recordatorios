@@ -661,7 +661,7 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 .surface-card:hover {
-  background: rgba(255, 255, 255, 0.96) !important;
+  background: var(--bg-hover) !important;
   border-color: var(--border-focus) !important;
   box-shadow: var(--shadow-md) !important;
 }
@@ -816,6 +816,7 @@ button { -webkit-tap-highlight-color: transparent; }
   color: var(--text-primary);
   position: relative;
   z-index: 1;
+  padding-right: 0.1em;
 }
 .auth-hero-panel p {
   max-width: 420px;

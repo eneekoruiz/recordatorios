@@ -404,8 +404,6 @@ export const useAppStore = create<AppState>()(
           let groupKey = '';
           if (task.sectionId && activeSectionIds.has(task.sectionId)) {
             groupKey = `section_${task.sectionId}`;
-          } else if (task.cycle_id) {
-            groupKey = `cycle_${task.cycle_id}`;
           } else {
             groupKey = 'no_section';
           }
