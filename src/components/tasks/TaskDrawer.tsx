@@ -31,10 +31,10 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   const [blockedBy, setBlockedBy] = useState<string[]>([]);
   const [sectionId, setSectionId] = useState<string | undefined>(defaultSectionId);
   const [cardTimeOpen, setCardTimeOpen] = useState(true);
-  const [cardRepeatOpen, setCardRepeatOpen] = useState(false);
-  const [cardReqOpen, setCardReqOpen] = useState(false);
-  const [cardDetailsOpen, setCardDetailsOpen] = useState(false);
-  const [cardFinanceOpen, setCardFinanceOpen] = useState(false);
+  const [cardRepeatOpen, setCardRepeatOpen] = useState(true);
+  const [cardReqOpen, setCardReqOpen] = useState(true);
+  const [cardDetailsOpen, setCardDetailsOpen] = useState(true);
+  const [cardFinanceOpen, setCardFinanceOpen] = useState(true);
   const [hasDate, setHasDate] = useState(false);
   const [hasTime, setHasTime] = useState(false);
   const [url, setUrl] = useState('');
@@ -163,10 +163,10 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         
         // Reset to default collapsed status on create
         setCardTimeOpen(true);
-        setCardRepeatOpen(false);
-        setCardReqOpen(false);
-        setCardDetailsOpen(false);
-        setCardFinanceOpen(false);
+        setCardRepeatOpen(true);
+        setCardReqOpen(true);
+        setCardDetailsOpen(true);
+        setCardFinanceOpen(true);
       }
     }
   }, [isOpen, taskId, task, defaultCategoryId, defaultSectionId]);
