@@ -353,7 +353,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     estimateSize: (index) => {
       const item = flattenedData[index];
       if (item.type === 'page-header') return 160;
-      if (item.type === 'header') return 48; // Increased for Apple-style top margin / spacing
+      if (item.type === 'header') return index === 0 ? 56 : 76; // Extra Apple-style spacing between sections
       if (item.type === 'empty-section') return 44;
       return 52; // task cards height in Apple style (compact)
     },
@@ -611,13 +611,13 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                   ...virtualStyle, 
                   borderBottom: 'none',
                   paddingLeft: `calc(16px + ${data.depth * 24}px)`,
-                  minHeight: 48,
-                  paddingTop: 8,
-                  paddingBottom: 8,
+                  minHeight: virtualItem.index === 0 ? 56 : 76,
+                  paddingTop: virtualItem.index === 0 ? 12 : 32, // More margin top as separator
+                  paddingBottom: 12,
                   display: 'flex',
                   alignItems: 'center',
                   outline: isDraggingOver ? `2px solid ${data.color}` : undefined,
-                  background: isDraggingOver ? `${data.color}14` : 'var(--bg-elevated)', // Blend with tasks
+                  background: isDraggingOver ? `${data.color}14` : 'transparent', // Transparent background as in Apple
                   zIndex: sectionMenuId === data.sectionId ? 50 : 10 // ALWAYS above tasks (zIndex 1)
                 }}
                 onClick={() => toggleCategory(data.category)}
@@ -654,10 +654,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                       onDoubleClick={(e) => isCustomSection && startEditingSection(e, data.sectionId!, data.title)}
                       style={{ 
                         cursor: isCustomSection ? 'text' : 'pointer',
-                        fontWeight: 700,
-                        color: data.color || 'var(--accent-primary)',
-                        fontSize: '1.25rem',
-                        letterSpacing: '-0.3px',
+                        fontWeight: 800,
+                        color: 'var(--text-primary)',
+                        fontSize: '1.45rem',
+                        letterSpacing: '-0.5px',
                         margin: 0
                       }}
                       title={isCustomSection ? "Doble click para editar" : ""}
