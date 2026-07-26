@@ -1,7 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion';
-import { CheckCircle, Trash2, GripVertical, Play, Lock, Link2, Flag, MapPin, Image as ImageIcon, MoreHorizontal, Repeat, Edit3, Sparkles } from 'lucide-react';
+import {
+  CheckCircle, Trash2, Lock, Link2, Flag, MapPin,
+  Image as ImageIcon, MoreHorizontal, Repeat, Edit3,
+  Play, ChevronRight
+} from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
@@ -19,27 +23,25 @@ interface TaskCardProps {
   showListName?: boolean;
 }
 
-export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, index, showListName = true }: TaskCardProps) {
-  const { cycles, tasks, nestTask, addDependency, lists } = useAppStore();
+export const TaskCard = React.memo(function TaskCard({
+  task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, index, showListName = true
+}: TaskCardProps) {
+  const { cycles, tasks, nestTask, lists } = useAppStore();
   const taskCycle = cycles.find(c => c.id === task.cycle_id);
   const taskList = lists?.find(l => l.id === task.categoryId);
 
   let dueDateColor = 'var(--text-secondary)';
   if (task.dueDate) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const due = new Date(task.dueDate);
-    due.setHours(0, 0, 0, 0);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const due = new Date(task.dueDate); due.setHours(0, 0, 0, 0);
     if (due < today) dueDateColor = 'var(--accent-red)';
     else if (due.getTime() === today.getTime()) dueDateColor = 'var(--accent-orange)';
   }
+
   const [isDragOver, setIsDragOver] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  const [menuPos, setMenuPos] = useState({ x: 0, y: 0 });
   const [feedback, setFeedback] = useState<string | null>(null);
-  
-  // Inline editing state
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title || '');
   const [isEditingNote, setIsEditingNote] = useState(false);
@@ -47,7 +49,7 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
   const updateTask = useAppStore(state => state.updateTask);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Sync state if task changes externally, but ONLY if we are not currently editing
+  // Sync state if task changes externally but not while editing
   useEffect(() => {
     if (!isEditingTitle) setEditTitle(task.title || '');
     if (!isEditingNote) setEditNote(task.description || '');
@@ -55,422 +57,460 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
 
   const handleTitleSubmit = () => {
     setIsEditingTitle(false);
-    if (editTitle.trim() !== task.title) {
-      updateTask(task.id, { title: editTitle.trim() });
-    }
+    if (editTitle.trim() !== task.title) updateTask(task.id, { title: editTitle.trim() });
   };
 
   const handleNoteSubmit = () => {
     setIsEditingNote(false);
-    if (editNote.trim() !== (task.description || '')) {
-      updateTask(task.id, { description: editNote.trim() });
-    }
+    if (editNote.trim() !== (task.description || '')) updateTask(task.id, { description: editNote.trim() });
   };
 
-  // Bloqueado si alguna dependencia sigue pendiente
   const isBlocked = task.blockedBy && task.blockedBy.some(id => tasks[id] && tasks[id].status === 'pending');
-
   const isCompletedPeriod = isCompletedInCurrentPeriod(task, cycles);
-  
-  // Físicas de Swipe Nativas (iOS style)
-  const x = useMotionValue(0);
-  const leftOpacity = useTransform(x, [0, 50, 80], [0, 0.5, 1]);
-  const leftScale = useTransform(x, [0, 50, 80], [0.5, 0.8, 1]);
-  const rightOpacity = useTransform(x, [0, -50, -80], [0, 0.5, 1]);
-  const rightScale = useTransform(x, [0, -50, -80], [0.5, 0.8, 1]);
 
-  const handleSwipeEnd = (offset: number) => {
-    if (offset > 80 && !isBlocked) {
-      if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
-      onToggle(task.id);
-    } else if (offset < -80) {
+  // --- SWIPE (iOS-style: card physically moves) ---
+  const x = useMotionValue(0);
+
+  // Background reveal: opacity tied to card x position
+  const leftBgOpacity = useTransform(x, [0, 40, 80], [0, 0.7, 1]);
+  const rightBgOpacity = useTransform(x, [0, -40, -80], [0, 0.7, 1]);
+  const leftIconScale = useTransform(x, [20, 80], [0.6, 1]);
+  const rightIconScale = useTransform(x, [-20, -80], [0.6, 1]);
+
+  const SWIPE_COMPLETE_THRESHOLD = 80;
+  const SWIPE_DELETE_THRESHOLD = -80;
+
+  const handleSwipeEnd = useCallback((offsetX: number) => {
+    if (offsetX > SWIPE_COMPLETE_THRESHOLD && !isBlocked) {
+      if (navigator.vibrate) navigator.vibrate([30, 40, 30]);
+      // Always toggle: if completed → uncomplete, if pending → complete
+      onToggle(task.id, isCompletedPeriod);
+    } else if (offsetX < SWIPE_DELETE_THRESHOLD) {
       if (navigator.vibrate) navigator.vibrate(50);
-      onDelete(task.id);
-    } else if (offset < -50) {
-      if (cardRef.current) {
-        const rect = cardRef.current.getBoundingClientRect();
-        setMenuPos({
-          x: Math.max(12, Math.min(rect.right - 220, window.innerWidth - 232)),
-          y: Math.min(rect.bottom + 8, window.innerHeight - 220)
-        });
-      } else {
-        setMenuPos({ x: window.innerWidth - 232, y: window.innerHeight / 2 });
-      }
-      setShowMenu(true);
+      setIsDeleteConfirmOpen(true);
     }
-  };
+  }, [isBlocked, isCompletedPeriod, onToggle, task.id]);
 
   const notify = (message: string) => {
     setFeedback(message);
     window.setTimeout(() => setFeedback(null), 2400);
   };
 
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setMenuPos({
-      x: Math.max(12, Math.min(e.clientX, window.innerWidth - 236)),
-      y: Math.max(12, Math.min(e.clientY, window.innerHeight - 220))
-    });
-    setShowMenu(true);
-  };
+  const totalAlerts = task.alerts?.length || 0;
+  const completedAlertsCount = task.completedAlerts?.length || 0;
+  const isPartial = totalAlerts > 1 && completedAlertsCount > 0 && completedAlertsCount < totalAlerts;
+  const percentage = totalAlerts > 1 ? (completedAlertsCount / totalAlerts) * 100 : 0;
 
-  // Only show swipe backgrounds if dragging (x != 0)
-  const isDraggingX = useTransform(x, (val) => val !== 0);
-  
   return (
-    <div 
-      className="task-item-wrapper" 
-      style={{ ...virtualStyle, overflow: 'hidden' }}
+    <div
+      className="task-item-wrapper"
+      style={{ ...virtualStyle, position: 'relative', overflow: 'hidden' }}
       onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
       onDragLeave={() => setIsDragOver(false)}
       onDrop={(e) => {
         e.preventDefault();
         setIsDragOver(false);
         const draggedTaskId = e.dataTransfer.getData('text/plain');
-        if (draggedTaskId && draggedTaskId !== task.id) {
-          nestTask(draggedTaskId, task.id);
-        }
+        if (draggedTaskId && draggedTaskId !== task.id) nestTask(draggedTaskId, task.id);
       }}
     >
-      {/* Fondos de Swipe Fijos (Se revelan gradualmente con el drag) */}
-      <div style={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'space-between', zIndex: 0, overflow: 'hidden' }}>
-        {/* Left Side (Completar - Verde) */}
-        <motion.div style={{ flex: 1, background: 'var(--accent-green)', display: 'flex', alignItems: 'center', padding: '0 24px', opacity: leftOpacity }}>
-          <motion.div style={{ scale: leftScale, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <CheckCircle color="white" size={24} />
-          </motion.div>
-        </motion.div>
-        {/* Right Side (Eliminar - Rojo) */}
-        <motion.div style={{ flex: 1, background: 'var(--accent-red)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 24px', opacity: rightOpacity }}>
-          <motion.div style={{ scale: rightScale, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Trash2 color="white" size={24} />
-          </motion.div>
-        </motion.div>
-      </div>
-
-      {/* Tarjeta Principal */}
-      <motion.div 
-        ref={cardRef}
-        onContextMenu={handleContextMenu}
-        drag="x"
-        dragSnapToOrigin={true}
-        dragConstraints={{ left: -130, right: 130 }}
-        dragElastic={0.08}
-        dragTransition={{ bounceStiffness: 400, bounceDamping: 25 }}
-        onDragEnd={(_, info) => handleSwipeEnd(info.offset.x)}
-        className="ios-task-row"
-        style={{ 
-          x,
-          cursor: 'grab',
-          position: 'relative',
-          minHeight: '60px', 
-          display: 'flex', 
-          alignItems: 'center', 
-          padding: '12px 16px', 
-          zIndex: 10,
-          background: 'var(--bg-elevated)',
-          borderBottom: '0.5px solid var(--border-subtle)',
-          opacity: isBlocked ? 0.6 : 1,
-          pointerEvents: isBlocked ? 'none' : 'auto',
-          boxShadow: isDragOver ? '0 0 0 2px var(--accent-blue)' : 'none'
+      {/* Fixed swipe action backgrounds */}
+      {/* Left = Complete/Uncomplete */}
+      <motion.div
+        style={{
+          position: 'absolute', top: 0, left: 0, bottom: 0,
+          width: '50%',
+          background: isCompletedPeriod ? 'var(--accent-orange)' : 'var(--accent-green)',
+          display: 'flex', alignItems: 'center', paddingLeft: 24,
+          opacity: leftBgOpacity, zIndex: 0
         }}
       >
-        
+        <motion.div style={{ scale: leftIconScale }}>
+          {isCompletedPeriod
+            ? <CheckCircle color="white" size={26} style={{ opacity: 0.9 }} />
+            : <CheckCircle color="white" size={26} />
+          }
+        </motion.div>
+      </motion.div>
 
+      {/* Right = Delete */}
+      <motion.div
+        style={{
+          position: 'absolute', top: 0, right: 0, bottom: 0,
+          width: '50%',
+          background: 'var(--accent-red)',
+          display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 24,
+          opacity: rightBgOpacity, zIndex: 0
+        }}
+      >
+        <motion.div style={{ scale: rightIconScale }}>
+          <Trash2 color="white" size={26} />
+        </motion.div>
+      </motion.div>
 
-        {/* Checkbox con progreso parcial */}
-        {(() => {
-          const totalAlerts = task.alerts?.length || 0;
-          const completedAlerts = task.completedAlerts?.length || 0;
-          const isPartial = totalAlerts > 1 && completedAlerts > 0 && completedAlerts < totalAlerts;
-          const percentage = totalAlerts > 1 ? (completedAlerts / totalAlerts) * 100 : 0;
-          
-          return (
-            <motion.button 
-              className="checkbox" 
-              aria-label="Completar tarea"
-              disabled={isBlocked}
-              whileTap={{ scale: 0.85 }}
-              whileHover={{ scale: 1.1 }}
-              transition={{ type: "spring", stiffness: 400, damping: 17 }}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isBlocked) return;
-                if (navigator.vibrate) navigator.vibrate([20, 30, 20]);
-                onToggle(task.id, isCompletedPeriod || isPartial);
-              }}
-              style={{
-                width: 24, height: 24, 
-                borderRadius: '50%', 
-                border: isPartial ? 'none' : '2px solid var(--border-subtle)', 
-                marginRight: 'var(--space-12)', 
-                cursor: 'pointer',
-                background: isCompletedPeriod 
-                  ? 'var(--accent-primary)' 
-                  : isPartial 
-                    ? `conic-gradient(var(--accent-primary) ${percentage}%, var(--border-subtle) ${percentage}%)`
-                    : 'transparent',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0
-              }}
-            >
-              {isPartial && !isCompletedPeriod && <div style={{ width: 20, height: 20, background: 'var(--bg-surface)', borderRadius: '50%' }}></div>}
-              <AnimatePresence>
-                {isCompletedPeriod && (
-                  <motion.div
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0, opacity: 0 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                  >
-                    <CheckCircle size={16} color="white" />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.button>
-          );
-        })()}
-        
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: 0, gap: 'var(--space-12)' }}>
-          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-8)' }}>
-              {isBlocked && <Lock size={16} color="var(--accent-red)" />}
-              
-              {/* Badges UI de Prioridad en lugar de "!!!" */}
-              {task.priority && task.priority !== 'none' && task.priority !== 0 && task.priority !== '0' && (
-                <span className={`priority-badge ${task.priority}`}>
-                  {task.priority === 'low' ? '!' : task.priority === 'medium' ? '!!' : '!!!'}
-                </span>
-              )}
+      {/* Main card — physically slides */}
+      <motion.div
+        ref={cardRef}
+        drag="x"
+        dragSnapToOrigin
+        dragConstraints={{ left: -160, right: 160 }}
+        dragElastic={0.05}
+        dragTransition={{ bounceStiffness: 500, bounceDamping: 30 }}
+        onDragEnd={(_, info) => handleSwipeEnd(info.offset.x)}
+        draggable
+        onDragStart={(e: any) => {
+          if (e.dataTransfer) {
+            e.dataTransfer.setData('text/plain', task.id);
+            e.dataTransfer.effectAllowed = 'move';
+          }
+        }}
+        style={{
+          x,
+          position: 'relative',
+          zIndex: 1,
+          minHeight: 60,
+          display: 'flex',
+          alignItems: 'center',
+          padding: '10px 16px',
+          background: 'var(--bg-elevated)',
+          borderBottom: '0.5px solid var(--border-subtle)',
+          opacity: isBlocked ? 0.5 : 1,
+          pointerEvents: isBlocked ? 'none' : 'auto',
+          touchAction: 'pan-y',
+          outline: isDragOver ? '2px solid var(--accent-blue)' : undefined,
+        }}
+      >
+        {/* Checkbox */}
+        <motion.button
+          aria-label={isCompletedPeriod ? 'Marcar como pendiente' : 'Completar tarea'}
+          disabled={!!isBlocked}
+          whileTap={{ scale: 0.78 }}
+          transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (isBlocked) return;
+            if (navigator.vibrate) navigator.vibrate(15);
+            onToggle(task.id, isCompletedPeriod || isPartial);
+          }}
+          style={{
+            width: 26, height: 26,
+            borderRadius: '50%',
+            border: isPartial
+              ? 'none'
+              : `2px solid ${isCompletedPeriod ? 'var(--accent-primary)' : 'var(--border-color)'}`,
+            marginRight: 14,
+            cursor: 'pointer',
+            flexShrink: 0,
+            background: isCompletedPeriod
+              ? 'var(--accent-primary)'
+              : isPartial
+                ? `conic-gradient(var(--accent-primary) ${percentage}%, var(--border-subtle) ${percentage}%)`
+                : 'transparent',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          {isPartial && !isCompletedPeriod && (
+            <div style={{ width: 22, height: 22, background: 'var(--bg-surface)', borderRadius: '50%' }} />
+          )}
+          <AnimatePresence>
+            {isCompletedPeriod && (
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 22 }}
+              >
+                <CheckCircle size={16} color="white" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.button>
 
-              {isEditingTitle ? (
-                <input 
-                  value={editTitle} 
-                  autoFocus 
-                  onChange={e => setEditTitle(e.target.value)}
-                  onBlur={handleTitleSubmit}
-                  onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+        {/* Content */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            {isBlocked && <Lock size={15} color="var(--accent-red)" />}
+            {task.priority && task.priority !== 'none' && task.priority !== 0 && task.priority !== '0' && (
+              <span className={`priority-badge ${task.priority}`}>
+                {task.priority === 'low' ? '!' : task.priority === 'medium' ? '!!' : '!!!'}
+              </span>
+            )}
+            {isEditingTitle ? (
+              <input
+                value={editTitle}
+                autoFocus
+                onChange={e => setEditTitle(e.target.value)}
+                onBlur={handleTitleSubmit}
+                onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                onPointerDownCapture={e => e.stopPropagation()}
+                style={{
+                  fontSize: '1rem', fontWeight: 500, width: '100%',
+                  border: 'none', background: 'transparent', outline: 'none',
+                  color: 'var(--text-primary)', padding: 0
+                }}
+              />
+            ) : (
+              <span
+                onClick={() => setIsEditingTitle(true)}
+                style={{
+                  fontSize: '1rem', fontWeight: 500,
+                  color: 'var(--text-primary)',
+                  textDecoration: isCompletedPeriod ? 'line-through' : 'none',
+                  opacity: isCompletedPeriod ? 0.55 : 1,
+                  wordBreak: 'break-word',
+                  cursor: 'text',
+                  flex: 1,
+                }}
+              >
+                {task.title}
+              </span>
+            )}
+            {task.flagged && <Flag size={13} color="var(--accent-orange)" fill="var(--accent-orange)" />}
+            {task.locationName && <MapPin size={13} color="var(--accent-blue)" />}
+            {task.image && <ImageIcon size={13} color="var(--text-tertiary)" />}
+          </div>
+
+          {/* Note */}
+          {(task.description || isEditingNote || isEditingTitle) && (
+            <div style={{ marginTop: 2 }}>
+              {isEditingNote ? (
+                <textarea
+                  value={editNote}
+                  autoFocus
+                  placeholder="Añadir nota..."
+                  onChange={e => setEditNote(e.target.value)}
+                  onBlur={handleNoteSubmit}
                   onPointerDownCapture={e => e.stopPropagation()}
-                  style={{ fontSize: '1rem', fontWeight: 500, width: '100%', border: 'none', background: 'transparent', outline: 'none', color: 'var(--text-primary)', padding: 0 }}
+                  style={{
+                    fontSize: '0.85rem', width: '100%', border: 'none',
+                    background: 'transparent', outline: 'none',
+                    color: 'var(--text-secondary)', padding: 0,
+                    resize: 'none', minHeight: 36
+                  }}
                 />
               ) : (
-                <span 
-                  onClick={() => setIsEditingTitle(true)}
-                  style={{ 
-                    fontSize: '1rem',
-                    fontWeight: 500,
-                    color: 'var(--text-primary)',
-                    textDecoration: isCompletedPeriod ? 'line-through' : 'none', 
-                    opacity: isCompletedPeriod ? 0.6 : 1,
-                    wordBreak: 'break-word',
-                    whiteSpace: 'pre-wrap',
-                    cursor: 'text'
-                  }}>
-                  {task.title}
-                </span>
-              )}
-              {task.flagged && <Flag size={14} color="var(--accent-orange)" fill="var(--accent-orange)" />}
-              {task.locationName && <MapPin size={14} color="var(--accent-blue)" />}
-              {task.image && <ImageIcon size={14} color="var(--text-tertiary)" />}
-            </div>
-            
-            {/* Notas (Description) */}
-            {(task.description || isEditingNote || isEditingTitle) && (
-              <div style={{ marginTop: 2 }}>
-                {isEditingNote ? (
-                  <textarea 
-                    value={editNote} 
-                    autoFocus 
-                    placeholder="Añadir nota..."
-                    onChange={e => setEditNote(e.target.value)}
-                    onBlur={handleNoteSubmit}
-                    onPointerDownCapture={e => e.stopPropagation()}
-                    style={{ fontSize: '0.85rem', width: '100%', border: 'none', background: 'transparent', outline: 'none', color: 'var(--text-secondary)', padding: 0, resize: 'none', minHeight: '40px' }}
-                  />
-                ) : (
-                  <span 
-                    onClick={() => setIsEditingNote(true)}
-                    style={{ 
-                      fontSize: '0.85rem',
-                      color: 'var(--text-secondary)',
-                      wordBreak: 'break-word',
-                      whiteSpace: 'pre-wrap',
-                      cursor: 'text',
-                      display: 'block',
-                      maxHeight: '150px',
-                      overflowY: 'auto',
-                      scrollbarWidth: 'none'
-                    }}>
-                    {task.description || (isEditingTitle ? 'Añadir nota...' : '')}
-                  </span>
-                )}
-              </div>
-            )}
-            
-            <div style={{ display: 'flex', gap: 'var(--space-8)', marginTop: '2px', alignItems: 'center', flexWrap: 'wrap' }}>
-              {showListName && taskList && (
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', fontWeight: 500 }}>
-                  {taskList.name}
-                </span>
-              )}
-              {(task.dueDate || taskCycle) && (
-                <span style={{ fontSize: '0.85rem', color: dueDateColor, display: 'flex', alignItems: 'center', fontWeight: 500, gap: 4 }}>
-                  {task.dueDate && new Date(task.dueDate).toLocaleDateString()}
-                  {task.dueDate && taskCycle && <Repeat size={12} style={{ color: 'var(--text-tertiary)' }} />}
-                  {taskCycle && <span style={{color: 'var(--text-tertiary)'}}>{taskCycle.name}</span>}
+                <span
+                  onClick={() => setIsEditingNote(true)}
+                  style={{
+                    fontSize: '0.85rem', color: 'var(--text-secondary)',
+                    wordBreak: 'break-word', cursor: 'text', display: 'block',
+                    maxHeight: 100, overflowY: 'auto', scrollbarWidth: 'none'
+                  }}
+                >
+                  {task.description || (isEditingTitle ? 'Añadir nota...' : '')}
                 </span>
               )}
             </div>
+          )}
 
-            {task.isDetailed && (
-              <div style={{ display: 'flex', gap: 'var(--space-8)', marginTop: 'var(--space-4)', alignItems: 'center', fontSize: '13px', flexWrap: 'wrap' }}>
-                {task.price !== undefined && (
-                  <span style={{ color: 'var(--accent-green)', fontWeight: 600 }}>${task.price.toFixed(2)} {task.quantity ? `x ${task.quantity}` : ''}</span>
-                )}
-                {task.brand && (
-                  <span style={{ color: 'var(--text-tertiary)', background: 'var(--bg-elevated)', padding: '2px 6px', borderRadius: 4 }}>
-                    {task.brand}
-                  </span>
-                )}
-                {task.price !== undefined && task.quantity && (
-                  <span style={{ color: 'var(--text-secondary)' }}>= ${(task.price * task.quantity).toFixed(2)}</span>
-                )}
-              </div>
+          {/* Meta row */}
+          <div style={{ display: 'flex', gap: 8, marginTop: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+            {showListName && taskList && (
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 500 }}>
+                {taskList.name}
+              </span>
             )}
-
+            {(task.dueDate || taskCycle) && (
+              <span style={{ fontSize: '0.8rem', color: dueDateColor, display: 'flex', alignItems: 'center', gap: 3, fontWeight: 500 }}>
+                {task.dueDate && new Date(task.dueDate).toLocaleDateString()}
+                {task.dueDate && taskCycle && <Repeat size={11} style={{ color: 'var(--text-tertiary)' }} />}
+                {taskCycle && <span style={{ color: 'var(--text-tertiary)' }}>{taskCycle.name}</span>}
+              </span>
+            )}
             {task.url && (
-              <a 
-                href={task.url} 
-                target="_blank" 
+              <a
+                href={task.url}
+                target="_blank"
                 rel="noreferrer"
-                style={{ 
-                  display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 'var(--space-8)', 
-                  textDecoration: 'none', color: 'var(--accent-primary)', fontSize: '13px', fontWeight: 500,
-                  width: 'fit-content',
-                  wordBreak: 'break-all'
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  textDecoration: 'none', color: 'var(--accent-primary)',
+                  fontSize: '0.8rem', fontWeight: 500
                 }}
-                onClick={(e) => e.stopPropagation()}
+                onClick={e => e.stopPropagation()}
               >
-                <Link2 size={14} />
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>
-                  {(() => {
-                    try { return new URL(task.url).hostname.replace('www.', ''); }
-                    catch { return task.url; }
-                  })()}
+                <Link2 size={12} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }}>
+                  {(() => { try { return new URL(task.url).hostname.replace('www.', ''); } catch { return task.url; } })()}
                 </span>
               </a>
             )}
           </div>
-          
-          {!isBlocked && (
-            <button 
-              className="btn-icon" 
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowMenu(true);
-              }}
-              style={{ background: 'var(--border-subtle)', color: 'var(--text-secondary)' }}
-              title="Acciones"
-            >
-              <MoreHorizontal size={18} />
-            </button>
-          )}
         </div>
 
-        {/* Bottom Sheet Nativo de iOS */}
-        {createPortal(
-          <AnimatePresence>
-            {showMenu && (
-              <>
-                {/* Backdrop Oscuro */}
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  style={{ 
-                    position: 'fixed', 
-                    inset: 0, 
-                    zIndex: 999998, 
-                    background: 'rgba(0,0,0,0.3)', 
-                    backdropFilter: 'blur(3px)',
-                    WebkitBackdropFilter: 'blur(3px)'
-                  }} 
-                  onClick={(e) => { e.stopPropagation(); setShowMenu(false); }} 
-                />
-                
-                {/* Action Sheet Modal */}
-                <motion.div
-                  initial={{ y: '100%' }}
-                  animate={{ y: 0 }}
-                  exit={{ y: '100%' }}
-                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                  style={{
-                    position: 'fixed',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    zIndex: 999999,
-                    background: 'var(--bg-elevated)',
-                    backdropFilter: 'blur(25px)',
-                    WebkitBackdropFilter: 'blur(25px)',
-                    padding: '24px 24px max(24px, env(safe-area-inset-bottom))',
-                    borderTopLeftRadius: '24px',
-                    borderTopRightRadius: '24px',
-                    boxShadow: '0 -10px 40px rgba(0,0,0,0.1)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px'
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {/* Drag Handle (Cosmético) */}
-                  <div style={{ 
-                    width: '40px', 
-                    height: '5px', 
-                    borderRadius: '5px', 
-                    background: 'var(--border-color)', 
-                    alignSelf: 'center', 
-                    marginBottom: '12px' 
-                  }} />
-                  
-                  <button className="ios-sheet-btn" onClick={() => { setShowMenu(false); onEdit(task.id); }}>
-                    <Edit3 size={20} />
-                    <span>Editar Detalles</span>
-                  </button>
-                  <button className="ios-sheet-btn" onClick={() => { setShowMenu(false); onOpenZenMode(task.id); }}>
-                    <Sparkles size={20} />
-                    <span>Modo Zen</span>
-                  </button>
-                  <button className="ios-sheet-btn" onClick={() => { setShowMenu(false); addDependency(task.id); notify('Selecciona la tarea bloqueadora'); }}>
-                    <Link2 size={20} />
-                    <span>Añadir Dependencia</span>
-                  </button>
-                  
-                  <div style={{ height: '0.5px', background: 'var(--border-subtle)', margin: '8px 0' }} />
-                  
-                  <button className="ios-sheet-btn danger" onClick={() => { setShowMenu(false); setIsDeleteConfirmOpen(true); }}>
-                    <Trash2 size={20} />
-                    <span>Eliminar Tarea</span>
-                  </button>
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>,
-          document.body
+        {/* More button */}
+        {!isBlocked && (
+          <button
+            className="task-more-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowMenu(true);
+            }}
+            aria-label="Más opciones"
+          >
+            <ChevronRight size={18} color="var(--text-tertiary)" />
+          </button>
         )}
       </motion.div>
+
+      {/* ── Apple-style Bottom Sheet ── */}
+      {createPortal(
+        <AnimatePresence>
+          {showMenu && (
+            <>
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                style={{
+                  position: 'fixed', inset: 0, zIndex: 99998,
+                  background: 'rgba(0,0,0,0.4)',
+                  backdropFilter: 'blur(4px)',
+                  WebkitBackdropFilter: 'blur(4px)'
+                }}
+                onClick={() => setShowMenu(false)}
+              />
+
+              {/* Sheet */}
+              <motion.div
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', damping: 30, stiffness: 320, mass: 0.9 }}
+                style={{
+                  position: 'fixed', bottom: 0, left: 0, right: 0,
+                  zIndex: 99999,
+                  paddingBottom: 'max(20px, env(safe-area-inset-bottom))',
+                  padding: '0 12px max(20px, env(safe-area-inset-bottom))',
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                {/* Task header card */}
+                <div style={{
+                  background: 'var(--bg-elevated)',
+                  backdropFilter: 'blur(30px)',
+                  WebkitBackdropFilter: 'blur(30px)',
+                  borderRadius: 16,
+                  padding: '14px 16px',
+                  marginBottom: 10,
+                  border: '0.5px solid var(--border-subtle)',
+                }}>
+                  {/* Handle */}
+                  <div style={{
+                    width: 36, height: 4, borderRadius: 2,
+                    background: 'var(--border-color)',
+                    margin: '0 auto 14px'
+                  }} />
+                  <p style={{
+                    margin: 0, fontSize: '0.95rem', fontWeight: 600,
+                    color: 'var(--text-primary)', textAlign: 'center',
+                    lineHeight: 1.35
+                  }}>
+                    {task.title}
+                  </p>
+                  {task.description && (
+                    <p style={{
+                      margin: '6px 0 0', fontSize: '0.82rem',
+                      color: 'var(--text-secondary)', textAlign: 'center',
+                      lineHeight: 1.4
+                    }}>
+                      {task.description}
+                    </p>
+                  )}
+                </div>
+
+                {/* Action buttons group 1 */}
+                <div style={{
+                  background: 'var(--bg-elevated)',
+                  backdropFilter: 'blur(30px)',
+                  WebkitBackdropFilter: 'blur(30px)',
+                  borderRadius: 16,
+                  overflow: 'hidden',
+                  marginBottom: 10,
+                  border: '0.5px solid var(--border-subtle)',
+                }}>
+                  <ActionRow
+                    icon={<Edit3 size={20} color="var(--accent-primary)" />}
+                    label="Editar detalles"
+                    onClick={() => { setShowMenu(false); onEdit(task.id); }}
+                  />
+                  <div style={{ height: '0.5px', background: 'var(--border-subtle)', marginLeft: 54 }} />
+                  <ActionRow
+                    icon={<Play size={20} color="var(--accent-green)" />}
+                    label="Empezar esta tarea"
+                    sublabel="Cronómetro + modo enfoque"
+                    onClick={() => { setShowMenu(false); onOpenZenMode(task.id); }}
+                  />
+                  <div style={{ height: '0.5px', background: 'var(--border-subtle)', marginLeft: 54 }} />
+                  <ActionRow
+                    icon={
+                      isCompletedPeriod
+                        ? <CheckCircle size={20} color="var(--accent-orange)" />
+                        : <CheckCircle size={20} color="var(--accent-green)" />
+                    }
+                    label={isCompletedPeriod ? 'Marcar como pendiente' : 'Marcar como completado'}
+                    onClick={() => {
+                      setShowMenu(false);
+                      onToggle(task.id, isCompletedPeriod);
+                    }}
+                  />
+                </div>
+
+                {/* Danger group */}
+                <div style={{
+                  background: 'var(--bg-elevated)',
+                  backdropFilter: 'blur(30px)',
+                  WebkitBackdropFilter: 'blur(30px)',
+                  borderRadius: 16,
+                  overflow: 'hidden',
+                  marginBottom: 10,
+                  border: '0.5px solid var(--border-subtle)',
+                }}>
+                  <ActionRow
+                    icon={<Trash2 size={20} color="var(--accent-red)" />}
+                    label="Eliminar recordatorio"
+                    labelColor="var(--accent-red)"
+                    onClick={() => { setShowMenu(false); setIsDeleteConfirmOpen(true); }}
+                  />
+                </div>
+
+                {/* Cancel */}
+                <button
+                  onClick={() => setShowMenu(false)}
+                  style={{
+                    width: '100%',
+                    background: 'var(--bg-elevated)',
+                    backdropFilter: 'blur(30px)',
+                    WebkitBackdropFilter: 'blur(30px)',
+                    border: '0.5px solid var(--border-subtle)',
+                    borderRadius: 16,
+                    padding: '16px',
+                    fontSize: '1.05rem',
+                    fontWeight: 700,
+                    color: 'var(--accent-primary)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancelar
+                </button>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
       <ConfirmModal
         isOpen={isDeleteConfirmOpen}
         title="Eliminar recordatorio"
-        message={'“' + task.title + '” se moverá a la papelera. Podrás recuperarlo más adelante.'}
-        confirmText="Mover a papelera"
+        message={`"${task.title}" se moverá a la papelera.`}
+        confirmText="Eliminar"
         onCancel={() => setIsDeleteConfirmOpen(false)}
         onConfirm={() => {
           setIsDeleteConfirmOpen(false);
           onDelete(task.id);
-          notify('Recordatorio movido a la papelera');
         }}
       />
 
@@ -489,3 +529,47 @@ export const TaskCard = React.memo(function TaskCard({ task, virtualStyle, onTog
     </div>
   );
 });
+
+// ── Reusable action row for bottom sheet ──────────────────────────────────────
+function ActionRow({
+  icon, label, sublabel, onClick, labelColor
+}: {
+  icon: React.ReactNode;
+  label: string;
+  sublabel?: string;
+  onClick: () => void;
+  labelColor?: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 14,
+        padding: '14px 16px',
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        textAlign: 'left',
+        WebkitTapHighlightColor: 'transparent',
+      }}
+      onPointerDown={e => {
+        const el = e.currentTarget;
+        el.style.background = 'var(--bg-hover)';
+      }}
+      onPointerUp={e => { e.currentTarget.style.background = 'none'; }}
+      onPointerLeave={e => { e.currentTarget.style.background = 'none'; }}
+    >
+      <div style={{ width: 38, height: 38, borderRadius: 10, background: 'var(--bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        {icon}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '1rem', fontWeight: 500, color: labelColor || 'var(--text-primary)' }}>{label}</div>
+        {sublabel && <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', marginTop: 1 }}>{sublabel}</div>}
+      </div>
+      <ChevronRight size={16} color="var(--text-tertiary)" />
+    </button>
+  );
+}

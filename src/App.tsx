@@ -35,7 +35,7 @@ function App() {
     if (hasHydrated) return;
     const hydrationGuard = window.setTimeout(() => {
       useAppStore.getState().setHasHydrated(true);
-    }, 2200);
+    }, 600); // 600ms max — avoid getting stuck on the loader
     return () => window.clearTimeout(hydrationGuard);
   }, [hasHydrated]);
 
