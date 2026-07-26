@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, ChevronDown, Sparkles, FolderPlus, Settings, Trash2, MoreHorizontal, Edit3 } from 'lucide-react';
+import { Plus, ChevronDown, ChevronLeft, Sparkles, FolderPlus, Settings, Trash2, MoreHorizontal, Edit3 } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
@@ -596,8 +596,32 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           transition: 'background 0.25s ease, border-color 0.25s ease, backdrop-filter 0.25s ease, -webkit-backdrop-filter 0.25s ease'
         }}
       >
-        {/* Left spacer to keep center title balanced */}
-        <div style={{ minWidth: 24 }} />
+        {/* Left spacer / Mobile Back Button */}
+        {isMobile && onBackToSidebar ? (
+          <button 
+            onClick={onBackToSidebar} 
+            className="back-btn-ios" 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 4, 
+              background: 'transparent', 
+              border: 'none', 
+              color: 'var(--accent-primary, #0a84ff)', 
+              fontWeight: 500, 
+              fontSize: '1.05rem', 
+              cursor: 'pointer',
+              padding: '4px 8px 4px 0',
+              WebkitTapHighlightColor: 'transparent',
+              zIndex: 10
+            }}
+            title="Volver a listas"
+          >
+            <ChevronLeft size={22} /> Listas
+          </button>
+        ) : (
+          <div style={{ minWidth: 24 }} />
+        )}
         
         {/* Dynamic List Title on Top Bar (visible when scrolled) */}
         <div style={{ 
@@ -867,107 +891,109 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 {showDivider && (
                   <div className="ios-section-divider" style={{ height: '0.5px', background: 'var(--separator-color, rgba(142, 142, 147, 0.3))', margin: '0 0 12px 0', width: '100%' }} />
                 )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
-                  <ChevronDown 
-                    size={20} 
-                    color="var(--text-tertiary)" 
-                    style={{ transform: collapsed[data.category] ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }}
-                  />
-                  {isCustomSection && editingSectionId === data.sectionId ? (
-                    <input 
-                      type="text" 
-                      value={editingSectionName}
-                      onChange={e => setEditingSectionName(e.target.value)}
-                      onBlur={(e) => saveSectionName(e, data.sectionId!)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') saveSectionName(e as any, data.sectionId!);
-                      }}
-                      autoFocus
-                      onClick={e => e.stopPropagation()}
-                      style={{ background: 'transparent', border: 'none', borderBottom: `2px solid ${data.color}`, color: 'inherit', fontSize: 'inherit', fontFamily: 'inherit', outline: 'none' }}
-                    />
-                  ) : (
-                    <h3 
-                      onDoubleClick={(e) => isCustomSection && startEditingSection(e, data.sectionId!, data.title)}
-                      style={{ 
-                        cursor: isCustomSection ? 'text' : 'pointer',
-                        fontWeight: 800,
-                        color: 'var(--text-primary)',
-                        fontSize: '1.45rem',
-                        letterSpacing: '-0.5px',
-                        margin: 0
-                      }}
-                      title={isCustomSection ? "Doble click para editar" : ""}
-                    >
-                      {data.title}
-                    </h3>
-                  )}
-                  {isCustomSection && (
-                    <div style={{ position: 'relative' }}>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSectionMenuId(sectionMenuId === data.sectionId ? null : data.sectionId!);
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                    {isCustomSection && editingSectionId === data.sectionId ? (
+                      <input 
+                        type="text" 
+                        value={editingSectionName}
+                        onChange={e => setEditingSectionName(e.target.value)}
+                        onBlur={(e) => saveSectionName(e, data.sectionId!)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') saveSectionName(e as any, data.sectionId!);
                         }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5, padding: 4 }}
-                        title="Opciones de sección"
+                        autoFocus
+                        onClick={e => e.stopPropagation()}
+                        style={{ background: 'transparent', border: 'none', borderBottom: `2px solid ${data.color}`, color: 'inherit', fontSize: 'inherit', fontFamily: 'inherit', outline: 'none' }}
+                      />
+                    ) : (
+                      <h3 
+                        onDoubleClick={(e) => isCustomSection && startEditingSection(e, data.sectionId!, data.title)}
+                        style={{ 
+                          cursor: isCustomSection ? 'text' : 'pointer',
+                          fontWeight: 800,
+                          color: 'var(--text-primary)',
+                          fontSize: '1.45rem',
+                          letterSpacing: '-0.5px',
+                          margin: 0
+                        }}
+                        title={isCustomSection ? "Doble click para editar" : ""}
                       >
-                        <MoreHorizontal size={16} color="var(--text-primary)" />
-                      </button>
-                      
-                      {sectionMenuId === data.sectionId && (
-                        <>
-                          <div 
-                            style={{ position: 'fixed', inset: 0, zIndex: 90 }} 
-                            onClick={(e) => { e.stopPropagation(); setSectionMenuId(null); }}
-                          />
-                          <div 
-                            className="ios-dropdown-menu"
-                            style={{ 
-                              position: 'absolute', 
-                              left: '0', 
-                              top: '100%', 
-                              marginTop: '8px',
-                              zIndex: 100
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <button
-                              className="ios-dropdown-item"
-                              onClick={() => {
-                                setSectionMenuId(null);
-                                onOpenNewTask(data.sectionId);
+                        {data.title}
+                      </h3>
+                    )}
+                    {isCustomSection && (
+                      <div style={{ position: 'relative' }}>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSectionMenuId(sectionMenuId === data.sectionId ? null : data.sectionId!);
+                          }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5, padding: 4 }}
+                          title="Opciones de sección"
+                        >
+                          <MoreHorizontal size={16} color="var(--text-primary)" />
+                        </button>
+                        
+                        {sectionMenuId === data.sectionId && (
+                          <>
+                            <div 
+                              style={{ position: 'fixed', inset: 0, zIndex: 90 }} 
+                              onClick={(e) => { e.stopPropagation(); setSectionMenuId(null); }}
+                            />
+                            <div 
+                              className="ios-dropdown-menu"
+                              style={{ 
+                                position: 'absolute', 
+                                left: '0', 
+                                top: '100%', 
+                                marginTop: '8px',
+                                zIndex: 100
                               }}
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              <Plus size={16} /> Añadir tarea
-                            </button>
-                            <button
-                              className="ios-dropdown-item"
-                              onClick={() => {
-                                setSectionMenuId(null);
-                                handleAddSection(data.sectionId);
-                                if (collapsed[data.category]) toggleCategory(data.category);
-                              }}
-                            >
-                              <FolderPlus size={16} /> Añadir sub-sección
-                            </button>
-                            <div className="ios-dropdown-divider" />
-                            <button
-                              className="ios-dropdown-item danger"
-                              onClick={() => {
-                                setSectionMenuId(null);
-                                if (confirm('¿Seguro que quieres borrar esta sección? Las tareas no se borrarán, solo quedarán sin sección.')) {
-                                  deleteListSection(data.sectionId!);
-                                }
-                              }}
-                            >
-                              <Trash2 size={16} /> Eliminar sección
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
+                              <button
+                                className="ios-dropdown-item"
+                                onClick={() => {
+                                  setSectionMenuId(null);
+                                  onOpenNewTask(data.sectionId);
+                                }}
+                              >
+                                <Plus size={16} /> Añadir tarea
+                              </button>
+                              <button
+                                className="ios-dropdown-item"
+                                onClick={() => {
+                                  setSectionMenuId(null);
+                                  handleAddSection(data.sectionId);
+                                  if (collapsed[data.category]) toggleCategory(data.category);
+                                }}
+                              >
+                                <FolderPlus size={16} /> Añadir sub-sección
+                              </button>
+                              <div className="ios-dropdown-divider" />
+                              <button
+                                className="ios-dropdown-item danger"
+                                onClick={() => {
+                                  setSectionMenuId(null);
+                                  if (confirm('¿Seguro que quieres borrar esta sección? Las tareas no se borrarán, solo quedarán sin sección.')) {
+                                    deleteListSection(data.sectionId!);
+                                  }
+                                }}
+                              >
+                                <Trash2 size={16} /> Eliminar sección
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <ChevronDown 
+                    size={18} 
+                    color="var(--text-tertiary)" 
+                    style={{ transform: collapsed[data.category] ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}
+                  />
                 </div>
                 {isCustomSection && dragOverSectionId === data.sectionId && (
                   <span style={{ fontSize: '0.8rem', color: data.color }}>Mover aquí</span>

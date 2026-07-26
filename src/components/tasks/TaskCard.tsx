@@ -374,7 +374,7 @@ export const TaskCard = React.memo(function TaskCard({
           </div>
 
           {/* Note */}
-          {(task.description || isEditingNote || true) && (
+          {(task.description || isEditingNote || isEditingTitle) && (
             <div style={{ marginTop: 2 }}>
               {isEditingNote ? (
                 <textarea
@@ -456,36 +456,34 @@ export const TaskCard = React.memo(function TaskCard({
           <button
             onClick={(e) => { e.stopPropagation(); onToggleExpand?.(); }}
             style={{
-              background: isExpanded ? 'var(--bg-hover, rgba(142, 142, 147, 0.15))' : 'var(--accent-glow, rgba(10, 132, 255, 0.15))',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-md, 8px)',
+              background: 'transparent',
+              border: 'none',
               cursor: 'pointer',
-              padding: '6px 10px',
+              padding: '6px 8px',
               display: 'flex',
               alignItems: 'center',
-              gap: 6,
-              color: isExpanded ? 'var(--text-secondary)' : 'var(--accent-primary)',
-              fontWeight: 600,
+              gap: 4,
+              color: 'var(--text-tertiary)',
+              fontWeight: 500,
               fontSize: '0.8rem',
-              minWidth: 44,
-              minHeight: 36,
-              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+              minWidth: 32,
+              minHeight: 32,
               WebkitTapHighlightColor: 'transparent',
               flexShrink: 0,
+              opacity: 0.75,
+              transition: 'opacity 0.2s, color 0.2s',
               marginRight: 4
             }}
-            title={isExpanded ? "Contraer subtareas" : "Expandir subtareas"}
-            aria-label={isExpanded ? "Contraer subtareas" : "Expandir subtareas"}
+            title={isExpanded ? "Contraer" : "Expandir"}
+            aria-label={isExpanded ? "Contraer" : "Expandir"}
           >
-            <span>
-              {(() => {
-                if (isExpanded) return 'Contraer';
-                const count = tasks ? Object.values(tasks).filter(t => t && t.parentId === task.id && !t.deleted).length : 0;
-                return count > 0 ? `${count} ${count === 1 ? 'subtarea' : 'subtareas'}` : 'Subtareas';
-              })()}
-            </span>
+            {(() => {
+              if (isExpanded) return null;
+              const count = tasks ? Object.values(tasks).filter(t => t && t.parentId === task.id && !t.deleted).length : 0;
+              return count > 0 ? <span>{count}</span> : null;
+            })()}
             <motion.div style={{ display: 'flex', alignItems: 'center' }} animate={{ rotate: isExpanded ? 0 : -90 }} transition={{ type: 'spring', damping: 20, stiffness: 300 }}>
-              <ChevronDown size={16} />
+              <ChevronDown size={18} />
             </motion.div>
           </button>
         )}

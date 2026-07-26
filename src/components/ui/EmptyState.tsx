@@ -62,8 +62,8 @@ export function EmptyState({
         alignItems: 'center',
         justifyContent: 'center',
         height: '100%',
-        minHeight: '280px',
-        padding: 'var(--space-32)',
+        minHeight: '160px',
+        padding: '16px 20px',
         textAlign: 'center',
       }}
     >
