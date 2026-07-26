@@ -438,7 +438,11 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 <AnimatePresence>
                   {isMenuOpen && (
                     <>
-                      <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setIsMenuOpen(false)} />
+                      <motion.div 
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(0,0,0,0.15)' }} 
+                        onClick={() => setIsMenuOpen(false)} 
+                      />
                       <motion.div 
                         className="ios-dropdown-menu"
                         initial={{ opacity: 0, scale: 0.92, y: -6, transformOrigin: 'top right' }}
@@ -583,8 +587,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 className="group-header"
                 style={{ 
                   ...virtualStyle, 
-                  borderBottom: `1px solid var(--border-subtle)`,
-                  paddingLeft: `calc(12px + ${data.depth * 24}px)`, // Indent sub-sections
+                  borderBottom: 'none',
+                  paddingLeft: `calc(16px + ${data.depth * 24}px)`,
+                  paddingTop: 12,
+                  paddingBottom: 4,
                   outline: isDraggingOver ? `2px solid ${data.color}` : undefined,
                   background: isDraggingOver ? `${data.color}14` : undefined,
                   zIndex: sectionMenuId === data.sectionId ? 50 : undefined
@@ -623,11 +629,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                       onDoubleClick={(e) => isCustomSection && startEditingSection(e, data.sectionId!, data.title)}
                       style={{ 
                         cursor: isCustomSection ? 'text' : 'pointer',
-                        textTransform: 'uppercase',
-                        fontWeight: 600,
-                        color: 'var(--text-tertiary)',
-                        fontSize: '13px',
-                        letterSpacing: '0.5px',
+                        fontWeight: 700,
+                        color: data.color || 'var(--accent-primary)',
+                        fontSize: '1.25rem',
+                        letterSpacing: '-0.3px',
                         margin: 0
                       }}
                       title={isCustomSection ? "Doble click para editar" : ""}

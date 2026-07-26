@@ -167,6 +167,8 @@ export const TaskCard = React.memo(function TaskCard({
           display: 'flex',
           alignItems: 'center',
           padding: '8px 16px',
+          margin: '0 16px',
+          width: 'calc(100% - 32px)',
           background: 'var(--bg-elevated)',
           borderTopLeftRadius: isFirstInSection ? 10 : 0,
           borderTopRightRadius: isFirstInSection ? 10 : 0,
@@ -241,7 +243,7 @@ export const TaskCard = React.memo(function TaskCard({
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             {isBlocked && <Lock size={15} color="var(--accent-red)" />}
-            {task.priority && task.priority !== 'none' && task.priority !== 0 && task.priority !== '0' && (
+            {task.priority !== undefined && task.priority !== null && task.priority !== '' && task.priority !== 'none' && task.priority !== 0 && task.priority !== '0' && (
               <span className={`priority-badge ${task.priority}`}>
                 {task.priority === 'low' ? '!' : task.priority === 'medium' ? '!!' : '!!!'}
               </span>
@@ -301,7 +303,7 @@ export const TaskCard = React.memo(function TaskCard({
                 />
               ) : (
                 <span
-                  onClick={() => setIsEditingNote(true)}
+                  onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditingNote(true); }}
                   style={{
                     fontSize: '0.85rem', color: 'var(--text-secondary)',
                     wordBreak: 'break-word', cursor: 'text', display: 'block',
