@@ -190,9 +190,9 @@ html, body, #root, .app-container, .main-container, .main-content, .sidebar-cont
   position: sticky;
   top: 0;
   flex-shrink: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  overscroll-behavior: contain;
+  overflow: hidden !important;
+  display: flex;
+  flex-direction: column;
   border-right: 1px solid var(--border-subtle);
   background: var(--bg-surface-glass);
 
