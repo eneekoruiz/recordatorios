@@ -12,6 +12,7 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'cycles' | 'inbox' | 'high'>('all');
 
   const { tasks, cycles, toggleTask } = useAppStore();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -38,13 +39,25 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
 
     allTasks.forEach(t => {
       if (t.title.toLowerCase().includes(q)) {
-        nextResults.push({ type: 'task_flow', id: t.id, title: 'Modo Flow: ' + t.title, icon: <Play size={16} /> });
-        nextResults.push({ type: 'task_complete', id: t.id, title: 'Completar: ' + t.title, icon: <CheckCircle size={16} color="var(--accent-green)" /> });
+        const catId = t.categoryId || (t as any).category_id;
+        const sub = catId === 'inbox' || !catId ? 'Bandeja de entrada' : (catId || '');
+        const isHigh = t.priority === 3 || t.priority === 'high' || t.priority === '!!!' || t.title.includes('🚨');
+        const titlePrefix = isHigh && !t.title.includes('🚨') ? '🚨 ' : '';
+        nextResults.push({ type: 'task_flow', id: t.id, title: 'Modo Flow: ' + titlePrefix + t.title, subtitle: sub, icon: <Play size={16} /> });
+        nextResults.push({ type: 'task_complete', id: t.id, title: 'Completar: ' + titlePrefix + t.title, subtitle: sub, icon: <CheckCircle size={16} color="var(--accent-green)" /> });
       }
     });
 
     return nextResults;
   }, [allTasks, cycles, query]);
+
+  const filteredResults = results.filter(item => {
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'cycles') return item.type === 'cycle';
+    if (activeFilter === 'inbox') return item.type === 'task_complete' && (item.subtitle?.toLowerCase().includes('inbox') || item.subtitle?.toLowerCase().includes('bandeja'));
+    if (activeFilter === 'high') return item.type === 'task_complete' && item.title.toLowerCase().includes('🚨');
+    return true;
+  });
 
   const executeAction = useCallback((action: any) => {
     switch (action.type) {
@@ -81,7 +94,7 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
         if (e.key === 'Escape') setIsOpen(false);
         if (e.key === 'ArrowDown') {
           e.preventDefault();
-          setSelectedIndex(prev => Math.min(prev + 1, Math.max(results.length - 1, 0)));
+          setSelectedIndex(prev => Math.min(prev + 1, Math.max(filteredResults.length - 1, 0)));
         }
         if (e.key === 'ArrowUp') {
           e.preventDefault();
@@ -89,7 +102,7 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
         }
         if (e.key === 'Enter') {
           e.preventDefault();
-          const selected = results[selectedIndex];
+          const selected = filteredResults[selectedIndex];
           if (selected) executeAction(selected);
         }
       }
@@ -97,13 +110,14 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [executeAction, isOpen, results, selectedIndex]);
+  }, [executeAction, isOpen, filteredResults, selectedIndex]);
 
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 50);
       setQuery('');
       setSelectedIndex(0);
+      setActiveFilter('all');
     }
   }, [isOpen]);
 
@@ -169,8 +183,30 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
               </div>
             </div>
 
+            <div style={{ display: 'flex', gap: 8, padding: '8px 16px', borderBottom: '1px solid var(--border-subtle)', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              {[
+                { id: 'all', label: '✨ Todos' },
+                { id: 'cycles', label: '📅 Ciclos' },
+                { id: 'inbox', label: '📥 Bandeja' },
+                { id: 'high', label: '🚨 Prioridad' }
+              ].map(pill => (
+                <button
+                  key={pill.id}
+                  type="button"
+                  onClick={() => { setActiveFilter(pill.id as any); setSelectedIndex(0); }}
+                  style={{
+                    background: activeFilter === pill.id ? 'var(--accent-primary)' : 'var(--bg-elevated)',
+                    color: activeFilter === pill.id ? 'white' : 'var(--text-secondary)',
+                    border: 'none', borderRadius: 14, padding: '4px 12px', fontSize: '0.8rem', fontWeight: 500, cursor: 'pointer', transition: 'all 0.15s ease', whiteSpace: 'nowrap'
+                  }}
+                >
+                  {pill.label}
+                </button>
+              ))}
+            </div>
+
             <div style={{ maxHeight: '400px', overflowY: 'auto', padding: 'var(--space-8)' }}>
-              {results.slice(0, 15).map((result, idx) => {
+              {filteredResults.slice(0, 15).map((result, idx) => {
                 const isSelected = idx === selectedIndex;
                 return (
                   <div
@@ -189,13 +225,16 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-12)' }}>
                       {result.icon}
-                      <span style={{ fontSize: '1rem', fontWeight: isSelected ? 500 : 400 }}>{result.title}</span>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '1rem', fontWeight: isSelected ? 500 : 400 }}>{result.title}</span>
+                        {result.subtitle && <span style={{ fontSize: '0.75rem', color: isSelected ? 'rgba(255,255,255,0.7)' : 'var(--text-tertiary)' }}>{result.subtitle}</span>}
+                      </div>
                     </div>
                     {isSelected && <ArrowRight size={16} color="var(--accent-primary)" />}
                   </div>
                 );
               })}
-              {results.length === 0 && (
+              {filteredResults.length === 0 && (
                 <div style={{ padding: 'var(--space-32)', textAlign: 'center', color: 'var(--text-tertiary)' }}>
                   No se encontraron resultados
                 </div>

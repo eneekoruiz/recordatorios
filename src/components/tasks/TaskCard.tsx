@@ -10,6 +10,7 @@ import type { TaskItem } from '../../models/Task';
 import { useAppStore } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
 import { isCompletedInCurrentPeriod } from '../../services/TaskService';
+import { SoundService } from '../../services/SoundService';
 import { ConfirmModal } from '../ui/ConfirmModal';
 
 interface TaskCardProps {
@@ -129,6 +130,7 @@ export const TaskCard = React.memo(function TaskCard({
     if (offsetX > SWIPE_COMPLETE_THRESHOLD && !isBlocked) {
       if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate([5, 50, 5]);
       // Always toggle: if completed → uncomplete, if pending → complete
+      if (!isCompletedPeriod) SoundService.playComplete(); else SoundService.playUncomplete();
       onToggle(task.id, isCompletedPeriod);
     } else if (offsetX < SWIPE_DELETE_THRESHOLD) {
       if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate([5, 50, 5]);
@@ -266,6 +268,7 @@ export const TaskCard = React.memo(function TaskCard({
             e.stopPropagation();
             if (isBlocked) return;
             if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate([8]);
+            if (!isCompletedPeriod && !isPartial) SoundService.playComplete(); else SoundService.playUncomplete();
             onToggle(task.id, isCompletedPeriod || isPartial);
           }}
           style={{
@@ -567,6 +570,7 @@ export const TaskCard = React.memo(function TaskCard({
         onCancel={() => setIsDeleteConfirmOpen(false)}
         onConfirm={() => {
           setIsDeleteConfirmOpen(false);
+          SoundService.playDelete();
           onDelete(task.id);
         }}
       />
