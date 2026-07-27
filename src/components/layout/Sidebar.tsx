@@ -15,12 +15,13 @@ import {
   PinOff,
   Edit3,
   Settings,
-  RefreshCw,
   Volume2,
   HelpCircle,
   Folder,
   FolderOpen,
-  FolderPlus
+  FolderPlus,
+  IndentIncrease,
+  IndentDecrease
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -178,12 +179,6 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                   if (navigator.vibrate) {
                     try { navigator.vibrate([8]); } catch (err) {}
                   }
-                  const rect = target.getBoundingClientRect();
-                  setMenuCoords({
-                    top: clientY || rect.bottom,
-                    left: clientX || rect.left
-                  });
-                  setActiveMenuId(list.id);
                 }, 400);
               }}
               onPointerMove={(e) => {
@@ -215,14 +210,6 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                   longPressTimerRef.current = null;
                 }
                 wasLongPressedRef.current = true;
-                if (navigator.vibrate) {
-                  try { navigator.vibrate([8]); } catch (err) {}
-                }
-                setMenuCoords({
-                  top: e.clientY,
-                  left: e.clientX
-                });
-                setActiveMenuId(list.id);
               }}
               style={{ position: 'relative', transition: 'background-color 150ms ease', cursor: 'grab' }}
             >
@@ -238,7 +225,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
               
               {getTaskCount && !list.isFolder && <span className="count">{getTaskCount(list.id) || 0}</span>}
               
-              {(hasChildren || list.isFolder) ? (
+              {(hasChildren || list.isFolder) && (
                 <button 
                   onClick={(e) => { 
                     e.stopPropagation(); 
@@ -260,8 +247,6 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                 >
                   {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                 </button>
-              ) : (
-                <ChevronRight size={16} color="var(--text-tertiary)" style={{ marginLeft: 4 }} />
               )}
               
               <button 
@@ -290,7 +275,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
               {activeMenuId === list.id && menuCoords && createPortal(
                 <>
                   <div 
-                    style={{ position: 'fixed', inset: 0, zIndex: 99998, background: isMobile ? 'rgba(0,0,0,0.4)' : 'transparent' }} 
+                    style={{ position: 'fixed', inset: 0, zIndex: 99998, background: 'transparent' }} 
                     onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); setMenuCoords(null); }} 
                   />
                   <motion.div 
@@ -368,6 +353,41 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                     >
                       <FolderPlus size={16} /> Nueva carpeta anidada
                     </button>
+                    {index > 0 && (
+                      <button 
+                        className="ios-dropdown-item"
+                        onClick={() => {
+                          const prevSibling = currentLevelLists[index - 1];
+                          updateList(list.id, { parentId: prevSibling.id });
+                          setExpanded(prev => ({ ...prev, [prevSibling.id]: true }));
+                          window.dispatchEvent(new CustomEvent('show-toast', { detail: `Sangrado bajo "${prevSibling.name}"` }));
+                          setActiveMenuId(null);
+                          setMenuCoords(null);
+                        }}
+                        style={isMobile ? mobileItemStyle : undefined}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                      >
+                        <IndentIncrease size={16} /> Sangrar (Anidar en anterior)
+                      </button>
+                    )}
+                    {list.parentId && (
+                      <button 
+                        className="ios-dropdown-item"
+                        onClick={() => {
+                          const parentList = lists.find((l: any) => l.id === list.parentId);
+                          updateList(list.id, { parentId: parentList?.parentId });
+                          window.dispatchEvent(new CustomEvent('show-toast', { detail: `Des-sangrado (Nivel subido)` }));
+                          setActiveMenuId(null);
+                          setMenuCoords(null);
+                        }}
+                        style={isMobile ? mobileItemStyle : undefined}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                      >
+                        <IndentDecrease size={16} /> Des-sangrar (Subir de nivel)
+                      </button>
+                    )}
                     <button 
                       className="ios-dropdown-item"
                       onClick={() => {
@@ -471,6 +491,10 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   const [isNewFolderDefault, setIsNewFolderDefault] = useState(false);
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  useEffect(() => {
+    setIsProfileOpen(false);
+  }, [currentView]);
   const [soundEnabled, setSoundEnabled] = useState(SoundService.enabled);
 
   useEffect(() => {
@@ -568,13 +592,13 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               >
                 <div 
                   className="ios-dropdown-item"
-                  onClick={() => { onSelectView('DATA'); setIsProfileOpen(false); }}
+                  onClick={(e) => { e.stopPropagation(); onSelectView('DATA'); setIsProfileOpen(false); }}
                 >
                   <Download size={16} /> Importar / Exportar
                 </div>
                 <div 
                   className="ios-dropdown-item"
-                  onClick={() => { onSelectView('ANALYTICS'); setIsProfileOpen(false); }}
+                  onClick={(e) => { e.stopPropagation(); onSelectView('ANALYTICS'); setIsProfileOpen(false); }}
                 >
                   <BarChart size={16} /> Estadísticas
                 </div>
@@ -809,7 +833,6 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                   return catId === 'inbox' || !catId;
                 }).length}
               </span>
-              <ChevronRight size={16} color="var(--text-tertiary)" />
             </motion.div>
 
             <ListHierarchy 
@@ -836,7 +859,6 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               <span className="count">
                 {Object.values(tasks || {}).filter(t => t.deleted_at).length}
               </span>
-              <ChevronRight size={16} color="var(--text-tertiary)" />
             </motion.div>
           </div>
         </div>
@@ -933,7 +955,6 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                       <span className="title" style={{ color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)' }}>{cycle.name}</span>
                     </div>
                     {!isEditCyclesMode && <span className="count">{taskCount}</span>}
-                    {!isEditCyclesMode && <ChevronRight size={16} color="var(--text-tertiary)" />}
                   </div>
                   {isEditCyclesMode && (
                     <button
