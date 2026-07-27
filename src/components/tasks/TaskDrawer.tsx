@@ -140,7 +140,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         // Open cards dynamically if they have values configured
         setCardTimeOpen(!!task.dueDate || !!task.alerts?.some(a => a.type === 'at_time'));
         setCardRepeatOpen(!!task.cycle_id || !!task.sectionId || !!task.locationName || !!task.location);
-        setCardReqOpen(task.blockedBy && task.blockedBy.length > 0);
+        setCardReqOpen(!!(task.blockedBy && task.blockedBy.length > 0));
         setCardDetailsOpen(task.priority !== 'none' || !!task.flagged || !!task.url || !!task.image);
         setCardFinanceOpen(!!task.isDetailed);
       } else {
@@ -225,9 +225,6 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
 
   // Tareas disponibles para bloquear (no pueden ser la misma, y deben estar PENDING)
   const availableTasks = Object.values(useAppStore(state => state.tasks)).filter(t => t.status === 'pending' && !t.deleted_at);
-  const listSections = useAppStore(state => state.listSections || []);
-  const availableSections = listSections.filter(s => s.listId === category);
-
   // Efecto NLP en tiempo real: Escucha el título y autocompleta horas, fechas, ciclos
   useEffect(() => {
     if (title) {
@@ -512,7 +509,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
             drag="y"
             dragConstraints={{ top: 0 }}
             dragElastic={{ top: 0, bottom: 0.4 }}
-            onDragEnd={(e, info) => {
+            onDragEnd={(_e, info) => {
               if (info.offset.y > 100 || info.velocity.y > 500) {
                 onClose();
               }

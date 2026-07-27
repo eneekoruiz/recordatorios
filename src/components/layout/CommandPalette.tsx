@@ -41,7 +41,7 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
       if (t.title.toLowerCase().includes(q)) {
         const catId = t.categoryId || (t as any).category_id;
         const sub = catId === 'inbox' || !catId ? 'Bandeja de entrada' : (catId || '');
-        const isHigh = t.priority === 3 || t.priority === 'high' || t.priority === '!!!' || t.title.includes('🚨');
+        const isHigh = t.priority === 'high' || t.title.includes('🚨');
         const titlePrefix = isHigh && !t.title.includes('🚨') ? '🚨 ' : '';
         nextResults.push({ type: 'task_flow', id: t.id, title: 'Modo Flow: ' + titlePrefix + t.title, subtitle: sub, icon: <Play size={16} /> });
         nextResults.push({ type: 'task_complete', id: t.id, title: 'Completar: ' + titlePrefix + t.title, subtitle: sub, icon: <CheckCircle size={16} color="var(--accent-green)" /> });
@@ -211,7 +211,7 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
                 return (
                   <div
                     key={result.type + '_' + result.id}
-                    ref={el => itemRefs.current[idx] = el}
+                    ref={el => { itemRefs.current[idx] = el; }}
                     onMouseEnter={() => setSelectedIndex(idx)}
                     onClick={() => executeAction(result)}
                     style={{
