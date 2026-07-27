@@ -11,7 +11,7 @@ interface AuthScreenProps {
 
 export function AuthScreen({ onSuccess }: AuthScreenProps) {
   const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(localStorage.getItem('userEmail') || 'eneekoruiz@gmail.com');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);

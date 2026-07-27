@@ -42,6 +42,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [menuCoords, setMenuCoords] = useState<{ top: number; left: number } | null>(null);
+  const [draggingListId, setDraggingListId] = useState<string | null>(null);
   const removeList = useAppStore((state) => state.removeList);
   const updateList = useAppStore((state) => state.updateList);
   
@@ -58,10 +59,8 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
       setActiveMenuId(null);
       setMenuCoords(null);
     };
-    window.addEventListener('scroll', handleScroll, true);
     window.addEventListener('close-list-menus', handleScroll);
     return () => {
-      window.removeEventListener('scroll', handleScroll, true);
       window.removeEventListener('close-list-menus', handleScroll);
     };
   }, [activeMenuId]);
@@ -100,10 +99,8 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
               data-list-id={list.id}
               data-list-name={list.name}
               className={`ios-list-item ${isActive ? 'active' : ''}`}
-              drag
-              dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+              drag={draggingListId === list.id || isEditMode}
               dragSnapToOrigin={true}
-              dragElastic={0.8}
               whileDrag={{ scale: 1.02, zIndex: 100, boxShadow: '0 8px 24px rgba(0,0,0,0.3)', backgroundColor: 'var(--bg-elevated, #2c2c2e)' }}
               onDragStart={() => {
                 if (longPressTimerRef.current) {
@@ -112,6 +109,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                 }
               }}
               onDragEnd={(e, info) => {
+                setDraggingListId(null);
                 const targetEl = e.currentTarget as HTMLElement;
                 const oldVisibility = targetEl.style.visibility;
                 targetEl.style.visibility = 'hidden';
@@ -171,15 +169,13 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                 pointerStartRef.current = { x: e.clientX, y: e.clientY };
                 wasLongPressedRef.current = false;
                 if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-                const clientX = e.clientX;
-                const clientY = e.clientY;
-                const target = e.currentTarget;
                 longPressTimerRef.current = setTimeout(() => {
                   wasLongPressedRef.current = true;
+                  setDraggingListId(list.id);
                   if (navigator.vibrate) {
-                    try { navigator.vibrate([8]); } catch (err) {}
+                    try { navigator.vibrate([8]); } catch (_err) {}
                   }
-                }, 400);
+                }, 300);
               }}
               onPointerMove={(e) => {
                 if (!pointerStartRef.current || !longPressTimerRef.current) return;
@@ -191,12 +187,14 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                 }
               }}
               onPointerUp={() => {
+                setDraggingListId(null);
                 if (longPressTimerRef.current) {
                   clearTimeout(longPressTimerRef.current);
                   longPressTimerRef.current = null;
                 }
               }}
               onPointerCancel={() => {
+                setDraggingListId(null);
                 if (longPressTimerRef.current) {
                   clearTimeout(longPressTimerRef.current);
                   longPressTimerRef.current = null;
@@ -479,7 +477,8 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
     }
   };
 
-  const user = { name: 'Eneko Ruiz', email: localStorage.getItem('userEmail') || 'eneko@ejemplo.com' };
+  const user = { name: 'Eneko Ruiz', email: localStorage.getItem('userEmail') || 'eneekoruiz@gmail.com' };
+  const userProfileRef = useRef<HTMLDivElement>(null);
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [isEditCyclesMode, setIsEditCyclesMode] = useState(false);
@@ -491,10 +490,6 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   const [isNewFolderDefault, setIsNewFolderDefault] = useState(false);
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-
-  useEffect(() => {
-    setIsProfileOpen(false);
-  }, [currentView]);
   const [soundEnabled, setSoundEnabled] = useState(SoundService.enabled);
 
   useEffect(() => {
@@ -508,19 +503,13 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
     setIsListConfigOpen(true);
   };
 
-  const handleAddFolder = () => {
-    setEditingListId(undefined);
-    setParentListId(undefined);
-    setIsNewFolderDefault(true);
-    setIsListConfigOpen(true);
-  };
-
   return (
     <aside className="sidebar" onScroll={() => window.dispatchEvent(new Event('close-list-menus'))}>
       {/* 1 & 2. STICKY HEADER: USER PROFILE + SEARCH BAR */}
       <div className="sidebar-header">
       {/* 1. USER PROFILE */}
       <div 
+        ref={userProfileRef}
         className="user-profile" 
         onClick={(e) => { e.stopPropagation(); setIsProfileOpen((prev) => !prev); }}
         style={{
@@ -560,111 +549,109 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         </div>
         <ChevronDown size={16} color="var(--text-tertiary)" style={{ transform: isProfileOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
 
-        {/* PROFILE DROPDOWN */}
-        <AnimatePresence>
-          {isProfileOpen && (
+        {/* PROFILE DROPDOWN (PORTALED TO BODY FOR 100% RELIABLE CLICK OUTSIDE) */}
+        {isProfileOpen && typeof document !== 'undefined' && createPortal(
+          <AnimatePresence>
             <motion.div 
               key="sidebar-backdrop"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              style={{ position: 'fixed', inset: 0, zIndex: 90 }} 
+              style={{ position: 'fixed', inset: 0, zIndex: 99998 }} 
               onClick={(e) => { e.stopPropagation(); setIsProfileOpen(false); }}
             />
-          )}
-          {isProfileOpen && (
-              <motion.div 
-                key="sidebar-dropdown"
-                initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                transition={{ duration: 0.15 }}
-                className="ios-dropdown-menu"
-                style={{ 
-                  position: 'absolute', 
-                  top: '100%', 
-                  left: 0, 
-                  right: 0, 
-                  marginTop: 'var(--space-8)', 
-                  zIndex: 100
-                }}
-                onClick={(e) => e.stopPropagation()}
+            <motion.div 
+              key="sidebar-dropdown"
+              initial={{ opacity: 0, scale: 0.95, y: -10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+              transition={{ duration: 0.15 }}
+              className="ios-dropdown-menu"
+              style={{ 
+                position: 'fixed', 
+                top: (userProfileRef.current?.getBoundingClientRect().bottom || 60) + 8, 
+                left: userProfileRef.current?.getBoundingClientRect().left || 16, 
+                width: userProfileRef.current?.getBoundingClientRect().width || 240, 
+                zIndex: 99999
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div 
+                className="ios-dropdown-item"
+                onClick={(e) => { e.stopPropagation(); onSelectView('DATA'); setIsProfileOpen(false); }}
               >
-                <div 
-                  className="ios-dropdown-item"
-                  onClick={(e) => { e.stopPropagation(); onSelectView('DATA'); setIsProfileOpen(false); }}
-                >
-                  <Download size={16} /> Importar / Exportar
-                </div>
-                <div 
-                  className="ios-dropdown-item"
-                  onClick={(e) => { e.stopPropagation(); onSelectView('ANALYTICS'); setIsProfileOpen(false); }}
-                >
-                  <BarChart size={16} /> Estadísticas
-                </div>
-                <div 
-                  className="ios-dropdown-item"
-                  onClick={(e) => { e.stopPropagation(); toggleGlobalCycles(); }}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
-                >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <Settings size={16} /> Ciclos Temporales
-                  </span>
+                <Download size={16} /> Importar / Exportar
+              </div>
+              <div 
+                className="ios-dropdown-item"
+                onClick={(e) => { e.stopPropagation(); onSelectView('ANALYTICS'); setIsProfileOpen(false); }}
+              >
+                <BarChart size={16} /> Estadísticas
+              </div>
+              <div 
+                className="ios-dropdown-item"
+                onClick={(e) => { e.stopPropagation(); toggleGlobalCycles(); }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <Settings size={16} /> Ciclos Temporales
+                </span>
+                <div style={{
+                  width: '36px', height: '22px', borderRadius: '11px',
+                  background: globalCyclesEnabled ? 'var(--accent-primary)' : 'rgba(120,120,128,0.3)',
+                  position: 'relative', transition: 'background-color 0.2s ease', flexShrink: 0
+                }}>
                   <div style={{
-                    width: '36px', height: '22px', borderRadius: '11px',
-                    background: globalCyclesEnabled ? 'var(--accent-primary)' : 'rgba(120,120,128,0.3)',
-                    position: 'relative', transition: 'background-color 0.2s ease', flexShrink: 0
-                  }}>
-                    <div style={{
-                      width: '18px', height: '18px', borderRadius: '50%', background: '#ffffff',
-                      position: 'absolute', top: '2px', left: globalCyclesEnabled ? '16px' : '2px',
-                      transition: 'left 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                    }} />
-                  </div>
+                    width: '18px', height: '18px', borderRadius: '50%', background: '#ffffff',
+                    position: 'absolute', top: '2px', left: globalCyclesEnabled ? '16px' : '2px',
+                    transition: 'left 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                  }} />
                 </div>
-                <div 
-                  className="ios-dropdown-item"
-                  onClick={(e) => { e.stopPropagation(); const next = SoundService.toggleSound(); setSoundEnabled(next); }}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
-                >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <Volume2 size={16} /> Sonidos Acústicos
-                  </span>
+              </div>
+              <div 
+                className="ios-dropdown-item"
+                onClick={(e) => { e.stopPropagation(); const next = SoundService.toggleSound(); setSoundEnabled(next); }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <Volume2 size={16} /> Sonidos Acústicos
+                </span>
+                <div style={{
+                  width: '36px', height: '22px', borderRadius: '11px',
+                  background: soundEnabled ? 'var(--accent-primary)' : 'rgba(120,120,128,0.3)',
+                  position: 'relative', transition: 'background-color 0.2s ease', flexShrink: 0
+                }}>
                   <div style={{
-                    width: '36px', height: '22px', borderRadius: '11px',
-                    background: soundEnabled ? 'var(--accent-primary)' : 'rgba(120,120,128,0.3)',
-                    position: 'relative', transition: 'background-color 0.2s ease', flexShrink: 0
-                  }}>
-                    <div style={{
-                      width: '18px', height: '18px', borderRadius: '50%', background: '#ffffff',
-                      position: 'absolute', top: '2px', left: soundEnabled ? '16px' : '2px',
-                      transition: 'left 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                    }} />
-                  </div>
+                    width: '18px', height: '18px', borderRadius: '50%', background: '#ffffff',
+                    position: 'absolute', top: '2px', left: soundEnabled ? '16px' : '2px',
+                    transition: 'left 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                  }} />
                 </div>
-                <div 
-                  className="ios-dropdown-item"
-                  onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new Event('open-shortcuts-modal')); setIsProfileOpen(false); }}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
-                >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <HelpCircle size={16} /> Atajos de Teclado
-                  </span>
-                  <kbd style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-color)', borderRadius: 4, padding: '2px 6px', fontSize: '0.75rem', fontWeight: 600 }}>?</kbd>
-                </div>
-                <div className="ios-dropdown-divider" />
-                <div 
-                  className="ios-dropdown-item danger"
-                  onClick={() => {
-                    useAppStore.getState().logout();
-                    setIsProfileOpen(false);
-                  }}
-                >
-                  <LogOut size={16} /> Cerrar Sesión
-                </div>
-              </motion.div>
-          )}
-        </AnimatePresence>
+              </div>
+              <div 
+                className="ios-dropdown-item"
+                onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new Event('open-shortcuts-modal')); setIsProfileOpen(false); }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <HelpCircle size={16} /> Atajos de Teclado
+                </span>
+                <kbd style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-color)', borderRadius: 4, padding: '2px 6px', fontSize: '0.75rem', fontWeight: 600 }}>?</kbd>
+              </div>
+              <div className="ios-dropdown-divider" />
+              <div 
+                className="ios-dropdown-item danger"
+                onClick={() => {
+                  useAppStore.getState().logout();
+                  setIsProfileOpen(false);
+                }}
+              >
+                <LogOut size={16} /> Cerrar Sesión
+              </div>
+            </motion.div>
+          </AnimatePresence>,
+          document.body
+        )}
       </div>
 
       {/* 2. SEARCH BAR */}
