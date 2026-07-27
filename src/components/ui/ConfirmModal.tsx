@@ -76,7 +76,7 @@ export function ConfirmModal({
           initial={{ opacity: 0, y: 34, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 22, scale: 0.97 }}
-          transition={{ type: 'spring', stiffness: 430, damping: 34, mass: 0.82 }}
+          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
           onClick={(event) => event.stopPropagation()}
           style={{ position: 'relative', width: '100%', maxWidth: '440px', margin: '16px', background: 'var(--bg-surface)', borderRadius: '24px', padding: '24px', paddingBottom: 'calc(16px + env(safe-area-inset-bottom))', boxShadow: '0 24px 48px rgba(0,0,0,0.2)' }}>
           <div className={`premium-sheet-icon ${tone}`} aria-hidden="true" style={{ marginBottom: '16px' }}>

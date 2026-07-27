@@ -128,7 +128,10 @@ function App() {
   };
 
   const handleBack = () => {
-    if (navStack.length > 1) {
+    if (navView !== 'HOME') {
+      navReset('HOME');
+      if (isMobile) setMobileView('sidebar');
+    } else if (navStack.length > 1) {
       navPop();
       if (isMobile) setMobileView('sidebar');
     } else if (isMobile) {
@@ -178,7 +181,7 @@ function App() {
       <div className="main-container">
         <NavigationFrame
           isMobile={isMobile}
-          canGoBack={navView !== 'HOME' && navStack.length > 1}
+          canGoBack={navView !== 'HOME' || (isMobile && mobileView === 'content')}
           onBack={handleBack}
           viewKey={navView}
           backLabel={navStack.length > 1 ? 'Volver' : 'Listas'}

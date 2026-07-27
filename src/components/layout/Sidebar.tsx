@@ -462,9 +462,23 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 </div>
                 <div 
                   className="ios-dropdown-item"
-                  onClick={() => { toggleGlobalCycles(); setIsProfileOpen(false); }}
+                  onClick={(e) => { e.stopPropagation(); toggleGlobalCycles(); }}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
                 >
-                  <Settings size={16} /> {globalCyclesEnabled ? 'Ocultar Ciclos' : 'Mostrar Ciclos'}
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <Settings size={16} /> Ciclos Temporales
+                  </span>
+                  <div style={{
+                    width: '36px', height: '22px', borderRadius: '11px',
+                    background: globalCyclesEnabled ? 'var(--accent-primary)' : 'rgba(120,120,128,0.3)',
+                    position: 'relative', transition: 'background-color 0.2s ease', flexShrink: 0
+                  }}>
+                    <div style={{
+                      width: '18px', height: '18px', borderRadius: '50%', background: '#ffffff',
+                      position: 'absolute', top: '2px', left: globalCyclesEnabled ? '16px' : '2px',
+                      transition: 'left 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    }} />
+                  </div>
                 </div>
                 <div className="ios-dropdown-divider" />
                 <div 
@@ -684,21 +698,36 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
             <div className="section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span>Ciclos temporales</span>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              {isEditCyclesMode && (
-                <button
-                  onClick={() => {
-                    const allVisible = cycles.every(c => cycleVisibility[c.id]);
-                    const nextVisibility: Record<string, boolean> = {};
-                    cycles.forEach(c => {
-                      nextVisibility[c.id] = !allVisible;
-                    });
-                    useAppStore.setState({ cycleVisibility: nextVisibility });
-                  }}
-                  style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', fontSize: '0.82rem', cursor: 'pointer' }}
-                >
-                  {cycles.every(c => cycleVisibility[c.id]) ? 'Ocultar todos' : 'Mostrar todos'}
-                </button>
-              )}
+              {isEditCyclesMode && (() => {
+                const allVisible = cycles.every(c => cycleVisibility[c.id]);
+                return (
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const nextVisibility: Record<string, boolean> = {};
+                      cycles.forEach(c => {
+                        nextVisibility[c.id] = !allVisible;
+                      });
+                      useAppStore.setState({ cycleVisibility: nextVisibility });
+                    }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                    title={allVisible ? "Ocultar todos los ciclos" : "Mostrar todos los ciclos"}
+                  >
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Todos</span>
+                    <div style={{
+                      width: '32px', height: '18px', borderRadius: '9px',
+                      background: allVisible ? 'var(--accent-primary)' : 'rgba(120,120,128,0.3)',
+                      position: 'relative', transition: 'background-color 0.2s ease', flexShrink: 0
+                    }}>
+                      <div style={{
+                        width: '14px', height: '14px', borderRadius: '50%', background: '#ffffff',
+                        position: 'absolute', top: '2px', left: allVisible ? '16px' : '2px',
+                        transition: 'left 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                      }} />
+                    </div>
+                  </div>
+                );
+              })()}
               <button 
                 onClick={() => setIsEditCyclesMode(!isEditCyclesMode)}
                 style={{ background: 'transparent', border: 'none', color: isEditCyclesMode ? 'var(--accent-primary)' : 'var(--text-tertiary)', fontSize: '0.85rem', cursor: 'pointer' }}

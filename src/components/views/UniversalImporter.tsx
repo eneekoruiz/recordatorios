@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Download, Upload, Info, CheckCircle2 } from 'lucide-react';
+import { Download, Upload, Info, CheckCircle2, ChevronLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 import { detectFormatAndParse } from '../../utils/importerParser';
@@ -7,10 +7,12 @@ import type { ParseResult } from '../../utils/importerParser';
 import { useNavigation } from '../../hooks/useNavigation';
 
 export function UniversalImporter() {
-  const { exportData, cycles } = useAppStore();
-  const { pop } = useNavigation();
+  const { exportData, cycles, lists } = useAppStore();
+  const { pop, reset } = useNavigation();
   const [inputText, setInputText] = useState('');
   const [preview, setPreview] = useState<ParseResult | null>(null);
+  const [targetListId, setTargetListId] = useState<string>(lists[0]?.id || 'inbox');
+  const [forceAllToList, setForceAllToList] = useState<boolean>(false);
 
   const handleExport = () => {
     const data = exportData();
@@ -57,7 +59,15 @@ export function UniversalImporter() {
     
     useAppStore.setState((state) => {
       const updatedTasks = { ...state.tasks };
-      preview.tasks.forEach(t => { updatedTasks[t.id] = t; });
+      preview.tasks.forEach(t => {
+        const destinationListId = targetListId || state.lists[0]?.id || 'inbox';
+        const shouldRouteToTarget = forceAllToList || !t.listId || t.listId === 'inbox' || !state.lists.some(l => l.id === t.listId);
+        const taskToImport = {
+          ...t,
+          listId: shouldRouteToTarget ? destinationListId : t.listId
+        };
+        updatedTasks[taskToImport.id] = taskToImport;
+      });
       
       return {
         tasks: updatedTasks,
@@ -82,6 +92,15 @@ export function UniversalImporter() {
       height: '100%',
       overflowY: 'auto'
     }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-16)' }}>
+        <button 
+          onClick={() => reset('HOME')} 
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-full)', padding: '8px 16px', color: 'var(--text-primary)', fontWeight: 500, cursor: 'pointer', transition: 'all 0.2s ease' }}
+        >
+          <ChevronLeft size={18} /> Volver a Listas
+        </button>
+      </div>
+
       <header>
         <h1 className="text-display" style={{ marginBottom: 'var(--space-8)' }}>Importar y Exportar</h1>
         <p className="text-secondary">Haz backup de tus datos o importa desde texto plano, CSV o JSON.</p>
@@ -132,6 +151,40 @@ export function UniversalImporter() {
           <div style={{ display: 'flex', gap: 'var(--space-12)', color: 'var(--text-tertiary)', fontSize: '0.9rem', marginBottom: 'var(--space-24)', background: 'var(--bg-elevated)', padding: 'var(--space-12)', borderRadius: 'var(--radius-sm)' }}>
             <Info size={18} style={{ flexShrink: 0, marginTop: 2, color: 'var(--accent-primary)' }} />
             <span>Pega tu Backup JSON, un CSV estructurado, o simplemente suelta tus pensamientos en texto plano. El sistema detectará el formato.</span>
+          </div>
+
+          <div className="glass-panel" style={{ padding: 'var(--space-20)', borderRadius: 'var(--radius-xl)', marginBottom: 'var(--space-24)', border: '1px solid var(--border-subtle)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-primary)' }}>🎯 Lista de destino para importación</h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Las tareas sin lista o en bandeja de entrada se reasignarán automáticamente aquí.</p>
+              </div>
+              <select
+                value={targetListId}
+                onChange={(e) => setTargetListId(e.target.value)}
+                style={{
+                  background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border-focus)',
+                  borderRadius: 'var(--radius-md)', padding: '10px 16px', fontSize: '0.95rem', fontWeight: 500, outline: 'none', cursor: 'pointer'
+                }}
+              >
+                {lists.map(l => (
+                  <option key={l.id} value={l.id}>{l.icon ? `${l.name}` : l.name}</option>
+                ))}
+                <option value="inbox">📥 Bandeja de entrada (Inbox)</option>
+              </select>
+            </div>
+            <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="checkbox"
+                id="forceAllToList"
+                checked={forceAllToList}
+                onChange={(e) => setForceAllToList(e.target.checked)}
+                style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--accent-primary)' }}
+              />
+              <label htmlFor="forceAllToList" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                Forzar que el 100% de las tareas importadas vayan a esta lista (sobreescribir sus listas originales)
+              </label>
+            </div>
           </div>
 
           <AnimatePresence mode="wait">
