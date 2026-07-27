@@ -305,17 +305,11 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const completedVisibleCount = useMemo(() => visibleTasks.filter(t => isTaskCompleted(t)).length, [visibleTasks]);
 
   const isCatCollapsed = useCallback((cat: string) => {
-    if (cat.startsWith('section_') || cat.startsWith('task_')) {
-      return collapsed[cat] !== undefined ? collapsed[cat] : true;
-    }
     return !!collapsed[cat];
   }, [collapsed]);
 
   const toggleCategory = useCallback((cat: string) => {
-    setCollapsed(prev => {
-      const isCurrentlyCollapsed = (cat.startsWith('section_') || cat.startsWith('task_')) ? (prev[cat] !== undefined ? prev[cat] : true) : !!prev[cat];
-      return { ...prev, [cat]: !isCurrentlyCollapsed };
-    });
+    setCollapsed(prev => ({ ...prev, [cat]: !prev[cat] }));
   }, []);
 
   const getTitle = useCallback(() => {
@@ -444,15 +438,84 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         flat.push({ type: 'header', title: headerTitle, category: categoryOrCycle, color, depth: headerDepth });
         
         if (!collapsed[categoryOrCycle]) {
-          const roots = categoryTasks.filter(t => !t.parentId);
-          const processNode = (task: TaskItem, depth: number) => {
-            flat.push({ type: 'task', task, depth });
-            if (!isCatCollapsed(`task_${task.id}`)) {
-              const children = categoryTasks.filter(t => t.parentId === task.id);
-              children.forEach(c => processNode(c, depth + 1));
+          const renderSectionTreeForTasks = (tasksInScope: TaskItem[], listId: string, baseDepth: number, parentColor: string) => {
+            const sectionsForList = (listSections || []).filter(s => s.listId === listId && !s.deleted_at);
+            const tasksBySectionId = new Set(tasksInScope.map(t => t.id));
+
+            // 1. Uncategorized tasks in scope
+            const uncategorized = tasksInScope.filter(t => !t.sectionId || !sectionsForList.some(s => s.id === t.sectionId));
+            if (uncategorized.length > 0) {
+              const roots = uncategorized.filter(t => !t.parentId || !tasksBySectionId.has(t.parentId));
+              const processNode = (task: TaskItem, d: number) => {
+                flat.push({ type: 'task', task, depth: d });
+                if (!isCatCollapsed(`task_${task.id}`)) {
+                  const children = uncategorized.filter(t => t.parentId === task.id);
+                  children.forEach(c => processNode(c, d + 1));
+                }
+              };
+              roots.forEach(r => processNode(r, baseDepth));
             }
+
+            // 2. Section hierarchy for tasks in scope
+            const processSection = (secId: string, d: number) => {
+              const sec = sectionsForList.find(s => s.id === secId);
+              if (!sec) return;
+
+              const secTasks = tasksInScope.filter(t => t.sectionId === sec.id);
+              const hasTasksRecursively = (sId: string): boolean => {
+                if (tasksInScope.some(t => t.sectionId === sId)) return true;
+                return sectionsForList.filter(s => s.parentId === sId).some(child => hasTasksRecursively(child.id));
+              };
+
+              if (!hasTasksRecursively(sec.id)) return;
+
+              const categoryKey = `section_${sec.id}`;
+              flat.push({ type: 'header', title: sec.name, category: categoryKey, color: sec.color || parentColor, sectionId: sec.id, depth: d });
+
+              if (!isCatCollapsed(categoryKey)) {
+                if (secTasks.length > 0) {
+                  const roots = secTasks.filter(t => !t.parentId || !tasksBySectionId.has(t.parentId));
+                  const processNode = (task: TaskItem, dLevel: number) => {
+                    flat.push({ type: 'task', task, depth: dLevel });
+                    if (!isCatCollapsed(`task_${task.id}`)) {
+                      const children = secTasks.filter(t => t.parentId === task.id);
+                      children.forEach(c => processNode(c, dLevel + 1));
+                    }
+                  };
+                  roots.forEach(r => processNode(r, d));
+                }
+
+                const childSections = sectionsForList.filter(s => s.parentId === sec.id);
+                childSections.forEach(child => processSection(child.id, d + 1));
+              }
+            };
+
+            const rootSections = sectionsForList.filter(s => !s.parentId);
+            rootSections.forEach(sec => processSection(sec.id, baseDepth));
           };
-          roots.forEach(r => processNode(r, 0));
+
+          const presentCycleIds = Array.from(new Set(categoryTasks.map(t => t.cycle_id).filter(Boolean))) as string[];
+          if (presentCycleIds.length > 1) {
+            const sortedCycleIds = presentCycleIds.sort((a, b) => {
+              const cA = useAppStore.getState().cycles.find(c => c.id === a)?.daysValue || 0;
+              const cB = useAppStore.getState().cycles.find(c => c.id === b)?.daysValue || 0;
+              return cA - cB;
+            });
+
+            sortedCycleIds.forEach(cId => {
+              const cObj = useAppStore.getState().cycles.find(c => c.id === cId);
+              const cName = cObj ? cObj.name : cId;
+              const cycleSepKey = `cycle_sep_${categoryOrCycle}_${cId}`;
+              flat.push({ type: 'header', title: `⏳ ${cName}`, category: cycleSepKey, color: '#0a84ff', depth: 1 });
+
+              if (!collapsed[cycleSepKey]) {
+                const cTasks = categoryTasks.filter(t => t.cycle_id === cId);
+                renderSectionTreeForTasks(cTasks, categoryOrCycle, 2, color);
+              }
+            });
+          } else {
+            renderSectionTreeForTasks(categoryTasks, categoryOrCycle, 0, color);
+          }
         }
       });
     } else {
@@ -745,7 +808,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           overscrollBehaviorX: 'none',
           touchAction: 'pan-y',
           WebkitOverflowScrolling: 'touch',
-          paddingBottom: 'max(120px, calc(env(safe-area-inset-bottom) + 100px))'
+          paddingBottom: 'max(56px, calc(env(safe-area-inset-bottom) + 40px))'
         }}
       >
         <div className="tasks-container" style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative', background: 'var(--bg-elevated)', overflowX: 'hidden', touchAction: 'pan-y' }}>
@@ -1112,9 +1175,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         listId={currentList?.id} 
       />
 
-      <button className="fab" onClick={() => onOpenNewTask()} title="Añadir Tarea">
-        <Plus size={24} />
-      </button>
+      {createPortal(
+        <button className="fab" onClick={() => onOpenNewTask()} title="Añadir Tarea" style={{ zIndex: 99999 }}>
+          <Plus size={24} />
+        </button>,
+        document.body
+      )}
       <ConfirmModal
         isOpen={isConfirmOpen}
         onCancel={() => setIsConfirmOpen(false)}

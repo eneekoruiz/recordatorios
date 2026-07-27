@@ -1562,7 +1562,19 @@ html, body {
   scrollbar-width: thin;
 }
 
+.list-config-overlay {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
 @media (max-width: 768px) {
+  .list-config-overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
   .list-config-modal {
     width: 100% !important;
     max-width: none !important;
