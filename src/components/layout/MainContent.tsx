@@ -304,16 +304,16 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const activeVisibleCount = useMemo(() => visibleTasks.filter(t => !isTaskCompleted(t)).length, [visibleTasks]);
   const completedVisibleCount = useMemo(() => visibleTasks.filter(t => isTaskCompleted(t)).length, [visibleTasks]);
 
-  const isCatCollapsed = (cat: string) => {
-    if (cat.startsWith('section_')) {
+  const isCatCollapsed = useCallback((cat: string) => {
+    if (cat.startsWith('section_') || cat.startsWith('task_')) {
       return collapsed[cat] !== undefined ? collapsed[cat] : true;
     }
     return !!collapsed[cat];
-  };
+  }, [collapsed]);
 
   const toggleCategory = useCallback((cat: string) => {
     setCollapsed(prev => {
-      const isCurrentlyCollapsed = cat.startsWith('section_') ? (prev[cat] !== undefined ? prev[cat] : true) : !!prev[cat];
+      const isCurrentlyCollapsed = (cat.startsWith('section_') || cat.startsWith('task_')) ? (prev[cat] !== undefined ? prev[cat] : true) : !!prev[cat];
       return { ...prev, [cat]: !isCurrentlyCollapsed };
     });
   }, []);
@@ -447,7 +447,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           const roots = categoryTasks.filter(t => !t.parentId);
           const processNode = (task: TaskItem, depth: number) => {
             flat.push({ type: 'task', task, depth });
-            if (!collapsed[`task_${task.id}`]) {
+            if (!isCatCollapsed(`task_${task.id}`)) {
               const children = categoryTasks.filter(t => t.parentId === task.id);
               children.forEach(c => processNode(c, depth + 1));
             }
@@ -465,7 +465,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           const roots = groupedTasks['no_section'].filter(t => !t.parentId);
           const processNode = (task: TaskItem, depth: number) => {
             flat.push({ type: 'task', task, depth });
-            if (!collapsed[`task_${task.id}`]) {
+            if (!isCatCollapsed(`task_${task.id}`)) {
               const children = groupedTasks['no_section'].filter(t => t.parentId === task.id);
               children.forEach(c => processNode(c, depth + 1));
             }
@@ -492,7 +492,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             const roots = categoryTasks.filter(t => !t.parentId);
             const processNode = (task: TaskItem, depthLevel: number) => {
               flat.push({ type: 'task', task, depth: depthLevel });
-              if (!collapsed[`task_${task.id}`]) {
+              if (!isCatCollapsed(`task_${task.id}`)) {
                 const children = categoryTasks.filter(t => t.parentId === task.id);
                 children.forEach(c => processNode(c, depthLevel + 1));
               }
@@ -520,7 +520,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     }
 
     return flat;
-  }, [groupedTasks, smartTasks, currentCycle, collapsed, isListView, lists, listSections, currentList]);
+  }, [groupedTasks, smartTasks, currentCycle, collapsed, isListView, lists, listSections, currentList, isCatCollapsed]);
 
   // 2. React Virtualizer
   const parentRef = useRef<HTMLDivElement>(null);
@@ -549,9 +549,13 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     overscan: 12,
   });
 
+  useEffect(() => {
+    virtualizer.measure();
+  }, [flattenedData, collapsed, virtualizer]);
+
   const renderTask = useCallback((task: TaskItem, virtualStyle: React.CSSProperties, index: number, depth: number, isFirst: boolean, isLast: boolean, previousTaskId?: string, virtualKey?: React.Key) => {
     const hasChildren = Object.values(tasks).some(t => t.parentId === task.id && !t.deleted_at);
-    const isExpanded = !collapsed[`task_${task.id}`];
+    const isExpanded = !isCatCollapsed(`task_${task.id}`);
 
     return (
       <div
@@ -589,7 +593,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         </div>
       </div>
     );
-  }, [tasks, collapsed, toggleCategory, virtualizer, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, isListView, isSmartView, currentView]);
+  }, [tasks, isCatCollapsed, toggleCategory, virtualizer, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, isListView, isSmartView, currentView]);
 
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
   const smartListInfo = isSmartView ? SMART_LISTS.find(l => l.id === currentView) : null;

@@ -331,7 +331,6 @@ export const TaskCard = React.memo(function TaskCard({
             )}
             {isEditingTitle ? (
               <motion.input
-                layoutId={"task-title-" + task.id}
                 value={editTitle}
                 autoFocus
                 onChange={e => setEditTitle(e.target.value)}
@@ -346,7 +345,6 @@ export const TaskCard = React.memo(function TaskCard({
               />
             ) : (
               <motion.span
-                layoutId={"task-title-" + task.id}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}

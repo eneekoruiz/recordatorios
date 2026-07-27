@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState, useRef } from 'react';
@@ -57,6 +57,7 @@ export function NavigationFrame({
   const [direction, setDirection] = useState(1);
   const prevKeyRef = useRef(viewKey);
   const isPoppingRef = useRef(false);
+  const dragControls = useDragControls();
 
   if (viewKey !== prevKeyRef.current) {
     prevKeyRef.current = viewKey;
@@ -100,6 +101,8 @@ export function NavigationFrame({
           exit="exit"
           transition={pageTransition}
           drag={canGoBack ? 'x' : false}
+          dragControls={dragControls}
+          dragListener={false}
           dragConstraints={canGoBack ? { left: 0, right: screenWidth } : undefined}
           dragElastic={canGoBack ? { left: 0, right: 0.05 } : undefined}
           whileDrag={canGoBack ? {
@@ -125,6 +128,23 @@ export function NavigationFrame({
             overscrollBehaviorX: 'none',
           }}
         >
+          {canGoBack && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                bottom: 0,
+                left: 0,
+                width: 28,
+                zIndex: 9999,
+                touchAction: 'none',
+                cursor: 'grab'
+              }}
+              onPointerDown={(e) => {
+                dragControls.start(e);
+              }}
+            />
+          )}
           {showBackBar && (
             <div
               style={{

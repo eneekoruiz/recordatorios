@@ -473,6 +473,10 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(SoundService.enabled);
 
+  useEffect(() => {
+    setIsProfileOpen(false);
+  }, [currentView]);
+
   const handleAddList = () => {
     setEditingListId(undefined);
     setParentListId(undefined);
@@ -494,7 +498,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
       {/* 1. USER PROFILE */}
       <div 
         className="user-profile" 
-        onClick={() => setIsProfileOpen(!isProfileOpen)}
+        onClick={(e) => { e.stopPropagation(); setIsProfileOpen((prev) => !prev); }}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -778,18 +782,10 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               <button 
                 className="btn-icon"
                 style={{ padding: 4, cursor: 'pointer' }}
-                title="Nueva carpeta"
-                onClick={handleAddFolder}
-              >
-                <FolderPlus size={14} color="var(--text-tertiary)" />
-              </button>
-              <button 
-                className="btn-icon"
-                style={{ padding: 4, cursor: 'pointer' }}
                 title="Añadir lista"
                 onClick={handleAddList}
               >
-                <Plus size={14} color="var(--text-tertiary)" />
+                <Plus size={16} color="var(--accent-primary)" />
               </button>
             </div>
           </div>
@@ -957,54 +953,6 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
 
       </div>
       
-      {/* FIXED / STICKY FOOTER */}
-      <div className="sidebar-footer">
-        <button 
-          onClick={handleAddList}
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '8px', 
-            background: 'none', 
-            border: 'none', 
-            color: 'var(--text-secondary)', 
-            fontWeight: 600, 
-            fontSize: '0.9rem', 
-            cursor: 'pointer',
-            padding: '8px 12px',
-            borderRadius: '10px',
-            transition: 'background-color 0.2s ease, color 0.2s ease'
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--accent-primary)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
-        >
-          <Plus size={18} /> Añadir lista
-        </button>
-
-        <button 
-          onClick={handleAddFolder}
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '6px', 
-            background: 'none', 
-            border: 'none', 
-            color: 'var(--text-tertiary)', 
-            fontWeight: 500, 
-            fontSize: '0.85rem', 
-            cursor: 'pointer',
-            padding: '8px 10px',
-            borderRadius: '10px',
-            transition: 'background-color 0.2s ease, color 0.2s ease'
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-tertiary)'; }}
-          title="Nueva Carpeta"
-        >
-          <FolderPlus size={16} /> Carpeta
-        </button>
-      </div>
-
       {/* MODALS (OUTSIDE SCROLL) */}
       <ListConfigModal 
         isOpen={isListConfigOpen} 
