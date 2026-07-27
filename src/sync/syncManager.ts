@@ -157,7 +157,8 @@ class SyncManager {
     if (localStorage.getItem(legacyKey)) {
       localStorage.removeItem(legacyKey);
     }
-    const lastToken = localStorage.getItem(tokenKey) || '0';
+    const isLocalEmpty = Object.keys(state.tasks).length === 0;
+    const lastToken = isLocalEmpty ? '0' : (localStorage.getItem(tokenKey) || '0');
 
     const url = new URL(PULL_URL, window.location.origin);
     url.searchParams.append('lastToken', lastToken);

@@ -820,6 +820,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         >
           
           {flattenedData.map((data, index) => {
+          const hasAnyTasks = flattenedData.some(d => d.type === 'task');
+          if (!hasAnyTasks && data.type !== 'page-header') return null;
+
           const itemKey = getItemKey(data, index);
           const itemStyle: React.CSSProperties = {
             position: 'relative',
@@ -1162,7 +1165,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
         </div>
 
-        {(flattenedData.length === 0 || (flattenedData.length === 1 && flattenedData[0].type === 'page-header')) && (
+        {!flattenedData.some(d => d.type === 'task') && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 220px)', width: '100%' }}>
             <EmptyState {...emptyStateProps} />
           </div>
