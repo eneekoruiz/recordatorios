@@ -1281,17 +1281,28 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
     <AnimatePresence>
       {toast && (
         <motion.div
-          initial={{ opacity: 0, y: 50, scale: 0.9 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 20, scale: 0.9 }}
+          initial={{ opacity: 0, y: 50, x: "-50%", scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, x: "-50%", scale: 1 }}
+          exit={{ opacity: 0, y: 20, x: "-50%", scale: 0.9 }}
+          drag="x"
+          dragConstraints={{ left: -100, right: 100 }}
+          onDragEnd={(_, info) => { if (Math.abs(info.offset.x) > 50) setToast(null); }}
           style={{
-            position: 'fixed', bottom: 'env(safe-area-inset-bottom, 24px)', left: '50%', transform: 'translateX(-50%)',
-            background: 'var(--bg-elevated)', color: 'var(--text-primary)', padding: '12px 24px',
+            position: 'fixed', bottom: 'env(safe-area-inset-bottom, 24px)', left: '50%',
+            background: 'var(--bg-elevated)', color: 'var(--text-primary)', padding: '12px 16px',
             borderRadius: '999px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 99999,
-            fontWeight: 500, fontSize: '0.9rem', border: '1px solid var(--border-subtle)'
+            fontWeight: 500, fontSize: '0.9rem', border: '1px solid var(--border-subtle)',
+            display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between', minWidth: 260, boxSizing: 'border-box'
           }}
         >
-          {toast}
+          <span>{toast}</span>
+          <button
+            onClick={() => setToast(null)}
+            style={{ background: 'transparent', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', padding: 4 }}
+            title="Cerrar"
+          >
+            <X size={16} />
+          </button>
         </motion.div>
       )}
     </AnimatePresence>

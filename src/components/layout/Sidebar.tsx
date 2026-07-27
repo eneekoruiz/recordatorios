@@ -69,7 +69,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
     <div style={{ marginLeft: depth > 0 ? 16 : 0 }}>
       {currentLevelLists.map((list: any) => {
         const hasChildren = lists.some((l: any) => l.parentId === list.id);
-        const isExpanded = expanded[list.id];
+        const isExpanded = expanded[list.id] !== undefined ? expanded[list.id] : true;
         const isActive = currentView === `list_${list.id}`;
         const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
         const mobileItemStyle = {
@@ -261,6 +261,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                       onClick={() => {
                         setActiveMenuId(null);
                         setMenuCoords(null);
+                        setExpanded(prev => ({ ...prev, [list.id]: true }));
                         onAddSublist(list.id);
                       }}
                       style={isMobile ? mobileItemStyle : undefined}

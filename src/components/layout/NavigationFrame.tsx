@@ -32,7 +32,7 @@ export function NavigationFrame({
   backLabel = 'Volver',
   viewKey,
 }: NavigationFrameProps) {
-  const showBackBar = canGoBack;
+  const showBackBar = false; // El usuario quiere mantener solo el botón azul integrado en la cabecera del contenido y eliminar este top hood negro
 
   return (
     <div
