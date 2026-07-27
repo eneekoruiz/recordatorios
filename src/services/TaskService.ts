@@ -8,8 +8,9 @@ import type { TaskItem } from '../models/Task';
  * useAppStore, TaskCard y MainContent.
  */
 export function isCompletedInCurrentPeriod(task: Partial<TaskItem>, cycles: any[]): boolean {
-  if (task.status === 'completed') return true;
-  if (task.cycle_id && task.status === 'completed' && task.completionHistory) {
+  const isDone = (task as any).status === 'completed' || !!(task as any).completed_at || !!(task as any).completed;
+  if (isDone && !task.cycle_id) return true;
+  if (task.cycle_id && isDone && task.completionHistory) {
     if (task.completionHistory.length === 0) return false;
   }
   if (!task.cycle_id || !task.completionHistory || task.completionHistory.length === 0) return false;

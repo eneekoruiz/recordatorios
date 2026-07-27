@@ -10,6 +10,7 @@ export interface CustomCycle {
   updated_at?: string;
   deleted_at?: string;
   version?: number;
+  _is_dirty?: boolean;
 }
 
 export interface CustomList {

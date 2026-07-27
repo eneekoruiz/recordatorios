@@ -127,7 +127,7 @@ class SyncManager {
     
     if (cycles.length > 0) {
       cycles.forEach((c: any) => {
-        state.updateCycle(c.id, { _is_dirty: false });
+        state.updateCycle(c.id, { _is_dirty: false } as any);
       });
     }
     

@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, ChevronDown, ChevronLeft, Sparkles, FolderPlus, Settings, Trash2, MoreHorizontal, Edit3, X } from 'lucide-react';
+import { Plus, ChevronDown, ChevronLeft, FolderPlus, Settings, Trash2, MoreHorizontal, Edit3, X } from 'lucide-react';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
 import type { TaskItem } from '../../models/Task';
@@ -23,9 +23,9 @@ interface MainContentProps {
 }
 
 type VirtualItemType = 
-  | { type: 'page-header' }
-  | { type: 'header', title: string, category: string, color: string, sectionId?: string, depth: number }
-  | { type: 'empty-section', title: string, category: string, color: string, sectionId?: string, depth: number }
+  | { type: 'page-header', isFirstInSection?: boolean, isLastInSection?: boolean, depth?: number }
+  | { type: 'header', title: string, category: string, color: string, sectionId?: string, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean }
+  | { type: 'empty-section', title: string, category: string, color: string, sectionId?: string, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean }
   | { type: 'task', task: TaskItem, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean };
 
 const NOOP = () => {};
@@ -410,7 +410,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     if (currentCycle && currentCycle.daysValue === 1 && smartTasks.length > 0) {
       const prioritizedTasks = smartTasks.filter(t => t.flagged || t.priority === 'high' || t.priority === 'medium');
       if (prioritizedTasks.length > 0) {
-        flat.push({ type: 'header', title: 'Up Next (Priorizado)', category: 'smart', color: '#0a84ff' });
+        flat.push({ type: 'header', title: 'Up Next (Priorizado)', category: 'smart', color: '#0a84ff', depth: 0 });
         if (!collapsed['smart']) {
           prioritizedTasks.slice(0, 2).forEach(task => flat.push({ type: 'task', task, depth: 0 }));
         }
@@ -469,7 +469,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               if (!hasTasksRecursively(sec.id)) return;
 
               const categoryKey = `section_${sec.id}`;
-              flat.push({ type: 'header', title: sec.name, category: categoryKey, color: sec.color || parentColor, sectionId: sec.id, depth: d });
+              flat.push({ type: 'header', title: sec.name, category: categoryKey, color: (sec as any).color || parentColor, sectionId: sec.id, depth: d });
 
               if (!isCatCollapsed(categoryKey)) {
                 if (secTasks.length > 0) {
@@ -824,7 +824,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           const itemStyle: React.CSSProperties = {
             position: 'relative',
             width: '100%',
-            zIndex: data.type === 'section' || data.type === 'header' ? 10 : 1,
+            zIndex: data.type === 'header' || data.type === 'empty-section' ? 10 : 1,
             boxSizing: 'border-box'
           };
 
@@ -995,7 +995,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                         type="text" 
                         value={editingSectionName}
                         onChange={e => setEditingSectionName(e.target.value)}
-                        onBlur={(e) => saveSectionName(e, data.sectionId!)}
+                        onBlur={(e) => saveSectionName(e as any, data.sectionId!)}
                         onKeyDown={e => {
                           if (e.key === 'Enter') saveSectionName(e as any, data.sectionId!);
                         }}

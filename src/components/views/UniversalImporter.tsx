@@ -63,10 +63,11 @@ export function UniversalImporter() {
       let importedCount = 0;
 
       preview.tasks.forEach(t => {
-        const shouldRouteToTarget = forceAllToList || targetListId !== 'inbox' || !t.listId || t.listId === 'inbox' || !state.lists.some(l => l.id === t.listId);
+        const taskCatId = t.categoryId || (t as any).listId;
+        const shouldRouteToTarget = forceAllToList || targetListId !== 'inbox' || !taskCatId || taskCatId === 'inbox' || !state.lists.some(l => l.id === taskCatId);
         const taskToImport = {
           ...t,
-          listId: shouldRouteToTarget ? destinationListId : (t.listId || destinationListId)
+          categoryId: shouldRouteToTarget ? destinationListId : (taskCatId || destinationListId)
         };
         updatedTasks[taskToImport.id] = taskToImport;
         importedCount++;
@@ -132,7 +133,7 @@ export function UniversalImporter() {
           <h3 className="text-title" style={{ marginBottom: 'var(--space-16)' }}>Exportar Backup</h3>
           <p className="text-muted" style={{ marginBottom: 'var(--space-32)' }}>Descarga un archivo JSON con absolutamente todos tus ciclos, listas y tareas.</p>
           
-          <button 
+          <motion.button 
             onClick={handleExport}
             style={{ 
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-8)', 
@@ -145,7 +146,7 @@ export function UniversalImporter() {
             whileTap={{ scale: 0.98 }}
           >
             <Download size={20} /> Descargar JSON
-          </button>
+          </motion.button>
         </motion.div>
 
         {/* Import Card */}

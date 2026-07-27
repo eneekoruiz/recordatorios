@@ -20,7 +20,7 @@ export function AnalyticsView() {
   // (En un entorno real iteraríamos las fechas, pero para esta demo mostramos el volumen como Racha)
   const streak = dailyCompleted > 0 ? dailyCompleted + 2 : 0; 
 
-  const containerVariants = {
+  const containerVariants: any = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
@@ -28,7 +28,7 @@ export function AnalyticsView() {
     }
   };
 
-  const itemVariants = {
+  const itemVariants: any = {
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
   };

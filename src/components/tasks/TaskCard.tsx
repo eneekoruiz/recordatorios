@@ -4,11 +4,10 @@ import { motion, useMotionValue, useTransform, AnimatePresence, useMotionValueEv
 import {
   CheckCircle, Trash2, Lock, Link2, Flag, MapPin,
   Image as ImageIcon, MoreHorizontal, Repeat, Edit3,
-  Play, ChevronRight, ChevronDown, Copy, FolderOpen, IndentIncrease, IndentDecrease, X
+  ChevronDown, Copy, FolderOpen, IndentIncrease, IndentDecrease, X
 } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
-import { useAppStore } from '../../store/useAppStore';
-import { usePromptStore } from '../../store/usePromptStore';
+import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { isCompletedInCurrentPeriod } from '../../services/TaskService';
 import { SoundService } from '../../services/SoundService';
 import { ConfirmModal } from '../ui/ConfirmModal';
@@ -18,9 +17,9 @@ interface TaskCardProps {
   virtualStyle: React.CSSProperties;
   onToggle: (id: string, forceReverse?: boolean) => void;
   onDelete: (id: string) => void;
-  onOpenZenMode: (id: string) => void;
+  onOpenZenMode?: (id: string) => void;
   onEdit: (id: string) => void;
-  index: number;
+  index?: number;
   showListName?: boolean;
   isFirstInSection?: boolean;
   isLastInSection?: boolean;
@@ -31,7 +30,7 @@ interface TaskCardProps {
 }
 
 export const TaskCard = React.memo(function TaskCard({
-  task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, index, showListName = true, isFirstInSection, isLastInSection, previousTaskId, hasChildren, isExpanded, onToggleExpand
+  task, virtualStyle, onToggle, onDelete, onEdit, showListName = true, isFirstInSection, isLastInSection, previousTaskId, hasChildren, isExpanded, onToggleExpand
 }: TaskCardProps) {
   const cycles = useAppStore(state => state.cycles);
   const tasks = useAppStore(state => state.tasks);
@@ -48,7 +47,6 @@ export const TaskCard = React.memo(function TaskCard({
     else if (due.getTime() === today.getTime()) dueDateColor = 'var(--accent-orange)';
   }
 
-  const [isDragOver, setIsDragOver] = useState(false);
   const [contextMenuOpen, setContextMenuOpen] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -137,11 +135,6 @@ export const TaskCard = React.memo(function TaskCard({
       setIsDeleteConfirmOpen(true);
     }
   }, [isBlocked, isCompletedPeriod, onToggle, task.id]);
-
-  const notify = (message: string) => {
-    setFeedback(message);
-    window.setTimeout(() => setFeedback(null), 2400);
-  };
 
   const totalAlerts = task.alerts?.length || 0;
   const completedAlertsCount = task.completedAlerts?.length || 0;
@@ -256,7 +249,6 @@ export const TaskCard = React.memo(function TaskCard({
           opacity: isBlocked ? 0.5 : 1,
           pointerEvents: 'auto',
           touchAction: 'pan-y',
-          outline: isDragOver ? '2px solid var(--accent-blue)' : undefined,
           cursor: 'default',
         }}
       >
@@ -324,7 +316,7 @@ export const TaskCard = React.memo(function TaskCard({
         <div style={{ flex: 1, minWidth: 0, padding: '2px 0', boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             {isBlocked && <Lock size={15} color="var(--accent-red)" />}
-            {task.priority !== undefined && task.priority !== null && task.priority !== '' && task.priority !== 'none' && task.priority !== 0 && task.priority !== '0' && (
+            {task.priority && task.priority !== 'none' && (
               <span className={`priority-badge ${task.priority}`}>
                 {task.priority === 'low' ? '!' : task.priority === 'medium' ? '!!' : '!!!'}
               </span>
@@ -403,12 +395,12 @@ export const TaskCard = React.memo(function TaskCard({
                     wordBreak: 'break-word',
                     cursor: 'text',
                     display: 'block',
-                    minHeight: (task.description || (!task.completed && !isCompletedPeriod)) ? 22 : 0,
-                    padding: (task.description || (!task.completed && !isCompletedPeriod)) ? '2px 0' : 0,
+                    minHeight: (task.description || (!isTaskCompleted(task) && !isCompletedPeriod)) ? 22 : 0,
+                    padding: (task.description || (!isTaskCompleted(task) && !isCompletedPeriod)) ? '2px 0' : 0,
                     boxSizing: 'border-box'
                   }}
                 >
-                  {task.description || (!task.completed && !isCompletedPeriod ? 'Añadir nota...' : '')}
+                  {task.description || (!isTaskCompleted(task) && !isCompletedPeriod ? 'Añadir nota...' : '')}
                 </span>
               )}
             </div>
@@ -513,7 +505,7 @@ export const TaskCard = React.memo(function TaskCard({
           >
             {(() => {
               if (isExpanded) return null;
-              const count = tasks ? Object.values(tasks).filter(t => t && t.parentId === task.id && !t.deleted).length : 0;
+              const count = tasks ? Object.values(tasks).filter(t => t && t.parentId === task.id && !t.deleted_at).length : 0;
               return count > 0 ? <span>{count}</span> : null;
             })()}
             <motion.div style={{ display: 'flex', alignItems: 'center' }} animate={{ rotate: isExpanded ? 0 : -90 }} transition={{ type: 'spring', damping: 20, stiffness: 300 }}>

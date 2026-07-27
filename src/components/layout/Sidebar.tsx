@@ -38,7 +38,7 @@ interface SidebarProps {
 }
 
 // Sub-componente para jerarquía infinita
-const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditList, getTaskCount, parentId = undefined, depth = 0 }: any) => {
+const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditList, getTaskCount, parentId = undefined, depth = 0, isEditMode = false }: any) => {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [menuCoords, setMenuCoords] = useState<{ top: number; left: number } | null>(null);
@@ -46,7 +46,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
   const removeList = useAppStore((state) => state.removeList);
   const updateList = useAppStore((state) => state.updateList);
   
-  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
   const wasLongPressedRef = useRef(false);
 
@@ -430,7 +430,8 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                 onEditList={onEditList}
                 getTaskCount={getTaskCount}
                 parentId={list.id} 
-                depth={depth + 1} 
+                depth={depth + 1}
+                isEditMode={isEditMode}
               />
             )}
           </div>
@@ -464,7 +465,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
       case 'smart_all': 
         return active.length;
       case 'smart_flagged': 
-        return active.filter(t => t.priority === 3).length;
+        return active.filter(t => t.priority === 'high').length;
       case 'smart_completed': 
         return all.filter(t => isTaskCompleted(t)).length;
       case 'smart_overdue': {
@@ -829,6 +830,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               getTaskCount={(id: string) => Object.values(tasks || {}).filter(t => !t.deleted_at && !isTaskCompleted(t) && (t.categoryId === id || (t as any).category_id === id)).length}
               onAddSublist={(pId: string, isF?: boolean) => { setEditingListId(undefined); setParentListId(pId); setIsNewFolderDefault(!!isF); setIsListConfigOpen(true); }} 
               onEditList={(listId: string) => { setEditingListId(listId); setParentListId(undefined); setIsListConfigOpen(true); }}
+              isEditMode={isEditMode}
             />
 
             {/* Papelera */}

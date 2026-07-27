@@ -134,9 +134,9 @@ export const useAppStore = create<AppState>()(
       hasHydrated: false,
       setHasHydrated: (val) => set({ hasHydrated: val }),
 
-      toggleGlobalCycles: () => set((state) => ({ globalCyclesEnabled: !state.globalCyclesEnabled })),
+      toggleGlobalCycles: () => set((state: any) => ({ globalCyclesEnabled: !state.globalCyclesEnabled })),
 
-      toggleSmartList: (listId) => optimisticUpdate(get, set, (state) => {
+      toggleSmartList: (listId) => optimisticUpdate(get, set, (state: any) => {
         const newVisibility = {
           ...state.smartListVisibility,
           [listId]: !state.smartListVisibility[listId]
@@ -144,7 +144,7 @@ export const useAppStore = create<AppState>()(
         
         // Save to lists as a settings record so it syncs
         const settingsId = 'user_preferences_smart_lists';
-        const existingSettings = state.lists.find(l => l.id === settingsId);
+        const existingSettings = state.lists.find((l: any) => l.id === settingsId);
         const updatedList: any = {
           id: settingsId,
           name: 'Settings',
@@ -155,7 +155,7 @@ export const useAppStore = create<AppState>()(
         };
         
         const newLists = existingSettings
-          ? state.lists.map(l => l.id === settingsId ? updatedList : l)
+          ? state.lists.map((l: any) => l.id === settingsId ? updatedList : l)
           : [...state.lists, updatedList];
 
         return {
@@ -164,7 +164,7 @@ export const useAppStore = create<AppState>()(
         };
       }),
 
-      toggleCycleVisibility: (cycleId) => set((state) => ({
+      toggleCycleVisibility: (cycleId) => set((state: any) => ({
         cycleVisibility: {
           ...state.cycleVisibility,
           [cycleId]: !state.cycleVisibility[cycleId]
@@ -326,12 +326,12 @@ export const useAppStore = create<AppState>()(
         lists: state.lists.filter(l => l.id !== id && l.parentId !== id) // Remove list and its sublists
       })),
 
-      addListSection: (section) => set((state) => ({
+      addListSection: (section) => set((state: any) => ({
         listSections: [...(state.listSections || []), { ...section, _is_dirty: true, updated_at: new Date().toISOString() }]
       })),
 
-      updateListSection: (id, name) => set((state) => ({
-        listSections: (state.listSections || []).map(s => s.id === id ? { ...s, name, _is_dirty: true, updated_at: new Date().toISOString() } : s)
+      updateListSection: (id, name) => set((state: any) => ({
+        listSections: (state.listSections || []).map((s: any) => s.id === id ? { ...s, name, _is_dirty: true, updated_at: new Date().toISOString() } : s)
       })),
 
       deleteListSection: (id) => optimisticUpdate(get, set, (state) => {
@@ -379,23 +379,24 @@ export const useAppStore = create<AppState>()(
 
       // Algoritmo de Cascada Matemático
       getTasksByCycle: (cycleId, includeCompleted = false, temporarilyShowIds = []) => {
-        const { tasks, cycles } = get();
-        const targetCycle = cycles.find(c => c.id === cycleId);
+        const tasks = get().tasks as Record<string, TaskItem>;
+        const cycles = get().cycles as CustomCycle[];
+        const targetCycle = cycles.find((c: any) => c.id === cycleId);
         if (!targetCycle) return {};
 
-        const validCycles = cycles.filter(c => c.daysValue <= targetCycle.daysValue).map(c => c.id);
+        const validCycles = cycles.filter((c: any) => c.daysValue <= targetCycle.daysValue).map((c: any) => c.id);
 
         // Only show tasks with an explicit cycle_id — no date-based fallback for inbox tasks
         const grouped: Record<string, TaskItem[]> = {};
-        Object.values(tasks)
-          .filter(t => !t.deleted_at && (includeCompleted || !isTaskCompleted(t) || temporarilyShowIds.includes(t.id)))
-          .filter(t => {
+        (Object.values(tasks) as TaskItem[])
+          .filter((t: any) => !t.deleted_at && (includeCompleted || !isTaskCompleted(t) || temporarilyShowIds.includes(t.id)))
+          .filter((t: any) => {
             if (!t.cycle_id) return false; // Tasks without a cycle never appear in cycle views
             return validCycles.includes(t.cycle_id as string);
           })
-          .filter(t => includeCompleted || temporarilyShowIds.includes(t.id) || !isCompletedInCurrentPeriod(t, cycles))
-          .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-          .forEach(t => {
+          .filter((t: any) => includeCompleted || temporarilyShowIds.includes(t.id) || !isCompletedInCurrentPeriod(t, cycles))
+          .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+          .forEach((t: any) => {
             const listId = t.categoryId || (t as any).category_id || 'inbox';
             if (!grouped[listId]) grouped[listId] = [];
             grouped[listId].push(t);
@@ -404,9 +405,11 @@ export const useAppStore = create<AppState>()(
       },
 
       getTasksByList: (listId, includeCompleted = false, temporarilyShowIds = []) => {
-        const { tasks, lists, listSections } = get();
-        const validListIds = new Set(lists.map(l => l.id));
-        const filtered = Object.values(tasks).filter(t => {
+        const tasks = get().tasks as Record<string, TaskItem>;
+        const lists = get().lists as CustomList[];
+        const listSections = get().listSections as ListSection[];
+        const validListIds = new Set(lists.map((l: any) => l.id));
+        const filtered = (Object.values(tasks) as TaskItem[]).filter((t: any) => {
           if (t.deleted_at) return false;
           const taskCat = t.categoryId || (t as any).category_id;
           // If the task claims to be in a list that doesn't exist, treat it as inbox
@@ -425,8 +428,8 @@ export const useAppStore = create<AppState>()(
         grouped['no_section'] = [];
         
         // 2. Pre-initialize defined manual sections for this list so empty sections are visible
-        const sectionsForList = (listSections || []).filter(s => s.listId === listId && !s.deleted_at);
-        const activeSectionIds = new Set(sectionsForList.map(s => s.id));
+        const sectionsForList = (listSections || []).filter((s: any) => s.listId === listId && !s.deleted_at);
+        const activeSectionIds = new Set(sectionsForList.map((s: any) => s.id));
         for (const sec of sectionsForList) {
           grouped[`section_${sec.id}`] = [];
         }
@@ -452,16 +455,17 @@ export const useAppStore = create<AppState>()(
       },
 
       getSmartSortTasks: () => {
-        const { tasks, cycles } = get();
-        const tasksArray = Object.values(tasks).filter(t => t.status === 'pending' && !t.deleted_at);
+        const tasks = get().tasks as Record<string, TaskItem>;
+        const cycles = get().cycles as CustomCycle[];
+        const tasksArray = (Object.values(tasks) as TaskItem[]).filter((t: any) => t.status === 'pending' && !t.deleted_at);
         const now = new Date();
         const currentHours = now.getHours();
 
-        const scoredTasks = tasksArray.map(task => {
+        const scoredTasks = tasksArray.map((task: any) => {
           let score = 0;
           if (task.alerts && task.alerts.length > 0) {
             let closestDiff = 999;
-            task.alerts.forEach(alert => {
+            task.alerts.forEach((alert: any) => {
               if (alert.type === 'at_time' && alert.time) {
                 const [h] = alert.time.split(':');
                 const alertHour = parseInt(h, 10);
@@ -474,14 +478,14 @@ export const useAppStore = create<AppState>()(
           }
           
           // SmartSort: Tareas Diarias por la tarde
-          const taskCycle = cycles.find(c => c.id === task.cycle_id);
+          const taskCycle = cycles.find((c: any) => c.id === task.cycle_id);
           if (taskCycle && taskCycle.daysValue === 1 && currentHours > 18) {
             score += 30;
           }
           return { ...task, _score: score };
         });
 
-        return scoredTasks.sort((a, b) => {
+        return scoredTasks.sort((a: any, b: any) => {
           if (b._score !== a._score) return b._score - a._score;
           return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
         });
@@ -538,7 +542,7 @@ export const useAppStore = create<AppState>()(
             title = title.replace(`#${rawCycle}`, '').trim();
             
             // Buscar si ya existe el ciclo por nombre (case insensitive)
-            const existing = cycles.find(c => c.name.toLowerCase() === rawCycle.toLowerCase());
+            const existing = cycles.find((c: any) => c.name.toLowerCase() === rawCycle.toLowerCase());
             if (existing) {
               cycle_id = existing.id;
             } else {
