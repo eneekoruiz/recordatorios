@@ -71,21 +71,23 @@ export function EmptyState({
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0, ease: [0.22, 1, 0.36, 1] }}
-        style={{ position: 'relative', marginBottom: 'var(--space-24)' }}
+        style={{ position: 'relative', marginBottom: 'var(--space-24)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       >
-        {/* Static background glow */}
-        <div
+        {/* Breathing background ambient glow */}
+        <motion.div
+          animate={{ scale: [1, 1.2, 1], opacity: [0.35, 0.65, 0.35] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
           style={{
             position: 'absolute',
-            inset: -20,
+            inset: -28,
             background: 'radial-gradient(circle, var(--accent-glow) 0%, transparent 70%)',
             borderRadius: '50%',
-            opacity: 0.35,
-            zIndex: 0
+            zIndex: 0,
+            pointerEvents: 'none'
           }}
         />
         
-        {/* Static icon */}
+        {/* Shimmering glass icon container */}
         <div
           style={{
             position: 'relative',
@@ -93,12 +95,15 @@ export function EmptyState({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: 80,
-            height: 80,
-            background: 'var(--bg-surface)',
+            width: 84,
+            height: 84,
+            background: 'var(--bg-surface-glass)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
             borderRadius: '50%',
-            boxShadow: 'var(--shadow-md)',
-            border: '1px solid var(--border-subtle)'
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px var(--border-subtle)',
+            border: '1.5px solid var(--border-color)',
+            transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease'
           }}
         >
           {resolvedIcon}
