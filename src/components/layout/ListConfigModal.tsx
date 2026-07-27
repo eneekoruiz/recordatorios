@@ -47,19 +47,28 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
   const [icon, setIcon] = useState('list');
   const [isFocused, setIsFocused] = useState(false);
   const [isFolder, setIsFolder] = useState(defaultIsFolder || false);
+  const [showAllColors, setShowAllColors] = useState(false);
+  const [showAllIcons, setShowAllIcons] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       if (existingList) {
         setName(existingList.name);
         setColor(existingList.color);
-        setIcon(existingList.icon || (existingList.isFolder ? 'folder' : 'list'));
+        const initialIcon = existingList.icon || (existingList.isFolder ? 'folder' : 'list');
+        setIcon(initialIcon);
         setIsFolder(!!existingList.isFolder);
+        setShowAllColors(!COLORS.slice(0, 8).includes(existingList.color));
+        setShowAllIcons(!Object.keys(ICONS).slice(0, 12).includes(initialIcon));
       } else {
         setName('');
-        setColor(COLORS[Math.floor(Math.random() * 8)]); // Random from first 8
-        setIcon(defaultIsFolder ? 'folder' : 'list');
+        const initialColor = COLORS[Math.floor(Math.random() * 8)];
+        setColor(initialColor); // Random from first 8
+        const initialIcon = defaultIsFolder ? 'folder' : 'list';
+        setIcon(initialIcon);
         setIsFolder(!!defaultIsFolder);
+        setShowAllColors(false);
+        setShowAllIcons(false);
       }
     }
   }, [isOpen, existingList, defaultIsFolder]);
@@ -217,11 +226,12 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
             <div>
               <span style={{ display: 'block', marginBottom: 10, fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.02em', textTransform: 'uppercase' }}>Color</span>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-                {COLORS.map(c => {
+                {(showAllColors ? COLORS : COLORS.slice(0, 8)).map(c => {
                   const isSelected = color === c;
                   return (
                     <button 
                       key={c}
+                      type="button"
                       onClick={() => setColor(c)}
                       style={{
                         width: 38, 
@@ -245,6 +255,36 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                   );
                 })}
               </div>
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAllColors(!showAllColors)}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    color: 'var(--accent-primary)',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    padding: '6px 14px',
+                    borderRadius: '16px',
+                    transition: 'all 0.15s ease',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(10, 132, 255, 0.1)';
+                    e.currentTarget.style.borderColor = 'rgba(10, 132, 255, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+                  }}
+                >
+                  {showAllColors ? 'Ver menos' : `Ver más (${COLORS.length - 8} más)`}
+                </button>
+              </div>
             </div>
 
             {/* Icons */}
@@ -258,16 +298,18 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                 display: 'grid', 
                 gridTemplateColumns: 'repeat(auto-fill, minmax(44px, 1fr))', 
                 gap: 10, 
-                maxHeight: 180, 
-                overflowY: 'auto',
-                scrollbarWidth: 'thin'
+                maxHeight: showAllIcons ? 220 : 'auto', 
+                overflowY: showAllIcons ? 'auto' : 'visible',
+                scrollbarWidth: 'thin',
+                transition: 'max-height 0.25s ease'
               }}>
-                {Object.keys(ICONS).map(k => {
+                {(showAllIcons ? Object.keys(ICONS) : Object.keys(ICONS).slice(0, 12)).map(k => {
                   const IconComp = ICONS[k];
                   const isActive = icon === k;
                   return (
                     <button
                       key={k}
+                      type="button"
                       onClick={() => setIcon(k)}
                       style={{
                         width: 44, 
@@ -294,6 +336,36 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                     </button>
                   );
                 })}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAllIcons(!showAllIcons)}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    color: 'var(--accent-primary)',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    padding: '6px 14px',
+                    borderRadius: '16px',
+                    transition: 'all 0.15s ease',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(10, 132, 255, 0.1)';
+                    e.currentTarget.style.borderColor = 'rgba(10, 132, 255, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+                  }}
+                >
+                  {showAllIcons ? 'Ver menos' : `Ver más (${Object.keys(ICONS).length - 12} más)`}
+                </button>
               </div>
             </div>
 

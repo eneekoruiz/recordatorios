@@ -871,7 +871,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         >
           
           {flattenedData.map((data, index) => {
-          const hasAnyTasks = flattenedData.some(d => d.type === 'task');
+          const hasAnyTasks = visibleTasks.length > 0 || smartTasks.length > 0;
           if (!hasAnyTasks && data.type !== 'page-header') return null;
 
           const itemKey = getItemKey(data, index);
@@ -1216,8 +1216,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
         </div>
 
-        {!flattenedData.some(d => d.type === 'task') && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 220px)', width: '100%' }}>
+        {visibleTasks.length === 0 && smartTasks.length === 0 && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '320px', width: '100%', padding: '32px 16px', boxSizing: 'border-box' }}>
             <EmptyState {...emptyStateProps} />
           </div>
         )}
