@@ -102,8 +102,8 @@ export const TaskCard = React.memo(function TaskCard({
   const leftIconX = useTransform(x, [0, 100], [-30, 10]);
   const rightIconX = useTransform(x, [0, -100], [30, -10]);
 
-  const SWIPE_COMPLETE_THRESHOLD = 80;
-  const SWIPE_DELETE_THRESHOLD = -80;
+  const SWIPE_COMPLETE_THRESHOLD = 65;
+  const SWIPE_DELETE_THRESHOLD = -65;
 
   useMotionValueEvent(x, "change", (latest) => {
     if (latest > SWIPE_COMPLETE_THRESHOLD) {
@@ -231,9 +231,9 @@ export const TaskCard = React.memo(function TaskCard({
         ref={cardRef}
         drag="x"
         dragSnapToOrigin
-        dragConstraints={{ left: -160, right: 160 }}
-        dragElastic={0.8}
-        dragTransition={{ bounceStiffness: 600, bounceDamping: 35 }}
+        dragConstraints={{ left: -140, right: 140 }}
+        dragElastic={{ left: 0.15, right: 0.15 }}
+        dragTransition={{ bounceStiffness: 400, bounceDamping: 40 }}
         onDragEnd={(_, info) => handleSwipeEnd(info.offset.x)}
         style={{
           x,
@@ -259,12 +259,9 @@ export const TaskCard = React.memo(function TaskCard({
       >
 
         {/* Checkbox */}
-        <motion.button
-          layoutId={"task-status-" + task.id}
+        <button
           aria-label={isCompletedPeriod ? 'Marcar como pendiente' : 'Completar tarea'}
           disabled={!!isBlocked}
-          whileTap={{ scale: 0.85 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 15 }}
           onClick={(e) => {
             e.stopPropagation();
             if (isBlocked) return;
@@ -277,11 +274,12 @@ export const TaskCard = React.memo(function TaskCard({
             background: 'transparent',
             border: 'none',
             marginRight: 2,
-            cursor: 'pointer',
+            cursor: isBlocked ? 'default' : 'pointer',
             flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             position: 'relative',
-            WebkitTapHighlightColor: 'transparent'
+            WebkitTapHighlightColor: 'transparent',
+            outline: 'none'
           }}
         >
           {isPartial && !isCompletedPeriod && (
@@ -289,40 +287,34 @@ export const TaskCard = React.memo(function TaskCard({
               position: 'absolute',
               width: 22, height: 22,
               borderRadius: '50%',
-              background: `conic-gradient(var(--accent-primary) ${percentage}%, var(--border-subtle) ${percentage}%)`
+              background: `conic-gradient(var(--accent-primary) ${percentage}%, var(--border-subtle) ${percentage}%)`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>
-              <div style={{ position: 'absolute', inset: 2, background: 'var(--bg-surface)', borderRadius: '50%' }} />
+              <div style={{ width: 18, height: 18, background: 'var(--bg-elevated)', borderRadius: '50%' }} />
             </div>
           )}
-          <svg viewBox="0 0 24 24" width={22} height={22} style={{ zIndex: 1, overflow: 'visible' }}>
-            <motion.circle
-              cx="12" cy="12" r="10.5"
-              stroke={isCompletedPeriod ? 'var(--accent-primary)' : 'var(--border-color)'}
-              strokeWidth="1.5"
-              fill="none"
-              style={{ opacity: isPartial ? 0 : 1 }}
-            />
-            <motion.circle
-              cx="12" cy="12" r="10.5"
-              fill="var(--accent-primary)"
-              initial={{ scale: 0 }}
-              animate={{ scale: isCompletedPeriod ? 1 : 0 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 22 }}
-              style={{ transformOrigin: 'center' }}
-            />
-            <motion.path
-              d="M7.5 12.5L10.5 15.5L16.5 9"
-              stroke="white"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: isCompletedPeriod ? 1 : 0 }}
-              transition={{ duration: 0.35, ease: "easeOut" }}
-            />
-          </svg>
-        </motion.button>
+          <div style={{
+            width: 22, height: 22,
+            borderRadius: '50%',
+            border: isCompletedPeriod ? 'none' : '1.5px solid var(--border-color)',
+            background: isCompletedPeriod ? 'var(--accent-primary)' : 'transparent',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'background-color 0.18s ease, border-color 0.18s ease, transform 0.15s ease',
+            transform: 'scale(1)',
+            boxShadow: isCompletedPeriod ? '0 2px 6px rgba(0,0,0,0.15)' : 'none'
+          }}>
+            <svg viewBox="0 0 24 24" width={14} height={14} style={{ opacity: isCompletedPeriod ? 1 : 0, transition: 'opacity 0.15s ease', overflow: 'visible' }}>
+              <path
+                d="M5 12L10 17L19 7"
+                stroke="white"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+            </svg>
+          </div>
+        </button>
 
         {/* Content */}
         <div style={{ flex: 1, minWidth: 0 }}>

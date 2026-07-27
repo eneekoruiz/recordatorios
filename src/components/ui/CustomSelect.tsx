@@ -103,7 +103,7 @@ export function CustomSelect({ value, onChange, options, placeholder = 'Seleccio
                 initial={{ opacity: 0, y: coords.openUp ? 8 : -8, scale: 0.96 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: coords.openUp ? 8 : -8, scale: 0.97 }}
-                transition={{ type: 'spring', stiffness: 480, damping: 34 }}
+                transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
                 style={{
                   position: 'fixed',
                   left: coords.x,

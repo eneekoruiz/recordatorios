@@ -1,8 +1,10 @@
 import { useAppStore } from '../../store/useAppStore';
-import { Flame, Target, ArrowUpRight, ListTodo } from 'lucide-react';
+import { Flame, Target, ArrowUpRight, ListTodo, ChevronLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useNavigation } from '../../hooks/useNavigation';
 
 export function AnalyticsView() {
+  const { reset } = useNavigation();
   const tasks = useAppStore(state => state.tasks);
 
   // Estadísticas Simples (Habit Tracking)
@@ -33,6 +35,14 @@ export function AnalyticsView() {
 
   return (
     <main style={{ padding: 'var(--space-24)', maxWidth: 1000, margin: '0 auto', overflowY: 'auto', height: '100%' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-16)' }}>
+        <button 
+          onClick={() => reset('HOME')} 
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-full)', padding: '8px 16px', color: 'var(--text-primary)', fontWeight: 500, cursor: 'pointer', transition: 'all 0.2s ease' }}
+        >
+          <ChevronLeft size={18} /> Volver a Listas
+        </button>
+      </div>
       <header style={{ marginBottom: 'var(--space-32)' }}>
         <h1 className="text-display" style={{ color: 'var(--accent-purple)', marginBottom: 0 }}>
           Estadísticas y Hábitos

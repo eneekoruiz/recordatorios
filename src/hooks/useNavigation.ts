@@ -17,6 +17,10 @@ export const useNavigation = create<NavigationState>((set, get) => ({
     if (state.stack.length > 1) {
       return { stack: state.stack.slice(0, -1) };
     }
+    const current = state.stack[state.stack.length - 1];
+    if (current !== 'HOME') {
+      return { stack: ['HOME'] };
+    }
     return state;
   }),
   reset: (view) => set({ stack: [view] }),
