@@ -528,29 +528,39 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const virtualizer = useVirtualizer({
     count: flattenedData.length,
     getScrollElement: () => parentRef.current,
+    getItemKey: (index) => {
+      const item = flattenedData[index];
+      if (!item) return index;
+      if (item.type === 'page-header') return 'page-header';
+      if (item.type === 'header') return `header-${item.category || ''}-${item.sectionId || ''}-${item.title || ''}`;
+      if (item.type === 'empty-section') return `empty-${item.category || ''}-${item.sectionId || ''}`;
+      if (item.type === 'task') return `task-${item.task.id}`;
+      return index;
+    },
     estimateSize: (index) => {
       const item = flattenedData[index];
-      if (item.type === 'page-header') return 160;
-      if (item.type === 'header') return index === 0 ? 48 : 56; // Clean Apple-style spacing with divider line
+      if (!item) return 52;
+      if (item.type === 'page-header') return 100;
+      if (item.type === 'header') return index === 0 ? 44 : 56; // Clean Apple-style spacing with divider line
       if (item.type === 'empty-section') return 44;
-      return 56; // task cards height in Apple style (compact)
+      return 52; // task cards height in Apple style (compact)
     },
     measureElement: (el) => el.getBoundingClientRect().height,
-    overscan: 8,
+    overscan: 12,
   });
 
-  const renderTask = useCallback((task: TaskItem, virtualStyle: React.CSSProperties, index: number, depth: number, isFirst: boolean, isLast: boolean, previousTaskId?: string) => {
+  const renderTask = useCallback((task: TaskItem, virtualStyle: React.CSSProperties, index: number, depth: number, isFirst: boolean, isLast: boolean, previousTaskId?: string, virtualKey?: React.Key) => {
     const hasChildren = Object.values(tasks).some(t => t.parentId === task.id && !t.deleted_at);
     const isExpanded = !collapsed[`task_${task.id}`];
 
     return (
       <div
-        key={task.id}
+        key={virtualKey ?? `task-${task.id}`}
         ref={virtualizer.measureElement}
         data-index={index}
-        style={virtualStyle}
+        style={{ ...virtualStyle, margin: 0, padding: 0, boxSizing: 'border-box' }}
       >
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative', width: '100%', boxSizing: 'border-box' }}>
           {depth > 0 && (
             <div style={{
               position: 'absolute', left: 8 + (depth-1)*24, top: 0, bottom: 0, width: 2,
@@ -560,7 +570,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
           <TaskCard 
             task={task}
-            virtualStyle={{ paddingLeft: `calc(16px + ${depth * 24}px)` }}
+            virtualStyle={{ paddingLeft: `calc(16px + ${depth * 24}px)`, paddingRight: '16px', margin: 0, boxSizing: 'border-box' }}
             onToggle={handleToggleTask}
             onDelete={handleDeleteTask}
             onOpenZenMode={onOpenZenMode}
@@ -579,14 +589,14 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         </div>
       </div>
     );
-  }, [tasks, collapsed, toggleCategory, virtualizer, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, isListView]);
+  }, [tasks, collapsed, toggleCategory, virtualizer, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, isListView, isSmartView, currentView]);
 
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
   const smartListInfo = isSmartView ? SMART_LISTS.find(l => l.id === currentView) : null;
   const SmartIcon = smartListInfo ? smartListInfo.icon : null;
 
   return (
-    <main className="main-content" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
+    <main className="main-content" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden', overflowX: 'hidden', overscrollBehaviorX: 'none' }}>
       {/* Sticky Glass Top Bar */}
       <header 
         className="glass-header" 
@@ -726,11 +736,15 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           flex: 1,
           position: 'relative', 
           overflowY: 'auto', 
+          overflowX: 'hidden',
+          overscrollBehaviorY: 'contain',
+          overscrollBehaviorX: 'none',
+          touchAction: 'pan-y',
           WebkitOverflowScrolling: 'touch',
           paddingBottom: 'max(120px, calc(env(safe-area-inset-bottom) + 100px))'
         }}
       >
-        <div className="tasks-container" style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative', background: 'var(--bg-elevated)' }}>
+        <div className="tasks-container" style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative', background: 'var(--bg-elevated)', overflowX: 'hidden', touchAction: 'pan-y' }}>
           
           {virtualizer.getVirtualItems().map((virtualItem) => {
           const data = flattenedData[virtualItem.index];
@@ -746,46 +760,24 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
           if (data.type === 'page-header') {
             return (
-              <div key="page-header" ref={virtualizer.measureElement} data-index={virtualItem.index} style={{...virtualStyle, zIndex: 20}}>
+              <div key={virtualItem.key} ref={virtualizer.measureElement} data-index={virtualItem.index} style={{...virtualStyle, zIndex: 20, margin: 0, boxSizing: 'border-box'}}>
                 <motion.header 
                   layoutId={currentView.startsWith('list_') ? "list-item-" + currentView.replace('list_', '') : "smart-card-" + currentView}
                   className="content-header" 
-                  style={{ padding: '0px 16px 20px 16px', display: 'flex', flexDirection: 'column', gap: '16px', flexShrink: 0, margin: '0', borderBottom: 'none' }}
+                  style={{ padding: '0px 16px 20px 16px', display: 'flex', flexDirection: 'column', gap: '16px', flexShrink: 0, margin: '0', borderBottom: 'none', boxSizing: 'border-box' }}
                 >
         {/* Línea del Título (Debajo del Top Bar) */}
-        <div style={{ width: '100%' }}>
-          {/* Apple HIG Dynamic Time-of-Day Ambient Greeting */}
-          {(isSmartView || isListView) && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-              <span style={{
-                fontSize: '0.82rem',
-                fontWeight: 600,
-                padding: '4px 12px',
-                borderRadius: 20,
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border-subtle)',
-                color: 'var(--text-secondary)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
-              }}>
-                {(() => {
-                  const hour = new Date().getHours();
-                  if (hour >= 6 && hour < 13) return <span><strong style={{ color: '#ff9500' }}>☀️ Buenos días</strong> · Enfoque matutino</span>;
-                  if (hour >= 13 && hour < 21) return <span><strong style={{ color: '#0a84ff' }}>🌤️ Buenas tardes</strong> · Productividad constante</span>;
-                  return <span><strong style={{ color: '#bf5af2' }}>🌙 Buenas noches</strong> · Sesión de cierre y zen</span>;
-                })()}
-              </span>
-            </div>
-          )}
+        <div style={{ width: '100%', boxSizing: 'border-box' }}>
           <h1 className="text-display" style={{ 
             fontSize: '34px', 
             fontWeight: 700,
+            lineHeight: '1.2',
+            wordBreak: 'break-word',
             letterSpacing: '-0.5px',
             color: isSmartView ? SMART_COLORS[currentView] : isListView && currentList ? currentList.color : 'var(--text-primary)',
             display: 'flex', alignItems: 'center', margin: 0,
-            padding: 0
+            padding: 0,
+            boxSizing: 'border-box'
           }}>
             {CycleIcon && <CycleIcon size={32} color="var(--accent-primary)" style={{ marginRight: 12 }} />}
             {SmartIcon && smartListInfo && (
@@ -850,9 +842,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           {(() => {
             if (currentCycle) {
               return (
-                <div className="content-stats" style={{ marginTop: 'var(--space-8)' }}>
-                  <span className="stat-chip"><strong>{activeVisibleCount}</strong> pendientes</span>
-                  <span className="stat-chip"><strong>{completedVisibleCount}</strong> completadas</span>
+                <div className="content-stats" style={{ marginTop: 'var(--space-8)', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <span className="stat-chip" style={{ minHeight: '32px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', lineHeight: '1.3', wordBreak: 'break-word', boxSizing: 'border-box' }}><strong>{activeVisibleCount}</strong> pendientes</span>
+                  <span className="stat-chip" style={{ minHeight: '32px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', lineHeight: '1.3', wordBreak: 'break-word', boxSizing: 'border-box' }}><strong>{completedVisibleCount}</strong> completadas</span>
                 </div>
               );
             }
@@ -885,9 +877,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                   borderBottom: 'none',
                   borderTop: 'none',
                   paddingLeft: `calc(16px + ${data.depth * 24}px)`,
+                  paddingRight: '16px',
                   minHeight: showDivider ? 56 : 44,
                   paddingTop: showDivider ? 16 : 8,
                   paddingBottom: 8,
+                  margin: 0,
+                  boxSizing: 'border-box',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'center',
@@ -948,8 +943,13 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                           fontWeight: 800,
                           color: 'var(--text-primary)',
                           fontSize: '1.45rem',
+                          lineHeight: '1.3',
+                          minHeight: '28px',
+                          wordBreak: 'break-word',
                           letterSpacing: '-0.5px',
-                          margin: 0
+                          margin: 0,
+                          padding: '4px 0',
+                          boxSizing: 'border-box'
                         }}
                         title={isCustomSection ? "Doble click para editar" : ""}
                       >
@@ -1043,6 +1043,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 style={{ 
                   ...virtualStyle, 
                   paddingLeft: `calc(16px + ${data.depth * 24}px)`,
+                  paddingRight: '16px',
+                  minHeight: 44,
+                  margin: 0,
+                  boxSizing: 'border-box',
                   display: 'flex',
                   alignItems: 'center'
                 }}
@@ -1061,10 +1065,15 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                     color: 'var(--text-tertiary)',
                     borderRadius: 8,
                     padding: '8px 16px',
+                    minHeight: 36,
+                    lineHeight: '1.3',
+                    wordBreak: 'break-word',
+                    boxSizing: 'border-box',
                     cursor: 'pointer',
                     width: '100%',
                     maxWidth: 300,
                     fontSize: '0.9rem',
+                    margin: 0
                   }}
                 >
                   <Plus size={16} />
@@ -1080,7 +1089,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 prevId = prevData.task.id;
               }
             }
-            return renderTask(data.task, virtualStyle, virtualItem.index, data.depth, !!data.isFirstInSection, !!data.isLastInSection, prevId);
+            return renderTask(data.task, virtualStyle, virtualItem.index, data.depth, !!data.isFirstInSection, !!data.isLastInSection, prevId, virtualItem.key);
           }
         })}
 

@@ -151,7 +151,7 @@ export const TaskCard = React.memo(function TaskCard({
   return (
     <div
       className="task-item-wrapper"
-      style={{ ...virtualStyle, position: 'relative' }}
+      style={{ ...virtualStyle, position: 'relative', margin: 0, boxSizing: 'border-box' }}
       onPointerDown={(e) => {
         if (e.pointerType === 'mouse') return;
         touchStartX.current = e.clientX;
@@ -244,9 +244,10 @@ export const TaskCard = React.memo(function TaskCard({
           minHeight: 52,
           display: 'flex',
           alignItems: 'center',
-          padding: '8px 16px',
+          padding: '10px 16px',
           margin: 0,
           width: '100%',
+          boxSizing: 'border-box',
           background: 'var(--bg-elevated)',
           borderTopLeftRadius: isFirstInSection ? 10 : 0,
           borderTopRightRadius: isFirstInSection ? 10 : 0,
@@ -320,7 +321,7 @@ export const TaskCard = React.memo(function TaskCard({
         </button>
 
         {/* Content */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, padding: '2px 0', boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             {isBlocked && <Lock size={15} color="var(--accent-red)" />}
             {task.priority !== undefined && task.priority !== null && task.priority !== '' && task.priority !== 'none' && task.priority !== 0 && task.priority !== '0' && (
@@ -340,7 +341,7 @@ export const TaskCard = React.memo(function TaskCard({
                 style={{
                   fontSize: '1rem', fontWeight: 500, width: '100%',
                   border: 'none', background: 'transparent', outline: 'none',
-                  color: 'var(--text-primary)', padding: 0
+                  color: 'var(--text-primary)', padding: 0, lineHeight: '1.4', boxSizing: 'border-box'
                 }}
               />
             ) : (
@@ -352,12 +353,14 @@ export const TaskCard = React.memo(function TaskCard({
                 onClick={() => setIsEditingTitle(true)}
                 style={{
                   fontSize: '1rem', fontWeight: 500,
+                  lineHeight: '1.4', minHeight: '22px',
                   color: 'var(--text-primary)',
                   textDecoration: isCompletedPeriod ? 'line-through' : 'none',
                   opacity: isCompletedPeriod ? 0.55 : 1,
                   wordBreak: 'break-word',
                   cursor: 'text',
                   flex: 1,
+                  boxSizing: 'border-box'
                 }}
               >
                 {task.title}
@@ -396,13 +399,15 @@ export const TaskCard = React.memo(function TaskCard({
                   onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditingNote(true); }}
                   style={{
                     fontSize: '0.85rem',
+                    lineHeight: '1.4',
                     color: task.description ? 'var(--text-secondary)' : 'var(--text-tertiary)',
                     opacity: task.description ? 1 : (isHovered || isEditingTitle ? 0.8 : 0.4),
                     wordBreak: 'break-word',
                     cursor: 'text',
                     display: 'block',
-                    minHeight: (task.description || (!task.completed && !isCompletedPeriod)) ? 24 : 0,
-                    padding: (task.description || (!task.completed && !isCompletedPeriod)) ? '2px 0' : 0
+                    minHeight: (task.description || (!task.completed && !isCompletedPeriod)) ? 22 : 0,
+                    padding: (task.description || (!task.completed && !isCompletedPeriod)) ? '2px 0' : 0,
+                    boxSizing: 'border-box'
                   }}
                 >
                   {task.description || (!task.completed && !isCompletedPeriod ? 'Añadir nota...' : '')}
@@ -412,14 +417,43 @@ export const TaskCard = React.memo(function TaskCard({
           )}
 
           {/* Meta row */}
-          <div style={{ display: 'flex', gap: 8, marginTop: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center', flexWrap: 'wrap' }}>
             {showListName && taskList && (
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 500 }}>
+              <span style={{ 
+                fontSize: '0.78rem', 
+                color: 'var(--text-tertiary)', 
+                fontWeight: 600,
+                lineHeight: '1.3',
+                wordBreak: 'break-word',
+                display: 'inline-flex',
+                alignItems: 'center',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                background: 'var(--bg-surface-glass)',
+                border: '1px solid var(--border-subtle)',
+                minHeight: '20px',
+                boxSizing: 'border-box'
+              }}>
                 {taskList.name}
               </span>
             )}
             {(task.dueDate || taskCycle) && (
-              <span style={{ fontSize: '0.8rem', color: dueDateColor, display: 'flex', alignItems: 'center', gap: 3, fontWeight: 500 }}>
+              <span style={{ 
+                fontSize: '0.78rem', 
+                color: dueDateColor, 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: 4, 
+                fontWeight: 600,
+                lineHeight: '1.3',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                background: 'var(--bg-surface-glass)',
+                border: '1px solid var(--border-subtle)',
+                minHeight: '20px',
+                boxSizing: 'border-box',
+                wordBreak: 'break-word'
+              }}>
                 {task.dueDate && new Date(task.dueDate).toLocaleDateString()}
                 {task.dueDate && taskCycle && <Repeat size={11} style={{ color: 'var(--text-tertiary)' }} />}
                 {taskCycle && <span style={{ color: 'var(--text-tertiary)' }}>{taskCycle.name}</span>}
@@ -433,7 +467,14 @@ export const TaskCard = React.memo(function TaskCard({
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4,
                   textDecoration: 'none', color: 'var(--accent-primary)',
-                  fontSize: '0.8rem', fontWeight: 500
+                  fontSize: '0.78rem', fontWeight: 600,
+                  lineHeight: '1.3',
+                  padding: '2px 8px',
+                  borderRadius: '6px',
+                  background: 'rgba(10, 132, 255, 0.08)',
+                  border: '1px solid rgba(10, 132, 255, 0.2)',
+                  minHeight: '20px',
+                  boxSizing: 'border-box'
                 }}
                 onClick={e => e.stopPropagation()}
               >

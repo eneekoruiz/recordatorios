@@ -102,6 +102,21 @@ input, textarea, [contenteditable="true"] {
 }
 
 /* ========================================================
+   PHASE 13: PREVENT HORIZONTAL OVERSCROLL & BOUNCING
+   & PROPER TOUCH-ACTION ON SCROLLABLE LISTS
+======================================================== */
+html, body, #root, .app-container, .main-container, .main-content, .sidebar-container {
+  overflow-x: hidden !important;
+  overscroll-behavior-x: none !important;
+}
+
+/* Scrollable containers, lists, cards, and touch targets must strictly allow only vertical panning */
+.sidebar-container, .tasks-container, .ios-list-item, .ios-smart-card, .ios-task-row, .task-card-shell, .task-item-wrapper, .group-header, .prompt-modal, .list-config-modal, .auth-stage, .auth-card {
+  touch-action: pan-y !important;
+  overscroll-behavior-x: none !important;
+}
+
+/* ========================================================
    GLASSMORPHISM UTILITIES
 ======================================================== */
 .glass-header {
@@ -1475,24 +1490,28 @@ button:disabled {
   }
 }
 
-/* Enforce strict layout boundaries */
+/* Enforce strict layout boundaries & prevent horizontal overscroll / bounce */
 html, body {
-  overflow-x: hidden;
+  overflow-x: hidden !important;
+  overscroll-behavior-x: none !important;
   width: 100%;
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
-#root {
-  overflow-x: hidden;
+#root, .app-container, .main-container, .main-content, #main-scroll-area {
+  overflow-x: hidden !important;
+  overscroll-behavior-x: none !important;
   width: 100%;
 }
 *, *::before, *::after {
   box-sizing: border-box;
 }
 
-.main-content, #main-scroll-area {
-  overflow-x: hidden;
+/* Ensure all lists and touch rows use pan-y to prevent diagonal swipe leakage */
+.sidebar-container, .tasks-container, .ios-list-item, .ios-smart-card, .ios-task-row, .task-card-shell, .task-item-wrapper, .group-header {
+  touch-action: pan-y !important;
+  overscroll-behavior-x: none !important;
 }
 
 /* Stat Pills Responsiveness */
