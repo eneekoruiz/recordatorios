@@ -8,11 +8,33 @@
   flex-direction: column;
   padding: 24px 20px;
   gap: 16px;
-  overflow: hidden; /* Inner .sidebar-scroll-area handles scroll */
+  overflow: hidden !important; /* Inner .sidebar-content handles scroll */
   background: transparent;
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   transform: translateZ(0);
+  position: relative;
+}
+
+.sidebar-header {
+  flex-shrink: 0 !important;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  z-index: 10;
+}
+
+.sidebar-footer {
+  flex-shrink: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle, rgba(255,255,255,0.08));
+  z-index: 10;
+  background: transparent;
 }
 
 /* ========================================================
@@ -83,14 +105,17 @@
    — The single scrollable region inside the sidebar.
    Everything below the search bar lives here.
 ======================================================== */
+.sidebar-content,
 .sidebar-scroll-area {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
   display: flex;
   flex-direction: column;
   gap: 20px;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 
   /* Scrollbar — Firefox */
   scrollbar-width: thin;
@@ -755,7 +780,7 @@
 .ios-dropdown-menu {
   border-radius: 18px;
   border: 1px solid var(--border-color);
-  background: var(--bg-surface, #1c1c1e) !important;
+  background: #ffffff !important;
   opacity: 1 !important;
   box-shadow: 0 20px 48px rgba(0,0,0,0.4), 0 0 0 1px var(--border-color);
   backdrop-filter: none !important;
@@ -796,7 +821,7 @@
   }
   .ios-task-row { background: var(--bg-surface-glass); }
   .group-header { background: var(--bg-surface-glass); }
-  .ios-dropdown-menu { background: #1c1c1e !important; opacity: 1 !important; backdrop-filter: none !important; }
+  .ios-dropdown-menu { background: #1c1c1e !important; opacity: 1 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 }
 
 

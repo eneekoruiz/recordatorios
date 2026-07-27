@@ -8,6 +8,7 @@ interface ListConfigModalProps {
   onClose: () => void;
   listId?: string; // If undefined, it creates a new list
   parentId?: string; // If provided, creates a sub-list
+  defaultIsFolder?: boolean;
 }
 
 const COLORS = [
@@ -22,11 +23,11 @@ const COLORS = [
 import { 
   ShoppingCart, Briefcase, Heart, Book, Coffee, CheckSquare, Plane, Music, Video, Zap, Home,
   Gamepad2, Dumbbell, Palette, GraduationCap, Code, Scissors, Camera, Utensils, Droplets, Flame, Sun, Moon,
-  Star, Trophy, Car, Bike, Train, Ticket, Glasses, Headphones, Watch, Shield, Key, Lock, Bell, Check
+  Star, Trophy, Car, Bike, Train, Ticket, Glasses, Headphones, Watch, Shield, Key, Lock, Bell, Check, Folder, FolderOpen
 } from 'lucide-react';
 
 const ICONS: Record<string, any> = {
-  'list': CheckSquare, 'cart': ShoppingCart, 'briefcase': Briefcase, 'heart': Heart, 'book': Book,
+  'list': CheckSquare, 'folder': Folder, 'folder-open': FolderOpen, 'cart': ShoppingCart, 'briefcase': Briefcase, 'heart': Heart, 'book': Book,
   'coffee': Coffee, 'plane': Plane, 'music': Music, 'video': Video, 'zap': Zap, 'home': Home,
   'gamepad': Gamepad2, 'dumbbell': Dumbbell, 'palette': Palette, 'cap': GraduationCap, 'code': Code,
   'scissors': Scissors, 'camera': Camera, 'food': Utensils, 'water': Droplets, 'fire': Flame, 'sun': Sun,
@@ -34,7 +35,7 @@ const ICONS: Record<string, any> = {
   'glasses': Glasses, 'headphones': Headphones, 'watch': Watch, 'shield': Shield, 'key': Key, 'lock': Lock, 'bell': Bell
 };
 
-export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfigModalProps) {
+export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFolder }: ListConfigModalProps) {
   const lists = useAppStore(state => state.lists);
   const addList = useAppStore(state => state.addList);
   const updateList = useAppStore(state => state.updateList);
@@ -45,20 +46,23 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
   const [color, setColor] = useState(COLORS[0]);
   const [icon, setIcon] = useState('list');
   const [isFocused, setIsFocused] = useState(false);
+  const [isFolder, setIsFolder] = useState(defaultIsFolder || false);
 
   useEffect(() => {
     if (isOpen) {
       if (existingList) {
         setName(existingList.name);
         setColor(existingList.color);
-        setIcon(existingList.icon || 'list');
+        setIcon(existingList.icon || (existingList.isFolder ? 'folder' : 'list'));
+        setIsFolder(!!existingList.isFolder);
       } else {
         setName('');
         setColor(COLORS[Math.floor(Math.random() * 8)]); // Random from first 8
-        setIcon('list');
+        setIcon(defaultIsFolder ? 'folder' : 'list');
+        setIsFolder(!!defaultIsFolder);
       }
     }
-  }, [isOpen, existingList]);
+  }, [isOpen, existingList, defaultIsFolder]);
 
   if (!isOpen) return null;
 
@@ -69,9 +73,10 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
       updateList(existingList.id, {
         name: name.trim(),
         color,
-        icon
+        icon,
+        isFolder
       });
-      window.dispatchEvent(new CustomEvent('show-toast', { detail: `Lista "${name.trim()}" actualizada` }));
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: `${isFolder ? 'Carpeta' : 'Lista'} "${name.trim()}" actualizada` }));
     } else {
       const newId = name.trim().toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
       addList({
@@ -79,11 +84,12 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
         parentId,
         name: name.trim(),
         color,
-        icon,
+        icon: isFolder && icon === 'list' ? 'folder' : icon,
         isFinancial: false,
-        showCompleted: false
+        showCompleted: false,
+        isFolder
       });
-      window.dispatchEvent(new CustomEvent('show-toast', { detail: parentId ? `Lista anidada "${name.trim()}" creada con éxito` : `Lista "${name.trim()}" creada con éxito` }));
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: parentId ? `${isFolder ? 'Subcarpeta' : 'Lista anidada'} "${name.trim()}" creada con éxito` : `${isFolder ? 'Carpeta' : 'Lista'} "${name.trim()}" creada con éxito` }));
     }
     onClose();
   };
@@ -100,7 +106,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
-              {existingList ? 'Editar Lista' : (parentId ? 'Nueva Lista Anidada' : 'Nueva Lista')}
+              {existingList ? (existingList.isFolder ? 'Editar Carpeta' : 'Editar Lista') : (isFolder ? 'Nueva Carpeta' : (parentId ? 'Nueva Lista Anidada' : 'Nueva Lista'))}
             </h3>
             <button 
               onClick={onClose}
@@ -150,7 +156,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
                 onChange={e => setName(e.target.value)}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
-                placeholder="Nombre de la lista" 
+                placeholder={isFolder ? "Nombre de la carpeta" : "Nombre de la lista"} 
                 autoFocus
                 style={{
                   background: isFocused ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.06)',
@@ -167,6 +173,43 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
                   transition: 'all 0.2s ease'
                 }}
               />
+            </div>
+
+            {/* Is Folder Switch */}
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between', 
+              background: 'rgba(255,255,255,0.04)', 
+              border: '1px solid rgba(255,255,255,0.08)', 
+              borderRadius: 14, 
+              padding: '12px 16px',
+              cursor: 'pointer'
+            }}
+            onClick={() => {
+              const next = !isFolder;
+              setIsFolder(next);
+              if (next && icon === 'list') setIcon('folder');
+              if (!next && (icon === 'folder' || icon === 'folder-open')) setIcon('list');
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <Folder size={20} color={isFolder ? color : 'var(--text-secondary)'} />
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)' }}>Es una carpeta</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Agrupa listas y subcarpetas sin contener tareas directamente</span>
+                </div>
+              </div>
+              <div style={{
+                width: 44, height: 26, borderRadius: 13,
+                background: isFolder ? color : 'rgba(255,255,255,0.15)',
+                position: 'relative', transition: 'background-color 0.2s ease', flexShrink: 0
+              }}>
+                <div style={{
+                  width: 22, height: 22, borderRadius: '50%', background: '#ffffff',
+                  position: 'absolute', top: 2, left: isFolder ? 20 : 2,
+                  transition: 'left 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                }} />
+              </div>
             </div>
 
             {/* Colors */}
