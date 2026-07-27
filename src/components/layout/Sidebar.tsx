@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
+import { isCompletedInCurrentPeriod } from '../../services/TaskService';
 import { SoundService } from '../../services/SoundService';
 import { getCycleIcon } from '../../constants/icons';
 import { ListConfigModal } from './ListConfigModal';
@@ -916,7 +917,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               const isVisible = !!cycleVisibility[cycle.id];
               const Icon = getCycleIcon(cycle.icon);
               const isActive = currentView === cycle.id;
-              const taskCount = Object.values(tasks || {}).filter(t => !t.deleted_at && !isTaskCompleted(t) && t.cycle_id === cycle.id).length;
+              const taskCount = Object.values(tasks || {}).filter(t => !t.deleted_at && !isTaskCompleted(t) && t.cycle_id === cycle.id && !isCompletedInCurrentPeriod(t, cycles)).length;
               
               // Si el usuario desactivó explícitamente el ciclo, no lo mostramos a menos que esté en modo edición
               if (!isVisible && !isEditCyclesMode) return null;
