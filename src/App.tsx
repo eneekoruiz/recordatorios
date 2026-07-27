@@ -14,6 +14,7 @@ import { useNavigation } from './hooks/useNavigation';
 import { NavigationFrame } from './components/layout/NavigationFrame';
 import { AuthScreen } from './components/auth/AuthScreen';
 import { InstallPromptModal } from './components/layout/InstallPromptModal';
+import { ShortcutsModal } from './components/layout/ShortcutsModal';
 import { syncManager } from './sync/syncManager';
 import { TaskSkeletonLoader } from './components/ui/TaskSkeletonLoader';
 
@@ -28,6 +29,7 @@ function App() {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [defaultSectionId, setDefaultSectionId] = useState<string | undefined>(undefined);
   const [zenModeTaskId, setZenModeTaskId] = useState<string | null>(null);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const hasHydrated = useAppStore((state) => state.hasHydrated);
 
   // IndexedDB can be unavailable in privacy/restricted contexts. Never strand the
@@ -139,6 +141,46 @@ function App() {
     }
   };
 
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const active = document.activeElement;
+      const isInputActive = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT' || active.getAttribute('contenteditable') === 'true');
+      if (isInputActive) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        e.preventDefault();
+        setIsShortcutsOpen(prev => !prev);
+        return;
+      }
+      if (e.key === '/') {
+        e.preventDefault();
+        window.dispatchEvent(new Event('open-command-palette'));
+        return;
+      }
+      if (e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        setIsDrawerOpen(true);
+        return;
+      }
+      if (e.key === '1') { e.preventDefault(); handleSelectView('cycle_day'); }
+      else if (e.key === '2') { e.preventDefault(); handleSelectView('cycle_week'); }
+      else if (e.key === '3') { e.preventDefault(); handleSelectView('all'); }
+      else if (e.key === '4') { e.preventDefault(); handleSelectView('inbox'); }
+      else if (e.key === '5') { e.preventDefault(); handleSelectView('ANALYTICS'); }
+      else if (e.key === '6') { e.preventDefault(); handleSelectView('DATA'); }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const handleOpenShortcuts = () => setIsShortcutsOpen(true);
+    window.addEventListener('open-shortcuts-modal', handleOpenShortcuts);
+    return () => window.removeEventListener('open-shortcuts-modal', handleOpenShortcuts);
+  }, []);
+
   // ── Conditional returns (AFTER all hooks) ────────────────────────
   if (!hasHydrated) {
     return (
@@ -234,6 +276,7 @@ function App() {
         onOpenZenMode={(taskId) => setZenModeTaskId(taskId)}
       />
       <InstallPromptModal />
+      <ShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
     </div>
   );
 }
