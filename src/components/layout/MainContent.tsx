@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback } from 'react';
+import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, ChevronDown, ChevronLeft, Sparkles, FolderPlus, Settings, Trash2, MoreHorizontal, Edit3, X } from 'lucide-react';
