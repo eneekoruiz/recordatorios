@@ -418,7 +418,16 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     }
 
     // Categorías (Si estamos en ciclo) o Ciclos (Si estamos en Lista)
-    if (!isListView) {
+    if (currentView === 'TRASH') {
+      const trashTasks = (groupedTasks['Papelera'] || []).sort((a, b) => {
+        const dA = a.deleted_at ? new Date(a.deleted_at).getTime() : 0;
+        const dB = b.deleted_at ? new Date(b.deleted_at).getTime() : 0;
+        return dB - dA; // Más recientemente borrados primero
+      });
+      trashTasks.forEach((task) => {
+        flat.push({ type: 'task', task, depth: 0 });
+      });
+    } else if (!isListView) {
       Object.entries(groupedTasks).forEach(([categoryOrCycle, categoryTasks]) => {
         let color = '#34c759'; // Default
         let headerTitle = categoryOrCycle;
@@ -536,7 +545,41 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         }
       }
 
-      // 2. Sections Hierarchy
+      // 2. Dynamic Cycle Sections (Recurrencia Diaria, Semanal, Mensual, Anual)
+      const allCycles = useAppStore.getState().cycles || [];
+      const presentCycleKeys = Object.keys(groupedTasks).filter(k => k.startsWith('cycle_') && groupedTasks[k].length > 0);
+      
+      if (presentCycleKeys.length > 0) {
+        const sortedCycles = presentCycleKeys.sort((a, b) => {
+          const idA = a.replace('cycle_', '');
+          const idB = b.replace('cycle_', '');
+          const cA = allCycles.find(c => c.id === idA)?.daysValue || 0;
+          const cB = allCycles.find(c => c.id === idB)?.daysValue || 0;
+          return cA - cB;
+        });
+
+        sortedCycles.forEach(catKey => {
+          const cId = catKey.replace('cycle_', '');
+          const cObj = allCycles.find(c => c.id === cId);
+          const cName = cObj ? cObj.name : cId;
+          
+          flat.push({ type: 'header', title: `⏳ ${cName}`, category: catKey, color, depth: 0 });
+          if (!isCatCollapsed(catKey)) {
+            const categoryTasks = groupedTasks[catKey] || [];
+            const roots = categoryTasks.filter(t => !t.parentId);
+            const processNode = (task: TaskItem, depthLevel: number) => {
+              flat.push({ type: 'task', task, depth: depthLevel });
+              if (!isCatCollapsed(`task_${task.id}`)) {
+                const children = categoryTasks.filter(t => t.parentId === task.id);
+                children.forEach(c => processNode(c, depthLevel + 1));
+              }
+            };
+            roots.forEach(r => processNode(r, 0));
+          }
+        });
+      }
+
+      // 3. Sections Hierarchy (Secciones Manuales)
       const sectionsForList = (listSections || []).filter(s => s.listId === currentList?.id && !s.deleted_at);
       
       const processSection = (secId: string, depth: number) => {
@@ -544,10 +587,18 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         if (!sec) return;
         
         const categoryKey = `section_${sec.id}`;
+        const categoryTasks = groupedTasks[categoryKey] || [];
+
+        // Evitar duplicar secciones vacías manuales si ya se muestra una sección dinámica con un ciclo equivalente
+        const isDuplicateEmpty = categoryTasks.length === 0 && presentCycleKeys.some(k => {
+          const cName = allCycles.find(c => c.id === k.replace('cycle_', ''))?.name || '';
+          return sec.name.toLowerCase().includes(cName.toLowerCase()) || cName.toLowerCase().includes(sec.name.toLowerCase());
+        });
+        if (isDuplicateEmpty) return;
+
         flat.push({ type: 'header', title: sec.name, category: categoryKey, color, sectionId: sec.id, depth });
         
         if (!isCatCollapsed(categoryKey)) {
-          const categoryTasks = groupedTasks[categoryKey] || [];
           if (categoryTasks.length === 0) {
             flat.push({ type: 'empty-section', title: 'Aquí no hay tareas', category: categoryKey, color, sectionId: sec.id, depth });
           } else {

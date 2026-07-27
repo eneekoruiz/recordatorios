@@ -25,12 +25,7 @@ export const isTaskCompleted = (t: any) => {
   return t.status === 'completed' || !!t.completed_at;
 };
 
-const INITIAL_LISTS: CustomList[] = [
-  { id: 'compras', name: 'Compras', color: '#ff9500' },
-  { id: 'care', name: 'Care', color: '#af52de' },
-  { id: 'quehaceres', name: 'Quehaceres', color: '#34c759' },
-  { id: 'limpieza', name: 'Limpieza', color: '#0a84ff' }
-];
+const INITIAL_LISTS: CustomList[] = [];
 
 const INITIAL_CYCLES: CustomCycle[] = [
   { id: 'cycle_day', name: 'Diario', daysValue: 1, isPinned: true, icon: 'sun' },
@@ -436,7 +431,9 @@ export const useAppStore = create<AppState>()(
 
         for (const task of filtered) {
           let groupKey = '';
-          if (task.sectionId && activeSectionIds.has(task.sectionId)) {
+          if (task.cycle_id) {
+            groupKey = `cycle_${task.cycle_id}`;
+          } else if (task.sectionId && activeSectionIds.has(task.sectionId)) {
             groupKey = `section_${task.sectionId}`;
           } else {
             groupKey = 'no_section';
@@ -656,13 +653,24 @@ export const useAppStore = create<AppState>()(
         const cleanedTasks: Record<string, TaskItem> = {};
         
         Object.entries(state.tasks).forEach(([id, t]) => {
-          const listId = t.categoryId || (t as any).category_id || (t as any).listId;
-          // Si está en bandeja de entrada ('inbox'), sin listId, o cuyo listId no existe en state.lists ni es un ciclo temporal, se elimina (no se incluye en cleanedTasks)
-          if (!listId || listId === 'inbox' || listId === 'user_preferences_smart_lists' || (!validListIds.has(listId) && !String(listId).startsWith('cycle_'))) {
+          let updatedTask = { ...t };
+          
+          // Política de retención en papelera: 30 días según estándar de Apple Reminders
+          if (updatedTask.deleted_at) {
+            const delTimestamp = new Date(updatedTask.deleted_at).getTime();
+            if (!isNaN(delTimestamp) && (Date.now() - delTimestamp > 30 * 24 * 60 * 60 * 1000)) {
+              return; // Eliminar definitivamente tras 30 días
+            }
+            cleanedTasks[id] = updatedTask;
+            return;
+          }
+
+          const listId = updatedTask.categoryId || (updatedTask as any).category_id || (updatedTask as any).listId;
+          // Proteger tareas de bandeja de entrada ('inbox' o sin lista) y verificar listas válidas
+          if (listId === 'user_preferences_smart_lists' || (listId && listId !== 'inbox' && !validListIds.has(listId) && !String(listId).startsWith('cycle_'))) {
             return;
           }
           
-          let updatedTask = { ...t };
           const isCompleted = isTaskCompleted(updatedTask) || (updatedTask as any).completed;
           // Quitar fecha de tareas retrasadas no completadas ni borradas
           if (updatedTask.dueDate && !isCompleted && !updatedTask.deleted_at) {
