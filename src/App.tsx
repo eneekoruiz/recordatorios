@@ -186,6 +186,7 @@ function App() {
 
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
