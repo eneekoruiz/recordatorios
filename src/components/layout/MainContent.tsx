@@ -744,6 +744,31 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 >
         {/* Línea del Título (Debajo del Top Bar) */}
         <div style={{ width: '100%' }}>
+          {/* Apple HIG Dynamic Time-of-Day Ambient Greeting */}
+          {(isSmartView || isListView) && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <span style={{
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                padding: '4px 12px',
+                borderRadius: 20,
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-secondary)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+              }}>
+                {(() => {
+                  const hour = new Date().getHours();
+                  if (hour >= 6 && hour < 13) return <span><strong style={{ color: '#ff9500' }}>☀️ Buenos días</strong> · Enfoque matutino</span>;
+                  if (hour >= 13 && hour < 21) return <span><strong style={{ color: '#0a84ff' }}>🌤️ Buenas tardes</strong> · Productividad constante</span>;
+                  return <span><strong style={{ color: '#bf5af2' }}>🌙 Buenas noches</strong> · Sesión de cierre y zen</span>;
+                })()}
+              </span>
+            </div>
+          )}
           <h1 className="text-display" style={{ 
             fontSize: '34px', 
             fontWeight: 700,
