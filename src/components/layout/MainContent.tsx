@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, ChevronDown, ChevronLeft, Sparkles, FolderPlus, Settings, Trash2, MoreHorizontal, Edit3 } from 'lucide-react';
+import { Plus, ChevronDown, ChevronLeft, Sparkles, FolderPlus, Settings, Trash2, MoreHorizontal, Edit3, X } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
@@ -304,8 +304,18 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const activeVisibleCount = useMemo(() => visibleTasks.filter(t => !isTaskCompleted(t)).length, [visibleTasks]);
   const completedVisibleCount = useMemo(() => visibleTasks.filter(t => isTaskCompleted(t)).length, [visibleTasks]);
 
+  const isCatCollapsed = (cat: string) => {
+    if (cat.startsWith('section_')) {
+      return collapsed[cat] !== undefined ? collapsed[cat] : true;
+    }
+    return !!collapsed[cat];
+  };
+
   const toggleCategory = useCallback((cat: string) => {
-    setCollapsed(prev => ({ ...prev, [cat]: !prev[cat] }));
+    setCollapsed(prev => {
+      const isCurrentlyCollapsed = cat.startsWith('section_') ? (prev[cat] !== undefined ? prev[cat] : true) : !!prev[cat];
+      return { ...prev, [cat]: !isCurrentlyCollapsed };
+    });
   }, []);
 
   const getTitle = useCallback(() => {
@@ -474,7 +484,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         const categoryKey = `section_${sec.id}`;
         flat.push({ type: 'header', title: sec.name, category: categoryKey, color, sectionId: sec.id, depth });
         
-        if (!collapsed[categoryKey]) {
+        if (!isCatCollapsed(categoryKey)) {
           const categoryTasks = groupedTasks[categoryKey] || [];
           if (categoryTasks.length === 0) {
             flat.push({ type: 'empty-section', title: 'Aquí no hay tareas', category: categoryKey, color, sectionId: sec.id, depth });
@@ -990,7 +1000,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                                 onClick={() => {
                                   setSectionMenuId(null);
                                   handleAddSection(data.sectionId);
-                                  if (collapsed[data.category]) toggleCategory(data.category);
+                                  if (isCatCollapsed(data.category)) toggleCategory(data.category);
                                 }}
                               >
                                 <FolderPlus size={16} /> Añadir sección anidada
@@ -1016,7 +1026,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                   <ChevronDown 
                     size={18} 
                     color="var(--text-tertiary)" 
-                    style={{ transform: collapsed[data.category] ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}
+                    style={{ transform: isCatCollapsed(data.category) ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}
                   />
                 </div>
                 {isCustomSection && dragOverSectionId === data.sectionId && (
@@ -1108,27 +1118,35 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               position: 'fixed',
               bottom: 'max(28px, env(safe-area-inset-bottom))',
               left: '50%',
-              transform: 'translateX(-50%)',
               background: 'var(--bg-elevated, #1c1c1e)',
               backdropFilter: 'blur(35px) saturate(200%)',
               WebkitBackdropFilter: 'blur(35px) saturate(200%)',
               border: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.15))',
               borderRadius: '16px',
-              padding: '12px 20px',
+              padding: '12px 16px',
               boxShadow: '0 12px 36px rgba(0,0,0,0.3)',
               display: 'flex',
               alignItems: 'center',
-              gap: '16px',
+              gap: '12px',
               zIndex: 999999,
               pointerEvents: 'auto',
               minWidth: '280px',
               maxWidth: '90vw',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              boxSizing: 'border-box'
             }}
-            initial={{ opacity: 0, y: 24, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            initial={{ opacity: 0, y: 24, x: "-50%", scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, x: "-50%", scale: 1 }}
+            exit={{ opacity: 0, y: 20, x: "-50%", scale: 0.9 }}
             transition={{ type: 'spring', stiffness: 450, damping: 28 }}
+            drag="x"
+            dragConstraints={{ left: -100, right: 100 }}
+            onDragEnd={(_, info) => {
+              if (Math.abs(info.offset.x) > 60) {
+                if (deletedToast.timeoutId) window.clearTimeout(deletedToast.timeoutId);
+                setDeletedToast(null);
+              }
+            }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden', flex: 1 }}>
               <Trash2 size={18} color="var(--accent-red)" style={{ flexShrink: 0 }} />
@@ -1140,30 +1158,52 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 Eliminado "{deletedToast.title}"
               </span>
             </div>
-            <button
-              onClick={() => {
-                if (deletedToast.timeoutId) window.clearTimeout(deletedToast.timeoutId);
-                updateTask(deletedToast.id, { deleted_at: undefined });
-                setDeletedToast(null);
-              }}
-              style={{
-                background: 'var(--accent-primary)',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '999px',
-                padding: '6px 14px',
-                fontSize: '0.9rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                flexShrink: 0,
-                boxShadow: '0 2px 8px rgba(10, 132, 255, 0.3)',
-                transition: 'transform 0.15s ease'
-              }}
-              onPointerDown={e => { e.currentTarget.style.transform = 'scale(0.93)'; }}
-              onPointerUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
-            >
-              Deshacer
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              <button
+                onClick={() => {
+                  if (deletedToast.timeoutId) window.clearTimeout(deletedToast.timeoutId);
+                  updateTask(deletedToast.id, { deleted_at: undefined });
+                  setDeletedToast(null);
+                }}
+                style={{
+                  background: 'var(--accent-primary)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '999px',
+                  padding: '6px 14px',
+                  fontSize: '0.9rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(10, 132, 255, 0.3)',
+                  transition: 'transform 0.15s ease'
+                }}
+                onPointerDown={e => { e.currentTarget.style.transform = 'scale(0.93)'; }}
+                onPointerUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+              >
+                Deshacer
+              </button>
+              <button
+                onClick={() => {
+                  if (deletedToast.timeoutId) window.clearTimeout(deletedToast.timeoutId);
+                  setDeletedToast(null);
+                }}
+                style={{
+                  background: 'transparent',
+                  color: 'var(--text-tertiary)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: 28,
+                  height: 28,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer'
+                }}
+                title="Cerrar"
+              >
+                <X size={16} />
+              </button>
+            </div>
           </motion.div>
         </AnimatePresence>,
         document.body

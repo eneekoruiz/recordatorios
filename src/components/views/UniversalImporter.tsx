@@ -12,7 +12,7 @@ export function UniversalImporter() {
   const [inputText, setInputText] = useState('');
   const [preview, setPreview] = useState<ParseResult | null>(null);
   const [targetListId, setTargetListId] = useState<string>(lists[0]?.id || 'inbox');
-  const [forceAllToList, setForceAllToList] = useState<boolean>(false);
+  const [forceAllToList, setForceAllToList] = useState<boolean>(true); // Por defecto true para que todos los recordatorios vayan a la lista seleccionada por el usuario
 
   const handleExport = () => {
     const data = exportData();
@@ -58,22 +58,31 @@ export function UniversalImporter() {
     if (!preview) return;
     
     useAppStore.setState((state) => {
+      const destinationListId = targetListId || state.lists[0]?.id || 'inbox';
       const updatedTasks = { ...state.tasks };
+      let importedCount = 0;
+
       preview.tasks.forEach(t => {
-        const destinationListId = targetListId || state.lists[0]?.id || 'inbox';
-        const shouldRouteToTarget = forceAllToList || !t.listId || t.listId === 'inbox' || !state.lists.some(l => l.id === t.listId);
+        const shouldRouteToTarget = forceAllToList || targetListId !== 'inbox' || !t.listId || t.listId === 'inbox' || !state.lists.some(l => l.id === t.listId);
         const taskToImport = {
           ...t,
-          listId: shouldRouteToTarget ? destinationListId : t.listId
+          listId: shouldRouteToTarget ? destinationListId : (t.listId || destinationListId)
         };
         updatedTasks[taskToImport.id] = taskToImport;
+        importedCount++;
       });
       
+      const nextLists = preview.lists && preview.lists.length > 0 ? preview.lists : state.lists;
+      const nextSections = preview.listSections && preview.listSections.length > 0 ? preview.listSections : state.listSections;
+
+      const destinationName = nextLists.find(l => l.id === destinationListId)?.name || (destinationListId === 'inbox' ? 'Bandeja de entrada' : 'Lista seleccionada');
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: `Importados ${importedCount} recordatorios a "${destinationName}"` }));
+
       return {
         tasks: updatedTasks,
         cycles: [...state.cycles, ...preview.cycles],
-        lists: preview.lists && preview.lists.length > 0 ? preview.lists : state.lists,
-        listSections: preview.listSections && preview.listSections.length > 0 ? preview.listSections : state.listSections,
+        lists: nextLists,
+        listSections: nextSections,
       };
     });
 

@@ -4,7 +4,7 @@ import { motion, useMotionValue, useTransform, AnimatePresence, useMotionValueEv
 import {
   CheckCircle, Trash2, Lock, Link2, Flag, MapPin,
   Image as ImageIcon, MoreHorizontal, Repeat, Edit3,
-  Play, ChevronRight, ChevronDown, Copy, FolderOpen, IndentIncrease, IndentDecrease
+  Play, ChevronRight, ChevronDown, Copy, FolderOpen, IndentIncrease, IndentDecrease, X
 } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore } from '../../store/useAppStore';
@@ -579,11 +579,23 @@ export const TaskCard = React.memo(function TaskCard({
         <motion.div
           className="premium-toast"
           role="status"
+          style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between', minWidth: 260, boxSizing: 'border-box' }}
           initial={{ opacity: 0, y: 14, x: '-50%' }}
           animate={{ opacity: 1, y: 0, x: '-50%' }}
+          exit={{ opacity: 0, y: 14, x: '-50%' }}
           transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+          drag="x"
+          dragConstraints={{ left: -100, right: 100 }}
+          onDragEnd={(_, info) => { if (Math.abs(info.offset.x) > 50) setFeedback(null); }}
         >
-          {feedback}
+          <span>{feedback}</span>
+          <button
+            onClick={() => setFeedback(null)}
+            style={{ background: 'transparent', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', padding: 4 }}
+            title="Cerrar"
+          >
+            <X size={16} />
+          </button>
         </motion.div>,
         document.body
       )}

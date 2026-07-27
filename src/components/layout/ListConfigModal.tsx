@@ -71,6 +71,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
         color,
         icon
       });
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: `Lista "${name.trim()}" actualizada` }));
     } else {
       const newId = name.trim().toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
       addList({
@@ -82,6 +83,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId }: ListConfi
         isFinancial: false,
         showCompleted: false
       });
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: parentId ? `Lista anidada "${name.trim()}" creada con éxito` : `Lista "${name.trim()}" creada con éxito` }));
     }
     onClose();
   };

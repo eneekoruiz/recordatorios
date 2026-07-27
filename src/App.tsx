@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X } from 'lucide-react';
 import { Sidebar } from './components/layout/Sidebar';
 import { MainContent } from './components/layout/MainContent';
 import { WidgetDashboard } from './components/layout/WidgetDashboard';
@@ -45,6 +48,16 @@ function App() {
   const navStack = useNavigation((state) => state.stack);
   const navView = useNavigation((state) => state.currentView());
   const { push: navPush, pop: navPop, reset: navReset } = useNavigation();
+  const [globalToast, setGlobalToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleToast = (e: any) => {
+      setGlobalToast(e.detail);
+      window.setTimeout(() => setGlobalToast(null), 3500);
+    };
+    window.addEventListener('show-toast', handleToast);
+    return () => window.removeEventListener('show-toast', handleToast);
+  }, []);
 
   // ── Resize listener ──────────────────────────────────────────────
   useEffect(() => {
@@ -277,6 +290,33 @@ function App() {
       />
       <InstallPromptModal />
       <ShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
+
+      {globalToast && createPortal(
+        <AnimatePresence>
+          <motion.div
+            className="premium-toast"
+            role="status"
+            style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between', minWidth: 260, boxSizing: 'border-box' }}
+            initial={{ opacity: 0, y: 20, x: "-50%", scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, x: "-50%", scale: 1 }}
+            exit={{ opacity: 0, y: 20, x: "-50%", scale: 0.9 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+            drag="x"
+            dragConstraints={{ left: -100, right: 100 }}
+            onDragEnd={(_, info) => { if (Math.abs(info.offset.x) > 50) setGlobalToast(null); }}
+          >
+            <span>{globalToast}</span>
+            <button
+              onClick={() => setGlobalToast(null)}
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', padding: 4 }}
+              title="Cerrar"
+            >
+              <X size={16} />
+            </button>
+          </motion.div>
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 }
