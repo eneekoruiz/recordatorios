@@ -2,7 +2,6 @@ import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, ChevronDown, ChevronLeft, Sparkles, FolderPlus, Settings, Trash2, MoreHorizontal, Edit3, X } from 'lucide-react';
-import { useVirtualizer } from '@tanstack/react-virtual';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
 import type { TaskItem } from '../../models/Task';
@@ -585,47 +584,34 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     return flat;
   }, [groupedTasks, smartTasks, currentCycle, collapsed, isListView, lists, listSections, currentList, isCatCollapsed]);
 
-  // 2. React Virtualizer
+  // 2. Scroll Container & Item Keys (Refactored to native fluid block layout for zero-overlap & perfect touch scroll)
   const parentRef = useRef<HTMLDivElement>(null);
-  
-  const virtualizer = useVirtualizer({
-    count: flattenedData.length,
-    getScrollElement: () => parentRef.current,
-    getItemKey: (index) => {
-      const item = flattenedData[index];
-      if (!item) return index;
-      if (item.type === 'page-header') return 'page-header';
-      if (item.type === 'header') return `header-${item.category || ''}-${item.sectionId || ''}-${item.title || ''}`;
-      if (item.type === 'empty-section') return `empty-${item.category || ''}-${item.sectionId || ''}`;
-      if (item.type === 'task') return `task-${item.task.id}`;
-      return index;
-    },
-    estimateSize: (index) => {
-      const item = flattenedData[index];
-      if (!item) return 52;
-      if (item.type === 'page-header') return 100;
-      if (item.type === 'header') return index === 0 ? 44 : 56; // Clean Apple-style spacing with divider line
-      if (item.type === 'empty-section') return 44;
-      return 52; // task cards height in Apple style (compact)
-    },
-    measureElement: (el) => el.getBoundingClientRect().height,
-    overscan: 12,
-  });
 
+  // Reset scroll position to top instantly whenever navigating to a different view or list
   useEffect(() => {
-    virtualizer.measure();
-  }, [flattenedData, collapsed, virtualizer]);
+    if (parentRef.current) {
+      parentRef.current.scrollTo({ top: 0, behavior: 'instant' as any });
+    }
+  }, [currentView]);
 
-  const renderTask = useCallback((task: TaskItem, virtualStyle: React.CSSProperties, index: number, depth: number, isFirst: boolean, isLast: boolean, previousTaskId?: string, virtualKey?: React.Key) => {
+  const getItemKey = useCallback((item: VirtualItemType, index: number) => {
+    if (!item) return index;
+    if (item.type === 'page-header') return 'page-header';
+    if (item.type === 'header') return `header-${item.category || ''}-${item.sectionId || ''}-${item.title || ''}-${index}`;
+    if (item.type === 'empty-section') return `empty-${item.category || ''}-${item.sectionId || ''}-${index}`;
+    if (item.type === 'task') return `task-${item.task.id}`;
+    return index;
+  }, []);
+
+  const renderTask = useCallback((task: TaskItem, itemStyle: React.CSSProperties, index: number, depth: number, isFirst: boolean, isLast: boolean, previousTaskId?: string, itemKey?: React.Key) => {
     const hasChildren = Object.values(tasks).some(t => t.parentId === task.id && !t.deleted_at);
     const isExpanded = !isCatCollapsed(`task_${task.id}`);
 
     return (
       <div
-        key={virtualKey ?? `task-${task.id}`}
-        ref={virtualizer.measureElement}
+        key={itemKey ?? `task-${task.id}`}
         data-index={index}
-        style={{ ...virtualStyle, margin: 0, padding: 0, boxSizing: 'border-box' }}
+        style={{ ...itemStyle, margin: 0, padding: 0, boxSizing: 'border-box' }}
       >
         <div style={{ position: 'relative', width: '100%', boxSizing: 'border-box' }}>
           {depth > 0 && (
@@ -656,7 +642,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         </div>
       </div>
     );
-  }, [tasks, isCatCollapsed, toggleCategory, virtualizer, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, isListView, isSmartView, currentView]);
+  }, [tasks, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, isListView, isSmartView, currentView]);
 
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
   const smartListInfo = isSmartView ? SMART_LISTS.find(l => l.id === currentView) : null;
@@ -668,14 +654,19 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       <header 
         className="glass-header" 
         style={{ 
-          position: 'sticky', 
-          top: 0, 
-          padding: '12px 16px', 
+          position: 'relative', 
+          flexShrink: 0,
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)',
+          paddingBottom: '12px',
+          paddingLeft: '16px',
+          paddingRight: '16px',
+          minHeight: 'calc(env(safe-area-inset-top, 0px) + 56px)',
           display: 'flex', 
           width: '100%', 
           alignItems: 'center', 
           justifyContent: 'space-between', 
           zIndex: 100,
+          boxSizing: 'border-box',
           background: isScrolled ? 'var(--bg-surface-glass)' : 'transparent',
           borderBottom: isScrolled ? '0.5px solid var(--border-subtle)' : '0.5px solid transparent',
           backdropFilter: isScrolled ? 'blur(20px) saturate(180%)' : 'none',
@@ -700,6 +691,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               cursor: 'pointer',
               padding: '4px 8px 4px 0',
               WebkitTapHighlightColor: 'transparent',
+              flexShrink: 0,
               zIndex: 10
             }}
             title="Volver a listas"
@@ -707,12 +699,13 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             <ChevronLeft size={22} /> Listas
           </button>
         ) : (
-          <div style={{ minWidth: 24 }} />
+          <div style={{ minWidth: 24, flexShrink: 0 }} />
         )}
         
         {/* Dynamic List Title on Top Bar (visible when scrolled) */}
         <div style={{ 
           flex: 1, 
+          minWidth: 0,
           textAlign: 'center', 
           fontWeight: 600, 
           fontSize: '1rem', 
@@ -730,7 +723,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         </div>
 
         {/* Right: Actions aligned to the right */}
-        <div className="header-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap', justifyContent: 'flex-end', position: 'relative' }}>
+        <div className="header-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center', marginLeft: 'auto', flexWrap: 'nowrap', flexShrink: 0, justifyContent: 'flex-end', position: 'relative' }}>
           {isListView && currentList && (
             <div style={{ position: 'relative' }}>
               <button className="icon-btn" onClick={() => setIsMenuOpen(!isMenuOpen)} title="Opciones de Lista">
@@ -811,27 +804,36 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           paddingBottom: 'max(56px, calc(env(safe-area-inset-bottom) + 40px))'
         }}
       >
-        <div className="tasks-container" style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative', background: 'var(--bg-elevated)', overflowX: 'hidden', touchAction: 'pan-y' }}>
+        <div 
+          className="tasks-container" 
+          style={{ 
+            display: 'flex',
+            flexDirection: 'column',
+            width: '100%', 
+            position: 'relative', 
+            background: 'var(--bg-elevated)', 
+            overflowX: 'hidden', 
+            touchAction: 'pan-y',
+            minHeight: '100%',
+            boxSizing: 'border-box'
+          }}
+        >
           
-          {virtualizer.getVirtualItems().map((virtualItem) => {
-          const data = flattenedData[virtualItem.index];
-          
-          const virtualStyle: React.CSSProperties = {
-            position: 'absolute',
-            top: 0,
-            left: 0,
+          {flattenedData.map((data, index) => {
+          const itemKey = getItemKey(data, index);
+          const itemStyle: React.CSSProperties = {
+            position: 'relative',
             width: '100%',
-            transform: `translateY(${virtualItem.start}px)`,
             zIndex: data.type === 'section' || data.type === 'header' ? 10 : 1,
+            boxSizing: 'border-box'
           };
 
           if (data.type === 'page-header') {
             return (
-              <div key={virtualItem.key} ref={virtualizer.measureElement} data-index={virtualItem.index} style={{...virtualStyle, zIndex: 20, margin: 0, boxSizing: 'border-box'}}>
-                <motion.header 
-                  layoutId={currentView.startsWith('list_') ? "list-item-" + currentView.replace('list_', '') : "smart-card-" + currentView}
+              <div key={itemKey} data-index={index} style={{...itemStyle, zIndex: 20, margin: 0, boxSizing: 'border-box'}}>
+                <header 
                   className="content-header" 
-                  style={{ padding: '0px 16px 20px 16px', display: 'flex', flexDirection: 'column', gap: '16px', flexShrink: 0, margin: '0', borderBottom: 'none', boxSizing: 'border-box' }}
+                  style={{ padding: '4px 16px 20px 16px', display: 'flex', flexDirection: 'column', gap: '16px', flexShrink: 0, margin: '0', borderBottom: 'none', boxSizing: 'border-box' }}
                 >
         {/* Línea del Título (Debajo del Top Bar) */}
         <div style={{ width: '100%', boxSizing: 'border-box' }}>
@@ -924,7 +926,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             </div>
           )}
         </div>
-      </motion.header>
+      </header>
               </div>
             );
           } else if (data.type === 'header') {
@@ -932,15 +934,14 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             const sectionId = data.sectionId;
             const isDraggingOver = dragOverSectionId === sectionId && isCustomSection;
 
-            const showDivider = virtualItem.index > 0 && flattenedData[virtualItem.index - 1]?.type !== 'page-header';
+            const showDivider = index > 0 && flattenedData[index - 1]?.type !== 'page-header';
             return (
               <div 
-                key={virtualItem.key}
-                ref={virtualizer.measureElement}
-                data-index={virtualItem.index}
+                key={itemKey}
+                data-index={index}
                 className="group-header"
                 style={{ 
-                  ...virtualStyle, 
+                  ...itemStyle, 
                   borderBottom: 'none',
                   borderTop: 'none',
                   paddingLeft: `calc(16px + ${data.depth * 24}px)`,
@@ -1104,11 +1105,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           } else if (data.type === 'empty-section') {
             return (
               <div 
-                key={virtualItem.key}
-                ref={virtualizer.measureElement}
-                data-index={virtualItem.index}
+                key={itemKey}
+                data-index={index}
                 style={{ 
-                  ...virtualStyle, 
+                  ...itemStyle, 
                   paddingLeft: `calc(16px + ${data.depth * 24}px)`,
                   paddingRight: '16px',
                   minHeight: 44,
@@ -1150,13 +1150,13 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             );
           } else {
             let prevId;
-            if (virtualItem.index > 0) {
-              const prevData = flattenedData[virtualItem.index - 1];
+            if (index > 0) {
+              const prevData = flattenedData[index - 1];
               if (prevData.type === 'task') {
                 prevId = prevData.task.id;
               }
             }
-            return renderTask(data.task, virtualStyle, virtualItem.index, data.depth, !!data.isFirstInSection, !!data.isLastInSection, prevId, virtualItem.key);
+            return renderTask(data.task, itemStyle, index, data.depth, !!data.isFirstInSection, !!data.isLastInSection, prevId, itemKey);
           }
         })}
 
