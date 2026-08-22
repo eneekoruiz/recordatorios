@@ -675,7 +675,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       <div
         key={itemKey ?? `task-${task.id}`}
         data-index={index}
-        style={{ ...itemStyle, margin: 0, padding: 0, boxSizing: 'border-box' }}
+        style={{ ...itemStyle, margin: 0, padding: '0 16px', boxSizing: 'border-box' }}
       >
         <div style={{ position: 'relative', width: '100%', boxSizing: 'border-box' }}>
           {depth > 0 && (
@@ -687,7 +687,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
           <TaskCard 
             task={task}
-            virtualStyle={{ paddingLeft: `calc(16px + ${depth * 24}px)`, paddingRight: '16px', margin: 0, boxSizing: 'border-box' }}
+            virtualStyle={{ margin: 0, padding: '0 16px', boxSizing: 'border-box' }}
+            indent={depth * 24}
             onToggle={handleToggleTask}
             onDelete={handleDeleteTask}
             onOpenZenMode={onOpenZenMode}
@@ -1012,7 +1013,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                   ...itemStyle, 
                   borderBottom: 'none',
                   borderTop: 'none',
-                  paddingLeft: `calc(16px + ${data.depth * 24}px)`,
+                  paddingLeft: `calc(32px + ${data.depth * 24}px)`,
                   paddingRight: '16px',
                   minHeight: showDivider ? 56 : 44,
                   paddingTop: showDivider ? 16 : 8,
@@ -1076,13 +1077,14 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                         onDoubleClick={(e) => isCustomSection && startEditingSection(e, data.sectionId!, data.title)}
                         style={{ 
                           cursor: isCustomSection ? 'text' : 'pointer',
-                          fontWeight: 800,
-                          color: 'var(--text-primary)',
-                          fontSize: '1.45rem',
+                          fontWeight: 600,
+                          color: 'var(--text-tertiary)',
+                          fontSize: '0.85rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
                           lineHeight: '1.3',
                           minHeight: '28px',
                           wordBreak: 'break-word',
-                          letterSpacing: '-0.5px',
                           margin: 0,
                           padding: '4px 0',
                           boxSizing: 'border-box'

@@ -688,7 +688,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         
         {/* SMART LISTS GRID */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 var(--space-12)', marginBottom: 'var(--space-8)' }}>
-          <span className="section-header" style={{ margin: 0, padding: 0 }}>LISTAS INTELIGENTES</span>
+          <span className="section-header" style={{ margin: 0, padding: 0, marginLeft: 12 }}>Listas inteligentes</span>
           <button 
             onClick={() => setIsEditMode(!isEditMode)}
             style={{ background: 'transparent', border: 'none', color: isEditMode ? 'var(--accent-primary)' : 'var(--text-tertiary)', fontSize: '0.85rem', cursor: 'pointer' }}
