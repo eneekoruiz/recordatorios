@@ -159,12 +159,32 @@ export const useAppStore = create<AppState>()(
         };
       }),
 
-      toggleCycleVisibility: (cycleId) => set((state: any) => ({
-        cycleVisibility: {
+      toggleCycleVisibility: (cycleId) => optimisticUpdate(get, set, (state: any) => {
+        const newVisibility = {
           ...state.cycleVisibility,
           [cycleId]: !state.cycleVisibility[cycleId]
-        }
-      })),
+        };
+
+        const settingsId = 'user_preferences_cycle_visibility';
+        const existingSettings = state.lists.find((l: any) => l.id === settingsId);
+        const updatedList: any = {
+          id: settingsId,
+          name: 'CycleSettings',
+          color: '#000000',
+          icon: JSON.stringify(newVisibility),
+          _is_dirty: true,
+          updated_at: new Date().toISOString()
+        };
+        
+        const newLists = existingSettings
+          ? state.lists.map((l: any) => l.id === settingsId ? updatedList : l)
+          : [...state.lists, updatedList];
+
+        return {
+          cycleVisibility: newVisibility,
+          lists: newLists
+        };
+      }),
 
       addTask: (payload) => optimisticUpdate(get, set, (state) => {
         const newTask = TaskRepository.create(payload);
@@ -690,7 +710,7 @@ export const useAppStore = create<AppState>()(
     {
       name: 'reminders-storage',
       storage: createJSONStorage(() => idbStorage),
-      version: 7,
+      version: 8,
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },
@@ -847,6 +867,44 @@ export const useAppStore = create<AppState>()(
             });
           }
           state = { ...state, tasks: cleanedTasks };
+        }
+        
+        if (version < 8) {
+          const taggedTasks: Record<string, TaskItem> = {};
+          const nowStr = new Date().toISOString();
+          if (state.tasks) {
+            Object.entries(state.tasks).forEach(([id, t]: [string, any]) => {
+              let changed = false;
+              let newCycleId = t.cycle_id;
+              
+              if (t.title.includes('[D]')) {
+                newCycleId = 'cycle_day';
+                changed = true;
+              } else if (t.title.includes('[S]')) {
+                newCycleId = 'cycle_week';
+                changed = true;
+              } else if (t.title.includes('[M]')) {
+                newCycleId = 'cycle_month';
+                changed = true;
+              } else if (t.title.includes('[A]')) {
+                newCycleId = 'cycle_year';
+                changed = true;
+              }
+
+              if (changed && newCycleId !== t.cycle_id) {
+                taggedTasks[id] = {
+                  ...t,
+                  cycle_id: newCycleId,
+                  version: (t.version || 1) + 1,
+                  updated_at: nowStr,
+                  _is_dirty: true
+                };
+              } else {
+                taggedTasks[id] = t;
+              }
+            });
+          }
+          state = { ...state, tasks: taggedTasks };
         }
         
         return state as AppState;

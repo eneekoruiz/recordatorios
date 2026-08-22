@@ -203,6 +203,16 @@ class SyncManager {
           return;
         }
 
+        if (serverList.id === 'user_preferences_cycle_visibility') {
+          try {
+            const parsed = JSON.parse(serverList.icon);
+            useAppStore.setState({ cycleVisibility: parsed });
+          } catch (e) {
+            console.error('Failed to parse cycle visibility:', e);
+          }
+          return;
+        }
+
         const localList = state.lists.find(l => l.id === serverList.id);
         if (!localList) {
           state.addList({ ...serverList, _is_dirty: false });
