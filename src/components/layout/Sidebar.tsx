@@ -304,7 +304,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                       overflowY: 'auto'
                     } : { 
                       position: 'fixed',
-                      top: menuCoords.top + 4,
+                      top: Math.min(menuCoords.top + 4, window.innerHeight - 400),
                       left: Math.max(12, Math.min(menuCoords.left, window.innerWidth - 220)),
                       zIndex: 99999
                     }}
