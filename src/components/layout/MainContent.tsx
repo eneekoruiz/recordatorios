@@ -876,7 +876,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             flexDirection: 'column',
             width: '100%', 
             position: 'relative', 
-            background: 'var(--bg-elevated)', 
+            background: 'transparent', 
             overflowX: 'hidden', 
             touchAction: 'pan-y',
             minHeight: '100%',
@@ -1230,13 +1230,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           }
         })}
 
-        </div>
-
         {visibleTasks.length === 0 && smartTasks.length === 0 && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '320px', width: '100%', padding: '32px 16px', boxSizing: 'border-box' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', width: '100%', padding: '32px 16px', boxSizing: 'border-box' }}>
             <EmptyState {...emptyStateProps} />
           </div>
         )}
+        </div>
       </div>
 
       <ListConfigModal 

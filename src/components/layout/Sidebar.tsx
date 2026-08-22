@@ -216,12 +216,12 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
               style={{ position: 'relative', transition: 'background-color 150ms ease', cursor: 'grab' }}
             >
               {list.isFolder ? (
-                isExpanded ? <FolderOpen size={18} color={list.color} style={{ marginRight: 10, flexShrink: 0 }} /> : <Folder size={18} color={list.color} style={{ marginRight: 10, flexShrink: 0 }} />
+                isExpanded ? <FolderOpen size={depth > 0 ? 14 : 18} color={list.color} style={{ marginRight: depth > 0 ? 8 : 10, flexShrink: 0 }} /> : <Folder size={depth > 0 ? 14 : 18} color={list.color} style={{ marginRight: depth > 0 ? 8 : 10, flexShrink: 0 }} />
               ) : (
-                <div className="list-icon" style={{ backgroundColor: list.color }} />
+                <div className="list-icon" style={{ backgroundColor: list.color, width: depth > 0 ? 16 : undefined, height: depth > 0 ? 16 : undefined, marginRight: depth > 0 ? 8 : undefined }} />
               )}
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-                <span className="title" style={{ color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)' }}>{list.name}</span>
+                <span className="title" style={{ color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)', fontSize: depth > 0 ? '0.9rem' : undefined }}>{list.name}</span>
                 {list.isShared && <span className="subtitle">Esta lista es compartida.</span>}
               </div>
               
