@@ -164,6 +164,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                 }
                 if (list.isFolder) {
                   setExpanded(p => ({ ...p, [list.id]: !isExpanded }));
+                  onSelectView(`folder_${list.id}`);
                 } else {
                   onSelectView(`list_${list.id}`);
                 }

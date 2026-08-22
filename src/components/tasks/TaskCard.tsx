@@ -347,8 +347,31 @@ export const TaskCard = React.memo(function TaskCard({
                 autoFocus
                 onChange={e => setEditTitle(e.target.value)}
                 onBlur={handleTitleSubmit}
-                onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                onKeyDown={e => { e.stopPropagation(); if (e.key === 'Enter') e.currentTarget.blur(); }}
+                onClick={e => e.stopPropagation()}
+                onPointerDown={e => e.stopPropagation()}
                 onPointerDownCapture={e => e.stopPropagation()}
+                onPaste={e => {
+                  const pasted = e.clipboardData.getData('text');
+                  if (pasted.includes('\n')) {
+                    e.preventDefault();
+                    const lines = pasted.split('\n').map(l => l.trim()).filter(Boolean);
+                    if (lines.length > 0) {
+                      setEditTitle(lines[0]);
+                      const { addTask } = useAppStore.getState();
+                      lines.slice(1).forEach(line => {
+                        addTask({
+                          id: crypto.randomUUID(),
+                          title: line,
+                          categoryId: task.categoryId,
+                          type: 'task',
+                          completed: false,
+                          created_at: new Date().toISOString()
+                        } as any);
+                      });
+                    }
+                  }
+                }}
                 style={{
                   fontSize: '1rem', fontWeight: 500, width: '100%',
                   border: 'none', background: 'transparent', outline: 'none',
@@ -386,12 +409,26 @@ export const TaskCard = React.memo(function TaskCard({
             <div style={{ marginTop: 2 }}>
               {isEditingNote ? (
                 <textarea
+                  ref={(el) => {
+                    if (el && isEditingNote) {
+                      // Small timeout ensures the browser paints first, helping iOS keyboards
+                      setTimeout(() => el.focus(), 50);
+                    }
+                  }}
                   value={editNote}
                   autoFocus
                   placeholder="Añadir nota..."
                   onChange={e => setEditNote(e.target.value)}
                   onBlur={handleNoteSubmit}
+                  onKeyDown={e => e.stopPropagation()}
+                  onClick={e => e.stopPropagation()}
+                  onPointerDown={e => e.stopPropagation()}
                   onPointerDownCapture={e => e.stopPropagation()}
+                  onFocus={e => {
+                    const val = e.target.value;
+                    e.target.value = '';
+                    e.target.value = val;
+                  }}
                   style={{
                     fontSize: '0.85rem', width: '100%', border: 'none',
                     background: 'transparent', outline: 'none',
@@ -403,10 +440,10 @@ export const TaskCard = React.memo(function TaskCard({
                 <span
                   role="button"
                   tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
-                  onClick={() => setIsEditingNote(true)}
-                  onPointerDownCapture={(e) => { e.stopPropagation(); }}
-                  onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditingNote(true); }}
+                  onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsEditingNote(true); } }}
+                  onClick={(e) => { e.stopPropagation(); setIsEditingNote(true); }}
+                  onPointerDownCapture={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => { e.stopPropagation(); setIsEditingNote(true); }}
                   style={{
                     fontSize: '0.85rem',
                     lineHeight: '1.4',
