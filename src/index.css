@@ -505,38 +505,48 @@ input:checked + .slider::before {
 }
 
 .categories-section .section-header {
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: #000;
-  margin-bottom: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+  margin-left: 12px;
 }
 
 .ios-list-block {
-  background: transparent;
-  border-radius: 0;
-  overflow: visible;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
 .ios-list-item {
   display: flex;
   align-items: center;
-  padding: 14px 16px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: 14px;
-  margin-bottom: 8px;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  margin-bottom: 0;
   position: relative;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: var(--shadow-sm);
+  transition: background-color 0.15s ease;
+  box-shadow: none;
 }
 .ios-list-item:not(:last-child)::after {
-  display: none;
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 52px;
+  right: 0;
+  height: 1px;
+  background-color: var(--border-subtle);
 }
 .ios-list-item .list-icon {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   margin-right: 12px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
 }
 .ios-list-item span.title {
   font-weight: 600;
@@ -559,9 +569,9 @@ input:checked + .slider::before {
 }
 .ios-list-item:active, .ios-list-item:hover {
   background: var(--bg-hover);
-  border-color: var(--border-focus);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+  border-color: transparent;
+  transform: none;
+  box-shadow: none;
 }
 
 /* Actions Button - Clean layout helper */
@@ -1319,7 +1329,6 @@ button:disabled {
   user-select: none;
   -webkit-user-select: none;
   border: none !important;
-  border-bottom: 0.5px solid var(--border-subtle) !important;
   border-radius: 0 !important;
   box-shadow: none !important;
   margin-bottom: 0px !important;

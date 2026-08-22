@@ -27,10 +27,11 @@ interface TaskCardProps {
   hasChildren?: boolean;
   isExpanded?: boolean;
   onToggleExpand?: () => void;
+  indent?: number;
 }
 
 export const TaskCard = React.memo(function TaskCard({
-  task, virtualStyle, onToggle, onDelete, onEdit, showListName = true, isFirstInSection, isLastInSection, previousTaskId, hasChildren, isExpanded, onToggleExpand
+  task, virtualStyle, onToggle, onDelete, onEdit, showListName = true, isFirstInSection, isLastInSection, previousTaskId, hasChildren, isExpanded, onToggleExpand, indent = 0
 }: TaskCardProps) {
   const cycles = useAppStore(state => state.cycles);
   const tasks = useAppStore(state => state.tasks);
@@ -248,7 +249,7 @@ export const TaskCard = React.memo(function TaskCard({
           minHeight: 52,
           display: 'flex',
           alignItems: 'center',
-          padding: '10px 16px',
+          padding: `10px 16px 10px ${16 + indent}px`,
           margin: 0,
           width: '100%',
           boxSizing: 'border-box',
@@ -257,6 +258,7 @@ export const TaskCard = React.memo(function TaskCard({
           borderTopRightRadius: isFirstInSection ? 10 : 0,
           borderBottomLeftRadius: isLastInSection ? 10 : 0,
           borderBottomRightRadius: isLastInSection ? 10 : 0,
+          borderBottom: isLastInSection ? 'none' : '0.5px solid var(--border-subtle)',
           opacity: isBlocked ? 0.5 : 1,
           pointerEvents: 'auto',
           touchAction: 'pan-y',
