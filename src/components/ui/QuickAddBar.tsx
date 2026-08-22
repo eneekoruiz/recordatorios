@@ -165,6 +165,30 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
             onChange={e => setText(e.target.value)}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
+            onPaste={e => {
+              const pasted = e.clipboardData.getData('text');
+              if (pasted.includes('\n')) {
+                e.preventDefault();
+                const lines = pasted.split('\n').map(l => l.trim()).filter(Boolean);
+                if (lines.length > 0) {
+                  setText(lines[0]);
+                  // create rest as new tasks
+                  lines.slice(1).forEach(line => {
+                    const extracted = parseNaturalLanguage(line, lists);
+                    addTask({
+                      id: crypto.randomUUID(),
+                      title: extracted.title,
+                      categoryId: extracted.categoryId || currentListId || undefined,
+                      type: 'task',
+                      completed: false,
+                      priority: extracted.priority || 'none',
+                      dueDate: extracted.dueDate || undefined,
+                      created_at: new Date().toISOString()
+                    } as any);
+                  });
+                }
+              }
+            }}
             placeholder="Añadir rápido: 'Comprar pan mañana a las 18:00 !alta'..."
             style={{
               flex: 1,

@@ -261,6 +261,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     return grouped;
   }, [currentView, tasks, lists]);
 
+  const isFolderView = currentView.startsWith('folder_');
   const resolvedShowCompleted = isListView ? !!currentList?.showCompleted : false;
 
   const handleToggleTask = useCallback((id: string, forceReverse?: boolean) => {
@@ -283,10 +284,44 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     if (currentView === 'TRASH') {
       return { 'Papelera': Object.values(tasks).filter(t => t.deleted_at) };
     }
+    if (isFolderView) {
+      const folderId = currentView.replace('folder_', '');
+      
+      // Get all lists that are descendants of this folder
+      const descendantListIds = new Set<string>();
+      const queue = [folderId];
+      while (queue.length > 0) {
+        const currId = queue.shift()!;
+        const children = lists?.filter(l => l.parentId === currId) || [];
+        children.forEach(c => {
+          descendantListIds.add(c.id);
+          queue.push(c.id);
+        });
+      }
+
+      const allTasks = Object.values(tasks).filter(t => !t.deleted_at);
+      const validTasks = resolvedShowCompleted 
+        ? allTasks 
+        : allTasks.filter(t => !isTaskCompleted(t) || recentlyCompletedIds.includes(t.id));
+
+      const filteredTasks = validTasks.filter(t => {
+        const catId = t.categoryId || (t as any).category_id;
+        return catId && descendantListIds.has(catId);
+      });
+
+      const grouped: Record<string, TaskItem[]> = {};
+      filteredTasks.forEach(task => {
+        const catId = task.categoryId || (task as any).category_id;
+        const listName = lists?.find(l => l.id === catId)?.name || 'Sin Lista';
+        if (!grouped[listName]) grouped[listName] = [];
+        grouped[listName].push(task);
+      });
+      return grouped;
+    }
     if (isSmartView) return getTasksForSmartView(resolvedShowCompleted, recentlyCompletedIds);
     if (isListView) return getTasksByList(currentView.replace('list_', ''), resolvedShowCompleted, recentlyCompletedIds);
     return getTasksByCycle(currentView, resolvedShowCompleted, recentlyCompletedIds);
-  }, [currentView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, resolvedShowCompleted, recentlyCompletedIds]);
+  }, [currentView, isFolderView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, resolvedShowCompleted, recentlyCompletedIds, lists]);
     
   const smartTasks = useMemo(() => currentView === 'cycle_day' ? getSmartSortTasks() : [], [currentView, getSmartSortTasks, tasks]);
 
@@ -326,11 +361,16 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       return names[currentView] || currentView;
     }
     if (currentView === 'TRASH') return 'Papelera Eliminados';
+    if (isFolderView) {
+      const folderId = currentView.replace('folder_', '');
+      const folder = lists?.find(l => l.id === folderId);
+      return folder ? folder.name : 'Carpeta';
+    }
     if (currentView === 'list_inbox') return 'Bandeja de entrada';
     if (currentCycle) return currentCycle.name;
     if (currentList) return currentList.name;
     return 'Tareas';
-  }, [isSmartView, currentView, currentCycle, currentList]);
+  }, [isSmartView, isFolderView, currentView, currentCycle, currentList, lists]);
 
   const handleAddSection = useCallback(async (parentId?: string) => {
     if (!currentList) return;
@@ -911,7 +951,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             lineHeight: '1.2',
             wordBreak: 'break-word',
             letterSpacing: '-0.5px',
-            color: isSmartView ? SMART_COLORS[currentView] : isListView && currentList ? currentList.color : 'var(--text-primary)',
+            color: isSmartView ? SMART_COLORS[currentView] : (isListView && currentList) ? currentList.color : isFolderView ? (lists?.find(l => l.id === currentView.replace('folder_', ''))?.color || 'var(--text-primary)') : 'var(--text-primary)',
             display: 'flex', alignItems: 'center', margin: 0,
             padding: 0,
             boxSizing: 'border-box'
