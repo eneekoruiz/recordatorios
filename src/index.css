@@ -201,7 +201,7 @@ html, body, #root, .app-container, .main-container, .main-content, .sidebar-cont
 
 /* ---------- Sidebar ---------- */
 .sidebar-container {
-  width: 280px;
+  width: 310px;
   height: 100dvh;
   position: sticky;
   top: 0;
@@ -783,14 +783,14 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 .fab {
-  bottom: max(34px, env(safe-area-inset-bottom)) !important;
+  bottom: max(80px, env(safe-area-inset-bottom)) !important;
   right: max(34px, env(safe-area-inset-right)) !important;
 }
 
 @media (max-width: 768px) {
   .main-content { padding: 0 !important; }
   .fab {
-    bottom: max(22px, env(safe-area-inset-bottom)) !important;
+    bottom: max(70px, env(safe-area-inset-bottom)) !important;
     right: max(18px, env(safe-area-inset-right)) !important;
   }
 }

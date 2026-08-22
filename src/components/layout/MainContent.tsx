@@ -904,7 +904,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                   style={{ padding: '4px 16px 20px 16px', display: 'flex', flexDirection: 'column', gap: '16px', flexShrink: 0, margin: '0', borderBottom: 'none', boxSizing: 'border-box' }}
                 >
         {/* Línea del Título (Debajo del Top Bar) */}
-        <div style={{ width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
           <h1 className="text-display" style={{ 
             fontSize: '34px', 
             fontWeight: 700,
@@ -962,8 +962,20 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             )}
           </h1>
 
+          {(() => {
+            if (currentCycle) {
+              return (
+                <div className="content-stats" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginLeft: '4px' }}>
+                  <span className="stat-chip" style={{ minHeight: '32px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', lineHeight: '1.3', wordBreak: 'break-word', boxSizing: 'border-box', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 999 }}><strong>{activeVisibleCount}</strong> &nbsp;pendientes</span>
+                  <span className="stat-chip" style={{ minHeight: '32px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', lineHeight: '1.3', wordBreak: 'break-word', boxSizing: 'border-box', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 999 }}><strong>{completedVisibleCount}</strong> &nbsp;completadas</span>
+                </div>
+              );
+            }
+            return null;
+          })()}
+
           {currentCycle && !['cycle_day', 'cycle_week', 'cycle_month', 'cycle_year'].includes(currentCycle.id) && (
-            <div style={{ marginTop: 'var(--space-8)' }}>
+            <div>
               <button 
                 onClick={async () => {
                   setConfirmProps({ title: 'Eliminar Ciclo', message: `¿Estás seguro de eliminar el ciclo ${currentCycle.name}? Esta acción no se puede deshacer.`, onConfirm: () => deleteCycle(currentCycle.id) }); setIsConfirmOpen(true);
@@ -976,17 +988,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             </div>
           )}
 
-          {(() => {
-            if (currentCycle) {
-              return (
-                <div className="content-stats" style={{ marginTop: 'var(--space-8)', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <span className="stat-chip" style={{ minHeight: '32px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', lineHeight: '1.3', wordBreak: 'break-word', boxSizing: 'border-box' }}><strong>{activeVisibleCount}</strong> pendientes</span>
-                  <span className="stat-chip" style={{ minHeight: '32px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', lineHeight: '1.3', wordBreak: 'break-word', boxSizing: 'border-box' }}><strong>{completedVisibleCount}</strong> completadas</span>
-                </div>
-              );
-            }
-            return null;
-          })()}
 
           {totalCost > 0 && (
             <div style={{ marginTop: 12, display: 'inline-block', background: 'var(--accent-glow)', color: 'var(--accent-primary)', padding: '6px 12px', borderRadius: 999, fontWeight: 700, border: '1px solid rgba(37,99,235,0.12)' }}>
@@ -1077,11 +1078,11 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                         onDoubleClick={(e) => isCustomSection && startEditingSection(e, data.sectionId!, data.title)}
                         style={{ 
                           cursor: isCustomSection ? 'text' : 'pointer',
-                          fontWeight: 600,
-                          color: 'var(--text-tertiary)',
-                          fontSize: '0.85rem',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.5px',
+                          fontWeight: data.depth === 0 ? 700 : 600,
+                          color: data.depth === 0 ? 'var(--text-primary)' : data.depth === 1 ? 'var(--text-secondary)' : 'var(--text-tertiary)',
+                          fontSize: data.depth === 0 ? '1.2rem' : data.depth === 1 ? '1rem' : '0.85rem',
+                          textTransform: data.depth >= 2 ? 'uppercase' : 'none',
+                          letterSpacing: data.depth >= 2 ? '0.5px' : '0',
                           lineHeight: '1.3',
                           minHeight: '28px',
                           wordBreak: 'break-word',
