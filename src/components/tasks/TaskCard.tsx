@@ -258,7 +258,7 @@ export const TaskCard = React.memo(function TaskCard({
           borderTopRightRadius: isFirstInSection ? 10 : 0,
           borderBottomLeftRadius: isLastInSection ? 10 : 0,
           borderBottomRightRadius: isLastInSection ? 10 : 0,
-          borderBottom: isLastInSection ? 'none' : '0.5px solid var(--border-subtle)',
+          borderBottom: 'none',
           opacity: isBlocked ? 0.5 : 1,
           pointerEvents: 'auto',
           touchAction: 'pan-y',
