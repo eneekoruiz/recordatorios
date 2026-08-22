@@ -18,6 +18,7 @@ import { NavigationFrame } from './components/layout/NavigationFrame';
 import { AuthScreen } from './components/auth/AuthScreen';
 import { InstallPromptModal } from './components/layout/InstallPromptModal';
 import { ShortcutsModal } from './components/layout/ShortcutsModal';
+import { BottomShortcutBar } from './components/layout/BottomShortcutBar';
 import { syncManager } from './sync/syncManager';
 import { TaskSkeletonLoader } from './components/ui/TaskSkeletonLoader';
 
@@ -191,8 +192,17 @@ function App() {
 
   useEffect(() => {
     const handleOpenShortcuts = () => setIsShortcutsOpen(true);
+    const handleOpenNewTask = () => {
+      setEditingTaskId(null);
+      setDefaultSectionId(undefined);
+      setIsDrawerOpen(true);
+    };
     window.addEventListener('open-shortcuts-modal', handleOpenShortcuts);
-    return () => window.removeEventListener('open-shortcuts-modal', handleOpenShortcuts);
+    window.addEventListener('open-new-task-drawer', handleOpenNewTask);
+    return () => {
+      window.removeEventListener('open-shortcuts-modal', handleOpenShortcuts);
+      window.removeEventListener('open-new-task-drawer', handleOpenNewTask);
+    };
   }, []);
 
   // ── Conditional returns (AFTER all hooks) ────────────────────────
@@ -291,6 +301,7 @@ function App() {
       />
       <InstallPromptModal />
       <ShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
+      <BottomShortcutBar />
 
       {globalToast && createPortal(
         <AnimatePresence>
@@ -298,10 +309,10 @@ function App() {
             className="premium-toast"
             role="status"
             style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between', minWidth: 260, boxSizing: 'border-box' }}
-            initial={{ opacity: 0, y: 20, x: "-50%", scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, x: "-50%", scale: 1 }}
-            exit={{ opacity: 0, y: 20, x: "-50%", scale: 0.9 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+            initial={{ opacity: 0, y: 16, x: "-50%" }}
+            animate={{ opacity: 1, y: 0, x: "-50%" }}
+            exit={{ opacity: 0, y: 16, x: "-50%" }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             drag="x"
             dragConstraints={{ left: -100, right: 100 }}
             onDragEnd={(_, info) => { if (Math.abs(info.offset.x) > 50) setGlobalToast(null); }}

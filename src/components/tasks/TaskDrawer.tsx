@@ -225,11 +225,11 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
 
   // Tareas disponibles para bloquear (no pueden ser la misma, y deben estar PENDING)
   const availableTasks = Object.values(useAppStore(state => state.tasks)).filter(t => t.status === 'pending' && !t.deleted_at);
-  // Efecto NLP en tiempo real: Escucha el título y autocompleta horas, fechas, ciclos
+  // Efecto NLP en tiempo real: Escucha el título y autocompleta horas, fechas, ciclos, prioridades y listas
   useEffect(() => {
     if (title) {
       const nlp = parseNaturalLanguage(title);
-      const newChips: {type: 'time'|'date'|'cycle', label: string}[] = [];
+      const newChips: {type: 'time'|'date'|'cycle'|'priority'|'category', label: string}[] = [];
       
       // Manejar tiempos
       if (nlp.times.length > 0) {
@@ -238,31 +238,38 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         if (newAlerts.length > 0) {
           setAlerts(prev => [...prev, ...newAlerts]);
         }
-        nlp.times.forEach(t => newChips.push({ type: 'time', label: t }));
+        nlp.times.forEach(t => newChips.push({ type: 'time', label: `⏰ ${t}` }));
       }
       
       // Manejar sugerencia de fecha
       if (nlp.suggestedDueDate) {
         setDueDate(nlp.suggestedDueDate);
-        newChips.push({ type: 'date', label: nlp.suggestedDueDate.toLocaleDateString() });
-      } else {
-        setDueDate(new Date()); // Volver a hoy por defecto
+        setHasDate(true);
+        newChips.push({ type: 'date', label: `📅 ${nlp.suggestedDueDate.toLocaleDateString()}` });
       }
 
       // Manejar sugerencia de ciclo
       if (nlp.suggestedCycleId) {
         setCycleId(nlp.suggestedCycleId);
         const cName = cycles.find(c => c.id === nlp.suggestedCycleId)?.name || 'Ciclo';
-        newChips.push({ type: 'cycle', label: cName });
-      } else {
-        setCycleId(undefined); // Volver a one-off
+        newChips.push({ type: 'cycle', label: `🔄 ${cName}` });
+      }
+
+      // Manejar prioridad
+      if (nlp.suggestedPriority) {
+        setPriority(nlp.suggestedPriority);
+        const prioLabel = nlp.suggestedPriority === 'high' ? '🚨 Alta' : nlp.suggestedPriority === 'medium' ? '⚡ Media' : '🔵 Baja';
+        newChips.push({ type: 'priority', label: prioLabel });
+      }
+
+      // Manejar categoría
+      if (nlp.suggestedCategory) {
+        newChips.push({ type: 'category', label: `@${nlp.suggestedCategory}` });
       }
       
-      setSuggestedChips(newChips);
+      setSuggestedChips(newChips as any);
     } else {
       setSuggestedChips([]);
-      setCycleId(undefined);
-      setDueDate(new Date());
     }
   }, [title, alerts, cycles]);
 

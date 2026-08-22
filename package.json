@@ -4,10 +4,11 @@
   "version": "1.0.1",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"npx vite\" \"node server/index.js\"",
+    "dev": "concurrently \"vite\" \"node server/index.js\"",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
+    "test:e2e": "playwright test",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -30,6 +31,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
