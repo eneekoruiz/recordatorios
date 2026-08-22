@@ -280,7 +280,7 @@ export const useAppStore = create<AppState>()(
       }),
 
       addCycle: (cycle) => optimisticUpdate(get, set, (state) => ({
-        cycles: [...state.cycles, { 
+        cycles: [...state.cycles.filter(c => c.id !== cycle.id), { 
           ...cycle, 
           _is_dirty: cycle._is_dirty ?? true, 
           updated_at: cycle.updated_at || new Date().toISOString() 
@@ -301,7 +301,7 @@ export const useAppStore = create<AppState>()(
       })),
 
       addList: (list) => optimisticUpdate(get, set, (state) => ({
-        lists: [...state.lists, { 
+        lists: [...state.lists.filter(l => l.id !== list.id), { 
           ...list, 
           _is_dirty: list._is_dirty ?? true, 
           updated_at: list.updated_at || new Date().toISOString() 
@@ -322,7 +322,7 @@ export const useAppStore = create<AppState>()(
       })),
 
       addListSection: (section) => set((state: any) => ({
-        listSections: [...(state.listSections || []), { ...section, _is_dirty: true, updated_at: new Date().toISOString() }]
+        listSections: [...(state.listSections || []).filter((s: any) => s.id !== section.id), { ...section, _is_dirty: true, updated_at: new Date().toISOString() }]
       })),
 
       updateListSection: (id, name) => set((state: any) => ({
@@ -699,18 +699,30 @@ export const useAppStore = create<AppState>()(
         delete (rest as Partial<AppState>).hasHydrated;
         return rest;
       },
-      merge: (persistedState: any, currentState: any) => ({
-        ...currentState,
-        ...persistedState,
-        smartListVisibility: {
-          ...currentState.smartListVisibility,
-          ...(persistedState.smartListVisibility || {})
-        },
-        cycleVisibility: {
-          ...currentState.cycleVisibility,
-          ...(persistedState.cycleVisibility || {})
-        }
-      }),
+      merge: (persistedState: any, currentState: any) => {
+        const rawLists = persistedState?.lists || currentState.lists || [];
+        const uniqueLists = Array.from(new Map(rawLists.map((l: any) => [l.id, l])).values());
+        const rawCycles = persistedState?.cycles || currentState.cycles || [];
+        const uniqueCycles = Array.from(new Map(rawCycles.map((c: any) => [c.id, c])).values());
+        const rawSections = persistedState?.listSections || currentState.listSections || [];
+        const uniqueSections = Array.from(new Map(rawSections.map((s: any) => [s.id, s])).values());
+        
+        return {
+          ...currentState,
+          ...persistedState,
+          lists: uniqueLists,
+          cycles: uniqueCycles,
+          listSections: uniqueSections,
+          smartListVisibility: {
+            ...currentState.smartListVisibility,
+            ...(persistedState?.smartListVisibility || {})
+          },
+          cycleVisibility: {
+            ...currentState.cycleVisibility,
+            ...(persistedState?.cycleVisibility || {})
+          }
+        };
+      },
       migrate: (persistedState: any, version: number) => {
         let state = persistedState;
         

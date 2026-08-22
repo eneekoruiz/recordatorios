@@ -11,6 +11,8 @@ import { ConfirmModal } from '../ui/ConfirmModal';
 import { getCycleIcon } from '../../constants/icons';
 import { ListConfigModal } from './ListConfigModal';
 import { SMART_LISTS } from '../../constants/smartLists';
+import { QuickAddBar } from '../ui/QuickAddBar';
+import { OnboardingGuideCard } from '../ui/OnboardingGuideCard';
 // Settings icon import removed because it was merged into single lucide-react import above
 
 interface MainContentProps {
@@ -350,6 +352,17 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [editingSectionName, setEditingSectionName] = useState('');
   const [sectionMenuId, setSectionMenuId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!sectionMenu.open && !sectionMenuId) return;
+    const handleScroll = (e: Event) => {
+      if (e.target instanceof HTMLElement && e.target.closest('.ios-dropdown-menu')) return;
+      setSectionMenu({ open: false, x: 0, y: 0 });
+      setSectionMenuId(null);
+    };
+    window.addEventListener('scroll', handleScroll, true);
+    return () => window.removeEventListener('scroll', handleScroll, true);
+  }, [sectionMenu.open, sectionMenuId]);
 
   const startEditingSection = useCallback((e: React.MouseEvent, sectionId: string, currentName: string) => {
     e.stopPropagation();
@@ -980,6 +993,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             </div>
           )}
         </div>
+        <OnboardingGuideCard />
       </header>
               </div>
             );
@@ -1385,6 +1399,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           </motion.div>
         </>,
         document.body
+      )}
+
+      {currentView !== 'TRASH' && (
+        <QuickAddBar currentView={currentView} onExpandDrawer={() => onOpenNewTask()} />
       )}
     </main>
   );

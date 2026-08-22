@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Zap, CheckCircle, Play, ArrowRight } from 'lucide-react';
+import { Search, Zap, CheckCircle, Play, ArrowRight, Plus } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 
 interface CommandPaletteProps {
@@ -23,33 +23,70 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
     [tasks]
   );
 
+  const lists = useAppStore(state => state.lists);
+
   const results = useMemo(() => {
     const nextResults: any[] = [];
-    const q = query.toLowerCase();
+    const q = query.toLowerCase().trim();
 
-    if ('brain dump'.includes(q) || 'nueva'.includes(q)) {
-      nextResults.push({ type: 'action', id: 'brain_dump', title: 'Abrir Brain Dump', icon: <Zap size={16} color="var(--accent-primary)" /> });
+    // 1. Acciones del sistema
+    if ('nueva tarea'.includes(q) || 'crear'.includes(q) || 'añadir'.includes(q) || q === '') {
+      nextResults.push({ type: 'action', id: 'new_task', title: '✨ Crear nueva tarea...', subtitle: 'Acceso rápido', icon: <Plus size={16} color="var(--accent-primary)" /> });
     }
 
-    cycles.forEach(c => {
-      if (c.name.toLowerCase().includes(q)) {
-        nextResults.push({ type: 'cycle', id: c.id, title: 'Ir a ' + c.name, icon: <Search size={14} color="var(--text-tertiary)" /> });
+    if ('brain dump'.includes(q) || 'importar texto'.includes(q)) {
+      nextResults.push({ type: 'action', id: 'brain_dump', title: '📥 Abrir Universal Importer / Brain Dump', subtitle: 'Importar en lote', icon: <Zap size={16} color="var(--accent-primary)" /> });
+    }
+
+    if ('estadísticas'.includes(q) || 'analytics'.includes(q) || 'métricas'.includes(q)) {
+      nextResults.push({ type: 'action', id: 'analytics', title: '📊 Ver Estadísticas y Métricas', subtitle: 'Productividad', icon: <Zap size={16} color="var(--accent-primary)" /> });
+    }
+
+    // 2. Listas Inteligentes
+    const smartLists = [
+      { id: 'smart_today', name: 'Hoy', icon: '☀️' },
+      { id: 'smart_scheduled', name: 'Programados', icon: '📅' },
+      { id: 'smart_all', name: 'Todos', icon: '📋' },
+      { id: 'smart_flagged', name: 'Marcados', icon: '🚩' },
+      { id: 'smart_completed', name: 'Completados', icon: '✅' },
+      { id: 'TRASH', name: 'Papelera', icon: '🗑️' }
+    ];
+
+    smartLists.forEach(sl => {
+      if (sl.name.toLowerCase().includes(q) || q === '') {
+        nextResults.push({ type: 'smart', id: sl.id, title: `${sl.icon} Ir a ${sl.name}`, subtitle: 'Lista inteligente', icon: <Search size={14} color="var(--text-tertiary)" /> });
       }
     });
 
+    // 3. Listas personalizadas
+    const uniqueLists = Array.from(new Map((lists || []).map(l => [l.id, l])).values());
+    uniqueLists.filter(l => l.id !== 'user_preferences_smart_lists').forEach(l => {
+      if (l.name.toLowerCase().includes(q) || q === '') {
+        nextResults.push({ type: 'list', id: `list_${l.id}`, title: `📁 ${l.name}`, subtitle: 'Mis listas', icon: <Search size={14} color="var(--accent-primary)" /> });
+      }
+    });
+
+    // 4. Ciclos Temporales
+    cycles.forEach(c => {
+      if (c.name.toLowerCase().includes(q) || q === '') {
+        nextResults.push({ type: 'cycle', id: c.id, title: `🔄 Ciclo ${c.name}`, subtitle: 'Ciclo temporal', icon: <Search size={14} color="var(--accent-orange)" /> });
+      }
+    });
+
+    // 5. Tareas
     allTasks.forEach(t => {
-      if (t.title.toLowerCase().includes(q)) {
+      if (t.title.toLowerCase().includes(q) && q !== '') {
         const catId = t.categoryId || (t as any).category_id;
         const sub = catId === 'inbox' || !catId ? 'Bandeja de entrada' : (catId || '');
-        const isHigh = t.priority === 'high' || t.title.includes('🚨');
-        const titlePrefix = isHigh && !t.title.includes('🚨') ? '🚨 ' : '';
-        nextResults.push({ type: 'task_flow', id: t.id, title: 'Modo Flow: ' + titlePrefix + t.title, subtitle: sub, icon: <Play size={16} /> });
+        const isHigh = t.priority === 'high' || t.priority === 1;
+        const titlePrefix = isHigh ? '🚨 ' : '';
+        nextResults.push({ type: 'task_flow', id: t.id, title: 'Modo Enfoque: ' + titlePrefix + t.title, subtitle: sub, icon: <Play size={16} /> });
         nextResults.push({ type: 'task_complete', id: t.id, title: 'Completar: ' + titlePrefix + t.title, subtitle: sub, icon: <CheckCircle size={16} color="var(--accent-green)" /> });
       }
     });
 
     return nextResults;
-  }, [allTasks, cycles, query]);
+  }, [allTasks, cycles, lists, query]);
 
   const filteredResults = results.filter(item => {
     if (activeFilter === 'all') return true;
@@ -62,8 +99,14 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
   const executeAction = useCallback((action: any) => {
     switch (action.type) {
       case 'action':
-        if (action.id === 'brain_dump') onSelectView('BRAIN_DUMP');
+        if (action.id === 'brain_dump') onSelectView('DATA');
+        else if (action.id === 'analytics') onSelectView('ANALYTICS');
+        else if (action.id === 'new_task') {
+          window.dispatchEvent(new Event('open-new-task-drawer'));
+        }
         break;
+      case 'smart':
+      case 'list':
       case 'cycle':
         onSelectView(action.id);
         break;
@@ -216,21 +259,27 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
                     onClick={() => executeAction(result)}
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: 'var(--space-12) var(--space-16)',
-                      background: isSelected ? 'var(--accent-glow)' : 'transparent',
-                      borderRadius: 'var(--radius-md)',
+                      padding: '10px 14px',
+                      background: isSelected ? 'var(--accent-primary)' : 'transparent',
+                      borderRadius: '10px',
                       cursor: 'pointer',
-                      color: isSelected ? 'white' : 'var(--text-secondary)'
+                      transition: 'background-color 0.1s ease',
+                      color: isSelected ? 'white' : 'var(--text-primary)'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-12)' }}>
-                      {result.icon}
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontSize: '1rem', fontWeight: isSelected ? 500 : 400 }}>{result.title}</span>
-                        {result.subtitle && <span style={{ fontSize: '0.75rem', color: isSelected ? 'rgba(255,255,255,0.7)' : 'var(--text-tertiary)' }}>{result.subtitle}</span>}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{ 
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: isSelected ? 'white' : 'var(--text-secondary)'
+                      }}>
+                        {result.icon}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <span style={{ fontSize: '0.95rem', fontWeight: 500, color: isSelected ? 'white' : 'var(--text-primary)' }}>{result.title}</span>
+                        {result.subtitle && <span style={{ fontSize: '0.78rem', color: isSelected ? 'rgba(255,255,255,0.85)' : 'var(--text-tertiary)' }}>{result.subtitle}</span>}
                       </div>
                     </div>
-                    {isSelected && <ArrowRight size={16} color="var(--accent-primary)" />}
+                    {isSelected && <ArrowRight size={16} color="white" />}
                   </div>
                 );
               })}

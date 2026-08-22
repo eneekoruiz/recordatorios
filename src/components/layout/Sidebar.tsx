@@ -60,19 +60,22 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
       setActiveMenuId(null);
       setMenuCoords(null);
     };
+    window.addEventListener('scroll', handleScroll, true);
     window.addEventListener('close-list-menus', handleScroll);
     return () => {
+      window.removeEventListener('scroll', handleScroll, true);
       window.removeEventListener('close-list-menus', handleScroll);
     };
   }, [activeMenuId]);
   
-  const currentLevelLists = lists.filter((l: any) => l.parentId === parentId && l.id !== 'user_preferences_smart_lists');
+  const uniqueLists = Array.from(new Map((lists || []).map((l: any) => [l.id, l])).values());
+  const currentLevelLists = uniqueLists.filter((l: any) => l.parentId === parentId && l.id !== 'user_preferences_smart_lists');
   if (currentLevelLists.length === 0) return null;
 
   return (
     <div style={{ marginLeft: depth > 0 ? 16 : 0 }}>
       {currentLevelLists.map((list: any) => {
-        const hasChildren = lists.some((l: any) => l.parentId === list.id);
+        const hasChildren = uniqueLists.some((l: any) => l.parentId === list.id);
         const isExpanded = expanded[list.id] !== undefined ? expanded[list.id] : true;
         const isActive = !list.isFolder && currentView === `list_${list.id}`;
         const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
@@ -580,9 +583,20 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
             >
               <div 
                 className="ios-dropdown-item"
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  localStorage.removeItem('pwa_prompt_dismissed'); 
+                  window.dispatchEvent(new Event('open-install-modal'));
+                  setIsProfileOpen(false); 
+                }}
+              >
+                <Download size={16} /> Instalar como App
+              </div>
+              <div 
+                className="ios-dropdown-item"
                 onClick={(e) => { e.stopPropagation(); onSelectView('DATA'); setIsProfileOpen(false); }}
               >
-                <Download size={16} /> Importar / Exportar
+                <Folder size={16} /> Importar / Exportar
               </div>
               <div 
                 className="ios-dropdown-item"
@@ -660,7 +674,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
       <div className="search-bar">
         <input 
           type="text" 
-          placeholder="Buscar" 
+          placeholder="Buscar (Ctrl + K)" 
           onFocus={(e) => {
             window.dispatchEvent(new Event('open-command-palette'));
             e.target.blur();
@@ -751,7 +765,8 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
 
         {/* LISTAS ANCLADAS */}
         {(() => {
-          const pinnedLists = lists.filter(l => l.isPinned && l.id !== 'user_preferences_smart_lists');
+          const uniqueLists = Array.from(new Map((lists || []).map((l: any) => [l.id, l])).values());
+          const pinnedLists = uniqueLists.filter(l => l.isPinned && l.id !== 'user_preferences_smart_lists');
           if (pinnedLists.length === 0) return null;
           return (
             <>
@@ -913,7 +928,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
           )}
 
           <div className="ios-list-block">
-            {cycles.filter(c => c.isPinned).map(cycle => {
+            {Array.from(new Map((cycles || []).map((c: any) => [c.id, c])).values()).filter(c => c.isPinned).map(cycle => {
               const isVisible = !!cycleVisibility[cycle.id];
               const Icon = getCycleIcon(cycle.icon);
               const isActive = currentView === cycle.id;

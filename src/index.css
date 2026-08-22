@@ -4,29 +4,29 @@
    DESIGN SYSTEM TOKENS
 ======================================================== */
 :root {
-  /* Color Palette — Light Theme (Glassmorphism & Pearl) */
-  --bg-base: #ffffff;
-  --bg-surface: rgba(255, 255, 255, 0.7);
-  --bg-surface-glass: rgba(255, 255, 255, 0.55);
-  --bg-elevated: #ffffff;
-  --bg-card: #ffffff;
-  --bg-hover: rgba(0, 0, 0, 0.04);
+  /* Color Palette — Light Theme (Sober & Natural) */
+  --bg-base: #F9F9FB;
+  --bg-surface: #FFFFFF;
+  --bg-surface-glass: rgba(255, 255, 255, 0.85);
+  --bg-elevated: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-hover: rgba(0, 0, 0, 0.03);
 
-  --accent-primary: #007aff;
-  --accent-blue: #007aff;
-  --accent-glow: rgba(0, 122, 255, 0.25);
-  --accent-purple: #5856d6;
-  --accent-green: #34c759;
-  --accent-red: #ff3b30;
-  --accent-orange: #ff9500;
-  --accent-yellow: #ffcc00;
+  --accent-primary: #000000;
+  --accent-blue: #0070F3;
+  --accent-glow: rgba(0, 0, 0, 0.05);
+  --accent-purple: #7928CA;
+  --accent-green: #10B981;
+  --accent-red: #EF4444;
+  --accent-orange: #F59E0B;
+  --accent-yellow: #FBBF24;
 
-  --text-primary: #1c1c1e;
-  --text-secondary: #636366;
-  --text-tertiary: #8e8e93;
+  --text-primary: #111111;
+  --text-secondary: #666666;
+  --text-tertiary: #888888;
 
   --border-subtle: rgba(0, 0, 0, 0.06);
-  --border-focus: rgba(0, 122, 255, 0.25);
+  --border-focus: rgba(0, 0, 0, 0.15);
   --border-color: rgba(0, 0, 0, 0.08);
 
   /* Spacing Scale (Mathematical — 4px base) */
@@ -40,23 +40,23 @@
   --space-48: 3rem;
   --space-64: 4rem;
 
-  /* Border Radius */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 18px;
-  --radius-xl: 24px;
+  /* Border Radius (Sober) */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-full: 9999px;
 
   /* Typography */
-  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, sans-serif;
-  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display', system-ui, sans-serif;
 
-  /* Shadows & Depth */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
-  --shadow-xl: 0 24px 64px rgba(0, 0, 0, 0.16);
-  --shadow-glow: 0 0 20px rgba(0, 122, 255, 0.35);
+  /* Shadows & Depth (Crisp & Tight) */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.06), 0 4px 8px rgba(0, 0, 0, 0.03);
+  --shadow-xl: 0 24px 48px rgba(0, 0, 0, 0.08);
+  --shadow-glow: 0 0 0 2px rgba(0, 0, 0, 0.05);
 
   --card-bg: rgba(255, 255, 255, 1);
 }
@@ -85,6 +85,22 @@ body {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+/* Premium Cinematic Noise Texture */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.035;
+}
+
+@media (prefers-color-scheme: dark) {
+  body::before {
+    opacity: 0.02;
+  }
 }
 
 /* Blindaje Táctil Universal contra Selección Nativa de iOS */
@@ -448,12 +464,19 @@ input:checked + .slider::before {
   padding: 12px 16px;
   cursor: pointer;
   position: relative;
-  transition: all 0.2s;
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.2s;
   display: flex; 
   flex-direction: column;
   min-height: 85px;
   justify-content: space-between;
   border: none;
+}
+
+@media (hover: hover) {
+  .ios-smart-card:hover {
+    transform: translateY(-2px) scale(1.015);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15) !important;
+  }
 }
 .ios-smart-card .icon-circle {
   background: white;
@@ -760,36 +783,38 @@ button { -webkit-tap-highlight-color: transparent; }
 
 @media (prefers-color-scheme: dark) {
   :root {
+    /* Color Palette — Dark Theme (Sober & Natural) */
     --bg-base: #000000;
-    --bg-surface: rgba(28, 28, 30, 0.85);
-    --bg-surface-glass: rgba(28, 28, 30, 0.75);
-    --bg-elevated: var(--bg-surface-glass);
-    --bg-card: var(--bg-surface-glass);
-    --bg-hover: rgba(255, 255, 255, 0.1);
-    --bg-pressed: rgba(255, 255, 255, 0.15);
+    --bg-surface: #111111;
+    --bg-surface-glass: rgba(17, 17, 17, 0.85);
+    --bg-elevated: #111111;
+    --bg-card: #111111;
+    --bg-hover: rgba(255, 255, 255, 0.05);
+    --bg-pressed: rgba(255, 255, 255, 0.08);
     
-    --accent-primary: #0A84FF;
-    --accent-blue: #0A84FF;
-    --accent-glow: rgba(10, 132, 255, 0.35);
-    --accent-purple: #BF5AF2;
-    --accent-green: #32D74B;
-    --accent-red: #FF453A;
-    --accent-orange: #FF9F0A;
-    --accent-yellow: #FFD60A;
+    --accent-primary: #FFFFFF;
+    --accent-blue: #3291FF;
+    --accent-glow: rgba(255, 255, 255, 0.08);
+    --accent-purple: #8A2BE2;
+    --accent-green: #34D399;
+    --accent-red: #F87171;
+    --accent-orange: #FBBF24;
+    --accent-yellow: #FCD34D;
     
-    --text-primary: #FFFFFF;
-    --text-secondary: rgba(235, 235, 245, 0.6);
-    --text-tertiary: rgba(235, 235, 245, 0.45);
+    --text-primary: #EDEDED;
+    --text-secondary: #A0A0A0;
+    --text-tertiary: #666666;
     
-    --border-subtle: rgba(255, 255, 255, 0.12);
-    --border-focus: rgba(10, 132, 255, 0.4);
-    --border-color: rgba(84, 84, 88, 0.3);
+    --border-subtle: rgba(255, 255, 255, 0.1);
+    --border-focus: rgba(255, 255, 255, 0.2);
+    --border-color: rgba(255, 255, 255, 0.15);
     
-    --card-bg: rgba(22, 22, 22, 0.5);
-    --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.4);
-    --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.5);
-    --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.6);
-    --shadow-xl: 0 32px 96px rgba(0, 0, 0, 0.8);
+    --card-bg: #111111;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.6);
+    --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.8);
+    --shadow-xl: 0 24px 48px rgba(0, 0, 0, 1);
+    --shadow-glow: 0 0 0 2px rgba(255, 255, 255, 0.1);
   }
 
   body {
@@ -874,16 +899,17 @@ button { -webkit-tap-highlight-color: transparent; }
   z-index: 1;
 }
 .auth-hero-panel h1 {
-  max-width: 440px;
+  max-width: 100%;
   margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(2.7rem, 6vw, 5.25rem);
-  line-height: 0.92;
-  letter-spacing: 0;
+  font-size: clamp(2rem, 3.8vw, 3.6rem);
+  line-height: 1.08;
+  letter-spacing: -0.01em;
   color: var(--text-primary);
   position: relative;
   z-index: 1;
-  padding-right: 0.1em;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 .auth-hero-panel p {
   max-width: 420px;
@@ -1268,8 +1294,14 @@ button:disabled {
   color: var(--accent-primary, #0a84ff);
   border-bottom: none !important;
 }
-.ios-list-item .title, .ios-smart-card h3, .content-header h1, .group-header h3 {
-  overflow-wrap: anywhere;
+.ios-list-item .title, .ios-smart-card h3 {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+.content-header h1, .group-header h3 {
+  overflow-wrap: break-word;
 }
 .header-actions { max-width: 100%; }
 .ios-task-row {
@@ -1591,9 +1623,14 @@ html, body {
     top: 9px;
     left: 50%;
     width: 38px;
-    height: 5px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--text-tertiary) 42%, transparent);
     transform: translateX(-50%);
   }
 }
+
+@media (min-width: 900px) {
+  .desktop-shortcut-bar {
+    display: flex !important;
+  }
+}
+
+

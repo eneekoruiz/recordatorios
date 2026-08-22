@@ -1,6 +1,9 @@
 class SoundServiceClass {
   private ctx: AudioContext | null = null;
   private _enabled: boolean = true;
+  private ambientSource: AudioNode | null = null;
+  private ambientGain: GainNode | null = null;
+  private isAmbientPlaying: boolean = false;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -38,83 +41,191 @@ class SoundServiceClass {
     }
   }
 
+  /**
+   * Chime armónico de doble nota tipo Apple Reminders (C6 -> E6)
+   */
   public playComplete() {
     if (!this._enabled || typeof window === 'undefined') return;
     try {
       this.initCtx();
       if (!this.ctx) return;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sine';
       const now = this.ctx.currentTime;
-      osc.frequency.setValueAtTime(600, now);
-      osc.frequency.exponentialRampToValueAtTime(1200, now + 0.08);
-      gain.gain.setValueAtTime(0.12, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(now);
-      osc.stop(now + 0.08);
+
+      // Nota 1 (C6: 1046.5 Hz)
+      const osc1 = this.ctx.createOscillator();
+      const gain1 = this.ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(1046.5, now);
+      gain1.gain.setValueAtTime(0.09, now);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+      osc1.connect(gain1);
+      gain1.connect(this.ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.16);
+
+      // Nota 2 (E6: 1318.5 Hz con retardo sutil de 45ms)
+      const osc2 = this.ctx.createOscillator();
+      const gain2 = this.ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(1318.5, now + 0.045);
+      gain2.gain.setValueAtTime(0.0001, now);
+      gain2.gain.setValueAtTime(0.12, now + 0.045);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+      osc2.connect(gain2);
+      gain2.connect(this.ctx.destination);
+      osc2.start(now + 0.045);
+      osc2.stop(now + 0.28);
     } catch {}
   }
 
+  /**
+   * Tono suave descendente al desmarcar
+   */
   public playUncomplete() {
     if (!this._enabled || typeof window === 'undefined') return;
     try {
       this.initCtx();
       if (!this.ctx) return;
+      const now = this.ctx.currentTime;
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'sine';
-      const now = this.ctx.currentTime;
-      osc.frequency.setValueAtTime(450, now);
-      osc.frequency.exponentialRampToValueAtTime(300, now + 0.06);
-      gain.gain.setValueAtTime(0.08, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+      osc.frequency.setValueAtTime(659.25, now); // E5
+      osc.frequency.exponentialRampToValueAtTime(440, now + 0.09); // A4
+      gain.gain.setValueAtTime(0.07, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
       osc.connect(gain);
       gain.connect(this.ctx.destination);
       osc.start(now);
-      osc.stop(now + 0.06);
+      osc.stop(now + 0.09);
     } catch {}
   }
 
+  /**
+   * Swoop acústico suave al eliminar
+   */
   public playDelete() {
     if (!this._enabled || typeof window === 'undefined') return;
     try {
       this.initCtx();
       if (!this.ctx) return;
+      const now = this.ctx.currentTime;
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
-      osc.type = 'triangle';
-      const now = this.ctx.currentTime;
-      osc.frequency.setValueAtTime(220, now);
-      osc.frequency.exponentialRampToValueAtTime(120, now + 0.07);
-      gain.gain.setValueAtTime(0.1, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(320, now);
+      osc.frequency.exponentialRampToValueAtTime(120, now + 0.12);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
       osc.connect(gain);
       gain.connect(this.ctx.destination);
       osc.start(now);
-      osc.stop(now + 0.07);
+      osc.stop(now + 0.12);
     } catch {}
   }
 
+  /**
+   * Click háptico / pop de interfaz para botones y selección
+   */
   public playPop() {
     if (!this._enabled || typeof window === 'undefined') return;
     try {
       this.initCtx();
       if (!this.ctx) return;
+      const now = this.ctx.currentTime;
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'sine';
-      const now = this.ctx.currentTime;
-      osc.frequency.setValueAtTime(900, now);
-      gain.gain.setValueAtTime(0.06, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+      osc.frequency.setValueAtTime(1200, now);
+      osc.frequency.exponentialRampToValueAtTime(400, now + 0.025);
+      gain.gain.setValueAtTime(0.04, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.025);
       osc.connect(gain);
       gain.connect(this.ctx.destination);
       osc.start(now);
-      osc.stop(now + 0.03);
+      osc.stop(now + 0.025);
     } catch {}
+  }
+
+  /**
+   * Generador de sonido ambiente sintético para modo Zen (lluvia / ruido marrón / binaural)
+   */
+  public startAmbientSound(type: 'rain' | 'waves' | 'binaural' = 'rain') {
+    if (typeof window === 'undefined') return;
+    this.stopAmbientSound();
+    try {
+      this.initCtx();
+      if (!this.ctx) return;
+      
+      const bufferSize = 2 * this.ctx.sampleRate;
+      const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
+      let lastOut = 0.0;
+
+      for (let i = 0; i < bufferSize; i++) {
+        if (type === 'rain') {
+          // Pink / rain noise
+          const white = Math.random() * 2 - 1;
+          output[i] = (lastOut + (0.02 * white)) / 1.02;
+          lastOut = output[i];
+          output[i] *= 3.5;
+        } else {
+          // Brown noise / calm waves
+          const white = Math.random() * 2 - 1;
+          output[i] = (lastOut + (0.01 * white)) / 1.01;
+          lastOut = output[i];
+          output[i] *= 4.0;
+        }
+      }
+
+      const whiteNoise = this.ctx.createBufferSource();
+      whiteNoise.buffer = noiseBuffer;
+      whiteNoise.loop = true;
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = type === 'rain' ? 'lowpass' : 'bandpass';
+      filter.frequency.value = type === 'rain' ? 800 : 400;
+
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0.01, this.ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.05, this.ctx.currentTime + 1.5);
+
+      whiteNoise.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      whiteNoise.start();
+      this.ambientSource = whiteNoise;
+      this.ambientGain = gain;
+      this.isAmbientPlaying = true;
+    } catch (e) {
+      console.error('Ambient audio error:', e);
+    }
+  }
+
+  public stopAmbientSound() {
+    if (this.ambientGain && this.ctx) {
+      try {
+        this.ambientGain.gain.linearRampToValueAtTime(0.0001, this.ctx.currentTime + 0.5);
+        setTimeout(() => {
+          if (this.ambientSource) {
+            (this.ambientSource as any).stop?.();
+            this.ambientSource.disconnect();
+            this.ambientSource = null;
+          }
+          this.ambientGain = null;
+          this.isAmbientPlaying = false;
+        }, 500);
+      } catch {
+        this.ambientSource = null;
+        this.ambientGain = null;
+        this.isAmbientPlaying = false;
+      }
+    }
+  }
+
+  public get isPlayingAmbient(): boolean {
+    return this.isAmbientPlaying;
   }
 }
 

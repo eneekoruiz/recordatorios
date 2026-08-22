@@ -51,3 +51,5 @@ tmp/
 .vercel
 
 .vercel
+test-results/  
+playwright-report/ 

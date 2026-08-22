@@ -49,6 +49,17 @@ export const TaskCard = React.memo(function TaskCard({
 
   const [contextMenuOpen, setContextMenuOpen] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (!contextMenuOpen) return;
+    const handleScroll = (e: Event) => {
+      if (e.target instanceof HTMLElement && e.target.closest('.ios-dropdown-menu')) return;
+      setContextMenuOpen(false);
+    };
+    window.addEventListener('scroll', handleScroll, true);
+    return () => window.removeEventListener('scroll', handleScroll, true);
+  }, [contextMenuOpen]);
+
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [isHovered, setIsHovered] = useState(false);
   const longPressTimer = useRef<number | null>(null);
@@ -254,10 +265,12 @@ export const TaskCard = React.memo(function TaskCard({
       >
 
         {/* Checkbox */}
-        <button
+        <motion.button
+          whileTap={{ scale: 0.82 }}
+          whileHover={{ scale: 1.05 }}
           aria-label={isCompletedPeriod ? 'Marcar como pendiente' : 'Completar tarea'}
           disabled={!!isBlocked}
-          onClick={(e) => {
+          onClick={(e: React.MouseEvent) => {
             e.stopPropagation();
             if (isBlocked) return;
             if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate([8]);
@@ -295,30 +308,35 @@ export const TaskCard = React.memo(function TaskCard({
             border: isCompletedPeriod ? 'none' : '1.5px solid var(--border-color)',
             background: isCompletedPeriod ? 'var(--accent-primary)' : 'transparent',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'background-color 0.18s ease, border-color 0.18s ease, transform 0.15s ease',
-            transform: 'scale(1)',
+            transition: 'background-color 0.18s ease, border-color 0.18s ease',
             boxShadow: isCompletedPeriod ? '0 2px 6px rgba(0,0,0,0.15)' : 'none'
           }}>
-            <svg viewBox="0 0 24 24" width={14} height={14} style={{ opacity: isCompletedPeriod ? 1 : 0, transition: 'opacity 0.15s ease', overflow: 'visible' }}>
-              <path
+            <svg viewBox="0 0 24 24" width={14} height={14} style={{ overflow: 'visible' }}>
+              <motion.path
                 d="M5 12L10 17L19 7"
                 stroke="white"
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 fill="none"
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ 
+                  pathLength: isCompletedPeriod ? 1 : 0,
+                  opacity: isCompletedPeriod ? 1 : 0
+                }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
               />
             </svg>
           </div>
-        </button>
+        </motion.button>
 
         {/* Content */}
         <div style={{ flex: 1, minWidth: 0, padding: '2px 0', boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             {isBlocked && <Lock size={15} color="var(--accent-red)" />}
-            {task.priority && task.priority !== 'none' && (
-              <span className={`priority-badge ${task.priority}`}>
-                {task.priority === 'low' ? '!' : task.priority === 'medium' ? '!!' : '!!!'}
+            {Boolean(task.priority && task.priority !== 'none' && task.priority !== 0) && (
+              <span className={`priority-badge ${typeof task.priority === 'number' ? (task.priority === 1 ? 'high' : task.priority === 5 ? 'medium' : 'low') : task.priority}`}>
+                {task.priority === 'low' || task.priority === 9 ? '!' : task.priority === 'medium' || task.priority === 5 ? '!!' : '!!!'}
               </span>
             )}
             {isEditingTitle ? (
