@@ -460,6 +460,7 @@ input:checked + .slider::before {
    IOS PIXEL-PERFECT REDESIGN
 ======================================================== */
 .ios-smart-card {
+  background: var(--bg-elevated);
   border-radius: 16px;
   padding: 12px 16px;
   cursor: pointer;
@@ -470,6 +471,7 @@ input:checked + .slider::before {
   min-height: 85px;
   justify-content: space-between;
   border: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Apple standard slight elevation */
 }
 
 @media (hover: hover) {
@@ -479,29 +481,31 @@ input:checked + .slider::before {
   }
 }
 .ios-smart-card .icon-circle {
-  background: white;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .ios-smart-card h3 {
-  color: white;
+  color: var(--text-secondary);
   margin: 0;
-  font-size: 1rem;
+  margin-top: 12px;
+  font-size: 1.05rem;
   font-weight: 600;
   align-self: flex-start;
+  letter-spacing: -0.01em;
 }
 .ios-smart-card .count {
   position: absolute;
-  top: 6px;
-  right: 12px;
+  top: 8px;
+  right: 14px;
   font-size: 2rem;
   font-weight: 700;
-  color: white;
+  color: var(--text-primary);
   line-height: 1;
+  letter-spacing: -0.03em;
 }
 
 .categories-section .section-header {
@@ -533,7 +537,13 @@ input:checked + .slider::before {
   box-shadow: none;
 }
 .ios-list-item:not(:last-child)::after {
-  display: none;
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 56px; /* Icon width (28) + padding (16) + margin (12) */
+  right: 0;
+  height: 0.5px;
+  background: var(--border-subtle, rgba(0,0,0,0.06));
 }
 .ios-list-item .list-icon {
   width: 28px;

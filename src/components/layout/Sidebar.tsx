@@ -106,6 +106,13 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
               drag={draggingListId === list.id || isEditMode}
               dragSnapToOrigin={true}
               whileDrag={{ scale: 1.02, zIndex: 100, boxShadow: '0 8px 24px rgba(0,0,0,0.3)', backgroundColor: 'var(--bg-elevated, #2c2c2e)' }}
+              animate={{
+                scale: activeMenuId === list.id ? 0.96 : 1,
+                zIndex: activeMenuId === list.id ? 99999 : 'auto',
+                boxShadow: activeMenuId === list.id ? '0 16px 40px rgba(0,0,0,0.2)' : 'none',
+                borderRadius: activeMenuId === list.id ? 12 : 0,
+              }}
+              transition={{ type: 'spring', damping: 25, stiffness: 450 }}
               onDragStart={() => {
                 if (longPressTimerRef.current) {
                   clearTimeout(longPressTimerRef.current);
@@ -176,9 +183,21 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                 if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
                 longPressTimerRef.current = setTimeout(() => {
                   wasLongPressedRef.current = true;
-                  setDraggingListId(list.id);
                   if (navigator.vibrate) {
-                    try { navigator.vibrate([8]); } catch (_err) {}
+                    try { navigator.vibrate([10]); } catch (_err) {}
+                  }
+                  // Open Premium Context Menu
+                  if (activeMenuId === list.id) {
+                    setActiveMenuId(null);
+                    setMenuCoords(null);
+                  } else {
+                    const el = document.querySelector(`[data-list-id="${list.id}"]`);
+                    const rect = el ? el.getBoundingClientRect() : { bottom: pointerStartRef.current!.y, left: pointerStartRef.current!.x };
+                    setMenuCoords({
+                      top: rect.bottom,
+                      left: rect.left
+                    });
+                    setActiveMenuId(list.id);
                   }
                 }, 300);
               }}
@@ -213,6 +232,11 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                   longPressTimerRef.current = null;
                 }
                 wasLongPressedRef.current = true;
+                setMenuCoords({
+                  top: e.clientY,
+                  left: e.clientX
+                });
+                setActiveMenuId(list.id);
               }}
               style={{ position: 'relative', transition: 'background-color 150ms ease', cursor: 'grab' }}
             >
@@ -228,7 +252,7 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
               
               {getTaskCount && !list.isFolder && <span className="count">{getTaskCount(list.id) || 0}</span>}
               
-              {(hasChildren || list.isFolder) && (
+              {(hasChildren || list.isFolder) ? (
                 <button 
                   onClick={(e) => { 
                     e.stopPropagation(); 
@@ -250,6 +274,10 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                 >
                   {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                 </button>
+              ) : (
+                <div style={{ marginLeft: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 4, color: 'var(--text-tertiary)', opacity: 0.5 }}>
+                  <ChevronRight size={16} />
+                </div>
               )}
               
               <button 
@@ -282,10 +310,10 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                     onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); setMenuCoords(null); }} 
                   />
                   <motion.div 
-                    initial={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.95 }}
-                    animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1 }}
-                    exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                    initial={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.85, y: -10 }}
+                    animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }}
+                    exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.95, y: -5 }}
+                    transition={{ type: 'spring', damping: 25, stiffness: 450 }}
                     className={isMobile ? undefined : "ios-dropdown-menu"}
                     style={isMobile ? { 
                       position: 'fixed',
@@ -307,7 +335,16 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                       position: 'fixed',
                       top: Math.min(menuCoords.top + 4, window.innerHeight - 400),
                       left: Math.max(12, Math.min(menuCoords.left, window.innerWidth - 220)),
-                      zIndex: 99999
+                      zIndex: 99999,
+                      width: 220,
+                      background: 'var(--bg-material, rgba(255,255,255,0.75))',
+                      backdropFilter: 'blur(30px) saturate(180%)',
+                      WebkitBackdropFilter: 'blur(30px) saturate(180%)',
+                      borderRadius: '14px',
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.04)',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      padding: '8px 0',
+                      display: 'flex', flexDirection: 'column'
                     }}
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -685,7 +722,19 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
       </div>
 
       {/* 3. SCROLLABLE AREA */}
-      <div className="sidebar-content sidebar-scroll-area" onScroll={() => window.dispatchEvent(new Event('close-list-menus'))}>
+      <div 
+        className="sidebar-content sidebar-scroll-area" 
+        onScroll={() => window.dispatchEvent(new Event('close-list-menus'))}
+        style={{ 
+          flex: 1, 
+          overflowY: 'auto', 
+          overflowX: 'hidden',
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehaviorY: 'auto',
+          display: 'flex', 
+          flexDirection: 'column' 
+        }}
+      >
         
         {/* SMART LISTS GRID */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 var(--space-12)', marginBottom: 'var(--space-8)' }}>
@@ -751,8 +800,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                   <span 
                     className="count" 
                     style={{ 
-                      fontSize: getTaskCount(list.id) >= 100 ? '1.4rem' : getTaskCount(list.id) >= 10 ? '1.7rem' : '2rem',
-                      color: list.color
+                      fontSize: getTaskCount(list.id) >= 100 ? '1.4rem' : getTaskCount(list.id) >= 10 ? '1.7rem' : '2rem'
                     }}
                   >
                     {getTaskCount(list.id)}
@@ -793,7 +841,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                       <motion.div layoutId={"smart-icon-" + list.id} className="icon-circle" style={{ backgroundColor: list.color, boxShadow: `0 4px 12px ${list.color}40`, border: 'none' }}>
                         <span style={{ fontSize: 16 }}>📌</span>
                       </motion.div>
-                      <span className="count" style={{ fontSize: countFontSize, color: list.color }}>{count}</span>
+                      <span className="count" style={{ fontSize: countFontSize }}>{count}</span>
                       <h3>{list.name}</h3>
                     </motion.div>
                   );
@@ -805,8 +853,8 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
 
         {/* MIS LISTAS */}
         <div className="categories-section" style={{ flexShrink: 0 }}>
-          <div className="section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span>Mis listas</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 12px 8px 16px' }}>
+            <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Mis listas</span>
             <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
               <button 
                 className="btn-icon"
