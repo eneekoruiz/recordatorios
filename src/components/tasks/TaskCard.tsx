@@ -239,13 +239,19 @@ export const TaskCard = React.memo(function TaskCard({
         drag="x"
         dragSnapToOrigin
         dragConstraints={{ left: -140, right: 140 }}
-        dragElastic={{ left: 0.15, right: 0.15 }}
-        dragTransition={{ bounceStiffness: 400, bounceDamping: 40 }}
+        dragElastic={0.25}
+        dragTransition={{ bounceStiffness: 500, bounceDamping: 35 }}
         onDragEnd={(_, info) => handleSwipeEnd(info.offset.x)}
+        animate={{
+          scale: contextMenuOpen ? 0.96 : 1,
+          boxShadow: contextMenuOpen ? '0 16px 40px rgba(0,0,0,0.2)' : 'none',
+          borderRadius: contextMenuOpen ? 12 : (isFirstInSection ? 10 : isLastInSection ? 10 : 0),
+        }}
+        transition={{ type: 'spring', damping: 25, stiffness: 400 }}
         style={{
           x,
           position: 'relative',
-          zIndex: 1,
+          zIndex: contextMenuOpen ? 99999 : 1,
           minHeight: 52,
           display: 'flex',
           alignItems: 'center',
@@ -265,6 +271,18 @@ export const TaskCard = React.memo(function TaskCard({
           cursor: 'default',
         }}
       >
+        {/* iOS Ultra-Thin Separator (except for last item) */}
+        {!isLastInSection && !contextMenuOpen && (
+          <div style={{
+            position: 'absolute',
+            bottom: 0,
+            left: `${48 + indent}px`,
+            right: 0,
+            height: '0.5px',
+            background: 'var(--border-subtle, rgba(0,0,0,0.06))',
+            zIndex: 0
+          }} />
+        )}
 
         {/* Checkbox */}
         <motion.button
@@ -614,7 +632,7 @@ export const TaskCard = React.memo(function TaskCard({
                 transition={{ duration: 0.18 }}
                 style={{
                   position: 'fixed', inset: 0, zIndex: 99998,
-                  background: 'transparent', // No dark overlay blocking the view!
+                  background: 'rgba(0,0,0,0.05)', // Extremely subtle overlay to catch clicks
                 }}
                 onClick={() => setContextMenuOpen(false)}
                 onContextMenu={(e) => { e.preventDefault(); setContextMenuOpen(false); }}
@@ -622,21 +640,21 @@ export const TaskCard = React.memo(function TaskCard({
 
               {/* Floating Popover Container */}
               <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.15 }}
+                initial={{ opacity: 0, scale: 0.85, y: -10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 450 }}
                 style={{
                   position: 'fixed', zIndex: 99999,
                   top: Math.min(contextMenuPosition.y, typeof window !== 'undefined' ? window.innerHeight - 350 : 300),
                   left: Math.min(contextMenuPosition.x, typeof window !== 'undefined' ? window.innerWidth - 220 : 100),
                   width: 220,
-                  background: 'var(--bg-elevated)',
-                  backdropFilter: 'blur(20px)',
-                  WebkitBackdropFilter: 'blur(20px)',
-                  borderRadius: 'var(--radius-md, 12px)',
-                  boxShadow: 'var(--shadow-lg, 0 8px 30px rgba(0,0,0,0.12))',
-                  border: '1px solid var(--border-subtle)',
+                  background: 'var(--bg-material, rgba(255,255,255,0.75))',
+                  backdropFilter: 'blur(30px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(30px) saturate(180%)',
+                  borderRadius: '14px',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.04)',
+                  border: '1px solid rgba(255,255,255,0.2)',
                   padding: '8px 0',
                   display: 'flex', flexDirection: 'column'
                 }}
@@ -760,7 +778,6 @@ function MenuActions({ task, setContextMenuOpen, onEdit, nestTask, previousTaskI
   );
 }
 
-// ── Reusable action row for menu ──────────────────────────────────────
 function ActionRow({
   icon, label, onClick, labelColor
 }: {
@@ -770,7 +787,9 @@ function ActionRow({
   labelColor?: string;
 }) {
   return (
-    <button
+    <motion.button
+      whileTap={{ scale: 0.96, backgroundColor: 'rgba(0,0,0,0.06)' }}
+      transition={{ type: 'spring', damping: 25, stiffness: 450 }}
       onClick={onClick}
       style={{
         width: '100%',
@@ -783,14 +802,8 @@ function ActionRow({
         cursor: 'pointer',
         textAlign: 'left',
         WebkitTapHighlightColor: 'transparent',
-        height: 52,
+        height: 48, // slightly shorter matching iOS
       }}
-      onPointerDown={e => {
-        const el = e.currentTarget;
-        el.style.background = 'var(--bg-hover)';
-      }}
-      onPointerUp={e => { e.currentTarget.style.background = 'none'; }}
-      onPointerLeave={e => { e.currentTarget.style.background = 'none'; }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: labelColor || 'var(--text-primary)' }}>
         {icon}
@@ -798,6 +811,6 @@ function ActionRow({
       <div style={{ flex: 1, fontSize: '0.95rem', fontWeight: 500, color: labelColor || 'var(--text-primary)' }}>
         {label}
       </div>
-    </button>
+    </motion.button>
   );
 }
