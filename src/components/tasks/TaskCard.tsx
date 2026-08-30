@@ -402,19 +402,25 @@ export const TaskCard = React.memo(function TaskCard({
                 tabIndex={0}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
                 onClick={() => setIsEditingTitle(true)}
+                className={`task-title ${isCompletedPeriod ? 'completed' : ''}`}
                 style={{
-                  fontSize: '1rem', fontWeight: 500,
-                  lineHeight: '1.4', minHeight: '22px',
-                  color: 'var(--text-primary)',
-                  textDecoration: isCompletedPeriod ? 'line-through' : 'none',
-                  opacity: isCompletedPeriod ? 0.55 : 1,
+                  color: isCompletedPeriod ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                  fontWeight: 400,
+                  fontSize: '1.05rem',
+                  lineHeight: '1.4',
+                  whiteSpace: 'normal',
                   wordBreak: 'break-word',
-                  cursor: 'text',
-                  flex: 1,
-                  boxSizing: 'border-box'
+                  overflow: 'visible',
+                  cursor: 'text'
                 }}
               >
-                {task.title}
+                {task.title.split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
+                  part.match(/^https?:\/\//) ? (
+                    <a key={i} href={part} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>
+                      {part}
+                    </a>
+                  ) : part
+                )}
               </motion.span>
             )}
             {task.flagged && <Flag size={13} color="var(--accent-orange)" fill="var(--accent-orange)" />}
@@ -429,7 +435,6 @@ export const TaskCard = React.memo(function TaskCard({
                 <textarea
                   ref={(el) => {
                     if (el && isEditingNote) {
-                      // Small timeout ensures the browser paints first, helping iOS keyboards
                       setTimeout(() => el.focus(), 50);
                     }
                   }}
@@ -475,81 +480,71 @@ export const TaskCard = React.memo(function TaskCard({
                     boxSizing: 'border-box'
                   }}
                 >
-                  {task.description || (!isTaskCompleted(task) && !isCompletedPeriod ? 'Añadir nota...' : '')}
+                  {task.description ? (
+                    task.description.split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
+                      part.match(/^https?:\/\//) ? (
+                        <a key={i} href={part} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>
+                          {part}
+                        </a>
+                      ) : part
+                    )
+                  ) : (!isTaskCompleted(task) && !isCompletedPeriod ? 'Añadir nota...' : '')}
                 </span>
               )}
             </div>
           )}
 
           {/* Meta row */}
-          <div style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center', flexWrap: 'wrap' }}>
-            {showListName && taskList && (
-              <span style={{ 
-                fontSize: '0.78rem', 
-                color: 'var(--text-tertiary)', 
-                fontWeight: 600,
-                lineHeight: '1.3',
-                wordBreak: 'break-word',
-                display: 'inline-flex',
-                alignItems: 'center',
-                padding: '2px 8px',
-                borderRadius: '6px',
-                background: 'var(--bg-surface-glass)',
-                border: '1px solid var(--border-subtle)',
-                minHeight: '20px',
-                boxSizing: 'border-box'
-              }}>
-                {taskList.name}
-              </span>
-            )}
-            {(task.dueDate || taskCycle) && (
-              <span style={{ 
-                fontSize: '0.78rem', 
-                color: dueDateColor, 
-                display: 'inline-flex', 
-                alignItems: 'center', 
-                gap: 4, 
-                fontWeight: 600,
-                lineHeight: '1.3',
-                padding: '2px 8px',
-                borderRadius: '6px',
-                background: 'var(--bg-surface-glass)',
-                border: '1px solid var(--border-subtle)',
-                minHeight: '20px',
-                boxSizing: 'border-box',
-                wordBreak: 'break-word'
-              }}>
-                {task.dueDate && new Date(task.dueDate).toLocaleDateString()}
-                {task.dueDate && taskCycle && <Repeat size={11} style={{ color: 'var(--text-tertiary)' }} />}
-                {taskCycle && <span style={{ color: 'var(--text-tertiary)' }}>{taskCycle.name}</span>}
-              </span>
-            )}
-            {task.url && (
-              <a
-                href={task.url}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                  textDecoration: 'none', color: 'var(--accent-primary)',
-                  fontSize: '0.78rem', fontWeight: 600,
-                  lineHeight: '1.3',
-                  padding: '2px 8px',
-                  borderRadius: '6px',
-                  background: 'rgba(10, 132, 255, 0.08)',
-                  border: '1px solid rgba(10, 132, 255, 0.2)',
-                  minHeight: '20px',
-                  boxSizing: 'border-box'
-                }}
-                onClick={e => e.stopPropagation()}
-              >
-                <Link2 size={12} />
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }}>
-                  {(() => { try { return new URL(task.url).hostname.replace('www.', ''); } catch { return task.url; } })()}
+          {(showListName || task.dueDate || taskCycle) && (
+            <div style={{ display: 'flex', gap: '4px', marginTop: 2, alignItems: 'center', flexWrap: 'wrap', fontSize: '0.85rem', color: 'var(--text-tertiary)', lineHeight: '1.2' }}>
+              {showListName && taskList && (
+                <span>{taskList.name}</span>
+              )}
+              {showListName && taskList && (task.dueDate || taskCycle) && <span>&nbsp;</span>}
+              {(task.dueDate || taskCycle) && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  {task.dueDate && <span style={{ color: dueDateColor === 'var(--accent-red)' ? '#FF3B30' : dueDateColor }}>{new Date(task.dueDate).toLocaleDateString()}</span>}
+                  {task.dueDate && taskCycle && <span><Repeat size={10} /></span>}
+                  {taskCycle && <span>{taskCycle.name}</span>}
                 </span>
-              </a>
-            )}
-          </div>
+              )}
+            </div>
+          )}
+
+          {/* Rich Link Preview */}
+          {task.url && (
+            <a
+              href={task.url}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                textDecoration: 'none', color: 'var(--text-primary)',
+                marginTop: 8,
+                padding: '8px 12px',
+                borderRadius: '12px',
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+                boxSizing: 'border-box',
+                maxWidth: '100%',
+                overflow: 'hidden'
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Link2 size={16} color="var(--accent-primary)" />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--accent-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {task.url}
+                </span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {(() => { try { return new URL(task.url).hostname.replace('www.', ''); } catch { return 'Enlace web'; } })()}
+                </span>
+              </div>
+            </a>
+          )}
         </div>
 
         {/* Subtask Chevron */}
