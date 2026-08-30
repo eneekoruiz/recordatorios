@@ -908,7 +908,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           position: 'relative', 
           overflowY: 'auto', 
           overflowX: 'hidden',
-          overscrollBehaviorY: 'contain',
+          overscrollBehaviorY: 'auto',
           overscrollBehaviorX: 'none',
           touchAction: 'pan-y',
           WebkitOverflowScrolling: 'touch',
