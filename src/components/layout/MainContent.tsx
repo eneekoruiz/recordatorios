@@ -712,7 +712,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     const isExpanded = !isCatCollapsed(`task_${task.id}`);
 
     return (
-      <div
+      <motion.div
+        layout="position"
+        initial={{ opacity: 0, height: 0, scaleY: 0.95, overflow: 'hidden' }}
+        animate={{ opacity: 1, height: 'auto', scaleY: 1, overflow: 'visible' }}
+        exit={{ opacity: 0, height: 0, scaleY: 0.95, overflow: 'hidden' }}
+        transition={{ type: 'spring', damping: 28, stiffness: 400 }}
         key={itemKey ?? `task-${task.id}`}
         data-index={index}
         style={{ ...itemStyle, margin: 0, padding: '0 16px', boxSizing: 'border-box' }}
@@ -721,7 +726,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           {depth > 0 && (
             <div style={{
               position: 'absolute', left: 8 + (depth-1)*24, top: 0, bottom: 0, width: 2,
-              background: 'var(--accent-primary)', opacity: Math.max(0.2, 1 - depth*0.2), zIndex: 1
+              background: 'var(--accent-primary)', opacity: Math.max(0.15, 1 - depth*0.2), zIndex: 1,
+              borderRadius: 2
             }} />
           )}
 
@@ -745,7 +751,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             } as any)}
           />
         </div>
-      </div>
+      </motion.div>
     );
   }, [tasks, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, isListView, isSmartView, currentView]);
 
