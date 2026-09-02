@@ -21,7 +21,8 @@ import {
   FolderOpen,
   FolderPlus,
   IndentIncrease,
-  IndentDecrease
+  IndentDecrease,
+  Rocket
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
