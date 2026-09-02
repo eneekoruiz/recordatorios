@@ -40,10 +40,12 @@ interface SidebarProps {
 }
 
 // Sub-componente para jerarquía infinita
-const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditList, getTaskCount, parentId = undefined, depth = 0, isEditMode = false }: any) => {
+const ListHierarchy = ({ 
+  lists, currentView, onSelectView, onAddSublist, onEditList, getTaskCount, 
+  parentId = undefined, depth = 0, isEditMode = false,
+  activeMenuId, setActiveMenuId, menuCoords, setMenuCoords
+}: any) => {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
-  const [menuCoords, setMenuCoords] = useState<{ top: number; left: number } | null>(null);
   const [draggingListId, setDraggingListId] = useState<string | null>(null);
   const removeList = useAppStore((state) => state.removeList);
   const updateList = useAppStore((state) => state.updateList);
@@ -505,6 +507,10 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                   parentId={list.id} 
                   depth={depth + 1}
                   isEditMode={isEditMode}
+                  activeMenuId={activeMenuId}
+                  setActiveMenuId={setActiveMenuId}
+                  menuCoords={menuCoords}
+                  setMenuCoords={setMenuCoords}
                 />
               ) : (
                 <motion.div 
@@ -574,6 +580,9 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   const toggleCycleVisibility = useAppStore((state) => state.toggleCycleVisibility);
   const globalCyclesEnabled = useAppStore((state) => state.globalCyclesEnabled);
   const toggleGlobalCycles = useAppStore((state) => state.toggleGlobalCycles);
+  
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [menuCoords, setMenuCoords] = useState<{ top: number; left: number } | null>(null);
   
   const getTaskCount = (listId: string) => {
     const all = Object.values(tasks || {}).filter(t => !t.deleted_at);
@@ -1165,6 +1174,10 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               onAddSublist={(pId: string, isF?: boolean) => { setEditingListId(undefined); setParentListId(pId); setIsNewFolderDefault(!!isF); setIsListConfigOpen(true); }} 
               onEditList={(listId: string) => { setEditingListId(listId); setParentListId(undefined); setIsListConfigOpen(true); }}
               isEditMode={isEditMode}
+              activeMenuId={activeMenuId}
+              setActiveMenuId={setActiveMenuId}
+              menuCoords={menuCoords}
+              setMenuCoords={setMenuCoords}
             />
 
             {/* Papelera */}
