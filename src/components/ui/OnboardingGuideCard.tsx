@@ -1,18 +1,16 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Command, Headphones, X, Check, ArrowRight } from 'lucide-react';
+import { Sparkles, Command, Headphones, X, Check, ArrowRight, Trash2, Rocket } from 'lucide-react';
+import { useAppStore } from '../../store/useAppStore';
 import { SoundService } from '../../services/SoundService';
 
 export function OnboardingGuideCard() {
   const [isVisible, setIsVisible] = useState(false);
-  const [completedSteps, setCompletedSteps] = useState<number[]>(() => {
-    try {
-      const stored = localStorage.getItem('onboarding_completed_steps');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
+
+  const tasksMap = useAppStore((state) => state.tasks);
+  const toggleTaskStatus = useAppStore((state) => state.toggleTaskStatus);
+  const removeList = useAppStore((state) => state.removeList);
+  const deleteTask = useAppStore((state) => state.deleteTask);
 
   useEffect(() => {
     const isHidden = localStorage.getItem('hide_onboarding_guide') === 'true';
@@ -27,55 +25,66 @@ export function OnboardingGuideCard() {
     SoundService.playPop();
   };
 
-  const handleToggleStep = (stepIndex: number) => {
-    const next = completedSteps.includes(stepIndex)
-      ? completedSteps.filter(s => s !== stepIndex)
-      : [...completedSteps, stepIndex];
-    setCompletedSteps(next);
-    localStorage.setItem('onboarding_completed_steps', JSON.stringify(next));
-    if (!completedSteps.includes(stepIndex)) {
-      SoundService.playComplete();
-    }
+  const handleSkipAndRemoveList = () => {
+    localStorage.setItem('hide_onboarding_guide', 'true');
+    setIsVisible(false);
+
+    // Eliminar las tareas de onboarding y la lista 'primeros_pasos'
+    Object.values(tasksMap).forEach((t) => {
+      if (t.categoryId === 'primeros_pasos') {
+        deleteTask(t.id);
+      }
+    });
+    removeList('primeros_pasos');
+    SoundService.playPop();
+  };
+
+  const handleGoToList = () => {
+    window.dispatchEvent(new CustomEvent('select-view', { detail: 'list_primeros_pasos' }));
   };
 
   if (!isVisible) return null;
 
-  const steps = [
-    {
-      title: 'Añadir con Lenguaje Natural',
-      desc: 'Escribe en la barra inferior: "Reunión mañana a las 10:00 !alta @Trabajo"',
-      icon: <Sparkles size={16} color="var(--accent-primary)" />,
-      actionLabel: 'Probar',
-      onAction: () => {
-        const input = document.querySelector('input[placeholder*="Añadir rápido"]') as HTMLInputElement;
-        if (input) {
-          input.focus();
-          input.value = 'Comprar pan mañana a las 18:00 !alta';
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-      }
-    },
-    {
-      title: 'Paleta de Comandos (Ctrl + K)',
-      desc: 'Pulsa Ctrl+K o "/" para buscar cualquier tarea, ciclo o lista en milisegundos.',
-      icon: <Command size={16} color="var(--accent-orange)" />,
-      actionLabel: 'Abrir (Ctrl+K)',
-      onAction: () => {
-        window.dispatchEvent(new Event('open-command-palette'));
-      }
-    },
-    {
-      title: 'Modo Enfoque Zen con Audio',
-      desc: 'Pasa el ratón sobre cualquier recordatorio y pulsa el botón ▶ para activar el modo Pomodoro con sonidos de lluvia o mar.',
-      icon: <Headphones size={16} color="var(--accent-green)" />,
-      actionLabel: 'Ver Atajos',
-      onAction: () => {
-        window.dispatchEvent(new Event('open-shortcuts-modal'));
-      }
-    }
-  ];
+  // Obtener tareas reales de la lista 'primeros_pasos'
+  const onboardingTasks = Object.values(tasksMap).filter(t => t.categoryId === 'primeros_pasos');
+  const completedTasks = onboardingTasks.filter(t => t.status === 'completed' || !!t.completed_at);
 
-  const progressPercent = Math.round((completedSteps.length / steps.length) * 100);
+  const totalCount = onboardingTasks.length || 5;
+  const completedCount = completedTasks.length;
+  const progressPercent = Math.round((completedCount / totalCount) * 100);
+
+  // Acciones predeterminadas asociadas a las tareas de primeros pasos
+  const getActionForTask = (task: any) => {
+    if (task.id === 'task_onboarding_1' || task.title.includes('lenguaje natural')) {
+      return {
+        label: 'Probar',
+        onClick: () => {
+          const input = document.querySelector('input[placeholder*="Añadir rápido"]') as HTMLInputElement;
+          if (input) {
+            input.focus();
+            input.value = 'Comprar pan mañana a las 18:00 !alta';
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        }
+      };
+    }
+    if (task.id === 'task_onboarding_2' || task.title.includes('Paleta de Comandos')) {
+      return {
+        label: 'Abrir (Ctrl+K)',
+        onClick: () => window.dispatchEvent(new Event('open-command-palette'))
+      };
+    }
+    if (task.id === 'task_onboarding_3' || task.title.includes('Enfoque Zen')) {
+      return {
+        label: 'Ver Atajos',
+        onClick: () => window.dispatchEvent(new Event('open-shortcuts-modal'))
+      };
+    }
+    return {
+      label: 'Ver Lista',
+      onClick: handleGoToList
+    };
+  };
 
   return (
     <AnimatePresence>
@@ -96,51 +105,94 @@ export function OnboardingGuideCard() {
         }}
       >
         {/* Card Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--accent-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Sparkles size={16} color="var(--accent-primary)" />
+            <div style={{ width: 32, height: 32, borderRadius: 10, background: 'linear-gradient(135deg, rgba(255, 45, 85, 0.15), rgba(255, 149, 0, 0.15))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Rocket size={18} color="#ff2d55" />
             </div>
             <div>
-              <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-                Guía Rápida de Productividad ({completedSteps.length}/{steps.length})
+              <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                Primeros Pasos ({completedCount}/{totalCount})
               </h3>
               <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                Descubre cómo aprovechar al máximo Recordatorios Élite
+                Completa estas tareas reales para dominar la aplicación o táchalas directamente
               </span>
             </div>
           </div>
 
-          <button
-            onClick={handleDismiss}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-tertiary)',
-              cursor: 'pointer',
-              padding: 4,
-              borderRadius: 6,
-              display: 'flex',
-              alignItems: 'center'
-            }}
-            title="Ocultar guía"
-          >
-            <X size={16} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              onClick={handleGoToList}
+              style={{
+                background: 'rgba(255, 45, 85, 0.1)',
+                border: '1px solid rgba(255, 45, 85, 0.25)',
+                color: '#ff2d55',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                borderRadius: 8,
+                padding: '4px 10px',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4
+              }}
+            >
+              <span>Ver Lista 🚀</span>
+            </button>
+
+            <button
+              onClick={handleSkipAndRemoveList}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-tertiary)',
+                fontSize: '0.78rem',
+                fontWeight: 500,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '4px 6px'
+              }}
+              title="Quitar esta guía y eliminar la lista de Primeros Pasos"
+            >
+              <Trash2 size={14} />
+              <span>Saltar y quitar</span>
+            </button>
+
+            <button
+              onClick={handleDismiss}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-tertiary)',
+                cursor: 'pointer',
+                padding: 4,
+                borderRadius: 6,
+                display: 'flex',
+                alignItems: 'center'
+              }}
+              title="Ocultar banner"
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
 
         {/* Progress Bar */}
-        <div style={{ width: '100%', height: 4, background: 'var(--border-subtle)', borderRadius: 2, marginBottom: 16, overflow: 'hidden' }}>
-          <div style={{ width: `${progressPercent}%`, height: '100%', background: 'var(--accent-primary)', borderRadius: 2, transition: 'width 0.3s ease' }} />
+        <div style={{ width: '100%', height: 5, background: 'var(--border-subtle)', borderRadius: 3, marginBottom: 16, overflow: 'hidden' }}>
+          <div style={{ width: `${progressPercent}%`, height: '100%', background: 'linear-gradient(90deg, #ff2d55, #ff9500)', borderRadius: 3, transition: 'width 0.35s ease' }} />
         </div>
 
-        {/* Step Items */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
-          {steps.map((step, idx) => {
-            const isDone = completedSteps.includes(idx);
+        {/* Task Items Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
+          {onboardingTasks.map((task) => {
+            const isDone = task.status === 'completed' || !!task.completed_at;
+            const action = getActionForTask(task);
+
             return (
               <div
-                key={idx}
+                key={task.id}
                 style={{
                   background: isDone ? 'rgba(52, 199, 89, 0.08)' : 'var(--bg-elevated)',
                   border: isDone ? '1px solid rgba(52, 199, 89, 0.3)' : '1px solid var(--border-subtle)',
@@ -153,12 +205,15 @@ export function OnboardingGuideCard() {
                   transition: 'all 0.18s ease'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                   <button
-                    onClick={() => handleToggleStep(idx)}
+                    onClick={() => {
+                      toggleTaskStatus(task.id);
+                      if (!isDone) SoundService.playComplete();
+                    }}
                     style={{
-                      width: 20,
-                      height: 20,
+                      width: 22,
+                      height: 22,
                       borderRadius: '50%',
                       border: isDone ? 'none' : '1.5px solid var(--border-color)',
                       background: isDone ? 'var(--accent-green)' : 'transparent',
@@ -168,39 +223,56 @@ export function OnboardingGuideCard() {
                       justifyContent: 'center',
                       cursor: 'pointer',
                       flexShrink: 0,
-                      marginTop: 2
+                      marginTop: 2,
+                      transition: 'transform 0.15s ease'
                     }}
+                    title={isDone ? 'Marcar como pendiente' : 'Tachar tarea'}
                   >
-                    {isDone && <Check size={12} strokeWidth={3} />}
+                    {isDone && <Check size={13} strokeWidth={3} />}
                   </button>
                   <div>
-                    <h4 style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 2px 0' }}>
-                      {step.title}
+                    <h4 style={{
+                      fontSize: '0.86rem',
+                      fontWeight: 600,
+                      color: isDone ? 'var(--text-secondary)' : 'var(--text-primary)',
+                      textDecoration: isDone ? 'line-through' : 'none',
+                      margin: '0 0 2px 0'
+                    }}>
+                      {task.title}
                     </h4>
-                    <p style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.35 }}>
-                      {step.desc}
-                    </p>
+                    {task.description && (
+                      <p style={{
+                        fontSize: '0.76rem',
+                        color: 'var(--text-secondary)',
+                        margin: 0,
+                        lineHeight: 1.35,
+                        opacity: isDone ? 0.7 : 1
+                      }}>
+                        {task.description}
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                <button
-                  onClick={step.onAction}
-                  style={{
-                    alignSelf: 'flex-end',
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--accent-primary)',
-                    fontSize: '0.78rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    padding: '2px 6px'
-                  }}
-                >
-                  {step.actionLabel} <ArrowRight size={12} />
-                </button>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: 4 }}>
+                  <button
+                    onClick={action.onClick}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--accent-primary)',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: '2px 6px'
+                    }}
+                  >
+                    {action.label} <ArrowRight size={12} />
+                  </button>
+                </div>
               </div>
             );
           })}

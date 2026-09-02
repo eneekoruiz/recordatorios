@@ -4,7 +4,7 @@ import { motion, useMotionValue, useTransform, AnimatePresence, useMotionValueEv
 import {
   CheckCircle, Trash2, Lock, Link2, Flag, MapPin,
   Image as ImageIcon, MoreHorizontal, Repeat, Edit3,
-  ChevronDown, Copy, FolderOpen, IndentIncrease, IndentDecrease, X
+  ChevronDown, Copy, FolderOpen, IndentIncrease, IndentDecrease, X, Play
 } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -31,7 +31,7 @@ interface TaskCardProps {
 }
 
 export const TaskCard = React.memo(function TaskCard({
-  task, virtualStyle, onToggle, onDelete, onEdit, showListName = true, isFirstInSection, isLastInSection, previousTaskId, hasChildren, isExpanded, onToggleExpand, indent = 0
+  task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, showListName = true, isFirstInSection, isLastInSection, previousTaskId, hasChildren, isExpanded, onToggleExpand, indent = 0
 }: TaskCardProps) {
   const cycles = useAppStore(state => state.cycles);
   const tasks = useAppStore(state => state.tasks);
@@ -54,11 +54,20 @@ export const TaskCard = React.memo(function TaskCard({
   useEffect(() => {
     if (!contextMenuOpen) return;
     const handleScroll = (e: Event) => {
-      if (e.target instanceof HTMLElement && e.target.closest('.ios-dropdown-menu')) return;
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest && target.closest('.ios-dropdown-menu')) {
+        return; // Permite hacer scroll interno dentro del menú desplegable
+      }
       setContextMenuOpen(false);
     };
-    window.addEventListener('scroll', handleScroll, true);
-    return () => window.removeEventListener('scroll', handleScroll, true);
+    window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
+    window.addEventListener('wheel', handleScroll, { capture: true, passive: true });
+    window.addEventListener('touchmove', handleScroll, { capture: true, passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('wheel', handleScroll, true);
+      window.removeEventListener('touchmove', handleScroll, true);
+    };
   }, [contextMenuOpen]);
 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -286,8 +295,7 @@ export const TaskCard = React.memo(function TaskCard({
 
         {/* Checkbox */}
         <motion.button
-          whileTap={{ scale: 0.82 }}
-          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.85 }}
           aria-label={isCompletedPeriod ? 'Marcar como pendiente' : 'Completar tarea'}
           disabled={!!isBlocked}
           onClick={(e: React.MouseEvent) => {
@@ -311,6 +319,26 @@ export const TaskCard = React.memo(function TaskCard({
             outline: 'none'
           }}
         >
+          {/* Halo expansivo al completar */}
+          <AnimatePresence>
+            {isCompletedPeriod && (
+              <motion.div
+                key="complete-glow-burst"
+                initial={{ scale: 0.6, opacity: 0.75 }}
+                animate={{ scale: 1.65, opacity: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
+                style={{
+                  position: 'absolute',
+                  width: 22, height: 22,
+                  borderRadius: '50%',
+                  background: 'var(--accent-primary)',
+                  pointerEvents: 'none'
+                }}
+              />
+            )}
+          </AnimatePresence>
+
           {isPartial && !isCompletedPeriod && (
             <div style={{
               position: 'absolute',
@@ -322,15 +350,24 @@ export const TaskCard = React.memo(function TaskCard({
               <div style={{ width: 18, height: 18, background: 'var(--bg-elevated)', borderRadius: '50%' }} />
             </div>
           )}
-          <div style={{
-            width: 22, height: 22,
-            borderRadius: '50%',
-            border: isCompletedPeriod ? 'none' : '1.5px solid var(--border-color)',
-            background: isCompletedPeriod ? 'var(--accent-primary)' : 'transparent',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'background-color 0.18s ease, border-color 0.18s ease',
-            boxShadow: isCompletedPeriod ? '0 2px 6px rgba(0,0,0,0.15)' : 'none'
-          }}>
+
+          <motion.div
+            animate={{
+              scale: isCompletedPeriod ? [1, 1.25, 0.94, 1] : 1,
+              backgroundColor: isCompletedPeriod ? 'var(--accent-primary)' : 'rgba(0,0,0,0)'
+            }}
+            transition={{
+              scale: { type: 'spring', stiffness: 500, damping: 22 },
+              backgroundColor: { duration: 0.2, ease: 'easeOut' }
+            }}
+            style={{
+              width: 22, height: 22,
+              borderRadius: '50%',
+              border: isCompletedPeriod ? 'none' : '1.5px solid var(--border-color)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: isCompletedPeriod ? '0 2px 8px var(--accent-glow, rgba(10, 132, 255, 0.3))' : 'none'
+            }}
+          >
             <svg viewBox="0 0 24 24" width={14} height={14} style={{ overflow: 'visible' }}>
               <motion.path
                 d="M5 12L10 17L19 7"
@@ -344,10 +381,13 @@ export const TaskCard = React.memo(function TaskCard({
                   pathLength: isCompletedPeriod ? 1 : 0,
                   opacity: isCompletedPeriod ? 1 : 0
                 }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
+                transition={{
+                  pathLength: { type: 'spring', stiffness: 420, damping: 26, delay: 0.02 },
+                  opacity: { duration: 0.15 }
+                }}
               />
             </svg>
-          </div>
+          </motion.div>
         </motion.button>
 
         {/* Content */}
@@ -402,16 +442,22 @@ export const TaskCard = React.memo(function TaskCard({
                 tabIndex={0}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
                 onClick={() => setIsEditingTitle(true)}
-                className={`task-title ${isCompletedPeriod ? 'completed' : ''}`}
-                style={{
+                className="task-title"
+                animate={{
                   color: isCompletedPeriod ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                  opacity: isCompletedPeriod ? 0.65 : 1
+                }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+                style={{
                   fontWeight: 400,
                   fontSize: '1.05rem',
                   lineHeight: '1.4',
                   whiteSpace: 'normal',
                   wordBreak: 'break-word',
                   overflow: 'visible',
-                  cursor: 'text'
+                  cursor: 'text',
+                  position: 'relative',
+                  display: 'inline-block'
                 }}
               >
                 {task.title.split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
@@ -421,6 +467,23 @@ export const TaskCard = React.memo(function TaskCard({
                     </a>
                   ) : part
                 )}
+
+                {/* Línea de tachado animada de izquierda a derecha */}
+                <motion.span
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: isCompletedPeriod ? 1 : 0 }}
+                  transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                  style={{
+                    position: 'absolute',
+                    top: '52%',
+                    left: 0,
+                    right: 0,
+                    height: '1.5px',
+                    background: 'var(--text-tertiary)',
+                    transformOrigin: 'left center',
+                    pointerEvents: 'none'
+                  }}
+                />
               </motion.span>
             )}
             {task.flagged && <Flag size={13} color="var(--accent-orange)" fill="var(--accent-orange)" />}
@@ -494,18 +557,37 @@ export const TaskCard = React.memo(function TaskCard({
             </div>
           )}
 
-          {/* Meta row */}
+          {/* Meta row - Native iOS HIG Style */}
           {(showListName || task.dueDate || taskCycle) && (
-            <div style={{ display: 'flex', gap: '4px', marginTop: 2, alignItems: 'center', flexWrap: 'wrap', fontSize: '0.85rem', color: 'var(--text-tertiary)', lineHeight: '1.2' }}>
+            <div style={{ display: 'flex', gap: '6px', marginTop: 3, alignItems: 'center', flexWrap: 'wrap', fontSize: '0.8rem', color: 'var(--text-tertiary)', lineHeight: '1.3' }}>
               {showListName && taskList && (
-                <span>{taskList.name}</span>
+                <span style={{ 
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  background: 'var(--bg-hover, rgba(0,0,0,0.04))', padding: '1px 7px', borderRadius: '6px',
+                  fontWeight: 500, fontSize: '0.75rem', color: taskList.color || 'var(--text-secondary)'
+                }}>
+                  {taskList.name}
+                </span>
               )}
-              {showListName && taskList && (task.dueDate || taskCycle) && <span>&nbsp;</span>}
-              {(task.dueDate || taskCycle) && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                  {task.dueDate && <span style={{ color: dueDateColor === 'var(--accent-red)' ? '#FF3B30' : dueDateColor }}>{new Date(task.dueDate).toLocaleDateString()}</span>}
-                  {task.dueDate && taskCycle && <span><Repeat size={10} /></span>}
-                  {taskCycle && <span>{taskCycle.name}</span>}
+              {task.dueDate && (
+                <span style={{ 
+                  display: 'inline-flex', alignItems: 'center', gap: 4, 
+                  color: dueDateColor, fontWeight: dueDateColor === '#FF3B30' ? 600 : 400 
+                }}>
+                  📅 {(() => {
+                    const due = new Date(task.dueDate);
+                    const today = new Date(); today.setHours(0, 0, 0, 0);
+                    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+                    const dueZero = new Date(due); dueZero.setHours(0, 0, 0, 0);
+                    if (dueZero.getTime() === today.getTime()) return 'Hoy';
+                    if (dueZero.getTime() === tomorrow.getTime()) return 'Mañana';
+                    return due.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+                  })()}
+                </span>
+              )}
+              {taskCycle && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--text-tertiary)' }}>
+                  <Repeat size={11} style={{ flexShrink: 0 }} /> {taskCycle.name}
                 </span>
               )}
             </div>
@@ -584,32 +666,60 @@ export const TaskCard = React.memo(function TaskCard({
           </button>
         )}
 
-        {/* More button */}
+        {/* Zen Mode Play Button on Hover & More button */}
         {!isBlocked && (
-          <button
-            className="task-more-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              const rect = e.currentTarget.getBoundingClientRect();
-              setContextMenuPosition({ x: rect.right, y: rect.bottom });
-              setContextMenuOpen(true);
-            }}
-            aria-label="Más opciones"
-            style={{
-              width: 44, height: 44,
-              display: isMobile ? 'none' : 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              opacity: isHovered || contextMenuOpen ? 1 : 0,
-              transition: 'opacity 0.2s ease',
-              WebkitTapHighlightColor: 'transparent'
-            }}
-          >
-            <MoreHorizontal size={18} color="var(--text-tertiary)" />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {onOpenZenMode && (
+              <button
+                className="task-zen-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenZenMode(task.id);
+                }}
+                aria-label="Modo Enfoque Zen"
+                title="Modo Enfoque Zen ▶️"
+                style={{
+                  width: 32, height: 32,
+                  borderRadius: '50%',
+                  display: isMobile ? 'none' : 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'var(--accent-glow)',
+                  border: '1px solid rgba(10, 132, 255, 0.25)',
+                  cursor: 'pointer',
+                  opacity: isHovered || contextMenuOpen ? 1 : 0,
+                  transition: 'opacity 0.2s ease, transform 0.15s ease',
+                  WebkitTapHighlightColor: 'transparent'
+                }}
+              >
+                <Play size={14} color="var(--accent-primary)" fill="var(--accent-primary)" style={{ marginLeft: 2 }} />
+              </button>
+            )}
+            <button
+              className="task-more-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                const rect = e.currentTarget.getBoundingClientRect();
+                setContextMenuPosition({ x: rect.right, y: rect.bottom });
+                setContextMenuOpen(true);
+              }}
+              aria-label="Más opciones"
+              style={{
+                width: 44, height: 44,
+                display: isMobile ? 'none' : 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                opacity: isHovered || contextMenuOpen ? 1 : 0,
+                transition: 'opacity 0.2s ease',
+                WebkitTapHighlightColor: 'transparent'
+              }}
+            >
+              <MoreHorizontal size={18} color="var(--text-tertiary)" />
+            </button>
+          </div>
         )}
 
       </motion.div>
@@ -635,6 +745,7 @@ export const TaskCard = React.memo(function TaskCard({
 
               {/* Floating Popover Container */}
               <motion.div
+                className="ios-dropdown-menu"
                 initial={{ opacity: 0, scale: 0.85, y: -10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: -5 }}
@@ -655,7 +766,7 @@ export const TaskCard = React.memo(function TaskCard({
                 }}
                 onClick={e => e.stopPropagation()}
               >
-                <MenuActions task={task} setContextMenuOpen={setContextMenuOpen} onEdit={onEdit} nestTask={nestTask} previousTaskId={previousTaskId} setIsDeleteConfirmOpen={setIsDeleteConfirmOpen} updateTask={updateTask} />
+                <MenuActions task={task} setContextMenuOpen={setContextMenuOpen} onEdit={onEdit} nestTask={nestTask} previousTaskId={previousTaskId} setIsDeleteConfirmOpen={setIsDeleteConfirmOpen} updateTask={updateTask} onOpenZenMode={onOpenZenMode} />
               </motion.div>
             </>
           )}
@@ -704,8 +815,19 @@ export const TaskCard = React.memo(function TaskCard({
   );
 });
 
+interface MenuActionsProps {
+  task: TaskItem;
+  setContextMenuOpen: (open: boolean) => void;
+  onEdit: (id: string) => void;
+  nestTask: (taskId: string, parentId?: string) => void;
+  previousTaskId?: string;
+  setIsDeleteConfirmOpen: (open: boolean) => void;
+  updateTask: (id: string, updates: Partial<TaskItem>) => void;
+  onOpenZenMode?: (id: string) => void;
+}
+
 // ── MenuActions Component ──────────────────────────────────────
-function MenuActions({ task, setContextMenuOpen, onEdit, nestTask, previousTaskId, setIsDeleteConfirmOpen, updateTask }: any) {
+function MenuActions({ task, setContextMenuOpen, onEdit, nestTask, previousTaskId, setIsDeleteConfirmOpen, updateTask, onOpenZenMode }: MenuActionsProps) {
   const addTask = useAppStore(state => state.addTask);
   const lists = useAppStore(state => state.lists);
   const [showMoveSubmenu, setShowMoveSubmenu] = useState(false);
@@ -749,6 +871,13 @@ function MenuActions({ task, setContextMenuOpen, onEdit, nestTask, previousTaskI
 
   return (
     <>
+      {onOpenZenMode && (
+        <ActionRow 
+          icon={<Play size={18} color="var(--accent-primary)" fill="var(--accent-primary)" />} 
+          label="Modo Enfoque Zen ▶️" 
+          onClick={() => { setContextMenuOpen(false); onOpenZenMode(task.id); }} 
+        />
+      )}
       <ActionRow icon={<Edit3 size={18} />} label="Editar" onClick={() => { setContextMenuOpen(false); onEdit(task.id); }} />
       <ActionRow icon={<Copy size={18} />} label="Duplicar" onClick={() => { addTask({ ...task, id: crypto.randomUUID(), title: `${task.title} (copia)`, created_at: Date.now(), completed: false, completed_at: undefined }); setContextMenuOpen(false); }} />
       <ActionRow icon={<FolderOpen size={18} />} label="Mover a lista" onClick={() => { setShowMoveSubmenu(true); }} />

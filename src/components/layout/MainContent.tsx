@@ -12,7 +12,6 @@ import { getCycleIcon } from '../../constants/icons';
 import { ListConfigModal } from './ListConfigModal';
 import { SMART_LISTS } from '../../constants/smartLists';
 import { QuickAddBar } from '../ui/QuickAddBar';
-import { OnboardingGuideCard } from '../ui/OnboardingGuideCard';
 // Settings icon import removed because it was merged into single lucide-react import above
 
 interface MainContentProps {
@@ -77,6 +76,14 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     };
 
     switch (currentView) {
+      case 'smart_primeros_pasos':
+        return {
+          title: "¡Primeros Pasos completados!",
+          subtitle: "Has completado todos los recordatorios guía. Puedes ocultar esta lista inteligente desde el botón Editar de la barra lateral.",
+          iconName: "sparkles",
+          ctaText: undefined,
+          onAction: undefined
+        };
       case 'smart_today':
         return {
           title: "Todo al día para hoy",
@@ -167,11 +174,16 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           onAction: handleNewTask
         };
       default:
+        const isFolder = currentList?.isFolder;
         return {
-          title: `Sin tareas en "${currentList?.name || (currentCycle ? currentCycle.name : 'la lista')}"`,
-          subtitle: "Esta lista está vacía en este momento. Empieza añadiendo tu primer ítem.",
-          iconName: "list",
-          ctaText: "Añadir tarea",
+          title: isFolder 
+            ? `La carpeta "${currentList?.name || 'Carpeta'}" está vacía`
+            : `Sin tareas en "${currentList?.name || (currentCycle ? currentCycle.name : 'la lista')}"`,
+          subtitle: isFolder 
+            ? "Esta carpeta no contiene sublistas ni tareas activas. Puedes añadir una nueva lista o crear un recordatorio dentro."
+            : "Esta lista está vacía en este momento. Empieza añadiendo tu primer ítem.",
+          iconName: isFolder ? "folder" : "list",
+          ctaText: isFolder ? "Añadir a la carpeta" : "Añadir tarea",
           onAction: handleNewTask
         };
     }
@@ -179,6 +191,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
   // Menu state
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [strictCycleFilter, setStrictCycleFilter] = useState(false);
 
   // Estados para la edición de ciclos in-place
   const [isEditingCycle, setIsEditingCycle] = useState(false);
@@ -212,6 +225,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     let filteredTasks: TaskItem[] = [];
 
     switch (currentView) {
+      case 'smart_primeros_pasos':
+        filteredTasks = validTasks.filter(t => t.categoryId === 'primeros_pasos');
+        break;
       case 'smart_today': {
         const today = new Date().toISOString().split('T')[0];
         filteredTasks = validTasks.filter(t => {
@@ -232,7 +248,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         filteredTasks = validTasks;
         break;
       case 'smart_flagged':
-        filteredTasks = validTasks.filter(t => t.flagged);
+        filteredTasks = validTasks.filter(t => Boolean(t.flagged || (t.priority && t.priority !== 'none')));
         break;
       case 'smart_completed':
         filteredTasks = allTasks.filter(t => isTaskCompleted(t)); // always completed
@@ -254,7 +270,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     const grouped: Record<string, TaskItem[]> = {};
     filteredTasks.forEach(task => {
       const catId = task.categoryId || (task as any).category_id;
-      const listName = lists?.find(l => l.id === catId)?.name || 'Sin Lista';
+      let listName = lists?.find(l => l.id === catId)?.name;
+      if (!listName) {
+        listName = (catId === 'primeros_pasos' || currentView === 'smart_primeros_pasos')
+          ? 'Guía de Inicio'
+          : 'Sin Lista';
+      }
       if (!grouped[listName]) grouped[listName] = [];
       grouped[listName].push(task);
     });
@@ -284,11 +305,14 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     if (currentView === 'TRASH') {
       return { 'Papelera': Object.values(tasks).filter(t => t.deleted_at) };
     }
-    if (isFolderView) {
-      const folderId = currentView.replace('folder_', '');
+
+    let rawGrouped: Record<string, TaskItem[]> = {};
+
+    if (isFolderView && currentList) {
+      const folderId = currentList.id;
       
-      // Get all lists that are descendants of this folder
-      const descendantListIds = new Set<string>();
+      // Obtener todas las sublistas descendientes de esta carpeta
+      const descendantListIds = new Set<string>([folderId]);
       const queue = [folderId];
       while (queue.length > 0) {
         const currId = queue.shift()!;
@@ -299,29 +323,43 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         });
       }
 
-      const allTasks = Object.values(tasks).filter(t => !t.deleted_at);
+      const allTasks = Object.values(tasks).filter((t: any) => !t.deleted_at);
       const validTasks = resolvedShowCompleted 
         ? allTasks 
-        : allTasks.filter(t => !isTaskCompleted(t) || recentlyCompletedIds.includes(t.id));
+        : allTasks.filter((t: any) => !isTaskCompleted(t) || recentlyCompletedIds.includes(t.id));
 
-      const filteredTasks = validTasks.filter(t => {
+      const filteredTasks = validTasks.filter((t: any) => {
         const catId = t.categoryId || (t as any).category_id;
         return catId && descendantListIds.has(catId);
       });
 
       const grouped: Record<string, TaskItem[]> = {};
-      filteredTasks.forEach(task => {
+      filteredTasks.forEach((task: any) => {
         const catId = task.categoryId || (task as any).category_id;
         const listName = lists?.find(l => l.id === catId)?.name || 'Sin Lista';
         if (!grouped[listName]) grouped[listName] = [];
         grouped[listName].push(task);
       });
-      return grouped;
+      rawGrouped = grouped;
+    } else if (isSmartView) {
+      rawGrouped = getTasksForSmartView(resolvedShowCompleted, recentlyCompletedIds);
+    } else if (isListView) {
+      rawGrouped = getTasksByList(currentView.replace('list_', ''), resolvedShowCompleted, recentlyCompletedIds);
+    } else {
+      rawGrouped = getTasksByCycle(currentView, resolvedShowCompleted, recentlyCompletedIds);
     }
-    if (isSmartView) return getTasksForSmartView(resolvedShowCompleted, recentlyCompletedIds);
-    if (isListView) return getTasksByList(currentView.replace('list_', ''), resolvedShowCompleted, recentlyCompletedIds);
-    return getTasksByCycle(currentView, resolvedShowCompleted, recentlyCompletedIds);
-  }, [currentView, isFolderView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, resolvedShowCompleted, recentlyCompletedIds, lists]);
+
+    if (currentCycle && strictCycleFilter) {
+      const filteredGrouped: Record<string, TaskItem[]> = {};
+      Object.entries(rawGrouped).forEach(([key, taskList]) => {
+        const matching = taskList.filter(t => t.cycle_id === currentCycle.id);
+        if (matching.length > 0) filteredGrouped[key] = matching;
+      });
+      return filteredGrouped;
+    }
+
+    return rawGrouped;
+  }, [currentView, isFolderView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, resolvedShowCompleted, recentlyCompletedIds, lists, currentCycle, strictCycleFilter, currentList]);
     
   const smartTasks = useMemo(() => currentView === 'cycle_day' ? getSmartSortTasks() : [], [currentView, getSmartSortTasks, tasks]);
 
@@ -351,6 +389,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const getTitle = useCallback(() => {
     if (isSmartView) {
       const names: Record<string, string> = {
+        'smart_primeros_pasos': 'Primeros Pasos',
         'smart_today': 'Hoy',
         'smart_scheduled': 'Programado',
         'smart_all': 'Todos',
@@ -396,12 +435,21 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   useEffect(() => {
     if (!sectionMenu.open && !sectionMenuId) return;
     const handleScroll = (e: Event) => {
-      if (e.target instanceof HTMLElement && e.target.closest('.ios-dropdown-menu')) return;
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest && target.closest('.ios-dropdown-menu')) {
+        return; // Permite hacer scroll interno dentro del menú desplegable
+      }
       setSectionMenu({ open: false, x: 0, y: 0 });
       setSectionMenuId(null);
     };
-    window.addEventListener('scroll', handleScroll, true);
-    return () => window.removeEventListener('scroll', handleScroll, true);
+    window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
+    window.addEventListener('wheel', handleScroll, { capture: true, passive: true });
+    window.addEventListener('touchmove', handleScroll, { capture: true, passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('wheel', handleScroll, true);
+      window.removeEventListener('touchmove', handleScroll, true);
+    };
   }, [sectionMenu.open, sectionMenuId]);
 
   const startEditingSection = useCallback((e: React.MouseEvent, sectionId: string, currentName: string) => {
@@ -486,19 +534,22 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         let headerTitle = categoryOrCycle;
         let headerDepth = 0;
 
-        // In cycle view, the category key is a list id — resolve to name
-        if (categoryOrCycle === 'inbox' || categoryOrCycle === 'undefined' || !categoryOrCycle) {
+        // In cycle or smart view, resolve category key to name
+        if (categoryOrCycle === 'primeros_pasos' || categoryOrCycle === 'Guía de Inicio' || currentView === 'smart_primeros_pasos') {
+          headerTitle = 'Guía de Inicio';
+          color = '#ff2d55';
+        } else if (categoryOrCycle === 'inbox' || categoryOrCycle === 'undefined' || !categoryOrCycle) {
           headerTitle = 'Sin lista';
           color = '#8e8e93';
         } else {
           const catObj = lists?.find(l => l.id === categoryOrCycle);
           if (catObj) { headerTitle = catObj.name; color = catObj.color; }
-          else { headerTitle = 'Sin lista'; color = '#8e8e93'; }
+          else { headerTitle = categoryOrCycle === 'Sin Lista' ? 'Sin lista' : categoryOrCycle; color = '#8e8e93'; }
         }
         
         flat.push({ type: 'header', title: headerTitle, category: categoryOrCycle, color, depth: headerDepth });
         
-        if (!collapsed[categoryOrCycle]) {
+        if (!isCatCollapsed(categoryOrCycle)) {
           const renderSectionTreeForTasks = (tasksInScope: TaskItem[], listId: string, baseDepth: number, parentColor: string) => {
             const sectionsForList = (listSections || []).filter(s => s.listId === listId && !s.deleted_at);
             const tasksBySectionId = new Set(tasksInScope.map(t => t.id));
@@ -892,7 +943,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               <FolderPlus size={20} color="var(--accent-primary)" />
             </button>
           )}
-          <button className="icon-btn" onClick={() => onOpenNewTask()} title="Añadir Tarea"><Plus size={22} color="var(--accent-primary)" /></button>
         </div>
       </header>
 
@@ -1014,6 +1064,43 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 <div className="content-stats" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginLeft: '4px' }}>
                   <span className="stat-chip" style={{ minHeight: '32px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', lineHeight: '1.3', wordBreak: 'break-word', boxSizing: 'border-box', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 999 }}><strong>{activeVisibleCount}</strong> &nbsp;pendientes</span>
                   <span className="stat-chip" style={{ minHeight: '32px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', lineHeight: '1.3', wordBreak: 'break-word', boxSizing: 'border-box', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 999 }}><strong>{completedVisibleCount}</strong> &nbsp;completadas</span>
+
+                  {currentCycle.daysValue > 1 && (
+                    <div style={{ display: 'flex', gap: 6, width: '100%', marginTop: 4 }}>
+                      <button
+                        onClick={() => setStrictCycleFilter(false)}
+                        style={{
+                          cursor: 'pointer',
+                          minHeight: '28px',
+                          padding: '3px 10px',
+                          fontSize: '0.78rem',
+                          fontWeight: !strictCycleFilter ? 700 : 500,
+                          background: !strictCycleFilter ? 'var(--accent-glow)' : 'var(--bg-card)',
+                          color: !strictCycleFilter ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                          border: !strictCycleFilter ? '1px solid rgba(10,132,255,0.3)' : '1px solid var(--border-subtle)',
+                          borderRadius: 999
+                        }}
+                      >
+                        🔀 Mezcladas (Diarias + {currentCycle.name})
+                      </button>
+                      <button
+                        onClick={() => setStrictCycleFilter(true)}
+                        style={{
+                          cursor: 'pointer',
+                          minHeight: '28px',
+                          padding: '3px 10px',
+                          fontSize: '0.78rem',
+                          fontWeight: strictCycleFilter ? 700 : 500,
+                          background: strictCycleFilter ? 'var(--accent-glow)' : 'var(--bg-card)',
+                          color: strictCycleFilter ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                          border: strictCycleFilter ? '1px solid rgba(10,132,255,0.3)' : '1px solid var(--border-subtle)',
+                          borderRadius: 999
+                        }}
+                      >
+                        🎯 Solo {currentCycle.name}s
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             }
@@ -1041,7 +1128,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             </div>
           )}
         </div>
-        <OnboardingGuideCard />
       </header>
               </div>
             );

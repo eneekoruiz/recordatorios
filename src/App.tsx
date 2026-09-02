@@ -26,7 +26,7 @@ function App() {
   // ── All hooks FIRST (before any conditional returns) ──────────────
   const token = useAppStore((state) => state.token);
   const tasks = useAppStore((state) => state.tasks); // Subscribing to tasks
-  const [currentView, setCurrentView] = useState('cycle_day');
+  const [currentView, setCurrentView] = useState('smart_primeros_pasos');
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [mobileView, setMobileView] = useState<'sidebar' | 'content'>('sidebar');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -89,17 +89,118 @@ function App() {
 
   // ── Default lists initialization & Data Hygiene ──────────────────
   useEffect(() => {
-    const lists = useAppStore.getState().lists;
+    const state = useAppStore.getState();
+    const lists = state.lists;
+    const isHidden = localStorage.getItem('hide_onboarding_guide') === 'true';
+
     if (!lists || lists.length === 0) {
       const initial = [
-        { id: 'compras', name: 'Compras', color: '#ff9500' },
-        { id: 'care', name: 'Care', color: '#af52de' },
-        { id: 'quehaceres', name: 'Quehaceres', color: '#34c759' },
-        { id: 'limpieza', name: 'Limpieza', color: '#0a84ff' },
+        { id: 'primeros_pasos', name: '🚀 Primeros Pasos', color: '#ff2d55', icon: 'rocket', isPinned: true },
+        { id: 'compras', name: 'Compras', color: '#ff9500', icon: 'shopping-cart' },
+        { id: 'care', name: 'Care', color: '#af52de', icon: 'heart' },
+        { id: 'quehaceres', name: 'Quehaceres', color: '#34c759', icon: 'check-square' },
+        { id: 'limpieza', name: 'Limpieza', color: '#0a84ff', icon: 'sparkles' },
       ];
-      initial.forEach((l) => useAppStore.getState().addList(l));
+      initial.forEach((l) => state.addList(l));
+    } else if (!lists.some(l => l.id === 'primeros_pasos') && !isHidden) {
+      state.addList({ id: 'primeros_pasos', name: '🚀 Primeros Pasos', color: '#ff2d55', icon: 'rocket', isPinned: true });
     }
-    useAppStore.getState().cleanupDataHygiene();
+
+    // Hydrate user preferences from settings list objects
+    const cycleSettings = lists.find(l => l.id === 'user_preferences_cycle_visibility');
+    if (cycleSettings?.icon) {
+      try {
+        const parsed = JSON.parse(cycleSettings.icon);
+        useAppStore.setState(prev => ({ cycleVisibility: { ...prev.cycleVisibility, ...parsed } }));
+      } catch (e) {}
+    }
+    const smartSettings = lists.find(l => l.id === 'user_preferences_smart_lists');
+    if (smartSettings?.icon) {
+      try {
+        const parsed = JSON.parse(smartSettings.icon);
+        useAppStore.setState(prev => ({ smartListVisibility: { ...prev.smartListVisibility, ...parsed } }));
+      } catch (e) {}
+    }
+    const pinnedSettings = lists.find(l => l.id === 'user_preferences_pinned_smart_lists');
+    if (pinnedSettings?.icon) {
+      try {
+        const parsed = JSON.parse(pinnedSettings.icon);
+        useAppStore.setState({ pinnedSmartLists: parsed });
+      } catch (e) {}
+    }
+
+    // Inicializar tareas de Primeros Pasos si no se ha ocultado la guía
+    if (!isHidden) {
+      const existingTasks = Object.values(state.tasks);
+      
+      // Limpiar tareas de primeros pasos existentes que tuvieran cycle_day accidentalmente asignado
+      existingTasks.forEach(t => {
+        if (t.categoryId === 'primeros_pasos' && t.cycle_id) {
+          const updated = { ...t };
+          delete updated.cycle_id;
+          state.updateTaskRaw(updated);
+        }
+      });
+
+      const hasOnboardingTasks = existingTasks.some(t => t.categoryId === 'primeros_pasos');
+      if (!hasOnboardingTasks) {
+        const defaultTasks: Partial<TaskItem>[] = [
+          {
+            id: 'task_onboarding_1',
+            categoryId: 'primeros_pasos',
+            title: '📝 Crear tu primer recordatorio en lenguaje natural',
+            description: 'Escribe abajo: "Reunión mañana a las 10:00 !alta @Trabajo" y pulsa Enter.',
+            priority: 'high',
+            status: 'pending',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          {
+            id: 'task_onboarding_2',
+            categoryId: 'primeros_pasos',
+            title: '⚡ Abrir la Paleta de Comandos (Ctrl + K)',
+            description: 'Pulsa Ctrl+K o "/" en tu teclado para buscar cualquier tarea, ciclo o lista en milisegundos.',
+            priority: 'medium',
+            status: 'pending',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          {
+            id: 'task_onboarding_3',
+            categoryId: 'primeros_pasos',
+            title: '🎧 Activar el Modo Enfoque Zen con Audio',
+            description: 'Pasa el ratón sobre cualquier recordatorio (▶️) o abre sus opciones (•••) y elige "Modo Enfoque Zen ▶️".',
+            priority: 'low',
+            status: 'pending',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          {
+            id: 'task_onboarding_4',
+            categoryId: 'primeros_pasos',
+            title: '🏷️ Organizar con Prioridades y Listas',
+            description: 'Asigna prioridades (!alta, !media, !baja) y agrupa tus pendientes en distintas listas temáticas.',
+            priority: 'medium',
+            status: 'pending',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          {
+            id: 'task_onboarding_5',
+            categoryId: 'primeros_pasos',
+            title: '☁️ Sincronizar en la Nube con PostgreSQL Neon',
+            description: 'Tus tareas se guardan de forma local y se respaldan automáticamente al iniciar sesión.',
+            priority: 'none',
+            status: 'pending',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ];
+        defaultTasks.forEach((t) => state.addTask(t));
+      }
+    }
+
+    state.cleanupDataHygiene();
   }, []);
 
   // ── Sync Manager lifecycle and listeners ──────────────────────────
@@ -197,11 +298,16 @@ function App() {
       setDefaultSectionId(undefined);
       setIsDrawerOpen(true);
     };
+    const handleSelectViewCustom = (e: any) => {
+      if (e.detail) handleSelectView(e.detail);
+    };
     window.addEventListener('open-shortcuts-modal', handleOpenShortcuts);
     window.addEventListener('open-new-task-drawer', handleOpenNewTask);
+    window.addEventListener('select-view', handleSelectViewCustom);
     return () => {
       window.removeEventListener('open-shortcuts-modal', handleOpenShortcuts);
       window.removeEventListener('open-new-task-drawer', handleOpenNewTask);
+      window.removeEventListener('select-view', handleSelectViewCustom);
     };
   }, []);
 

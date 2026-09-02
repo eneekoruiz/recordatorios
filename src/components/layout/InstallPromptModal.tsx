@@ -141,11 +141,13 @@ export function InstallPromptModal() {
             </div>
 
             <h3 style={{ margin: '0 0 10px 0', fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
-              {installInfo.title}
+              {deferredPrompt ? 'Instalar Recordatorios Élite' : installInfo.title}
             </h3>
             
             <p style={{ margin: '0 0 24px 0', fontSize: '0.92rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>
-              {installInfo.desc}
+              {deferredPrompt 
+                ? 'Haz clic en el botón "Instalar Aplicación" a continuación para añadir Recordatorios a tu escritorio o pantalla de inicio.' 
+                : installInfo.desc}
             </p>
 
             <button 
@@ -179,7 +181,7 @@ export function InstallPromptModal() {
                 border: 'none', fontWeight: 500, fontSize: '0.88rem', cursor: 'pointer'
               }}
             >
-              Cerrar
+              No volver a mostrar
             </button>
           </motion.div>
         </motion.div>
