@@ -42,16 +42,31 @@ export function parseNaturalLanguage(text: string): ParsedNLPResult {
     cleanTitle = cleanTitle.replace(`@${listMatch[1]}`, '').trim();
   }
 
-  // 3. Detección de Ciclos explícitos (#Ciclo)
+  // 3. Detección de Ciclos explícitos (#Ciclo y prefijos [D], [S], [M], [A])
   let suggestedCycleId: string | undefined = undefined;
-  const cycleMatch = cleanTitle.match(/#([a-zA-Z0-9_áéíóúñÁÉÍÓÚÑ-]+)/);
-  if (cycleMatch) {
-    const rawCycle = cycleMatch[1].toLowerCase();
-    if (rawCycle.includes('dia') || rawCycle.includes('diari')) suggestedCycleId = 'cycle_day';
-    else if (rawCycle.includes('sem') || rawCycle.includes('week')) suggestedCycleId = 'cycle_week';
-    else if (rawCycle.includes('mes') || rawCycle.includes('mensu')) suggestedCycleId = 'cycle_month';
-    else if (rawCycle.includes('anual') || rawCycle.includes('ano') || rawCycle.includes('año')) suggestedCycleId = 'cycle_year';
-    cleanTitle = cleanTitle.replace(`#${cycleMatch[1]}`, '').trim();
+  
+  // a) Prefijos al inicio [D], [S], [M], [A]
+  const prefixMatch = cleanTitle.match(/^\[([dsmadSMA])\]/i);
+  if (prefixMatch) {
+    const code = prefixMatch[1].toLowerCase();
+    if (code === 'd') suggestedCycleId = 'cycle_day';
+    else if (code === 's') suggestedCycleId = 'cycle_week';
+    else if (code === 'm') suggestedCycleId = 'cycle_month';
+    else if (code === 'a') suggestedCycleId = 'cycle_year';
+    cleanTitle = cleanTitle.replace(/^\[[dsmadSMA]\]\s*/i, '').trim();
+  }
+
+  // b) Hash de ciclos #diario, #semanal, etc.
+  if (!suggestedCycleId) {
+    const cycleMatch = cleanTitle.match(/#([a-zA-Z0-9_áéíóúñÁÉÍÓÚÑ-]+)/);
+    if (cycleMatch) {
+      const rawCycle = cycleMatch[1].toLowerCase();
+      if (rawCycle.includes('dia') || rawCycle.includes('diari')) suggestedCycleId = 'cycle_day';
+      else if (rawCycle.includes('sem') || rawCycle.includes('week')) suggestedCycleId = 'cycle_week';
+      else if (rawCycle.includes('mes') || rawCycle.includes('mensu')) suggestedCycleId = 'cycle_month';
+      else if (rawCycle.includes('anual') || rawCycle.includes('ano') || rawCycle.includes('año')) suggestedCycleId = 'cycle_year';
+      cleanTitle = cleanTitle.replace(`#${cycleMatch[1]}`, '').trim();
+    }
   }
 
   // 4. Detección de Horas (Alertas)

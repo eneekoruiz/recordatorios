@@ -54,22 +54,27 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
   useEffect(() => {
     if (!activeMenuId) return;
     const handleScroll = (e: Event) => {
-      if (e.target instanceof HTMLElement && e.target.closest('.ios-dropdown-menu')) {
-        return;
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest && target.closest('.ios-dropdown-menu')) {
+        return; // Permite hacer scroll interno dentro del menú desplegable de la barra lateral
       }
       setActiveMenuId(null);
       setMenuCoords(null);
     };
-    window.addEventListener('scroll', handleScroll, true);
+    window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
+    window.addEventListener('wheel', handleScroll, { capture: true, passive: true });
+    window.addEventListener('touchmove', handleScroll, { capture: true, passive: true });
     window.addEventListener('close-list-menus', handleScroll);
     return () => {
       window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('wheel', handleScroll, true);
+      window.removeEventListener('touchmove', handleScroll, true);
       window.removeEventListener('close-list-menus', handleScroll);
     };
   }, [activeMenuId]);
   
   const uniqueLists = Array.from(new Map((lists || []).map((l: any) => [l.id, l])).values());
-  const currentLevelLists = uniqueLists.filter((l: any) => l.parentId === parentId && l.id !== 'user_preferences_smart_lists');
+  const currentLevelLists = uniqueLists.filter((l: any) => l.parentId === parentId && l.id !== 'user_preferences_smart_lists' && l.id !== 'primeros_pasos');
   if (currentLevelLists.length === 0) return null;
 
   return (
@@ -260,25 +265,31 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                   }}
                   onPointerDown={(e) => e.stopPropagation()}
                   style={{ 
-                    background: 'none', 
-                    border: 'none', 
-                    padding: 4, 
+                    background: isExpanded ? 'var(--accent-glow)' : 'var(--bg-card)', 
+                    border: isExpanded ? '1px solid rgba(10, 132, 255, 0.3)' : '1px solid var(--border-subtle)', 
+                    borderRadius: 6, 
+                    padding: '3px 8px', 
                     cursor: 'pointer', 
-                    color: 'var(--text-tertiary)',
+                    color: isExpanded ? 'var(--accent-primary)' : 'var(--text-secondary)',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    marginLeft: 4
+                    gap: 4,
+                    marginLeft: 6,
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                    transition: 'all 0.15s ease'
                   }}
-                  title={isExpanded ? "Contraer" : "Expandir"}
+                  title={isExpanded ? "Contraer sublistas" : "Expandir sublistas"}
                 >
-                  {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                  <motion.div animate={{ rotate: isExpanded ? 0 : -90 }} transition={{ duration: 0.15 }}>
+                    <ChevronDown size={14} color={isExpanded ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
+                  </motion.div>
+                  <span style={{ fontSize: '0.72rem', whiteSpace: 'nowrap' }}>
+                    {isExpanded ? 'Sublistas' : 'Ver sublistas'}
+                  </span>
                 </button>
-              ) : (
-                <div style={{ marginLeft: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 4, color: 'var(--text-tertiary)', opacity: 0.5 }}>
-                  <ChevronRight size={16} />
-                </div>
-              )}
+              ) : null}
               
               <button 
                 className="list-action-btn"
@@ -351,130 +362,197 @@ const ListHierarchy = ({ lists, currentView, onSelectView, onAddSublist, onEditL
                     {isMobile && (
                       <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border-subtle, rgba(255,255,255,0.2))', margin: '0 auto 12px', flexShrink: 0 }} />
                     )}
-                    <button 
-                      className="ios-dropdown-item"
-                      onClick={() => {
-                        setActiveMenuId(null);
-                        setMenuCoords(null);
-                        updateList(list.id, { isPinned: !list.isPinned });
-                      }}
-                      style={isMobile ? mobileItemStyle : { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                    >
-                      {list.isPinned ? <PinOff size={14} /> : <Pin size={14} />}
-                      {list.isPinned ? 'Desanclar' : 'Anclar'}
-                    </button>
-                    <button 
-                      className="ios-dropdown-item"
-                      onClick={() => {
-                        setActiveMenuId(null);
-                        setMenuCoords(null);
-                        setExpanded(prev => ({ ...prev, [list.id]: true }));
-                        onAddSublist(list.id, false);
-                      }}
-                      style={isMobile ? mobileItemStyle : undefined}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <Plus size={16} /> Nueva lista anidada
-                    </button>
-                    <button 
-                      className="ios-dropdown-item"
-                      onClick={() => {
-                        setActiveMenuId(null);
-                        setMenuCoords(null);
-                        setExpanded(prev => ({ ...prev, [list.id]: true }));
-                        onAddSublist(list.id, true);
-                      }}
-                      style={isMobile ? mobileItemStyle : undefined}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <FolderPlus size={16} /> Nueva carpeta anidada
-                    </button>
-                    {index > 0 && (
+                    {list.id === 'primeros_pasos' ? (
                       <button 
-                        className="ios-dropdown-item"
+                        className="ios-dropdown-item danger"
                         onClick={() => {
-                          const prevSibling = currentLevelLists[index - 1];
-                          updateList(list.id, { parentId: prevSibling.id });
-                          setExpanded(prev => ({ ...prev, [prevSibling.id]: true }));
-                          window.dispatchEvent(new CustomEvent('show-toast', { detail: `Sangrado bajo "${prevSibling.name}"` }));
                           setActiveMenuId(null);
                           setMenuCoords(null);
+                          localStorage.setItem('hide_onboarding_guide', 'true');
+                          removeList('primeros_pasos');
+                          onSelectView('list_inbox');
                         }}
-                        style={isMobile ? mobileItemStyle : undefined}
-                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        style={isMobile ? { ...mobileItemStyle, color: '#ff3b30' } : { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: '#ff3b30', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
                       >
-                        <IndentIncrease size={16} /> Sangrar (Anidar en anterior)
+                        <Trash2 size={16} color="#ff3b30" /> Ocultar / Eliminar guía de inicio
                       </button>
+                    ) : (
+                      <>
+                        <button 
+                          className="ios-dropdown-item"
+                          onClick={() => {
+                            setActiveMenuId(null);
+                            setMenuCoords(null);
+                            updateList(list.id, { isPinned: !list.isPinned });
+                          }}
+                          style={isMobile ? mobileItemStyle : { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          {list.isPinned ? <PinOff size={14} /> : <Pin size={14} />}
+                          {list.isPinned ? 'Desanclar' : 'Anclar'}
+                        </button>
+                        <button 
+                          className="ios-dropdown-item"
+                          onClick={() => {
+                            setActiveMenuId(null);
+                            setMenuCoords(null);
+                            setExpanded(prev => ({ ...prev, [list.id]: true }));
+                            onAddSublist(list.id, false);
+                          }}
+                          style={isMobile ? mobileItemStyle : undefined}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <Plus size={16} /> Nueva lista anidada
+                        </button>
+                        <button 
+                          className="ios-dropdown-item"
+                          onClick={() => {
+                            setActiveMenuId(null);
+                            setMenuCoords(null);
+                            setExpanded(prev => ({ ...prev, [list.id]: true }));
+                            onAddSublist(list.id, true);
+                          }}
+                          style={isMobile ? mobileItemStyle : undefined}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <FolderPlus size={16} /> Nueva carpeta anidada
+                        </button>
+                        {index > 0 && (
+                          <button 
+                            className="ios-dropdown-item"
+                            onClick={() => {
+                              const prevSibling = currentLevelLists[index - 1];
+                              updateList(list.id, { parentId: prevSibling.id });
+                              setExpanded(prev => ({ ...prev, [prevSibling.id]: true }));
+                              window.dispatchEvent(new CustomEvent('show-toast', { detail: `Sangrado bajo "${prevSibling.name}"` }));
+                              setActiveMenuId(null);
+                              setMenuCoords(null);
+                            }}
+                            style={isMobile ? mobileItemStyle : undefined}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                          >
+                            <IndentIncrease size={16} /> Sangrar (Anidar en anterior)
+                          </button>
+                        )}
+                        {list.parentId && (
+                          <button 
+                            className="ios-dropdown-item"
+                            onClick={() => {
+                              const parentList = lists.find((l: any) => l.id === list.parentId);
+                              updateList(list.id, { parentId: parentList?.parentId });
+                              window.dispatchEvent(new CustomEvent('show-toast', { detail: `Des-sangrado (Nivel subido)` }));
+                              setActiveMenuId(null);
+                              setMenuCoords(null);
+                            }}
+                            style={isMobile ? mobileItemStyle : undefined}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                          >
+                            <IndentDecrease size={16} /> Des-sangrar (Subir de nivel)
+                          </button>
+                        )}
+                        <button 
+                          className="ios-dropdown-item"
+                          onClick={() => {
+                            setActiveMenuId(null);
+                            setMenuCoords(null);
+                            onEditList(list.id);
+                          }}
+                          style={isMobile ? mobileItemStyle : undefined}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <Edit3 size={16} /> Editar {list.isFolder ? 'Carpeta' : 'Lista'}
+                        </button>
+                        <div className="ios-dropdown-divider" style={isMobile ? { margin: '4px 0', borderTop: '1px solid var(--border-subtle, rgba(255,255,255,0.1))' } : undefined} />
+                        <button 
+                          className="ios-dropdown-item danger"
+                          onClick={() => {
+                            if (confirm(`¿Seguro que quieres borrar ${list.isFolder ? 'la carpeta' : 'la lista'} "${list.name}" y su contenido anidado?`)) {
+                              removeList(list.id);
+                            }
+                            setActiveMenuId(null);
+                            setMenuCoords(null);
+                          }}
+                          style={isMobile ? { ...mobileItemStyle, color: 'var(--accent-danger, #ff3b30)' } : undefined}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <Trash2 size={16} /> Eliminar {list.isFolder ? 'Carpeta' : 'Lista'}
+                        </button>
+                      </>
                     )}
-                    {list.parentId && (
-                      <button 
-                        className="ios-dropdown-item"
-                        onClick={() => {
-                          const parentList = lists.find((l: any) => l.id === list.parentId);
-                          updateList(list.id, { parentId: parentList?.parentId });
-                          window.dispatchEvent(new CustomEvent('show-toast', { detail: `Des-sangrado (Nivel subido)` }));
-                          setActiveMenuId(null);
-                          setMenuCoords(null);
-                        }}
-                        style={isMobile ? mobileItemStyle : undefined}
-                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                      >
-                        <IndentDecrease size={16} /> Des-sangrar (Subir de nivel)
-                      </button>
-                    )}
-                    <button 
-                      className="ios-dropdown-item"
-                      onClick={() => {
-                        setActiveMenuId(null);
-                        setMenuCoords(null);
-                        onEditList(list.id);
-                      }}
-                      style={isMobile ? mobileItemStyle : undefined}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <Edit3 size={16} /> Editar {list.isFolder ? 'Carpeta' : 'Lista'}
-                    </button>
-                    <div className="ios-dropdown-divider" style={isMobile ? { margin: '4px 0', borderTop: '1px solid var(--border-subtle, rgba(255,255,255,0.1))' } : undefined} />
-                    <button 
-                      className="ios-dropdown-item danger"
-                      onClick={() => {
-                        if (confirm(`¿Seguro que quieres borrar ${list.isFolder ? 'la carpeta' : 'la lista'} "${list.name}" y su contenido anidado?`)) {
-                          removeList(list.id);
-                        }
-                        setActiveMenuId(null);
-                        setMenuCoords(null);
-                      }}
-                      style={isMobile ? { ...mobileItemStyle, color: 'var(--accent-danger, #ff3b30)' } : undefined}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <Trash2 size={16} /> Eliminar {list.isFolder ? 'Carpeta' : 'Lista'}
-                    </button>
                   </motion.div>
                 </>,
                 document.body
               )}
             </motion.div>
             
-            {hasChildren && isExpanded && (
-              <ListHierarchy 
-                lists={lists} 
-                currentView={currentView} 
-                onSelectView={onSelectView} 
-                onAddSublist={onAddSublist}
-                onEditList={onEditList}
-                getTaskCount={getTaskCount}
-                parentId={list.id} 
-                depth={depth + 1}
-                isEditMode={isEditMode}
-              />
+            {(hasChildren || list.isFolder) && isExpanded && (
+              hasChildren ? (
+                <ListHierarchy 
+                  lists={lists} 
+                  currentView={currentView} 
+                  onSelectView={onSelectView} 
+                  onAddSublist={onAddSublist}
+                  onEditList={onEditList}
+                  getTaskCount={getTaskCount}
+                  parentId={list.id} 
+                  depth={depth + 1}
+                  isEditMode={isEditMode}
+                />
+              ) : (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  style={{ 
+                    paddingLeft: (depth + 1) * 16 + 28, 
+                    paddingTop: 6, 
+                    paddingBottom: 6, 
+                    paddingRight: 12,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    borderRadius: 8,
+                    margin: '2px 0'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>
+                    <FolderOpen size={14} opacity={0.65} />
+                    <span>Carpeta vacía</span>
+                  </div>
+                  {onAddSublist && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAddSublist(list.id);
+                      }}
+                      style={{
+                        background: 'var(--accent-glow, rgba(10, 132, 255, 0.12))',
+                        border: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.15))',
+                        color: 'var(--accent-primary)',
+                        fontSize: '0.74rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        padding: '3px 8px',
+                        borderRadius: 6,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4
+                      }}
+                      title="Crear una sublista dentro de esta carpeta"
+                    >
+                      <Plus size={11} /> Sublista
+                    </button>
+                  )}
+                </motion.div>
+              )
             )}
           </div>
         );
@@ -487,7 +565,9 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   const lists = useAppStore((state) => state.lists);
   const cycles = useAppStore((state) => state.cycles);
   const smartListVisibility = useAppStore((state) => state.smartListVisibility);
+  const pinnedSmartLists = useAppStore((state) => state.pinnedSmartLists) || ['smart_primeros_pasos'];
   const toggleSmartList = useAppStore((state) => state.toggleSmartList);
+  const togglePinSmartList = useAppStore((state) => state.togglePinSmartList);
   const tasks = useAppStore((state) => state.tasks);
   const cycleVisibility = useAppStore((state) => state.cycleVisibility);
   const toggleCycleVisibility = useAppStore((state) => state.toggleCycleVisibility);
@@ -500,6 +580,8 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
     const todayStr = new Date().toDateString();
     
     switch (listId) {
+      case 'smart_primeros_pasos':
+        return active.filter(t => t.categoryId === 'primeros_pasos').length;
       case 'smart_today': 
         return active.filter(t => t.dueDate && new Date(t.dueDate).toDateString() === todayStr).length;
       case 'smart_scheduled': 
@@ -507,7 +589,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
       case 'smart_all': 
         return active.length;
       case 'smart_flagged': 
-        return active.filter(t => t.priority === 'high').length;
+        return active.filter(t => Boolean(t.flagged || (t.priority && t.priority !== 'none'))).length;
       case 'smart_completed': 
         return all.filter(t => isTaskCompleted(t)).length;
       case 'smart_overdue': {
@@ -515,8 +597,24 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         today.setHours(0, 0, 0, 0);
         return active.filter(t => t.dueDate && new Date(t.dueDate) < today).length;
       }
-      default: 
-        return 0;
+      default: {
+        const cleanListId = listId.replace('list_', '').replace('folder_', '');
+        const descendantListIds = new Set<string>([cleanListId]);
+        const queue = [cleanListId];
+        while (queue.length > 0) {
+          const currId = queue.shift()!;
+          const children = lists?.filter(l => l.parentId === currId) || [];
+          children.forEach(c => {
+            descendantListIds.add(c.id);
+            queue.push(c.id);
+          });
+        }
+        return active.filter(t => {
+          if (t.categoryId === 'primeros_pasos') return false;
+          const catId = t.categoryId || (t as any).category_id;
+          return catId && descendantListIds.has(catId);
+        }).length;
+      }
     }
   };
 
@@ -736,6 +834,92 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         }}
       >
         
+        {/* ANCLADAS (PINNED SMART LISTS SECTION) */}
+        {pinnedSmartLists.length > 0 && (
+          <div style={{ padding: '0 var(--space-12)', marginBottom: 'var(--space-16)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-8)', paddingLeft: 12 }}>
+              <span className="section-header" style={{ margin: 0, padding: 0 }}>Ancladas</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {pinnedSmartLists.map(smartId => {
+                const smartItem = SMART_LISTS.find(s => s.id === smartId);
+                if (!smartItem) return null;
+                const Icon = smartItem.icon;
+                const count = getTaskCount(smartId);
+                const isActive = currentView === smartId;
+
+                return (
+                  <motion.div
+                    key={smartId}
+                    layoutId={"pinned-item-" + smartId}
+                    className={`sidebar-item ${isActive ? 'active' : ''}`}
+                    onClick={() => {
+                      if (isEditMode) {
+                        togglePinSmartList(smartId);
+                      } else {
+                        onSelectView(smartId);
+                      }
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: '10px 14px',
+                      borderRadius: 12,
+                      background: isActive ? 'var(--accent-glow)' : 'var(--bg-elevated)',
+                      border: isActive ? '1px solid rgba(10, 132, 255, 0.25)' : '1px solid var(--border-subtle)',
+                      cursor: 'pointer',
+                      boxShadow: isActive ? '0 2px 8px var(--accent-glow)' : '0 1px 3px rgba(0,0,0,0.03)',
+                      transition: 'all 150ms ease'
+                    }}
+                  >
+                    <div style={{
+                      width: 28, height: 28, borderRadius: 8,
+                      background: smartItem.color,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0,
+                      boxShadow: `0 2px 6px ${smartItem.color}40`
+                    }}>
+                      <Icon size={16} color="white" />
+                    </div>
+                    <span style={{
+                      flex: 1, fontWeight: 600, fontSize: '0.95rem',
+                      color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                    }}>
+                      {smartItem.name}
+                    </span>
+                    
+                    {!isEditMode && (
+                      <span style={{
+                        fontSize: '0.85rem', fontWeight: 700,
+                        color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                        background: isActive ? 'rgba(10, 132, 255, 0.15)' : 'var(--bg-hover)',
+                        padding: '2px 8px', borderRadius: 999
+                      }}>
+                        {count}
+                      </span>
+                    )}
+
+                    {isEditMode && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          togglePinSmartList(smartId);
+                        }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--accent-orange)' }}
+                        title="Desanclar de esta sección"
+                      >
+                        <PinOff size={16} />
+                      </button>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* SMART LISTS GRID */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 var(--space-12)', marginBottom: 'var(--space-8)' }}>
           <span className="section-header" style={{ margin: 0, padding: 0, marginLeft: 12 }}>Listas inteligentes</span>
@@ -754,12 +938,12 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
           padding: '0 var(--space-12)',
           marginBottom: 'var(--space-16)'
         }}>
-          {SMART_LISTS.filter(list => smartListVisibility[list.id] || isEditMode).length === 0 ? (
+          {SMART_LISTS.filter(list => !pinnedSmartLists.includes(list.id) && (smartListVisibility[list.id] || isEditMode)).length === 0 ? (
             <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 'var(--space-16) 0', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>
               No tienes listas inteligentes seleccionadas
             </div>
           ) : (
-            SMART_LISTS.map(list => {
+            SMART_LISTS.filter(list => !pinnedSmartLists.includes(list.id)).map(list => {
               if (!smartListVisibility[list.id] && !isEditMode) return null;
               const Icon = list.icon;
             
@@ -781,7 +965,22 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 }}
               >
                 {isEditMode && (
-                  <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 10 }}>
+                  <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 10, display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        togglePinSmartList(list.id);
+                      }}
+                      style={{
+                        background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)',
+                        borderRadius: '50%', width: 22, height: 22,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', color: 'var(--accent-orange)'
+                      }}
+                      title="Anclar arriba"
+                    >
+                      <Pin size={12} />
+                    </button>
                     <div style={{ 
                       width: 20, height: 20, borderRadius: '50%', 
                       border: smartListVisibility[list.id] ? 'none' : '1px solid var(--border-focus)',
@@ -812,44 +1011,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
           }))}
         </div>
 
-        {/* LISTAS ANCLADAS */}
-        {(() => {
-          const uniqueLists = Array.from(new Map((lists || []).map((l: any) => [l.id, l])).values());
-          const pinnedLists = uniqueLists.filter(l => l.isPinned && l.id !== 'user_preferences_smart_lists');
-          if (pinnedLists.length === 0) return null;
-          return (
-            <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 var(--space-12)', marginBottom: 'var(--space-8)' }}>
-                <span className="section-header" style={{ margin: 0, padding: 0 }}>ANCLADAS</span>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 'var(--space-8)', padding: '0 var(--space-12)', marginBottom: 'var(--space-16)' }}>
-                {pinnedLists.map(list => {
-                  const isActive = currentView === `list_${list.id}`;
-                  const count = Object.values(tasks || {}).filter(t => !t.deleted_at && !isTaskCompleted(t) && (t.categoryId === list.id || (t as any).category_id === list.id)).length;
-                  const countFontSize = count >= 100 ? '1.4rem' : count >= 10 ? '1.7rem' : '2rem';
-                  return (
-                    <motion.div
-                      key={list.id}
-                      layoutId={"smart-card-" + list.id}
-                      className="ios-smart-card"
-                      onClick={() => onSelectView(`list_${list.id}`)}
-                      style={{ 
-                        boxShadow: isActive ? '0 0 0 2px var(--accent-primary)' : undefined,
-                        transition: 'background-color 150ms ease, box-shadow 150ms ease'
-                      }}
-                    >
-                      <motion.div layoutId={"smart-icon-" + list.id} className="icon-circle" style={{ backgroundColor: list.color, boxShadow: `0 4px 12px ${list.color}40`, border: 'none' }}>
-                        <span style={{ fontSize: 16 }}>📌</span>
-                      </motion.div>
-                      <span className="count" style={{ fontSize: countFontSize }}>{count}</span>
-                      <h3>{list.name}</h3>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </>
-          );
-        })()}
+
 
         {/* MIS LISTAS */}
         <div className="categories-section" style={{ flexShrink: 0 }}>
@@ -867,6 +1029,52 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
             </div>
           </div>
           <div className="ios-list-block">
+            {/* 🚀 Primeros Pasos (Banner distinguido en la parte superior) */}
+            {lists?.some(l => l.id === 'primeros_pasos') && (
+              <motion.div 
+                className={`ios-list-item ${currentView === 'smart_primeros_pasos' || currentView === 'list_primeros_pasos' ? 'active' : ''}`}
+                onClick={() => onSelectView('smart_primeros_pasos')}
+                style={{ 
+                  background: 'rgba(255, 45, 85, 0.08)',
+                  borderBottom: '1px solid rgba(255, 45, 85, 0.15)',
+                  transition: 'background-color 150ms ease'
+                }}
+              >
+                <div className="list-icon" style={{ backgroundColor: '#ff2d55', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Rocket size={12} color="white" />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                  <span className="title" style={{ fontWeight: 700, color: 'var(--text-primary)' }}>🚀 Primeros Pasos</span>
+                </div>
+                <span className="count" style={{ background: 'rgba(255, 45, 85, 0.15)', color: '#ff2d55', fontWeight: 700 }}>
+                  {getTaskCount('smart_primeros_pasos')}
+                </span>
+                
+                <button 
+                  className="list-action-btn"
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    if (activeMenuId === 'primeros_pasos') {
+                      setActiveMenuId(null);
+                      setMenuCoords(null);
+                    } else {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setMenuCoords({
+                        top: rect.bottom,
+                        left: rect.left - 120
+                      });
+                      setActiveMenuId('primeros_pasos');
+                    }
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 4, marginLeft: 4 }}
+                  title="Opciones de Guía"
+                >
+                  <MoreHorizontal size={14} />
+                </button>
+              </motion.div>
+            )}
+
             {/* Bandeja de entrada */}
             <motion.div 
               className={`ios-list-item ${currentView === 'list_inbox' ? 'active' : ''}`}
@@ -892,7 +1100,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               lists={lists} 
               currentView={currentView} 
               onSelectView={onSelectView} 
-              getTaskCount={(id: string) => Object.values(tasks || {}).filter(t => !t.deleted_at && !isTaskCompleted(t) && (t.categoryId === id || (t as any).category_id === id)).length}
+              getTaskCount={getTaskCount}
               onAddSublist={(pId: string, isF?: boolean) => { setEditingListId(undefined); setParentListId(pId); setIsNewFolderDefault(!!isF); setIsListConfigOpen(true); }} 
               onEditList={(listId: string) => { setEditingListId(listId); setParentListId(undefined); setIsListConfigOpen(true); }}
               isEditMode={isEditMode}
@@ -981,7 +1189,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               const isVisible = !!cycleVisibility[cycle.id];
               const Icon = getCycleIcon(cycle.icon);
               const isActive = currentView === cycle.id;
-              const taskCount = Object.values(tasks || {}).filter(t => !t.deleted_at && !isTaskCompleted(t) && t.cycle_id === cycle.id && !isCompletedInCurrentPeriod(t, cycles)).length;
+              const taskCount = Object.values(tasks || {}).filter(t => !t.deleted_at && !isTaskCompleted(t) && t.categoryId !== 'primeros_pasos' && t.cycle_id === cycle.id && !isCompletedInCurrentPeriod(t, cycles)).length;
               
               // Si el usuario desactivó explícitamente el ciclo, no lo mostramos a menos que esté en modo edición
               if (!isVisible && !isEditCyclesMode) return null;

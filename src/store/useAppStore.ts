@@ -40,9 +40,11 @@ interface AppState {
   lists: CustomList[];
   listSections: ListSection[];
   smartListVisibility: Record<string, boolean>;
+  pinnedSmartLists: string[];
   cycleVisibility: Record<string, boolean>;
   
   toggleSmartList: (listId: string) => void;
+  togglePinSmartList: (listId: string) => void;
   toggleCycleVisibility: (cycleId: string) => void;
   globalCyclesEnabled: boolean;
   toggleGlobalCycles: () => void;
@@ -100,12 +102,14 @@ export const useAppStore = create<AppState>()(
       token: null,
       userId: null,
       smartListVisibility: {
+        smart_primeros_pasos: true,
         smart_today: true,
         smart_scheduled: true,
         smart_all: true,
         smart_flagged: true,
         smart_completed: false
       },
+      pinnedSmartLists: ['smart_primeros_pasos'],
       cycleVisibility: {},  // All hidden by default; auto-activates when a task with that cycle_id is created
       globalCyclesEnabled: true,
 
@@ -130,6 +134,35 @@ export const useAppStore = create<AppState>()(
       setHasHydrated: (val) => set({ hasHydrated: val }),
 
       toggleGlobalCycles: () => set((state: any) => ({ globalCyclesEnabled: !state.globalCyclesEnabled })),
+
+      togglePinSmartList: (listId) => optimisticUpdate(get, set, (state: any) => {
+        const currentPinned = state.pinnedSmartLists || ['smart_primeros_pasos'];
+        const isPinned = currentPinned.includes(listId);
+        const newPinned = isPinned
+          ? currentPinned.filter((id: string) => id !== listId)
+          : [...currentPinned, listId];
+
+        // Guardar como registro de configuración en la nube para sincronización entre dispositivos
+        const settingsId = 'user_preferences_pinned_smart_lists';
+        const existingSettings = state.lists.find((l: any) => l.id === settingsId);
+        const updatedList: any = {
+          id: settingsId,
+          name: 'Settings Pinned',
+          color: '#000000',
+          icon: JSON.stringify(newPinned),
+          _is_dirty: true,
+          updated_at: new Date().toISOString()
+        };
+
+        const newLists = existingSettings
+          ? state.lists.map((l: any) => l.id === settingsId ? updatedList : l)
+          : [...state.lists, updatedList];
+
+        return {
+          pinnedSmartLists: newPinned,
+          lists: newLists
+        };
+      }),
 
       toggleSmartList: (listId) => optimisticUpdate(get, set, (state: any) => {
         const newVisibility = {
@@ -406,6 +439,7 @@ export const useAppStore = create<AppState>()(
         (Object.values(tasks) as TaskItem[])
           .filter((t: any) => !t.deleted_at && (includeCompleted || !isTaskCompleted(t) || temporarilyShowIds.includes(t.id)))
           .filter((t: any) => {
+            if (t.categoryId === 'primeros_pasos') return false; // Onboarding tasks NEVER bleed into cycle views
             if (!t.cycle_id) return false; // Tasks without a cycle never appear in cycle views
             return validCycles.includes(t.cycle_id as string);
           })
@@ -474,7 +508,7 @@ export const useAppStore = create<AppState>()(
       getSmartSortTasks: () => {
         const tasks = get().tasks as Record<string, TaskItem>;
         const cycles = get().cycles as CustomCycle[];
-        const tasksArray = (Object.values(tasks) as TaskItem[]).filter((t: any) => t.status === 'pending' && !t.deleted_at);
+        const tasksArray = (Object.values(tasks) as TaskItem[]).filter((t: any) => t.status === 'pending' && !t.deleted_at && t.categoryId !== 'primeros_pasos');
         const now = new Date();
         const currentHours = now.getHours();
 
@@ -726,21 +760,46 @@ export const useAppStore = create<AppState>()(
         const uniqueCycles = Array.from(new Map(rawCycles.map((c: any) => [c.id, c])).values());
         const rawSections = persistedState?.listSections || currentState.listSections || [];
         const uniqueSections = Array.from(new Map(rawSections.map((s: any) => [s.id, s])).values());
-        
+
+        let mergedCycleVisibility = {
+          ...currentState.cycleVisibility,
+          ...(persistedState?.cycleVisibility || {})
+        };
+        const cycleSettings = uniqueLists.find((l: any) => l.id === 'user_preferences_cycle_visibility');
+        if (cycleSettings?.icon) {
+          try {
+            mergedCycleVisibility = { ...mergedCycleVisibility, ...JSON.parse(cycleSettings.icon) };
+          } catch (e) {}
+        }
+
+        let mergedSmartListVisibility = {
+          ...currentState.smartListVisibility,
+          ...(persistedState?.smartListVisibility || {})
+        };
+        const smartSettings = uniqueLists.find((l: any) => l.id === 'user_preferences_smart_lists');
+        if (smartSettings?.icon) {
+          try {
+            mergedSmartListVisibility = { ...mergedSmartListVisibility, ...JSON.parse(smartSettings.icon) };
+          } catch (e) {}
+        }
+
+        let mergedPinnedSmartLists = persistedState?.pinnedSmartLists || currentState.pinnedSmartLists || ['smart_primeros_pasos'];
+        const pinnedSettings = uniqueLists.find((l: any) => l.id === 'user_preferences_pinned_smart_lists');
+        if (pinnedSettings?.icon) {
+          try {
+            mergedPinnedSmartLists = JSON.parse(pinnedSettings.icon);
+          } catch (e) {}
+        }
+
         return {
           ...currentState,
           ...persistedState,
           lists: uniqueLists,
           cycles: uniqueCycles,
           listSections: uniqueSections,
-          smartListVisibility: {
-            ...currentState.smartListVisibility,
-            ...(persistedState?.smartListVisibility || {})
-          },
-          cycleVisibility: {
-            ...currentState.cycleVisibility,
-            ...(persistedState?.cycleVisibility || {})
-          }
+          smartListVisibility: mergedSmartListVisibility,
+          cycleVisibility: mergedCycleVisibility,
+          pinnedSmartLists: mergedPinnedSmartLists
         };
       },
       migrate: (persistedState: any, version: number) => {

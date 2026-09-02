@@ -8,19 +8,27 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: 'auto',
       workbox: {
         cleanupOutdatedCaches: true,
         clientsClaim: true,
-        skipWaiting: true
+        skipWaiting: true,
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api/],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}']
       },
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: ['favicon.ico', 'favicon.svg', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'Recordatorios Elite',
+        id: '/',
+        name: 'Recordatorios Élite',
         short_name: 'Recordatorios',
-        description: 'Productividad nivel Staff Engineer',
+        description: 'PWA de productividad personal y laboral',
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',
+        orientation: 'portrait',
+        start_url: '/',
+        scope: '/',
         icons: [
           {
             src: 'favicon.svg',

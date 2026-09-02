@@ -203,6 +203,16 @@ class SyncManager {
           return;
         }
 
+        if (serverList.id === 'user_preferences_pinned_smart_lists') {
+          try {
+            const parsed = JSON.parse(serverList.icon);
+            useAppStore.setState({ pinnedSmartLists: parsed });
+          } catch (e) {
+            console.error('Failed to parse pinned smart lists:', e);
+          }
+          return;
+        }
+
         if (serverList.id === 'user_preferences_cycle_visibility') {
           try {
             const parsed = JSON.parse(serverList.icon);
