@@ -1076,6 +1076,66 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               </motion.div>
             )}
 
+            {/* Portal flotante para menú de Primeros Pasos */}
+            {activeMenuId === 'primeros_pasos' && menuCoords && createPortal(
+              <>
+                <div 
+                  style={{ position: 'fixed', inset: 0, zIndex: 99998, background: 'transparent' }} 
+                  onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); setMenuCoords(null); }} 
+                />
+                <motion.div 
+                  initial={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.85, y: -10 }}
+                  animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }}
+                  exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.95, y: -5 }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 450 }}
+                  className={isMobile ? undefined : "ios-dropdown-menu"}
+                  style={isMobile ? { 
+                    position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 99999,
+                    background: 'var(--bg-elevated, #1c1c1e)',
+                    borderTop: '1px solid var(--border-subtle, rgba(255,255,255,0.1))',
+                    borderRadius: '20px 20px 0 0', padding: '16px 16px max(24px, env(safe-area-inset-bottom))',
+                    boxShadow: '0 -10px 40px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', gap: 8
+                  } : { 
+                    position: 'fixed',
+                    top: Math.min(menuCoords.top + 4, window.innerHeight - 200),
+                    left: Math.max(12, Math.min(menuCoords.left, window.innerWidth - 220)),
+                    zIndex: 99999, width: 220,
+                    background: 'var(--bg-material, rgba(255,255,255,0.75))',
+                    backdropFilter: 'blur(30px) saturate(180%)',
+                    WebkitBackdropFilter: 'blur(30px) saturate(180%)',
+                    borderRadius: '14px',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.04)',
+                    border: '1px solid rgba(255,255,255,0.2)', padding: '8px 0',
+                    display: 'flex', flexDirection: 'column'
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button 
+                    className="ios-dropdown-item danger"
+                    onClick={() => {
+                      setActiveMenuId(null);
+                      setMenuCoords(null);
+                      localStorage.setItem('hide_onboarding_guide', 'true');
+                      removeList('primeros_pasos');
+                      const allTasks = useAppStore.getState().tasks;
+                      Object.values(allTasks).forEach(t => {
+                        if (t.categoryId === 'primeros_pasos') {
+                          updateTask(t.id, { deleted_at: new Date().toISOString() });
+                        }
+                      });
+                      onSelectView('list_inbox');
+                    }}
+                    style={isMobile ? mobileItemStyle : { display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'transparent', border: 'none', color: '#ff3b30', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.88rem', fontWeight: 600, width: '100%' }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,59,48,0.1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <Trash2 size={16} color="#ff3b30" /> Saltar primeros pasos
+                  </button>
+                </motion.div>
+              </>,
+              document.body
+            )}
+
             {/* Bandeja de entrada */}
             <motion.div 
               className={`ios-list-item ${currentView === 'list_inbox' ? 'active' : ''}`}
