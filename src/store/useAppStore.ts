@@ -88,6 +88,10 @@ interface AppState {
   token: string | null;
   userId: string | null;
   setToken: (token: string | null, userId: string | null) => void;
+  syncStatus: 'idle' | 'syncing' | 'synced' | 'error' | 'offline';
+  lastSyncedAt: number | null;
+  setSyncStatus: (status: 'idle' | 'syncing' | 'synced' | 'error' | 'offline') => void;
+  setLastSyncedAt: (timestamp: number) => void;
   logout: () => void;
   cleanupDataHygiene: () => void;
 }
@@ -101,6 +105,10 @@ export const useAppStore = create<AppState>()(
       listSections: [],
       token: null,
       userId: null,
+      syncStatus: 'idle',
+      lastSyncedAt: null,
+      setSyncStatus: (syncStatus) => set({ syncStatus }),
+      setLastSyncedAt: (lastSyncedAt) => set({ lastSyncedAt }),
       smartListVisibility: {
         smart_primeros_pasos: true,
         smart_today: true,

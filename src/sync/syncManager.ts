@@ -80,21 +80,32 @@ class SyncManager {
   }
 
   async syncNow() {
-    if (this.isSyncing || !this.isOnline) return;
+    if (!this.isOnline) {
+      useAppStore.getState().setSyncStatus('offline');
+      return;
+    }
+    if (this.isSyncing) return;
     const { token } = useAppStore.getState();
-    if (!token) return; // No auth, no sync
+    if (!token) {
+      useAppStore.getState().setSyncStatus('idle');
+      return;
+    }
 
     if (!this.eventSource) {
       this.setupRealtime(token);
     }
 
     this.isSyncing = true;
+    useAppStore.getState().setSyncStatus('syncing');
 
     try {
       await this.push(token);
       await this.pull(token);
+      useAppStore.getState().setSyncStatus('synced');
+      useAppStore.getState().setLastSyncedAt(Date.now());
     } catch (error) {
       console.error('Sync failed:', error);
+      useAppStore.getState().setSyncStatus('error');
     } finally {
       this.isSyncing = false;
     }

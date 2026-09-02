@@ -22,12 +22,16 @@ import {
   FolderPlus,
   IndentIncrease,
   IndentDecrease,
-  Rocket
+  Rocket,
+  RefreshCw,
+  Cloud,
+  CloudOff
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { isCompletedInCurrentPeriod } from '../../services/TaskService';
 import { SoundService } from '../../services/SoundService';
+import { syncManager } from '../../sync/syncManager';
 import { getCycleIcon } from '../../constants/icons';
 import { ListConfigModal } from './ListConfigModal';
 import { CycleConfigModal } from './CycleConfigModal';
@@ -580,6 +584,8 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   const toggleCycleVisibility = useAppStore((state) => state.toggleCycleVisibility);
   const globalCyclesEnabled = useAppStore((state) => state.globalCyclesEnabled);
   const toggleGlobalCycles = useAppStore((state) => state.toggleGlobalCycles);
+  const syncStatus = useAppStore((state) => state.syncStatus);
+  const lastSyncedAt = useAppStore((state) => state.lastSyncedAt);
   
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [menuCoords, setMenuCoords] = useState<{ top: number; left: number } | null>(null);
@@ -690,13 +696,38 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         }}>
           {user.name.charAt(0)}
         </div>
-        <div className="user-info" style={{ flex: 1 }}>
-          <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+        <div className="user-info" style={{ flex: 1, minWidth: 0 }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {user.name}
           </h2>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-            {user.email}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+              {user.email}
+            </span>
+            <div 
+              style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: 4, 
+                fontSize: '0.68rem', 
+                fontWeight: 600,
+                padding: '1px 6px', 
+                borderRadius: 99, 
+                background: syncStatus === 'synced' ? 'rgba(52, 199, 89, 0.12)' : syncStatus === 'syncing' ? 'rgba(10, 132, 255, 0.12)' : syncStatus === 'error' ? 'rgba(255, 69, 58, 0.12)' : 'var(--bg-hover)',
+                color: syncStatus === 'synced' ? 'var(--accent-green, #34c759)' : syncStatus === 'syncing' ? 'var(--accent-primary, #0a84ff)' : syncStatus === 'error' ? 'var(--accent-red, #ff453a)' : 'var(--text-tertiary)'
+              }}
+              title={lastSyncedAt ? `Última sincronización: ${new Date(lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : 'Sincronización en la nube'}
+            >
+              <span style={{ 
+                width: 5, 
+                height: 5, 
+                borderRadius: '50%', 
+                background: 'currentColor',
+                display: 'inline-block'
+              }} />
+              {syncStatus === 'syncing' ? 'Sincronizando...' : syncStatus === 'synced' ? 'Nube' : syncStatus === 'offline' ? 'Offline' : syncStatus === 'error' ? 'Reintentar' : 'Local'}
+            </div>
+          </div>
         </div>
         <ChevronDown size={16} color="var(--text-tertiary)" style={{ transform: isProfileOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
 
@@ -727,6 +758,22 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               }}
               onClick={(e) => e.stopPropagation()}
             >
+              <div 
+                className="ios-dropdown-item"
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  syncManager.syncNow();
+                }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <RefreshCw size={16} style={{ animation: syncStatus === 'syncing' ? 'spin-anim 1s linear infinite' : 'none' }} /> 
+                  Sincronizar ahora
+                </span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>
+                  {lastSyncedAt ? new Date(lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pendiente'}
+                </span>
+              </div>
               <div 
                 className="ios-dropdown-item"
                 onClick={(e) => { 
