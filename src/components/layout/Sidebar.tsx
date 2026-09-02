@@ -1045,7 +1045,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                   <Rocket size={12} color="white" />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-                  <span className="title" style={{ fontWeight: 700, color: 'var(--text-primary)' }}>🚀 Primeros Pasos</span>
+                  <span className="title" style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Primeros Pasos</span>
                 </div>
                 <span className="count" style={{ background: 'rgba(255, 45, 85, 0.15)', color: '#ff2d55', fontWeight: 700 }}>
                   {getTaskCount('smart_primeros_pasos')}
