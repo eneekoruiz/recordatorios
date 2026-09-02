@@ -584,25 +584,26 @@
   padding: 8px 0;
 }
 .ios-list-item {
-  min-height: 54px;
-  margin: 4px 8px;
-  border-radius: 14px;
-  padding: 12px 14px;
-  transition: all 0.2s ease;
+  min-height: 44px;
+  margin: 2px 6px;
+  border-radius: 10px;
+  padding: 10px 12px;
+  transition: background-color 0.15s ease;
   background: transparent;
+  border: 1px solid transparent;
 }
 .ios-list-item:hover { 
-  transform: translateX(4px); 
   background: var(--bg-hover); 
 }
 .ios-list-item.active {
   background: var(--bg-hover);
   border: 1px solid var(--border-focus);
+  border-radius: 10px;
 }
 .ios-list-item .list-icon {
   width: 28px;
   height: 28px;
-  border-radius: 10px;
+  border-radius: 8px;
   box-shadow: var(--shadow-sm), inset 0 1px 1px rgba(255,255,255,0.2);
 }
 .ios-list-item span.title { font-weight: 600; font-size: 0.95rem; }

@@ -528,12 +528,12 @@ input:checked + .slider::before {
   align-items: center;
   padding: 10px 12px;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 10px;
   margin: 2px 6px;
   position: relative;
   cursor: pointer;
-  transition: background-color 0.15s ease, border-radius 0.15s ease;
+  transition: background-color 0.15s ease;
   box-shadow: none;
 }
 .ios-list-item:not(:last-child)::after {
@@ -1320,10 +1320,11 @@ button:disabled {
   border-bottom: none !important;
 }
 .ios-list-item .title, .ios-smart-card h3 {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
   display: block;
+  word-break: break-word;
 }
 .content-header h1, .group-header h3 {
   overflow-wrap: break-word;
