@@ -95,7 +95,7 @@ function App() {
 
     if (!lists || lists.length === 0) {
       const initial = [
-        { id: 'primeros_pasos', name: '🚀 Primeros Pasos', color: '#ff2d55', icon: 'rocket', isPinned: true },
+        { id: 'primeros_pasos', name: 'Primeros Pasos', color: '#ff2d55', icon: 'rocket', isPinned: true },
         { id: 'compras', name: 'Compras', color: '#ff9500', icon: 'shopping-cart' },
         { id: 'care', name: 'Care', color: '#af52de', icon: 'heart' },
         { id: 'quehaceres', name: 'Quehaceres', color: '#34c759', icon: 'check-square' },
@@ -103,7 +103,7 @@ function App() {
       ];
       initial.forEach((l) => state.addList(l));
     } else if (!lists.some(l => l.id === 'primeros_pasos') && !isHidden) {
-      state.addList({ id: 'primeros_pasos', name: '🚀 Primeros Pasos', color: '#ff2d55', icon: 'rocket', isPinned: true });
+      state.addList({ id: 'primeros_pasos', name: 'Primeros Pasos', color: '#ff2d55', icon: 'rocket', isPinned: true });
     }
 
     // Hydrate user preferences from settings list objects
@@ -148,7 +148,7 @@ function App() {
           {
             id: 'task_onboarding_1',
             categoryId: 'primeros_pasos',
-            title: '📝 Crear tu primer recordatorio en lenguaje natural',
+            title: 'Crear tu primer recordatorio en lenguaje natural',
             description: 'Escribe abajo: "Reunión mañana a las 10:00 !alta @Trabajo" y pulsa Enter.',
             priority: 'high',
             status: 'pending',
@@ -158,7 +158,7 @@ function App() {
           {
             id: 'task_onboarding_2',
             categoryId: 'primeros_pasos',
-            title: '⚡ Abrir la Paleta de Comandos (Ctrl + K)',
+            title: 'Abrir la Paleta de Comandos (Ctrl + K)',
             description: 'Pulsa Ctrl+K o "/" en tu teclado para buscar cualquier tarea, ciclo o lista en milisegundos.',
             priority: 'medium',
             status: 'pending',
@@ -168,8 +168,8 @@ function App() {
           {
             id: 'task_onboarding_3',
             categoryId: 'primeros_pasos',
-            title: '🎧 Activar el Modo Enfoque Zen con Audio',
-            description: 'Pasa el ratón sobre cualquier recordatorio (▶️) o abre sus opciones (•••) y elige "Modo Enfoque Zen ▶️".',
+            title: 'Activar el Modo Enfoque Zen con Audio',
+            description: 'Pasa el ratón sobre cualquier recordatorio o abre sus opciones (...) y elige "Modo Enfoque Zen".',
             priority: 'low',
             status: 'pending',
             created_at: new Date().toISOString(),
@@ -178,7 +178,7 @@ function App() {
           {
             id: 'task_onboarding_4',
             categoryId: 'primeros_pasos',
-            title: '🏷️ Organizar con Prioridades y Listas',
+            title: 'Organizar con Prioridades y Listas',
             description: 'Asigna prioridades (!alta, !media, !baja) y agrupa tus pendientes en distintas listas temáticas.',
             priority: 'medium',
             status: 'pending',
