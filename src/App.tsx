@@ -99,11 +99,33 @@ function App() {
         { id: 'compras', name: 'Compras', color: '#ff9500', icon: 'shopping-cart' },
         { id: 'care', name: 'Care', color: '#af52de', icon: 'heart' },
         { id: 'quehaceres', name: 'Quehaceres', color: '#34c759', icon: 'check-square' },
-        { id: 'limpieza', name: 'Limpieza', color: '#0a84ff', icon: 'sparkles' },
+        { id: 'limpieza', name: 'Limpieza', color: '#0a84ff', icon: 'folder', isFolder: true },
+        { id: 'limpieza_diaria', name: 'Diaria', color: '#0a84ff', icon: 'list', parentId: 'limpieza' },
+        { id: 'limpieza_semanal', name: 'Semanal', color: '#0a84ff', icon: 'list', parentId: 'limpieza' },
+        { id: 'limpieza_mensual', name: 'Mensual', color: '#0a84ff', icon: 'list', parentId: 'limpieza' },
+        { id: 'limpieza_anual', name: 'Anual', color: '#0a84ff', icon: 'list', parentId: 'limpieza' },
       ];
       initial.forEach((l) => state.addList(l));
-    } else if (!lists.some(l => l.id === 'primeros_pasos') && !isHidden) {
-      state.addList({ id: 'primeros_pasos', name: 'Primeros Pasos', color: '#ff2d55', icon: 'rocket', isPinned: true });
+    } else {
+      if (!lists.some(l => l.id === 'primeros_pasos') && !isHidden) {
+        state.addList({ id: 'primeros_pasos', name: 'Primeros Pasos', color: '#ff2d55', icon: 'rocket', isPinned: true });
+      }
+      // Asegurar que la estructura de Limpieza coincida con las sublistas
+      const limpiezaList = lists.find(l => l.id === 'limpieza');
+      if (limpiezaList && !limpiezaList.isFolder) {
+        state.updateList('limpieza', { isFolder: true });
+      }
+      const sublists = [
+        { id: 'limpieza_diaria', name: 'Diaria' },
+        { id: 'limpieza_semanal', name: 'Semanal' },
+        { id: 'limpieza_mensual', name: 'Mensual' },
+        { id: 'limpieza_anual', name: 'Anual' },
+      ];
+      sublists.forEach(sub => {
+        if (!lists.some(l => l.id === sub.id || (l.name === sub.name && l.parentId === 'limpieza'))) {
+          state.addList({ id: sub.id, name: sub.name, color: '#0a84ff', icon: 'list', parentId: 'limpieza' });
+        }
+      });
     }
 
     // Hydrate user preferences from settings list objects
