@@ -4,7 +4,7 @@ import { motion, useMotionValue, useTransform, AnimatePresence, useMotionValueEv
 import {
   CheckCircle, Trash2, Lock, Link2, Flag, MapPin,
   Image as ImageIcon, MoreHorizontal, Repeat, Edit3,
-  ChevronDown, Copy, FolderOpen, IndentIncrease, IndentDecrease, X, Play
+  ChevronDown, Copy, FolderOpen, IndentIncrease, IndentDecrease, X, Play, Calendar
 } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -574,7 +574,7 @@ export const TaskCard = React.memo(function TaskCard({
                   display: 'inline-flex', alignItems: 'center', gap: 4, 
                   color: dueDateColor, fontWeight: dueDateColor === '#FF3B30' ? 600 : 400 
                 }}>
-                  📅 {(() => {
+                  <Calendar size={11} style={{ flexShrink: 0 }} /> {(() => {
                     const due = new Date(task.dueDate);
                     const today = new Date(); today.setHours(0, 0, 0, 0);
                     const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
