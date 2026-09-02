@@ -1660,4 +1660,14 @@ html, body {
   }
 }
 
+@keyframes spin-anim {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin-anim {
+  animation: spin-anim 1s linear infinite;
+}
+
+
 

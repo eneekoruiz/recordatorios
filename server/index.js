@@ -16,6 +16,36 @@ const clients = new Map(); // userId -> Set of Response objects
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
+// --- SECURITY HEADERS ---
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
+// --- IN-MEMORY RATE LIMITER FOR AUTH ---
+const authAttempts = new Map(); // ip -> { count, resetTime }
+const authRateLimiter = (req, res, next) => {
+  const ip = req.ip || req.connection.remoteAddress || 'unknown';
+  const now = Date.now();
+  const record = authAttempts.get(ip) || { count: 0, resetTime: now + 15 * 60 * 1000 };
+
+  if (now > record.resetTime) {
+    record.count = 0;
+    record.resetTime = now + 15 * 60 * 1000;
+  }
+
+  record.count += 1;
+  authAttempts.set(ip, record);
+
+  if (record.count > 25) {
+    return res.status(429).json({ error: 'Demasiados intentos de acceso. Por favor, espera 15 minutos.' });
+  }
+
+  next();
+};
+
 // --- MIDDLEWARE ---
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -31,17 +61,24 @@ const authenticateToken = (req, res, next) => {
 };
 
 // --- AUTHENTICATION ---
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', authRateLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'Faltan credenciales' });
+    if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({ error: 'Faltan credenciales válidas' });
+    }
 
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const cleanEmail = email.toLowerCase().trim();
+    if (password.length < 4) {
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 4 caracteres' });
+    }
+
+    const existing = await prisma.user.findUnique({ where: { email: cleanEmail } });
     if (existing) return res.status(400).json({ error: 'El email ya está registrado' });
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { email, password: hashedPassword }
+      data: { email: cleanEmail, password: hashedPassword }
     });
 
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET);
@@ -52,10 +89,15 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authRateLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await prisma.user.findUnique({ where: { email } });
+    if (!email || !password || typeof email !== 'string') {
+      return res.status(400).json({ error: 'Faltan credenciales válidas' });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const user = await prisma.user.findUnique({ where: { email: cleanEmail } });
 
     if (!user || !user.password) return res.status(400).json({ error: 'Usuario o contraseña incorrectos' });
 
@@ -110,7 +152,7 @@ app.post('/api/sync/push', authenticateToken, async (req, res) => {
         transaction.push(
           prisma.task.upsert({
             where: { id: t.id },
-            update: { payload: t, deletedAt: delAt },
+            update: { payload: t, deletedAt: delAt, userId },
             create: { id: t.id, userId, payload: t, deletedAt: delAt }
           })
         );
@@ -124,7 +166,7 @@ app.post('/api/sync/push', authenticateToken, async (req, res) => {
         transaction.push(
           prisma.cycle.upsert({
             where: { id: c.id },
-            update: { payload: c },
+            update: { payload: c, userId },
             create: { id: c.id, userId, payload: c }
           })
         );
@@ -138,7 +180,7 @@ app.post('/api/sync/push', authenticateToken, async (req, res) => {
         transaction.push(
           prisma.list.upsert({
             where: { id: l.id },
-            update: { payload: l },
+            update: { payload: l, userId },
             create: { id: l.id, userId, payload: l }
           })
         );
@@ -157,7 +199,7 @@ app.post('/api/sync/push', authenticateToken, async (req, res) => {
         transaction.push(
           prisma.listSection.upsert({
             where: { id: s.id },
-            update: { payload: s, deletedAt: delAt },
+            update: { payload: s, deletedAt: delAt, userId },
             create: { id: s.id, userId, payload: s, deletedAt: delAt }
           })
         );
