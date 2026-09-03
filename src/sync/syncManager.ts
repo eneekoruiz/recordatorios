@@ -130,7 +130,12 @@ class SyncManager {
       body: JSON.stringify({ tasks, cycles, lists, listSections })
     });
 
-    if (!response.ok) throw new Error('Push failed');
+    if (response.status === 401 || response.status === 403) {
+      console.warn('Sync auth expired, logging out to prompt re-login');
+      useAppStore.getState().logout();
+      throw new Error('Auth expired');
+    }
+    if (!response.ok) throw new Error(`Push failed (${response.status})`);
 
     // Remove dirty flag locally
     const updatedTasks = tasks.map(t => ({ ...t, _is_dirty: false }));
@@ -179,7 +184,12 @@ class SyncManager {
         'Authorization': `Bearer ${token}`
       }
     });
-    if (!response.ok) throw new Error('Pull failed');
+    if (response.status === 401 || response.status === 403) {
+      console.warn('Sync auth expired, logging out to prompt re-login');
+      useAppStore.getState().logout();
+      throw new Error('Auth expired');
+    }
+    if (!response.ok) throw new Error(`Pull failed (${response.status})`);
 
     const data = await response.json();
     

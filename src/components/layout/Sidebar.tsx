@@ -122,7 +122,7 @@ const ListHierarchy = ({
                 scale: activeMenuId === list.id ? 0.96 : 1,
                 zIndex: activeMenuId === list.id ? 99999 : 'auto',
                 boxShadow: activeMenuId === list.id ? '0 16px 40px rgba(0,0,0,0.2)' : 'none',
-                borderRadius: activeMenuId === list.id ? 12 : 0,
+                borderRadius: 12,
               }}
               transition={{ type: 'spring', damping: 25, stiffness: 450 }}
               onDragStart={() => {
