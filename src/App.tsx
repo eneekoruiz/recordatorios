@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
@@ -21,6 +21,7 @@ import { ShortcutsModal } from './components/layout/ShortcutsModal';
 import { BottomShortcutBar } from './components/layout/BottomShortcutBar';
 import { syncManager } from './sync/syncManager';
 import { TaskSkeletonLoader } from './components/ui/TaskSkeletonLoader';
+import type { TaskItem } from './models/Task';
 
 function App() {
   // ── All hooks FIRST (before any conditional returns) ──────────────
@@ -48,7 +49,7 @@ function App() {
 
   const navStack = useNavigation((state) => state.stack);
   const navView = useNavigation((state) => state.currentView());
-  const { push: navPush, pop: navPop, reset: navReset } = useNavigation();
+  const { pop: navPop, reset: navReset } = useNavigation();
   const [globalToast, setGlobalToast] = useState<string | null>(null);
   const theme = useAppStore((state) => state.theme) || 'light';
 

@@ -7,7 +7,7 @@ import type { TaskItem, CustomCycle } from '../models/Task';
  * Aplica principios de Clean Code, Guard Clauses y tipado estricto.
  */
 export function isCompletedInCurrentPeriod(task: Partial<TaskItem>, cycles: CustomCycle[]): boolean {
-  const isDone = task.status === 'completed' || !!task.completed_at || !!task.completed;
+  const isDone = task.status === 'completed' || !!(task as any).completed_at || !!(task as any).completed;
   
   if (isDone && !task.cycle_id) {
     return true;

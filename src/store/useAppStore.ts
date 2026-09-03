@@ -117,7 +117,7 @@ export const useAppStore = create<AppState>()(
         try { localStorage.setItem('user_explicit_theme', theme); } catch {}
         set({ theme });
       },
-      toggleTheme: () => set((state) => {
+      toggleTheme: () => set((state: AppState) => {
         const newTheme = state.theme === 'dark' ? 'light' : 'dark';
         try { localStorage.setItem('user_explicit_theme', newTheme); } catch {}
         return { theme: newTheme };
@@ -777,11 +777,11 @@ export const useAppStore = create<AppState>()(
       },
       merge: (persistedState: any, currentState: any) => {
         const rawLists = persistedState?.lists || currentState.lists || [];
-        const uniqueLists = Array.from(new Map(rawLists.map((l: any) => [l.id, l])).values());
+        const uniqueLists: any[] = Array.from(new Map(rawLists.map((l: any) => [l.id, l])).values());
         const rawCycles = persistedState?.cycles || currentState.cycles || [];
-        const uniqueCycles = Array.from(new Map(rawCycles.map((c: any) => [c.id, c])).values());
+        const uniqueCycles: any[] = Array.from(new Map(rawCycles.map((c: any) => [c.id, c])).values());
         const rawSections = persistedState?.listSections || currentState.listSections || [];
-        const uniqueSections = Array.from(new Map(rawSections.map((s: any) => [s.id, s])).values());
+        const uniqueSections: any[] = Array.from(new Map(rawSections.map((s: any) => [s.id, s])).values());
 
         let mergedCycleVisibility = {
           ...currentState.cycleVisibility,

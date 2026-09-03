@@ -83,7 +83,7 @@ const ListHierarchy = ({
   
   const rawLists = Array.from(new Map((lists || []).map((l: any) => [l.id, l])).values());
   const seenNameParent = new Map<string, any>();
-  for (const l of rawLists) {
+  for (const l of (rawLists as any[])) {
     const key = `${(l.name || '').trim().toLowerCase()}_${l.parentId || 'root'}`;
     const existing = seenNameParent.get(key);
     if (!existing) {
@@ -617,6 +617,24 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [menuCoords, setMenuCoords] = useState<{ top: number; left: number } | null>(null);
+  const removeList = useAppStore((state) => state.removeList);
+  const updateTask = useAppStore((state) => state.updateTask);
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+  const mobileItemStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    padding: '12px 16px',
+    minHeight: 48,
+    fontSize: '1rem',
+    background: 'transparent',
+    border: 'none',
+    color: 'var(--text-primary)',
+    textAlign: 'left' as const,
+    cursor: 'pointer',
+    borderRadius: 10,
+    width: '100%'
+  };
   
   const getTaskCount = (listId: string) => {
     const all = Object.values(tasks || {}).filter(t => !t.deleted_at);

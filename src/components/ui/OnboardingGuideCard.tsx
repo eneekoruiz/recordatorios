@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Command, Headphones, X, Check, ArrowRight, Trash2, Rocket } from 'lucide-react';
+import { X, Check, ArrowRight, Trash2, Rocket } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { SoundService } from '../../services/SoundService';
 
@@ -8,7 +8,7 @@ export function OnboardingGuideCard() {
   const [isVisible, setIsVisible] = useState(false);
 
   const tasksMap = useAppStore((state) => state.tasks);
-  const toggleTaskStatus = useAppStore((state) => state.toggleTaskStatus);
+  const toggleTask = useAppStore((state) => state.toggleTask);
   const removeList = useAppStore((state) => state.removeList);
   const deleteTask = useAppStore((state) => state.deleteTask);
 
@@ -47,7 +47,7 @@ export function OnboardingGuideCard() {
 
   // Obtener tareas reales de la lista 'primeros_pasos'
   const onboardingTasks = Object.values(tasksMap).filter(t => t.categoryId === 'primeros_pasos');
-  const completedTasks = onboardingTasks.filter(t => t.status === 'completed' || !!t.completed_at);
+  const completedTasks = onboardingTasks.filter(t => t.status === 'completed' || !!(t as any).completed_at);
 
   const totalCount = onboardingTasks.length || 5;
   const completedCount = completedTasks.length;
@@ -187,7 +187,7 @@ export function OnboardingGuideCard() {
         {/* Task Items Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
           {onboardingTasks.map((task) => {
-            const isDone = task.status === 'completed' || !!task.completed_at;
+            const isDone = task.status === 'completed' || !!(task as any).completed_at;
             const action = getActionForTask(task);
 
             return (
@@ -208,7 +208,7 @@ export function OnboardingGuideCard() {
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                   <button
                     onClick={() => {
-                      toggleTaskStatus(task.id);
+                      toggleTask(task.id);
                       if (!isDone) SoundService.playComplete();
                     }}
                     style={{

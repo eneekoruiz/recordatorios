@@ -171,19 +171,19 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
                 const lines = pasted.split('\n').map(l => l.trim()).filter(Boolean);
                 if (lines.length > 0) {
                   setText(lines[0]);
-                  // create rest as new tasks
+                  const defaultCategory = currentView.startsWith('list_') ? currentView.replace('list_', '') : 'inbox';
                   lines.slice(1).forEach(line => {
-                    const extracted = parseNaturalLanguage(line, lists);
+                    const extracted = parseNaturalLanguage(line);
                     addTask({
                       id: crypto.randomUUID(),
-                      title: extracted.title,
-                      categoryId: extracted.categoryId || currentListId || undefined,
+                      title: extracted.cleanTitle || line,
+                      categoryId: defaultCategory,
                       type: 'task',
-                      completed: false,
-                      priority: extracted.priority || 'none',
-                      dueDate: extracted.dueDate || undefined,
+                      status: 'pending',
+                      priority: extracted.suggestedPriority || 'none',
+                      dueDate: extracted.suggestedDueDate ? extracted.suggestedDueDate.toISOString() : undefined,
                       created_at: new Date().toISOString()
-                    } as any);
+                    });
                   });
                 }
               }
