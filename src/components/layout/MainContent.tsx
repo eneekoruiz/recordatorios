@@ -1563,12 +1563,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  padding: '11px 16px',
+                  padding: '9px 14px',
                   borderRadius: 12,
                   background: 'var(--bg-elevated)',
                   border: '1px solid var(--border-subtle)',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                  gap: 12
+                  gap: 10
                 }}
               >
                 <div style={{
@@ -1660,8 +1660,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 12,
-                  padding: '11px 16px',
+                  gap: 10,
+                  padding: '9px 14px',
                   borderRadius: 12,
                   cursor: 'pointer',
                   color: 'var(--text-tertiary)',

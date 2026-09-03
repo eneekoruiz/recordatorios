@@ -19,10 +19,14 @@
 
 .sidebar-header {
   flex-shrink: 0 !important;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  width: 100%;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 12px 14px 10px !important;
   z-index: 10;
 }
 
@@ -630,40 +634,8 @@
 }
 
 /* ========================================================
-   APPLE REMINDERS NATIVE FOOTER & INLINE ADD
+   APPLE REMINDERS INLINE ADD & COUNTER
 ======================================================== */
-.sidebar-bottom-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px;
-  border-top: 1px solid var(--border-subtle);
-  background: var(--bg-surface-glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  flex-shrink: 0;
-  z-index: 10;
-}
-.sidebar-bottom-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: transparent;
-  border: none;
-  color: var(--accent-primary, #007aff);
-  font-size: 0.92rem;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 6px 8px;
-  border-radius: 8px;
-  transition: background-color 0.15s ease, opacity 0.15s ease;
-}
-.sidebar-bottom-btn:hover {
-  background-color: var(--bg-hover);
-}
-.sidebar-bottom-btn:active {
-  opacity: 0.7;
-}
 
 .apple-large-counter {
   font-size: 34px;

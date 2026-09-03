@@ -280,7 +280,7 @@ export const TaskCard = React.memo(function TaskCard({
           minHeight: 52,
           display: 'flex',
           alignItems: 'center',
-          padding: `10px 16px 10px ${16 + indent}px`,
+          padding: `9px 14px 9px ${12 + indent}px`,
           margin: 0,
           width: '100%',
           boxSizing: 'border-box',
@@ -301,7 +301,7 @@ export const TaskCard = React.memo(function TaskCard({
           <div style={{
             position: 'absolute',
             bottom: 0,
-            left: `${48 + indent}px`,
+            left: `${40 + indent}px`,
             right: 0,
             height: '0.5px',
             background: 'var(--border-subtle, rgba(0,0,0,0.06))',
@@ -322,11 +322,11 @@ export const TaskCard = React.memo(function TaskCard({
             onToggle(task.id, isCompletedPeriod || isPartial);
           }}
           style={{
-            width: 44, height: 44,
-            padding: 11,
+            width: 26, height: 26,
+            padding: 0,
             background: 'transparent',
             border: 'none',
-            marginRight: 2,
+            marginRight: 10,
             cursor: isBlocked ? 'default' : 'pointer',
             flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',

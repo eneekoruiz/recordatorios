@@ -81,7 +81,22 @@ const ListHierarchy = ({
     };
   }, [activeMenuId]);
   
-  const uniqueLists = Array.from(new Map((lists || []).map((l: any) => [l.id, l])).values());
+  const rawLists = Array.from(new Map((lists || []).map((l: any) => [l.id, l])).values());
+  const seenNameParent = new Map<string, any>();
+  for (const l of rawLists) {
+    const key = `${(l.name || '').trim().toLowerCase()}_${l.parentId || 'root'}`;
+    const existing = seenNameParent.get(key);
+    if (!existing) {
+      seenNameParent.set(key, l);
+    } else {
+      const existingCount = getTaskCount ? (getTaskCount(existing.id) || 0) : 0;
+      const currentCount = getTaskCount ? (getTaskCount(l.id) || 0) : 0;
+      if (currentCount > existingCount) {
+        seenNameParent.set(key, l);
+      }
+    }
+  }
+  const uniqueLists = Array.from(seenNameParent.values());
   const currentLevelLists = uniqueLists.filter((l: any) => l.parentId === parentId && l.id !== 'user_preferences_smart_lists' && l.id !== 'primeros_pasos' && !l.isPinned);
   if (currentLevelLists.length === 0) return null;
 
@@ -277,7 +292,7 @@ const ListHierarchy = ({
               
               {getTaskCount && !list.isFolder && <span className="count">{getTaskCount(list.id) || 0}</span>}
               
-              {(hasChildren || list.isFolder) ? (
+              {(hasChildren || list.isFolder) && (
                 <button 
                   onClick={(e) => { 
                     e.stopPropagation(); 
@@ -285,32 +300,29 @@ const ListHierarchy = ({
                   }}
                   onPointerDown={(e) => e.stopPropagation()}
                   style={{ 
-                    background: isExpanded ? 'var(--accent-glow)' : 'var(--bg-card)', 
-                    border: isExpanded ? '1px solid rgba(10, 132, 255, 0.3)' : '1px solid var(--border-subtle)', 
-                    borderRadius: 6, 
-                    padding: '2px 6px', 
-                    cursor: 'pointer', 
-                    color: isExpanded ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                    background: 'transparent',
+                    border: 'none',
+                    padding: '4px',
+                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 3,
-                    marginLeft: 6,
-                    fontSize: '0.72rem',
-                    fontWeight: 600,
+                    justifyContent: 'center',
+                    color: 'var(--text-tertiary)',
+                    marginLeft: 4,
                     flexShrink: 0,
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-                    transition: 'all 0.15s ease'
+                    borderRadius: 6
                   }}
-                  title={isExpanded ? "Ocultar sublistas" : "Mostrar sublistas"}
+                  title={isExpanded ? "Contraer" : "Expandir"}
                 >
-                  <motion.div animate={{ rotate: isExpanded ? 0 : -90 }} transition={{ duration: 0.15 }}>
-                    <ChevronDown size={13} color={isExpanded ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
+                  <motion.div 
+                    animate={{ rotate: isExpanded ? 0 : -90 }} 
+                    transition={{ duration: 0.15 }}
+                    style={{ display: 'flex', alignItems: 'center' }}
+                  >
+                    <ChevronDown size={14} color="var(--text-tertiary)" />
                   </motion.div>
-                  <span style={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
-                    {isExpanded ? 'Ocultar' : (uniqueLists.filter((l: any) => l.parentId === list.id).length > 0 ? `${uniqueLists.filter((l: any) => l.parentId === list.id).length}` : 'Sublistas')}
-                  </span>
                 </button>
-              ) : null}
+              )}
               
               <button 
                 className="list-action-btn"
@@ -679,7 +691,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   return (
     <aside className="sidebar" onScroll={() => window.dispatchEvent(new Event('close-list-menus'))}>
       {/* 1 & 2. STICKY HEADER: SEARCH BAR + USER PROFILE IN THE SAME ROW */}
-      <div className="sidebar-header" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px 8px' }}>
+      <div className="sidebar-header" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'nowrap', alignItems: 'center', gap: 10, padding: '12px 14px 8px', width: '100%', boxSizing: 'border-box' }}>
         {/* Search Bar on the left */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div 
@@ -1434,7 +1446,11 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               const isVisible = !!cycleVisibility[cycle.id];
               const Icon = getCycleIcon(cycle.icon);
               const isActive = currentView === cycle.id;
-              const taskCount = Object.values(tasks || {}).filter(t => !t.deleted_at && !isTaskCompleted(t) && t.categoryId !== 'primeros_pasos' && t.cycle_id === cycle.id && !isCompletedInCurrentPeriod(t, cycles)).length;
+              const taskCount = Object.values(tasks || {}).filter(t => {
+                if (t.deleted_at || isTaskCompleted(t) || t.categoryId === 'primeros_pasos') return false;
+                const effCycle = t.cycle_id || (t.categoryId === 'limpieza_diaria' ? 'cycle_day' : t.categoryId === 'limpieza_semanal' ? 'cycle_week' : t.categoryId === 'limpieza_mensual' ? 'cycle_month' : t.categoryId === 'limpieza_anual' ? 'cycle_year' : null);
+                return effCycle === cycle.id && !isCompletedInCurrentPeriod(t, cycles);
+              }).length;
               
               // Si el usuario desactivó explícitamente el ciclo, no lo mostramos a menos que esté en modo edición
               if (!isVisible && !isEditCyclesMode) return null;
@@ -1479,37 +1495,6 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         </div>
         )}
 
-      </div>
-      
-      {/* 4. APPLE REMINDERS BOTTOM TOOLBAR */}
-      <div className="sidebar-bottom-bar">
-        <button 
-          className="sidebar-bottom-btn"
-          onClick={() => {
-            HapticService.selection();
-            window.dispatchEvent(new CustomEvent('focus-inline-add'));
-          }}
-          title="Nuevo recordatorio (N)"
-        >
-          <div style={{
-            width: 20, height: 20, borderRadius: '50%',
-            background: 'var(--accent-primary)',
-            color: 'white',
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
-            <Plus size={13} strokeWidth={2.6} />
-          </div>
-          <span>Nuevo recordatorio</span>
-        </button>
-
-        <button 
-          className="sidebar-bottom-btn"
-          onClick={handleAddList}
-          title="Añadir lista"
-          style={{ fontWeight: 500 }}
-        >
-          <span>Añadir lista</span>
-        </button>
       </div>
       
       {/* MODALS (OUTSIDE SCROLL) */}
