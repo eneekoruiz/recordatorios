@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Sparkles, SlidersHorizontal, ArrowUp } from 'lucide-react';
+import { Sparkles, SlidersHorizontal, ArrowUp } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { parseNaturalLanguage } from '../../utils/nlp';
 import { SoundService } from '../../services/SoundService';
@@ -16,7 +16,6 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const addTask = useAppStore(state => state.addTask);
   const lists = useAppStore(state => state.lists);
-  const cycles = useAppStore(state => state.cycles);
 
   const nlp = parseNaturalLanguage(text);
 

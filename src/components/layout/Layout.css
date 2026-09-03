@@ -615,16 +615,120 @@
 }
 .ios-list-item span.title { font-weight: 600; font-size: 0.95rem; }
 .ios-list-item .count {
-  min-width: 28px;
-  height: 26px;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--text-tertiary, #8e8e93);
+  margin-left: auto;
+  padding: 0 4px;
+  background: transparent;
+  border: none;
+  line-height: 1;
+}
+.ios-list-item.active .count {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+/* ========================================================
+   APPLE REMINDERS NATIVE FOOTER & INLINE ADD
+======================================================== */
+.sidebar-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-surface-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  flex-shrink: 0;
+  z-index: 10;
+}
+.sidebar-bottom-btn {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  border-radius: 99px;
-  background: var(--border-subtle);
-  font-size: 0.85rem;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: var(--accent-primary, #007aff);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 8px;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+.sidebar-bottom-btn:hover {
+  background-color: var(--bg-hover);
+}
+.sidebar-bottom-btn:active {
+  opacity: 0.7;
+}
+
+.apple-large-counter {
+  font-size: 34px;
   font-weight: 700;
-  color: var(--text-secondary);
+  font-family: var(--font-display, inherit);
+  line-height: 1;
+  letter-spacing: -0.5px;
+  margin-left: auto;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.apple-inline-add-row {
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  width: 100%;
+  box-sizing: border-box;
+  cursor: text;
+  transition: background-color 0.15s ease;
+  background: var(--bg-elevated);
+}
+.apple-inline-add-row:hover {
+  background-color: var(--bg-hover);
+}
+.apple-inline-add-circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px dashed var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+.apple-inline-add-row:hover .apple-inline-add-circle {
+  border-color: var(--accent-primary);
+  border-style: solid;
+}
+
+.task-info-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--accent-primary);
+  opacity: 0;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+.task-item-inner:hover .task-info-btn {
+  opacity: 0.85;
+}
+.task-info-btn:hover {
+  opacity: 1 !important;
+  background: var(--bg-hover);
 }
 
 .content-header {

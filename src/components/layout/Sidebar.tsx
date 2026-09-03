@@ -1481,6 +1481,37 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
 
       </div>
       
+      {/* 4. APPLE REMINDERS BOTTOM TOOLBAR */}
+      <div className="sidebar-bottom-bar">
+        <button 
+          className="sidebar-bottom-btn"
+          onClick={() => {
+            HapticService.selection();
+            window.dispatchEvent(new CustomEvent('focus-inline-add'));
+          }}
+          title="Nuevo recordatorio (N)"
+        >
+          <div style={{
+            width: 20, height: 20, borderRadius: '50%',
+            background: 'var(--accent-primary)',
+            color: 'white',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            <Plus size={13} strokeWidth={2.6} />
+          </div>
+          <span>Nuevo recordatorio</span>
+        </button>
+
+        <button 
+          className="sidebar-bottom-btn"
+          onClick={handleAddList}
+          title="Añadir lista"
+          style={{ fontWeight: 500 }}
+        >
+          <span>Añadir lista</span>
+        </button>
+      </div>
+      
       {/* MODALS (OUTSIDE SCROLL) */}
       <ListConfigModal 
         isOpen={isListConfigOpen} 

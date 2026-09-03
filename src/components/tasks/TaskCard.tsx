@@ -4,7 +4,7 @@ import { motion, useMotionValue, useTransform, AnimatePresence, useMotionValueEv
 import {
   CheckCircle, Trash2, Lock, Link2, Flag, MapPin,
   Image as ImageIcon, MoreHorizontal, Repeat, Edit3,
-  ChevronDown, Copy, FolderOpen, IndentIncrease, IndentDecrease, X, Play, Calendar
+  ChevronDown, Copy, FolderOpen, IndentIncrease, IndentDecrease, X, Play, Calendar, Info
 } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -40,13 +40,15 @@ export const TaskCard = React.memo(function TaskCard({
   const lists = useAppStore(state => state.lists);
   const taskCycle = cycles.find(c => c.id === task.cycle_id);
   const taskList = lists?.find(l => l.id === task.categoryId);
+  const taskColor = taskList?.color || 'var(--accent-primary, #007aff)';
 
-  let dueDateColor = 'var(--text-secondary)';
+  let dueDateColor = 'var(--text-tertiary)';
   if (task.dueDate) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const due = new Date(task.dueDate); due.setHours(0, 0, 0, 0);
-    if (due < today) dueDateColor = 'var(--accent-red)';
-    else if (due.getTime() === today.getTime()) dueDateColor = 'var(--accent-orange)';
+    if (due < today) dueDateColor = '#ff3b30'; // Apple Red
+    else if (due.getTime() === today.getTime()) dueDateColor = '#007aff'; // Apple Blue
+    else dueDateColor = 'var(--text-tertiary)';
   }
 
   const [contextMenuOpen, setContextMenuOpen] = useState(false);
@@ -346,7 +348,7 @@ export const TaskCard = React.memo(function TaskCard({
                   position: 'absolute',
                   width: 22, height: 22,
                   borderRadius: '50%',
-                  background: 'var(--accent-primary)',
+                  background: taskColor,
                   pointerEvents: 'none'
                 }}
               />
@@ -358,7 +360,7 @@ export const TaskCard = React.memo(function TaskCard({
               position: 'absolute',
               width: 22, height: 22,
               borderRadius: '50%',
-              background: `conic-gradient(var(--accent-primary) ${percentage}%, var(--border-subtle) ${percentage}%)`,
+              background: `conic-gradient(${taskColor} ${percentage}%, var(--border-subtle) ${percentage}%)`,
               display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>
               <div style={{ width: 18, height: 18, background: 'var(--bg-elevated)', borderRadius: '50%' }} />
@@ -368,7 +370,7 @@ export const TaskCard = React.memo(function TaskCard({
           <motion.div
             animate={{
               scale: isCompletedPeriod ? [1, 1.25, 0.94, 1] : 1,
-              backgroundColor: isCompletedPeriod ? 'var(--accent-primary)' : 'rgba(0,0,0,0)'
+              backgroundColor: isCompletedPeriod ? taskColor : 'rgba(0,0,0,0)'
             }}
             transition={{
               scale: { type: 'spring', stiffness: 500, damping: 22 },
@@ -377,9 +379,10 @@ export const TaskCard = React.memo(function TaskCard({
             style={{
               width: 22, height: 22,
               borderRadius: '50%',
-              border: isCompletedPeriod ? 'none' : '1.5px solid var(--border-color)',
+              border: isCompletedPeriod ? 'none' : `1.5px solid ${isHovered ? taskColor : 'var(--border-color)'}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: isCompletedPeriod ? '0 2px 8px var(--accent-glow, rgba(10, 132, 255, 0.3))' : 'none'
+              boxShadow: isCompletedPeriod ? `0 2px 8px ${taskColor}40` : 'none',
+              transition: 'border-color 0.15s ease'
             }}
           >
             <svg viewBox="0 0 24 24" width={14} height={14} style={{ overflow: 'visible' }}>
@@ -710,6 +713,33 @@ export const TaskCard = React.memo(function TaskCard({
                 <Play size={14} color="var(--accent-primary)" fill="var(--accent-primary)" style={{ marginLeft: 2 }} />
               </button>
             )}
+            {/* Apple Reminders Info (i) button */}
+            <button
+              className="task-info-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(task.id);
+              }}
+              aria-label="Detalles del recordatorio"
+              title="Información y detalles (i)"
+              style={{
+                width: 32, height: 32,
+                borderRadius: '50%',
+                display: isMobile ? 'none' : 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                color: taskColor,
+                opacity: isHovered || contextMenuOpen ? 0.9 : 0,
+                transition: 'opacity 0.2s ease, background-color 0.15s ease',
+                WebkitTapHighlightColor: 'transparent'
+              }}
+            >
+              <Info size={17} strokeWidth={2.2} />
+            </button>
+
             <button
               className="task-more-btn"
               onClick={(e) => {
@@ -720,14 +750,14 @@ export const TaskCard = React.memo(function TaskCard({
               }}
               aria-label="Más opciones"
               style={{
-                width: 44, height: 44,
+                width: 32, height: 32,
                 display: isMobile ? 'none' : 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 background: 'transparent',
                 border: 'none',
                 cursor: 'pointer',
-                opacity: isHovered || contextMenuOpen ? 1 : 0,
+                opacity: isHovered || contextMenuOpen ? 0.8 : 0,
                 transition: 'opacity 0.2s ease',
                 WebkitTapHighlightColor: 'transparent'
               }}
