@@ -64,6 +64,18 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const updateTask = useAppStore((state) => state.updateTask);
 
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isInlineAdding, setIsInlineAdding] = useState(false);
+  const [inlineTitle, setInlineTitle] = useState('');
+  const inlineInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      setIsInlineAdding(true);
+      setTimeout(() => inlineInputRef.current?.focus(), 60);
+    };
+    window.addEventListener('focus-inline-add', handleFocus);
+    return () => window.removeEventListener('focus-inline-add', handleFocus);
+  }, []);
 
   const currentCycle = useMemo(() => cycles.find(c => c.id === currentView), [cycles, currentView]);
   const currentList = useMemo(() => lists?.find(l => `list_${l.id}` === currentView), [lists, currentView]);
@@ -889,6 +901,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
   const smartListInfo = isSmartView ? SMART_LISTS.find(l => l.id === currentView) : null;
   const SmartIcon = smartListInfo ? smartListInfo.icon : null;
+  const viewColor = isSmartView ? (smartListInfo?.color || SMART_COLORS[currentView] || 'var(--accent-primary)') : (isListView && currentList) ? (currentList.color || 'var(--accent-primary)') : isFolderView ? (lists?.find(l => l.id === currentView.replace('folder_', ''))?.color || 'var(--accent-primary)') : 'var(--accent-primary)';
 
   return (
     <main className="main-content" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden', overflowX: 'hidden', overscrollBehaviorX: 'none' }}>
@@ -1135,18 +1148,20 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                   className="content-header" 
                   style={{ padding: '4px 16px 20px 16px', display: 'flex', flexDirection: 'column', gap: '16px', flexShrink: 0, margin: '0', borderBottom: 'none', boxSizing: 'border-box' }}
                 >
-        {/* Línea del Título (Debajo del Top Bar) */}
-        <div style={{ width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+        {/* Línea del Título (Debajo del Top Bar) - Estilo Apple Reminders */}
+        <div style={{ width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
           <h1 className="text-display" style={{ 
             fontSize: '34px', 
             fontWeight: 700,
             lineHeight: '1.2',
             wordBreak: 'break-word',
             letterSpacing: '-0.5px',
-            color: isSmartView ? SMART_COLORS[currentView] : (isListView && currentList) ? currentList.color : isFolderView ? (lists?.find(l => l.id === currentView.replace('folder_', ''))?.color || 'var(--text-primary)') : 'var(--text-primary)',
+            color: viewColor,
             display: 'flex', alignItems: 'center', margin: 0,
             padding: 0,
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            flex: 1,
+            minWidth: 0
           }}>
             {CycleIcon && <CycleIcon size={32} color="var(--accent-primary)" style={{ marginRight: 12 }} />}
             {SmartIcon && smartListInfo && (
@@ -1155,7 +1170,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 width: 38, height: 38, borderRadius: '50%',
                 backgroundColor: smartListInfo.color,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: `0 4px 12px ${smartListInfo.color}40`
+                boxShadow: `0 4px 12px ${smartListInfo.color}40`,
+                flexShrink: 0
               }}>
                 <SmartIcon size={22} color="white" />
               </div>
@@ -1186,13 +1202,21 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                     setIsEditingCycle(true);
                   }
                 }}
-                style={{ cursor: currentCycle ? 'text' : 'default' }}
+                style={{ cursor: currentCycle ? 'text' : 'default', overflow: 'hidden', textOverflow: 'ellipsis' }}
                 title={currentCycle ? "Doble click para editar nombre" : undefined}
               >
                 {getTitle()}
               </span>
             )}
           </h1>
+
+          {/* Gran Contador Apple Reminders en el color de la lista */}
+          {!currentCycle && currentView !== 'TRASH' && (
+            <span className="apple-large-counter" style={{ color: viewColor }}>
+              {activeVisibleCount}
+            </span>
+          )}
+        </div>
 
           {(() => {
             if (currentCycle) {
@@ -1296,7 +1320,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               </span>
             </div>
           )}
-        </div>
       </header>
               </div>
             );
@@ -1531,6 +1554,135 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             return renderTask(data.task, itemStyle, index, data.depth, !!data.isFirstInSection, !!data.isLastInSection, prevId, itemKey);
           }
         })}
+
+        {/* Apple Reminders Inline Quick Add Row */}
+        {currentView !== 'TRASH' && currentView !== 'smart_completed' && (
+          <div style={{ padding: '6px 16px 14px', width: '100%', boxSizing: 'border-box' }}>
+            {isInlineAdding ? (
+              <div 
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '11px 16px',
+                  borderRadius: 12,
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-subtle)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                  gap: 12
+                }}
+              >
+                <div style={{
+                  width: 22, height: 22,
+                  borderRadius: '50%',
+                  border: `1.5px solid ${viewColor}`,
+                  flexShrink: 0
+                }} />
+                <input
+                  ref={inlineInputRef}
+                  type="text"
+                  value={inlineTitle}
+                  placeholder="Nuevo recordatorio"
+                  onChange={(e) => setInlineTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (inlineTitle.trim()) {
+                        const newTaskTitle = inlineTitle.trim();
+                        setInlineTitle('');
+                        const defaultCategoryId = currentView.startsWith('list_') ? currentView.replace('list_', '') : undefined;
+                        let dueDate: string | undefined = undefined;
+                        if (currentView === 'smart_today') {
+                          const today = new Date();
+                          today.setHours(12, 0, 0, 0);
+                          dueDate = today.toISOString();
+                        }
+                        const { addTask } = useAppStore.getState();
+                        addTask({
+                          id: crypto.randomUUID(),
+                          title: newTaskTitle,
+                          categoryId: defaultCategoryId,
+                          dueDate,
+                          completed: false,
+                          created_at: new Date().toISOString()
+                        } as any);
+                        HapticService.selection();
+                        setTimeout(() => inlineInputRef.current?.focus(), 50);
+                      } else {
+                        setIsInlineAdding(false);
+                      }
+                    } else if (e.key === 'Escape') {
+                      setIsInlineAdding(false);
+                      setInlineTitle('');
+                    }
+                  }}
+                  onBlur={() => {
+                    if (inlineTitle.trim()) {
+                      const newTaskTitle = inlineTitle.trim();
+                      setInlineTitle('');
+                      const defaultCategoryId = currentView.startsWith('list_') ? currentView.replace('list_', '') : undefined;
+                      let dueDate: string | undefined = undefined;
+                      if (currentView === 'smart_today') {
+                        const today = new Date();
+                        today.setHours(12, 0, 0, 0);
+                        dueDate = today.toISOString();
+                      }
+                      const { addTask } = useAppStore.getState();
+                      addTask({
+                        id: crypto.randomUUID(),
+                        title: newTaskTitle,
+                        categoryId: defaultCategoryId,
+                        dueDate,
+                        completed: false,
+                        created_at: new Date().toISOString()
+                      } as any);
+                    }
+                    setIsInlineAdding(false);
+                  }}
+                  style={{
+                    fontSize: '1.02rem',
+                    fontWeight: 400,
+                    width: '100%',
+                    border: 'none',
+                    background: 'transparent',
+                    outline: 'none',
+                    color: 'var(--text-primary)',
+                    padding: 0
+                  }}
+                />
+              </div>
+            ) : (
+              <div 
+                onClick={() => {
+                  setIsInlineAdding(true);
+                  setTimeout(() => inlineInputRef.current?.focus(), 50);
+                }}
+                className="apple-inline-add-row"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '11px 16px',
+                  borderRadius: 12,
+                  cursor: 'pointer',
+                  color: 'var(--text-tertiary)',
+                  fontSize: '0.95rem',
+                  background: 'transparent',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <div style={{
+                  width: 22, height: 22, borderRadius: '50%',
+                  border: '1.5px dashed var(--border-color)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <Plus size={13} color="var(--text-tertiary)" />
+                </div>
+                <span style={{ fontWeight: 500 }}>Nuevo recordatorio</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {visibleTasks.length === 0 && smartTasks.length === 0 && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', width: '100%', padding: '32px 16px', boxSizing: 'border-box' }}>
