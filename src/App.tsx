@@ -50,6 +50,23 @@ function App() {
   const navView = useNavigation((state) => state.currentView());
   const { push: navPush, pop: navPop, reset: navReset } = useNavigation();
   const [globalToast, setGlobalToast] = useState<string | null>(null);
+  const theme = useAppStore((state) => state.theme) || 'light';
+
+  // ── Theme synchronization (Always light mode by default) ─────────
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.body.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.body.classList.remove('dark');
+    }
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) {
+      metaTheme.setAttribute('content', theme === 'dark' ? '#000000' : '#ffffff');
+    }
+  }, [theme]);
 
   useEffect(() => {
     const handleToast = (e: any) => {

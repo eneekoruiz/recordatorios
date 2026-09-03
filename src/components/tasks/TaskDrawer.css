@@ -486,10 +486,8 @@ select[multiple].detail-select {
   .drawer-content { padding: 16px 14px calc(128px + env(safe-area-inset-bottom)); }
 }
 
-@media (prefers-color-scheme: dark) {
-  .drawer {
-    background: var(--bg-elevated);
-  }
+[data-theme="dark"] .drawer {
+  background: var(--bg-elevated);
 }
 
 /* Apple HIG Focus-Visible Accessibility & Mouse Focus Suppression */

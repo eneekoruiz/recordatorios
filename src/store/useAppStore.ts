@@ -92,6 +92,9 @@ interface AppState {
   lastSyncedAt: number | null;
   setSyncStatus: (status: 'idle' | 'syncing' | 'synced' | 'error' | 'offline') => void;
   setLastSyncedAt: (timestamp: number) => void;
+  theme: 'light' | 'dark';
+  setTheme: (theme: 'light' | 'dark') => void;
+  toggleTheme: () => void;
   logout: () => void;
   cleanupDataHygiene: () => void;
 }
@@ -109,6 +112,9 @@ export const useAppStore = create<AppState>()(
       lastSyncedAt: null,
       setSyncStatus: (syncStatus) => set({ syncStatus }),
       setLastSyncedAt: (lastSyncedAt) => set({ lastSyncedAt }),
+      theme: 'light',
+      setTheme: (theme) => set({ theme }),
+      toggleTheme: () => set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
       smartListVisibility: {
         smart_primeros_pasos: true,
         smart_today: true,
