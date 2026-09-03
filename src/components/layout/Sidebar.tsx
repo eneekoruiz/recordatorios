@@ -261,7 +261,19 @@ const ListHierarchy = ({
                 <div className="list-icon" style={{ backgroundColor: list.color, width: depth > 0 ? 16 : undefined, height: depth > 0 ? 16 : undefined, marginRight: depth > 0 ? 8 : undefined }} />
               )}
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-                <span className="title" style={{ color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)', fontSize: depth > 0 ? '0.9rem' : undefined }}>{list.name}</span>
+                <span 
+                  className="title" 
+                  style={{ 
+                    color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)', 
+                    fontSize: depth > 0 ? '0.9rem' : undefined,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}
+                  title={list.name}
+                >
+                  {list.name}
+                </span>
                 {list.isShared && <span className="subtitle">Esta lista es compartida.</span>}
               </div>
               
@@ -278,25 +290,26 @@ const ListHierarchy = ({
                     background: isExpanded ? 'var(--accent-glow)' : 'var(--bg-card)', 
                     border: isExpanded ? '1px solid rgba(10, 132, 255, 0.3)' : '1px solid var(--border-subtle)', 
                     borderRadius: 6, 
-                    padding: '3px 8px', 
+                    padding: '2px 6px', 
                     cursor: 'pointer', 
                     color: isExpanded ? 'var(--accent-primary)' : 'var(--text-secondary)',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 4,
+                    gap: 3,
                     marginLeft: 6,
-                    fontSize: '0.75rem',
+                    fontSize: '0.72rem',
                     fontWeight: 600,
+                    flexShrink: 0,
                     boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                     transition: 'all 0.15s ease'
                   }}
-                  title={isExpanded ? "Contraer sublistas" : "Expandir sublistas"}
+                  title={isExpanded ? "Ocultar sublistas" : "Mostrar sublistas"}
                 >
                   <motion.div animate={{ rotate: isExpanded ? 0 : -90 }} transition={{ duration: 0.15 }}>
-                    <ChevronDown size={14} color={isExpanded ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
+                    <ChevronDown size={13} color={isExpanded ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
                   </motion.div>
-                  <span style={{ fontSize: '0.72rem', whiteSpace: 'nowrap' }}>
-                    {isExpanded ? 'Sublistas' : 'Ver sublistas'}
+                  <span style={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
+                    {isExpanded ? 'Ocultar' : (uniqueLists.filter((l: any) => l.parentId === list.id).length > 0 ? `${uniqueLists.filter((l: any) => l.parentId === list.id).length}` : 'Sublistas')}
                   </span>
                 </button>
               ) : null}
@@ -768,7 +781,8 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 className="ios-dropdown-item"
                 onClick={(e) => { 
                   e.stopPropagation(); 
-                  syncManager.syncNow();
+                  HapticService.selection();
+                  syncManager.syncNow(true);
                 }}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
               >
@@ -1155,8 +1169,8 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
             </div>
           </div>
           <div className="ios-list-block">
-            {/* 🚀 Primeros Pasos (Banner distinguido en la parte superior) */}
-            {lists?.some(l => l.id === 'primeros_pasos') && (
+            {/* 🚀 Primeros Pasos (Banner distinguido en la parte superior solo si no está ya anclada arriba) */}
+            {lists?.some(l => l.id === 'primeros_pasos') && !pinnedSmartLists.includes('smart_primeros_pasos') && (
               <motion.div 
                 className={`ios-list-item ${currentView === 'smart_primeros_pasos' || currentView === 'list_primeros_pasos' ? 'active' : ''}`}
                 onClick={() => onSelectView('smart_primeros_pasos')}

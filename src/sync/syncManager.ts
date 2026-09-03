@@ -2,11 +2,19 @@ import { useAppStore } from '../store/useAppStore';
 import type { TaskItem } from '../models/Task';
 
 // Always use relative URLs so they work on any domain (avoids ERR_NAME_NOT_RESOLVED from stale VITE_API_URL)
+// Dynamically resolve API URL so mobile devices on LAN connect to the correct host
 const isDev = import.meta.env.DEV;
-const API_BASE = isDev ? (import.meta.env.VITE_API_URL || 'http://localhost:3001') : '';
-const PULL_URL = `${API_BASE}/api/sync/pull`;
-const PUSH_URL = `${API_BASE}/api/sync/push`;
-const LIVE_URL = `${API_BASE}/api/sync/live`;
+const getApiBase = () => {
+  if (!isDev) return '';
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (typeof window !== 'undefined' && window.location.hostname) {
+    return `http://${window.location.hostname}:3001`;
+  }
+  return 'http://localhost:3001';
+};
+const PULL_URL = () => `${getApiBase()}/api/sync/pull`;
+const PUSH_URL = () => `${getApiBase()}/api/sync/push`;
+const LIVE_URL = () => `${getApiBase()}/api/sync/live`;
 const SYNC_INTERVAL_MS = 30 * 1000; // 30 seconds
 
 class SyncManager {
@@ -62,7 +70,7 @@ class SyncManager {
       this.eventSource.close();
     }
 
-    const url = `${LIVE_URL}?token=${encodeURIComponent(token)}`;
+    const url = `${LIVE_URL()}?token=${encodeURIComponent(token)}`;
     this.eventSource = new EventSource(url);
 
     this.eventSource.onmessage = (event) => {
@@ -84,7 +92,7 @@ class SyncManager {
     };
   }
 
-  async syncNow() {
+  async syncNow(forceFullPull = false) {
     if (!this.isOnline) {
       useAppStore.getState().setSyncStatus('offline');
       return;
@@ -105,7 +113,7 @@ class SyncManager {
 
     try {
       await this.push(token);
-      await this.pull(token);
+      await this.pull(token, forceFullPull);
       useAppStore.getState().setSyncStatus('synced');
       useAppStore.getState().setLastSyncedAt(Date.now());
     } catch (error) {
@@ -126,7 +134,7 @@ class SyncManager {
     if (tasks.length === 0 && cycles.length === 0 && lists.length === 0 && listSections.length === 0) return;
 
     // Send payload to backend
-    const response = await fetch(PUSH_URL, {
+    const response = await fetch(PUSH_URL(), {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -167,7 +175,7 @@ class SyncManager {
     }
   }
 
-  private async pull(token: string) {
+  private async pull(token: string, forceFullPull = false) {
     const state = useAppStore.getState();
     // Use userId if available; fall back to a hash of the token itself to avoid
     // all devices sharing a single 'sync_token_null' key and missing all server data.
@@ -179,9 +187,10 @@ class SyncManager {
       localStorage.removeItem(legacyKey);
     }
     const isLocalEmpty = Object.keys(state.tasks).length === 0;
-    const lastToken = isLocalEmpty ? '0' : (localStorage.getItem(tokenKey) || '0');
+    const lastToken = (forceFullPull || isLocalEmpty) ? '0' : (localStorage.getItem(tokenKey) || '0');
 
-    const url = new URL(PULL_URL, window.location.origin);
+    const pullUrl = PULL_URL();
+    const url = new URL(pullUrl, window.location.origin);
     url.searchParams.append('lastToken', lastToken);
 
     const response = await fetch(url.toString(), {

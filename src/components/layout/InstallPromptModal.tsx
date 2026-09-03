@@ -36,7 +36,7 @@ export function InstallPromptModal() {
         });
       } else if (isSafari) {
         setInstallInfo({
-          title: 'Instala Recordatorios Élite',
+          title: 'Instala Recordatorios en iOS',
           desc: 'Toca el icono de Compartir (⬆️) en Safari y selecciona "Añadir a la pantalla de inicio" para tener la experiencia de app nativa.',
         });
       }
@@ -48,13 +48,13 @@ export function InstallPromptModal() {
     } else if (isEdge) {
       setInstallInfo({
         title: 'Instalar en Microsoft Edge',
-        desc: 'Puedes instalar Recordatorios como app de escritorio. Pulsa el botón "Instalar" abajo o el icono (+) en la barra de direcciones de Edge.',
+        desc: 'Para instalarla en Edge: Abre el menú de tres puntos (···) en la esquina superior derecha del navegador > selecciona "Aplicaciones" > haz clic en "Instalar este sitio como una aplicación".',
         isEdge: true
       });
     } else {
       setInstallInfo({
-        title: 'Disponible como App de Escritorio',
-        desc: 'Abre el menú de tu navegador (los tres puntos en la esquina superior) o haz clic en el icono de instalación en la barra de direcciones.',
+        title: 'Instalar como App de Escritorio',
+        desc: 'Abre el menú de tu navegador (los tres puntos en la esquina superior derecha) y selecciona "Instalar aplicación" o "Guardar y compartir > Instalar página como aplicación".',
       });
     }
 
@@ -63,15 +63,9 @@ export function InstallPromptModal() {
     };
     window.addEventListener('open-install-modal', handleOpenManual);
 
-    let timer: any = null;
-    if (!isStandalone && !hasDismissed) {
-      timer = setTimeout(() => setIsOpen(true), 2200);
-    }
-
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('open-install-modal', handleOpenManual);
-      if (timer) clearTimeout(timer);
     };
   }, []);
 

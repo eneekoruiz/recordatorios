@@ -330,7 +330,7 @@ app.get('/api/share/:token', authenticateToken, async (req, res) => {
 
 // START
 if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Recordatorios Backend running on port ${PORT}`);
   });
 }
