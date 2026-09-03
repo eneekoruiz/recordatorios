@@ -132,7 +132,7 @@ export const useAppStore = create<AppState>()(
       },
       pinnedSmartLists: ['smart_primeros_pasos'],
       cycleVisibility: {},  // All hidden by default; auto-activates when a task with that cycle_id is created
-      globalCyclesEnabled: true,
+      globalCyclesEnabled: false,
 
       setToken: (token, userId) => set({ token, userId }),
       logout: () => {
@@ -461,8 +461,9 @@ export const useAppStore = create<AppState>()(
           .filter((t: any) => !t.deleted_at && (includeCompleted || !isTaskCompleted(t) || temporarilyShowIds.includes(t.id)))
           .filter((t: any) => {
             if (t.categoryId === 'primeros_pasos') return false; // Onboarding tasks NEVER bleed into cycle views
-            if (!t.cycle_id) return false; // Tasks without a cycle never appear in cycle views
-            return validCycles.includes(t.cycle_id as string);
+            const effCycle = t.cycle_id || (t.categoryId === 'limpieza_diaria' ? 'cycle_day' : t.categoryId === 'limpieza_semanal' ? 'cycle_week' : t.categoryId === 'limpieza_mensual' ? 'cycle_month' : t.categoryId === 'limpieza_anual' ? 'cycle_year' : null);
+            if (!effCycle) return false;
+            return validCycles.includes(effCycle as string);
           })
           .filter((t: any) => includeCompleted || temporarilyShowIds.includes(t.id) || !isCompletedInCurrentPeriod(t, cycles))
           .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
