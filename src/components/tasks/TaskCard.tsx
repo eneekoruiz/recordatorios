@@ -4,7 +4,8 @@ import { motion, useMotionValue, useTransform, AnimatePresence, useMotionValueEv
 import {
   CheckCircle, Trash2, Lock, Link2, Flag, MapPin,
   Image as ImageIcon, MoreHorizontal, Repeat, Edit3,
-  ChevronDown, Copy, FolderOpen, IndentIncrease, IndentDecrease, X, Play, Calendar, Info
+  ChevronDown, Copy, IndentIncrease, IndentDecrease, X, Play, Calendar, Info,
+  AlertCircle, CalendarDays, CalendarX, Clock, Sun, ChevronRight, ArrowLeft, FolderInput, LayoutList
 } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -92,8 +93,32 @@ export const TaskCard = React.memo(function TaskCard({
   const [editTitle, setEditTitle] = useState(task.title || '');
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [editNote, setEditNote] = useState(task.description || '');
-  const updateTask = useAppStore(state => state.updateTask);
   const cardRef = useRef<HTMLDivElement>(null);
+
+  const openContextMenu = useCallback(() => {
+    HapticService.impact('medium');
+    if (cardRef.current) {
+      const rect = cardRef.current.getBoundingClientRect();
+      const menuWidth = 260;
+      const estimatedMenuHeight = 420;
+      
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const showAbove = spaceBelow < 280 && rect.top > estimatedMenuHeight;
+      
+      const top = showAbove 
+        ? Math.max(12, rect.top - estimatedMenuHeight - 6)
+        : Math.min(window.innerHeight - estimatedMenuHeight - 12, rect.bottom + 6);
+        
+      let left = rect.right - menuWidth;
+      if (rect.width <= 360) {
+        left = rect.left;
+      }
+      left = Math.max(12, Math.min(window.innerWidth - menuWidth - 12, left));
+
+      setContextMenuPosition({ x: left, y: top });
+    }
+    setContextMenuOpen(true);
+  }, []);
 
   // Sync state if task changes externally but not while editing
   useEffect(() => {
@@ -181,17 +206,15 @@ export const TaskCard = React.memo(function TaskCard({
   return (
     <div
       className="task-item-wrapper"
-      style={{ ...virtualStyle, position: 'relative', margin: 0, boxSizing: 'border-box' }}
+      style={{ ...virtualStyle, position: 'relative', margin: 0, boxSizing: 'border-box', zIndex: contextMenuOpen ? 99999 : 1 }}
       onPointerDown={(e) => {
         if (e.pointerType === 'mouse') return;
         touchStartX.current = e.clientX;
         touchStartY.current = e.clientY;
         if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
         longPressTimer.current = window.setTimeout(() => {
-          HapticService.impact('medium');
-          setContextMenuPosition({ x: touchStartX.current, y: touchStartY.current });
-          setContextMenuOpen(true);
-        }, 400);
+          openContextMenu();
+        }, 380);
       }}
       onPointerMove={(e) => {
         if (!longPressTimer.current) return;
@@ -216,8 +239,12 @@ export const TaskCard = React.memo(function TaskCard({
       }}
       onContextMenu={(e) => {
         e.preventDefault();
-        setContextMenuPosition({ x: e.clientX, y: e.clientY });
-        setContextMenuOpen(true);
+        e.stopPropagation();
+        if (longPressTimer.current) {
+          window.clearTimeout(longPressTimer.current);
+          longPressTimer.current = null;
+        }
+        openContextMenu();
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -268,9 +295,11 @@ export const TaskCard = React.memo(function TaskCard({
         dragTransition={{ bounceStiffness: 500, bounceDamping: 35 }}
         onDragEnd={(_, info) => handleSwipeEnd(info.offset.x)}
         animate={{
-          scale: contextMenuOpen ? 0.96 : 1,
-          boxShadow: contextMenuOpen ? '0 16px 40px rgba(0,0,0,0.2)' : 'none',
-          borderRadius: contextMenuOpen ? 12 : (isFirstInSection ? 10 : isLastInSection ? 10 : 0),
+          scale: contextMenuOpen ? 1.025 : 1,
+          boxShadow: contextMenuOpen 
+            ? '0 18px 45px rgba(0,0,0,0.22), 0 4px 14px rgba(0,0,0,0.1)' 
+            : 'none',
+          borderRadius: contextMenuOpen ? 14 : (isFirstInSection ? 10 : isLastInSection ? 10 : 0),
         }}
         transition={{ type: 'spring', damping: 25, stiffness: 400 }}
         style={{
@@ -744,9 +773,7 @@ export const TaskCard = React.memo(function TaskCard({
               className="task-more-btn"
               onClick={(e) => {
                 e.stopPropagation();
-                const rect = e.currentTarget.getBoundingClientRect();
-                setContextMenuPosition({ x: rect.right, y: rect.bottom });
-                setContextMenuOpen(true);
+                openContextMenu();
               }}
               aria-label="Más opciones"
               style={{
@@ -782,7 +809,9 @@ export const TaskCard = React.memo(function TaskCard({
                 transition={{ duration: 0.18 }}
                 style={{
                   position: 'fixed', inset: 0, zIndex: 99998,
-                  background: 'rgba(0,0,0,0.05)', // Extremely subtle overlay to catch clicks
+                  background: 'rgba(0, 0, 0, 0.28)',
+                  backdropFilter: 'blur(10px)',
+                  WebkitBackdropFilter: 'blur(10px)',
                 }}
                 onClick={() => setContextMenuOpen(false)}
                 onContextMenu={(e) => { e.preventDefault(); setContextMenuOpen(false); }}
@@ -791,27 +820,40 @@ export const TaskCard = React.memo(function TaskCard({
               {/* Floating Popover Container */}
               <motion.div
                 className="ios-dropdown-menu"
-                initial={{ opacity: 0, scale: 0.85, y: -10 }}
+                initial={{ opacity: 0, scale: 0.92, y: -6 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: -5 }}
-                transition={{ type: 'spring', damping: 25, stiffness: 450 }}
+                exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                transition={{ type: 'spring', damping: 26, stiffness: 450 }}
                 style={{
-                  position: 'fixed', zIndex: 99999,
-                  top: Math.min(contextMenuPosition.y, typeof window !== 'undefined' ? window.innerHeight - 350 : 300),
-                  left: Math.min(contextMenuPosition.x, typeof window !== 'undefined' ? window.innerWidth - 220 : 100),
-                  width: 220,
-                  background: 'var(--bg-material, rgba(255,255,255,0.75))',
-                  backdropFilter: 'blur(30px) saturate(180%)',
-                  WebkitBackdropFilter: 'blur(30px) saturate(180%)',
+                  position: 'fixed', zIndex: 100000,
+                  top: contextMenuPosition.y,
+                  left: contextMenuPosition.x,
+                  width: 260,
+                  background: 'var(--bg-material, rgba(255,255,255,0.85))',
+                  backdropFilter: 'blur(35px) saturate(190%)',
+                  WebkitBackdropFilter: 'blur(35px) saturate(190%)',
                   borderRadius: '14px',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.04)',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  padding: '8px 0',
-                  display: 'flex', flexDirection: 'column'
+                  boxShadow: '0 14px 40px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.06)',
+                  border: '1px solid var(--border-subtle)',
+                  padding: '6px 0',
+                  display: 'flex', flexDirection: 'column',
+                  maxHeight: 'calc(100vh - 32px)',
+                  overflowY: 'auto'
                 }}
                 onClick={e => e.stopPropagation()}
               >
-                <MenuActions task={task} setContextMenuOpen={setContextMenuOpen} onEdit={onEdit} nestTask={nestTask} previousTaskId={previousTaskId} setIsDeleteConfirmOpen={setIsDeleteConfirmOpen} updateTask={updateTask} onOpenZenMode={onOpenZenMode} />
+                <MenuActions 
+                  task={task} 
+                  setContextMenuOpen={setContextMenuOpen} 
+                  onEdit={onEdit} 
+                  nestTask={nestTask} 
+                  previousTaskId={previousTaskId} 
+                  setIsDeleteConfirmOpen={setIsDeleteConfirmOpen} 
+                  updateTask={updateTask} 
+                  onOpenZenMode={onOpenZenMode}
+                  onToggle={onToggle}
+                  isCompleted={isCompletedPeriod}
+                />
               </motion.div>
             </>
           )}
@@ -869,117 +911,502 @@ interface MenuActionsProps {
   setIsDeleteConfirmOpen: (open: boolean) => void;
   updateTask: (id: string, updates: Partial<TaskItem>) => void;
   onOpenZenMode?: (id: string) => void;
+  onToggle: (id: string, forceReverse?: boolean) => void;
+  isCompleted: boolean;
 }
 
 // ── MenuActions Component ──────────────────────────────────────
-function MenuActions({ task, setContextMenuOpen, onEdit, nestTask, previousTaskId, setIsDeleteConfirmOpen, updateTask, onOpenZenMode }: MenuActionsProps) {
+function MenuActions({
+  task,
+  setContextMenuOpen,
+  onEdit,
+  nestTask,
+  previousTaskId,
+  setIsDeleteConfirmOpen,
+  updateTask,
+  onOpenZenMode,
+  onToggle,
+  isCompleted
+}: MenuActionsProps) {
   const addTask = useAppStore(state => state.addTask);
   const lists = useAppStore(state => state.lists);
-  const [showMoveSubmenu, setShowMoveSubmenu] = useState(false);
+  const listSections = useAppStore(state => state.listSections);
+  const [currentSubmenu, setCurrentSubmenu] = useState<'main' | 'move_list' | 'move_section' | 'due_date' | 'priority'>('main');
 
-  if (showMoveSubmenu) {
+  const availableSections = (listSections || []).filter(
+    s => s.listId === (task.categoryId || task.listId) && !s.deleted_at
+  );
+
+  // Submenu: Mover a lista
+  if (currentSubmenu === 'move_list') {
     return (
-      <>
-        <button onClick={() => setShowMoveSubmenu(false)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', width: '100%', border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 600, color: 'var(--accent-primary)' }}>← Volver</button>
-        <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 16px' }} />
-        {lists?.map(list => (
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
+          <button 
+            onClick={() => setCurrentSubmenu('main')}
+            style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, padding: 0 }}
+          >
+            <ArrowLeft size={16} /> Volver
+          </button>
+          <span style={{ flex: 1, textAlign: 'center', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginRight: 20 }}>
+            Trasladar a lista
+          </span>
+        </div>
+        <div style={{ maxHeight: 280, overflowY: 'auto', padding: '4px 0' }}>
+          {lists?.map(list => {
+            const isCurrent = (task.categoryId || task.listId) === list.id;
+            return (
+              <button
+                key={list.id}
+                onClick={() => {
+                  updateTask(task.id, { listId: list.id, categoryId: list.id, sectionId: undefined });
+                  setContextMenuOpen(false);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '9px 14px',
+                  width: '100%',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  color: isCurrent ? 'var(--accent-primary)' : 'var(--text-primary)',
+                  textAlign: 'left',
+                  fontSize: '0.92rem',
+                  borderRadius: 6
+                }}
+                onPointerDown={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                onPointerUp={e => { e.currentTarget.style.background = 'transparent'; }}
+                onPointerLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                <span style={{ width: 10, height: 10, borderRadius: '50%', background: list.color || 'var(--accent-primary)', flexShrink: 0 }} />
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{list.name}</span>
+                {isCurrent && <CheckCircle size={15} color="var(--accent-primary)" />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // Submenu: Trasladar a sección
+  if (currentSubmenu === 'move_section') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
+          <button 
+            onClick={() => setCurrentSubmenu('main')}
+            style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, padding: 0 }}
+          >
+            <ArrowLeft size={16} /> Volver
+          </button>
+          <span style={{ flex: 1, textAlign: 'center', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginRight: 20 }}>
+            Trasladar a sección
+          </span>
+        </div>
+        <div style={{ maxHeight: 280, overflowY: 'auto', padding: '4px 0' }}>
           <button
-            key={list.id}
             onClick={() => {
-              updateTask(task.id, { listId: list.id, categoryId: list.id, sectionId: undefined });
+              updateTask(task.id, { sectionId: undefined });
               setContextMenuOpen(false);
-              setShowMoveSubmenu(false);
             }}
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 10,
-              padding: '10px 16px',
+              justifyContent: 'space-between',
+              padding: '9px 14px',
               width: '100%',
               border: 'none',
               background: 'transparent',
               cursor: 'pointer',
-              color: 'var(--text-primary)',
-              textAlign: 'left'
+              color: !task.sectionId ? 'var(--accent-primary)' : 'var(--text-primary)',
+              textAlign: 'left',
+              fontSize: '0.92rem',
+              borderRadius: 6
             }}
             onPointerDown={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
             onPointerUp={e => { e.currentTarget.style.background = 'transparent'; }}
             onPointerLeave={e => { e.currentTarget.style.background = 'transparent'; }}
           >
-            <span style={{ width: 12, height: 12, borderRadius: '50%', background: list.color || 'var(--accent-primary)', flexShrink: 0 }} />
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{list.name}</span>
+            <span>Sin sección</span>
+            {!task.sectionId && <CheckCircle size={15} color="var(--accent-primary)" />}
           </button>
-        ))}
-      </>
+          {availableSections.map(sec => {
+            const isCurrent = task.sectionId === sec.id;
+            return (
+              <button
+                key={sec.id}
+                onClick={() => {
+                  updateTask(task.id, { sectionId: sec.id });
+                  setContextMenuOpen(false);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '9px 14px',
+                  width: '100%',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  color: isCurrent ? 'var(--accent-primary)' : 'var(--text-primary)',
+                  textAlign: 'left',
+                  fontSize: '0.92rem',
+                  borderRadius: 6
+                }}
+                onPointerDown={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                onPointerUp={e => { e.currentTarget.style.background = 'transparent'; }}
+                onPointerLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sec.name}</span>
+                {isCurrent && <CheckCircle size={15} color="var(--accent-primary)" />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
     );
   }
 
+  // Submenu: Fecha límite
+  if (currentSubmenu === 'due_date') {
+    const handleSetDueDate = (iso?: string) => {
+      updateTask(task.id, { dueDate: iso });
+      setContextMenuOpen(false);
+    };
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
+          <button 
+            onClick={() => setCurrentSubmenu('main')}
+            style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, padding: 0 }}
+          >
+            <ArrowLeft size={16} /> Volver
+          </button>
+          <span style={{ flex: 1, textAlign: 'center', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginRight: 20 }}>
+            Fecha límite
+          </span>
+        </div>
+        <div style={{ padding: '4px 0' }}>
+          <ActionRow 
+            icon={<Sun size={17} color="#007aff" />} 
+            label="Hoy" 
+            sublabel="18:00"
+            onClick={() => {
+              const d = new Date(); d.setHours(18, 0, 0, 0);
+              handleSetDueDate(d.toISOString());
+            }} 
+          />
+          <ActionRow 
+            icon={<Calendar size={17} color="#ff9500" />} 
+            label="Mañana" 
+            sublabel="09:00"
+            onClick={() => {
+              const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0);
+              handleSetDueDate(d.toISOString());
+            }} 
+          />
+          <ActionRow 
+            icon={<CalendarDays size={17} color="#5856d6" />} 
+            label="Este fin de semana" 
+            sublabel="Sábado 10:00"
+            onClick={() => {
+              const d = new Date();
+              const day = d.getDay();
+              const diff = day === 6 ? 7 : (6 - day);
+              d.setDate(d.getDate() + diff); d.setHours(10, 0, 0, 0);
+              handleSetDueDate(d.toISOString());
+            }} 
+          />
+          <ActionRow 
+            icon={<Clock size={17} color="#34c759" />} 
+            label="Próxima semana" 
+            sublabel="Lunes 09:00"
+            onClick={() => {
+              const d = new Date();
+              const day = d.getDay();
+              const diff = (day === 0 ? 1 : 8 - day);
+              d.setDate(d.getDate() + diff); d.setHours(9, 0, 0, 0);
+              handleSetDueDate(d.toISOString());
+            }} 
+          />
+          {task.dueDate && (
+            <>
+              <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
+              <ActionRow 
+                icon={<CalendarX size={17} color="var(--accent-red)" />} 
+                label="Sin fecha límite" 
+                labelColor="var(--accent-red)"
+                onClick={() => handleSetDueDate(undefined)} 
+              />
+            </>
+          )}
+          <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
+          <ActionRow 
+            icon={<Edit3 size={17} color="var(--accent-primary)" />} 
+            label="Personalizar fecha..." 
+            onClick={() => {
+              setContextMenuOpen(false);
+              onEdit(task.id);
+            }} 
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Submenu: Prioridad
+  if (currentSubmenu === 'priority') {
+    const priorities: { value: 'none' | 'low' | 'medium' | 'high'; label: string; marks: string; color: string }[] = [
+      { value: 'none', label: 'Ninguna', marks: '', color: 'var(--text-primary)' },
+      { value: 'low', label: 'Baja', marks: '!', color: '#34c759' },
+      { value: 'medium', label: 'Media', marks: '!!', color: '#ff9500' },
+      { value: 'high', label: 'Alta (Urgente)', marks: '!!!', color: '#ff3b30' },
+    ];
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
+          <button 
+            onClick={() => setCurrentSubmenu('main')}
+            style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, padding: 0 }}
+          >
+            <ArrowLeft size={16} /> Volver
+          </button>
+          <span style={{ flex: 1, textAlign: 'center', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginRight: 20 }}>
+            Prioridad
+          </span>
+        </div>
+        <div style={{ padding: '4px 0' }}>
+          {priorities.map(p => {
+            const isCurrent = (task.priority || 'none') === p.value;
+            return (
+              <button
+                key={p.value}
+                onClick={() => {
+                  updateTask(task.id, { priority: p.value });
+                  setContextMenuOpen(false);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '9px 14px',
+                  width: '100%',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  color: isCurrent ? 'var(--accent-primary)' : 'var(--text-primary)',
+                  textAlign: 'left',
+                  fontSize: '0.92rem',
+                  borderRadius: 6
+                }}
+                onPointerDown={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                onPointerUp={e => { e.currentTarget.style.background = 'transparent'; }}
+                onPointerLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {p.marks && <span style={{ fontWeight: 800, color: p.color, width: 22 }}>{p.marks}</span>}
+                  <span>{p.label}</span>
+                </div>
+                {isCurrent && <CheckCircle size={15} color="var(--accent-primary)" />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // Vista Principal
+  const isUrgent = task.priority === 'high';
+
   return (
     <>
+      {/* 1. Marcar como completado */}
+      <ActionRow 
+        icon={<CheckCircle size={18} color="var(--accent-primary)" />} 
+        label={isCompleted ? "Marcar como pendiente" : "Marcar como completado"} 
+        onClick={() => { 
+          setContextMenuOpen(false); 
+          onToggle(task.id); 
+        }} 
+      />
+
+      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
+
+      {/* 2. Fecha límite */}
+      <ActionRow 
+        icon={<Calendar size={18} color="#007aff" />} 
+        label="Fecha límite"
+        sublabel={task.dueDate ? new Date(task.dueDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : undefined}
+        trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
+        onClick={() => setCurrentSubmenu('due_date')} 
+      />
+
+      {/* 3. Marcar como urgente / Prioridad */}
+      <ActionRow 
+        icon={<AlertCircle size={18} color={isUrgent ? '#ff3b30' : 'var(--text-primary)'} />} 
+        label={isUrgent ? "Quitar urgencia" : "Marcar como urgente"}
+        trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
+        onClick={() => setCurrentSubmenu('priority')} 
+      />
+
+      {/* 4. Con marca */}
+      <ActionRow 
+        icon={<Flag size={18} color={task.flagged ? '#ff9500' : 'var(--text-primary)'} fill={task.flagged ? '#ff9500' : 'none'} />} 
+        label={task.flagged ? "Quitar marca" : "Con marca"} 
+        onClick={() => { 
+          setContextMenuOpen(false); 
+          updateTask(task.id, { flagged: !task.flagged }); 
+        }} 
+      />
+
+      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
+
+      {/* 5. Trasladar a lista */}
+      <ActionRow 
+        icon={<FolderInput size={18} />} 
+        label="Trasladar a lista..." 
+        trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
+        onClick={() => setCurrentSubmenu('move_list')} 
+      />
+
+      {/* 6. Trasladar a sección (si hay secciones disponibles en esta lista) */}
+      {availableSections.length > 0 && (
+        <ActionRow 
+          icon={<LayoutList size={18} />} 
+          label="Trasladar a sección..." 
+          trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
+          onClick={() => setCurrentSubmenu('move_section')} 
+        />
+      )}
+
+      {/* 7. Sangrar / Anular sangría de recordatorio */}
+      {previousTaskId && !task.parentId && (
+        <ActionRow 
+          icon={<IndentIncrease size={18} />} 
+          label="Sangrar recordatorio" 
+          onClick={() => { 
+            setContextMenuOpen(false); 
+            nestTask(task.id, previousTaskId); 
+          }} 
+        />
+      )}
+      {task.parentId && (
+        <ActionRow 
+          icon={<IndentDecrease size={18} />} 
+          label="Anular sangría" 
+          onClick={() => { 
+            setContextMenuOpen(false); 
+            nestTask(task.id, undefined); 
+          }} 
+        />
+      )}
+
+      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
+
+      {/* 8. Duplicar */}
+      <ActionRow 
+        icon={<Copy size={18} />} 
+        label="Duplicar" 
+        onClick={() => { 
+          addTask({ 
+            ...task, 
+            id: crypto.randomUUID(), 
+            title: `${task.title} (copia)`, 
+            created_at: new Date().toISOString(), 
+            completed: false, 
+            completed_at: undefined 
+          }); 
+          setContextMenuOpen(false); 
+        }} 
+      />
+
+      {/* 9. Modo Enfoque Zen (opcional) */}
       {onOpenZenMode && (
         <ActionRow 
           icon={<Play size={18} color="var(--accent-primary)" fill="var(--accent-primary)" />} 
-          label="Modo Enfoque Zen ▶️" 
+          label="Modo Enfoque Zen" 
           onClick={() => { setContextMenuOpen(false); onOpenZenMode(task.id); }} 
         />
       )}
-      <ActionRow icon={<Edit3 size={18} />} label="Editar" onClick={() => { setContextMenuOpen(false); onEdit(task.id); }} />
-      <ActionRow icon={<Copy size={18} />} label="Duplicar" onClick={() => { addTask({ ...task, id: crypto.randomUUID(), title: `${task.title} (copia)`, created_at: Date.now(), completed: false, completed_at: undefined }); setContextMenuOpen(false); }} />
-      <ActionRow icon={<FolderOpen size={18} />} label="Mover a lista" onClick={() => { setShowMoveSubmenu(true); }} />
-      
-      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 16px' }} />
-      
-      {previousTaskId && !task.parentId && (
-        <ActionRow icon={<IndentIncrease size={18} />} label="Sangrar" onClick={() => { setContextMenuOpen(false); nestTask(task.id, previousTaskId); }} />
-      )}
-      {task.parentId && (
-        <ActionRow icon={<IndentDecrease size={18} />} label="Extraer" onClick={() => { setContextMenuOpen(false); nestTask(task.id, undefined); }} />
-      )}
-      
-      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 16px' }} />
-      
-      <ActionRow icon={<Flag size={18} />} label={task.flagged ? "Quitar flag" : "Marcar con flag"} onClick={() => { setContextMenuOpen(false); updateTask(task.id, { flagged: !task.flagged }); }} />
-      
-      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 16px' }} />
-      
-      <ActionRow icon={<Trash2 size={18} color="var(--accent-red)" />} label="Eliminar" labelColor="var(--accent-red)" onClick={() => { setContextMenuOpen(false); setIsDeleteConfirmOpen(true); }} />
+
+      {/* 10. Detalles del recordatorio */}
+      <ActionRow 
+        icon={<Info size={18} color="var(--accent-primary)" />} 
+        label="Detalles..." 
+        onClick={() => { setContextMenuOpen(false); onEdit(task.id); }} 
+      />
+
+      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
+
+      {/* 11. Eliminar recordatorio */}
+      <ActionRow 
+        icon={<Trash2 size={18} color="var(--accent-red)" />} 
+        label="Eliminar" 
+        labelColor="var(--accent-red)" 
+        onClick={() => { setContextMenuOpen(false); setIsDeleteConfirmOpen(true); }} 
+      />
     </>
   );
 }
 
 function ActionRow({
-  icon, label, onClick, labelColor
+  icon, label, sublabel, trailing, onClick, labelColor
 }: {
   icon: React.ReactNode;
   label: string;
+  sublabel?: string;
+  trailing?: React.ReactNode;
   onClick: () => void;
   labelColor?: string;
 }) {
   return (
     <motion.button
-      whileTap={{ scale: 0.96, backgroundColor: 'rgba(0,0,0,0.06)' }}
+      whileTap={{ scale: 0.98, backgroundColor: 'var(--bg-hover)' }}
       transition={{ type: 'spring', damping: 25, stiffness: 450 }}
       onClick={onClick}
       style={{
         width: '100%',
         display: 'flex',
         alignItems: 'center',
-        gap: 12,
-        padding: '0 16px',
+        gap: 10,
+        padding: '0 14px',
         background: 'none',
         border: 'none',
         cursor: 'pointer',
         textAlign: 'left',
         WebkitTapHighlightColor: 'transparent',
-        height: 48, // slightly shorter matching iOS
+        height: 42,
+        borderRadius: 8,
+        transition: 'background-color 0.12s ease'
       }}
+      onPointerDown={e => { e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
+      onPointerUp={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+      onPointerLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: labelColor || 'var(--text-primary)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, color: labelColor || 'var(--text-primary)', flexShrink: 0 }}>
         {icon}
       </div>
-      <div style={{ flex: 1, fontSize: '0.95rem', fontWeight: 500, color: labelColor || 'var(--text-primary)' }}>
-        {label}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        <span style={{ fontSize: '0.9rem', fontWeight: 450, color: labelColor || 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {label}
+        </span>
       </div>
+      {sublabel && (
+        <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', flexShrink: 0, marginRight: trailing ? 4 : 0 }}>
+          {sublabel}
+        </span>
+      )}
+      {trailing && (
+        <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          {trailing}
+        </div>
+      )}
     </motion.button>
   );
 }
