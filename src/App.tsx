@@ -265,7 +265,10 @@ function App() {
   }, [token]);
 
   // ── Helpers ──────────────────────────────────────────────────────
+  const previousMobileView = useRef<'sidebar' | 'content'>('sidebar');
+
   const handleSelectView = (view: string) => {
+    previousMobileView.current = mobileView;
     if (view === 'DATA' || view === 'BRAIN_DUMP') {
       navReset('UNIVERSAL_IMPORTER');
       if (isMobile) setMobileView('content');
@@ -286,10 +289,10 @@ function App() {
   const handleBack = () => {
     if (navView !== 'HOME') {
       navReset('HOME');
-      if (isMobile) setMobileView('sidebar');
+      if (isMobile) setMobileView(previousMobileView.current || 'sidebar');
     } else if (navStack.length > 1) {
       navPop();
-      if (isMobile) setMobileView('sidebar');
+      if (isMobile) setMobileView(previousMobileView.current || 'sidebar');
     } else if (isMobile) {
       setMobileView('sidebar');
     }
@@ -426,8 +429,8 @@ function App() {
               isMobile={isMobile}
             />
           )}
-          {navView === 'UNIVERSAL_IMPORTER' && <UniversalImporter />}
-          {navView === 'ANALYTICS' && <AnalyticsView />}
+          {navView === 'UNIVERSAL_IMPORTER' && <UniversalImporter onBack={handleBack} />}
+          {navView === 'ANALYTICS' && <AnalyticsView onBack={handleBack} />}
         </NavigationFrame>
       </div>
 
@@ -448,19 +451,7 @@ function App() {
       )}
 
       <CommandPalette
-        onSelectView={(view) => {
-          if (view === 'DATA' || view === 'BRAIN_DUMP') {
-            navPush('UNIVERSAL_IMPORTER');
-            if (isMobile) setMobileView('content');
-          } else if (view === 'ANALYTICS') {
-            navPush('ANALYTICS');
-            if (isMobile) setMobileView('content');
-          } else {
-            setCurrentView(view);
-            navReset('HOME');
-            if (isMobile) setMobileView('content');
-          }
-        }}
+        onSelectView={(view) => handleSelectView(view)}
         onOpenZenMode={(taskId) => setZenModeTaskId(taskId)}
       />
       <InstallPromptModal />

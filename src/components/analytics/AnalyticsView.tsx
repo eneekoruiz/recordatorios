@@ -3,9 +3,21 @@ import { Flame, Target, ArrowUpRight, ListTodo, ChevronLeft } from 'lucide-react
 import { motion } from 'framer-motion';
 import { useNavigation } from '../../hooks/useNavigation';
 
-export function AnalyticsView() {
+interface AnalyticsViewProps {
+  onBack?: () => void;
+}
+
+export function AnalyticsView({ onBack }: AnalyticsViewProps) {
   const { reset } = useNavigation();
   const tasks = useAppStore(state => state.tasks);
+
+  const handleBackClick = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      reset('HOME');
+    }
+  };
 
   // Estadísticas Simples (Habit Tracking)
   const taskList = Object.values(tasks).filter(t => !t.deleted_at);
@@ -37,7 +49,7 @@ export function AnalyticsView() {
     <main style={{ padding: 'var(--space-24)', maxWidth: 1000, margin: '0 auto', overflowY: 'auto', height: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-16)' }}>
         <button 
-          onClick={() => reset('HOME')} 
+          onClick={handleBackClick} 
           style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-full)', padding: '8px 16px', color: 'var(--text-primary)', fontWeight: 500, cursor: 'pointer', transition: 'all 0.2s ease' }}
         >
           <ChevronLeft size={18} /> Volver a Listas

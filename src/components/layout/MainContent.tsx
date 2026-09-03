@@ -1111,7 +1111,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           overscrollBehaviorX: 'none',
           touchAction: 'pan-y',
           WebkitOverflowScrolling: 'touch',
-          paddingBottom: 'max(56px, calc(env(safe-area-inset-bottom) + 40px))'
+          paddingBottom: 'calc(130px + env(safe-area-inset-bottom, 0px))'
         }}
       >
         <div 

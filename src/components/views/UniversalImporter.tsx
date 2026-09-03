@@ -6,9 +6,21 @@ import { detectFormatAndParse } from '../../utils/importerParser';
 import type { ParseResult } from '../../utils/importerParser';
 import { useNavigation } from '../../hooks/useNavigation';
 
-export function UniversalImporter() {
+interface UniversalImporterProps {
+  onBack?: () => void;
+}
+
+export function UniversalImporter({ onBack }: UniversalImporterProps) {
   const { exportData, cycles, lists } = useAppStore();
   const { pop, reset } = useNavigation();
+
+  const handleBackClick = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      reset('HOME');
+    }
+  };
   const [inputText, setInputText] = useState('');
   const [preview, setPreview] = useState<ParseResult | null>(null);
   const [targetListId, setTargetListId] = useState<string>(lists[0]?.id || 'inbox');
@@ -104,7 +116,7 @@ export function UniversalImporter() {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-16)' }}>
         <button 
-          onClick={() => reset('HOME')} 
+          onClick={handleBackClick} 
           style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-full)', padding: '8px 16px', color: 'var(--text-primary)', fontWeight: 500, cursor: 'pointer', transition: 'all 0.2s ease' }}
         >
           <ChevronLeft size={18} /> Volver a Listas
