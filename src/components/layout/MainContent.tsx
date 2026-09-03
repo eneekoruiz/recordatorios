@@ -322,29 +322,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     });
   }, [sortBy]);
 
-  const handleToggleTask = useCallback((id: string, forceReverse?: boolean) => {
-    const task = tasks[id];
-    if (task) {
-      const willBeCompleted = !isTaskCompleted(task);
-      if (willBeCompleted) {
-        setRecentlyCompletedIds(prev => [...prev, id]);
-        setTimeout(() => {
-          setRecentlyCompletedIds(prev => prev.filter(x => x !== id));
-        }, 3000);
-
-        if (activeVisibleCount === 1) {
-          setShowCelebration(true);
-          SoundService.playComplete();
-          HapticService.notification('success');
-          setTimeout(() => setShowCelebration(false), 3500);
-        }
-      } else {
-        setRecentlyCompletedIds(prev => prev.filter(x => x !== id));
-      }
-    }
-    toggleTask(id, forceReverse);
-  }, [tasks, toggleTask, activeVisibleCount]);
-
   const groupedTasks = useMemo(() => {
     if (currentView === 'TRASH') {
       return { 'Papelera': Object.values(tasks).filter(t => t.deleted_at) };
@@ -457,6 +434,29 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     }
     return all.filter(t => (t.categoryId || (t as any).category_id) === currentView).length;
   }, [tasks, currentView]);
+
+  const handleToggleTask = useCallback((id: string, forceReverse?: boolean) => {
+    const task = tasks[id];
+    if (task) {
+      const willBeCompleted = !isTaskCompleted(task);
+      if (willBeCompleted) {
+        setRecentlyCompletedIds(prev => [...prev, id]);
+        setTimeout(() => {
+          setRecentlyCompletedIds(prev => prev.filter(x => x !== id));
+        }, 3000);
+
+        if (activeVisibleCount === 1) {
+          setShowCelebration(true);
+          SoundService.playComplete();
+          HapticService.notification('success');
+          setTimeout(() => setShowCelebration(false), 3500);
+        }
+      } else {
+        setRecentlyCompletedIds(prev => prev.filter(x => x !== id));
+      }
+    }
+    toggleTask(id, forceReverse);
+  }, [tasks, toggleTask, activeVisibleCount]);
 
   const isCatCollapsed = useCallback((cat: string) => {
     return !!collapsed[cat];
