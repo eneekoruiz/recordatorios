@@ -113,8 +113,15 @@ export const useAppStore = create<AppState>()(
       setSyncStatus: (syncStatus) => set({ syncStatus }),
       setLastSyncedAt: (lastSyncedAt) => set({ lastSyncedAt }),
       theme: 'light',
-      setTheme: (theme) => set({ theme }),
-      toggleTheme: () => set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
+      setTheme: (theme) => {
+        try { localStorage.setItem('user_explicit_theme', theme); } catch {}
+        set({ theme });
+      },
+      toggleTheme: () => set((state) => {
+        const newTheme = state.theme === 'dark' ? 'light' : 'dark';
+        try { localStorage.setItem('user_explicit_theme', newTheme); } catch {}
+        return { theme: newTheme };
+      }),
       smartListVisibility: {
         smart_primeros_pasos: true,
         smart_today: true,
@@ -805,9 +812,13 @@ export const useAppStore = create<AppState>()(
           } catch (e) {}
         }
 
+        const userExplicitTheme = typeof localStorage !== 'undefined' ? localStorage.getItem('user_explicit_theme') : null;
+        const resolvedTheme = userExplicitTheme === 'dark' ? 'dark' : 'light';
+
         return {
           ...currentState,
           ...persistedState,
+          theme: resolvedTheme,
           lists: uniqueLists,
           cycles: uniqueCycles,
           listSections: uniqueSections,

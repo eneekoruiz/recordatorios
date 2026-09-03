@@ -24,7 +24,8 @@ import {
   Rocket,
   RefreshCw,
   Moon,
-  Smartphone
+  Smartphone,
+  Search
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -81,7 +82,7 @@ const ListHierarchy = ({
   }, [activeMenuId]);
   
   const uniqueLists = Array.from(new Map((lists || []).map((l: any) => [l.id, l])).values());
-  const currentLevelLists = uniqueLists.filter((l: any) => l.parentId === parentId && l.id !== 'user_preferences_smart_lists' && l.id !== 'primeros_pasos');
+  const currentLevelLists = uniqueLists.filter((l: any) => l.parentId === parentId && l.id !== 'user_preferences_smart_lists' && l.id !== 'primeros_pasos' && !l.isPinned);
   if (currentLevelLists.length === 0) return null;
 
   return (
@@ -596,7 +597,6 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   const cycleVisibility = useAppStore((state) => state.cycleVisibility);
   const toggleCycleVisibility = useAppStore((state) => state.toggleCycleVisibility);
   const globalCyclesEnabled = useAppStore((state) => state.globalCyclesEnabled);
-  const toggleGlobalCycles = useAppStore((state) => state.toggleGlobalCycles);
   const syncStatus = useAppStore((state) => state.syncStatus);
   const lastSyncedAt = useAppStore((state) => state.lastSyncedAt);
   const theme = useAppStore((state) => state.theme) || 'light';
@@ -678,74 +678,86 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
 
   return (
     <aside className="sidebar" onScroll={() => window.dispatchEvent(new Event('close-list-menus'))}>
-      {/* 1 & 2. STICKY HEADER: USER PROFILE + SEARCH BAR */}
-      <div className="sidebar-header">
-      {/* 1. USER PROFILE */}
-      <div 
-        ref={userProfileRef}
-        className="user-profile" 
-        onClick={(e) => { e.stopPropagation(); setIsProfileOpen((prev) => !prev); }}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'var(--space-12)',
-          cursor: 'pointer',
-          position: 'relative',
-          padding: 'var(--space-8) var(--space-4)',
-          borderRadius: 'var(--radius-md)',
-          transition: 'background 0.2s',
-          zIndex: 100
-        }}
-      >
-        <div className="avatar" style={{
-          width: 36,
-          height: 36,
-          borderRadius: 'var(--radius-full)',
-          background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-purple))',
-          color: 'white',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontWeight: 700,
-          fontSize: '1.25rem',
-          boxShadow: 'var(--shadow-sm)'
-        }}>
-          {user.name.charAt(0)}
-        </div>
-        <div className="user-info" style={{ flex: 1, minWidth: 0 }}>
-          <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {user.name}
-          </h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-              {user.email}
-            </span>
-            <div 
-              style={{ 
-                display: 'inline-flex', 
-                alignItems: 'center', 
-                gap: 4, 
-                fontSize: '0.68rem', 
-                fontWeight: 600,
-                padding: '1px 6px', 
-                borderRadius: 99, 
-                background: syncStatus === 'synced' ? 'rgba(52, 199, 89, 0.12)' : syncStatus === 'syncing' ? 'rgba(10, 132, 255, 0.12)' : syncStatus === 'error' ? 'rgba(255, 69, 58, 0.12)' : 'var(--bg-hover)',
-                color: syncStatus === 'synced' ? 'var(--accent-green, #34c759)' : syncStatus === 'syncing' ? 'var(--accent-primary, #0a84ff)' : syncStatus === 'error' ? 'var(--accent-red, #ff453a)' : 'var(--text-tertiary)'
-              }}
-              title={lastSyncedAt ? `Última sincronización: ${new Date(lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : 'Sincronización en la nube'}
-            >
-              <span style={{ 
-                width: 5, 
-                height: 5, 
-                borderRadius: '50%', 
-                background: 'currentColor',
-                display: 'inline-block'
-              }} />
-              {syncStatus === 'syncing' ? 'Sincronizando...' : syncStatus === 'synced' ? 'Nube' : syncStatus === 'offline' ? 'Offline' : syncStatus === 'error' ? 'Reintentar' : 'Local'}
-            </div>
+      {/* 1 & 2. STICKY HEADER: SEARCH BAR + USER PROFILE IN THE SAME ROW */}
+      <div className="sidebar-header" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px 8px' }}>
+        {/* Search Bar on the left */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div 
+            onClick={() => window.dispatchEvent(new Event('open-command-palette'))}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 10,
+              padding: '7px 10px',
+              cursor: 'pointer',
+              color: 'var(--text-tertiary)',
+              fontSize: '0.88rem',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <Search size={15} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
+            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Buscar</span>
+            <kbd style={{
+              fontSize: '0.68rem',
+              fontWeight: 600,
+              background: 'var(--bg-card)',
+              color: 'var(--text-tertiary)',
+              padding: '1px 5px',
+              borderRadius: 4,
+              border: '1px solid var(--border-subtle)',
+              flexShrink: 0
+            }}>⌘K</kbd>
           </div>
         </div>
-        <ChevronDown size={16} color="var(--text-tertiary)" style={{ transform: isProfileOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+
+        {/* User Profile Avatar Trigger on the right */}
+        <div 
+          ref={userProfileRef}
+          className="user-profile-trigger"
+          onClick={(e) => { e.stopPropagation(); setIsProfileOpen((prev) => !prev); }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            cursor: 'pointer',
+            position: 'relative',
+            flexShrink: 0,
+            borderRadius: '50%',
+            padding: 2
+          }}
+          title={`${user.name} (${user.email})`}
+        >
+          <div style={{ position: 'relative' }}>
+            <div className="avatar" style={{
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-purple))',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 700,
+              fontSize: '0.9rem',
+              boxShadow: 'var(--shadow-sm)'
+            }}>
+              {user.name.charAt(0)}
+            </div>
+            {/* Sync status micro-dot */}
+            <span style={{
+              position: 'absolute',
+              bottom: -1,
+              right: -1,
+              width: 9,
+              height: 9,
+              borderRadius: '50%',
+              background: syncStatus === 'synced' ? '#34c759' : syncStatus === 'syncing' ? '#0a84ff' : syncStatus === 'error' ? '#ff3b30' : '#8e8e93',
+              border: '2px solid var(--bg-base)'
+            }} />
+          </div>
+        </div>
 
         {/* PROFILE DROPDOWN (PORTALED TO BODY FOR 100% RELIABLE CLICK OUTSIDE) */}
         {isProfileOpen && typeof document !== 'undefined' && createPortal(
@@ -767,13 +779,19 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               className="ios-dropdown-menu"
               style={{ 
                 position: 'fixed', 
-                top: (userProfileRef.current?.getBoundingClientRect().bottom || 60) + 8, 
-                left: userProfileRef.current?.getBoundingClientRect().left || 16, 
-                width: userProfileRef.current?.getBoundingClientRect().width || 240, 
+                top: (userProfileRef.current?.getBoundingClientRect().bottom || 50) + 8, 
+                left: Math.max(12, (userProfileRef.current?.getBoundingClientRect().right || 240) - 240), 
+                width: 240, 
                 zIndex: 99999
               }}
               onClick={(e) => e.stopPropagation()}
             >
+              {/* User info in dropdown */}
+              <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid var(--border-subtle)' }}>
+                <div style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name}</div>
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</div>
+              </div>
+
               <div 
                 className="ios-dropdown-item"
                 onClick={(e) => { 
@@ -799,59 +817,11 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                   window.dispatchEvent(new Event('open-install-modal'));
                   setIsProfileOpen(false); 
                 }}
-              >
-                <Download size={16} /> Instalar como App
-              </div>
-              <div 
-                className="ios-dropdown-item"
-                onClick={(e) => { e.stopPropagation(); onSelectView('DATA'); setIsProfileOpen(false); }}
-              >
-                <Folder size={16} /> Importar / Exportar
-              </div>
-              <div 
-                className="ios-dropdown-item"
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  const data = useAppStore.getState().exportData();
-                  const blob = new Blob([data], { type: 'application/json' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `recordatorios_backup_${new Date().toISOString().split('T')[0]}.json`;
-                  a.click();
-                  URL.revokeObjectURL(url);
-                  HapticService.notification('success');
-                  window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Copia de seguridad descargada correctamente' }));
-                  setIsProfileOpen(false); 
-                }}
-              >
-                <Download size={16} /> Copia de Seguridad Rápida
-              </div>
-              <div 
-                className="ios-dropdown-item"
-                onClick={(e) => { e.stopPropagation(); onSelectView('ANALYTICS'); setIsProfileOpen(false); }}
-              >
-                <BarChart size={16} /> Estadísticas
-              </div>
-              <div 
-                className="ios-dropdown-item"
-                onClick={(e) => { e.stopPropagation(); HapticService.selection(); toggleGlobalCycles(); }}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
               >
                 <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <Settings size={16} /> Ciclos Temporales
+                  <Download size={16} /> Instalar como App
                 </span>
-                <div style={{
-                  width: '36px', height: '22px', borderRadius: '11px',
-                  background: globalCyclesEnabled ? 'var(--accent-primary)' : 'rgba(120,120,128,0.3)',
-                  position: 'relative', transition: 'background-color 0.2s ease', flexShrink: 0
-                }}>
-                  <div style={{
-                    width: '18px', height: '18px', borderRadius: '50%', background: '#ffffff',
-                    position: 'absolute', top: '2px', left: globalCyclesEnabled ? '16px' : '2px',
-                    transition: 'left 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                  }} />
-                </div>
               </div>
               <div 
                 className="ios-dropdown-item"
@@ -859,7 +829,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
               >
                 <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <Volume2 size={16} /> Sonidos Acústicos
+                  <Volume2 size={16} /> Sonidos de Interfaz
                 </span>
                 <div style={{
                   width: '36px', height: '22px', borderRadius: '11px',
@@ -927,13 +897,49 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 </span>
                 <kbd style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-color)', borderRadius: 4, padding: '2px 6px', fontSize: '0.75rem', fontWeight: 600 }}>?</kbd>
               </div>
-              <div className="ios-dropdown-divider" />
               <div 
-                className="ios-dropdown-item danger"
-                onClick={() => {
-                  useAppStore.getState().logout();
+                className="ios-dropdown-item"
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  HapticService.selection();
+                  const data = useAppStore.getState().exportData();
+                  const blob = new Blob([data], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `recordatorios_backup_${new Date().toISOString().split('T')[0]}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
                   setIsProfileOpen(false);
                 }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
+                title="Descargar copia de seguridad en JSON"
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <Download size={16} /> Copia de Seguridad Rápida
+                </span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>JSON</span>
+              </div>
+              <div className="ios-dropdown-divider" />
+              <div 
+                className="ios-dropdown-item"
+                onClick={(e) => { e.stopPropagation(); setIsListConfigOpen(true); setIsProfileOpen(false); }}
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', cursor: 'pointer' }}
+              >
+                <Settings size={16} /> Gestionar Listas
+              </div>
+              <div 
+                className="ios-dropdown-item"
+                onClick={(e) => { e.stopPropagation(); onSelectView('ANALYTICS'); setIsProfileOpen(false); }}
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', cursor: 'pointer' }}
+              >
+                <BarChart size={16} /> Estadísticas y Productividad
+              </div>
+              <div className="ios-dropdown-divider" />
+              <div 
+                className="ios-dropdown-item delete"
+                onClick={(e) => { e.stopPropagation(); useAppStore.getState().logout(); setIsProfileOpen(false); }}
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', cursor: 'pointer' }}
               >
                 <LogOut size={16} /> Cerrar Sesión
               </div>
@@ -941,19 +947,6 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
           </AnimatePresence>,
           document.body
         )}
-      </div>
-
-      {/* 2. SEARCH BAR */}
-      <div className="search-bar">
-        <input 
-          type="text" 
-          placeholder="Buscar (Ctrl + K)" 
-          onFocus={(e) => {
-            window.dispatchEvent(new Event('open-command-palette'));
-            e.target.blur();
-          }}
-        />
-      </div>
       </div>
 
       {/* 3. SCROLLABLE AREA */}
@@ -971,13 +964,14 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         }}
       >
         
-        {/* ANCLADAS (PINNED SMART LISTS SECTION) */}
-        {pinnedSmartLists.length > 0 && (
-          <div style={{ padding: '0 var(--space-12)', marginBottom: 'var(--space-16)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-8)', paddingLeft: 12 }}>
+        {/* ANCLADAS (PINNED LISTS SECTION) */}
+        {(pinnedSmartLists.length > 0 || (lists || []).some((l: any) => l.isPinned)) && (
+          <div style={{ padding: '0 14px', marginBottom: 18 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, paddingLeft: 4 }}>
               <span className="section-header" style={{ margin: 0, padding: 0 }}>Ancladas</span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {/* Pinned Smart Lists */}
               {pinnedSmartLists.map(smartId => {
                 const smartItem = SMART_LISTS.find(s => s.id === smartId);
                 if (!smartItem) return null;
@@ -1001,8 +995,8 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                       display: 'flex',
                       alignItems: 'center',
                       gap: 12,
-                      padding: '10px 14px',
-                      borderRadius: 12,
+                      padding: '11px 14px',
+                      borderRadius: 14,
                       background: isActive ? 'var(--accent-glow)' : 'var(--bg-elevated)',
                       border: isActive ? '1px solid rgba(10, 132, 255, 0.25)' : '1px solid var(--border-subtle)',
                       cursor: 'pointer',
@@ -1011,13 +1005,13 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                     }}
                   >
                     <div style={{
-                      width: 28, height: 28, borderRadius: 8,
+                      width: 30, height: 30, borderRadius: '50%',
                       background: smartItem.color,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       flexShrink: 0,
                       boxShadow: `0 2px 6px ${smartItem.color}40`
                     }}>
-                      <Icon size={16} color="white" />
+                      <Icon size={15} color="white" />
                     </div>
                     <span style={{
                       flex: 1, fontWeight: 600, fontSize: '0.95rem',
@@ -1053,13 +1047,63 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                   </motion.div>
                 );
               })}
+
+              {/* Pinned Custom Lists */}
+              {(lists || []).filter((l: any) => l.isPinned && l.id !== 'primeros_pasos').map((list: any) => {
+                const isActive = currentView === `list_${list.id}`;
+                const count = getTaskCount ? getTaskCount(list.id) : 0;
+                return (
+                  <motion.div
+                    key={"pinned-custom-" + list.id}
+                    className={`sidebar-item ${isActive ? 'active' : ''}`}
+                    onClick={() => onSelectView(`list_${list.id}`)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: '11px 14px',
+                      borderRadius: 14,
+                      background: isActive ? 'var(--accent-glow)' : 'var(--bg-elevated)',
+                      border: isActive ? '1px solid rgba(10, 132, 255, 0.25)' : '1px solid var(--border-subtle)',
+                      cursor: 'pointer',
+                      boxShadow: isActive ? '0 2px 8px var(--accent-glow)' : '0 1px 3px rgba(0,0,0,0.03)',
+                      transition: 'all 150ms ease'
+                    }}
+                  >
+                    <div style={{
+                      width: 30, height: 30, borderRadius: '50%',
+                      background: list.color || '#0a84ff',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0,
+                      boxShadow: `0 2px 6px ${(list.color || '#0a84ff')}40`
+                    }}>
+                      <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'white' }} />
+                    </div>
+                    <span style={{
+                      flex: 1, fontWeight: 600, fontSize: '0.95rem',
+                      color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                    }}>
+                      {list.name}
+                    </span>
+                    <span style={{
+                      fontSize: '0.85rem', fontWeight: 700,
+                      color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                      background: isActive ? 'rgba(10, 132, 255, 0.15)' : 'var(--bg-hover)',
+                      padding: '2px 8px', borderRadius: 999
+                    }}>
+                      {count}
+                    </span>
+                  </motion.div>
+                );
+              })}
             </div>
           </div>
         )}
 
         {/* SMART LISTS GRID */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 var(--space-12)', marginBottom: 'var(--space-8)' }}>
-          <span className="section-header" style={{ margin: 0, padding: 0, marginLeft: 12 }}>Listas inteligentes</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 14px', marginBottom: 8 }}>
+          <span className="section-header" style={{ margin: 0, padding: 0, marginLeft: 4 }}>Listas inteligentes</span>
           <button 
             onClick={() => setIsEditMode(!isEditMode)}
             style={{ background: 'transparent', border: 'none', color: isEditMode ? 'var(--accent-primary)' : 'var(--text-tertiary)', fontSize: '0.85rem', cursor: 'pointer' }}
@@ -1071,9 +1115,9 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', 
-          gap: 'var(--space-8)', 
-          padding: '0 var(--space-12)',
-          marginBottom: 'var(--space-16)'
+          gap: 10, 
+          padding: '0 14px',
+          marginBottom: 18
         }}>
           {SMART_LISTS.filter(list => !pinnedSmartLists.includes(list.id) && (smartListVisibility[list.id] || isEditMode)).length === 0 ? (
             <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 'var(--space-16) 0', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>
@@ -1167,7 +1211,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
           </div>
           <div className="ios-list-block">
             {/* 🚀 Primeros Pasos (Banner distinguido en la parte superior solo si no está ya anclada arriba) */}
-            {lists?.some(l => l.id === 'primeros_pasos') && !pinnedSmartLists.includes('smart_primeros_pasos') && (
+            {lists?.some(l => l.id === 'primeros_pasos') && !pinnedSmartLists.includes('smart_primeros_pasos') && !lists.some(l => l.id === 'primeros_pasos' && l.isPinned) && (
               <motion.div 
                 className={`ios-list-item ${currentView === 'smart_primeros_pasos' || currentView === 'list_primeros_pasos' ? 'active' : ''}`}
                 onClick={() => onSelectView('smart_primeros_pasos')}

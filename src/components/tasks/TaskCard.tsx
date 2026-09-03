@@ -100,8 +100,21 @@ export const TaskCard = React.memo(function TaskCard({
   }, [task.title, task.description, isEditingTitle, isEditingNote]);
 
   const handleTitleSubmit = () => {
+    // Delay setting isEditingTitle to false to prevent race condition with clicking "Añadir nota..."
+    setTimeout(() => {
+      setIsEditingTitle(false);
+      if (editTitle.trim() && editTitle.trim() !== task.title) {
+        updateTask(task.id, { title: editTitle.trim() });
+      }
+    }, 150);
+  };
+
+  const startEditingNote = () => {
+    if (editTitle.trim() && editTitle.trim() !== task.title) {
+      updateTask(task.id, { title: editTitle.trim() });
+    }
     setIsEditingTitle(false);
-    if (editTitle.trim() !== task.title) updateTask(task.id, { title: editTitle.trim() });
+    setIsEditingNote(true);
   };
 
   const handleNoteSubmit = () => {
@@ -527,10 +540,11 @@ export const TaskCard = React.memo(function TaskCard({
                 <span
                   role="button"
                   tabIndex={0}
-                  onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsEditingNote(true); } }}
-                  onClick={(e) => { e.stopPropagation(); setIsEditingNote(true); }}
+                  onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startEditingNote(); } }}
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); startEditingNote(); }}
+                  onClick={(e) => { e.stopPropagation(); startEditingNote(); }}
                   onPointerDownCapture={(e) => e.stopPropagation()}
-                  onPointerDown={(e) => { e.stopPropagation(); setIsEditingNote(true); }}
+                  onPointerDown={(e) => { e.stopPropagation(); startEditingNote(); }}
                   style={{
                     fontSize: '0.85rem',
                     lineHeight: '1.4',
