@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Play, Pause, CheckCircle, X, Sparkles, CloudRain, Waves, 
-  Headphones, RotateCcw, Volume2, VolumeX, Clock, ArrowRight 
+  Headphones, Volume2, VolumeX, Clock, ArrowRight 
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { SoundService } from '../../services/SoundService';

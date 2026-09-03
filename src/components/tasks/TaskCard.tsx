@@ -94,6 +94,7 @@ export const TaskCard = React.memo(function TaskCard({
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [editNote, setEditNote] = useState(task.description || '');
   const cardRef = useRef<HTMLDivElement>(null);
+  const updateTask = useAppStore(state => state.updateTask);
 
   const openContextMenu = useCallback(() => {
     HapticService.impact('medium');
@@ -440,9 +441,9 @@ export const TaskCard = React.memo(function TaskCard({
         <div style={{ flex: 1, minWidth: 0, padding: '2px 0', boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             {isBlocked && <Lock size={15} color="var(--accent-red)" />}
-            {Boolean(task.priority && task.priority !== 'none' && task.priority !== 0) && (
-              <span className={`priority-badge ${typeof task.priority === 'number' ? (task.priority === 1 ? 'high' : task.priority === 5 ? 'medium' : 'low') : task.priority}`}>
-                {task.priority === 'low' || task.priority === 9 ? '!' : task.priority === 'medium' || task.priority === 5 ? '!!' : '!!!'}
+            {Boolean(task.priority && task.priority !== 'none' && (task.priority as any) !== 0) && (
+              <span className={`priority-badge ${typeof task.priority === 'number' ? ((task.priority as any) === 1 ? 'high' : (task.priority as any) === 5 ? 'medium' : 'low') : task.priority}`}>
+                {task.priority === 'low' || (task.priority as any) === 9 ? '!' : task.priority === 'medium' || (task.priority as any) === 5 ? '!!' : '!!!'}
               </span>
             )}
             {isEditingTitle ? (
@@ -963,7 +964,7 @@ function MenuActions({
   const [currentSubmenu, setCurrentSubmenu] = useState<'main' | 'move_list' | 'move_section' | 'due_date' | 'priority'>('main');
 
   const availableSections = (listSections || []).filter(
-    s => s.listId === (task.categoryId || task.listId) && !s.deleted_at
+    s => s.listId === task.categoryId && !s.deleted_at
   );
 
   // Submenu: Mover a lista
@@ -983,12 +984,12 @@ function MenuActions({
         </div>
         <div style={{ maxHeight: 280, overflowY: 'auto', padding: '4px 0' }}>
           {lists?.map(list => {
-            const isCurrent = (task.categoryId || task.listId) === list.id;
+            const isCurrent = task.categoryId === list.id;
             return (
               <button
                 key={list.id}
                 onClick={() => {
-                  updateTask(task.id, { listId: list.id, categoryId: list.id, sectionId: undefined });
+                  updateTask(task.id, { categoryId: list.id, sectionId: undefined });
                   setContextMenuOpen(false);
                 }}
                 style={{
@@ -1348,8 +1349,8 @@ function MenuActions({
             id: crypto.randomUUID(), 
             title: `${task.title} (copia)`, 
             created_at: new Date().toISOString(), 
-            completed: false, 
-            completed_at: undefined 
+            updated_at: new Date().toISOString(),
+            status: 'pending'
           }); 
           setContextMenuOpen(false); 
         }} 

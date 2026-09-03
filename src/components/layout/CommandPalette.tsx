@@ -78,7 +78,7 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
       if (t.title.toLowerCase().includes(q) && q !== '') {
         const catId = t.categoryId || (t as any).category_id;
         const sub = catId === 'inbox' || !catId ? 'Bandeja de entrada' : (catId || '');
-        const isHigh = t.priority === 'high' || t.priority === 1;
+        const isHigh = t.priority === 'high' || (t.priority as any) === 1;
         const titlePrefix = isHigh ? '🚨 ' : '';
         nextResults.push({ type: 'task_flow', id: t.id, title: 'Modo Enfoque: ' + titlePrefix + t.title, subtitle: sub, icon: <Play size={16} /> });
         nextResults.push({ type: 'task_complete', id: t.id, title: 'Completar: ' + titlePrefix + t.title, subtitle: sub, icon: <CheckCircle size={16} color="var(--accent-green)" /> });
