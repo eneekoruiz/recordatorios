@@ -46,6 +46,11 @@ class SyncManager {
       this.isOnline = false;
       useAppStore.getState().setSyncStatus('offline');
     });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && this.isOnline) {
+        this.syncNow();
+      }
+    });
   }
 
   start() {

@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
-  ChevronRight, 
   ChevronDown, 
   Plus,
   Check,
@@ -24,8 +23,6 @@ import {
   IndentDecrease,
   Rocket,
   RefreshCw,
-  Cloud,
-  CloudOff,
   Moon,
   Smartphone
 } from 'lucide-react';
@@ -199,7 +196,7 @@ const ListHierarchy = ({
                 longPressTimerRef.current = setTimeout(() => {
                   wasLongPressedRef.current = true;
                   if (navigator.vibrate) {
-                    try { navigator.vibrate([10]); } catch (_err) {}
+                    try { navigator.vibrate([10]); } catch {}
                   }
                   // Open Premium Context Menu
                   if (activeMenuId === list.id) {

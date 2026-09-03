@@ -16,10 +16,6 @@ export function InstallPromptModal() {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // Si ya está instalado en modo aplicación (standalone) o descartado
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
-    const hasDismissed = localStorage.getItem('pwa_prompt_dismissed');
-
     const ua = navigator.userAgent.toLowerCase();
     const isIOS = /iphone|ipad|ipod/.test(ua);
     const isSafari = isIOS && /safari/.test(ua) && !/crios/.test(ua) && !/fxios/.test(ua);

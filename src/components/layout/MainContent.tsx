@@ -884,7 +884,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         </div>
       </motion.div>
     );
-  }, [tasks, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, isListView, isSmartView, currentView]);
+  }, [tasks, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, isSmartView, currentView]);
 
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
   const smartListInfo = isSmartView ? SMART_LISTS.find(l => l.id === currentView) : null;
