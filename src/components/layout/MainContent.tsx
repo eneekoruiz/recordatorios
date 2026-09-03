@@ -868,7 +868,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         <div style={{ position: 'relative', width: '100%', boxSizing: 'border-box' }}>
           {depth > 0 && (
             <div style={{
-              position: 'absolute', left: 8 + (depth-1)*24, top: 0, bottom: 0, width: 2,
+              position: 'absolute', left: 8 + (depth-1)*16, top: 0, bottom: 0, width: 2,
               background: 'var(--accent-primary)', opacity: Math.max(0.15, 1 - depth*0.2), zIndex: 1,
               borderRadius: 2
             }} />
@@ -876,8 +876,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
           <TaskCard 
             task={task}
-            virtualStyle={{ margin: 0, padding: '0 16px', boxSizing: 'border-box' }}
-            indent={depth * 24}
+            virtualStyle={{ margin: 0, padding: 0, boxSizing: 'border-box' }}
+            indent={depth * 16}
             onToggle={handleToggleTask}
             onDelete={handleDeleteTask}
             onOpenZenMode={onOpenZenMode}
@@ -1563,12 +1563,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  padding: '9px 14px',
+                  padding: '8px 12px',
                   borderRadius: 12,
                   background: 'var(--bg-elevated)',
                   border: '1px solid var(--border-subtle)',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                  gap: 10
+                  gap: 8
                 }}
               >
                 <div style={{
@@ -1660,8 +1660,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 10,
-                  padding: '9px 14px',
+                  gap: 8,
+                  padding: '8px 12px',
                   borderRadius: 12,
                   cursor: 'pointer',
                   color: 'var(--text-tertiary)',

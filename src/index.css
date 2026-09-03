@@ -248,8 +248,9 @@ html, body, #root, .app-container, .main-container, .main-content, .sidebar-cont
 
 .main-content {
   padding: 0;
-  max-width: 900px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -751,7 +752,9 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 .main-content {
-  max-width: 1080px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
   padding: 0 !important;
 }
 
