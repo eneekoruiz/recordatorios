@@ -515,77 +515,81 @@
 }
 
 .ios-smart-card {
-  min-height: 110px;
-  border-radius: 20px;
+  min-height: 94px;
+  border-radius: 16px;
   overflow: hidden;
   isolation: isolate;
   background: var(--bg-surface-glass);
   border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-md), inset 0 1px 1px rgba(255,255,255,0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   backdrop-filter: blur(24px) saturate(1.2);
   -webkit-backdrop-filter: blur(24px) saturate(1.2);
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  padding: 16px;
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   position: relative;
+  cursor: pointer;
 }
 .ios-smart-card::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 60%);
+  background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 60%);
   z-index: -1;
   pointer-events: none;
 }
 .ios-smart-card:hover {
-  transform: translateY(-4px) scale(1.02);
+  transform: translateY(-2px);
   border-color: var(--border-focus);
-  box-shadow: var(--shadow-lg), inset 0 1px 2px rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
 }
-.ios-smart-card:active { transform: translateY(2px) scale(0.97); }
+.ios-smart-card:active { transform: translateY(1px) scale(0.98); }
 .ios-smart-card .icon-circle {
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
   background: var(--bg-surface);
-  box-shadow: var(--shadow-sm), inset 0 1px 1px rgba(255,255,255,0.2);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 .ios-smart-card h3 {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-top: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-top: 10px;
+  margin-bottom: 0;
   line-height: 1.2;
 }
 .ios-smart-card .count {
   position: absolute;
-  top: 14px;
-  right: 16px;
+  top: 10px;
+  right: 14px;
   font-family: var(--font-display);
-  font-size: 1.8rem;
-  font-weight: 800;
+  font-size: 1.85rem;
+  font-weight: 700;
   color: var(--text-primary);
+  line-height: 1;
 }
 
 .ios-list-block {
-  border-radius: 20px;
+  border-radius: 16px;
   background: var(--bg-surface-glass);
   border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-md), inset 0 1px 1px rgba(255,255,255,0.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
   backdrop-filter: blur(20px) saturate(1.2);
   -webkit-backdrop-filter: blur(20px) saturate(1.2);
-  padding: 8px 0;
+  padding: 6px 0;
 }
 .ios-list-item {
-  min-height: 44px;
-  margin: 2px 6px;
+  min-height: 48px;
+  margin: 3px 6px;
   border-radius: 12px;
-  padding: 10px 12px;
+  padding: 10px 14px;
   transition: background-color 0.15s ease;
   background: transparent;
   border: 1px solid transparent;
@@ -600,10 +604,14 @@
   border-radius: 12px;
 }
 .ios-list-item .list-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  box-shadow: var(--shadow-sm), inset 0 1px 1px rgba(255,255,255,0.2);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 .ios-list-item span.title { font-weight: 600; font-size: 0.95rem; }
 .ios-list-item .count {
