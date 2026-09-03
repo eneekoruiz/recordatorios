@@ -1,3 +1,5 @@
+import { HapticService } from './HapticService';
+
 class SoundServiceClass {
   private ctx: AudioContext | null = null;
   private _enabled: boolean = true;
@@ -45,6 +47,7 @@ class SoundServiceClass {
    * Chime armónico de doble nota tipo Apple Reminders (C6 -> E6)
    */
   public playComplete() {
+    HapticService.notification('success');
     if (!this._enabled || typeof window === 'undefined') return;
     try {
       this.initCtx();
@@ -82,6 +85,7 @@ class SoundServiceClass {
    * Tono suave descendente al desmarcar
    */
   public playUncomplete() {
+    HapticService.impact('medium');
     if (!this._enabled || typeof window === 'undefined') return;
     try {
       this.initCtx();
@@ -105,6 +109,7 @@ class SoundServiceClass {
    * Swoop acústico suave al eliminar
    */
   public playDelete() {
+    HapticService.impact('heavy');
     if (!this._enabled || typeof window === 'undefined') return;
     try {
       this.initCtx();
@@ -128,6 +133,7 @@ class SoundServiceClass {
    * Click háptico / pop de interfaz para botones y selección
    */
   public playPop() {
+    HapticService.impact('light');
     if (!this._enabled || typeof window === 'undefined') return;
     try {
       this.initCtx();

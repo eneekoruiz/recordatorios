@@ -32,6 +32,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { isCompletedInCurrentPeriod } from '../../services/TaskService';
 import { SoundService } from '../../services/SoundService';
+import { HapticService } from '../../services/HapticService';
 import { syncManager } from '../../sync/syncManager';
 import { getCycleIcon } from '../../constants/icons';
 import { ListConfigModal } from './ListConfigModal';
@@ -796,13 +797,32 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               </div>
               <div 
                 className="ios-dropdown-item"
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  const data = useAppStore.getState().exportData();
+                  const blob = new Blob([data], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `recordatorios_backup_${new Date().toISOString().split('T')[0]}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  HapticService.notification('success');
+                  window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Copia de seguridad descargada correctamente' }));
+                  setIsProfileOpen(false); 
+                }}
+              >
+                <Download size={16} /> Copia de Seguridad Rápida
+              </div>
+              <div 
+                className="ios-dropdown-item"
                 onClick={(e) => { e.stopPropagation(); onSelectView('ANALYTICS'); setIsProfileOpen(false); }}
               >
                 <BarChart size={16} /> Estadísticas
               </div>
               <div 
                 className="ios-dropdown-item"
-                onClick={(e) => { e.stopPropagation(); toggleGlobalCycles(); }}
+                onClick={(e) => { e.stopPropagation(); HapticService.selection(); toggleGlobalCycles(); }}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
               >
                 <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -822,7 +842,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               </div>
               <div 
                 className="ios-dropdown-item"
-                onClick={(e) => { e.stopPropagation(); const next = SoundService.toggleSound(); setSoundEnabled(next); }}
+                onClick={(e) => { e.stopPropagation(); HapticService.selection(); const next = SoundService.toggleSound(); setSoundEnabled(next); }}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
               >
                 <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -842,7 +862,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               </div>
               <div 
                 className="ios-dropdown-item"
-                onClick={(e) => { e.stopPropagation(); toggleTheme(); }}
+                onClick={(e) => { e.stopPropagation(); HapticService.selection(); toggleTheme(); }}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
               >
                 <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

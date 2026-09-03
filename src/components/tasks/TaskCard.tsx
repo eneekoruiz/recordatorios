@@ -10,6 +10,7 @@ import type { TaskItem } from '../../models/Task';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { isCompletedInCurrentPeriod } from '../../services/TaskService';
 import { SoundService } from '../../services/SoundService';
+import { HapticService } from '../../services/HapticService';
 import { ConfirmModal } from '../ui/ConfirmModal';
 
 interface TaskCardProps {
@@ -128,7 +129,7 @@ export const TaskCard = React.memo(function TaskCard({
   useMotionValueEvent(x, "change", (latest) => {
     if (latest > SWIPE_COMPLETE_THRESHOLD) {
       if (!hasCrossedLeftThreshold.current) {
-        if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate(5);
+        HapticService.impact('light');
         hasCrossedLeftThreshold.current = true;
       }
     } else {
@@ -137,7 +138,7 @@ export const TaskCard = React.memo(function TaskCard({
 
     if (latest < SWIPE_DELETE_THRESHOLD) {
       if (!hasCrossedRightThreshold.current) {
-        if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate(5);
+        HapticService.impact('light');
         hasCrossedRightThreshold.current = true;
       }
     } else {
@@ -147,12 +148,12 @@ export const TaskCard = React.memo(function TaskCard({
 
   const handleSwipeEnd = useCallback((offsetX: number) => {
     if (offsetX > SWIPE_COMPLETE_THRESHOLD && !isBlocked) {
-      if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate([5, 50, 5]);
+      HapticService.notification('success');
       // Always toggle: if completed → uncomplete, if pending → complete
       if (!isCompletedPeriod) SoundService.playComplete(); else SoundService.playUncomplete();
       onToggle(task.id, isCompletedPeriod);
     } else if (offsetX < SWIPE_DELETE_THRESHOLD) {
-      if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate([5, 50, 5]);
+      HapticService.impact('heavy');
       setIsDeleteConfirmOpen(true);
     }
   }, [isBlocked, isCompletedPeriod, onToggle, task.id]);
@@ -172,7 +173,7 @@ export const TaskCard = React.memo(function TaskCard({
         touchStartY.current = e.clientY;
         if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
         longPressTimer.current = window.setTimeout(() => {
-          if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate([10]);
+          HapticService.impact('medium');
           setContextMenuPosition({ x: touchStartX.current, y: touchStartY.current });
           setContextMenuOpen(true);
         }, 400);

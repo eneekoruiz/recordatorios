@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, ChevronDown, ChevronLeft, FolderPlus, Settings, Trash2, MoreHorizontal, Edit3, X } from 'lucide-react';
+import { Plus, ChevronDown, ChevronLeft, FolderPlus, Settings, Trash2, MoreHorizontal, Edit3, X, Check, ArrowUpDown, Sparkles } from 'lucide-react';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
 import type { TaskItem } from '../../models/Task';
@@ -12,7 +12,8 @@ import { getCycleIcon } from '../../constants/icons';
 import { ListConfigModal } from './ListConfigModal';
 import { SMART_LISTS } from '../../constants/smartLists';
 import { QuickAddBar } from '../ui/QuickAddBar';
-// Settings icon import removed because it was merged into single lucide-react import above
+import { HapticService } from '../../services/HapticService';
+import { SoundService } from '../../services/SoundService';
 
 interface MainContentProps {
   currentView: string;
@@ -283,7 +284,43 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   }, [currentView, tasks, lists]);
 
   const isFolderView = currentView.startsWith('folder_');
-  const resolvedShowCompleted = isListView ? !!currentList?.showCompleted : false;
+  const [showCompletedLocal, setShowCompletedLocal] = useState(false);
+  const [sortBy, setSortBy] = useState<'manual' | 'dueDate' | 'priority' | 'title' | 'createdAt'>('manual');
+  const [showCelebration, setShowCelebration] = useState(false);
+
+  const resolvedShowCompleted = isListView ? !!currentList?.showCompleted : showCompletedLocal;
+
+  const toggleShowCompleted = useCallback(() => {
+    HapticService.selection();
+    if (isListView && currentList) {
+      updateList(currentList.id, { showCompleted: !currentList.showCompleted });
+    } else {
+      setShowCompletedLocal(prev => !prev);
+    }
+  }, [isListView, currentList, updateList]);
+
+  const sortTaskList = useCallback((taskList: TaskItem[]) => {
+    if (sortBy === 'manual') return taskList;
+    return [...taskList].sort((a, b) => {
+      if (sortBy === 'dueDate') {
+        if (!a.dueDate && !b.dueDate) return 0;
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      }
+      if (sortBy === 'priority') {
+        const priorityOrder: Record<string, number> = { high: 3, medium: 2, low: 1, none: 0 };
+        return (priorityOrder[b.priority || 'none'] ?? 0) - (priorityOrder[a.priority || 'none'] ?? 0);
+      }
+      if (sortBy === 'title') {
+        return (a.title || '').localeCompare(b.title || '', 'es', { numeric: true, sensitivity: 'base' });
+      }
+      if (sortBy === 'createdAt') {
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      }
+      return 0;
+    });
+  }, [sortBy]);
 
   const handleToggleTask = useCallback((id: string, forceReverse?: boolean) => {
     const task = tasks[id];
@@ -294,12 +331,19 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         setTimeout(() => {
           setRecentlyCompletedIds(prev => prev.filter(x => x !== id));
         }, 3000);
+
+        if (activeVisibleCount === 1) {
+          setShowCelebration(true);
+          SoundService.playComplete();
+          HapticService.notification('success');
+          setTimeout(() => setShowCelebration(false), 3500);
+        }
       } else {
         setRecentlyCompletedIds(prev => prev.filter(x => x !== id));
       }
     }
     toggleTask(id, forceReverse);
-  }, [tasks, toggleTask]);
+  }, [tasks, toggleTask, activeVisibleCount]);
 
   const groupedTasks = useMemo(() => {
     if (currentView === 'TRASH') {
@@ -355,11 +399,19 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         const matching = taskList.filter(t => t.cycle_id === currentCycle.id);
         if (matching.length > 0) filteredGrouped[key] = matching;
       });
-      return filteredGrouped;
+      rawGrouped = filteredGrouped;
+    }
+
+    if (sortBy !== 'manual') {
+      const sortedGrouped: Record<string, TaskItem[]> = {};
+      Object.entries(rawGrouped).forEach(([key, taskList]) => {
+        sortedGrouped[key] = sortTaskList(taskList);
+      });
+      return sortedGrouped;
     }
 
     return rawGrouped;
-  }, [currentView, isFolderView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, resolvedShowCompleted, recentlyCompletedIds, lists, currentCycle, strictCycleFilter, currentList]);
+  }, [currentView, isFolderView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, resolvedShowCompleted, recentlyCompletedIds, lists, currentCycle, strictCycleFilter, currentList, sortBy, sortTaskList]);
     
   const smartTasks = useMemo(() => currentView === 'cycle_day' ? getSmartSortTasks() : [], [currentView, getSmartSortTasks, tasks]);
 
@@ -886,7 +938,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
         {/* Right: Actions aligned to the right */}
         <div className="header-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center', marginLeft: 'auto', flexWrap: 'nowrap', flexShrink: 0, justifyContent: 'flex-end', position: 'relative' }}>
-          {isListView && currentList && (
+          {(isListView || isSmartView || isFolderView) && (
             <div style={{ position: 'relative' }}>
               <button className="icon-btn" onClick={() => setIsMenuOpen(!isMenuOpen)} title="Opciones de Lista">
                 <MoreHorizontal size={20} color="var(--accent-primary)" />
@@ -907,31 +959,87 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                       transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                       style={{ 
                         position: 'absolute', right: 0, top: '100%', marginTop: 10, 
-                        zIndex: 100 
+                        zIndex: 100, minWidth: 210
                       }}
                     >
                       <button 
                         className="ios-dropdown-item"
-                        onClick={() => { updateList(currentList.id, { showCompleted: !currentList.showCompleted }); setIsMenuOpen(false); }}
+                        onClick={() => { toggleShowCompleted(); setIsMenuOpen(false); }}
                       >
-                        <input type="checkbox" checked={!!currentList.showCompleted} readOnly style={{ marginRight: 12, pointerEvents: 'none', accentColor: 'var(--accent-primary)' }} />
+                        <input type="checkbox" checked={resolvedShowCompleted} readOnly style={{ marginRight: 12, pointerEvents: 'none', accentColor: 'var(--accent-primary)' }} />
                         Mostrar Completados
                       </button>
-                      <button 
-                        className="ios-dropdown-item"
-                        onClick={() => { updateList(currentList.id, { isFinancial: !currentList.isFinancial }); setIsMenuOpen(false); }}
-                      >
-                        <input type="checkbox" checked={!!currentList.isFinancial} readOnly style={{ marginRight: 12, pointerEvents: 'none', accentColor: 'var(--accent-primary)' }} />
-                        Modo Financiero
-                      </button>
+
                       <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
+                      
+                      <div style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Ordenar por
+                      </div>
+
                       <button 
                         className="ios-dropdown-item"
-                        onClick={() => { setIsListConfigOpen(true); setIsMenuOpen(false); }}
+                        onClick={() => { HapticService.selection(); setSortBy('manual'); setIsMenuOpen(false); }}
+                        style={{ justifyContent: 'space-between' }}
                       >
-                        <Settings size={16} />
-                        Personalizar Lista
+                        <span>Manual</span>
+                        {sortBy === 'manual' && <Check size={14} color="var(--accent-primary)" />}
                       </button>
+
+                      <button 
+                        className="ios-dropdown-item"
+                        onClick={() => { HapticService.selection(); setSortBy('dueDate'); setIsMenuOpen(false); }}
+                        style={{ justifyContent: 'space-between' }}
+                      >
+                        <span>Fecha de vencimiento</span>
+                        {sortBy === 'dueDate' && <Check size={14} color="var(--accent-primary)" />}
+                      </button>
+
+                      <button 
+                        className="ios-dropdown-item"
+                        onClick={() => { HapticService.selection(); setSortBy('priority'); setIsMenuOpen(false); }}
+                        style={{ justifyContent: 'space-between' }}
+                      >
+                        <span>Prioridad</span>
+                        {sortBy === 'priority' && <Check size={14} color="var(--accent-primary)" />}
+                      </button>
+
+                      <button 
+                        className="ios-dropdown-item"
+                        onClick={() => { HapticService.selection(); setSortBy('title'); setIsMenuOpen(false); }}
+                        style={{ justifyContent: 'space-between' }}
+                      >
+                        <span>Título (A-Z)</span>
+                        {sortBy === 'title' && <Check size={14} color="var(--accent-primary)" />}
+                      </button>
+
+                      <button 
+                        className="ios-dropdown-item"
+                        onClick={() => { HapticService.selection(); setSortBy('createdAt'); setIsMenuOpen(false); }}
+                        style={{ justifyContent: 'space-between' }}
+                      >
+                        <span>Fecha de creación</span>
+                        {sortBy === 'createdAt' && <Check size={14} color="var(--accent-primary)" />}
+                      </button>
+
+                      {isListView && currentList && (
+                        <>
+                          <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
+                          <button 
+                            className="ios-dropdown-item"
+                            onClick={() => { updateList(currentList.id, { isFinancial: !currentList.isFinancial }); setIsMenuOpen(false); }}
+                          >
+                            <input type="checkbox" checked={!!currentList.isFinancial} readOnly style={{ marginRight: 12, pointerEvents: 'none', accentColor: 'var(--accent-primary)' }} />
+                            Modo Financiero
+                          </button>
+                          <button 
+                            className="ios-dropdown-item"
+                            onClick={() => { setIsListConfigOpen(true); setIsMenuOpen(false); }}
+                          >
+                            <Settings size={16} />
+                            Personalizar Lista
+                          </button>
+                        </>
+                      )}
                     </motion.div>
                   </>
                 )}
@@ -1368,6 +1476,42 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             <EmptyState {...emptyStateProps} />
           </div>
         )}
+
+        {completedVisibleCount > 0 && currentView !== 'TRASH' && currentView !== 'smart_completed' && (
+          <div style={{ padding: '20px 16px 32px', display: 'flex', justifyContent: 'center' }}>
+            <button
+              onClick={toggleShowCompleted}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 16px',
+                borderRadius: 20,
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-secondary)',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Check size={14} color="var(--accent-primary)" />
+              <span>{completedVisibleCount} completadas</span>
+              <span style={{ opacity: 0.4 }}>•</span>
+              <span style={{ color: 'var(--accent-primary)' }}>
+                {resolvedShowCompleted ? 'Ocultar' : 'Mostrar'}
+              </span>
+              <ChevronDown 
+                size={14} 
+                style={{ 
+                  transform: resolvedShowCompleted ? 'rotate(180deg)' : 'none', 
+                  transition: 'transform 0.2s ease' 
+                }} 
+              />
+            </button>
+          </div>
+        )}
         </div>
       </div>
 
@@ -1532,6 +1676,39 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             )}
           </motion.div>
         </>,
+        document.body
+      )}
+
+      {showCelebration && createPortal(
+        <AnimatePresence>
+          <motion.div
+            initial={{ opacity: 0, y: -24, scale: 0.92, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, scale: 1, x: '-50%' }}
+            exit={{ opacity: 0, y: -20, scale: 0.92, x: '-50%' }}
+            transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+            style={{
+              position: 'fixed',
+              top: 'max(24px, env(safe-area-inset-top))',
+              left: '50%',
+              zIndex: 999999,
+              background: 'var(--bg-elevated, #1c1c1e)',
+              border: '1px solid var(--border-subtle, rgba(255,255,255,0.15))',
+              boxShadow: '0 16px 40px rgba(0,0,0,0.3)',
+              borderRadius: 30,
+              padding: '10px 22px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              color: 'var(--text-primary)',
+              fontWeight: 600,
+              fontSize: '0.92rem',
+              pointerEvents: 'none'
+            }}
+          >
+            <Sparkles size={18} color="#FFD700" />
+            <span>¡Todo al día! Has completado todas las tareas</span>
+          </motion.div>
+        </AnimatePresence>,
         document.body
       )}
 
