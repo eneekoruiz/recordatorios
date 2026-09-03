@@ -20,8 +20,6 @@ export function InstallPromptModal() {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
     const hasDismissed = localStorage.getItem('pwa_prompt_dismissed');
 
-    if (isStandalone || hasDismissed) return;
-
     const ua = navigator.userAgent.toLowerCase();
     const isIOS = /iphone|ipad|ipod/.test(ua);
     const isSafari = isIOS && /safari/.test(ua) && !/crios/.test(ua) && !/fxios/.test(ua);
@@ -60,14 +58,20 @@ export function InstallPromptModal() {
       });
     }
 
-    const handleOpenManual = () => setIsOpen(true);
+    const handleOpenManual = () => {
+      setIsOpen(true);
+    };
     window.addEventListener('open-install-modal', handleOpenManual);
 
-    const timer = setTimeout(() => setIsOpen(true), 2200);
+    let timer: any = null;
+    if (!isStandalone && !hasDismissed) {
+      timer = setTimeout(() => setIsOpen(true), 2200);
+    }
+
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('open-install-modal', handleOpenManual);
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
     };
   }, []);
 

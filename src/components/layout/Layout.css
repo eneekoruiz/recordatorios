@@ -586,7 +586,7 @@
 .ios-list-item {
   min-height: 44px;
   margin: 2px 6px;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 10px 12px;
   transition: background-color 0.15s ease;
   background: transparent;
@@ -594,11 +594,12 @@
 }
 .ios-list-item:hover { 
   background: var(--bg-hover); 
+  border-radius: 12px;
 }
 .ios-list-item.active {
   background: var(--bg-hover);
   border: 1px solid var(--border-focus);
-  border-radius: 10px;
+  border-radius: 12px;
 }
 .ios-list-item .list-icon {
   width: 28px;
