@@ -26,7 +26,8 @@ import {
   RefreshCw,
   Cloud,
   CloudOff,
-  Moon
+  Moon,
+  Smartphone
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -590,6 +591,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   const lastSyncedAt = useAppStore((state) => state.lastSyncedAt);
   const theme = useAppStore((state) => state.theme) || 'light';
   const toggleTheme = useAppStore((state) => state.toggleTheme);
+  const [hapticEnabled, setHapticEnabled] = useState(() => HapticService.enabled);
   
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [menuCoords, setMenuCoords] = useState<{ top: number; left: number } | null>(null);
@@ -856,6 +858,30 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                   <div style={{
                     width: '18px', height: '18px', borderRadius: '50%', background: '#ffffff',
                     position: 'absolute', top: '2px', left: soundEnabled ? '16px' : '2px',
+                    transition: 'left 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                  }} />
+                </div>
+              </div>
+              <div 
+                className="ios-dropdown-item"
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  const next = HapticService.toggle(); 
+                  setHapticEnabled(next); 
+                }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <Smartphone size={16} /> Vibración Háptica
+                </span>
+                <div style={{
+                  width: '36px', height: '22px', borderRadius: '11px',
+                  background: hapticEnabled ? 'var(--accent-primary)' : 'rgba(120,120,128,0.3)',
+                  position: 'relative', transition: 'background-color 0.2s ease', flexShrink: 0
+                }}>
+                  <div style={{
+                    width: '18px', height: '18px', borderRadius: '50%', background: '#ffffff',
+                    position: 'absolute', top: '2px', left: hapticEnabled ? '16px' : '2px',
                     transition: 'left 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                   }} />
                 </div>
