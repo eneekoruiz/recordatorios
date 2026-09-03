@@ -430,6 +430,34 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const activeVisibleCount = useMemo(() => visibleTasks.filter(t => !isTaskCompleted(t)).length, [visibleTasks]);
   const completedVisibleCount = useMemo(() => visibleTasks.filter(t => isTaskCompleted(t)).length, [visibleTasks]);
 
+  const totalCompletedInCurrentView = useMemo(() => {
+    const all = Object.values(tasks).filter(t => !t.deleted_at && isTaskCompleted(t));
+    if (currentView.startsWith('list_')) {
+      const listId = currentView.replace('list_', '');
+      return all.filter(t => (t.categoryId || (t as any).category_id) === listId).length;
+    }
+    if (currentView.startsWith('cycle_')) {
+      return all.filter(t => t.cycle_id === currentView).length;
+    }
+    if (currentView === 'smart_today') {
+      const todayStr = new Date().toDateString();
+      return all.filter(t => t.dueDate && new Date(t.dueDate).toDateString() === todayStr).length;
+    }
+    if (currentView === 'smart_flagged') {
+      return all.filter(t => t.priority === 'high').length;
+    }
+    if (currentView === 'smart_scheduled') {
+      return all.filter(t => !!t.dueDate).length;
+    }
+    if (currentView === 'smart_all') {
+      return all.length;
+    }
+    if (currentView === 'smart_primeros_pasos') {
+      return all.filter(t => (t.categoryId || (t as any).category_id) === 'primeros_pasos').length;
+    }
+    return all.filter(t => (t.categoryId || (t as any).category_id) === currentView).length;
+  }, [tasks, currentView]);
+
   const isCatCollapsed = useCallback((cat: string) => {
     return !!collapsed[cat];
   }, [collapsed]);
@@ -1235,6 +1263,39 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               Total Estimado: ${totalCost.toFixed(2)}
             </div>
           )}
+
+          {sortBy !== 'manual' && (
+            <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span 
+                style={{ 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: 6, 
+                  padding: '4px 12px', 
+                  borderRadius: 12, 
+                  fontSize: '0.8rem', 
+                  fontWeight: 600, 
+                  background: 'var(--accent-glow, rgba(10,132,255,0.1))', 
+                  color: 'var(--accent-primary)',
+                  border: '1px solid rgba(10,132,255,0.2)'
+                }}
+              >
+                <ArrowUpDown size={13} />
+                <span>Orden: {
+                  sortBy === 'dueDate' ? 'Fecha de vencimiento' :
+                  sortBy === 'priority' ? 'Prioridad' :
+                  sortBy === 'title' ? 'Título (A-Z)' : 'Fecha de creación'
+                }</span>
+                <button
+                  onClick={() => { HapticService.selection(); setSortBy('manual'); }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, display: 'flex', alignItems: 'center', marginLeft: 4 }}
+                  title="Restablecer a orden manual"
+                >
+                  <X size={13} />
+                </button>
+              </span>
+            </div>
+          )}
         </div>
       </header>
               </div>
@@ -1477,7 +1538,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           </div>
         )}
 
-        {completedVisibleCount > 0 && currentView !== 'TRASH' && currentView !== 'smart_completed' && (
+        {(totalCompletedInCurrentView > 0 || completedVisibleCount > 0) && currentView !== 'TRASH' && currentView !== 'smart_completed' && (
           <div style={{ padding: '20px 16px 32px', display: 'flex', justifyContent: 'center' }}>
             <button
               onClick={toggleShowCompleted}
@@ -1497,7 +1558,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               }}
             >
               <Check size={14} color="var(--accent-primary)" />
-              <span>{completedVisibleCount} completadas</span>
+              <span>{totalCompletedInCurrentView || completedVisibleCount} completadas</span>
               <span style={{ opacity: 0.4 }}>•</span>
               <span style={{ color: 'var(--accent-primary)' }}>
                 {resolvedShowCompleted ? 'Ocultar' : 'Mostrar'}
