@@ -28,10 +28,15 @@ class SyncManager {
   constructor() {
     window.addEventListener('online', () => {
       this.isOnline = true;
+      const token = useAppStore.getState().token;
+      if (token && !this.eventSource) {
+        this.setupRealtime(token);
+      }
       this.syncNow();
     });
     window.addEventListener('offline', () => {
       this.isOnline = false;
+      useAppStore.getState().setSyncStatus('offline');
     });
   }
 
