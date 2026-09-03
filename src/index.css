@@ -794,15 +794,16 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 .fab {
-  bottom: max(80px, env(safe-area-inset-bottom)) !important;
-  right: max(34px, env(safe-area-inset-right)) !important;
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important;
+  right: max(28px, env(safe-area-inset-right)) !important;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease !important;
 }
 
 @media (max-width: 768px) {
   .main-content { padding: 0 !important; }
   .fab {
-    bottom: max(70px, env(safe-area-inset-bottom)) !important;
-    right: max(18px, env(safe-area-inset-right)) !important;
+    bottom: calc(90px + env(safe-area-inset-bottom, 0px)) !important;
+    right: max(16px, env(safe-area-inset-right)) !important;
   }
 }
 
@@ -1070,6 +1071,21 @@ button { -webkit-tap-highlight-color: transparent; }
   outline-offset: 2px;
   box-shadow: 0 0 0 4px var(--border-focus);
   transition: box-shadow 0.15s ease, outline-offset 0.15s ease;
+}
+/* Inline task editing suppression - seamlessly blend with card without blue focus borders */
+.task-note-textarea,
+.task-note-textarea:focus,
+.task-note-textarea:focus-visible,
+.task-note-preview,
+.task-note-preview:focus,
+.task-note-preview:focus-visible,
+.task-title-input,
+.task-title-input:focus,
+.task-title-input:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+  -webkit-box-shadow: none !important;
 }
 button:disabled {
   cursor: not-allowed !important;

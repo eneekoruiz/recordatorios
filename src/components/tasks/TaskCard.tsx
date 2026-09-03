@@ -542,17 +542,32 @@ export const TaskCard = React.memo(function TaskCard({
             <div style={{ marginTop: 2 }}>
               {isEditingNote ? (
                 <textarea
+                  className="task-note-textarea"
                   ref={(el) => {
                     if (el && isEditingNote) {
-                      setTimeout(() => el.focus(), 50);
+                      setTimeout(() => {
+                        el.focus();
+                        el.style.height = 'auto';
+                        el.style.height = `${el.scrollHeight}px`;
+                      }, 50);
                     }
                   }}
                   value={editNote}
                   autoFocus
                   placeholder="Añadir nota..."
-                  onChange={e => setEditNote(e.target.value)}
+                  onChange={e => {
+                    setEditNote(e.target.value);
+                    e.target.style.height = 'auto';
+                    e.target.style.height = `${e.target.scrollHeight}px`;
+                  }}
                   onBlur={handleNoteSubmit}
-                  onKeyDown={e => e.stopPropagation()}
+                  onKeyDown={e => {
+                    e.stopPropagation();
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleNoteSubmit();
+                    }
+                  }}
                   onClick={e => e.stopPropagation()}
                   onPointerDown={e => e.stopPropagation()}
                   onPointerDownCapture={e => e.stopPropagation()}
@@ -562,31 +577,45 @@ export const TaskCard = React.memo(function TaskCard({
                     e.target.value = val;
                   }}
                   style={{
-                    fontSize: '0.85rem', width: '100%', border: 'none',
-                    background: 'transparent', outline: 'none',
-                    color: 'var(--text-secondary)', padding: 0,
-                    resize: 'none', minHeight: 36
+                    fontSize: '0.84rem',
+                    lineHeight: '1.35',
+                    width: '100%',
+                    border: 'none',
+                    background: 'transparent',
+                    outline: 'none',
+                    boxShadow: 'none',
+                    WebkitBoxShadow: 'none',
+                    color: 'var(--text-secondary)',
+                    padding: 0,
+                    margin: 0,
+                    resize: 'none',
+                    minHeight: 18,
+                    fontFamily: 'inherit',
+                    display: 'block'
                   }}
                 />
               ) : (
                 <span
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startEditingNote(); } }}
+                  className="task-note-preview"
                   onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); startEditingNote(); }}
                   onClick={(e) => { e.stopPropagation(); startEditingNote(); }}
                   onPointerDownCapture={(e) => e.stopPropagation()}
                   onPointerDown={(e) => { e.stopPropagation(); startEditingNote(); }}
                   style={{
-                    fontSize: '0.85rem',
-                    lineHeight: '1.4',
+                    fontSize: '0.84rem',
+                    lineHeight: '1.35',
                     color: task.description ? 'var(--text-secondary)' : 'var(--text-tertiary)',
                     opacity: task.description ? 1 : (isHovered || isEditingTitle ? 0.8 : 0.4),
                     wordBreak: 'break-word',
                     cursor: 'text',
                     display: 'block',
-                    minHeight: (task.description || (!isTaskCompleted(task) && !isCompletedPeriod)) ? 22 : 0,
-                    padding: (task.description || (!isTaskCompleted(task) && !isCompletedPeriod)) ? '2px 0' : 0,
+                    minHeight: (task.description || (!isTaskCompleted(task) && !isCompletedPeriod)) ? 18 : 0,
+                    padding: 0,
+                    margin: 0,
+                    outline: 'none',
+                    border: 'none',
+                    boxShadow: 'none',
+                    WebkitBoxShadow: 'none',
                     boxSizing: 'border-box'
                   }}
                 >
