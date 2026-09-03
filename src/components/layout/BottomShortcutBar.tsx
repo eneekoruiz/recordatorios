@@ -1,5 +1,3 @@
-import { Command, Plus, HelpCircle, Sparkles } from 'lucide-react';
-
 export function BottomShortcutBar() {
   return (
     <div
