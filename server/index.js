@@ -244,11 +244,46 @@ app.get('/api/sync/pull', authenticateToken, async (req, res) => {
       where: { userId, updatedAt: { gt: lastDate } }
     });
 
+    // Provide active IDs for authoritative client-side reconciliation
+    const allActiveTasks = await prisma.task.findMany({
+      where: { userId, deletedAt: null },
+      select: { id: true }
+    });
+    const allActiveLists = await prisma.list.findMany({
+      where: { userId, deletedAt: null },
+      select: { id: true }
+    });
+    const allActiveSections = await prisma.listSection.findMany({
+      where: { userId, deletedAt: null },
+      select: { id: true }
+    });
+
     res.json({
-      tasks: tasks.map(t => t.payload),
+      tasks: tasks.map(t => {
+        const p = t.payload;
+        if (t.deletedAt && !p.deleted_at) {
+          p.deleted_at = t.deletedAt.toISOString();
+        }
+        return p;
+      }),
       cycles: cycles.map(c => c.payload),
-      lists: lists.map(l => l.payload),
-      listSections: listSections.map(s => s.payload),
+      lists: lists.map(l => {
+        const p = l.payload;
+        if (l.deletedAt && !p.deleted_at) {
+          p.deleted_at = l.deletedAt.toISOString();
+        }
+        return p;
+      }),
+      listSections: listSections.map(s => {
+        const p = s.payload;
+        if (s.deletedAt && !p.deleted_at) {
+          p.deleted_at = s.deletedAt.toISOString();
+        }
+        return p;
+      }),
+      activeTaskIds: allActiveTasks.map(t => t.id),
+      activeListIds: allActiveLists.map(l => l.id),
+      activeSectionIds: allActiveSections.map(s => s.id),
       serverTime: Date.now()
     });
   } catch (error) {
@@ -278,7 +313,13 @@ app.get('/api/sync/live', (req, res) => {
     }
     clients.get(userId).add(res);
 
+    // Heartbeat ping every 20 seconds to prevent connection timeout on mobile and proxies
+    const heartbeatInterval = setInterval(() => {
+      res.write(': ping\n\n');
+    }, 20000);
+
     req.on('close', () => {
+      clearInterval(heartbeatInterval);
       const userClients = clients.get(userId);
       if (userClients) {
         userClients.delete(res);

@@ -277,12 +277,14 @@ export const useAppStore = create<AppState>()(
         
         if (shouldReverse) {
           const newHistory = [...(existingTask.completionHistory || [])];
+          const resetCount = existingTask.targetCount ? { currentCount: 0 } : {};
           
           if (completedAlerts.length > 0 && !existingTask.status?.includes('completed')) {
             // Uncheck last partial alert if not fully completed
             updatedTask = TaskRepository.update(existingTask, {
               completedAlerts: completedAlerts.slice(0, -1),
-              status: 'pending'
+              status: 'pending',
+              ...resetCount
             });
           } else if (newHistory.length > 0) {
             // Uncheck full completion
@@ -291,10 +293,11 @@ export const useAppStore = create<AppState>()(
             updatedTask = TaskRepository.update(existingTask, {
               status: 'pending',
               completedAlerts: restoredAlerts,
-              completionHistory: newHistory
+              completionHistory: newHistory,
+              ...resetCount
             });
           } else {
-            updatedTask = TaskRepository.update(existingTask, { status: 'pending', completedAlerts: [] });
+            updatedTask = TaskRepository.update(existingTask, { status: 'pending', completedAlerts: [], ...resetCount });
           }
         } else {
           // Normal complete forward logic
@@ -305,17 +308,20 @@ export const useAppStore = create<AppState>()(
             });
           } else {
             const newCompletionHistory = [...(existingTask.completionHistory || []), Date.now()];
+            const targetCountUpdate = existingTask.targetCount ? { currentCount: existingTask.targetCount } : {};
             if (!isOneOff) {
               updatedTask = TaskRepository.update(existingTask, { 
                 completedAlerts: [], 
                 completionHistory: newCompletionHistory,
-                status: 'pending'
+                status: 'pending',
+                ...targetCountUpdate
               });
             } else {
               updatedTask = TaskRepository.update(existingTask, { 
                 status: 'completed',
                 completedAlerts: [...completedAlerts, alerts[completedAlerts.length]?.id].filter(Boolean) as string[],
-                completionHistory: newCompletionHistory
+                completionHistory: newCompletionHistory,
+                ...targetCountUpdate
               });
             }
           }
