@@ -84,6 +84,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const isListView = currentView.startsWith('list_');
   const isSmartView = currentView.startsWith('smart_');
 
+  const hasTemporalSections = useMemo(() => {
+    if (!isListView || !currentList) return false;
+    const secs = (listSections || []).filter(s => s.listId === currentList.id && !s.deleted_at);
+    return secs.some(s => /diaria|semanal|mensual|anual/i.test(s.name || s.id));
+  }, [isListView, currentList, listSections]);
+
   const emptyStateProps = useMemo(() => {
     const handleNewTask = () => {
       onOpenNewTask(currentView.startsWith('list_') ? currentView.replace('list_', '') : undefined);
@@ -205,7 +211,34 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
   // Menu state
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [strictCycleFilter, setStrictCycleFilter] = useState(false);
+  
+  // Opciones de inclusión jerárquica para ciclos (Semanales con/sin Diarias, Mensuales con/sin Semanales o Diarias)
+  const [cycleInclusion, setCycleInclusion] = useState<{
+    weekly: 'only_weekly' | 'include_daily';
+    monthly: 'only_monthly' | 'include_weekly' | 'include_all';
+    annual: 'only_annual' | 'include_monthly' | 'include_all';
+  }>(() => {
+    try {
+      const saved = localStorage.getItem('cycle_inclusion_pref');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {
+      weekly: 'only_weekly',
+      monthly: 'only_monthly',
+      annual: 'only_annual'
+    };
+  });
+
+  const updateCycleInclusion = (updates: Partial<typeof cycleInclusion>) => {
+    setCycleInclusion(prev => {
+      const next = { ...prev, ...updates };
+      try { localStorage.setItem('cycle_inclusion_pref', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
+  // Filtro de secciones temporales dentro de listas (ej. Care, Quehaceres)
+  const [listSectionFilter, setListSectionFilter] = useState<string>('all');
 
   // Estados para la edición de ciclos in-place
   const [isEditingCycle, setIsEditingCycle] = useState(false);
@@ -383,10 +416,74 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       rawGrouped = getTasksByCycle(currentView, resolvedShowCompleted, recentlyCompletedIds);
     }
 
-    if (currentCycle && strictCycleFilter) {
+    if (currentCycle) {
+      const allowedCycleIds = new Set<string>();
+      if (currentCycle.id === 'cycle_day') {
+        allowedCycleIds.add('cycle_day');
+      } else if (currentCycle.id === 'cycle_week') {
+        allowedCycleIds.add('cycle_week');
+        if (cycleInclusion.weekly === 'include_daily') {
+          allowedCycleIds.add('cycle_day');
+        }
+      } else if (currentCycle.id === 'cycle_month') {
+        allowedCycleIds.add('cycle_month');
+        if (cycleInclusion.monthly === 'include_weekly') {
+          allowedCycleIds.add('cycle_week');
+        } else if (cycleInclusion.monthly === 'include_all') {
+          allowedCycleIds.add('cycle_week');
+          allowedCycleIds.add('cycle_day');
+        }
+      } else if (currentCycle.id === 'cycle_year') {
+        allowedCycleIds.add('cycle_year');
+        if (cycleInclusion.annual === 'include_monthly') {
+          allowedCycleIds.add('cycle_month');
+        } else if (cycleInclusion.annual === 'include_all') {
+          allowedCycleIds.add('cycle_month');
+          allowedCycleIds.add('cycle_week');
+          allowedCycleIds.add('cycle_day');
+        }
+      } else {
+        allowedCycleIds.add(currentCycle.id);
+      }
+
       const filteredGrouped: Record<string, TaskItem[]> = {};
       Object.entries(rawGrouped).forEach(([key, taskList]) => {
-        const matching = taskList.filter(t => t.cycle_id === currentCycle.id);
+        const matching = taskList.filter(t => {
+          const eff = t.cycle_id || (
+            t.categoryId === 'limpieza_diaria' || (t.sectionId && t.sectionId.toLowerCase().includes('diaria')) ? 'cycle_day' :
+            t.categoryId === 'limpieza_semanal' || (t.sectionId && t.sectionId.toLowerCase().includes('semanal')) ? 'cycle_week' :
+            t.categoryId === 'limpieza_mensual' || (t.sectionId && t.sectionId.toLowerCase().includes('mensual')) ? 'cycle_month' :
+            t.categoryId === 'limpieza_anual' || (t.sectionId && t.sectionId.toLowerCase().includes('anual')) ? 'cycle_year' : null
+          );
+          return eff && allowedCycleIds.has(eff);
+        });
+        if (matching.length > 0) filteredGrouped[key] = matching;
+      });
+      rawGrouped = filteredGrouped;
+    }
+
+    // Filtrado de secciones temporales dentro de listas (ej. Care, Quehaceres)
+    if (isListView && listSectionFilter !== 'all') {
+      const currentSections = (listSections || []).filter(s => s.listId === currentList?.id && !s.deleted_at);
+      const filteredGrouped: Record<string, TaskItem[]> = {};
+      Object.entries(rawGrouped).forEach(([key, taskList]) => {
+        const matching = taskList.filter(t => {
+          const secObj = t.sectionId ? currentSections.find(s => s.id === t.sectionId) : null;
+          const textToMatch = `${secObj?.name || ''} ${t.sectionId || ''} ${t.cycle_id || ''}`.toLowerCase();
+          const isDay = t.cycle_id === 'cycle_day' || textToMatch.includes('diaria') || textToMatch.includes('diario');
+          const isWeek = t.cycle_id === 'cycle_week' || textToMatch.includes('semanal');
+          const isMonth = t.cycle_id === 'cycle_month' || textToMatch.includes('mensual');
+          const isYear = t.cycle_id === 'cycle_year' || textToMatch.includes('anual');
+
+          if (listSectionFilter === 'only_diaria') return isDay;
+          if (listSectionFilter === 'only_semanal') return isWeek;
+          if (listSectionFilter === 'semanal_plus_diaria') return isWeek || isDay;
+          if (listSectionFilter === 'only_mensual') return isMonth;
+          if (listSectionFilter === 'mensual_plus_semanal') return isMonth || isWeek;
+          if (listSectionFilter === 'mensual_all') return isMonth || isWeek || isDay;
+          if (listSectionFilter === 'only_anual') return isYear;
+          return true;
+        });
         if (matching.length > 0) filteredGrouped[key] = matching;
       });
       rawGrouped = filteredGrouped;
@@ -401,7 +498,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     }
 
     return rawGrouped;
-  }, [currentView, isFolderView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, resolvedShowCompleted, recentlyCompletedIds, lists, currentCycle, strictCycleFilter, currentList, sortBy, sortTaskList]);
+  }, [currentView, isFolderView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, resolvedShowCompleted, recentlyCompletedIds, lists, currentCycle, cycleInclusion, listSectionFilter, currentList, sortBy, sortTaskList]);
     
   const smartTasks = useMemo(() => currentView === 'cycle_day' ? getSmartSortTasks() : [], [currentView, getSmartSortTasks, tasks]);
 
@@ -1244,49 +1341,240 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           {(() => {
             if (currentCycle) {
               return (
-                <div className="content-stats" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginLeft: '4px' }}>
-                  <span className="stat-chip" style={{ minHeight: '32px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', lineHeight: '1.3', wordBreak: 'break-word', boxSizing: 'border-box', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 999 }}><strong>{activeVisibleCount}</strong> &nbsp;pendientes</span>
-                  <span className="stat-chip" style={{ minHeight: '32px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', lineHeight: '1.3', wordBreak: 'break-word', boxSizing: 'border-box', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 999 }}><strong>{completedVisibleCount}</strong> &nbsp;completadas</span>
+                <div className="content-stats" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginLeft: '4px', width: '100%' }}>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <span className="stat-chip" style={{ minHeight: '32px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', lineHeight: '1.3', wordBreak: 'break-word', boxSizing: 'border-box', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 999 }}><strong>{activeVisibleCount}</strong> &nbsp;pendientes</span>
+                    <span className="stat-chip" style={{ minHeight: '32px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', lineHeight: '1.3', wordBreak: 'break-word', boxSizing: 'border-box', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 999 }}><strong>{completedVisibleCount}</strong> &nbsp;completadas</span>
+                  </div>
 
-                  {currentCycle.daysValue > 1 && (
-                    <div style={{ display: 'flex', gap: 6, width: '100%', marginTop: 4 }}>
+                  {/* Selector Granular para Semanales: Solo Semanales vs Semanales + Diarias */}
+                  {currentCycle.id === 'cycle_week' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Ver:
+                      </span>
                       <button
-                        onClick={() => setStrictCycleFilter(false)}
+                        onClick={() => { HapticService.selection(); updateCycleInclusion({ weekly: 'only_weekly' }); }}
                         style={{
                           cursor: 'pointer',
                           minHeight: '28px',
-                          padding: '3px 10px',
-                          fontSize: '0.78rem',
-                          fontWeight: !strictCycleFilter ? 700 : 500,
-                          background: !strictCycleFilter ? 'var(--accent-glow)' : 'var(--bg-card)',
-                          color: !strictCycleFilter ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                          border: !strictCycleFilter ? '1px solid rgba(10,132,255,0.3)' : '1px solid var(--border-subtle)',
-                          borderRadius: 999
+                          padding: '4px 12px',
+                          fontSize: '0.8rem',
+                          fontWeight: cycleInclusion.weekly === 'only_weekly' ? 700 : 500,
+                          background: cycleInclusion.weekly === 'only_weekly' ? 'var(--accent-glow)' : 'var(--bg-card)',
+                          color: cycleInclusion.weekly === 'only_weekly' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                          border: cycleInclusion.weekly === 'only_weekly' ? '1px solid rgba(10,132,255,0.4)' : '1px solid var(--border-subtle)',
+                          borderRadius: 999,
+                          transition: 'all 0.15s ease'
                         }}
                       >
-                        🔀 Mezcladas (Diarias + {currentCycle.name})
+                        🎯 Solo Semanales
                       </button>
                       <button
-                        onClick={() => setStrictCycleFilter(true)}
+                        onClick={() => { HapticService.selection(); updateCycleInclusion({ weekly: 'include_daily' }); }}
                         style={{
                           cursor: 'pointer',
                           minHeight: '28px',
-                          padding: '3px 10px',
-                          fontSize: '0.78rem',
-                          fontWeight: strictCycleFilter ? 700 : 500,
-                          background: strictCycleFilter ? 'var(--accent-glow)' : 'var(--bg-card)',
-                          color: strictCycleFilter ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                          border: strictCycleFilter ? '1px solid rgba(10,132,255,0.3)' : '1px solid var(--border-subtle)',
+                          padding: '4px 12px',
+                          fontSize: '0.8rem',
+                          fontWeight: cycleInclusion.weekly === 'include_daily' ? 700 : 500,
+                          background: cycleInclusion.weekly === 'include_daily' ? 'var(--accent-glow)' : 'var(--bg-card)',
+                          color: cycleInclusion.weekly === 'include_daily' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                          border: cycleInclusion.weekly === 'include_daily' ? '1px solid rgba(10,132,255,0.4)' : '1px solid var(--border-subtle)',
+                          borderRadius: 999,
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        🔄 Semanales + Diarias
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Selector Granular para Mensuales: Solo Mensuales vs Mensuales + Semanales vs Todo */}
+                  {currentCycle.id === 'cycle_month' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Ver:
+                      </span>
+                      <button
+                        onClick={() => { HapticService.selection(); updateCycleInclusion({ monthly: 'only_monthly' }); }}
+                        style={{
+                          cursor: 'pointer',
+                          minHeight: '28px',
+                          padding: '4px 12px',
+                          fontSize: '0.8rem',
+                          fontWeight: cycleInclusion.monthly === 'only_monthly' ? 700 : 500,
+                          background: cycleInclusion.monthly === 'only_monthly' ? 'var(--accent-glow)' : 'var(--bg-card)',
+                          color: cycleInclusion.monthly === 'only_monthly' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                          border: cycleInclusion.monthly === 'only_monthly' ? '1px solid rgba(10,132,255,0.4)' : '1px solid var(--border-subtle)',
+                          borderRadius: 999,
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        🎯 Solo Mensuales
+                      </button>
+                      <button
+                        onClick={() => { HapticService.selection(); updateCycleInclusion({ monthly: 'include_weekly' }); }}
+                        style={{
+                          cursor: 'pointer',
+                          minHeight: '28px',
+                          padding: '4px 12px',
+                          fontSize: '0.8rem',
+                          fontWeight: cycleInclusion.monthly === 'include_weekly' ? 700 : 500,
+                          background: cycleInclusion.monthly === 'include_weekly' ? 'var(--accent-glow)' : 'var(--bg-card)',
+                          color: cycleInclusion.monthly === 'include_weekly' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                          border: cycleInclusion.monthly === 'include_weekly' ? '1px solid rgba(10,132,255,0.4)' : '1px solid var(--border-subtle)',
+                          borderRadius: 999,
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        📅 Mensuales + Semanales
+                      </button>
+                      <button
+                        onClick={() => { HapticService.selection(); updateCycleInclusion({ monthly: 'include_all' }); }}
+                        style={{
+                          cursor: 'pointer',
+                          minHeight: '28px',
+                          padding: '4px 12px',
+                          fontSize: '0.8rem',
+                          fontWeight: cycleInclusion.monthly === 'include_all' ? 700 : 500,
+                          background: cycleInclusion.monthly === 'include_all' ? 'var(--accent-glow)' : 'var(--bg-card)',
+                          color: cycleInclusion.monthly === 'include_all' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                          border: cycleInclusion.monthly === 'include_all' ? '1px solid rgba(10,132,255,0.4)' : '1px solid var(--border-subtle)',
+                          borderRadius: 999,
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        🌐 Todo (+ Semanales + Diarias)
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Selector Granular para Anuales: Solo Anuales vs Anuales + Mensuales vs Todo */}
+                  {currentCycle.id === 'cycle_year' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Ver:
+                      </span>
+                      <button
+                        onClick={() => { HapticService.selection(); updateCycleInclusion({ annual: 'only_annual' }); }}
+                        style={{
+                          cursor: 'pointer',
+                          minHeight: '28px',
+                          padding: '4px 12px',
+                          fontSize: '0.8rem',
+                          fontWeight: cycleInclusion.annual === 'only_annual' ? 700 : 500,
+                          background: cycleInclusion.annual === 'only_annual' ? 'var(--accent-glow)' : 'var(--bg-card)',
+                          color: cycleInclusion.annual === 'only_annual' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                          border: cycleInclusion.annual === 'only_annual' ? '1px solid rgba(10,132,255,0.4)' : '1px solid var(--border-subtle)',
+                          borderRadius: 999,
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        🎯 Solo Anuales
+                      </button>
+                      <button
+                        onClick={() => { HapticService.selection(); updateCycleInclusion({ annual: 'include_monthly' }); }}
+                        style={{
+                          cursor: 'pointer',
+                          minHeight: '28px',
+                          padding: '4px 12px',
+                          fontSize: '0.8rem',
+                          fontWeight: cycleInclusion.annual === 'include_monthly' ? 700 : 500,
+                          background: cycleInclusion.annual === 'include_monthly' ? 'var(--accent-glow)' : 'var(--bg-card)',
+                          color: cycleInclusion.annual === 'include_monthly' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                          border: cycleInclusion.annual === 'include_monthly' ? '1px solid rgba(10,132,255,0.4)' : '1px solid var(--border-subtle)',
+                          borderRadius: 999,
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        🗓️ Anuales + Mensuales
+                      </button>
+                      <button
+                        onClick={() => { HapticService.selection(); updateCycleInclusion({ annual: 'include_all' }); }}
+                        style={{
+                          cursor: 'pointer',
+                          minHeight: '28px',
+                          padding: '4px 12px',
+                          fontSize: '0.8rem',
+                          fontWeight: cycleInclusion.annual === 'include_all' ? 700 : 500,
+                          background: cycleInclusion.annual === 'include_all' ? 'var(--accent-glow)' : 'var(--bg-card)',
+                          color: cycleInclusion.annual === 'include_all' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                          border: cycleInclusion.annual === 'include_all' ? '1px solid rgba(10,132,255,0.4)' : '1px solid var(--border-subtle)',
+                          borderRadius: 999,
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        🌐 Todo (+ Mensuales + Sem. + Diarias)
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Fallback para ciclos personalizados creados por el usuario */}
+                  {currentCycle.daysValue > 1 && !['cycle_week', 'cycle_month', 'cycle_year'].includes(currentCycle.id) && (
+                    <div style={{ display: 'flex', gap: 6, width: '100%', marginTop: 4 }}>
+                      <button
+                        onClick={() => { HapticService.selection(); updateCycleInclusion({ weekly: 'only_weekly' }); }}
+                        style={{
+                          cursor: 'pointer',
+                          minHeight: '28px',
+                          padding: '4px 12px',
+                          fontSize: '0.8rem',
+                          fontWeight: 500,
+                          background: 'var(--bg-card)',
+                          color: 'var(--text-secondary)',
+                          border: '1px solid var(--border-subtle)',
                           borderRadius: 999
                         }}
                       >
-                        🎯 Solo {currentCycle.name}s
+                        🎯 Solo {currentCycle.name}
                       </button>
                     </div>
                   )}
                 </div>
               );
             }
+
+            if (isListView && hasTemporalSections) {
+              return (
+                <div className="content-stats" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginLeft: '4px', width: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Filtro:
+                    </span>
+                    {[
+                      { id: 'all', label: '🌟 Todas' },
+                      { id: 'only_diaria', label: '☀️ Diarias' },
+                      { id: 'only_semanal', label: '📅 Solo Semanales' },
+                      { id: 'semanal_plus_diaria', label: '🔄 Sem. + Diarias' },
+                      { id: 'only_mensual', label: '🌙 Solo Mensuales' },
+                      { id: 'mensual_plus_semanal', label: '🗓️ Mens. + Sem.' },
+                      { id: 'mensual_all', label: '🌐 Todo (+ Diarias)' },
+                    ].map(opt => (
+                      <button
+                        key={opt.id}
+                        onClick={() => { HapticService.selection(); setListSectionFilter(opt.id); }}
+                        style={{
+                          cursor: 'pointer',
+                          minHeight: '28px',
+                          padding: '3px 11px',
+                          fontSize: '0.78rem',
+                          fontWeight: listSectionFilter === opt.id ? 700 : 500,
+                          background: listSectionFilter === opt.id ? 'var(--accent-glow)' : 'var(--bg-card)',
+                          color: listSectionFilter === opt.id ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                          border: listSectionFilter === opt.id ? '1px solid rgba(10,132,255,0.4)' : '1px solid var(--border-subtle)',
+                          borderRadius: 999,
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+
             return null;
           })()}
 
