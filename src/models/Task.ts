@@ -34,6 +34,8 @@ export interface ListSection {
   listId: string;
   parentId?: string; // Para sub-secciones anidadas
   name: string;
+  order?: number;
+  created_at?: string;
   updated_at?: string;
   deleted_at?: string;
   _is_dirty?: boolean;
