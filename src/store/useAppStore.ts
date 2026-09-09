@@ -466,8 +466,13 @@ export const useAppStore = create<AppState>()(
         (Object.values(tasks) as TaskItem[])
           .filter((t: any) => !t.deleted_at && (includeCompleted || !isTaskCompleted(t) || temporarilyShowIds.includes(t.id)))
           .filter((t: any) => {
-            if (t.categoryId === 'primeros_pasos') return false; // Onboarding tasks NEVER bleed into cycle views
-            const effCycle = t.cycle_id || (t.categoryId === 'limpieza_diaria' ? 'cycle_day' : t.categoryId === 'limpieza_semanal' ? 'cycle_week' : t.categoryId === 'limpieza_mensual' ? 'cycle_month' : t.categoryId === 'limpieza_anual' ? 'cycle_year' : null);
+            if (t.categoryId === 'primeros_pasos') return false;
+            const effCycle = t.cycle_id || (
+              t.categoryId === 'limpieza_diaria' || (t.sectionId && t.sectionId.toLowerCase().includes('diaria')) ? 'cycle_day' :
+              t.categoryId === 'limpieza_semanal' || (t.sectionId && t.sectionId.toLowerCase().includes('semanal')) ? 'cycle_week' :
+              t.categoryId === 'limpieza_mensual' || (t.sectionId && t.sectionId.toLowerCase().includes('mensual')) ? 'cycle_month' :
+              t.categoryId === 'limpieza_anual' || (t.sectionId && t.sectionId.toLowerCase().includes('anual')) ? 'cycle_year' : null
+            );
             if (!effCycle) return false;
             return validCycles.includes(effCycle as string);
           })
