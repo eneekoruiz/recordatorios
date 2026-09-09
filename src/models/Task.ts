@@ -92,6 +92,10 @@ export interface TaskItem {
 
   duration?: number;
 
+  // --- HABIT & REPETITION FIELDS ---
+  targetCount?: number;
+  currentCount?: number;
+
   // --- SHOPPING & FINANCE FIELDS ---
   isDetailed?: boolean; 
   price?: number;       

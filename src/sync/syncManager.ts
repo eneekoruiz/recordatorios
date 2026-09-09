@@ -56,7 +56,7 @@ class SyncManager {
   start() {
     if (this.syncInterval) return;
     this.syncInterval = setInterval(() => this.syncNow(), SYNC_INTERVAL_MS);
-    this.syncNow();
+    this.syncNow(true); // Full authoritative reconciliation on app launch
   }
 
   stop() {
@@ -297,6 +297,53 @@ class SyncManager {
           });
         }
       });
+    }
+
+    // Authoritative Reconciliation: Purge deleted/ghost records that no longer exist on server
+    if (data.activeTaskIds && Array.isArray(data.activeTaskIds)) {
+      const activeTaskSet = new Set(data.activeTaskIds);
+      const incomingTaskIds = new Set((data.tasks || []).map((t: any) => t.id));
+      const currentTasks = useAppStore.getState().tasks;
+      let tasksChanged = false;
+      const reconciledTasks = { ...currentTasks };
+
+      for (const [id, localTask] of Object.entries(currentTasks)) {
+        // If local task is clean and not active on server:
+        if (!localTask._is_dirty && !activeTaskSet.has(id)) {
+          // If server didn't send it in this batch as soft-deleted, it was permanently deleted
+          if (!incomingTaskIds.has(id)) {
+            delete reconciledTasks[id];
+            tasksChanged = true;
+          }
+        }
+      }
+
+      if (tasksChanged) {
+        useAppStore.setState({ tasks: reconciledTasks });
+      }
+    }
+
+    if (data.activeListIds && Array.isArray(data.activeListIds)) {
+      const activeListSet = new Set(data.activeListIds);
+      const currentLists = useAppStore.getState().lists;
+      const reconciledLists = currentLists.filter(l => 
+        (l as any)._is_dirty || 
+        activeListSet.has(l.id) || 
+        l.id.startsWith('user_preferences_') || 
+        l.id === 'primeros_pasos'
+      );
+      if (reconciledLists.length !== currentLists.length) {
+        useAppStore.setState({ lists: reconciledLists });
+      }
+    }
+
+    if (data.activeSectionIds && Array.isArray(data.activeSectionIds)) {
+      const activeSectionSet = new Set(data.activeSectionIds);
+      const currentSections = useAppStore.getState().listSections || [];
+      const reconciledSections = currentSections.filter(s => (s as any)._is_dirty || activeSectionSet.has(s.id));
+      if (reconciledSections.length !== currentSections.length) {
+        useAppStore.setState({ listSections: reconciledSections });
+      }
     }
 
     if (data.serverTime) {

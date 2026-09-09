@@ -30,10 +30,11 @@ interface TaskCardProps {
   isExpanded?: boolean;
   onToggleExpand?: () => void;
   indent?: number;
+  onNavigateView?: (view: string) => void;
 }
 
 export const TaskCard = React.memo(function TaskCard({
-  task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, showListName = true, isFirstInSection, isLastInSection, previousTaskId, hasChildren, isExpanded, onToggleExpand, indent = 0
+  task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, showListName = true, isFirstInSection, isLastInSection, previousTaskId, hasChildren, isExpanded, onToggleExpand, indent = 0, onNavigateView
 }: TaskCardProps) {
   const cycles = useAppStore(state => state.cycles);
   const tasks = useAppStore(state => state.tasks);
@@ -536,6 +537,80 @@ export const TaskCard = React.memo(function TaskCard({
             {task.flagged && <Flag size={13} color="var(--accent-orange)" fill="var(--accent-orange)" />}
             {task.locationName && <MapPin size={13} color="var(--accent-blue)" />}
             {task.image && <ImageIcon size={13} color="var(--text-tertiary)" />}
+            {task.price !== undefined && task.price > 0 && (
+              <span 
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 2,
+                  padding: '1px 7px',
+                  borderRadius: 6,
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  background: 'rgba(52, 199, 89, 0.12)',
+                  color: '#34C759',
+                  verticalAlign: 'middle',
+                  lineHeight: '1.2'
+                }}
+              >
+                {task.price.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €
+              </span>
+            )}
+            {task.targetCount && task.targetCount > 1 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const current = task.currentCount || 0;
+                  const target = task.targetCount || 1;
+                  const next = current + 1;
+                  if (next >= target) {
+                    updateTask(task.id, { currentCount: target });
+                    if (!isTaskCompleted(task)) {
+                      onToggle(task.id);
+                    }
+                  } else {
+                    updateTask(task.id, { currentCount: next });
+                  }
+                  HapticService.selection();
+                }}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const current = task.currentCount || 0;
+                  if (current > 0) {
+                    updateTask(task.id, { currentCount: current - 1 });
+                    if (isTaskCompleted(task)) {
+                      onToggle(task.id, true);
+                    }
+                  }
+                }}
+                title="Clic: sumar progreso. Clic derecho: restar progreso."
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  padding: '2px 8px',
+                  borderRadius: 12,
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  background: (task.currentCount || 0) >= task.targetCount ? 'rgba(52, 199, 89, 0.15)' : 'rgba(0, 122, 255, 0.12)',
+                  color: (task.currentCount || 0) >= task.targetCount ? '#34C759' : '#007AFF',
+                  border: 'none',
+                  cursor: 'pointer',
+                  verticalAlign: 'middle',
+                  lineHeight: '1.2'
+                }}
+              >
+                <span>
+                  {task.title.toLowerCase().includes('agua') ? '💧' :
+                   task.title.toLowerCase().includes('diente') ? '🪥' :
+                   task.title.toLowerCase().includes('mano') ? '🧼' :
+                   task.title.toLowerCase().includes('aplicacion') ? '🧴' : '⚡'}
+                </span>
+                <span>{task.currentCount || 0}/{task.targetCount}</span>
+              </button>
+            )}
           </div>
 
           {/* Note */}
@@ -621,13 +696,48 @@ export const TaskCard = React.memo(function TaskCard({
                   }}
                 >
                   {task.description ? (
-                    task.description.split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
-                      part.match(/^https?:\/\//) ? (
-                        <a key={i} href={part} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>
-                          {part}
-                        </a>
-                      ) : part
-                    )
+                    task.description.split(/(https?:\/\/[^\s]+|app:\/\/list\/[^\s]+)/g).map((part, i) => {
+                      if (part.startsWith('app://list/')) {
+                        const targetListId = part.replace('app://list/', '');
+                        const targetList = lists?.find(l => l.id === targetListId);
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onNavigateView?.(`list_${targetListId}`);
+                            }}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              padding: '2px 8px',
+                              borderRadius: 6,
+                              background: 'rgba(0, 122, 255, 0.12)',
+                              color: 'var(--accent-primary)',
+                              border: 'none',
+                              cursor: 'pointer',
+                              fontWeight: 600,
+                              fontSize: '0.8rem',
+                              margin: '2px 4px 2px 0',
+                              verticalAlign: 'middle'
+                            }}
+                          >
+                            <LayoutList size={12} />
+                            <span>Abrir {targetList?.name || targetListId}</span>
+                          </button>
+                        );
+                      }
+                      if (part.match(/^https?:\/\//)) {
+                        return (
+                          <a key={i} href={part} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>
+                            {part}
+                          </a>
+                        );
+                      }
+                      return part;
+                    })
                   ) : (!isTaskCompleted(task) && !isCompletedPeriod ? 'Añadir nota...' : '')}
                 </span>
               )}
@@ -670,8 +780,41 @@ export const TaskCard = React.memo(function TaskCard({
             </div>
           )}
 
+          {/* In-app list navigation button if URL is app://list/:id */}
+          {task.url?.startsWith('app://list/') && (() => {
+            const targetListId = task.url.replace('app://list/', '');
+            const targetList = lists?.find(l => l.id === targetListId);
+            return (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNavigateView?.(`list_${targetListId}`);
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  marginTop: 8,
+                  padding: '7px 12px',
+                  borderRadius: 10,
+                  background: 'rgba(0, 122, 255, 0.1)',
+                  color: 'var(--accent-primary)',
+                  border: '1px solid rgba(0, 122, 255, 0.2)',
+                  fontWeight: 600,
+                  fontSize: '0.82rem',
+                  cursor: 'pointer'
+                }}
+              >
+                <LayoutList size={14} />
+                <span>Ir a lista {targetList?.name || targetListId}</span>
+                <ChevronRight size={13} style={{ opacity: 0.7 }} />
+              </button>
+            );
+          })()}
+
           {/* Rich Link Preview */}
-          {task.url && (
+          {task.url && !task.url.startsWith('app://list/') && (
             <a
               href={task.url}
               target="_blank"
@@ -692,11 +835,15 @@ export const TaskCard = React.memo(function TaskCard({
               onClick={e => e.stopPropagation()}
             >
               <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Link2 size={16} color="var(--accent-primary)" />
+                {task.url.includes('drive.google.com') || task.url.includes('docs.google.com') ? (
+                  <span style={{ fontSize: '1.1rem' }}>📁</span>
+                ) : (
+                  <Link2 size={16} color="var(--accent-primary)" />
+                )}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
                 <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--accent-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {task.url}
+                  {task.url.includes('drive.google.com') ? 'Google Drive' : task.url.includes('docs.google.com') ? 'Google Docs' : task.url}
                 </span>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {(() => { try { return new URL(task.url).hostname.replace('www.', ''); } catch { return 'Enlace web'; } })()}

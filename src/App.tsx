@@ -427,6 +427,7 @@ function App() {
               onOpenZenMode={(taskId) => setZenModeTaskId(taskId)}
               onEditTask={(taskId) => { setEditingTaskId(taskId); setIsDrawerOpen(true); }}
               onBackToSidebar={() => setMobileView('sidebar')}
+              onSelectView={handleSelectView}
               isMobile={isMobile}
             />
           )}

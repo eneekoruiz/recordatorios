@@ -80,6 +80,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   const [quantity, setQuantity] = useState<number>(1);
   const [brand, setBrand] = useState('');
   const [duration, setDuration] = useState<number | ''>('');
+  const [targetCount, setTargetCount] = useState<number | undefined>(undefined);
+  const [currentCount, setCurrentCount] = useState<number | undefined>(undefined);
   const [, setShowAdvanced] = useState(false);
 
   // Suggested chips purely for visual feedback
@@ -134,6 +136,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setQuantity(task.quantity !== undefined ? task.quantity : 1);
         setBrand(task.brand || '');
         setDuration(task.duration || '');
+        setTargetCount(task.targetCount);
+        setCurrentCount(task.currentCount);
         setHasDate(!!task.dueDate);
         setHasTime(!!task.alerts?.some(a => a.type === 'at_time'));
         
@@ -141,8 +145,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setCardTimeOpen(!!task.dueDate || !!task.alerts?.some(a => a.type === 'at_time'));
         setCardRepeatOpen(!!task.cycle_id || !!task.sectionId || !!task.locationName || !!task.location);
         setCardReqOpen(!!(task.blockedBy && task.blockedBy.length > 0));
-        setCardDetailsOpen(task.priority !== 'none' || !!task.flagged || !!task.url || !!task.image);
-        setCardFinanceOpen(!!task.isDetailed);
+        setCardDetailsOpen(task.priority !== 'none' || !!task.flagged || !!task.url || !!task.image || !!task.targetCount);
+        setCardFinanceOpen(!!task.isDetailed || task.price !== undefined);
       } else {
         // Nueva tarea
         setTitle('');
@@ -421,10 +425,12 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
       location: hasLocationAlert && locationLat !== null && locationLng !== null ? { lat: locationLat, lng: locationLng, radius: locationRadius, address: locationAddress } : undefined,
       image: image || undefined,
       isDetailed,
-      price: isDetailed && price !== undefined ? Number(price) : undefined,
-      quantity: isDetailed && quantity !== undefined ? Number(quantity) : undefined,
-      brand: isDetailed && brand ? brand : undefined,
-      duration: duration !== '' ? Number(duration) : undefined
+      price: price !== undefined && price !== null && !isNaN(Number(price)) && Number(price) > 0 ? Number(price) : undefined,
+      quantity: quantity !== undefined ? Number(quantity) : 1,
+      brand: brand || undefined,
+      duration: duration !== '' ? Number(duration) : undefined,
+      targetCount: targetCount && targetCount > 1 ? Number(targetCount) : undefined,
+      currentCount: targetCount && targetCount > 1 ? (currentCount || 0) : undefined
     };
 
     if (taskId) {
@@ -459,6 +465,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
     setQuantity(1);
     setBrand('');
     setDuration('');
+    setTargetCount(undefined);
+    setCurrentCount(undefined);
     onClose();
   };
 
@@ -1186,6 +1194,21 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                         />
                       </div>
                     )}
+
+                    <div className="divider"></div>
+
+                    <div className="detail-row" style={{ padding: '8px 0' }}>
+                      <span className="detail-label">Repeticiones diarias (Hábito)</span>
+                      <input 
+                        type="number" 
+                        min="1"
+                        max="100"
+                        placeholder="Ej: 10 (veces)" 
+                        value={targetCount || ''} 
+                        onChange={e => setTargetCount(e.target.value ? parseInt(e.target.value) : undefined)}
+                        style={{ width: 90, textAlign: 'right', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-primary)' }}
+                      />
+                    </div>
                   </div>
                   </motion.div>
                 )}
@@ -1193,7 +1216,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
               </div>
 
               {/* Card 5: Modo Financiero (Costes) */}
-              {(category === 'inbox' || useAppStore.getState().lists.find(l => l.id === category)?.isFinancial) && (
+              {(category === 'inbox' || useAppStore.getState().lists.find(l => l.id === category)?.isFinancial || (task && task.price !== undefined)) && (
                 <div className="section-card" style={{ marginBottom: '0' }}>
                   <button 
                     type="button"
@@ -1223,7 +1246,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                           <div className="divider"></div>
                           
                           <div className="detail-row" style={{ padding: '8px 0' }}>
-                            <span className="detail-label">Precio/Unidad ($)</span>
+                            <span className="detail-label">Precio/Unidad (€)</span>
                             <input 
                               type="number" 
                               step="0.01" 

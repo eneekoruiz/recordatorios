@@ -21,6 +21,7 @@ interface MainContentProps {
   onOpenZenMode: (taskId: string) => void;
   onEditTask?: (taskId: string) => void;
   onBackToSidebar?: () => void;
+  onSelectView?: (view: string) => void;
   isMobile?: boolean;
 }
 
@@ -41,7 +42,7 @@ const SMART_COLORS: Record<string, string> = {
   'smart_overdue': 'var(--accent-red)'
 };
 
-export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditTask, onBackToSidebar, isMobile }: MainContentProps) {
+export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditTask, onBackToSidebar, onSelectView, isMobile }: MainContentProps) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [sectionMenu, setSectionMenu] = useState<{ open: boolean; x: number; y: number; sectionId?: string; sectionName?: string }>({ open: false, x: 0, y: 0 });
   const sectionTouchTimer = useRef<any>(null);
@@ -408,8 +409,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const totalCost = useMemo(() => {
     let sum = 0;
     Object.values(groupedTasks).flat().forEach(t => {
-      if (t.isDetailed && t.price) {
-        sum += t.price * (t.quantity || 1);
+      if (t.price && !isTaskCompleted(t)) {
+        sum += (Number(t.price) || 0) * (t.quantity || 1);
       }
     });
     return sum;
@@ -887,6 +888,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             isFirstInSection={isFirst}
             isLastInSection={isLast}
             previousTaskId={previousTaskId}
+            onNavigateView={onSelectView}
             {...({
               hasChildren,
               isExpanded,
@@ -896,7 +898,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         </div>
       </motion.div>
     );
-  }, [tasks, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, isSmartView, currentView]);
+  }, [tasks, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, onSelectView, isSmartView, currentView]);
 
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
   const smartListInfo = isSmartView ? SMART_LISTS.find(l => l.id === currentView) : null;
@@ -1210,11 +1212,32 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             )}
           </h1>
 
-          {/* Gran Contador Apple Reminders en el color de la lista */}
+          {/* Gran Contador Apple Reminders en el color de la lista y Total Presupuesto */}
           {!currentCycle && currentView !== 'TRASH' && (
-            <span className="apple-large-counter" style={{ color: viewColor }}>
-              {activeVisibleCount}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              {totalCost > 0 && (
+                <span 
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '4px 12px',
+                    borderRadius: 12,
+                    background: 'rgba(52, 199, 89, 0.12)',
+                    color: '#34C759',
+                    fontWeight: 700,
+                    fontSize: '1rem',
+                    letterSpacing: '-0.2px'
+                  }}
+                  title="Presupuesto total pendiente"
+                >
+                  {totalCost.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €
+                </span>
+              )}
+              <span className="apple-large-counter" style={{ color: viewColor }}>
+                {activeVisibleCount}
+              </span>
+            </div>
           )}
         </div>
 
@@ -1329,6 +1352,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             const isDraggingOver = dragOverSectionId === sectionId && isCustomSection;
 
             const showDivider = index > 0 && flattenedData[index - 1]?.type !== 'page-header';
+            const sectionTasks = groupedTasks[data.category] || [];
+            const sectionTotal = sectionTasks.reduce((sum, t) => sum + (t.price && !isTaskCompleted(t) ? (Number(t.price) || 0) * (t.quantity || 1) : 0), 0);
             return (
               <div 
                 key={itemKey}
@@ -1418,6 +1443,23 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                       >
                         {data.title}
                       </h3>
+                    )}
+                    {sectionTotal > 0 && (
+                      <span 
+                        style={{
+                          fontSize: '0.78rem',
+                          fontWeight: 600,
+                          color: '#34C759',
+                          background: 'rgba(52, 199, 89, 0.12)',
+                          padding: '2px 8px',
+                          borderRadius: '8px',
+                          marginLeft: '2px',
+                          flexShrink: 0
+                        }}
+                        title="Subtotal de la sección"
+                      >
+                        {sectionTotal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €
+                      </span>
                     )}
                     {isCustomSection && (
                       <div style={{ position: 'relative' }}>
