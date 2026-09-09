@@ -219,12 +219,14 @@ class SyncManager {
         const serverTask: TaskItem = {
           ...rawTask,
           categoryId: rawTask.categoryId || rawTask.category_id || undefined,
+          sectionId: rawTask.sectionId || rawTask.section_id || undefined,
+          cycle_id: rawTask.cycle_id || rawTask.cycleId || undefined,
         };
         const localTask = state.tasks[serverTask.id];
         // Last Write Wins (Version-based first, fallback to timestamp)
         if (!localTask || 
             (serverTask.version || 0) > (localTask.version || 0) || 
-            ((serverTask.version || 0) === (localTask.version || 0) && new Date(serverTask.updated_at).getTime() > new Date(localTask.updated_at).getTime())) {
+            ((serverTask.version || 0) === (localTask.version || 0) && new Date(serverTask.updated_at).getTime() >= new Date(localTask.updated_at).getTime())) {
            state.updateTaskRaw({ ...serverTask, _is_dirty: false });
         }
       });

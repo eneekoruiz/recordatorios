@@ -240,6 +240,11 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   // Filtro de secciones temporales dentro de listas (ej. Care, Quehaceres)
   const [listSectionFilter, setListSectionFilter] = useState<string>('all');
 
+  // Resetear el filtro de sección al cambiar de vista o lista
+  useEffect(() => {
+    setListSectionFilter('all');
+  }, [currentView]);
+
   // Estados para la edición de ciclos in-place
   const [isEditingCycle, setIsEditingCycle] = useState(false);
   const [cycleEditName, setCycleEditName] = useState('');
@@ -468,9 +473,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       const filteredGrouped: Record<string, TaskItem[]> = {};
       Object.entries(rawGrouped).forEach(([key, taskList]) => {
         const matching = taskList.filter(t => {
-          const secObj = t.sectionId ? currentSections.find(s => s.id === t.sectionId) : null;
-          const textToMatch = `${secObj?.name || ''} ${t.sectionId || ''} ${t.cycle_id || ''}`.toLowerCase();
-          const isDay = t.cycle_id === 'cycle_day' || textToMatch.includes('diaria') || textToMatch.includes('diario');
+          const taskSecId = t.sectionId || (t as any).section_id;
+          const secObj = taskSecId ? currentSections.find(s => s.id === taskSecId) : null;
+          const textToMatch = `${secObj?.name || ''} ${taskSecId || ''} ${t.cycle_id || ''}`.toLowerCase();
+          const isDay = t.cycle_id === 'cycle_day' || !!t.targetCount || textToMatch.includes('diaria') || textToMatch.includes('diario') || textToMatch.includes('recurrent');
           const isWeek = t.cycle_id === 'cycle_week' || textToMatch.includes('semanal');
           const isMonth = t.cycle_id === 'cycle_month' || textToMatch.includes('mensual');
           const isYear = t.cycle_id === 'cycle_year' || textToMatch.includes('anual');
@@ -874,7 +880,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       }
 
       // 3. Sections Hierarchy (Secciones Manuales)
-      const sectionsForList = (listSections || []).filter(s => s.listId === currentList?.id && !s.deleted_at);
+      const sectionsForList = (listSections || [])
+        .filter(s => s.listId === currentList?.id && !s.deleted_at)
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
       
       const processSection = (secId: string, depth: number) => {
         const sec = sectionsForList.find(s => s.id === secId);
@@ -882,6 +890,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         
         const categoryKey = `section_${sec.id}`;
         const categoryTasks = groupedTasks[categoryKey] || [];
+
+        // Si se está filtrando por temporalidad (ej. solo semanales o solo diarias)
+        // y esta sección no tiene tareas que cumplan el filtro, no mostrar la sección vacía
+        if (listSectionFilter !== 'all' && categoryTasks.length === 0) {
+          return;
+        }
 
         // Evitar duplicar secciones vacías manuales si ya se muestra una sección dinámica con un ciclo equivalente
         const isDuplicateEmpty = categoryTasks.length === 0 && presentCycleKeys.some(k => {
@@ -1550,6 +1564,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                       { id: 'only_mensual', label: '🌙 Solo Mensuales' },
                       { id: 'mensual_plus_semanal', label: '🗓️ Mens. + Sem.' },
                       { id: 'mensual_all', label: '🌐 Todo (+ Diarias)' },
+                      { id: 'only_anual', label: '🎆 Anuales' },
                     ].map(opt => (
                       <button
                         key={opt.id}

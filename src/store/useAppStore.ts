@@ -467,11 +467,12 @@ export const useAppStore = create<AppState>()(
           .filter((t: any) => !t.deleted_at && (includeCompleted || !isTaskCompleted(t) || temporarilyShowIds.includes(t.id)))
           .filter((t: any) => {
             if (t.categoryId === 'primeros_pasos') return false;
+            const taskSec = (t.sectionId || (t as any).section_id || '').toLowerCase();
             const effCycle = t.cycle_id || (
-              t.categoryId === 'limpieza_diaria' || !!t.targetCount || (t.sectionId && (t.sectionId.toLowerCase().includes('diaria') || t.sectionId.toLowerCase().includes('recurrentes'))) ? 'cycle_day' :
-              t.categoryId === 'limpieza_semanal' || (t.sectionId && t.sectionId.toLowerCase().includes('semanal')) ? 'cycle_week' :
-              t.categoryId === 'limpieza_mensual' || (t.sectionId && t.sectionId.toLowerCase().includes('mensual')) ? 'cycle_month' :
-              t.categoryId === 'limpieza_anual' || (t.sectionId && t.sectionId.toLowerCase().includes('anual')) ? 'cycle_year' : null
+              t.categoryId === 'limpieza_diaria' || !!t.targetCount || taskSec.includes('diaria') || taskSec.includes('recurrent') ? 'cycle_day' :
+              t.categoryId === 'limpieza_semanal' || taskSec.includes('semanal') ? 'cycle_week' :
+              t.categoryId === 'limpieza_mensual' || taskSec.includes('mensual') ? 'cycle_month' :
+              t.categoryId === 'limpieza_anual' || taskSec.includes('anual') ? 'cycle_year' : null
             );
             if (!effCycle) return false;
             return validCycles.includes(effCycle as string);
@@ -510,7 +511,9 @@ export const useAppStore = create<AppState>()(
         grouped['no_section'] = [];
         
         // 2. Pre-initialize defined manual sections for this list so empty sections are visible
-        const sectionsForList = (listSections || []).filter((s: any) => s.listId === listId && !s.deleted_at);
+        const sectionsForList = (listSections || [])
+          .filter((s: any) => s.listId === listId && !s.deleted_at)
+          .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
         const activeSectionIds = new Set(sectionsForList.map((s: any) => s.id));
         for (const sec of sectionsForList) {
           grouped[`section_${sec.id}`] = [];
@@ -518,8 +521,9 @@ export const useAppStore = create<AppState>()(
 
         for (const task of filtered) {
           let groupKey = '';
-          if (task.sectionId && activeSectionIds.has(task.sectionId)) {
-            groupKey = `section_${task.sectionId}`;
+          const taskSecId = task.sectionId || (task as any).section_id;
+          if (taskSecId && activeSectionIds.has(taskSecId)) {
+            groupKey = `section_${taskSecId}`;
           } else if (task.cycle_id) {
             groupKey = `cycle_${task.cycle_id}`;
           } else {
