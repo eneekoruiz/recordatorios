@@ -468,7 +468,7 @@ export const useAppStore = create<AppState>()(
           .filter((t: any) => {
             if (t.categoryId === 'primeros_pasos') return false;
             const effCycle = t.cycle_id || (
-              t.categoryId === 'limpieza_diaria' || (t.sectionId && t.sectionId.toLowerCase().includes('diaria')) ? 'cycle_day' :
+              t.categoryId === 'limpieza_diaria' || !!t.targetCount || (t.sectionId && (t.sectionId.toLowerCase().includes('diaria') || t.sectionId.toLowerCase().includes('recurrentes'))) ? 'cycle_day' :
               t.categoryId === 'limpieza_semanal' || (t.sectionId && t.sectionId.toLowerCase().includes('semanal')) ? 'cycle_week' :
               t.categoryId === 'limpieza_mensual' || (t.sectionId && t.sectionId.toLowerCase().includes('mensual')) ? 'cycle_month' :
               t.categoryId === 'limpieza_anual' || (t.sectionId && t.sectionId.toLowerCase().includes('anual')) ? 'cycle_year' : null
@@ -518,10 +518,10 @@ export const useAppStore = create<AppState>()(
 
         for (const task of filtered) {
           let groupKey = '';
-          if (task.cycle_id) {
-            groupKey = `cycle_${task.cycle_id}`;
-          } else if (task.sectionId && activeSectionIds.has(task.sectionId)) {
+          if (task.sectionId && activeSectionIds.has(task.sectionId)) {
             groupKey = `section_${task.sectionId}`;
+          } else if (task.cycle_id) {
+            groupKey = `cycle_${task.cycle_id}`;
           } else {
             groupKey = 'no_section';
           }

@@ -696,15 +696,18 @@ export const TaskCard = React.memo(function TaskCard({
                   }}
                 >
                   {task.description ? (
-                    task.description.split(/(https?:\/\/[^\s]+|app:\/\/list\/[^\s]+)/g).map((part, i) => {
-                      if (part.startsWith('app://list/')) {
-                        const targetListId = part.replace('app://list/', '');
+                    task.description.split(/(https?:\/\/[^\s]+|app:\/\/[^\s]+)/g).map((part, i) => {
+                      const isCareLink = part.startsWith('app://list/care') || (part.includes('icloud.com/reminders') && part.includes('Care'));
+                      const isAppList = part.startsWith('app://list/');
+                      if (isCareLink || isAppList) {
+                        const targetListId = isCareLink ? 'care' : part.replace('app://list/', '');
                         const targetList = lists?.find(l => l.id === targetListId);
                         return (
                           <button
                             key={i}
                             type="button"
                             onClick={(e) => {
+                              e.preventDefault();
                               e.stopPropagation();
                               onNavigateView?.(`list_${targetListId}`);
                             }}
@@ -725,9 +728,12 @@ export const TaskCard = React.memo(function TaskCard({
                             }}
                           >
                             <LayoutList size={12} />
-                            <span>Abrir {targetList?.name || targetListId}</span>
+                            <span>Abrir lista {targetList?.name || targetListId}</span>
                           </button>
                         );
+                      }
+                      if (part.startsWith('app://')) {
+                        return null;
                       }
                       if (part.match(/^https?:\/\//)) {
                         return (
@@ -780,77 +786,88 @@ export const TaskCard = React.memo(function TaskCard({
             </div>
           )}
 
-          {/* In-app list navigation button if URL is app://list/:id */}
-          {task.url?.startsWith('app://list/') && (() => {
-            const targetListId = task.url.replace('app://list/', '');
-            const targetList = lists?.find(l => l.id === targetListId);
-            return (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onNavigateView?.(`list_${targetListId}`);
-                }}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  marginTop: 8,
-                  padding: '7px 12px',
-                  borderRadius: 10,
-                  background: 'rgba(0, 122, 255, 0.1)',
-                  color: 'var(--accent-primary)',
-                  border: '1px solid rgba(0, 122, 255, 0.2)',
-                  fontWeight: 600,
-                  fontSize: '0.82rem',
-                  cursor: 'pointer'
-                }}
-              >
-                <LayoutList size={14} />
-                <span>Ir a lista {targetList?.name || targetListId}</span>
-                <ChevronRight size={13} style={{ opacity: 0.7 }} />
-              </button>
-            );
-          })()}
+          {/* In-app list navigation button if URL is Care or an in-app list */}
+          {(() => {
+            if (!task.url) return null;
+            const isCareUrl = task.url.startsWith('app://list/care') || (task.url.includes('icloud.com/reminders') && task.url.includes('Care')) || task.title.toLowerCase().includes('skin-care') || task.title.toLowerCase().includes('skincare');
+            const isAppListUrl = task.url.startsWith('app://list/');
+            
+            if (isCareUrl || isAppListUrl) {
+              const targetListId = isCareUrl ? 'care' : task.url.replace('app://list/', '');
+              const targetList = lists?.find(l => l.id === targetListId);
+              return (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onNavigateView?.(`list_${targetListId}`);
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    marginTop: 8,
+                    padding: '7px 14px',
+                    borderRadius: 10,
+                    background: 'rgba(0, 122, 255, 0.12)',
+                    color: 'var(--accent-primary)',
+                    border: '1px solid rgba(0, 122, 255, 0.25)',
+                    fontWeight: 600,
+                    fontSize: '0.84rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <LayoutList size={15} />
+                  <span>Ir a lista {targetList?.name || 'Care'}</span>
+                  <ChevronRight size={14} style={{ opacity: 0.7 }} />
+                </button>
+              );
+            }
 
-          {/* Rich Link Preview */}
-          {task.url && !task.url.startsWith('app://list/') && (
-            <a
-              href={task.url}
-              target="_blank"
-              rel="noreferrer"
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                textDecoration: 'none', color: 'var(--text-primary)',
-                marginTop: 8,
-                padding: '8px 12px',
-                borderRadius: '12px',
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border-subtle)',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-                boxSizing: 'border-box',
-                maxWidth: '100%',
-                overflow: 'hidden'
-              }}
-              onClick={e => e.stopPropagation()}
-            >
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                {task.url.includes('drive.google.com') || task.url.includes('docs.google.com') ? (
-                  <span style={{ fontSize: '1.1rem' }}>📁</span>
-                ) : (
-                  <Link2 size={16} color="var(--accent-primary)" />
-                )}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
-                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--accent-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {task.url.includes('drive.google.com') ? 'Google Drive' : task.url.includes('docs.google.com') ? 'Google Docs' : task.url}
-                </span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {(() => { try { return new URL(task.url).hostname.replace('www.', ''); } catch { return 'Enlace web'; } })()}
-                </span>
-              </div>
-            </a>
-          )}
+            // External URLs (exclude app:// so Safari doesn't throw invalid scheme error)
+            if (task.url.startsWith('http')) {
+              return (
+                <a
+                  href={task.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    textDecoration: 'none', color: 'var(--text-primary)',
+                    marginTop: 8,
+                    padding: '8px 12px',
+                    borderRadius: '12px',
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-subtle)',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+                    boxSizing: 'border-box',
+                    maxWidth: '100%',
+                    overflow: 'hidden'
+                  }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {task.url.includes('drive.google.com') || task.url.includes('docs.google.com') ? (
+                      <span style={{ fontSize: '1.1rem' }}>📁</span>
+                    ) : (
+                      <Link2 size={16} color="var(--accent-primary)" />
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--accent-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {task.url.includes('drive.google.com') ? 'Google Drive' : task.url.includes('docs.google.com') ? 'Google Docs' : task.url}
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {(() => { try { return new URL(task.url).hostname.replace('www.', ''); } catch { return 'Enlace web'; } })()}
+                    </span>
+                  </div>
+                </a>
+              );
+            }
+
+            return null;
+          })()}
         </div>
 
         {/* Subtask Chevron */}
