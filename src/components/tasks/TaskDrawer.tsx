@@ -82,6 +82,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   const [duration, setDuration] = useState<number | ''>('');
   const [targetCount, setTargetCount] = useState<number | undefined>(undefined);
   const [currentCount, setCurrentCount] = useState<number | undefined>(undefined);
+  const [timeOfDay, setTimeOfDay] = useState<'morning' | 'afternoon' | 'night' | undefined>(undefined);
   const [, setShowAdvanced] = useState(false);
 
   // Suggested chips purely for visual feedback
@@ -138,11 +139,12 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setDuration(task.duration || '');
         setTargetCount(task.targetCount);
         setCurrentCount(task.currentCount);
+        setTimeOfDay(task.timeOfDay);
         setHasDate(!!task.dueDate);
         setHasTime(!!task.alerts?.some(a => a.type === 'at_time'));
         
         // Open cards dynamically if they have values configured
-        setCardTimeOpen(!!task.dueDate || !!task.alerts?.some(a => a.type === 'at_time'));
+        setCardTimeOpen(!!task.dueDate || !!task.alerts?.some(a => a.type === 'at_time') || !!task.timeOfDay);
         setCardRepeatOpen(!!task.cycle_id || !!task.sectionId || !!task.locationName || !!task.location);
         setCardReqOpen(!!(task.blockedBy && task.blockedBy.length > 0));
         setCardDetailsOpen(task.priority !== 'none' || !!task.flagged || !!task.url || !!task.image || !!task.targetCount);
@@ -154,6 +156,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setCategory(defaultCategoryId || 'inbox');
         setSectionId(defaultSectionId);
         setCycleId(undefined);
+        setTimeOfDay(undefined);
         setDueDate(new Date());
         setType('task');
         setAlerts([]);
@@ -184,6 +187,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setCardDetailsOpen(true);
         setCardFinanceOpen(true);
         setCycleId(undefined);
+        setTimeOfDay(undefined);
       }
     }
   }, [isOpen, taskId, task, defaultCategoryId, defaultSectionId]);
@@ -418,6 +422,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
       dueDate: hasDate ? dueDate.toISOString() : undefined,
       alerts,
       sectionId,
+      timeOfDay: timeOfDay || undefined,
       url: url || undefined,
       flagged: flagged || undefined,
       priority: priority !== 'none' ? priority : undefined,
@@ -715,6 +720,58 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                         </button>
                       </div>
                     )}
+
+                    <div className="divider"></div>
+                    
+                    {/* Franja Horaria Diaria (Mañana, Tarde, Noche) */}
+                    <div className="detail-row" style={{ padding: '8px 0', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                        <span className="detail-label" style={{ fontSize: '0.86rem', color: 'var(--text-secondary)' }}>Momento del día</span>
+                        {timeOfDay && (
+                          <button
+                            type="button"
+                            onClick={() => setTimeOfDay(undefined)}
+                            style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: '0.78rem', cursor: 'pointer', padding: 0 }}
+                          >
+                            Restablecer (Auto)
+                          </button>
+                        )}
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, width: '100%' }}>
+                        {[
+                          { id: 'morning', label: 'Mañana', icon: '🌅', color: '#FF9500' },
+                          { id: 'afternoon', label: 'Tarde', icon: '☀️', color: '#007AFF' },
+                          { id: 'night', label: 'Noche', icon: '🌙', color: '#AF52DE' }
+                        ].map(item => {
+                          const isSelected = timeOfDay === item.id;
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => setTimeOfDay(isSelected ? undefined : item.id as any)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 6,
+                                padding: '8px 4px',
+                                borderRadius: 10,
+                                fontSize: '0.82rem',
+                                fontWeight: isSelected ? 600 : 450,
+                                background: isSelected ? `${item.color}18` : 'var(--bg-card, rgba(0,0,0,0.03))',
+                                color: isSelected ? item.color : 'var(--text-secondary)',
+                                border: isSelected ? `1.5px solid ${item.color}` : '1px solid var(--border-subtle)',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              <span style={{ fontSize: '0.95rem' }}>{item.icon}</span>
+                              <span>{item.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
 
                     {/* Alertas Detectadas */}
                     {alerts.length > 0 && (

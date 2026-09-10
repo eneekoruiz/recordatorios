@@ -91,6 +91,7 @@ export interface TaskItem {
   flagged?: boolean;
   url?: string;
   image?: string;
+  timeOfDay?: 'morning' | 'afternoon' | 'night';
 
   duration?: number;
 

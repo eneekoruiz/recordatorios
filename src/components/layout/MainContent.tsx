@@ -239,11 +239,35 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
   // Filtro de secciones temporales dentro de listas (ej. Care, Quehaceres)
   const [listSectionFilter, setListSectionFilter] = useState<string>('all');
+  // Filtro de franja horaria para vista diaria (Mañana, Tarde, Noche)
+  const [dailyTimeFilter, setDailyTimeFilter] = useState<'all' | 'morning' | 'afternoon' | 'night'>('all');
 
-  // Resetear el filtro de sección al cambiar de vista o lista
+  // Resetear filtros al cambiar de vista o lista
   useEffect(() => {
     setListSectionFilter('all');
+    setDailyTimeFilter('all');
   }, [currentView]);
+
+  // Helper para resolver franja horaria de una tarea
+  const resolveTimeOfDay = useCallback((t: TaskItem): 'morning' | 'afternoon' | 'night' => {
+    if (t.timeOfDay) return t.timeOfDay;
+    if (t.alerts && t.alerts.length > 0) {
+      const timeAlert = t.alerts.find(a => a.type === 'at_time' && a.time);
+      if (timeAlert && timeAlert.time) {
+        const hour = parseInt(timeAlert.time.split(':')[0], 10);
+        if (!isNaN(hour)) {
+          if (hour >= 6 && hour < 14) return 'morning';
+          if (hour >= 14 && hour < 20) return 'afternoon';
+          return 'night';
+        }
+      }
+    }
+    const text = `${t.title || ''} ${t.description || ''}`.toLowerCase();
+    if (/\b(mañana|mañanero|despertar|despertarse|desayun|desayunar|aseo|dientes)\b/i.test(text)) return 'morning';
+    if (/\b(tarde|almuerz|almorzar|comida|comer|meriend|merendar|siesta)\b/i.test(text)) return 'afternoon';
+    if (/\b(noche|cenar|cena|dormir|acostar|acostarse|skin-care|skincare|serum)\b/i.test(text)) return 'night';
+    return 'morning';
+  }, []);
 
   // Estados para la edición de ciclos in-place
   const [isEditingCycle, setIsEditingCycle] = useState(false);
@@ -460,7 +484,11 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             t.categoryId === 'limpieza_mensual' || (t.sectionId && t.sectionId.toLowerCase().includes('mensual')) ? 'cycle_month' :
             t.categoryId === 'limpieza_anual' || (t.sectionId && t.sectionId.toLowerCase().includes('anual')) ? 'cycle_year' : null
           );
-          return eff && allowedCycleIds.has(eff);
+          if (!eff || !allowedCycleIds.has(eff)) return false;
+          if (currentCycle.id === 'cycle_day' && dailyTimeFilter !== 'all') {
+            return resolveTimeOfDay(t) === dailyTimeFilter;
+          }
+          return true;
         });
         if (matching.length > 0) filteredGrouped[key] = matching;
       });
@@ -504,7 +532,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     }
 
     return rawGrouped;
-  }, [currentView, isFolderView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, resolvedShowCompleted, recentlyCompletedIds, lists, currentCycle, cycleInclusion, listSectionFilter, currentList, sortBy, sortTaskList]);
+  }, [currentView, isFolderView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, resolvedShowCompleted, recentlyCompletedIds, lists, currentCycle, cycleInclusion, listSectionFilter, dailyTimeFilter, resolveTimeOfDay, currentList, sortBy, sortTaskList]);
     
   const smartTasks = useMemo(() => currentView === 'cycle_day' ? getSmartSortTasks() : [], [currentView, getSmartSortTasks, tasks]);
 
@@ -1332,17 +1360,19 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 4,
-                    padding: '4px 12px',
-                    borderRadius: 12,
-                    background: 'rgba(52, 199, 89, 0.12)',
-                    color: '#34C759',
-                    fontWeight: 700,
-                    fontSize: '1rem',
+                    padding: '3px 10px',
+                    borderRadius: 8,
+                    background: 'var(--bg-card, rgba(255,255,255,0.7))',
+                    border: '1px solid var(--border-subtle)',
+                    color: 'var(--text-secondary)',
+                    fontWeight: 600,
+                    fontSize: '0.88rem',
+                    fontVariantNumeric: 'tabular-nums',
                     letterSpacing: '-0.2px'
                   }}
                   title="Presupuesto total pendiente"
                 >
-                  {totalCost.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €
+                  {totalCost.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €
                 </span>
               )}
               <span className="apple-large-counter" style={{ color: viewColor }}>
@@ -1360,6 +1390,40 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                     <span className="stat-chip" style={{ minHeight: '32px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', lineHeight: '1.3', wordBreak: 'break-word', boxSizing: 'border-box', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 999 }}><strong>{activeVisibleCount}</strong> &nbsp;pendientes</span>
                     <span className="stat-chip" style={{ minHeight: '32px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', lineHeight: '1.3', wordBreak: 'break-word', boxSizing: 'border-box', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 999 }}><strong>{completedVisibleCount}</strong> &nbsp;completadas</span>
                   </div>
+
+                  {/* Selector Granular para Diarias: Momento del día (Todas, Mañana, Tarde, Noche) */}
+                  {currentCycle.id === 'cycle_day' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Momento:
+                      </span>
+                      {[
+                        { id: 'all', label: '⚡ Todas' },
+                        { id: 'morning', label: '🌅 Mañana' },
+                        { id: 'afternoon', label: '☀️ Tarde' },
+                        { id: 'night', label: '🌙 Noche' },
+                      ].map(opt => (
+                        <button
+                          key={opt.id}
+                          onClick={() => { HapticService.selection(); setDailyTimeFilter(opt.id as any); }}
+                          style={{
+                            cursor: 'pointer',
+                            minHeight: '28px',
+                            padding: '3px 11px',
+                            fontSize: '0.78rem',
+                            fontWeight: dailyTimeFilter === opt.id ? 700 : 500,
+                            background: dailyTimeFilter === opt.id ? 'var(--accent-glow)' : 'var(--bg-card)',
+                            color: dailyTimeFilter === opt.id ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                            border: dailyTimeFilter === opt.id ? '1px solid rgba(10,132,255,0.4)' : '1px solid var(--border-subtle)',
+                            borderRadius: 999,
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Selector Granular para Semanales: Solo Semanales vs Semanales + Diarias */}
                   {currentCycle.id === 'cycle_week' && (
@@ -1609,8 +1673,26 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
 
           {totalCost > 0 && (
-            <div style={{ marginTop: 12, display: 'inline-block', background: 'var(--accent-glow)', color: 'var(--accent-primary)', padding: '6px 12px', borderRadius: 999, fontWeight: 700, border: '1px solid rgba(37,99,235,0.12)' }}>
-              Total Estimado: ${totalCost.toFixed(2)}
+            <div 
+              style={{ 
+                marginTop: 10, 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: 6,
+                background: 'var(--bg-elevated)', 
+                color: 'var(--text-secondary)', 
+                padding: '4px 12px', 
+                borderRadius: 8, 
+                fontWeight: 500, 
+                fontSize: '0.84rem',
+                border: '1px solid var(--border-subtle)',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+              }}
+            >
+              <span style={{ color: 'var(--text-tertiary)' }}>Total estimado:</span>
+              <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, color: 'var(--text-primary)' }}>
+                {totalCost.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €
+              </span>
             </div>
           )}
 
@@ -1750,18 +1832,20 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                     {sectionTotal > 0 && (
                       <span 
                         style={{
-                          fontSize: '0.78rem',
-                          fontWeight: 600,
-                          color: '#34C759',
-                          background: 'rgba(52, 199, 89, 0.12)',
-                          padding: '2px 8px',
-                          borderRadius: '8px',
+                          fontSize: '0.76rem',
+                          fontWeight: 500,
+                          fontVariantNumeric: 'tabular-nums',
+                          color: 'var(--text-secondary)',
+                          background: 'var(--bg-hover, rgba(0,0,0,0.04))',
+                          border: '1px solid var(--border-subtle)',
+                          padding: '1.5px 7px',
+                          borderRadius: '6px',
                           marginLeft: '2px',
                           flexShrink: 0
                         }}
                         title="Subtotal de la sección"
                       >
-                        {sectionTotal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €
+                        {sectionTotal.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €
                       </span>
                     )}
                     {isCustomSection && (
