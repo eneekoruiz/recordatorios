@@ -1027,25 +1027,29 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                       gap: 12,
                       padding: '11px 14px',
                       borderRadius: 14,
-                      background: isActive ? 'var(--accent-glow)' : 'var(--bg-elevated)',
-                      border: isActive ? '1px solid rgba(10, 132, 255, 0.25)' : '1px solid var(--border-subtle)',
+                      background: isActive 
+                        ? smartItem.color 
+                        : `color-mix(in srgb, ${smartItem.color} 15%, var(--bg-elevated))`,
+                      border: isActive 
+                        ? `1.5px solid ${smartItem.color}` 
+                        : `1.5px solid color-mix(in srgb, ${smartItem.color} 30%, transparent)`,
                       cursor: 'pointer',
-                      boxShadow: isActive ? '0 2px 8px var(--accent-glow)' : '0 1px 3px rgba(0,0,0,0.03)',
+                      boxShadow: isActive ? `0 4px 14px ${smartItem.color}40` : `0 2px 6px ${smartItem.color}15`,
                       transition: 'all 150ms ease'
                     }}
                   >
                     <div style={{
                       width: 30, height: 30, borderRadius: '50%',
-                      background: smartItem.color,
+                      background: isActive ? 'rgba(255, 255, 255, 0.25)' : smartItem.color,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       flexShrink: 0,
-                      boxShadow: `0 2px 6px ${smartItem.color}40`
+                      boxShadow: isActive ? 'none' : `0 2px 6px ${smartItem.color}40`
                     }}>
                       <Icon size={15} color="white" />
                     </div>
                     <span style={{
-                      flex: 1, fontWeight: 600, fontSize: '0.95rem',
-                      color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)',
+                      flex: 1, fontWeight: 650, fontSize: '0.95rem',
+                      color: isActive ? '#ffffff' : 'var(--text-primary)',
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
                     }}>
                       {smartItem.name}
@@ -1054,9 +1058,10 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                     {!isEditMode && (
                       <span style={{
                         fontSize: '0.85rem', fontWeight: 700,
-                        color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                        background: isActive ? 'rgba(10, 132, 255, 0.15)' : 'var(--bg-hover)',
-                        padding: '2px 8px', borderRadius: 999
+                        color: isActive ? '#ffffff' : 'var(--text-primary)',
+                        background: isActive ? 'rgba(255, 255, 255, 0.22)' : 'var(--bg-hover)',
+                        padding: '2px 8px', borderRadius: 999,
+                        fontVariantNumeric: 'tabular-nums'
                       }}>
                         {count}
                       </span>
@@ -1157,6 +1162,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
             SMART_LISTS.filter(list => !pinnedSmartLists.includes(list.id)).map(list => {
               if (!smartListVisibility[list.id] && !isEditMode) return null;
               const Icon = list.icon;
+              const isActive = currentView === list.id;
             
             return (
               <motion.div 
@@ -1171,8 +1177,17 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                   }
                 }}
                 style={{
+                  background: isActive 
+                    ? list.color 
+                    : `color-mix(in srgb, ${list.color} 16%, var(--bg-elevated))`,
+                  border: isActive 
+                    ? `1.5px solid ${list.color}` 
+                    : `1.5px solid color-mix(in srgb, ${list.color} 30%, transparent)`,
+                  boxShadow: isActive 
+                    ? `0 8px 22px ${list.color}45` 
+                    : `0 3px 10px ${list.color}15`,
                   opacity: isEditMode && !smartListVisibility[list.id] ? 0.5 : 1,
-                  transition: 'background-color 150ms ease, opacity 150ms ease'
+                  transition: 'all 180ms ease'
                 }}
               >
                 {isEditMode && (
@@ -1203,20 +1218,37 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                     </div>
                   </div>
                 )}
-                <motion.div layoutId={"smart-icon-" + list.id} className="icon-circle" style={{ backgroundColor: list.color, boxShadow: `0 4px 12px ${list.color}40`, border: 'none' }}>
+                <motion.div 
+                  layoutId={"smart-icon-" + list.id} 
+                  className="icon-circle" 
+                  style={{ 
+                    backgroundColor: isActive ? 'rgba(255, 255, 255, 0.28)' : list.color, 
+                    boxShadow: isActive ? 'none' : `0 4px 12px ${list.color}40`, 
+                    border: 'none',
+                    transition: 'background-color 150ms ease'
+                  }}
+                >
                   <Icon size={18} color="white" />
                 </motion.div>
                 {!isEditMode && (
                   <span 
                     className="count" 
                     style={{ 
-                      fontSize: getTaskCount(list.id) >= 100 ? '1.4rem' : getTaskCount(list.id) >= 10 ? '1.7rem' : '2rem'
+                      fontSize: getTaskCount(list.id) >= 100 ? '1.4rem' : getTaskCount(list.id) >= 10 ? '1.7rem' : '2rem',
+                      color: isActive ? '#ffffff' : 'var(--text-primary)',
+                      transition: 'color 150ms ease'
                     }}
                   >
                     {getTaskCount(list.id)}
                   </span>
                 )}
-                <h3>{list.name}</h3>
+                <h3 style={{ 
+                  color: isActive ? '#ffffff' : 'var(--text-primary)', 
+                  fontWeight: 700,
+                  transition: 'color 150ms ease'
+                }}>
+                  {list.name}
+                </h3>
               </motion.div>
             );
           }))}
