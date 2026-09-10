@@ -228,21 +228,28 @@ export const TaskCard = React.memo(function TaskCard({
     HapticService.impact('medium');
     if (cardRef.current) {
       const rect = cardRef.current.getBoundingClientRect();
-      const menuWidth = 260;
-      const estimatedMenuHeight = 420;
+      const menuWidth = Math.min(270, window.innerWidth - 24);
+      const estimatedMenuHeight = 440;
       
       const spaceBelow = window.innerHeight - rect.bottom;
-      const showAbove = spaceBelow < 280 && rect.top > estimatedMenuHeight;
+      const spaceAbove = rect.top;
       
-      const top = showAbove 
-        ? Math.max(12, rect.top - estimatedMenuHeight - 6)
-        : Math.min(window.innerHeight - estimatedMenuHeight - 12, rect.bottom + 6);
+      let top: number;
+      if (spaceBelow >= 360) {
+        top = rect.bottom + 8;
+      } else if (spaceAbove >= 360) {
+        top = Math.max(12, rect.top - estimatedMenuHeight - 8);
+      } else {
+        top = Math.max(12, (window.innerHeight - estimatedMenuHeight) / 2);
+      }
+      top = Math.max(12, Math.min(window.innerHeight - estimatedMenuHeight - 12, top));
         
       let left = rect.right - menuWidth;
-      if (rect.width <= 360) {
-        left = rect.left;
+      if (window.innerWidth <= 640) {
+        left = Math.max(12, (window.innerWidth - menuWidth) / 2);
+      } else {
+        left = Math.max(12, Math.min(window.innerWidth - menuWidth - 16, left));
       }
-      left = Math.max(12, Math.min(window.innerWidth - menuWidth - 12, left));
 
       setContextMenuPosition({ x: left, y: top });
     }
@@ -335,9 +342,20 @@ export const TaskCard = React.memo(function TaskCard({
   return (
     <div
       className="task-item-wrapper"
-      style={{ ...virtualStyle, position: 'relative', margin: 0, boxSizing: 'border-box', zIndex: contextMenuOpen ? 99999 : 1 }}
+      style={{
+        ...virtualStyle,
+        position: 'relative',
+        margin: 0,
+        boxSizing: 'border-box',
+        zIndex: contextMenuOpen ? 99999 : 1,
+        touchAction: 'pan-y',
+        WebkitTouchCallout: 'none',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+      }}
       onPointerDown={(e) => {
-        if (e.pointerType === 'mouse') return;
+        if (isEditingTitle || isEditingNote) return;
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
         touchStartX.current = e.clientX;
         touchStartY.current = e.clientY;
         if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
@@ -349,7 +367,7 @@ export const TaskCard = React.memo(function TaskCard({
         if (!longPressTimer.current) return;
         const dx = Math.abs(e.clientX - touchStartX.current);
         const dy = Math.abs(e.clientY - touchStartY.current);
-        if (dx > 10 || dy > 10) {
+        if (dx > 20 || dy > 20) {
           window.clearTimeout(longPressTimer.current);
           longPressTimer.current = null;
         }
@@ -472,6 +490,7 @@ export const TaskCard = React.memo(function TaskCard({
           whileTap={{ scale: 0.85 }}
           aria-label={isCompletedPeriod ? 'Marcar como pendiente' : 'Completar tarea'}
           disabled={!!isBlocked}
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={(e: React.MouseEvent) => {
             e.stopPropagation();
             if (isBlocked) return;
@@ -1109,6 +1128,7 @@ export const TaskCard = React.memo(function TaskCard({
             {onOpenZenMode && (
               <button
                 className="task-zen-btn"
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
                   onOpenZenMode(task.id);
@@ -1135,6 +1155,7 @@ export const TaskCard = React.memo(function TaskCard({
             {/* Apple Reminders Info (i) button */}
             <button
               className="task-info-btn"
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
                 HapticService.selection();
@@ -1220,7 +1241,7 @@ export const TaskCard = React.memo(function TaskCard({
                   position: 'fixed', zIndex: 100000,
                   top: contextMenuPosition.y,
                   left: contextMenuPosition.x,
-                  width: 260,
+                  width: Math.min(270, window.innerWidth - 24),
                   background: 'var(--bg-material, rgba(255,255,255,0.85))',
                   backdropFilter: 'blur(35px) saturate(190%)',
                   WebkitBackdropFilter: 'blur(35px) saturate(190%)',
@@ -1229,7 +1250,7 @@ export const TaskCard = React.memo(function TaskCard({
                   border: '1px solid var(--border-subtle)',
                   padding: '6px 0',
                   display: 'flex', flexDirection: 'column',
-                  maxHeight: 'calc(100vh - 32px)',
+                  maxHeight: 'calc(100vh - 24px)',
                   overflowY: 'auto'
                 }}
                 onClick={e => e.stopPropagation()}
@@ -1628,11 +1649,11 @@ function MenuActions({
         }} 
       />
 
-      {/* 2. Detalles del recordatorio (Panel de metadatos) */}
+      {/* 2. Editar recordatorio (Panel de metadatos) */}
       <ActionRow 
         icon={<Info size={18} color="var(--accent-primary)" />} 
-        label="Detalles del recordatorio" 
-        sublabel="Editar metadatos"
+        label="Editar recordatorio" 
+        sublabel="Metadatos y notas"
         trailing={<span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>ℹ️</span>}
         onClick={() => { 
           setContextMenuOpen(false); 
@@ -1642,7 +1663,40 @@ function MenuActions({
 
       <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
 
-      {/* 2. Fecha límite */}
+      {/* 3. Sangrar / Anular sangría de recordatorio */}
+      {task.parentId ? (
+        <ActionRow 
+          icon={<IndentDecrease size={18} color="var(--accent-primary)" />} 
+          label="Anular sangría" 
+          sublabel="Convertir en principal"
+          onClick={() => { 
+            setContextMenuOpen(false); 
+            nestTask(task.id, undefined); 
+          }} 
+        />
+      ) : previousTaskId ? (
+        <ActionRow 
+          icon={<IndentIncrease size={18} color="var(--accent-primary)" />} 
+          label="Sangrar recordatorio" 
+          sublabel="Hacer subtarea"
+          onClick={() => { 
+            setContextMenuOpen(false); 
+            nestTask(task.id, previousTaskId); 
+          }} 
+        />
+      ) : (
+        <ActionRow 
+          icon={<IndentIncrease size={18} color="var(--text-tertiary)" />} 
+          label="Sangrar recordatorio" 
+          sublabel="Requiere tarea previa"
+          disabled={true}
+          onClick={() => {}} 
+        />
+      )}
+
+      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
+
+      {/* 4. Fecha límite */}
       <ActionRow 
         icon={<Calendar size={18} color="#007aff" />} 
         label="Fecha límite"
@@ -1651,7 +1705,7 @@ function MenuActions({
         onClick={() => setCurrentSubmenu('due_date')} 
       />
 
-      {/* 3. Marcar como urgente / Prioridad */}
+      {/* 5. Marcar como urgente / Prioridad */}
       <ActionRow 
         icon={<AlertCircle size={18} color={isUrgent ? '#ff3b30' : 'var(--text-primary)'} />} 
         label={isUrgent ? "Quitar urgencia" : "Marcar como urgente"}
@@ -1659,7 +1713,7 @@ function MenuActions({
         onClick={() => setCurrentSubmenu('priority')} 
       />
 
-      {/* 4. Con marca */}
+      {/* 6. Con marca */}
       <ActionRow 
         icon={<Flag size={18} color={task.flagged ? '#ff9500' : 'var(--text-primary)'} fill={task.flagged ? '#ff9500' : 'none'} />} 
         label={task.flagged ? "Quitar marca" : "Con marca"} 
@@ -1671,7 +1725,7 @@ function MenuActions({
 
       <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
 
-      {/* 5. Trasladar a lista */}
+      {/* 7. Trasladar a lista */}
       <ActionRow 
         icon={<FolderInput size={18} />} 
         label="Trasladar a lista..." 
@@ -1679,7 +1733,7 @@ function MenuActions({
         onClick={() => setCurrentSubmenu('move_list')} 
       />
 
-      {/* 6. Trasladar a sección (si hay secciones disponibles en esta lista) */}
+      {/* 8. Trasladar a sección (si hay secciones disponibles en esta lista) */}
       {availableSections.length > 0 && (
         <ActionRow 
           icon={<LayoutList size={18} />} 
@@ -1689,31 +1743,9 @@ function MenuActions({
         />
       )}
 
-      {/* 7. Sangrar / Anular sangría de recordatorio */}
-      {previousTaskId && !task.parentId && (
-        <ActionRow 
-          icon={<IndentIncrease size={18} />} 
-          label="Sangrar recordatorio" 
-          onClick={() => { 
-            setContextMenuOpen(false); 
-            nestTask(task.id, previousTaskId); 
-          }} 
-        />
-      )}
-      {task.parentId && (
-        <ActionRow 
-          icon={<IndentDecrease size={18} />} 
-          label="Anular sangría" 
-          onClick={() => { 
-            setContextMenuOpen(false); 
-            nestTask(task.id, undefined); 
-          }} 
-        />
-      )}
-
       <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
 
-      {/* 8. Duplicar */}
+      {/* 9. Duplicar */}
       <ActionRow 
         icon={<Copy size={18} />} 
         label="Duplicar" 
@@ -1730,7 +1762,7 @@ function MenuActions({
         }} 
       />
 
-      {/* 9. Modo Enfoque Zen (opcional) */}
+      {/* 10. Modo Enfoque Zen (opcional) */}
       {onOpenZenMode && (
         <ActionRow 
           icon={<Play size={18} color="var(--accent-primary)" fill="var(--accent-primary)" />} 
@@ -1738,13 +1770,6 @@ function MenuActions({
           onClick={() => { setContextMenuOpen(false); onOpenZenMode(task.id); }} 
         />
       )}
-
-      {/* 10. Detalles del recordatorio */}
-      <ActionRow 
-        icon={<Info size={18} color="var(--accent-primary)" />} 
-        label="Detalles..." 
-        onClick={() => { setContextMenuOpen(false); onEdit(task.id); }} 
-      />
 
       <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
 
@@ -1760,7 +1785,7 @@ function MenuActions({
 }
 
 function ActionRow({
-  icon, label, sublabel, trailing, onClick, labelColor
+  icon, label, sublabel, trailing, onClick, labelColor, disabled
 }: {
   icon: React.ReactNode;
   label: string;
@@ -1768,12 +1793,14 @@ function ActionRow({
   trailing?: React.ReactNode;
   onClick: () => void;
   labelColor?: string;
+  disabled?: boolean;
 }) {
   return (
     <motion.button
-      whileTap={{ scale: 0.98, backgroundColor: 'var(--bg-hover)' }}
+      whileTap={disabled ? undefined : { scale: 0.98, backgroundColor: 'var(--bg-hover)' }}
       transition={{ type: 'spring', damping: 25, stiffness: 450 }}
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
       style={{
         width: '100%',
         display: 'flex',
@@ -1782,16 +1809,18 @@ function ActionRow({
         padding: '0 14px',
         background: 'none',
         border: 'none',
-        cursor: 'pointer',
+        cursor: disabled ? 'not-allowed' : 'pointer',
         textAlign: 'left',
         WebkitTapHighlightColor: 'transparent',
         height: 42,
         borderRadius: 8,
-        transition: 'background-color 0.12s ease'
+        transition: 'background-color 0.12s ease',
+        opacity: disabled ? 0.38 : 1,
+        pointerEvents: disabled ? 'none' : 'auto'
       }}
-      onPointerDown={e => { e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
-      onPointerUp={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-      onPointerLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+      onPointerDown={e => { if (!disabled) e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
+      onPointerUp={e => { if (!disabled) e.currentTarget.style.backgroundColor = 'transparent'; }}
+      onPointerLeave={e => { if (!disabled) e.currentTarget.style.backgroundColor = 'transparent'; }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, color: labelColor || 'var(--text-primary)', flexShrink: 0 }}>
         {icon}
