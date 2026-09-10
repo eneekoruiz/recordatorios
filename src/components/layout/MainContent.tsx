@@ -84,11 +84,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const isListView = currentView.startsWith('list_');
   const isSmartView = currentView.startsWith('smart_');
 
-  const hasTemporalSections = useMemo(() => {
-    if (!isListView || !currentList) return false;
-    const secs = (listSections || []).filter(s => s.listId === currentList.id && !s.deleted_at);
-    return secs.some(s => /diaria|semanal|mensual|anual/i.test(s.name || s.id));
-  }, [isListView, currentList, listSections]);
 
   const emptyStateProps = useMemo(() => {
     const handleNewTask = () => {
@@ -213,7 +208,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
   // Opciones de inclusión jerárquica para ciclos (Semanales con/sin Diarias, Mensuales con/sin Semanales o Diarias)
-  const [cycleInclusion, setCycleInclusion] = useState<{
+  const [cycleInclusion] = useState<{
     weekly: 'only_weekly' | 'include_daily';
     monthly: 'only_monthly' | 'include_weekly' | 'include_all';
     annual: 'only_annual' | 'include_monthly' | 'include_all';
@@ -229,23 +224,19 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     };
   });
 
-  const updateCycleInclusion = (updates: Partial<typeof cycleInclusion>) => {
-    setCycleInclusion(prev => {
-      const next = { ...prev, ...updates };
-      try { localStorage.setItem('cycle_inclusion_pref', JSON.stringify(next)); } catch {}
-      return next;
-    });
-  };
 
   // Filtro de secciones temporales dentro de listas (ej. Care, Quehaceres)
   const [listSectionFilter, setListSectionFilter] = useState<string>('all');
   // Filtro de franja horaria para vista diaria (Mañana, Tarde, Noche)
   const [dailyTimeFilter, setDailyTimeFilter] = useState<'all' | 'morning' | 'afternoon' | 'night'>('all');
+  // Aislamiento contextual de sección (Ocultar el resto / Ver todas)
+  const [isolatedSectionKey, setIsolatedSectionKey] = useState<string | null>(null);
 
   // Resetear filtros al cambiar de vista o lista
   useEffect(() => {
     setListSectionFilter('all');
     setDailyTimeFilter('all');
+    setIsolatedSectionKey(null);
   }, [currentView]);
 
   // Helper para resolver franja horaria de una tarea
@@ -754,6 +745,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       });
     } else if (!isListView) {
       Object.entries(groupedTasks).forEach(([categoryOrCycle, categoryTasks]) => {
+        if (isolatedSectionKey && isolatedSectionKey !== categoryOrCycle) {
+          return;
+        }
+
         let color = '#34c759'; // Default
         let headerTitle = categoryOrCycle;
         let headerDepth = 0;
@@ -860,16 +855,18 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       
       // 1. Uncategorized (no_section)
       if (groupedTasks['no_section'] && groupedTasks['no_section'].length > 0) {
-        if (!collapsed['no_section']) {
-          const roots = groupedTasks['no_section'].filter(t => !t.parentId);
-          const processNode = (task: TaskItem, depth: number) => {
-            flat.push({ type: 'task', task, depth });
-            if (!isCatCollapsed(`task_${task.id}`)) {
-              const children = groupedTasks['no_section'].filter(t => t.parentId === task.id);
-              children.forEach(c => processNode(c, depth + 1));
-            }
-          };
-          roots.forEach(r => processNode(r, 0));
+        if (!isolatedSectionKey || isolatedSectionKey === 'no_section') {
+          if (!collapsed['no_section']) {
+            const roots = groupedTasks['no_section'].filter(t => !t.parentId);
+            const processNode = (task: TaskItem, depth: number) => {
+              flat.push({ type: 'task', task, depth });
+              if (!isCatCollapsed(`task_${task.id}`)) {
+                const children = groupedTasks['no_section'].filter(t => t.parentId === task.id);
+                children.forEach(c => processNode(c, depth + 1));
+              }
+            };
+            roots.forEach(r => processNode(r, 0));
+          }
         }
       }
 
@@ -887,6 +884,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         });
 
         sortedCycles.forEach(catKey => {
+          if (isolatedSectionKey && isolatedSectionKey !== catKey) return;
           const cId = catKey.replace('cycle_', '');
           const cObj = allCycles.find(c => c.id === cId);
           const cName = cObj ? cObj.name : cId;
@@ -911,12 +909,28 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       const sectionsForList = (listSections || [])
         .filter(s => s.listId === currentList?.id && !s.deleted_at)
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+      const isDescendant = (targetCatKey: string, ancestorSecId: string) => {
+        if (!targetCatKey.startsWith('section_')) return false;
+        const targetId = targetCatKey.replace('section_', '');
+        let curr = sectionsForList.find(s => s.id === targetId);
+        while (curr) {
+          if (curr.parentId === ancestorSecId) return true;
+          curr = sectionsForList.find(s => s.id === curr?.parentId);
+        }
+        return false;
+      };
       
       const processSection = (secId: string, depth: number) => {
         const sec = sectionsForList.find(s => s.id === secId);
         if (!sec) return;
         
         const categoryKey = `section_${sec.id}`;
+
+        if (isolatedSectionKey && isolatedSectionKey !== categoryKey && !isDescendant(isolatedSectionKey, sec.id) && !isDescendant(categoryKey, isolatedSectionKey.replace('section_', ''))) {
+          return;
+        }
+
         const categoryTasks = groupedTasks[categoryKey] || [];
 
         // Si se está filtrando por temporalidad (ej. solo semanales o solo diarias)
@@ -969,7 +983,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     }
 
     return flat;
-  }, [groupedTasks, smartTasks, currentCycle, collapsed, isListView, lists, listSections, currentList, isCatCollapsed]);
+  }, [groupedTasks, smartTasks, currentCycle, collapsed, isListView, lists, listSections, currentList, isCatCollapsed, isolatedSectionKey]);
 
   // 2. Scroll Container & Item Keys (Refactored to native fluid block layout for zero-overlap & perfect touch scroll)
   const parentRef = useRef<HTMLDivElement>(null);
@@ -1382,280 +1396,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           )}
         </div>
 
-          {(() => {
-            if (currentCycle) {
-              return (
-                <div className="content-stats" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginLeft: '4px', width: '100%' }}>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <span className="stat-chip" style={{ minHeight: '32px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', lineHeight: '1.3', wordBreak: 'break-word', boxSizing: 'border-box', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 999 }}><strong>{activeVisibleCount}</strong> &nbsp;pendientes</span>
-                    <span className="stat-chip" style={{ minHeight: '32px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', lineHeight: '1.3', wordBreak: 'break-word', boxSizing: 'border-box', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 999 }}><strong>{completedVisibleCount}</strong> &nbsp;completadas</span>
-                  </div>
-
-                  {/* Selector Granular para Diarias: Momento del día (Todas, Mañana, Tarde, Noche) */}
-                  {currentCycle.id === 'cycle_day' && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Momento:
-                      </span>
-                      {[
-                        { id: 'all', label: '⚡ Todas' },
-                        { id: 'morning', label: '🌅 Mañana' },
-                        { id: 'afternoon', label: '☀️ Tarde' },
-                        { id: 'night', label: '🌙 Noche' },
-                      ].map(opt => (
-                        <button
-                          key={opt.id}
-                          onClick={() => { HapticService.selection(); setDailyTimeFilter(opt.id as any); }}
-                          style={{
-                            cursor: 'pointer',
-                            minHeight: '28px',
-                            padding: '3px 11px',
-                            fontSize: '0.78rem',
-                            fontWeight: dailyTimeFilter === opt.id ? 700 : 500,
-                            background: dailyTimeFilter === opt.id ? 'var(--accent-glow)' : 'var(--bg-card)',
-                            color: dailyTimeFilter === opt.id ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                            border: dailyTimeFilter === opt.id ? '1px solid rgba(10,132,255,0.4)' : '1px solid var(--border-subtle)',
-                            borderRadius: 999,
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Selector Granular para Semanales: Solo Semanales vs Semanales + Diarias */}
-                  {currentCycle.id === 'cycle_week' && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Ver:
-                      </span>
-                      <button
-                        onClick={() => { HapticService.selection(); updateCycleInclusion({ weekly: 'only_weekly' }); }}
-                        style={{
-                          cursor: 'pointer',
-                          minHeight: '28px',
-                          padding: '4px 12px',
-                          fontSize: '0.8rem',
-                          fontWeight: cycleInclusion.weekly === 'only_weekly' ? 700 : 500,
-                          background: cycleInclusion.weekly === 'only_weekly' ? 'var(--accent-glow)' : 'var(--bg-card)',
-                          color: cycleInclusion.weekly === 'only_weekly' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                          border: cycleInclusion.weekly === 'only_weekly' ? '1px solid rgba(10,132,255,0.4)' : '1px solid var(--border-subtle)',
-                          borderRadius: 999,
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        🎯 Solo Semanales
-                      </button>
-                      <button
-                        onClick={() => { HapticService.selection(); updateCycleInclusion({ weekly: 'include_daily' }); }}
-                        style={{
-                          cursor: 'pointer',
-                          minHeight: '28px',
-                          padding: '4px 12px',
-                          fontSize: '0.8rem',
-                          fontWeight: cycleInclusion.weekly === 'include_daily' ? 700 : 500,
-                          background: cycleInclusion.weekly === 'include_daily' ? 'var(--accent-glow)' : 'var(--bg-card)',
-                          color: cycleInclusion.weekly === 'include_daily' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                          border: cycleInclusion.weekly === 'include_daily' ? '1px solid rgba(10,132,255,0.4)' : '1px solid var(--border-subtle)',
-                          borderRadius: 999,
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        🔄 Semanales + Diarias
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Selector Granular para Mensuales: Solo Mensuales vs Mensuales + Semanales vs Todo */}
-                  {currentCycle.id === 'cycle_month' && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Ver:
-                      </span>
-                      <button
-                        onClick={() => { HapticService.selection(); updateCycleInclusion({ monthly: 'only_monthly' }); }}
-                        style={{
-                          cursor: 'pointer',
-                          minHeight: '28px',
-                          padding: '4px 12px',
-                          fontSize: '0.8rem',
-                          fontWeight: cycleInclusion.monthly === 'only_monthly' ? 700 : 500,
-                          background: cycleInclusion.monthly === 'only_monthly' ? 'var(--accent-glow)' : 'var(--bg-card)',
-                          color: cycleInclusion.monthly === 'only_monthly' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                          border: cycleInclusion.monthly === 'only_monthly' ? '1px solid rgba(10,132,255,0.4)' : '1px solid var(--border-subtle)',
-                          borderRadius: 999,
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        🎯 Solo Mensuales
-                      </button>
-                      <button
-                        onClick={() => { HapticService.selection(); updateCycleInclusion({ monthly: 'include_weekly' }); }}
-                        style={{
-                          cursor: 'pointer',
-                          minHeight: '28px',
-                          padding: '4px 12px',
-                          fontSize: '0.8rem',
-                          fontWeight: cycleInclusion.monthly === 'include_weekly' ? 700 : 500,
-                          background: cycleInclusion.monthly === 'include_weekly' ? 'var(--accent-glow)' : 'var(--bg-card)',
-                          color: cycleInclusion.monthly === 'include_weekly' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                          border: cycleInclusion.monthly === 'include_weekly' ? '1px solid rgba(10,132,255,0.4)' : '1px solid var(--border-subtle)',
-                          borderRadius: 999,
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        📅 Mensuales + Semanales
-                      </button>
-                      <button
-                        onClick={() => { HapticService.selection(); updateCycleInclusion({ monthly: 'include_all' }); }}
-                        style={{
-                          cursor: 'pointer',
-                          minHeight: '28px',
-                          padding: '4px 12px',
-                          fontSize: '0.8rem',
-                          fontWeight: cycleInclusion.monthly === 'include_all' ? 700 : 500,
-                          background: cycleInclusion.monthly === 'include_all' ? 'var(--accent-glow)' : 'var(--bg-card)',
-                          color: cycleInclusion.monthly === 'include_all' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                          border: cycleInclusion.monthly === 'include_all' ? '1px solid rgba(10,132,255,0.4)' : '1px solid var(--border-subtle)',
-                          borderRadius: 999,
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        🌐 Todo (+ Semanales + Diarias)
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Selector Granular para Anuales: Solo Anuales vs Anuales + Mensuales vs Todo */}
-                  {currentCycle.id === 'cycle_year' && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Ver:
-                      </span>
-                      <button
-                        onClick={() => { HapticService.selection(); updateCycleInclusion({ annual: 'only_annual' }); }}
-                        style={{
-                          cursor: 'pointer',
-                          minHeight: '28px',
-                          padding: '4px 12px',
-                          fontSize: '0.8rem',
-                          fontWeight: cycleInclusion.annual === 'only_annual' ? 700 : 500,
-                          background: cycleInclusion.annual === 'only_annual' ? 'var(--accent-glow)' : 'var(--bg-card)',
-                          color: cycleInclusion.annual === 'only_annual' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                          border: cycleInclusion.annual === 'only_annual' ? '1px solid rgba(10,132,255,0.4)' : '1px solid var(--border-subtle)',
-                          borderRadius: 999,
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        🎯 Solo Anuales
-                      </button>
-                      <button
-                        onClick={() => { HapticService.selection(); updateCycleInclusion({ annual: 'include_monthly' }); }}
-                        style={{
-                          cursor: 'pointer',
-                          minHeight: '28px',
-                          padding: '4px 12px',
-                          fontSize: '0.8rem',
-                          fontWeight: cycleInclusion.annual === 'include_monthly' ? 700 : 500,
-                          background: cycleInclusion.annual === 'include_monthly' ? 'var(--accent-glow)' : 'var(--bg-card)',
-                          color: cycleInclusion.annual === 'include_monthly' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                          border: cycleInclusion.annual === 'include_monthly' ? '1px solid rgba(10,132,255,0.4)' : '1px solid var(--border-subtle)',
-                          borderRadius: 999,
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        🗓️ Anuales + Mensuales
-                      </button>
-                      <button
-                        onClick={() => { HapticService.selection(); updateCycleInclusion({ annual: 'include_all' }); }}
-                        style={{
-                          cursor: 'pointer',
-                          minHeight: '28px',
-                          padding: '4px 12px',
-                          fontSize: '0.8rem',
-                          fontWeight: cycleInclusion.annual === 'include_all' ? 700 : 500,
-                          background: cycleInclusion.annual === 'include_all' ? 'var(--accent-glow)' : 'var(--bg-card)',
-                          color: cycleInclusion.annual === 'include_all' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                          border: cycleInclusion.annual === 'include_all' ? '1px solid rgba(10,132,255,0.4)' : '1px solid var(--border-subtle)',
-                          borderRadius: 999,
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        🌐 Todo (+ Mensuales + Sem. + Diarias)
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Fallback para ciclos personalizados creados por el usuario */}
-                  {currentCycle.daysValue > 1 && !['cycle_week', 'cycle_month', 'cycle_year'].includes(currentCycle.id) && (
-                    <div style={{ display: 'flex', gap: 6, width: '100%', marginTop: 4 }}>
-                      <button
-                        onClick={() => { HapticService.selection(); updateCycleInclusion({ weekly: 'only_weekly' }); }}
-                        style={{
-                          cursor: 'pointer',
-                          minHeight: '28px',
-                          padding: '4px 12px',
-                          fontSize: '0.8rem',
-                          fontWeight: 500,
-                          background: 'var(--bg-card)',
-                          color: 'var(--text-secondary)',
-                          border: '1px solid var(--border-subtle)',
-                          borderRadius: 999
-                        }}
-                      >
-                        🎯 Solo {currentCycle.name}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            }
-
-            if (isListView && hasTemporalSections) {
-              return (
-                <div className="content-stats" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginLeft: '4px', width: '100%' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      Filtro:
-                    </span>
-                    {[
-                      { id: 'all', label: '🌟 Todas' },
-                      { id: 'only_diaria', label: '☀️ Diarias' },
-                      { id: 'only_semanal', label: '📅 Solo Semanales' },
-                      { id: 'semanal_plus_diaria', label: '🔄 Sem. + Diarias' },
-                      { id: 'only_mensual', label: '🌙 Solo Mensuales' },
-                      { id: 'mensual_plus_semanal', label: '🗓️ Mens. + Sem.' },
-                      { id: 'mensual_all', label: '🌐 Todo (+ Diarias)' },
-                      { id: 'only_anual', label: '🎆 Anuales' },
-                    ].map(opt => (
-                      <button
-                        key={opt.id}
-                        onClick={() => { HapticService.selection(); setListSectionFilter(opt.id); }}
-                        style={{
-                          cursor: 'pointer',
-                          minHeight: '28px',
-                          padding: '3px 11px',
-                          fontSize: '0.78rem',
-                          fontWeight: listSectionFilter === opt.id ? 700 : 500,
-                          background: listSectionFilter === opt.id ? 'var(--accent-glow)' : 'var(--bg-card)',
-                          color: listSectionFilter === opt.id ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                          border: listSectionFilter === opt.id ? '1px solid rgba(10,132,255,0.4)' : '1px solid var(--border-subtle)',
-                          borderRadius: 999,
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              );
-            }
-
-            return null;
-          })()}
+          {currentCycle && (
+            <div className="content-stats" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginLeft: '4px' }}>
+              <span className="stat-chip" style={{ minHeight: '32px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', lineHeight: '1.3', wordBreak: 'break-word', boxSizing: 'border-box', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 999 }}><strong>{activeVisibleCount}</strong> &nbsp;pendientes</span>
+              <span className="stat-chip" style={{ minHeight: '32px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', lineHeight: '1.3', wordBreak: 'break-word', boxSizing: 'border-box', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 999 }}><strong>{completedVisibleCount}</strong> &nbsp;completadas</span>
+            </div>
+          )}
 
           {currentCycle && !['cycle_day', 'cycle_week', 'cycle_month', 'cycle_year'].includes(currentCycle.id) && (
             <div>
@@ -1915,11 +1661,47 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                       </div>
                     )}
                   </div>
-                  <ChevronDown 
-                    size={18} 
-                    color="var(--text-tertiary)" 
-                    style={{ transform: isCatCollapsed(data.category) ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}
-                  />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    {(!isCatCollapsed(data.category) || isolatedSectionKey === data.category) && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          HapticService.selection();
+                          setIsolatedSectionKey(prev => {
+                            const next = prev === data.category ? null : data.category;
+                            if (next && isCatCollapsed(data.category)) {
+                              toggleCategory(data.category);
+                            }
+                            return next;
+                          });
+                        }}
+                        style={{
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          padding: '3px 10px',
+                          borderRadius: 999,
+                          fontSize: '0.74rem',
+                          fontWeight: isolatedSectionKey === data.category ? 700 : 500,
+                          background: isolatedSectionKey === data.category ? 'var(--accent-primary)' : 'var(--bg-card)',
+                          color: isolatedSectionKey === data.category ? '#ffffff' : 'var(--text-secondary)',
+                          border: isolatedSectionKey === data.category ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                          boxShadow: isolatedSectionKey === data.category ? '0 2px 8px rgba(10,132,255,0.35)' : 'none',
+                          transition: 'all 0.15s ease',
+                          lineHeight: '1.2'
+                        }}
+                        title={isolatedSectionKey === data.category ? "Mostrar todas las secciones" : `Ocultar el resto y ver solo ${data.title}`}
+                      >
+                        {isolatedSectionKey === data.category ? '👁️ Ver todas' : 'Ocultar el resto'}
+                      </button>
+                    )}
+                    <ChevronDown 
+                      size={18} 
+                      color="var(--text-tertiary)" 
+                      style={{ transform: isCatCollapsed(data.category) ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}
+                    />
+                  </div>
                 </div>
                 {isCustomSection && dragOverSectionId === data.sectionId && (
                   <span style={{ fontSize: '0.8rem', color: data.color }}>Mover aquí</span>
