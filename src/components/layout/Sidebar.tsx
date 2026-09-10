@@ -995,16 +995,27 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
       >
         
         {/* ANCLADAS (PINNED LISTS SECTION) */}
-        {(pinnedSmartLists.length > 0 || (lists || []).some((l: any) => l.isPinned)) && (
-          <div style={{ padding: '0 14px', marginBottom: 18 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, paddingLeft: 4 }}>
-              <span className="section-header" style={{ margin: 0, padding: 0 }}>Ancladas</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {/* Pinned Smart Lists */}
-              {pinnedSmartLists.map(smartId => {
-                const smartItem = SMART_LISTS.find(s => s.id === smartId);
-                if (!smartItem) return null;
+        {(() => {
+          const visiblePinnedSmartLists = pinnedSmartLists.filter(smartId => {
+            if (smartId === 'smart_primeros_pasos' && getTaskCount('smart_primeros_pasos') === 0 && !isEditMode) return false;
+            if (!smartListVisibility[smartId] && !isEditMode) return false;
+            return true;
+          });
+          const visiblePinnedCustomLists = (lists || []).filter((l: any) => l.isPinned && l.id !== 'primeros_pasos');
+          const hasAnyPinned = visiblePinnedSmartLists.length > 0 || visiblePinnedCustomLists.length > 0;
+
+          if (!hasAnyPinned && !isEditMode) return null;
+
+          return (
+            <div style={{ padding: '0 14px', marginBottom: 18 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, paddingLeft: 4 }}>
+                <span className="section-header" style={{ margin: 0, padding: 0 }}>Ancladas</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {/* Pinned Smart Lists */}
+                {visiblePinnedSmartLists.map(smartId => {
+                  const smartItem = SMART_LISTS.find(s => s.id === smartId);
+                  if (!smartItem) return null;
                 const Icon = smartItem.icon;
                 const count = getTaskCount(smartId);
                 const isActive = currentView === smartId;
@@ -1134,7 +1145,8 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               })}
             </div>
           </div>
-        )}
+        );
+      })()}
 
         {/* SMART LISTS GRID */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 14px', marginBottom: 8 }}>
@@ -1154,12 +1166,22 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
           padding: '0 14px',
           marginBottom: 18
         }}>
-          {SMART_LISTS.filter(list => !pinnedSmartLists.includes(list.id) && (smartListVisibility[list.id] || isEditMode)).length === 0 ? (
-            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 'var(--space-16) 0', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>
-              No tienes listas inteligentes seleccionadas
-            </div>
-          ) : (
-            SMART_LISTS.filter(list => !pinnedSmartLists.includes(list.id)).map(list => {
+          {(() => {
+            const availableGridLists = SMART_LISTS.filter(list => {
+              if (pinnedSmartLists.includes(list.id)) return false;
+              if (list.id === 'smart_primeros_pasos' && getTaskCount('smart_primeros_pasos') === 0 && !isEditMode) return false;
+              return smartListVisibility[list.id] || isEditMode;
+            });
+
+            if (availableGridLists.length === 0) {
+              return (
+                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 'var(--space-16) 0', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>
+                  No tienes listas inteligentes seleccionadas
+                </div>
+              );
+            }
+
+            return availableGridLists.map(list => {
               if (!smartListVisibility[list.id] && !isEditMode) return null;
               const Icon = list.icon;
               const isActive = currentView === list.id;
@@ -1251,7 +1273,8 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 </h3>
               </motion.div>
             );
-          }))}
+          });
+        })()}
         </div>
 
 
@@ -1272,8 +1295,8 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
             </div>
           </div>
           <div className="ios-list-block">
-            {/* 🚀 Primeros Pasos (Banner distinguido en la parte superior solo si no está ya anclada arriba) */}
-            {lists?.some(l => l.id === 'primeros_pasos') && !pinnedSmartLists.includes('smart_primeros_pasos') && !lists.some(l => l.id === 'primeros_pasos' && l.isPinned) && (
+            {/* 🚀 Primeros Pasos (Banner distinguido en la parte superior solo si no está ya anclada arriba y tiene tareas pendientes) */}
+            {lists?.some(l => l.id === 'primeros_pasos') && (getTaskCount('smart_primeros_pasos') > 0 || isEditMode) && !pinnedSmartLists.includes('smart_primeros_pasos') && !lists.some(l => l.id === 'primeros_pasos' && l.isPinned) && (
               <motion.div 
                 className={`ios-list-item ${currentView === 'smart_primeros_pasos' || currentView === 'list_primeros_pasos' ? 'active' : ''}`}
                 onClick={() => onSelectView('smart_primeros_pasos')}

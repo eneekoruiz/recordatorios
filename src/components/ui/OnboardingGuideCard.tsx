@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, ArrowRight, Trash2, Rocket } from 'lucide-react';
-import { useAppStore } from '../../store/useAppStore';
+import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { SoundService } from '../../services/SoundService';
 
 export function OnboardingGuideCard() {
@@ -43,14 +43,16 @@ export function OnboardingGuideCard() {
     window.dispatchEvent(new CustomEvent('select-view', { detail: 'list_primeros_pasos' }));
   };
 
-  if (!isVisible) return null;
-
   // Obtener tareas reales de la lista 'primeros_pasos'
-  const onboardingTasks = Object.values(tasksMap).filter(t => t.categoryId === 'primeros_pasos');
-  const completedTasks = onboardingTasks.filter(t => t.status === 'completed' || !!(t as any).completed_at);
+  const onboardingTasks = Object.values(tasksMap).filter(t => t.categoryId === 'primeros_pasos' && !t.deleted_at);
+  const completedTasks = onboardingTasks.filter(t => isTaskCompleted(t));
 
   const totalCount = onboardingTasks.length || 5;
   const completedCount = completedTasks.length;
+  const pendingCount = totalCount - completedCount;
+
+  if (!isVisible || pendingCount === 0) return null;
+
   const progressPercent = Math.round((completedCount / totalCount) * 100);
 
   // Acciones predeterminadas asociadas a las tareas de primeros pasos

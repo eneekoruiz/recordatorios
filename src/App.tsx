@@ -12,7 +12,7 @@ import { UniversalImporter } from './components/views/UniversalImporter';
 import { CommandPalette } from './components/layout/CommandPalette';
 import { ZenMode } from './components/tasks/ZenMode';
 import { GeolocationService } from './services/GeolocationService';
-import { useAppStore } from './store/useAppStore';
+import { useAppStore, isTaskCompleted } from './store/useAppStore';
 import { useNavigation } from './hooks/useNavigation';
 import { NavigationFrame } from './components/layout/NavigationFrame';
 import { AuthScreen } from './components/auth/AuthScreen';
@@ -27,7 +27,22 @@ function App() {
   // ── All hooks FIRST (before any conditional returns) ──────────────
   const token = useAppStore((state) => state.token);
   const tasks = useAppStore((state) => state.tasks); // Subscribing to tasks
-  const [currentView, setCurrentView] = useState('smart_primeros_pasos');
+  const [currentView, setCurrentView] = useState(() => {
+    try {
+      const raw = localStorage.getItem('reminders_store');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const storedTasks = Object.values(parsed?.state?.tasks || {});
+        if (storedTasks.length > 0) {
+          const pendingOnboarding = storedTasks.filter((t: any) => t.categoryId === 'primeros_pasos' && !t.deleted_at && t.status !== 'completed');
+          if (pendingOnboarding.length === 0) {
+            return 'smart_today';
+          }
+        }
+      }
+    } catch {}
+    return 'smart_primeros_pasos';
+  });
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [mobileView, setMobileView] = useState<'sidebar' | 'content'>('sidebar');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -46,6 +61,17 @@ function App() {
     }, 600); // 600ms max — avoid getting stuck on the loader
     return () => window.clearTimeout(hydrationGuard);
   }, [hasHydrated]);
+
+  // Si los primeros pasos ya están completados o sin tareas pendientes, redirigir automáticamente fuera de ella
+  useEffect(() => {
+    if (currentView === 'smart_primeros_pasos' || currentView === 'list_primeros_pasos') {
+      const allTasks = Object.values(tasks || {}).filter((t: any) => !t.deleted_at);
+      const activePrimerosPasos = allTasks.filter((t: any) => t.categoryId === 'primeros_pasos' && !isTaskCompleted(t));
+      if (allTasks.length > 0 && activePrimerosPasos.length === 0) {
+        setCurrentView('smart_today');
+      }
+    }
+  }, [currentView, tasks]);
 
   const navStack = useNavigation((state) => state.stack);
   const navView = useNavigation((state) => state.currentView());
