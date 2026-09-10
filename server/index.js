@@ -8,7 +8,9 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
-const prisma = new PrismaClient({});
+const prisma = new PrismaClient(
+  process.env.DATABASE_URL ? { datasourceUrl: process.env.DATABASE_URL } : {}
+);
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_for_recordatorios';
 const clients = new Map(); // userId -> Set of Response objects
@@ -27,7 +29,8 @@ app.use((req, res, next) => {
 // --- IN-MEMORY RATE LIMITER FOR AUTH ---
 const authAttempts = new Map(); // ip -> { count, resetTime }
 const authRateLimiter = (req, res, next) => {
-  const ip = req.ip || req.connection.remoteAddress || 'unknown';
+  const forwarded = req.headers['x-forwarded-for'];
+  const ip = (typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : null) || req.socket?.remoteAddress || req.ip || 'unknown';
   const now = Date.now();
   const record = authAttempts.get(ip) || { count: 0, resetTime: now + 15 * 60 * 1000 };
 
@@ -39,8 +42,8 @@ const authRateLimiter = (req, res, next) => {
   record.count += 1;
   authAttempts.set(ip, record);
 
-  if (record.count > 25) {
-    return res.status(429).json({ error: 'Demasiados intentos de acceso. Por favor, espera 15 minutos.' });
+  if (record.count > 60) {
+    return res.status(429).json({ error: 'Demasiados intentos de acceso. Por favor, espera unos minutos.' });
   }
 
   next();
@@ -60,8 +63,13 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+// --- HEALTH CHECK ---
+app.get(['/api/health', '/health'], (req, res) => {
+  res.json({ status: 'ok', serverTime: new Date().toISOString() });
+});
+
 // --- AUTHENTICATION ---
-app.post('/api/auth/register', authRateLimiter, async (req, res) => {
+app.post(['/api/auth/register', '/auth/register'], authRateLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
@@ -69,12 +77,22 @@ app.post('/api/auth/register', authRateLimiter, async (req, res) => {
     }
 
     const cleanEmail = email.toLowerCase().trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      return res.status(400).json({ error: 'El formato de correo electrónico no es válido' });
+    }
+
     if (password.length < 4) {
       return res.status(400).json({ error: 'La contraseña debe tener al menos 4 caracteres' });
     }
 
     const existing = await prisma.user.findUnique({ where: { email: cleanEmail } });
-    if (existing) return res.status(400).json({ error: 'El email ya está registrado' });
+    if (existing) {
+      return res.status(409).json({ 
+        error: 'Este correo ya está registrado. Puedes iniciar sesión o restablecer tu contraseña.',
+        existing: true
+      });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
@@ -84,22 +102,24 @@ app.post('/api/auth/register', authRateLimiter, async (req, res) => {
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET);
     res.json({ token, user: { id: user.id, email: user.email } });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error('Register error:', error);
+    res.status(500).json({ error: 'Error al registrar la cuenta. Por favor, inténtalo de nuevo.' });
   }
 });
 
-app.post('/api/auth/login', authRateLimiter, async (req, res) => {
+app.post(['/api/auth/login', '/auth/login'], authRateLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password || typeof email !== 'string') {
-      return res.status(400).json({ error: 'Faltan credenciales válidas' });
+      return res.status(400).json({ error: 'Introduce tu email y contraseña' });
     }
 
     const cleanEmail = email.toLowerCase().trim();
     const user = await prisma.user.findUnique({ where: { email: cleanEmail } });
 
-    if (!user || !user.password) return res.status(400).json({ error: 'Usuario o contraseña incorrectos' });
+    if (!user || !user.password) {
+      return res.status(400).json({ error: 'No existe ninguna cuenta con este email o la contraseña es incorrecta' });
+    }
 
     let validPassword = false;
     
@@ -120,18 +140,55 @@ app.post('/api/auth/login', authRateLimiter, async (req, res) => {
       }
     }
 
-    if (!validPassword) return res.status(400).json({ error: 'Contraseña incorrecta' });
+    if (!validPassword) {
+      return res.status(400).json({ error: 'Contraseña incorrecta. Puedes restablecerla si la has olvidado.' });
+    }
 
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET);
     res.json({ token, user: { id: user.id, email: user.email } });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Error en el servidor de autenticación' });
+  }
+});
+
+app.post(['/api/auth/reset-password', '/auth/reset-password'], authRateLimiter, async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+    if (!email || !newPassword || typeof email !== 'string' || typeof newPassword !== 'string') {
+      return res.status(400).json({ error: 'Faltan credenciales válidas' });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    if (newPassword.length < 4) {
+      return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 4 caracteres' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: cleanEmail } });
+    if (!user) {
+      return res.status(404).json({ error: 'No existe ninguna cuenta registrada con este correo electrónico' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const updated = await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword }
+    });
+
+    const token = jwt.sign({ id: updated.id, email: updated.email }, JWT_SECRET);
+    res.json({ 
+      token, 
+      user: { id: updated.id, email: updated.email }, 
+      message: 'Contraseña actualizada y sesión iniciada correctamente' 
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Error al restablecer la contraseña' });
   }
 });
 
 // --- SYNC ---
-app.post('/api/sync/push', authenticateToken, async (req, res) => {
+app.post(['/api/sync/push', '/sync/push'], authenticateToken, async (req, res) => {
   const { tasks, cycles, lists, listSections } = req.body;
   const userId = req.user.id;
 
@@ -222,7 +279,7 @@ app.post('/api/sync/push', authenticateToken, async (req, res) => {
   }
 });
 
-app.get('/api/sync/pull', authenticateToken, async (req, res) => {
+app.get(['/api/sync/pull', '/sync/pull'], authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const lastToken = parseInt(req.query.lastToken || '0', 10);
   const lastDate = new Date(lastToken);
@@ -292,7 +349,7 @@ app.get('/api/sync/pull', authenticateToken, async (req, res) => {
   }
 });
 
-app.get('/api/sync/live', (req, res) => {
+app.get(['/api/sync/live', '/sync/live'], (req, res) => {
   const token = req.query.token;
   if (!token) return res.sendStatus(401);
 
@@ -335,7 +392,7 @@ app.get('/api/sync/live', (req, res) => {
 });
 
 // --- SHARE ---
-app.post('/api/share/generate', authenticateToken, async (req, res) => {
+app.post(['/api/share/generate', '/share/generate'], authenticateToken, async (req, res) => {
   const { listId } = req.body;
   const userId = req.user.id;
   try {
@@ -349,7 +406,7 @@ app.post('/api/share/generate', authenticateToken, async (req, res) => {
   }
 });
 
-app.get('/api/share/:token', authenticateToken, async (req, res) => {
+app.get(['/api/share/:token', '/share/:token'], authenticateToken, async (req, res) => {
   const { token } = req.params;
   try {
     const link = await prisma.sharedLink.findUnique({ where: { id: token }, include: { list: true } });
