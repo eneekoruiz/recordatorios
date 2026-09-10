@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, useMotionValue, useTransform, AnimatePresence, useMotionValueEvent } from 'framer-motion';
 import {
   CheckCircle, Trash2, Lock, Link2, Flag, MapPin,
-  Image as ImageIcon, MoreHorizontal, Repeat, Edit3,
+  Image as ImageIcon, MoreHorizontal, Edit3,
   ChevronDown, Copy, IndentIncrease, IndentDecrease, X, Play, Calendar, Info,
   AlertCircle, CalendarDays, CalendarX, Clock, Sun, ChevronRight, ArrowLeft, FolderInput, LayoutList
 } from 'lucide-react';
@@ -40,7 +40,6 @@ export const TaskCard = React.memo(function TaskCard({
   const tasks = useAppStore(state => state.tasks);
   const nestTask = useAppStore(state => state.nestTask);
   const lists = useAppStore(state => state.lists);
-  const taskCycle = cycles.find(c => c.id === task.cycle_id);
   const taskList = lists?.find(l => l.id === task.categoryId);
   const taskColor = taskList?.color || 'var(--accent-primary, #007aff)';
 
@@ -52,6 +51,134 @@ export const TaskCard = React.memo(function TaskCard({
     else if (due.getTime() === today.getTime()) dueDateColor = '#007aff'; // Apple Blue
     else dueDateColor = 'var(--text-tertiary)';
   }
+
+  // Helper para franja horaria diaria (Mañana 🌅, Tarde ☀️, Noche 🌙)
+  const timeOfDayInfo = (() => {
+    let tag: 'morning' | 'afternoon' | 'night' | null = task.timeOfDay || null;
+    
+    if (!tag && task.alerts && task.alerts.length > 0) {
+      const timeAlert = task.alerts.find(a => a.type === 'at_time' && a.time);
+      if (timeAlert && timeAlert.time) {
+        const hour = parseInt(timeAlert.time.split(':')[0], 10);
+        if (!isNaN(hour)) {
+          if (hour >= 6 && hour < 14) tag = 'morning';
+          else if (hour >= 14 && hour < 20) tag = 'afternoon';
+          else tag = 'night';
+        }
+      }
+    }
+
+    if (!tag) {
+      const text = `${task.title || ''} ${task.description || ''}`.toLowerCase();
+      if (/\b(mañana|mañanero|despertar|despertarse|desayun|desayunar|aseo|dientes)\b/i.test(text)) {
+        tag = 'morning';
+      } else if (/\b(tarde|almuerz|almorzar|comida|comer|meriend|merendar|siesta)\b/i.test(text)) {
+        tag = 'afternoon';
+      } else if (/\b(noche|cenar|cena|dormir|acostar|acostarse|skin-care|skincare|serum)\b/i.test(text)) {
+        tag = 'night';
+      }
+    }
+
+    // Mostrar el tag si está configurado explícitamente, o si es una tarea de ciclo diario / recurrente
+    const isDaily = task.cycle_id === 'cycle_day' || 
+      !!task.targetCount || 
+      (task.sectionId && (task.sectionId.includes('diaria') || task.sectionId.includes('recurrent'))) ||
+      task.categoryId === 'limpieza_diaria' || task.categoryId === 'care_diaria';
+
+    if (!tag && !isDaily) return null;
+    const resolvedTag = tag || 'morning';
+
+    switch (resolvedTag) {
+      case 'morning':
+        return {
+          tag: 'morning' as const,
+          label: 'Mañana',
+          icon: '🌅',
+          next: 'afternoon' as const,
+          color: '#FF9500',
+          bg: 'rgba(255, 149, 0, 0.1)',
+          border: 'rgba(255, 149, 0, 0.22)'
+        };
+      case 'afternoon':
+        return {
+          tag: 'afternoon' as const,
+          label: 'Tarde',
+          icon: '☀️',
+          next: 'night' as const,
+          color: '#007AFF',
+          bg: 'rgba(0, 122, 255, 0.1)',
+          border: 'rgba(0, 122, 255, 0.22)'
+        };
+      case 'night':
+        return {
+          tag: 'night' as const,
+          label: 'Noche',
+          icon: '🌙',
+          next: 'morning' as const,
+          color: '#AF52DE',
+          bg: 'rgba(175, 82, 222, 0.1)',
+          border: 'rgba(175, 82, 222, 0.22)'
+        };
+    }
+  })();
+
+  // Helper para píldora de frecuencia elegante estilo Apple Reminders
+  const cycleBadge = (() => {
+    const cycleId = task.cycle_id || (
+      task.categoryId === 'limpieza_diaria' || (task.sectionId && (task.sectionId.includes('diaria') || task.sectionId.includes('recurrentes'))) ? 'cycle_day' :
+      task.categoryId === 'limpieza_semanal' || (task.sectionId && task.sectionId.includes('semanal')) ? 'cycle_week' :
+      task.categoryId === 'limpieza_mensual' || (task.sectionId && task.sectionId.includes('mensual')) ? 'cycle_month' :
+      task.categoryId === 'limpieza_anual' || (task.sectionId && task.sectionId.includes('anual')) ? 'cycle_year' : null
+    );
+
+    if (!cycleId) return null;
+
+    if (cycleId === 'cycle_day') {
+      return {
+        label: 'Diario',
+        icon: '☀️',
+        color: '#FF9500',
+        bg: 'rgba(255, 149, 0, 0.09)',
+        border: '1px solid rgba(255, 149, 0, 0.22)'
+      };
+    }
+    if (cycleId === 'cycle_week') {
+      return {
+        label: 'Semanal',
+        icon: '📅',
+        color: '#007AFF',
+        bg: 'rgba(0, 122, 255, 0.09)',
+        border: '1px solid rgba(0, 122, 255, 0.22)'
+      };
+    }
+    if (cycleId === 'cycle_month') {
+      return {
+        label: 'Mensual',
+        icon: '🌙',
+        color: '#AF52DE',
+        bg: 'rgba(175, 82, 222, 0.09)',
+        border: '1px solid rgba(175, 82, 222, 0.22)'
+      };
+    }
+    if (cycleId === 'cycle_year') {
+      return {
+        label: 'Anual',
+        icon: '🎆',
+        color: '#5856D6',
+        bg: 'rgba(88, 86, 214, 0.09)',
+        border: '1px solid rgba(88, 86, 214, 0.22)'
+      };
+    }
+
+    const custom = cycles.find(c => c.id === cycleId);
+    return {
+      label: custom?.name || cycleId,
+      icon: '🔄',
+      color: 'var(--accent-primary)',
+      bg: 'var(--accent-glow)',
+      border: '1px solid rgba(0, 122, 255, 0.2)'
+    };
+  })();
 
   const [contextMenuOpen, setContextMenuOpen] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
@@ -539,21 +666,33 @@ export const TaskCard = React.memo(function TaskCard({
             {task.image && <ImageIcon size={13} color="var(--text-tertiary)" />}
             {task.price !== undefined && task.price > 0 && (
               <span 
+                className="apple-price-pill"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(task.id);
+                }}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 2,
-                  padding: '1px 7px',
+                  gap: 3,
+                  padding: '1.5px 7px',
                   borderRadius: 6,
                   fontSize: '0.78rem',
-                  fontWeight: 600,
-                  background: 'rgba(52, 199, 89, 0.12)',
-                  color: '#34C759',
+                  fontWeight: 500,
+                  fontVariantNumeric: 'tabular-nums',
+                  background: 'var(--bg-hover, rgba(0,0,0,0.04))',
+                  border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
+                  color: 'var(--text-secondary)',
                   verticalAlign: 'middle',
-                  lineHeight: '1.2'
+                  lineHeight: '1.2',
+                  cursor: 'pointer'
                 }}
+                title={`Precio: ${task.price} €${task.quantity && task.quantity > 1 ? ` (${task.quantity} uds)` : ''} (Toca para editar)`}
               >
-                {task.price.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €
+                {task.quantity && task.quantity > 1 && (
+                  <span style={{ color: 'var(--text-tertiary)', fontSize: '0.72rem' }}>{task.quantity}×</span>
+                )}
+                <span>{task.price.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €</span>
               </span>
             )}
             {task.targetCount && task.targetCount > 1 && (
@@ -751,7 +890,7 @@ export const TaskCard = React.memo(function TaskCard({
           )}
 
           {/* Meta row - Native iOS HIG Style */}
-          {(showListName || task.dueDate || taskCycle) && (
+          {(showListName || task.dueDate || cycleBadge || timeOfDayInfo) && (
             <div style={{ display: 'flex', gap: '6px', marginTop: 3, alignItems: 'center', flexWrap: 'wrap', fontSize: '0.8rem', color: 'var(--text-tertiary)', lineHeight: '1.3' }}>
               {showListName && taskList && (
                 <span style={{ 
@@ -763,10 +902,18 @@ export const TaskCard = React.memo(function TaskCard({
                 </span>
               )}
               {task.dueDate && (
-                <span style={{ 
-                  display: 'inline-flex', alignItems: 'center', gap: 4, 
-                  color: dueDateColor, fontWeight: dueDateColor === '#FF3B30' ? 600 : 400 
-                }}>
+                <span 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(task.id);
+                  }}
+                  style={{ 
+                    display: 'inline-flex', alignItems: 'center', gap: 4, 
+                    color: dueDateColor, fontWeight: dueDateColor === '#FF3B30' ? 600 : 400,
+                    cursor: 'pointer'
+                  }}
+                  title="Fecha de vencimiento (Toca para editar)"
+                >
                   <Calendar size={11} style={{ flexShrink: 0 }} /> {(() => {
                     const due = new Date(task.dueDate);
                     const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -778,10 +925,59 @@ export const TaskCard = React.memo(function TaskCard({
                   })()}
                 </span>
               )}
-              {taskCycle && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--text-tertiary)' }}>
-                  <Repeat size={11} style={{ flexShrink: 0 }} /> {taskCycle.name}
+              {cycleBadge && (
+                <span 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(task.id);
+                  }}
+                  style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    gap: 3.5, 
+                    color: cycleBadge.color,
+                    background: cycleBadge.bg,
+                    border: cycleBadge.border,
+                    padding: '1.5px 7px',
+                    borderRadius: 6,
+                    fontSize: '0.74rem',
+                    fontWeight: 550,
+                    letterSpacing: '-0.1px',
+                    cursor: 'pointer'
+                  }}
+                  title={`Frecuencia de repetición: ${cycleBadge.label} (Toca para editar)`}
+                >
+                  <span style={{ fontSize: '0.78rem' }}>{cycleBadge.icon}</span>
+                  <span>{cycleBadge.label}</span>
                 </span>
+              )}
+              {timeOfDayInfo && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    updateTask(task.id, { timeOfDay: timeOfDayInfo.next });
+                    HapticService.selection();
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 3,
+                    padding: '1.5px 7px',
+                    borderRadius: 6,
+                    fontSize: '0.74rem',
+                    fontWeight: 600,
+                    background: timeOfDayInfo.bg,
+                    color: timeOfDayInfo.color,
+                    border: `1px solid ${timeOfDayInfo.border}`,
+                    cursor: 'pointer',
+                    letterSpacing: '-0.1px'
+                  }}
+                  title={`Momento del día: ${timeOfDayInfo.label}. Pulsa para cambiar (Mañana ➔ Tarde ➔ Noche).`}
+                >
+                  <span style={{ fontSize: '0.8rem' }}>{timeOfDayInfo.icon}</span>
+                  <span>{timeOfDayInfo.label}</span>
+                </button>
               )}
             </div>
           )}
@@ -941,26 +1137,28 @@ export const TaskCard = React.memo(function TaskCard({
               className="task-info-btn"
               onClick={(e) => {
                 e.stopPropagation();
+                HapticService.selection();
                 onEdit(task.id);
               }}
               aria-label="Detalles del recordatorio"
               title="Información y detalles (i)"
               style={{
-                width: 32, height: 32,
+                width: 34, height: 34,
                 borderRadius: '50%',
-                display: isMobile ? 'none' : 'flex',
+                display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 background: 'transparent',
                 border: 'none',
                 cursor: 'pointer',
-                color: taskColor,
-                opacity: isHovered || contextMenuOpen ? 0.9 : 0,
-                transition: 'opacity 0.2s ease, background-color 0.15s ease',
-                WebkitTapHighlightColor: 'transparent'
+                color: taskColor || 'var(--accent-primary)',
+                opacity: isMobile ? 0.85 : (isHovered || contextMenuOpen ? 0.95 : 0.4),
+                transition: 'opacity 0.2s ease, background-color 0.15s ease, transform 0.12s ease',
+                WebkitTapHighlightColor: 'transparent',
+                flexShrink: 0
               }}
             >
-              <Info size={17} strokeWidth={2.2} />
+              <Info size={18} strokeWidth={2.2} />
             </button>
 
             <button
@@ -1427,6 +1625,18 @@ function MenuActions({
         onClick={() => { 
           setContextMenuOpen(false); 
           onToggle(task.id); 
+        }} 
+      />
+
+      {/* 2. Detalles del recordatorio (Panel de metadatos) */}
+      <ActionRow 
+        icon={<Info size={18} color="var(--accent-primary)" />} 
+        label="Detalles del recordatorio" 
+        sublabel="Editar metadatos"
+        trailing={<span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>ℹ️</span>}
+        onClick={() => { 
+          setContextMenuOpen(false); 
+          onEdit(task.id); 
         }} 
       />
 
