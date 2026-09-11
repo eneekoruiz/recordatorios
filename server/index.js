@@ -9,9 +9,9 @@ import { handleMcpRequest, MCP_TOOLS } from './mcp.js';
 dotenv.config();
 
 const app = express();
-const prisma = new PrismaClient(
-  process.env.DATABASE_URL ? { datasourceUrl: process.env.DATABASE_URL } : {}
-);
+const defaultDbUrl = "postgresql://neondb_owner:npg_2gljaqFKrIy5@ep-shiny-recipe-aba2p06b-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require";
+const dbUrl = process.env.DATABASE_URL || defaultDbUrl;
+const prisma = new PrismaClient({ datasourceUrl: dbUrl });
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_for_recordatorios';
 const clients = new Map(); // userId -> Set of Response objects

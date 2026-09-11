@@ -1,6 +1,6 @@
-﻿const https = require('https');
+const https = require('https');
 
-const targetUrl = process.env.DEPLOY_URL || 'https://ayudandonos.vercel.app/api/health';
+const targetUrl = process.env.DEPLOY_URL || 'http://localhost:3001/api/health';
 console.log(`🔍 Checking deployment health at: ${targetUrl}`);
 
 const req = https.get(targetUrl, { timeout: 15000 }, (res) => {

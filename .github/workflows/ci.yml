@@ -1,4 +1,4 @@
-﻿name: CI & Quality Assurance
+name: CI & Quality Assurance
 
 on:
   push:
@@ -11,6 +11,11 @@ jobs:
     name: Build & E2E Verification
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      CI: 'true'
+      DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://neondb_owner:npg_2gljaqFKrIy5@ep-shiny-recipe-aba2p06b-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require' }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET || 'super_secret_jwt_key_for_recordatorios' }}
+      PORT: 3001
 
     steps:
       - name: Checkout Code
