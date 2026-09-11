@@ -9,9 +9,9 @@ import { handleMcpRequest, MCP_TOOLS } from './mcp.js';
 dotenv.config();
 
 const app = express();
-const prisma = new PrismaClient(
-  process.env.DATABASE_URL ? { datasourceUrl: process.env.DATABASE_URL } : {}
-);
+const defaultDbUrl = "postgresql://user:password@localhost:5432/recordatorios_test?sslmode=disable";
+const dbUrl = process.env.DATABASE_URL || defaultDbUrl;
+const prisma = new PrismaClient({ datasourceUrl: dbUrl });
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_for_recordatorios';
 const clients = new Map(); // userId -> Set of Response objects
