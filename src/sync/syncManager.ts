@@ -71,6 +71,10 @@ class SyncManager {
   }
 
   private setupRealtime(token: string) {
+    if (!token || token.startsWith('local_offline') || token.startsWith('offline_')) {
+      return;
+    }
+
     if (this.eventSource) {
       this.eventSource.close();
     }
@@ -90,7 +94,7 @@ class SyncManager {
       // Reconnect after 5s if still logged in
       setTimeout(() => {
         const currentToken = useAppStore.getState().token;
-        if (currentToken && this.isOnline) {
+        if (currentToken && this.isOnline && !currentToken.startsWith('local_offline') && !currentToken.startsWith('offline_')) {
           this.setupRealtime(currentToken);
         }
       }, 5000);
@@ -104,7 +108,7 @@ class SyncManager {
     }
     if (this.isSyncing) return;
     const { token } = useAppStore.getState();
-    if (!token) {
+    if (!token || token.startsWith('local_offline') || token.startsWith('offline_')) {
       useAppStore.getState().setSyncStatus('idle');
       return;
     }

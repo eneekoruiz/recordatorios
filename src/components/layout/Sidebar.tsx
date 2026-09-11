@@ -25,7 +25,8 @@ import {
   RefreshCw,
   Moon,
   Smartphone,
-  Search
+  Search,
+  Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -1283,7 +1284,29 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         <div className="categories-section" style={{ flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 12px 8px 16px' }}>
             <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Mis listas</span>
-            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <button 
+                className="btn-icon"
+                style={{ 
+                  padding: '3px 8px', 
+                  borderRadius: 999,
+                  background: 'var(--accent-glow)',
+                  border: '1px solid var(--accent-primary)',
+                  color: 'var(--accent-primary)',
+                  fontSize: '0.72rem',
+                  fontWeight: 650,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  cursor: 'pointer'
+                }}
+                title="Abrir Asistente IA (Ctrl+J)"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('open-ai-assistant'));
+                }}
+              >
+                <Sparkles size={12} /> IA
+              </button>
               <button 
                 className="btn-icon"
                 style={{ padding: 4, cursor: 'pointer' }}

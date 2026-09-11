@@ -153,9 +153,25 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
 
         {/* Input Form */}
         <form onSubmit={handleSubmit} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
-          <div style={{ color: isFocused ? 'var(--accent-primary)' : 'var(--text-tertiary)', display: 'flex', alignItems: 'center', transition: 'color 0.2s' }}>
+          <button
+            type="button"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('open-ai-assistant', { detail: text }));
+            }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 2,
+              color: text ? 'var(--accent-primary)' : isFocused ? 'var(--accent-primary)' : 'var(--text-tertiary)',
+              display: 'flex',
+              alignItems: 'center',
+              transition: 'all 0.2s ease'
+            }}
+            title="Hablar con la IA / Asistente MCP (Ctrl+J)"
+          >
             <Sparkles size={18} />
-          </div>
+          </button>
 
           <input
             ref={inputRef}

@@ -20,6 +20,10 @@ const optimisticUpdate = (
 };
 
 export const isTaskCompleted = (t: any) => {
+  // Si la tarea tiene meta de repeticiones (ej. 3 vasos de agua), solo se considera completada si se alcanza la meta
+  if (t.targetCount && t.targetCount > 1) {
+    return (t.currentCount || 0) >= t.targetCount;
+  }
   // Only treat as completed if status is explicitly 'completed' or has a completed_at timestamp.
   // We do NOT use completionHistory here because recurring tasks accumulate history but reset to 'pending'.
   return t.status === 'completed' || !!t.completed_at;
@@ -50,6 +54,7 @@ interface AppState {
   toggleGlobalCycles: () => void;
   
   addTask: (task: Partial<TaskItem>) => void;
+  addTasksBatch: (tasks: Partial<TaskItem>[], options?: { createList?: CustomList }) => void;
   updateTaskRaw: (task: TaskItem) => void; // Para uso interno y SyncProvider
   toggleTask: (id: string, forceReverse?: boolean) => void;
   deleteTask: (id: string) => void;
@@ -256,6 +261,32 @@ export const useAppStore = create<AppState>()(
         };
       }),
 
+      addTasksBatch: (tasksToCreate, options) => optimisticUpdate(get, set, (state) => {
+        let nextLists = state.lists;
+        if (options?.createList) {
+          if (!nextLists.some(l => l.id === options.createList!.id)) {
+            nextLists = [...nextLists, options.createList];
+          }
+        }
+
+        const newTasks = { ...state.tasks };
+        let newCycleVisibility = { ...state.cycleVisibility };
+
+        tasksToCreate.forEach(payload => {
+          const newTask = TaskRepository.create(payload);
+          newTasks[newTask.id] = newTask;
+          if (newTask.cycle_id && newCycleVisibility[newTask.cycle_id] === undefined) {
+            newCycleVisibility[newTask.cycle_id] = true;
+          }
+        });
+
+        return {
+          tasks: newTasks,
+          lists: nextLists,
+          cycleVisibility: newCycleVisibility
+        };
+      }),
+
       updateTaskRaw: (task) => optimisticUpdate(get, set, (state) => ({
         tasks: {
           ...state.tasks,
@@ -271,20 +302,32 @@ export const useAppStore = create<AppState>()(
         const alerts = existingTask.alerts || [];
         const completedAlerts = existingTask.completedAlerts || [];
         const isOneOff = !existingTask.cycle_id;
+        const isTargetTask = Boolean(existingTask.targetCount && existingTask.targetCount > 1);
+        const currentCount = existingTask.currentCount || 0;
+        const targetCount = existingTask.targetCount || 1;
         
         // Auto-detect reverse if already completed or if forceReverse is explicitly passed
         const shouldReverse = forceReverse || isTaskCompleted(existingTask);
         
         if (shouldReverse) {
           const newHistory = [...(existingTask.completionHistory || [])];
-          const resetCount = existingTask.targetCount ? { currentCount: 0 } : {};
           
-          if (completedAlerts.length > 0 && !existingTask.status?.includes('completed')) {
+          if (isTargetTask) {
+            if (newHistory.length > 0 && isTaskCompleted(existingTask)) {
+              newHistory.pop();
+            }
+            const decrementedCount = Math.max(0, currentCount > 0 ? currentCount - 1 : 0);
+            updatedTask = TaskRepository.update(existingTask, {
+              status: 'pending',
+              currentCount: decrementedCount,
+              completionHistory: newHistory
+            });
+          } else if (completedAlerts.length > 0 && !existingTask.status?.includes('completed')) {
             // Uncheck last partial alert if not fully completed
             updatedTask = TaskRepository.update(existingTask, {
               completedAlerts: completedAlerts.slice(0, -1),
               status: 'pending',
-              ...resetCount
+              currentCount: 0
             });
           } else if (newHistory.length > 0) {
             // Uncheck full completion
@@ -294,14 +337,45 @@ export const useAppStore = create<AppState>()(
               status: 'pending',
               completedAlerts: restoredAlerts,
               completionHistory: newHistory,
-              ...resetCount
+              currentCount: 0
             });
           } else {
-            updatedTask = TaskRepository.update(existingTask, { status: 'pending', completedAlerts: [], ...resetCount });
+            updatedTask = TaskRepository.update(existingTask, { 
+              status: 'pending', 
+              completedAlerts: [], 
+              currentCount: 0 
+            });
           }
         } else {
           // Normal complete forward logic
-          if (alerts.length > 1 && completedAlerts.length < alerts.length - 1) {
+          if (isTargetTask) {
+            const nextCount = currentCount + 1;
+            if (nextCount < targetCount) {
+              // Intermediate step: stay pending, increment count, no history push yet
+              updatedTask = TaskRepository.update(existingTask, {
+                currentCount: nextCount,
+                status: 'pending'
+              });
+            } else {
+              // Reached target count: mark as completed (or recurring pending with history)
+              const newCompletionHistory = [...(existingTask.completionHistory || []), Date.now()];
+              if (!isOneOff) {
+                updatedTask = TaskRepository.update(existingTask, {
+                  completedAlerts: [],
+                  completionHistory: newCompletionHistory,
+                  status: 'pending',
+                  currentCount: targetCount
+                });
+              } else {
+                updatedTask = TaskRepository.update(existingTask, {
+                  status: 'completed',
+                  completedAlerts: [...completedAlerts, alerts[completedAlerts.length]?.id].filter(Boolean) as string[],
+                  completionHistory: newCompletionHistory,
+                  currentCount: targetCount
+                });
+              }
+            }
+          } else if (alerts.length > 1 && completedAlerts.length < alerts.length - 1) {
             const nextAlert = alerts[completedAlerts.length] || alerts[alerts.length - 1];
             updatedTask = TaskRepository.update(existingTask, { 
               completedAlerts: [...completedAlerts, nextAlert.id] 
@@ -1012,3 +1086,7 @@ export const useAppStore = create<AppState>()(
     }
   )
 );
+
+if (typeof window !== 'undefined') {
+  (window as any).useAppStore = useAppStore;
+}

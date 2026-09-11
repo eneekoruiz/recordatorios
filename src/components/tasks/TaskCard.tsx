@@ -336,8 +336,17 @@ export const TaskCard = React.memo(function TaskCard({
 
   const totalAlerts = task.alerts?.length || 0;
   const completedAlertsCount = task.completedAlerts?.length || 0;
-  const isPartial = totalAlerts > 1 && completedAlertsCount > 0 && completedAlertsCount < totalAlerts;
-  const percentage = totalAlerts > 1 ? (completedAlertsCount / totalAlerts) * 100 : 0;
+  const hasTargetCount = Boolean(task.targetCount && task.targetCount > 1);
+  const targetCount = task.targetCount || 1;
+  const effectiveCurrentCount = (task.cycle_id && !isCompletedPeriod && (task.currentCount || 0) >= targetCount)
+    ? 0
+    : (task.currentCount || 0);
+
+  const isTargetPartial = hasTargetCount && effectiveCurrentCount > 0 && effectiveCurrentCount < targetCount;
+  const isPartial = (totalAlerts > 1 && completedAlertsCount > 0 && completedAlertsCount < totalAlerts) || isTargetPartial;
+  const percentage = hasTargetCount
+    ? (Math.min(effectiveCurrentCount, targetCount) / targetCount) * 100
+    : (totalAlerts > 1 ? (completedAlertsCount / totalAlerts) * 100 : 0);
 
   return (
     <div
@@ -495,8 +504,22 @@ export const TaskCard = React.memo(function TaskCard({
             e.stopPropagation();
             if (isBlocked) return;
             if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate([8]);
-            if (!isCompletedPeriod && !isPartial) SoundService.playComplete(); else SoundService.playUncomplete();
-            onToggle(task.id, isCompletedPeriod || isPartial);
+            
+            if (isCompletedPeriod) {
+              SoundService.playUncomplete();
+              onToggle(task.id, true);
+            } else {
+              const isNextFinal = hasTargetCount
+                ? (effectiveCurrentCount + 1 >= targetCount)
+                : (!task.alerts || task.alerts.length <= 1 || completedAlertsCount + 1 >= totalAlerts);
+              
+              if (isNextFinal) {
+                SoundService.playComplete();
+              } else {
+                SoundService.playPop();
+              }
+              onToggle(task.id, false);
+            }
           }}
           style={{
             width: 26, height: 26,
@@ -538,9 +561,27 @@ export const TaskCard = React.memo(function TaskCard({
               width: 22, height: 22,
               borderRadius: '50%',
               background: `conic-gradient(${taskColor} ${percentage}%, var(--border-subtle) ${percentage}%)`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              zIndex: 1
             }}>
-              <div style={{ width: 18, height: 18, background: 'var(--bg-elevated)', borderRadius: '50%' }} />
+              <div style={{ 
+                width: 17, height: 17, 
+                background: 'var(--bg-elevated)', 
+                borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                {hasTargetCount && (
+                  <span style={{ 
+                    fontSize: '0.62rem', 
+                    fontWeight: 700, 
+                    color: taskColor, 
+                    lineHeight: 1, 
+                    transform: 'translateY(-0.5px)' 
+                  }}>
+                    {effectiveCurrentCount}
+                  </span>
+                )}
+              </div>
             </div>
           )}
 
@@ -556,7 +597,7 @@ export const TaskCard = React.memo(function TaskCard({
             style={{
               width: 22, height: 22,
               borderRadius: '50%',
-              border: isCompletedPeriod ? 'none' : `1.5px solid ${isHovered ? taskColor : 'var(--border-color)'}`,
+              border: (isCompletedPeriod || isPartial) ? 'none' : `1.5px solid ${isHovered ? taskColor : 'var(--border-color)'}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: isCompletedPeriod ? `0 2px 8px ${taskColor}40` : 'none',
               transition: 'border-color 0.15s ease'
@@ -719,31 +760,29 @@ export const TaskCard = React.memo(function TaskCard({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  const current = task.currentCount || 0;
-                  const target = task.targetCount || 1;
-                  const next = current + 1;
-                  if (next >= target) {
-                    updateTask(task.id, { currentCount: target });
-                    if (!isTaskCompleted(task)) {
-                      onToggle(task.id);
-                    }
+                  if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate([6]);
+                  if (isCompletedPeriod) {
+                    SoundService.playUncomplete();
+                    onToggle(task.id, true);
                   } else {
-                    updateTask(task.id, { currentCount: next });
+                    const isNextFinal = effectiveCurrentCount + 1 >= targetCount;
+                    if (isNextFinal) {
+                      SoundService.playComplete();
+                    } else {
+                      SoundService.playPop();
+                    }
+                    onToggle(task.id, false);
                   }
                   HapticService.selection();
                 }}
                 onContextMenu={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  const current = task.currentCount || 0;
-                  if (current > 0) {
-                    updateTask(task.id, { currentCount: current - 1 });
-                    if (isTaskCompleted(task)) {
-                      onToggle(task.id, true);
-                    }
-                  }
+                  if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate([6]);
+                  SoundService.playUncomplete();
+                  onToggle(task.id, true);
                 }}
-                title="Clic: sumar progreso. Clic derecho: restar progreso."
+                title="Clic: avanzar progreso (+1). Clic derecho: retroceder progreso (-1)."
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -752,8 +791,8 @@ export const TaskCard = React.memo(function TaskCard({
                   borderRadius: 12,
                   fontSize: '0.78rem',
                   fontWeight: 600,
-                  background: (task.currentCount || 0) >= task.targetCount ? 'rgba(52, 199, 89, 0.15)' : 'rgba(0, 122, 255, 0.12)',
-                  color: (task.currentCount || 0) >= task.targetCount ? '#34C759' : '#007AFF',
+                  background: isCompletedPeriod ? 'rgba(52, 199, 89, 0.15)' : 'rgba(0, 122, 255, 0.12)',
+                  color: isCompletedPeriod ? '#34C759' : '#007AFF',
                   border: 'none',
                   cursor: 'pointer',
                   verticalAlign: 'middle',
@@ -766,7 +805,7 @@ export const TaskCard = React.memo(function TaskCard({
                    task.title.toLowerCase().includes('mano') ? '🧼' :
                    task.title.toLowerCase().includes('aplicacion') ? '🧴' : '⚡'}
                 </span>
-                <span>{task.currentCount || 0}/{task.targetCount}</span>
+                <span>{effectiveCurrentCount}/{task.targetCount}</span>
               </button>
             )}
           </div>
