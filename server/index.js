@@ -427,7 +427,7 @@ app.get(['/api/share/:token', '/share/:token'], authenticateToken, async (req, r
 });
 
 // START
-if (process.env.NODE_ENV !== 'production') {
+if (!process.env.VERCEL) {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Recordatorios Backend running on port ${PORT}`);
   });
