@@ -21,6 +21,7 @@ import { ShortcutsModal } from './components/layout/ShortcutsModal';
 import { BottomShortcutBar } from './components/layout/BottomShortcutBar';
 import { syncManager } from './sync/syncManager';
 import { TaskSkeletonLoader } from './components/ui/TaskSkeletonLoader';
+import { AIAssistantModal } from './components/ai/AIAssistantModal';
 import type { TaskItem } from './models/Task';
 
 function App() {
@@ -50,7 +51,34 @@ function App() {
   const [defaultSectionId, setDefaultSectionId] = useState<string | undefined>(undefined);
   const [zenModeTaskId, setZenModeTaskId] = useState<string | null>(null);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+  const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+  const [aiInitialPrompt, setAiInitialPrompt] = useState('');
   const hasHydrated = useAppStore((state) => state.hasHydrated);
+
+  // Global listener for AI Assistant (shortcut Ctrl+J / Cmd+J and custom event)
+  useEffect(() => {
+    const handleOpenAI = (e: any) => {
+      setAiInitialPrompt(e.detail || '');
+      setIsAIAssistantOpen(true);
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'j') {
+        const target = e.target as HTMLElement;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') && target.id !== 'quick-add-input') {
+          // Si está en un input normal, no interrumpir excepto que sea el quick-add
+        } else {
+          e.preventDefault();
+          setIsAIAssistantOpen(prev => !prev);
+        }
+      }
+    };
+    window.addEventListener('open-ai-assistant', handleOpenAI);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('open-ai-assistant', handleOpenAI);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   // IndexedDB can be unavailable in privacy/restricted contexts. Never strand the
   // user behind an infinite loader: continue with the safe in-memory defaults.
@@ -470,6 +498,13 @@ function App() {
         }
         defaultSectionId={defaultSectionId}
         taskId={editingTaskId || undefined}
+      />
+
+      <AIAssistantModal
+        isOpen={isAIAssistantOpen}
+        onClose={() => { setIsAIAssistantOpen(false); setAiInitialPrompt(''); }}
+        initialPrompt={aiInitialPrompt}
+        onSelectView={(view) => handleSelectView(view)}
       />
 
       <PromptModal />

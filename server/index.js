@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
+import { handleMcpRequest, MCP_TOOLS } from './mcp.js';
 
 dotenv.config();
 
@@ -424,6 +425,45 @@ app.get(['/api/share/:token', '/share/:token'], authenticateToken, async (req, r
     console.error(err);
     res.status(500).json({ error: 'Error getting shared list' });
   }
+});
+
+// --- MCP (Model Context Protocol) ---
+const optionalAuthenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (token) {
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+      if (!err && user) {
+        req.user = user;
+      }
+      next();
+    });
+  } else {
+    next();
+  }
+};
+
+app.post(['/api/mcp', '/mcp'], optionalAuthenticateToken, async (req, res) => {
+  try {
+    const response = await handleMcpRequest(req.body, prisma, req.user?.id);
+    res.json(response);
+  } catch (err) {
+    console.error('MCP route error:', err);
+    res.status(500).json({ 
+      jsonrpc: '2.0', 
+      id: req.body?.id || null, 
+      error: { code: -32000, message: 'Internal Server Error' } 
+    });
+  }
+});
+
+app.get(['/api/mcp', '/mcp', '/api/mcp/tools', '/mcp/tools'], (req, res) => {
+  res.json({
+    name: 'Recordatorios Élite MCP Server',
+    version: '1.0.0',
+    protocolVersion: '2024-11-05',
+    tools: MCP_TOOLS
+  });
 });
 
 // START

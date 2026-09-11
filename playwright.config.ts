@@ -17,13 +17,13 @@ export default defineConfig({
       command: 'node server/index.js',
       port: 3001,
       reuseExistingServer: true,
-      timeout: 20000,
+      timeout: 60000,
     },
     {
       command: 'npx vite --port 5173',
       port: 5173,
       reuseExistingServer: true,
-      timeout: 20000,
+      timeout: 60000,
     }
   ],
   projects: [

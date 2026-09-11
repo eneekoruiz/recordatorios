@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Download, Upload, Info, CheckCircle2, ChevronLeft } from 'lucide-react';
+import { Download, Upload, Info, CheckCircle2, ChevronLeft, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 import { detectFormatAndParse } from '../../utils/importerParser';
@@ -134,6 +134,52 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
         gap: 'var(--space-24)' 
       }}>
         
+        {/* AI Assistant Conversational Importer Card */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="surface-card" 
+          style={{ 
+            padding: 'var(--space-32)', 
+            background: 'linear-gradient(135deg, color-mix(in srgb, #007aff 12%, var(--bg-surface)), color-mix(in srgb, #af52de 12%, var(--bg-surface)))',
+            border: '1.5px solid color-mix(in srgb, #007aff 30%, transparent)',
+            borderRadius: 'var(--radius-lg)',
+            gridColumn: '1 / -1',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            gap: 'var(--space-16)'
+          }}
+        >
+          <div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 10px', borderRadius: 999, background: 'var(--accent-glow)', color: 'var(--accent-primary)', fontSize: '0.8rem', fontWeight: 700, marginBottom: 12 }}>
+              <Sparkles size={14} /> Asistente IA & Protocolo MCP
+            </div>
+            <h3 className="text-title" style={{ marginBottom: 'var(--space-8)' }}>Importación Asistida con IA</h3>
+            <p className="text-secondary" style={{ margin: 0, maxWidth: 640 }}>
+              Habla o pega cualquier texto en bruto (rutinas, listas de compras, mudanzas o proyectos). La IA desglosará automáticamente los recordatorios con sus precios, fechas, franjas horarias y listas adecuadas para que los confirmes con un solo clic.
+            </p>
+          </div>
+
+          <motion.button 
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('open-ai-assistant'));
+            }}
+            style={{ 
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-8)', 
+              background: 'linear-gradient(135deg, #007aff, #af52de)', color: 'white', border: 'none', 
+              padding: '14px 24px', borderRadius: 'var(--radius-md)', fontWeight: 650, 
+              cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 16px rgba(0, 122, 255, 0.3)',
+              alignSelf: 'flex-start'
+            }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Sparkles size={18} /> Iniciar Asistente IA
+          </motion.button>
+        </motion.div>
+
         {/* Export Card */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}

@@ -7,6 +7,13 @@ import type { TaskItem, CustomCycle } from '../models/Task';
  * Aplica principios de Clean Code, Guard Clauses y tipado estricto.
  */
 export function isCompletedInCurrentPeriod(task: Partial<TaskItem>, cycles: CustomCycle[]): boolean {
+  // Si la tarea tiene meta de repeticiones (ej. 3 vasos de agua), no está completada hasta alcanzar la meta
+  if (task.targetCount && task.targetCount > 1) {
+    if ((task.currentCount || 0) < task.targetCount) {
+      return false;
+    }
+  }
+
   const isDone = task.status === 'completed' || !!(task as any).completed_at || !!(task as any).completed;
   
   if (isDone && !task.cycle_id) {
