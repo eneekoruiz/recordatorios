@@ -9,7 +9,7 @@ import { AnalyticsView } from './components/analytics/AnalyticsView';
 import { TaskDrawer } from './components/tasks/TaskDrawer';
 import { PromptModal } from './components/layout/PromptModal';
 import { UniversalImporter } from './components/views/UniversalImporter';
-import { CommandPalette } from './components/layout/CommandPalette';
+import { SpotlightModal } from './components/search/SpotlightModal';
 import { ZenMode } from './components/tasks/ZenMode';
 import { GeolocationService } from './services/GeolocationService';
 import { useAppStore, isTaskCompleted } from './store/useAppStore';
@@ -372,6 +372,13 @@ function App() {
         return;
       }
 
+      // Cmd+K or Ctrl+K opens Spotlight
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        window.dispatchEvent(new Event('open-command-palette'));
+        return;
+      }
+
       const active = document.activeElement;
       const isInputActive = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT' || active.getAttribute('contenteditable') === 'true');
       if (isInputActive) return;
@@ -513,9 +520,10 @@ function App() {
         <ZenMode taskId={zenModeTaskId} onClose={() => setZenModeTaskId(null)} />
       )}
 
-      <CommandPalette
+      <SpotlightModal
         onSelectView={(view) => handleSelectView(view)}
         onOpenZenMode={(taskId) => setZenModeTaskId(taskId)}
+        onEditTask={(taskId) => { setEditingTaskId(taskId); setIsDrawerOpen(true); }}
       />
       <InstallPromptModal />
       <ShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />

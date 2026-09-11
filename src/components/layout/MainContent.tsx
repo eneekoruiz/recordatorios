@@ -14,6 +14,7 @@ import { SMART_LISTS } from '../../constants/smartLists';
 import { QuickAddBar } from '../ui/QuickAddBar';
 import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
+import { DailyBriefingBanner } from './DailyBriefingBanner';
 
 interface MainContentProps {
   currentView: string;
@@ -1475,6 +1476,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             </div>
           )}
       </header>
+      {currentView === 'smart_today' && (
+        <DailyBriefingBanner />
+      )}
               </div>
             );
           } else if (data.type === 'header') {
