@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
-import { isCompletedInCurrentPeriod } from '../../services/TaskService';
+import { isCompletedInCurrentPeriod, calculateHabitStreak } from '../../services/TaskService';
 import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
 import { ConfirmModal } from '../ui/ConfirmModal';
@@ -348,6 +348,8 @@ export const TaskCard = React.memo(function TaskCard({
     ? (Math.min(effectiveCurrentCount, targetCount) / targetCount) * 100
     : (totalAlerts > 1 ? (completedAlertsCount / totalAlerts) * 100 : 0);
 
+  const habitStreak = calculateHabitStreak(task, cycles);
+
   return (
     <div
       className="task-item-wrapper"
@@ -470,10 +472,7 @@ export const TaskCard = React.memo(function TaskCard({
           width: '100%',
           boxSizing: 'border-box',
           background: 'var(--bg-elevated)',
-          borderTopLeftRadius: isFirstInSection ? 10 : 0,
-          borderTopRightRadius: isFirstInSection ? 10 : 0,
-          borderBottomLeftRadius: isLastInSection ? 10 : 0,
-          borderBottomRightRadius: isLastInSection ? 10 : 0,
+          borderRadius: `${isFirstInSection ? 10 : 0}px ${isFirstInSection ? 10 : 0}px ${isLastInSection ? 10 : 0}px ${isLastInSection ? 10 : 0}px`,
           borderBottom: 'none',
           opacity: isBlocked ? 0.5 : 1,
           pointerEvents: 'auto',
@@ -807,6 +806,29 @@ export const TaskCard = React.memo(function TaskCard({
                 </span>
                 <span>{effectiveCurrentCount}/{task.targetCount}</span>
               </button>
+            )}
+            {habitStreak.count >= 2 && (
+              <span
+                className="apple-streak-pill"
+                title={`¡Racha activa! Has completado esta tarea ${habitStreak.count} ${habitStreak.unit} consecutivos.`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3,
+                  padding: '2px 7px',
+                  borderRadius: 12,
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  background: 'linear-gradient(135deg, rgba(255, 149, 0, 0.16), rgba(255, 59, 48, 0.16))',
+                  color: '#ff6200',
+                  border: '1px solid rgba(255, 149, 0, 0.28)',
+                  verticalAlign: 'middle',
+                  lineHeight: '1.2'
+                }}
+              >
+                <span>🔥</span>
+                <span>{habitStreak.count} {habitStreak.unit}</span>
+              </span>
             )}
           </div>
 

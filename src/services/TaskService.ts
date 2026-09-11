@@ -87,3 +87,69 @@ export function wouldCreateDependencyCycle(
 
   return dfs(blockedByTaskId);
 }
+
+/**
+ * Calcula la racha consecutiva de cumplimiento de un hábito o tarea recurrente.
+ * Retorna el número de periodos consecutivos completados (días o semanas).
+ */
+export function calculateHabitStreak(
+  task: Partial<TaskItem>,
+  cycles: CustomCycle[] = []
+): { count: number; unit: 'días' | 'sem' } {
+  if (!task.completionHistory || task.completionHistory.length === 0) {
+    return { count: 0, unit: 'días' };
+  }
+
+  const cycleId = task.cycle_id || (task.targetCount ? 'cycle_day' : null);
+  const cycle = cycles.find((c) => c.id === cycleId);
+  const daysValue = cycle?.daysValue || 1;
+  const unit = daysValue >= 7 ? 'sem' : 'días';
+
+  // Extraer días únicos (YYYY-MM-DD) en los que se completó
+  const uniqueDays = Array.from(
+    new Set(
+      task.completionHistory.map((ts) => {
+        const d = new Date(ts);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      })
+    )
+  ).sort().reverse(); // Orden descendente (más reciente primero)
+
+  if (uniqueDays.length === 0) {
+    return { count: 0, unit };
+  }
+
+  const now = new Date();
+  const formatDay = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  const todayStr = formatDay(now);
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = formatDay(yesterday);
+
+  // La racha sigue viva si la última finalización fue hoy O ayer (si hoy aún no la completa)
+  const lastCompletedDay = uniqueDays[0];
+  if (lastCompletedDay !== todayStr && lastCompletedDay !== yesterdayStr) {
+    return { count: 0, unit };
+  }
+
+  let streak = 0;
+  let expectedDate = new Date(lastCompletedDay);
+
+  for (const dayStr of uniqueDays) {
+    const dayDate = new Date(dayStr);
+    const diffMs = Math.abs(expectedDate.getTime() - dayDate.getTime());
+    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays <= 1) {
+      streak++;
+      expectedDate = dayDate;
+      expectedDate.setDate(expectedDate.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+
+  return { count: streak, unit };
+}

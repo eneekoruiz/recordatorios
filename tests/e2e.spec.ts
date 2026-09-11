@@ -303,4 +303,55 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
     });
     expect(taskState.currentCount).toBe(3);
   });
+
+  // 10. Spotlight Modal (⌘K / Ctrl+K)
+  test('10. Spotlight Command Palette: Opens with Ctrl+K or search bar, searches, and closes with ESC', async ({ page }) => {
+    await ensureAppUnlocked(page);
+
+    // Focus body and test opening Spotlight via Ctrl+K or clicking search bar
+    await page.locator('body').click();
+    await page.keyboard.press('Control+k');
+    await page.waitForTimeout(300);
+
+    const searchInput = page.getByPlaceholder('Buscar recordatorios, listas o acciones...');
+    const isVisible = await searchInput.isVisible().catch(() => false);
+    if (!isVisible) {
+      // In headless Chrome, Control+k can be trapped by Chrome address bar shortcut; trigger via UI button
+      const searchBtn = page.locator('.sidebar-header').locator('text=Buscar');
+      await searchBtn.click();
+    }
+
+    await expect(searchInput).toBeVisible({ timeout: 5000 });
+
+    // Type query
+    await searchInput.fill('Hoy');
+    await page.waitForTimeout(200);
+
+    // Expect 'Ir a Hoy' action visible
+    const actionHoy = page.getByText('Ir a Hoy');
+    await expect(actionHoy).toBeVisible();
+
+    // Close via ESC
+    await page.keyboard.press('Escape');
+    await expect(searchInput).not.toBeVisible();
+  });
+
+  // 11. Daily Smart Briefing
+  test('11. Daily Smart Briefing: Renders greeting, date, and metrics banner on Hoy view', async ({ page }) => {
+    await ensureAppUnlocked(page);
+
+    // Select smart_today view
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent('select-view', { detail: 'smart_today' }));
+    });
+    await page.waitForTimeout(400);
+
+    // Verify Daily Briefing container is rendered
+    const briefing = page.locator('.daily-briefing-container');
+    await expect(briefing).toBeVisible({ timeout: 5000 });
+
+    // Verify it contains either Buenos días, Buenas tardes, or Buenas noches
+    const greetingText = await briefing.textContent();
+    expect(greetingText).toMatch(/Buenos días|Buenas tardes|Buenas noches/);
+  });
 });
