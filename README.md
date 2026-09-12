@@ -1,6 +1,12 @@
 # Recordatorios Elite
 
+[![CI & Quality Assurance](https://github.com/eneekoruiz/recordatorios/actions/workflows/ci.yml/badge.svg)](https://github.com/eneekoruiz/recordatorios/actions/workflows/ci.yml)
+[![Live Demo](https://img.shields.io/badge/Demo-recordatorios--tau.vercel.app-0070f3?style=flat&logo=vercel&logoColor=white)](https://recordatorios-tau.vercel.app)
+
+> 🌐 **Despliegue en vivo:** [https://recordatorios-tau.vercel.app](https://recordatorios-tau.vercel.app)
+
 PWA de productividad de nivel Staff Engineer con arquitectura Cloud-Agnostic, diseño UX/UI matemáticamente exacto y soporte Offline-First absoluto.
+
 
 ## Características Clave
 - **Cero Agobio Visual:** Revelación progresiva de opciones (Gestalt).
