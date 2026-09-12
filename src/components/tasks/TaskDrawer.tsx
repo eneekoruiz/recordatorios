@@ -84,6 +84,11 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   const [currentCount, setCurrentCount] = useState<number | undefined>(undefined);
   const [timeOfDay, setTimeOfDay] = useState<'morning' | 'afternoon' | 'night' | undefined>(undefined);
   const [, setShowAdvanced] = useState(false);
+  const [people, setPeople] = useState<string[]>([]);
+  const [personInput, setPersonInput] = useState('');
+  const [expirationType, setExpirationType] = useState<'card' | 'subscription' | 'other' | undefined>(undefined);
+  const [cardCaducidadOpen, setCardCaducidadOpen] = useState(true);
+  const [cardPeopleOpen, setCardPeopleOpen] = useState(true);
 
   // Suggested chips purely for visual feedback
   const [suggestedChips, setSuggestedChips] = useState<{type: 'time'|'date'|'cycle', label: string}[]>([]);
@@ -143,12 +148,17 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setHasDate(!!task.dueDate);
         setHasTime(!!task.alerts?.some(a => a.type === 'at_time'));
         
+        setPeople(task.people || []);
+        setExpirationType(task.expirationType || (task.categoryId === 'caducidades' ? (task.sectionId === 'sec_suscripciones' ? 'subscription' : 'card') : undefined));
+        
         // Open cards dynamically if they have values configured
         setCardTimeOpen(!!task.dueDate || !!task.alerts?.some(a => a.type === 'at_time') || !!task.timeOfDay);
         setCardRepeatOpen(!!task.cycle_id || !!task.sectionId || !!task.locationName || !!task.location);
         setCardReqOpen(!!(task.blockedBy && task.blockedBy.length > 0));
         setCardDetailsOpen(task.priority !== 'none' || !!task.flagged || !!task.url || !!task.image || !!task.targetCount);
         setCardFinanceOpen(!!task.isDetailed || task.price !== undefined);
+        setCardCaducidadOpen(task.categoryId === 'caducidades' || !!task.expirationType);
+        setCardPeopleOpen(task.categoryId === 'que_he_hecho' || (!!task.people && task.people.length > 0));
       } else {
         // Nueva tarea
         setTitle('');
@@ -179,6 +189,10 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setDuration('');
         setHasDate(false);
         setHasTime(false);
+        setPeople([]);
+        const isCad = defaultCategoryId === 'caducidades';
+        const isSub = defaultSectionId === 'sec_suscripciones';
+        setExpirationType(isCad ? (isSub ? 'subscription' : 'card') : undefined);
         
         // Reset to default collapsed status on create
         setCardTimeOpen(true);
@@ -186,6 +200,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setCardReqOpen(true);
         setCardDetailsOpen(true);
         setCardFinanceOpen(true);
+        setCardCaducidadOpen(isCad);
+        setCardPeopleOpen(defaultCategoryId === 'que_he_hecho');
         setCycleId(undefined);
         setTimeOfDay(undefined);
       }
@@ -435,7 +451,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
       brand: brand || undefined,
       duration: duration !== '' ? Number(duration) : undefined,
       targetCount: targetCount && targetCount > 1 ? Number(targetCount) : undefined,
-      currentCount: targetCount && targetCount > 1 ? (currentCount || 0) : undefined
+      currentCount: targetCount && targetCount > 1 ? (currentCount || 0) : undefined,
+      people: people.length > 0 ? people : undefined,
+      expirationType: expirationType || (category === 'caducidades' ? (sectionId === 'sec_suscripciones' ? 'subscription' : 'card') : undefined)
     };
 
     if (taskId) {
@@ -472,11 +490,26 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
     setDuration('');
     setTargetCount(undefined);
     setCurrentCount(undefined);
+    setPeople([]);
+    setExpirationType(undefined);
     onClose();
   };
 
   const removeAlert = (idToRemove: string) => {
     setAlerts(alerts.filter(a => a.id !== idToRemove));
+  };
+
+  const addAnticipationAlert = (offsetMinutes: number, label: string) => {
+    setHasDate(true);
+    setAlerts(prev => [
+      ...prev,
+      {
+        id: `alert_ant_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        type: 'before',
+        offsetMinutes,
+        label
+      }
+    ]);
   };
 
   const toggleListening = () => {
@@ -790,7 +823,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                                   className="alert-chip"
                                 >
                                   <Clock size={14} />
-                                  <span>{alert.time || `-${alert.offsetMinutes}m`}</span>
+                                  <span>{alert.label || alert.time || `-${alert.offsetMinutes}m`}</span>
                                   <button className="chip-remove" onClick={() => removeAlert(alert.id)}>
                                     <X size={14} />
                                   </button>
@@ -800,6 +833,45 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                           </div>
                         </div>
                       </>
+                    )}
+
+                    {/* Alertas preventivas inteligentes de caducidad */}
+                    {(category === 'caducidades' || expirationType || hasDate) && (
+                      <div style={{ marginTop: 10, padding: '10px 12px', background: 'var(--bg-card, rgba(0,0,0,0.03))', borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>
+                          ⚡ Alertas preventivas rápidas:
+                        </span>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            onClick={() => addAnticipationAlert(30 * 24 * 60, '1 mes antes')}
+                            style={{ padding: '4px 10px', fontSize: '0.76rem', borderRadius: 8, border: '1px solid rgba(255, 149, 0, 0.3)', background: 'rgba(255, 149, 0, 0.1)', color: '#ff9500', fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            💳 + 1 mes antes
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => addAnticipationAlert(15 * 24 * 60, '15 días antes')}
+                            style={{ padding: '4px 10px', fontSize: '0.76rem', borderRadius: 8, border: '1px solid rgba(255, 149, 0, 0.3)', background: 'rgba(255, 149, 0, 0.1)', color: '#ff9500', fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            💳 + 15 días antes
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => addAnticipationAlert(3 * 24 * 60, '3 días antes')}
+                            style={{ padding: '4px 10px', fontSize: '0.76rem', borderRadius: 8, border: '1px solid rgba(0, 122, 255, 0.3)', background: 'rgba(0, 122, 255, 0.1)', color: '#007aff', fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            📱 + 3 días antes
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => addAnticipationAlert(1440, '1 día antes')}
+                            style={{ padding: '4px 10px', fontSize: '0.76rem', borderRadius: 8, border: '1px solid rgba(0, 122, 255, 0.3)', background: 'rgba(0, 122, 255, 0.1)', color: '#007aff', fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            📱 + 1 día antes
+                          </button>
+                        </div>
+                      </div>
                     )}
                   </div>
                   </motion.div>
@@ -1349,6 +1421,152 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                   </AnimatePresence>
                 </div>
               )}
+
+              {/* Card Especial: Personas involucradas (Qué he hecho / Recuerdos) */}
+              <div className="section-card">
+                <button 
+                  type="button"
+                  className="section-card-header"
+                  onClick={() => setCardPeopleOpen(!cardPeopleOpen)}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 14 }}>👥</span>
+                    Personas involucradas ({people.length})
+                  </span>
+                  <ChevronDown size={18} style={{ transform: cardPeopleOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                </button>
+                <AnimatePresence>
+                {cardPeopleOpen && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ height: { duration: 0.3, ease: [0.22, 1, 0.36, 1] }, opacity: { duration: 0.2 } }} style={{ overflow: 'hidden' }}>
+                  <div className="section-card-content">
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: people.length > 0 ? 10 : 0 }}>
+                      {people.map(p => (
+                        <span 
+                          key={p} 
+                          style={{ 
+                            display: 'inline-flex', alignItems: 'center', gap: 4, 
+                            padding: '3px 10px', borderRadius: 12, fontSize: '0.8rem', fontWeight: 600,
+                            background: 'rgba(88, 86, 214, 0.14)', color: '#5856d6', border: '1px solid rgba(88, 86, 214, 0.25)' 
+                          }}
+                        >
+                          <span>👤 {p}</span>
+                          <button
+                            type="button"
+                            onClick={() => setPeople(people.filter(x => x !== p))}
+                            style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
+                          >
+                            <X size={13} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                      <input
+                        type="text"
+                        placeholder="Nombre de la persona (ej. Laura, Carlos)..."
+                        value={personInput}
+                        onChange={e => setPersonInput(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const val = personInput.trim().replace(/^@/, '');
+                            if (val && !people.includes(val)) {
+                              setPeople([...people, val]);
+                              setPersonInput('');
+                            }
+                          }
+                        }}
+                        style={{ flex: 1, padding: '7px 12px', borderRadius: 8, border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', fontSize: '0.85rem', color: 'var(--text-primary)' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const val = personInput.trim().replace(/^@/, '');
+                          if (val && !people.includes(val)) {
+                            setPeople([...people, val]);
+                            setPersonInput('');
+                          }
+                        }}
+                        style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: 'var(--accent-primary)', color: 'white', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}
+                      >
+                        Añadir
+                      </button>
+                    </div>
+                  </div>
+                  </motion.div>
+                )}
+                </AnimatePresence>
+              </div>
+
+              {/* Card Especial: Caducidades y Suscripciones */}
+              <div className="section-card">
+                <button 
+                  type="button"
+                  className="section-card-header"
+                  onClick={() => setCardCaducidadOpen(!cardCaducidadOpen)}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 14 }}>💳</span>
+                    Tipo de Caducidad {expirationType ? `(${expirationType === 'card' ? 'Tarjeta' : expirationType === 'subscription' ? 'Suscripción' : 'Otro'})` : ''}
+                  </span>
+                  <ChevronDown size={18} style={{ transform: cardCaducidadOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                </button>
+                <AnimatePresence>
+                {cardCaducidadOpen && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ height: { duration: 0.3, ease: [0.22, 1, 0.36, 1] }, opacity: { duration: 0.2 } }} style={{ overflow: 'hidden' }}>
+                  <div className="section-card-content">
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                      <button
+                        type="button"
+                        onClick={() => setExpirationType(expirationType === 'card' ? undefined : 'card')}
+                        style={{
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '10px 6px',
+                          borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s ease',
+                          background: expirationType === 'card' ? 'rgba(255, 149, 0, 0.16)' : 'var(--bg-surface)',
+                          border: expirationType === 'card' ? '1.5px solid #ff9500' : '1px solid var(--border-subtle)',
+                          color: expirationType === 'card' ? '#ff9500' : 'var(--text-secondary)',
+                          fontWeight: expirationType === 'card' ? 600 : 400
+                        }}
+                      >
+                        <span style={{ fontSize: '1.2rem' }}>💳</span>
+                        <span style={{ fontSize: '0.78rem' }}>Tarjeta / Doc</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setExpirationType(expirationType === 'subscription' ? undefined : 'subscription')}
+                        style={{
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '10px 6px',
+                          borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s ease',
+                          background: expirationType === 'subscription' ? 'rgba(0, 122, 255, 0.16)' : 'var(--bg-surface)',
+                          border: expirationType === 'subscription' ? '1.5px solid #007aff' : '1px solid var(--border-subtle)',
+                          color: expirationType === 'subscription' ? '#007aff' : 'var(--text-secondary)',
+                          fontWeight: expirationType === 'subscription' ? 600 : 400
+                        }}
+                      >
+                        <span style={{ fontSize: '1.2rem' }}>📱</span>
+                        <span style={{ fontSize: '0.78rem' }}>Suscripción</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setExpirationType(expirationType === 'other' ? undefined : 'other')}
+                        style={{
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '10px 6px',
+                          borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s ease',
+                          background: expirationType === 'other' ? 'rgba(142, 142, 147, 0.16)' : 'var(--bg-surface)',
+                          border: expirationType === 'other' ? '1.5px solid #8e8e93' : '1px solid var(--border-subtle)',
+                          color: expirationType === 'other' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                          fontWeight: expirationType === 'other' ? 600 : 400
+                        }}
+                      >
+                        <span style={{ fontSize: '1.2rem' }}>📋</span>
+                        <span style={{ fontSize: '0.78rem' }}>Otro</span>
+                      </button>
+                    </div>
+                  </div>
+                  </motion.div>
+                )}
+                </AnimatePresence>
+              </div>
 
             </div>
           </motion.div>

@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
-import { isCompletedInCurrentPeriod, calculateHabitStreak } from '../../services/TaskService';
+import { isCompletedInCurrentPeriod, calculateHabitStreak, calculateExpirationStatus } from '../../services/TaskService';
 import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
 import { ConfirmModal } from '../ui/ConfirmModal';
@@ -349,6 +349,8 @@ export const TaskCard = React.memo(function TaskCard({
     : (totalAlerts > 1 ? (completedAlertsCount / totalAlerts) * 100 : 0);
 
   const habitStreak = calculateHabitStreak(task, cycles);
+  const isCaducidad = task.categoryId === 'caducidades' || !!task.expirationType;
+  const expirationStatus = (isCaducidad || task.dueDate) ? calculateExpirationStatus(task.dueDate) : null;
 
   return (
     <div
@@ -829,6 +831,64 @@ export const TaskCard = React.memo(function TaskCard({
                 <span>🔥</span>
                 <span>{habitStreak.count} {habitStreak.unit}</span>
               </span>
+            )}
+            {expirationStatus && (
+              <span
+                className="apple-expiration-pill"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(task.id);
+                }}
+                title={`Estado de caducidad: ${expirationStatus.label} (${expirationStatus.daysRemaining} días restantes) (Toca para editar)`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3.5,
+                  padding: '1.5px 7px',
+                  borderRadius: 6,
+                  fontSize: '0.74rem',
+                  fontWeight: 600,
+                  background: expirationStatus.badgeBg,
+                  color: expirationStatus.badgeColor,
+                  border: `1px solid ${expirationStatus.badgeColor}40`,
+                  verticalAlign: 'middle',
+                  lineHeight: '1.2',
+                  cursor: 'pointer'
+                }}
+              >
+                <span>
+                  {expirationStatus.status === 'expired' ? '🔴' :
+                   expirationStatus.status === 'imminent' ? '⚠️' :
+                   expirationStatus.status === 'warning' ? '⏳' : '✅'}
+                </span>
+                <span>{expirationStatus.label}</span>
+              </span>
+            )}
+            {task.people && task.people.length > 0 && (
+              <div style={{ display: 'inline-flex', gap: 4, alignItems: 'center', verticalAlign: 'middle' }}>
+                {task.people.map(person => (
+                  <span
+                    key={person}
+                    className="apple-person-pill"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 3,
+                      padding: '1.5px 7px',
+                      borderRadius: 12,
+                      fontSize: '0.72rem',
+                      fontWeight: 550,
+                      background: 'rgba(88, 86, 214, 0.12)',
+                      color: '#5856D6',
+                      border: '1px solid rgba(88, 86, 214, 0.22)',
+                      lineHeight: '1.2'
+                    }}
+                  >
+                    <span>👤</span>
+                    <span>{person}</span>
+                  </span>
+                ))}
+              </div>
             )}
           </div>
 

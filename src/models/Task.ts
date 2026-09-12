@@ -46,6 +46,7 @@ export interface AlertDef {
   type: 'at_time' | 'before';
   time?: string; // Format "HH:MM" para notificaciones en momento exacto
   offsetMinutes?: number; // 60 = 1 hour before, 1440 = 1 day before, etc.
+  label?: string; // e.g. "1 mes antes", "15 días antes", "3 días antes", "1 día antes"
 }
 
 export interface Attachment {
@@ -108,6 +109,10 @@ export interface TaskItem {
   // --- INNOVATION FIELDS ---
   location?: { lat: number; lng: number; radius: number; address: string };
   locationName?: string; 
+
+  // --- SPECIAL LISTS: CADUCIDADES & QUÉ HE HECHO ---
+  people?: string[]; // Nombres de personas con las que se vivió la experiencia
+  expirationType?: 'card' | 'subscription' | 'other'; // Tipo de caducidad (tarjeta, suscripción, etc.) 
 
   // --- SYNC-READY FIELDS ---
   created_at: string; // ISO String
