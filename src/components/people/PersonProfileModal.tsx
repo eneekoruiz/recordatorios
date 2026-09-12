@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Calendar, Sparkles, Clock, Heart, Plus } from 'lucide-react';
+import { X, Calendar, Sparkles, Clock, Heart, Plus, Share2, Coffee } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { getPersonRelationshipStats } from '../../services/TaskService';
 import { HapticService } from '../../services/HapticService';
@@ -28,6 +28,33 @@ export const PersonProfileModal: React.FC<PersonProfileModalProps> = ({
   const stats = getPersonRelationshipStats(personName, allTasks);
 
   const initial = personName.charAt(0).toUpperCase();
+
+  const handleShare = async () => {
+    if (!personName) return;
+    const memories = stats.allPersonTasks.map((t: TaskItem) => {
+      const date = new Date(t.dueDate || t.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+      return `• ${t.title} (${date}${t.locationName ? ` en ${t.locationName}` : ''}${t.vibe ? ` ${t.vibe}` : ''})`;
+    }).join('\n');
+
+    const shareText = `✨ Momentos compartidos con ${personName} (${stats.count} vivencias):\n\n${memories}\n\n— Registrado en Recordatorios Élite`;
+
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: `Vivencias con ${personName}`,
+          text: shareText
+        });
+        return;
+      } catch {
+        // Fallback to clipboard
+      }
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      await navigator.clipboard.writeText(shareText);
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: `✓ Resumen de vivencias con ${personName} copiado al portapapeles` }));
+    }
+  };
 
   const handleTaskClick = (taskId: string) => {
     HapticService.selection();
@@ -132,26 +159,49 @@ export const PersonProfileModal: React.FC<PersonProfileModalProps> = ({
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={onClose}
-              title="Cerrar"
-              aria-label="Cerrar"
-              style={{
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: '50%',
-                width: 30,
-                height: 30,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                color: 'var(--text-secondary)'
-              }}
-            >
-              <X size={16} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button
+                type="button"
+                onClick={handleShare}
+                title="Compartir vivencias"
+                aria-label="Compartir vivencias"
+                style={{
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '50%',
+                  width: 30,
+                  height: 30,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: 'var(--text-secondary)'
+                }}
+              >
+                <Share2 size={15} />
+              </button>
+
+              <button
+                type="button"
+                onClick={onClose}
+                title="Cerrar"
+                aria-label="Cerrar"
+                style={{
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '50%',
+                  width: 30,
+                  height: 30,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: 'var(--text-secondary)'
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
           </div>
 
           {/* Stats Cards Row */}
@@ -213,6 +263,49 @@ export const PersonProfileModal: React.FC<PersonProfileModalProps> = ({
             </div>
           </div>
 
+          {/* Tiempo sin vernos proactivo */}
+          {stats.daysSinceLast !== null && stats.daysSinceLast >= 30 && (
+            <div
+              data-testid="long-time-no-see-alert"
+              style={{
+                margin: '12px 20px 0',
+                padding: '10px 14px',
+                borderRadius: 12,
+                background: 'rgba(255, 149, 0, 0.1)',
+                border: '1px solid rgba(255, 149, 0, 0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Coffee size={18} color="#ff9500" />
+                <span style={{ fontSize: '0.80rem', color: '#ff9500', fontWeight: 600 }}>
+                  Hace {stats.daysSinceLast} días del último plan. ¿Qué tal un café o una llamada?
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddClick}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: 999,
+                  background: '#ff9500',
+                  color: 'white',
+                  border: 'none',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
+                }}
+              >
+                Planear algo
+              </button>
+            </div>
+          )}
+
           {/* Memories List */}
           <div style={{
             flex: 1,
@@ -267,6 +360,11 @@ export const PersonProfileModal: React.FC<PersonProfileModalProps> = ({
                         {task.vibe && (
                           <span style={{ fontSize: '0.72rem', color: '#ff9500', background: 'rgba(255, 149, 0, 0.12)', padding: '1px 6px', borderRadius: 999, fontWeight: 600 }}>
                             {task.vibe}
+                          </span>
+                        )}
+                        {task.locationName && (
+                          <span style={{ fontSize: '0.72rem', color: '#34c759', background: 'rgba(52, 199, 89, 0.12)', padding: '1px 6px', borderRadius: 999, fontWeight: 600 }}>
+                            📍 {task.locationName}
                           </span>
                         )}
                       </div>

@@ -116,6 +116,7 @@ export interface TaskItem {
   issuerMask?: string; // e.g. "VISA •• 4821", "DNI", "Revolut" (Apple Wallet badge)
   autoRollover?: boolean; // Renovación automática de fecha al completar suscripción
   subscriptionPeriod?: 'monthly' | 'yearly'; // Periodicidad de suscripción para cálculo financiero y auto-rollover
+  managementUrl?: string; // Enlace web directo para gestionar o cancelar suscripción
   vibe?: string; // Estado de ánimo o tipo de recuerdo (Apple Journal emoji badge, ej: "✨ Especial", "🏔️ Aventura")
 
   // --- SYNC-READY FIELDS ---

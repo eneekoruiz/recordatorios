@@ -17,6 +17,7 @@ import { SoundService } from '../../services/SoundService';
 import { DailyBriefingBanner } from './DailyBriefingBanner';
 import { extractPeopleFromText, calculateExpirationStatus, calculateSubscriptionCosts, findFlashbackMemories } from '../../services/TaskService';
 import { PersonProfileModal } from '../people/PersonProfileModal';
+import { AIService } from '../../services/AIService';
 
 interface MainContentProps {
   currentView: string;
@@ -240,6 +241,27 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const [selectedPersonFilter, setSelectedPersonFilter] = useState<string | null>(null);
   // Ficha de relación de persona (modal)
   const [selectedPersonForProfile, setSelectedPersonForProfile] = useState<string | null>(null);
+  // Resumen del mes IA (modal)
+  const [monthlySummaryModal, setMonthlySummaryModal] = useState<{ open: boolean; title: string; text: string; loading: boolean }>({ open: false, title: '', text: '', loading: false });
+
+  const handleOpenMonthlySummary = async () => {
+    HapticService.selection();
+    const now = new Date();
+    const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const currentMonthName = monthNames[now.getMonth()];
+    
+    setMonthlySummaryModal({ open: true, title: `Memoria de ${currentMonthName}`, text: '', loading: true });
+    
+    const allQueHeHecho = allTasksArray.filter((t: any) => !t.deleted_at && (t.categoryId === 'que_he_hecho' || (t as any).category_id === 'que_he_hecho'));
+    const thisMonthTasks = allQueHeHecho.filter(t => {
+      const d = new Date(t.dueDate || t.created_at);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+
+    const tasksToSummarize = thisMonthTasks.length > 0 ? thisMonthTasks : allQueHeHecho;
+    const summary = await AIService.generateMonthlySummary(tasksToSummarize, currentMonthName);
+    setMonthlySummaryModal({ open: true, title: `Memoria de ${currentMonthName}`, text: summary, loading: false });
+  };
 
   // Resetear filtros al cambiar de vista o lista
   useEffect(() => {
@@ -1679,6 +1701,28 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                     <Clock size={14} />
                     <span>Línea de Tiempo</span>
                   </button>
+                  <button
+                    type="button"
+                    data-testid="monthly-summary-btn"
+                    onClick={() => handleOpenMonthlySummary()}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      padding: '5px 11px',
+                      borderRadius: 7,
+                      fontSize: '0.80rem',
+                      fontWeight: 650,
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: 'rgba(255, 149, 0, 0.12)',
+                      color: '#ff9500',
+                      transition: 'all 0.15s ease'
+                    }}
+                    title="Generar memoria y resumen mensual con IA"
+                  >
+                    <span>🪄 Resumen del mes</span>
+                  </button>
                 </div>
               </div>
 
@@ -2516,6 +2560,128 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         onEditTask={onEditTask}
         onAddMemoryWithPerson={() => onOpenNewTask('que_he_hecho')}
       />
+
+      {monthlySummaryModal.open && createPortal(
+        <div
+          data-testid="monthly-summary-modal"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16
+          }}
+        >
+          <div
+            onClick={() => setMonthlySummaryModal(prev => ({ ...prev, open: false }))}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.45)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)'
+            }}
+          />
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: 'relative',
+              width: '100%',
+              maxWidth: 520,
+              background: 'var(--bg-elevated)',
+              borderRadius: 20,
+              border: '1px solid var(--border-subtle)',
+              padding: '24px 20px',
+              boxShadow: '0 24px 60px rgba(0,0,0,0.3)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 14,
+              zIndex: 100000
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: '1.4rem' }}>🪄</span>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {monthlySummaryModal.title}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMonthlySummaryModal(prev => ({ ...prev, open: false }))}
+                title="Cerrar"
+                aria-label="Cerrar"
+                style={{
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '50%',
+                  width: 30,
+                  height: 30,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: 'var(--text-secondary)'
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {monthlySummaryModal.loading ? (
+              <div style={{ padding: '30px 10px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                <Sparkles size={20} className="animate-spin" style={{ margin: '0 auto 10px', color: '#ff9500' }} />
+                <span>Tejiendo tu memoria mensual con IA...</span>
+              </div>
+            ) : (
+              <div 
+                data-testid="monthly-summary-content"
+                style={{
+                  fontSize: '0.92rem',
+                  lineHeight: '1.6',
+                  color: 'var(--text-primary)',
+                  whiteSpace: 'pre-wrap',
+                  background: 'var(--bg-surface)',
+                  padding: '16px',
+                  borderRadius: 14,
+                  border: '1px solid var(--border-subtle)',
+                  maxHeight: '60vh',
+                  overflowY: 'auto'
+                }}
+              >
+                {monthlySummaryModal.text}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 6 }}>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                    await navigator.clipboard.writeText(monthlySummaryModal.text);
+                    window.dispatchEvent(new CustomEvent('show-toast', { detail: '✓ Resumen mensual copiado al portapapeles' }));
+                  }
+                }}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 10,
+                  background: '#ff9500',
+                  color: 'white',
+                  border: 'none',
+                  fontSize: '0.84rem',
+                  fontWeight: 650,
+                  cursor: 'pointer'
+                }}
+              >
+                Copiar memoria
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {currentView !== 'TRASH' && (
         <QuickAddBar currentView={currentView} onExpandDrawer={() => onOpenNewTask()} />

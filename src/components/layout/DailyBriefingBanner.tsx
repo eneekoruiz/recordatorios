@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Sun, Moon, Sunset, Sparkles, CheckCircle2, 
-  AlertCircle, ChevronDown, ChevronUp, Flame, Calendar
+  AlertCircle, ChevronDown, ChevronUp, Flame, Calendar, CreditCard
 } from 'lucide-react';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { calculateHabitStreak } from '../../services/TaskService';
@@ -74,6 +74,15 @@ export function DailyBriefingBanner() {
       }
     });
 
+    // Suscripciones o tarjetas que vencen en las próximas 48 horas
+    const upcomingCaducidades = allTasks.filter(t => {
+      if ((t.categoryId === 'caducidades' || t.expirationType) && t.dueDate && !isTaskCompleted(t)) {
+        const diffHours = (new Date(t.dueDate).getTime() - now.getTime()) / (1000 * 3600);
+        return diffHours >= -12 && diffHours <= 48;
+      }
+      return false;
+    });
+
     return {
       greeting,
       GreetingIcon,
@@ -85,7 +94,8 @@ export function DailyBriefingBanner() {
       highPriorityCount: highPriorityToday.length,
       habitsTotal: dailyHabits.length,
       habitsCompleted: completedHabits.length,
-      topStreak
+      topStreak,
+      upcomingCaducidades
     };
   }, [tasks, cycles]);
 
@@ -279,6 +289,30 @@ export function DailyBriefingBanner() {
                     <span>{briefing.habitsCompleted}/{briefing.habitsTotal} hábitos diarios</span>
                   </div>
                 )}
+
+                {briefing.upcomingCaducidades.length > 0 && (
+                  <div
+                    data-testid="briefing-caducidad-chip"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '5px 10px',
+                      borderRadius: 10,
+                      background: 'rgba(255, 149, 0, 0.12)',
+                      border: '1px solid rgba(255, 149, 0, 0.28)',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      color: '#ff9500'
+                    }}
+                  >
+                    <CreditCard size={14} />
+                    <span>
+                      {briefing.upcomingCaducidades[0].title}
+                      {briefing.upcomingCaducidades[0].price ? ` (${briefing.upcomingCaducidades[0].price} €)` : ''} vence pronto
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Dynamic message */}
@@ -299,6 +333,23 @@ export function DailyBriefingBanner() {
                   <span>💡 Tienes {briefing.pendingCount} recordatorio(s) para hoy. Mantén el ritmo para preservar tus rachas de hábitos.</span>
                 )}
               </div>
+
+              {briefing.upcomingCaducidades.length > 0 && (
+                <div 
+                  data-testid="briefing-caducidad-alert"
+                  style={{
+                    fontSize: '0.80rem',
+                    color: '#ff9500',
+                    lineHeight: 1.4,
+                    padding: '6px 10px',
+                    borderRadius: 8,
+                    background: 'rgba(255, 149, 0, 0.08)',
+                    borderLeft: '3px solid #ff9500'
+                  }}
+                >
+                  <span>💳 <strong>Aviso de caducidad:</strong> {briefing.upcomingCaducidades[0].title} vence en las próximas 48h{briefing.upcomingCaducidades[0].price ? ` por ${briefing.upcomingCaducidades[0].price} €` : ''}. Comprueba tu saldo o cancélala si ya no la estás usando.</span>
+                </div>
+              )}
             </div>
           </motion.div>
         )}

@@ -657,4 +657,149 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
     await page.waitForTimeout(300);
     await expect(profileModal).not.toBeVisible();
   });
+
+  // 17. AI Assistant: Text-to-Speech playback & location extraction
+  test('17. AI Assistant: TTS audio button, location extraction, and apple-location-pill in Qué he hecho', async ({ page }) => {
+    await ensureAppUnlocked(page);
+    await page.waitForLoadState('networkidle');
+
+    // Open AI Assistant modal
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent('open-ai-assistant'));
+    });
+    await page.waitForTimeout(400);
+
+    const aiInput = page.locator('input[placeholder*="Habla o escribe tus recordatorios"]').first();
+    await expect(aiInput).toBeVisible();
+    await aiInput.fill('Comer unos pintxos en Donosti con Irantzu');
+    await aiInput.press('Enter');
+    await page.waitForTimeout(800);
+
+    // Verify TTS button is rendered for assistant message
+    const ttsBtn = page.locator('[data-testid="ai-tts-btn"]').last();
+    await expect(ttsBtn).toBeVisible();
+    await ttsBtn.click(); // Trigger speak/cancel
+    await page.waitForTimeout(300);
+
+    // Verify location chip is present in proposed task preview
+    const locationChip = page.locator('text=📍 Donosti').first();
+    await expect(locationChip).toBeVisible();
+
+    // Import into Qué he hecho
+    const importBtn = page.locator('[data-testid="ai-import-all-btn"]').first();
+    await expect(importBtn).toBeVisible();
+    await importBtn.click();
+    await page.waitForTimeout(600);
+
+    // Verify memory card has apple-location-pill
+    const locationPill = page.locator('.apple-location-pill:has-text("Donosti")').first();
+    await expect(locationPill).toBeVisible();
+  });
+
+  // 18. Daily Smart Briefing: Upcoming subscription caducidad warning & management link
+  test('18. Daily Smart Briefing: 48h caducidad alert chip & managementUrl button in task card', async ({ page }) => {
+    await ensureAppUnlocked(page);
+    await page.waitForLoadState('networkidle');
+
+    // Seed a subscription due tomorrow with price and managementUrl
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    await page.evaluate((dueIso) => {
+      const store = (window as any).useAppStore?.getState?.();
+      if (store) {
+        store.addTask({
+          id: 'test-sub-hbo',
+          title: 'Max HBO Suscripción',
+          categoryId: 'caducidades',
+          sectionId: 'sec_suscripciones',
+          expirationType: 'subscription',
+          price: 9.99,
+          dueDate: dueIso,
+          managementUrl: 'https://max.com/account',
+          status: 'pending'
+        });
+      }
+    }, tomorrow);
+
+    await page.waitForTimeout(400);
+
+    // Navigate to Hoy (smart_today)
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent('select-view', { detail: 'smart_today' }));
+    });
+    await page.waitForTimeout(500);
+
+    // Verify Daily Briefing renders the caducidad chip
+    const caducidadChip = page.locator('[data-testid="briefing-caducidad-chip"]').first();
+    await expect(caducidadChip).toBeVisible();
+    await expect(caducidadChip).toContainText('Max HBO Suscripción');
+
+    // Navigate to Caducidades
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent('select-view', { detail: 'list_caducidades' }));
+    });
+    await page.waitForTimeout(500);
+
+    // Verify task card renders management URL button
+    const manageBtn = page.locator('.apple-manage-url-btn:has-text("Gestionar")').first();
+    await expect(manageBtn).toBeVisible();
+    await expect(manageBtn).toHaveAttribute('href', 'https://max.com/account');
+  });
+
+  // 19. Social Care: Tiempo sin vernos alert & AI Monthly Summary generator
+  test('19. Social Care: Tiempo sin vernos alert in Person Profile & AI Monthly Summary modal', async ({ page }) => {
+    await ensureAppUnlocked(page);
+    await page.waitForLoadState('networkidle');
+
+    // Seed an old memory from 45 days ago with Carlos
+    const oldDate = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString();
+    await page.evaluate((oldIso) => {
+      const store = (window as any).useAppStore?.getState?.();
+      if (store) {
+        store.addTask({
+          id: 'test-memory-carlos-old',
+          title: 'Cena de graduación',
+          categoryId: 'que_he_hecho',
+          people: ['Carlos'],
+          dueDate: oldIso,
+          created_at: oldIso,
+          status: 'pending'
+        });
+      }
+    }, oldDate);
+
+    // Navigate to Qué he hecho
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent('select-view', { detail: 'list_que_he_hecho' }));
+    });
+    await page.waitForTimeout(500);
+
+    // Click on Carlos person pill
+    const carlosPill = page.locator('.apple-person-pill:has-text("Carlos")').first();
+    await expect(carlosPill).toBeVisible();
+    await carlosPill.click();
+    await page.waitForTimeout(400);
+
+    // Check "Tiempo sin vernos" alert
+    const noSeeAlert = page.locator('[data-testid="long-time-no-see-alert"]').first();
+    await expect(noSeeAlert).toBeVisible();
+    await expect(noSeeAlert).toContainText('Hace 45 días del último plan');
+
+    // Close profile modal
+    const closeBtn = page.locator('.person-profile-overlay button[title="Cerrar"]').first();
+    await closeBtn.click();
+    await page.waitForTimeout(300);
+
+    // Click "🪄 Resumen del mes" button
+    const monthlyBtn = page.locator('[data-testid="monthly-summary-btn"]').first();
+    await expect(monthlyBtn).toBeVisible();
+    await monthlyBtn.click();
+    await page.waitForTimeout(600);
+
+    // Verify monthly summary modal opens and shows narrative
+    const summaryModal = page.locator('[data-testid="monthly-summary-modal"]').first();
+    await expect(summaryModal).toBeVisible();
+    const summaryContent = page.locator('[data-testid="monthly-summary-content"]').first();
+    await expect(summaryContent).toBeVisible();
+    await expect(summaryContent).toContainText('Memoria');
+  });
 });
