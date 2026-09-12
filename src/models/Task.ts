@@ -113,6 +113,10 @@ export interface TaskItem {
   // --- SPECIAL LISTS: CADUCIDADES & QUÉ HE HECHO ---
   people?: string[]; // Nombres de personas con las que se vivió la experiencia
   expirationType?: 'card' | 'subscription' | 'other'; // Tipo de caducidad (tarjeta, suscripción, etc.) 
+  issuerMask?: string; // e.g. "VISA •• 4821", "DNI", "Revolut" (Apple Wallet badge)
+  autoRollover?: boolean; // Renovación automática de fecha al completar suscripción
+  subscriptionPeriod?: 'monthly' | 'yearly'; // Periodicidad de suscripción para cálculo financiero y auto-rollover
+  vibe?: string; // Estado de ánimo o tipo de recuerdo (Apple Journal emoji badge, ej: "✨ Especial", "🏔️ Aventura")
 
   // --- SYNC-READY FIELDS ---
   created_at: string; // ISO String

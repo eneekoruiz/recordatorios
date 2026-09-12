@@ -15,7 +15,8 @@ import { QuickAddBar } from '../ui/QuickAddBar';
 import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
 import { DailyBriefingBanner } from './DailyBriefingBanner';
-import { extractPeopleFromText, calculateExpirationStatus } from '../../services/TaskService';
+import { extractPeopleFromText, calculateExpirationStatus, calculateSubscriptionCosts, findFlashbackMemories } from '../../services/TaskService';
+import { PersonProfileModal } from '../people/PersonProfileModal';
 
 interface MainContentProps {
   currentView: string;
@@ -235,12 +236,17 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const [isolatedSectionKey, setIsolatedSectionKey] = useState<string | null>(null);
   // Vista especial para "Qué he hecho": Por Personas o Línea de Tiempo (Timeline)
   const [lifeLogViewMode, setLifeLogViewMode] = useState<'people' | 'timeline'>('people');
+  // Filtro de persona específica en Qué he hecho
+  const [selectedPersonFilter, setSelectedPersonFilter] = useState<string | null>(null);
+  // Ficha de relación de persona (modal)
+  const [selectedPersonForProfile, setSelectedPersonForProfile] = useState<string | null>(null);
 
   // Resetear filtros al cambiar de vista o lista
   useEffect(() => {
     setListSectionFilter('all');
     setDailyTimeFilter('all');
     setIsolatedSectionKey(null);
+    setSelectedPersonFilter(null);
   }, [currentView]);
 
   // Helper para resolver franja horaria de una tarea
@@ -476,6 +482,13 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           if (grouped['persona_solo'].length === 0) {
             delete grouped['persona_solo'];
           }
+
+          if (selectedPersonFilter) {
+            const filterKey = `persona_${selectedPersonFilter}`;
+            Object.keys(grouped).forEach(k => {
+              if (k !== filterKey) delete grouped[k];
+            });
+          }
         } else {
           // Timeline mode: Group by Year and Month
           const sortedByDate = [...validTasks].sort((a, b) => {
@@ -589,7 +602,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     }
 
     return rawGrouped;
-  }, [currentView, isFolderView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, resolvedShowCompleted, recentlyCompletedIds, lists, currentCycle, cycleInclusion, listSectionFilter, dailyTimeFilter, resolveTimeOfDay, currentList, sortBy, sortTaskList, lifeLogViewMode]);
+  }, [currentView, isFolderView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, resolvedShowCompleted, recentlyCompletedIds, lists, currentCycle, cycleInclusion, listSectionFilter, dailyTimeFilter, resolveTimeOfDay, currentList, sortBy, sortTaskList, lifeLogViewMode, selectedPersonFilter]);
     
   const smartTasks = useMemo(() => currentView === 'cycle_day' ? getSmartSortTasks() : [], [currentView, getSmartSortTasks, tasks]);
 
@@ -608,6 +621,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const activeVisibleCount = useMemo(() => visibleTasks.filter(t => !isTaskCompleted(t)).length, [visibleTasks]);
   const completedVisibleCount = useMemo(() => visibleTasks.filter(t => !isTaskCompleted(t) ? false : true).length, [visibleTasks]);
 
+  const allTasksArray = useMemo(() => Object.values(tasks), [tasks]);
+  const flashbackMemories = useMemo(() => currentView === 'list_que_he_hecho' ? findFlashbackMemories(allTasksArray) : [], [currentView, allTasksArray]);
+
   const caducidadesStats = useMemo(() => {
     if (currentView !== 'list_caducidades') return null;
     const allCaducidades = Object.values(tasks).filter((t: any) => !t.deleted_at && (t.categoryId === 'caducidades' || (t as any).category_id === 'caducidades'));
@@ -622,11 +638,13 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         }
       }
     });
+    const subCosts = calculateSubscriptionCosts(allCaducidades);
     return {
       total: allCaducidades.length,
       cards: cards.length,
       subs: subs.length,
-      critical: criticalCount
+      critical: criticalCount,
+      subCosts
     };
   }, [currentView, tasks]);
 
@@ -1179,6 +1197,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             isLastInSection={isLast}
             previousTaskId={previousTaskId}
             onNavigateView={onSelectView}
+            onPersonClick={(p) => setSelectedPersonForProfile(p)}
             {...({
               hasChildren,
               isExpanded,
@@ -1188,7 +1207,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         </div>
       </motion.div>
     );
-  }, [tasks, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, onSelectView, isSmartView, currentView]);
+  }, [tasks, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, onSelectView, isSmartView, currentView, setSelectedPersonForProfile]);
 
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
   const smartListInfo = isSmartView ? SMART_LISTS.find(l => l.id === currentView) : null;
@@ -1613,53 +1632,138 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           )}
 
           {currentView === 'list_que_he_hecho' && (
-            <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ display: 'inline-flex', background: 'var(--bg-card, rgba(0,0,0,0.05))', padding: '3px', borderRadius: 10, border: '1px solid var(--border-subtle)' }}>
-                <button
-                  type="button"
-                  onClick={() => { HapticService.selection(); setLifeLogViewMode('people'); }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '6px 14px',
-                    borderRadius: 7,
-                    fontSize: '0.82rem',
-                    fontWeight: 600,
-                    border: 'none',
-                    cursor: 'pointer',
-                    background: lifeLogViewMode === 'people' ? 'var(--bg-elevated, #fff)' : 'transparent',
-                    color: lifeLogViewMode === 'people' ? '#5856d6' : 'var(--text-secondary)',
-                    boxShadow: lifeLogViewMode === 'people' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <Users size={14} />
-                  <span>Por Personas</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { HapticService.selection(); setLifeLogViewMode('timeline'); }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '6px 14px',
-                    borderRadius: 7,
-                    fontSize: '0.82rem',
-                    fontWeight: 600,
-                    border: 'none',
-                    cursor: 'pointer',
-                    background: lifeLogViewMode === 'timeline' ? 'var(--bg-elevated, #fff)' : 'transparent',
-                    color: lifeLogViewMode === 'timeline' ? '#5856d6' : 'var(--text-secondary)',
-                    boxShadow: lifeLogViewMode === 'timeline' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <Clock size={14} />
-                  <span>Línea de Tiempo</span>
-                </button>
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ display: 'inline-flex', background: 'var(--bg-card, rgba(0,0,0,0.05))', padding: '3px', borderRadius: 10, border: '1px solid var(--border-subtle)' }}>
+                  <button
+                    type="button"
+                    onClick={() => { HapticService.selection(); setLifeLogViewMode('people'); }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '6px 14px',
+                      borderRadius: 7,
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: lifeLogViewMode === 'people' ? 'var(--bg-elevated, #fff)' : 'transparent',
+                      color: lifeLogViewMode === 'people' ? '#5856d6' : 'var(--text-secondary)',
+                      boxShadow: lifeLogViewMode === 'people' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <Users size={14} />
+                    <span>Por Personas</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { HapticService.selection(); setLifeLogViewMode('timeline'); }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '6px 14px',
+                      borderRadius: 7,
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: lifeLogViewMode === 'timeline' ? 'var(--bg-elevated, #fff)' : 'transparent',
+                      color: lifeLogViewMode === 'timeline' ? '#5856d6' : 'var(--text-secondary)',
+                      boxShadow: lifeLogViewMode === 'timeline' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <Clock size={14} />
+                    <span>Línea de Tiempo</span>
+                  </button>
+                </div>
               </div>
+
+              {/* Filtro rápido por persona en modo personas */}
+              {lifeLogViewMode === 'people' && (() => {
+                const allQueHeHecho = allTasksArray.filter((t: any) => !t.deleted_at && (t.categoryId === 'que_he_hecho' || (t as any).category_id === 'que_he_hecho'));
+                const uniqueP = Array.from(new Set(allQueHeHecho.flatMap(t => (t.people && t.people.length > 0) ? t.people : extractPeopleFromText(`${t.title || ''} ${t.description || ''}`)))).filter(Boolean);
+                if (uniqueP.length === 0) return null;
+                return (
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 2 }}>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Filtrar:</span>
+                    <button
+                      type="button"
+                      onClick={() => { HapticService.selection(); setSelectedPersonFilter(null); }}
+                      style={{
+                        padding: '2px 9px',
+                        borderRadius: 999,
+                        fontSize: '0.74rem',
+                        fontWeight: 600,
+                        border: selectedPersonFilter === null ? '1px solid #5856D6' : '1px solid var(--border-subtle)',
+                        background: selectedPersonFilter === null ? '#5856D6' : 'var(--bg-elevated)',
+                        color: selectedPersonFilter === null ? '#ffffff' : 'var(--text-secondary)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Todos
+                    </button>
+                    {uniqueP.map(p => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => { HapticService.selection(); setSelectedPersonFilter(selectedPersonFilter === p ? null : p); }}
+                        style={{
+                          padding: '2px 9px',
+                          borderRadius: 999,
+                          fontSize: '0.74rem',
+                          fontWeight: 600,
+                          border: selectedPersonFilter === p ? '1px solid #5856D6' : '1px solid var(--border-subtle)',
+                          background: selectedPersonFilter === p ? '#5856D6' : 'var(--bg-elevated)',
+                          color: selectedPersonFilter === p ? '#ffffff' : 'var(--text-secondary)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        👤 {p}
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {/* Banner 'Un día como hoy' (Flashbacks estilo Apple Fotos) */}
+              {flashbackMemories.length > 0 && (
+                <div
+                  data-testid="flashback-banner"
+                  onClick={() => onEditTask?.(flashbackMemories[0].id)}
+                  style={{
+                    marginTop: 6,
+                    padding: '10px 14px',
+                    borderRadius: 14,
+                    background: 'linear-gradient(135deg, rgba(88, 86, 214, 0.12), rgba(255, 149, 0, 0.12))',
+                    border: '1px solid rgba(88, 86, 214, 0.25)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
+                  }}
+                  title="Toca para ver este recuerdo"
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: '1.4rem' }}>🌟</span>
+                    <div>
+                      <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        Un día como hoy: {flashbackMemories[0].title}
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
+                        {flashbackMemories[0].people && flashbackMemories[0].people.length > 0
+                          ? `Con ${flashbackMemories[0].people.join(', ')} • Toca para revivir este momento`
+                          : 'Recordatorio especial vivido en esta misma fecha'}
+                      </div>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '0.74rem', color: '#5856D6', fontWeight: 650 }}>Ver recuerdo →</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -1687,6 +1791,20 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Suscripciones:</span>
                 <span style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-primary)' }}>{caducidadesStats.subs}</span>
               </div>
+              {caducidadesStats.subCosts && caducidadesStats.subCosts.count > 0 && (
+                <>
+                  <div style={{ width: 1, height: 16, background: 'var(--border-subtle)' }} />
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-primary)' }}>
+                    <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Gasto recurrente:</span>
+                    <span style={{ fontSize: '0.86rem', fontWeight: 700, color: '#34c759' }}>
+                      {caducidadesStats.subCosts.formattedMonthly}/mes
+                    </span>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-tertiary)' }}>
+                      ({caducidadesStats.subCosts.formattedYearly}/año)
+                    </span>
+                  </div>
+                </>
+              )}
               {caducidadesStats.critical > 0 && (
                 <>
                   <div style={{ width: 1, height: 16, background: 'var(--border-subtle)' }} />
@@ -1802,6 +1920,32 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                       >
                         {data.title}
                       </h3>
+                    )}
+                    {data.category.startsWith('persona_') && data.category !== 'persona_solo' && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedPersonForProfile(data.category.replace('persona_', ''));
+                        }}
+                        style={{
+                          background: 'rgba(88, 86, 214, 0.12)',
+                          border: '1px solid rgba(88, 86, 214, 0.25)',
+                          borderRadius: 999,
+                          color: '#5856D6',
+                          fontSize: '0.72rem',
+                          fontWeight: 600,
+                          padding: '2px 8px',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 3,
+                          marginLeft: 4
+                        }}
+                        title="Ver momentos compartidos y relación"
+                      >
+                        <span>Ficha</span>
+                      </button>
                     )}
                     {sectionTotal > 0 && (
                       <span 
@@ -2363,6 +2507,15 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         </AnimatePresence>,
         document.body
       )}
+
+      <PersonProfileModal
+        personName={selectedPersonForProfile}
+        isOpen={!!selectedPersonForProfile}
+        onClose={() => setSelectedPersonForProfile(null)}
+        allTasks={allTasksArray}
+        onEditTask={onEditTask}
+        onAddMemoryWithPerson={() => onOpenNewTask('que_he_hecho')}
+      />
 
       {currentView !== 'TRASH' && (
         <QuickAddBar currentView={currentView} onExpandDrawer={() => onOpenNewTask()} />

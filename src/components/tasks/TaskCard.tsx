@@ -31,10 +31,11 @@ interface TaskCardProps {
   onToggleExpand?: () => void;
   indent?: number;
   onNavigateView?: (view: string) => void;
+  onPersonClick?: (person: string) => void;
 }
 
 export const TaskCard = React.memo(function TaskCard({
-  task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, showListName = true, isFirstInSection, isLastInSection, previousTaskId, hasChildren, isExpanded, onToggleExpand, indent = 0, onNavigateView
+  task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, showListName = true, isFirstInSection, isLastInSection, previousTaskId, hasChildren, isExpanded, onToggleExpand, indent = 0, onNavigateView, onPersonClick
 }: TaskCardProps) {
   const cycles = useAppStore(state => state.cycles);
   const tasks = useAppStore(state => state.tasks);
@@ -864,12 +865,62 @@ export const TaskCard = React.memo(function TaskCard({
                 <span>{expirationStatus.label}</span>
               </span>
             )}
+            {task.issuerMask && (
+              <span
+                className="apple-card-chip"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3.5,
+                  padding: '1.5px 7px',
+                  borderRadius: 6,
+                  fontSize: '0.72rem',
+                  fontWeight: 650,
+                  background: 'var(--bg-card)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border-subtle)',
+                  verticalAlign: 'middle',
+                  lineHeight: '1.2'
+                }}
+                title={`Identificador de tarjeta/documento: ${task.issuerMask}`}
+              >
+                <span>💳</span>
+                <span>{task.issuerMask}</span>
+              </span>
+            )}
+            {task.vibe && (
+              <span
+                className="apple-vibe-pill"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3,
+                  padding: '1.5px 7px',
+                  borderRadius: 999,
+                  fontSize: '0.72rem',
+                  fontWeight: 600,
+                  background: 'rgba(255, 149, 0, 0.12)',
+                  color: '#ff9500',
+                  border: '1px solid rgba(255, 149, 0, 0.22)',
+                  verticalAlign: 'middle',
+                  lineHeight: '1.2'
+                }}
+                title={`Estado de ánimo / Vibe: ${task.vibe}`}
+              >
+                <span>{task.vibe}</span>
+              </span>
+            )}
             {task.people && task.people.length > 0 && (
               <div style={{ display: 'inline-flex', gap: 4, alignItems: 'center', verticalAlign: 'middle' }}>
                 {task.people.map(person => (
                   <span
                     key={person}
                     className="apple-person-pill"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onPersonClick?.(person);
+                    }}
+                    title={`Ver relación y momentos compartidos con ${person}`}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -881,7 +932,8 @@ export const TaskCard = React.memo(function TaskCard({
                       background: 'rgba(88, 86, 214, 0.12)',
                       color: '#5856D6',
                       border: '1px solid rgba(88, 86, 214, 0.22)',
-                      lineHeight: '1.2'
+                      lineHeight: '1.2',
+                      cursor: 'pointer'
                     }}
                   >
                     <span>👤</span>
