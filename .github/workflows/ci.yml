@@ -6,6 +6,13 @@ on:
   pull_request:
     branches: [ main ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GIT_LFS_SKIP_SMUDGE: '1'
+
 jobs:
   test:
     name: Build & E2E Verification
@@ -20,6 +27,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          lfs: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
