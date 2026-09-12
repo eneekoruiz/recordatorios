@@ -12,6 +12,8 @@ export interface ProposedTask {
   quantity?: number;
   priority?: 'none' | 'low' | 'medium' | 'high';
   cycle?: 'cycle_day' | 'cycle_week' | 'cycle_month' | 'cycle_year';
+  people?: string[];
+  vibe?: string;
   selected: boolean;
 }
 
@@ -79,14 +81,20 @@ export class AIService {
   /**
    * Local Semantic Extractor (Zero-Config, runs 100% locally and offline)
    */
+  /**
+   * Local Semantic Extractor (Zero-Config, runs 100% locally and offline)
+   */
   public static localSemanticExtract(text: string, existingLists: CustomList[]): ProposedBatch {
     const trimmed = text.trim();
     if (!trimmed) {
       return {
-        reply: 'Hola, ¿en qué puedo ayudarte hoy? Puedes pedirme que organice tu día, prepare una lista de la compra o planifique un proyecto completo.',
+        reply: 'Hola, ¿en qué puedo ayudarte hoy? Puedes contarme cómo ha ido tu día, pedirme que organice tus recordatorios o planificar la semana.',
         tasks: []
       };
     }
+
+    // Check if the user is narrating their day or sharing personal experiences
+    const isNarrative = /\b(buah|hoy\s+(he\s+hecho|hice|estuve|fui|quedé|pasé)|ayer\s+(estuve|fui|quedé|hice)|esta\s+mañana|esta\s+tarde|este\s+finde|el\s+finde)\b/i.test(trimmed);
 
     // Detect if user wants to create a specific list
     let suggestedList: ProposedBatch['suggestedList'] | undefined;
@@ -103,7 +111,6 @@ export class AIService {
     }
 
     // Split into individual task candidates:
-    // Split by newlines, bullets (-, *, 1.), semicolons, or sentence terminators.
     let rawSegments: string[] = [];
     if (trimmed.includes('\n')) {
       rawSegments = trimmed.split('\n');
@@ -112,9 +119,9 @@ export class AIService {
       rawSegments = trimmed.split(/(?:;\s*|\.\s+(?=[A-Z0-9¿¡])|\s+-\s+|\s*\n\s*)/);
     }
 
-    // If only one segment and it contains multiple actions joined by commas or " y "
-    if (rawSegments.length === 1 && (trimmed.includes(',') || /\s+y\s+/i.test(trimmed))) {
-      const parts = trimmed.split(/,\s*(?:y\s+)?|\s+y\s+/i);
+    // If only one segment and it contains multiple actions joined by " y también ", " y luego ", " y ", commas
+    if (rawSegments.length === 1 && (trimmed.includes(',') || /\s+y\s+(?:también\s+|luego\s+)?/i.test(trimmed))) {
+      const parts = trimmed.split(/(?:,\s*(?:y\s+)?|\s+y\s+(?:también\s+|luego\s+)?)/i);
       if (parts.length > 1) {
         rawSegments = parts;
       }
@@ -122,14 +129,42 @@ export class AIService {
 
     const tasks: ProposedTask[] = [];
 
+    // Global people mentioned in prompt
+    const globalMentionedPeople: string[] = [];
+    const atMatches = trimmed.match(/@([a-zA-ZáéíóúÁÉÍÓÚñÑüÜ0-9_]+)/g);
+    if (atMatches) {
+      atMatches.forEach(m => globalMentionedPeople.push(m.slice(1)));
+    }
+    const withMatches = trimmed.matchAll(/(?:con|junto\s+a)\s+([A-ZÁÉÍÓÚ][a-záéíóúñ]+)/g);
+    for (const match of withMatches) {
+      if (match[1] && !/^(el|la|los|las|mi|mis|un|una|mucho|toda|todo)$/i.test(match[1])) {
+        globalMentionedPeople.push(match[1]);
+      }
+    }
+
     for (let segment of rawSegments) {
       segment = segment.trim().replace(/^[-*•\d.)]+\s*/, '');
       if (!segment || segment.length < 3) continue;
 
-      // Ignore greeting-only or meta segments
-      if (/^(hola|buenas|por favor|organízame|ayúdame|apúntame|quiero que|gracias)\.?$/i.test(segment)) {
+      // Ignore greeting-only or filler-only segments
+      if (/^(hola|buenas|por favor|organízame|ayúdame|apúntame|quiero que|gracias|buah|pues)\.?$/i.test(segment)) {
         continue;
       }
+
+      // Extract people in this specific segment
+      const segmentPeople: string[] = [];
+      const segAtMatches = segment.match(/@([a-zA-ZáéíóúÁÉÍÓÚñÑüÜ0-9_]+)/g);
+      if (segAtMatches) {
+        segAtMatches.forEach(m => segmentPeople.push(m.slice(1)));
+      }
+      const segWithMatches = segment.matchAll(/(?:con|junto\s+a)\s+([A-ZÁÉÍÓÚ][a-záéíóúñ]+)/g);
+      for (const match of segWithMatches) {
+        if (match[1] && !/^(el|la|los|las|mi|mis|un|una|mucho|toda|todo)$/i.test(match[1])) {
+          segmentPeople.push(match[1]);
+        }
+      }
+      // If segment didn't match local people but prompt has them, associate if narrative
+      const finalPeople = Array.from(new Set([...segmentPeople, ...(isNarrative ? globalMentionedPeople : [])]));
 
       // Extract price
       let price: number | undefined;
@@ -160,7 +195,10 @@ export class AIService {
       // Extract date
       let dueDate: Date | undefined;
       const now = new Date();
-      if (/\bhoy\b/i.test(segment)) {
+      if (/\bayer\b/i.test(segment) || /\bayer\b/i.test(trimmed)) {
+        dueDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        segment = segment.replace(/\bayer\b/i, '').trim();
+      } else if (/\bhoy\b/i.test(segment) || isNarrative) {
         dueDate = new Date();
         segment = segment.replace(/\bhoy\b/i, '').trim();
       } else if (/\bpasado\s+mañana\b/i.test(segment)) {
@@ -183,6 +221,22 @@ export class AIService {
         else if (/\b(noche|cena|dormir|acostar)\b/i.test(segment)) timeOfDay = 'night';
       }
 
+      // Detect Vibe
+      let vibe: string | undefined;
+      if (/\b(escalar|montaña|cima|senderism|aventur|viaje|vuelo|excursión|ruta)\b/i.test(segment)) {
+        vibe = '🏔️ Aventura';
+      } else if (/\b(fiesta|cumpleaños|celebr|bar|cerveza|copas|concierto|festival)\b/i.test(segment)) {
+        vibe = '🎉 Celebración';
+      } else if (/\b(estudi|biblioteca|reunión|examen|trabajo|proyecto|oficina|logro)\b/i.test(segment)) {
+        vibe = '💼 Logro';
+      } else if (/\b(gimnasio|entren|gym|correr|natación|deporte|pesas|pádel|futbol)\b/i.test(segment)) {
+        vibe = '💪 Deporte';
+      } else if (/\b(cena|cine|película|café|paseo|tranqui|relax|comida|descans)\b/i.test(segment)) {
+        vibe = '🍕 Relax';
+      } else if (isNarrative || finalPeople.length > 0) {
+        vibe = '✨ Especial';
+      }
+
       // Extract priority
       let priority: 'none' | 'low' | 'medium' | 'high' = 'none';
       if (/\b(urgente|importante|ya|prioridad\s+alta)\b/i.test(segment) || segment.includes('!!!')) {
@@ -203,33 +257,44 @@ export class AIService {
       let listId = suggestedList ? undefined : 'inbox';
       let listName = suggestedList ? suggestedList.name : 'Bandeja de entrada';
 
-      for (const l of existingLists) {
-        const regex = new RegExp(`\\b(${l.name}|@${l.id})\\b`, 'i');
-        if (regex.test(segment) || regex.test(text)) {
-          listId = l.id;
-          listName = l.name;
-          segment = segment.replace(regex, '').trim();
-          break;
+      if (isNarrative || finalPeople.length > 0) {
+        const queHeHechoList = existingLists.find(l => l.id === 'que_he_hecho' || l.id === 'list_que_he_hecho' || l.name.toLowerCase().includes('qué he hecho'));
+        if (queHeHechoList) {
+          listId = queHeHechoList.id;
+          listName = queHeHechoList.name;
+        } else {
+          listId = 'que_he_hecho';
+          listName = 'Qué he hecho';
+        }
+      } else {
+        for (const l of existingLists) {
+          const regex = new RegExp(`\\b(${l.name}|@${l.id})\\b`, 'i');
+          if (regex.test(segment) || regex.test(text)) {
+            listId = l.id;
+            listName = l.name;
+            segment = segment.replace(regex, '').trim();
+            break;
+          }
         }
       }
 
       // Cleanup title
       let cleanTitle = segment
-        .replace(/^(tengo\s+que|debo|hay\s+que|hacer|preparar|comprar|llamar|agendar)\s+/i, (m) => m)
+        .replace(/^(?:buah|pues|bueno|mira|oye|hoy|ayer)\s*,?\s*/i, '')
+        .replace(/^(?:he\s+hecho|hice|estuve|fui\s+a|quedé\s+con|tengo\s+que|debo|hay\s+que)\s+/i, (m) => m)
         .replace(/\s{2,}/g, ' ')
         .trim();
 
       if (cleanTitle.length >= 2) {
         cleanTitle = cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
         
-        // Build final ISO date if dueDate
         let finalDueDateString: string | undefined;
         if (dueDate) {
           if (timeString) {
             const [h, m] = timeString.split(':').map(Number);
             dueDate.setHours(h, m, 0, 0);
           } else {
-            dueDate.setHours(9, 0, 0, 0);
+            dueDate.setHours(12, 0, 0, 0);
           }
           finalDueDateString = dueDate.toISOString();
         }
@@ -244,14 +309,31 @@ export class AIService {
           price,
           priority,
           cycle,
+          people: finalPeople.length > 0 ? finalPeople : undefined,
+          vibe,
           selected: true
         });
       }
     }
 
     let reply = `He analizado tu petición y preparado ${tasks.length} recordatorio${tasks.length === 1 ? '' : 's'} listo${tasks.length === 1 ? '' : 's'} para importar:`;
-    if (tasks.length === 0) {
-      reply = 'No he podido detectar tareas claras en el texto. Puedes darme una lista como: "Comprar pan por 1€, llamar al dentista mañana a las 10:00 y hacer ejercicio por la tarde".';
+
+    // Empathetic & conversational companion reply if the user talked about their day
+    if (isNarrative && tasks.length > 0) {
+      const allUniquePeople = Array.from(new Set(tasks.flatMap(t => t.people || [])));
+      const activitiesOverview = tasks.map(t => {
+        let act = t.title.toLowerCase();
+        act = act.replace(/^(?:he\s+hecho|hice|estuve|fui\s+a)\s+/i, '');
+        return act;
+      }).filter(Boolean).slice(0, 3).join(', ');
+
+      const peoplePart = allUniquePeople.length > 0 
+        ? ` con ${allUniquePeople.join(' y ')}` 
+        : '';
+
+      reply = `¡Vaya día más activo! Con todo lo que me cuentas, veo que has hecho ${activitiesOverview || 'varias actividades'}${peoplePart}. ¿Quieres que lo apunte todo a tu lista «Qué he hecho»?`;
+    } else if (tasks.length === 0) {
+      reply = 'No he podido detectar tareas claras en el texto. Puedes contarme cómo ha ido tu día o darme una lista como: "Comprar pan por 1€, llamar al dentista mañana a las 10:00 y hacer ejercicio por la tarde".';
     }
 
     return {
@@ -271,17 +353,24 @@ export class AIService {
     apiKey: string
   ): Promise<ProposedBatch> {
     const listNames = existingLists.map(l => `${l.name} (id: ${l.id})`).join(', ');
-    const systemInstruction = `Eres el Asistente IA de Recordatorios Élite (iOS Reminders style).
-Tu objetivo es ayudar al usuario a planificar, desglosar y crear conjuntos de recordatorios estructurados a partir de lenguaje natural.
+    const systemInstruction = `Eres el Asistente IA de Recordatorios Élite (Apple Reminders & Journal companion).
+Tu objetivo es ayudar al usuario a planificar o rememorar vivencias, estructurando recordatorios o entradas de diario a partir de lenguaje natural.
 Listas existentes del usuario: [${listNames}].
+
+IMPORTANTE: Si el usuario te habla de su día o te cuenta vivencias ("Buah, pues hoy he hecho...", "estuve con Irantzu..."):
+- Actúa como una IA conversacional cálida y empática.
+- Responde con naturalidad reconociendo sus actividades y personas mencionadas (ejemplo: "¡Vaya día más activo! Con todo lo que me cuentas, veo que has hecho [X] con [Persona]. ¿Quieres que lo apunte todo a tu lista «Qué he hecho»?").
+- Asigna las tareas a la lista "Qué he hecho" (id: "que_he_hecho").
+- Extrae las personas en el campo "people" (ej: ["Irantzu", "Carlos"]).
+- Extrae un emoji/vibe en "vibe" (ej: "✨ Especial", "🏔️ Aventura", "🎉 Celebración", "💼 Logro", "🍕 Relax", "💪 Deporte").
 
 DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
 {
-  "reply": "Texto conversacional cordial explicando qué has organizado",
+  "reply": "Respuesta conversacional empática",
   "suggestedList": { "name": "NombreSiRecomiendasCrearLista", "color": "#007aff", "icon": "list" }, // opcional
   "tasks": [
     {
-      "title": "Título de la tarea",
+      "title": "Título de la tarea o vivencia",
       "description": "Notas adicionales (opcional)",
       "listName": "Nombre de la lista recomendada",
       "listId": "id de la lista si coincide con una existente",
@@ -289,7 +378,9 @@ DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
       "timeOfDay": "morning" | "afternoon" | "night" | null,
       "price": number | null,
       "priority": "none" | "low" | "medium" | "high",
-      "cycle": "cycle_day" | "cycle_week" | "cycle_month" | "cycle_year" | null
+      "cycle": "cycle_day" | "cycle_week" | "cycle_month" | "cycle_year" | null,
+      "people": ["Persona1", "Persona2"],
+      "vibe": "✨ Especial"
     }
   ]
 }`;
@@ -338,11 +429,13 @@ DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
     apiKey: string
   ): Promise<ProposedBatch> {
     const listNames = existingLists.map(l => `${l.name} (id: ${l.id})`).join(', ');
-    const systemPrompt = `Eres el Asistente IA de Recordatorios Élite. 
+    const systemPrompt = `Eres el Asistente IA de Recordatorios Élite (Apple Reminders & Journal companion). 
 Listas actuales del usuario: [${listNames}].
+Si el usuario te cuenta su día ("Buah, pues hoy he hecho...", "estuve con Irantzu..."), responde con tono empático y conversacional ("¡Vaya día más activo! Con todo lo que me cuentas, veo que has hecho... ¿Quieres que lo apunte todo a tu lista «Qué he hecho»?"), extrayendo participantes en "people" y vibe en "vibe".
+
 Analiza la solicitud y devuelve un JSON con:
 {
-  "reply": "Respuesta breve",
+  "reply": "Respuesta conversacional empática",
   "suggestedList": { "name": "NombreLista", "color": "#007aff", "icon": "list" }, // opcional
   "tasks": [
     {
@@ -354,7 +447,9 @@ Analiza la solicitud y devuelve un JSON con:
       "timeOfDay": "morning"|"afternoon"|"night"|null,
       "price": number|null,
       "priority": "none"|"low"|"medium"|"high",
-      "cycle": "cycle_day"|"cycle_week"|"cycle_month"|"cycle_year"|null
+      "cycle": "cycle_day"|"cycle_week"|"cycle_month"|"cycle_year"|null,
+      "people": ["string"],
+      "vibe": "string"
     }
   ]
 }`;
@@ -393,3 +488,4 @@ Analiza la solicitud y devuelve un JSON con:
     };
   }
 }
+

@@ -264,3 +264,137 @@ export function getAnticipationAlerts(type: 'card' | 'subscription' | 'other'): 
     { id: `alert_gen_1d_${now}`, type: 'before', offsetMinutes: 1 * 24 * 60, label: '1 día antes' }
   ];
 }
+
+/**
+ * Calcula el gasto recurrente total en suscripciones (mensual y anual)
+ */
+export function calculateSubscriptionCosts(tasks: TaskItem[]): {
+  monthlyTotal: number;
+  yearlyTotal: number;
+  formattedMonthly: string;
+  formattedYearly: string;
+  count: number;
+} {
+  let monthlyTotal = 0;
+  let count = 0;
+
+  for (const t of tasks) {
+    if (t.deleted_at || t.status === 'completed') continue;
+    const isSub = t.expirationType === 'subscription' || t.sectionId === 'sec_suscripciones';
+    if (!isSub) continue;
+
+    const price = typeof t.price === 'number' && !isNaN(t.price) ? t.price : 0;
+    if (price > 0) {
+      count++;
+      if (t.subscriptionPeriod === 'yearly') {
+        monthlyTotal += price / 12;
+      } else {
+        monthlyTotal += price;
+      }
+    }
+  }
+
+  const yearlyTotal = monthlyTotal * 12;
+  return {
+    monthlyTotal: Math.round(monthlyTotal * 100) / 100,
+    yearlyTotal: Math.round(yearlyTotal * 100) / 100,
+    formattedMonthly: (Math.round(monthlyTotal * 100) / 100).toFixed(2).replace('.', ',') + ' €',
+    formattedYearly: (Math.round(yearlyTotal * 100) / 100).toFixed(2).replace('.', ',') + ' €',
+    count
+  };
+}
+
+export interface PersonRelationshipStats {
+  person: string;
+  count: number;
+  latestTask: TaskItem | null;
+  earliestTask: TaskItem | null;
+  daysSinceLast: number | null;
+  lastPlanText: string;
+  allPersonTasks: TaskItem[];
+}
+
+/**
+ * Calcula estadísticas de relación y última vez juntos con una persona
+ */
+export function getPersonRelationshipStats(personName: string, allTasks: TaskItem[]): PersonRelationshipStats {
+  const normName = personName.trim().toLowerCase();
+  const personTasks = allTasks.filter(t => 
+    !t.deleted_at && 
+    t.people && 
+    t.people.some(p => p.trim().toLowerCase() === normName)
+  );
+
+  // Ordenar por fecha de más reciente a más antigua
+  personTasks.sort((a, b) => {
+    const timeA = new Date(a.dueDate || a.created_at).getTime();
+    const timeB = new Date(b.dueDate || b.created_at).getTime();
+    return timeB - timeA;
+  });
+
+  const latestTask = personTasks[0] || null;
+  const earliestTask = personTasks[personTasks.length - 1] || null;
+
+  let daysSinceLast: number | null = null;
+  let lastPlanText = 'Sin registros previos';
+
+  if (latestTask) {
+    const latestDate = new Date(latestTask.dueDate || latestTask.created_at);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    latestDate.setHours(0, 0, 0, 0);
+
+    const diffMs = today.getTime() - latestDate.getTime();
+    daysSinceLast = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+    if (daysSinceLast === 0) {
+      lastPlanText = '¡Hoy!';
+    } else if (daysSinceLast === 1) {
+      lastPlanText = 'Ayer';
+    } else if (daysSinceLast > 1) {
+      if (daysSinceLast < 30) {
+        lastPlanText = `Hace ${daysSinceLast} días`;
+      } else {
+        const months = Math.floor(daysSinceLast / 30);
+        lastPlanText = months === 1 ? 'Hace 1 mes' : `Hace ${months} meses`;
+      }
+    } else {
+      lastPlanText = 'Plan futuro';
+    }
+  }
+
+  return {
+    person: personName,
+    count: personTasks.length,
+    latestTask,
+    earliestTask,
+    daysSinceLast,
+    lastPlanText,
+    allPersonTasks: personTasks
+  };
+}
+
+/**
+ * Detecta recuerdos de "Un día como hoy" (Flashbacks / Efemérides)
+ */
+export function findFlashbackMemories(tasks: TaskItem[], refDate: Date = new Date()): TaskItem[] {
+  const refMonth = refDate.getMonth();
+  const refDay = refDate.getDate();
+  const refYear = refDate.getFullYear();
+
+  return tasks.filter(t => {
+    if (t.deleted_at) return false;
+    const isMemory = t.categoryId === 'que_he_hecho' || (t.people && t.people.length > 0);
+    if (!isMemory) return false;
+
+    const d = new Date(t.dueDate || t.created_at);
+    if (isNaN(d.getTime())) return false;
+
+    // Coincidencia exacta de mes y día en un año anterior
+    const isSameDayMonth = d.getMonth() === refMonth && d.getDate() === refDay;
+    const isPastYear = d.getFullYear() < refYear;
+
+    return isSameDayMonth && isPastYear;
+  });
+}
+

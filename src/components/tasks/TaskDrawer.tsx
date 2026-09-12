@@ -89,6 +89,10 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   const [expirationType, setExpirationType] = useState<'card' | 'subscription' | 'other' | undefined>(undefined);
   const [cardCaducidadOpen, setCardCaducidadOpen] = useState(true);
   const [cardPeopleOpen, setCardPeopleOpen] = useState(true);
+  const [vibe, setVibe] = useState<string | undefined>(undefined);
+  const [issuerMask, setIssuerMask] = useState<string>('');
+  const [autoRollover, setAutoRollover] = useState<boolean>(true);
+  const [subscriptionPeriod, setSubscriptionPeriod] = useState<'monthly' | 'yearly'>('monthly');
 
   // Suggested chips purely for visual feedback
   const [suggestedChips, setSuggestedChips] = useState<{type: 'time'|'date'|'cycle', label: string}[]>([]);
@@ -150,6 +154,10 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         
         setPeople(task.people || []);
         setExpirationType(task.expirationType || (task.categoryId === 'caducidades' ? (task.sectionId === 'sec_suscripciones' ? 'subscription' : 'card') : undefined));
+        setVibe(task.vibe);
+        setIssuerMask(task.issuerMask || '');
+        setAutoRollover(task.autoRollover ?? true);
+        setSubscriptionPeriod(task.subscriptionPeriod || 'monthly');
         
         // Open cards dynamically if they have values configured
         setCardTimeOpen(!!task.dueDate || !!task.alerts?.some(a => a.type === 'at_time') || !!task.timeOfDay);
@@ -158,7 +166,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setCardDetailsOpen(task.priority !== 'none' || !!task.flagged || !!task.url || !!task.image || !!task.targetCount);
         setCardFinanceOpen(!!task.isDetailed || task.price !== undefined);
         setCardCaducidadOpen(task.categoryId === 'caducidades' || !!task.expirationType);
-        setCardPeopleOpen(task.categoryId === 'que_he_hecho' || (!!task.people && task.people.length > 0));
+        setCardPeopleOpen(task.categoryId === 'que_he_hecho' || (!!task.people && task.people.length > 0) || !!task.vibe);
       } else {
         // Nueva tarea
         setTitle('');
@@ -193,6 +201,10 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         const isCad = defaultCategoryId === 'caducidades';
         const isSub = defaultSectionId === 'sec_suscripciones';
         setExpirationType(isCad ? (isSub ? 'subscription' : 'card') : undefined);
+        setVibe(undefined);
+        setIssuerMask('');
+        setAutoRollover(true);
+        setSubscriptionPeriod('monthly');
         
         // Reset to default collapsed status on create
         setCardTimeOpen(true);
@@ -453,7 +465,11 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
       targetCount: targetCount && targetCount > 1 ? Number(targetCount) : undefined,
       currentCount: targetCount && targetCount > 1 ? (currentCount || 0) : undefined,
       people: people.length > 0 ? people : undefined,
-      expirationType: expirationType || (category === 'caducidades' ? (sectionId === 'sec_suscripciones' ? 'subscription' : 'card') : undefined)
+      expirationType: expirationType || (category === 'caducidades' ? (sectionId === 'sec_suscripciones' ? 'subscription' : 'card') : undefined),
+      vibe: vibe || undefined,
+      issuerMask: issuerMask.trim() || undefined,
+      autoRollover: expirationType === 'subscription' ? autoRollover : undefined,
+      subscriptionPeriod: expirationType === 'subscription' ? subscriptionPeriod : undefined
     };
 
     if (taskId) {
@@ -492,6 +508,10 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
     setCurrentCount(undefined);
     setPeople([]);
     setExpirationType(undefined);
+    setVibe(undefined);
+    setIssuerMask('');
+    setAutoRollover(true);
+    setSubscriptionPeriod('monthly');
     onClose();
   };
 
@@ -1492,6 +1512,43 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                         Añadir
                       </button>
                     </div>
+
+                    {/* Vibe / Estado de ánimo estilo Apple Journal */}
+                    <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border-subtle)' }}>
+                      <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 650, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                        Vibe / Estado de Ánimo (Apple Journal)
+                      </label>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {[
+                          '✨ Especial',
+                          '🏔️ Aventura',
+                          '🎉 Celebración',
+                          '💼 Logro',
+                          '🍕 Relax',
+                          '💪 Deporte',
+                          '❤️ Familia'
+                        ].map(v => (
+                          <button
+                            key={v}
+                            type="button"
+                            onClick={() => setVibe(vibe === v ? undefined : v)}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: 999,
+                              fontSize: '0.78rem',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              border: vibe === v ? '1.5px solid #ff9500' : '1px solid var(--border-subtle)',
+                              background: vibe === v ? 'rgba(255, 149, 0, 0.16)' : 'var(--bg-surface)',
+                              color: vibe === v ? '#ff9500' : 'var(--text-secondary)',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            {v}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                   </motion.div>
                 )}
@@ -1562,6 +1619,106 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                         <span style={{ fontSize: '0.78rem' }}>Otro</span>
                       </button>
                     </div>
+
+                    {/* Tarjeta / Documento: Campo de Emisor/Identificador estilo Apple Wallet */}
+                    {expirationType === 'card' && (
+                      <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border-subtle)' }}>
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 650, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                          Identificador / Tarjeta (Apple Wallet)
+                        </label>
+                        <input
+                          type="text"
+                          value={issuerMask}
+                          onChange={e => setIssuerMask(e.target.value)}
+                          placeholder="ej. VISA •• 4821, DNI, Revolut..."
+                          style={{
+                            width: '100%',
+                            padding: '7px 12px',
+                            borderRadius: 8,
+                            border: '1px solid var(--border-subtle)',
+                            background: 'var(--bg-surface)',
+                            color: 'var(--text-primary)',
+                            fontSize: '0.85rem'
+                          }}
+                        />
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                          {['VISA', 'Mastercard', 'DNI', 'Pasaporte', 'Carnet', 'Revolut'].map(preset => (
+                            <button
+                              key={preset}
+                              type="button"
+                              onClick={() => setIssuerMask(issuerMask ? `${preset} ${issuerMask.replace(/^(VISA|Mastercard|DNI|Pasaporte|Carnet|Revolut)\s*/i, '')}` : preset)}
+                              style={{
+                                padding: '2px 8px',
+                                borderRadius: 6,
+                                border: '1px solid var(--border-subtle)',
+                                background: 'var(--bg-elevated)',
+                                fontSize: '0.72rem',
+                                color: 'var(--text-secondary)',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              +{preset}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Suscripción: Auto-rollover y periodicidad */}
+                    {expirationType === 'subscription' && (
+                      <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 650, color: 'var(--text-primary)' }}>
+                            Renovación automática (Auto-rollover)
+                          </span>
+                          <input
+                            type="checkbox"
+                            checked={autoRollover}
+                            onChange={e => setAutoRollover(e.target.checked)}
+                            style={{ cursor: 'pointer', width: 16, height: 16 }}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                            Periodicidad de cobro:
+                          </span>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button
+                              type="button"
+                              onClick={() => setSubscriptionPeriod('monthly')}
+                              style={{
+                                padding: '3px 10px',
+                                borderRadius: 6,
+                                border: subscriptionPeriod === 'monthly' ? '1.5px solid #007aff' : '1px solid var(--border-subtle)',
+                                background: subscriptionPeriod === 'monthly' ? 'rgba(0, 122, 255, 0.12)' : 'var(--bg-surface)',
+                                color: subscriptionPeriod === 'monthly' ? '#007aff' : 'var(--text-secondary)',
+                                fontSize: '0.76rem',
+                                fontWeight: subscriptionPeriod === 'monthly' ? 700 : 500,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Mensual
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSubscriptionPeriod('yearly')}
+                              style={{
+                                padding: '3px 10px',
+                                borderRadius: 6,
+                                border: subscriptionPeriod === 'yearly' ? '1.5px solid #007aff' : '1px solid var(--border-subtle)',
+                                background: subscriptionPeriod === 'yearly' ? 'rgba(0, 122, 255, 0.12)' : 'var(--bg-surface)',
+                                color: subscriptionPeriod === 'yearly' ? '#007aff' : 'var(--text-secondary)',
+                                fontSize: '0.76rem',
+                                fontWeight: subscriptionPeriod === 'yearly' ? 700 : 500,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Anual
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   </motion.div>
                 )}

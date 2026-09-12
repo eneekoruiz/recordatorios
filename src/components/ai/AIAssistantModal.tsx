@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -202,7 +202,9 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
 
     const tasksPayload = selectedTasks.map(t => {
       let finalCatId = t.listId;
-      if (targetListToCreate) {
+      if (t.listId === 'que_he_hecho' || t.listId === 'caducidades') {
+        finalCatId = t.listId;
+      } else if (targetListToCreate) {
         finalCatId = targetListToCreate.id;
       } else if (!finalCatId || !lists.some(l => l.id === finalCatId)) {
         finalCatId = lists[0]?.id || 'inbox';
@@ -219,6 +221,8 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
         quantity: t.quantity,
         priority: t.priority || 'none',
         cycle_id: t.cycle,
+        people: t.people,
+        vibe: t.vibe,
         status: 'pending' as const,
         created_at: new Date().toISOString()
       };
@@ -247,9 +251,11 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
       };
     }));
 
-    // If a new list was created or specified, optionally navigate
+    // If a new list was created or special list was specified, navigate
     if (targetListToCreate && onSelectView) {
       onSelectView(`list_${targetListToCreate.id}`);
+    } else if (tasksPayload[0]?.categoryId === 'que_he_hecho' && onSelectView) {
+      onSelectView('list_que_he_hecho');
     }
 
     onClose();
@@ -628,6 +634,20 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
                                   🔄 {t.cycle === 'cycle_day' ? 'Diario' : t.cycle === 'cycle_week' ? 'Semanal' : 'Mensual'}
                                 </span>
                               )}
+                              {t.people && t.people.length > 0 && (
+                                <div style={{ display: 'inline-flex', gap: 3, alignItems: 'center' }}>
+                                  {t.people.map(p => (
+                                    <span key={p} style={{ fontSize: '0.72rem', color: '#5856D6', background: 'rgba(88, 86, 214, 0.12)', padding: '1px 6px', borderRadius: 999, fontWeight: 600 }}>
+                                      👤 {p}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              {t.vibe && (
+                                <span style={{ fontSize: '0.72rem', color: '#ff9500', background: 'rgba(255, 149, 0, 0.12)', padding: '1px 6px', borderRadius: 999, fontWeight: 600 }}>
+                                  {t.vibe}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -636,6 +656,7 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
 
                     {/* Action button */}
                     <button
+                      data-testid="ai-import-all-btn"
                       onClick={() => handleImportBatch(msg.id)}
                       disabled={msg.batch.tasks.filter(t => t.selected).length === 0}
                       style={{
@@ -657,7 +678,9 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
                       }}
                     >
                       <CheckCircle2 size={17} />
-                      Importar {msg.batch.tasks.filter(t => t.selected).length} recordatorios
+                      {msg.batch.tasks[0]?.listId === 'que_he_hecho' || msg.batch.tasks[0]?.listName?.toLowerCase().includes('qué he hecho')
+                        ? `✓ Sí, apuntar e importar todo a Qué he hecho (${msg.batch.tasks.filter(t => t.selected).length})`
+                        : `✓ Sí, importar todo (${msg.batch.tasks.filter(t => t.selected).length})`}
                     </button>
                   </motion.div>
                 )}

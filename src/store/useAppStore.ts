@@ -391,12 +391,36 @@ export const useAppStore = create<AppState>()(
                 ...targetCountUpdate
               });
             } else {
-              updatedTask = TaskRepository.update(existingTask, { 
-                status: 'completed',
-                completedAlerts: [...completedAlerts, alerts[completedAlerts.length]?.id].filter(Boolean) as string[],
-                completionHistory: newCompletionHistory,
-                ...targetCountUpdate
-              });
+              // Si la tarea tiene autoRollover activo o es una suscripción con fecha
+              const isAutoRollover = existingTask.autoRollover || (existingTask.expirationType === 'subscription' && existingTask.dueDate);
+              if (isAutoRollover && existingTask.dueDate) {
+                const currentDue = new Date(existingTask.dueDate);
+                const period = existingTask.subscriptionPeriod || 'monthly';
+                if (period === 'yearly') {
+                  currentDue.setFullYear(currentDue.getFullYear() + 1);
+                } else {
+                  currentDue.setMonth(currentDue.getMonth() + 1);
+                }
+                const nextDueDateStr = currentDue.toISOString();
+                updatedTask = TaskRepository.update(existingTask, {
+                  status: 'pending',
+                  dueDate: nextDueDateStr,
+                  completedAlerts: [],
+                  completionHistory: newCompletionHistory,
+                  ...targetCountUpdate
+                });
+                const formattedDate = currentDue.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+                window.dispatchEvent(new CustomEvent('show-toast', {
+                  detail: `🔄 Renovación automática: Próximo vencimiento el ${formattedDate}`
+                }));
+              } else {
+                updatedTask = TaskRepository.update(existingTask, { 
+                  status: 'completed',
+                  completedAlerts: [...completedAlerts, alerts[completedAlerts.length]?.id].filter(Boolean) as string[],
+                  completionHistory: newCompletionHistory,
+                  ...targetCountUpdate
+                });
+              }
             }
           }
         }

@@ -485,4 +485,176 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
     await page.waitForTimeout(300);
     await expect(lauraHeader).toBeVisible();
   });
+
+  // 14. Conversational AI Companion: Natural conversational tone & multi-activity memory import
+  test('14. Conversational AI Companion: Empathetic response for life experiences, Irantzu detection & 1-click import into Qué he hecho', async ({ page }) => {
+    await ensureAppUnlocked(page);
+    await page.waitForLoadState('networkidle');
+
+    // Open AI Assistant modal via custom event
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent('open-ai-assistant'));
+    });
+    await page.waitForTimeout(400);
+
+    // AI modal should be visible
+    const modal = page.locator('text=Asistente de Recordatorios').first();
+    await expect(modal).toBeVisible();
+
+    // Type conversational prompt mentioning multiple activities and Irantzu
+    const aiInput = page.locator('input[placeholder*="Habla o escribe tus recordatorios"]').first();
+    await expect(aiInput).toBeVisible();
+    await aiInput.fill('Buah, pues hoy he hecho escalada con Irantzu y luego hemos ido a cenar pizza con Irantzu y Carlos');
+
+    // Submit prompt
+    await aiInput.press('Enter');
+    await page.waitForTimeout(1000);
+
+    // Verify AI responds empathetically mentioning Irantzu and asking to record it
+    const aiMessage = page.locator('text=Irantzu').first();
+    await expect(aiMessage).toBeVisible();
+
+    // Verify 1-click import CTA for "Qué he hecho" is present
+    const importBtn = page.locator('[data-testid="ai-import-all-btn"]').first();
+    await expect(importBtn).toBeVisible();
+    await expect(importBtn).toContainText('apuntar e importar todo a Qué he hecho');
+
+    // Click import
+    await importBtn.click();
+    await page.waitForTimeout(600);
+
+    // Verify we see the imported memories in Qué he hecho
+    const queHeHechoHeader = page.locator('text=Qué he hecho').first();
+    await expect(queHeHechoHeader).toBeVisible();
+
+    // Verify memory exists
+    const memoryCard = page.locator('.task-item-wrapper:has-text("escalada")').first();
+    await expect(memoryCard).toBeVisible();
+  });
+
+  // 15. Caducidades: Recurring subscription financial metrics & auto-rollover
+  test('15. Special List Caducidades: Recurring subscription financial totals & auto-rollover on completion', async ({ page }) => {
+    await ensureAppUnlocked(page);
+    await page.waitForLoadState('networkidle');
+
+    // Navigate to Caducidades
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent('select-view', { detail: 'list_caducidades' }));
+    });
+    await page.waitForTimeout(400);
+
+    const initialDue = new Date(Date.now() + 86400000 * 2); // 2 days from now
+
+    // Seed subscriptions with price, autoRollover and subscriptionPeriod
+    await page.evaluate((dueIso) => {
+      const store = (window as any).useAppStore?.getState?.();
+      if (store) {
+        store.addTask({
+          id: 'test-sub-spotify',
+          title: 'Spotify Premium Individual',
+          categoryId: 'caducidades',
+          sectionId: 'sec_suscripciones',
+          expirationType: 'subscription',
+          price: 10.99,
+          subscriptionPeriod: 'monthly',
+          autoRollover: true,
+          issuerMask: 'VISA •• 1234',
+          dueDate: dueIso,
+          status: 'pending'
+        });
+        store.addTask({
+          id: 'test-sub-icloud',
+          title: 'iCloud+ 2TB Anual',
+          categoryId: 'caducidades',
+          sectionId: 'sec_suscripciones',
+          expirationType: 'subscription',
+          price: 120,
+          subscriptionPeriod: 'yearly',
+          autoRollover: true,
+          dueDate: dueIso,
+          status: 'pending'
+        });
+      }
+    }, initialDue.toISOString());
+
+    await page.waitForTimeout(500);
+
+    // Check financial cost calculation badge in header (10.99 + 120/12 = 20.99 €/mes)
+    const costBadge = page.locator('text=Gasto recurrente').first();
+    await expect(costBadge).toBeVisible();
+    const costText = page.locator('text=/mes').first();
+    await expect(costText).toBeVisible();
+
+    // Check Apple Wallet chip on Spotify task
+    const walletChip = page.locator('.apple-card-chip:has-text("VISA •• 1234")').first();
+    await expect(walletChip).toBeVisible();
+
+    // Toggle Spotify task completion -> Auto-rollover should roll date forward +1 month and keep pending
+    const spotifyCheckbox = page.locator('.task-item-wrapper:has-text("Spotify Premium Individual") button[aria-label="Completar tarea"]').first();
+    await spotifyCheckbox.click();
+    await page.waitForTimeout(600);
+
+    // Verify task is still pending and date has rolled forward (+1 month)
+    const updatedTask = await page.evaluate(() => {
+      const store = (window as any).useAppStore?.getState?.();
+      return store?.tasks?.['test-sub-spotify'];
+    });
+
+    expect(updatedTask).toBeDefined();
+    expect(updatedTask.status).toBe('pending');
+    expect(new Date(updatedTask.dueDate).getTime()).toBeGreaterThan(initialDue.getTime() + 20 * 86400000);
+    expect(updatedTask.completionHistory?.length).toBeGreaterThan(0);
+  });
+
+  // 16. Qué he hecho: Person Profile modal opens with relationship stats
+  test('16. Special List Qué he hecho: Person Profile modal opens with relationship stats and memories history', async ({ page }) => {
+    await ensureAppUnlocked(page);
+    await page.waitForLoadState('networkidle');
+
+    // Navigate to Qué he hecho list
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent('select-view', { detail: 'list_que_he_hecho' }));
+    });
+    await page.waitForTimeout(400);
+
+    // Add memory with Irantzu
+    await page.evaluate(() => {
+      const store = (window as any).useAppStore?.getState?.();
+      if (store) {
+        store.addTask({
+          id: 'test-memory-irantzu-surf',
+          title: 'Tarde de surf y helados',
+          categoryId: 'que_he_hecho',
+          people: ['Irantzu'],
+          vibe: '🏄‍♂️ Deporte',
+          dueDate: new Date().toISOString(),
+          status: 'pending'
+        });
+      }
+    });
+
+    await page.waitForTimeout(500);
+
+    // Click on person pill
+    const irantzuPill = page.locator('.apple-person-pill:has-text("Irantzu")').first();
+    await expect(irantzuPill).toBeVisible();
+    await irantzuPill.click();
+    await page.waitForTimeout(400);
+
+    // Person Profile modal should open
+    const profileModal = page.locator('.person-profile-overlay').first();
+    await expect(profileModal).toBeVisible();
+    await expect(page.locator('text=Bitácora de momentos compartidos').first()).toBeVisible();
+    await expect(page.locator('text=Vivencias').first()).toBeVisible();
+
+    // Check shared memory appears in the modal list
+    const modalMemory = page.locator('.person-profile-overlay :text("Tarde de surf y helados")').first();
+    await expect(modalMemory).toBeVisible();
+
+    // Close modal
+    const closeBtn = page.locator('.person-profile-overlay button[title="Cerrar"]').first();
+    await closeBtn.click();
+    await page.waitForTimeout(300);
+    await expect(profileModal).not.toBeVisible();
+  });
 });
