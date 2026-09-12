@@ -1,4 +1,4 @@
-import type { CustomList } from '../models/Task';
+import type { CustomList, TaskItem } from '../models/Task';
 
 export interface ProposedTask {
   id: string;
@@ -14,6 +14,7 @@ export interface ProposedTask {
   cycle?: 'cycle_day' | 'cycle_week' | 'cycle_month' | 'cycle_year';
   people?: string[];
   vibe?: string;
+  locationName?: string;
   selected: boolean;
 }
 
@@ -237,6 +238,13 @@ export class AIService {
         vibe = '✨ Especial';
       }
 
+      // Extract location (e.g. "en Donosti", "en Bilbao", "en Madrid", "en Roma")
+      let locationName: string | undefined;
+      const locMatch = segment.match(/(?:\ben\s+|\bpor\s+)([A-ZÁÉÍÓÚ][a-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚ][a-záéíóúñ]+)?)/);
+      if (locMatch && !/^(la|el|los|las|mi|mis|su|sus|un|una|este|esta|casa|persona|vez|plan|coche|bici)$/i.test(locMatch[1])) {
+        locationName = locMatch[1].trim();
+      }
+
       // Extract priority
       let priority: 'none' | 'low' | 'medium' | 'high' = 'none';
       if (/\b(urgente|importante|ya|prioridad\s+alta)\b/i.test(segment) || segment.includes('!!!')) {
@@ -311,6 +319,7 @@ export class AIService {
           cycle,
           people: finalPeople.length > 0 ? finalPeople : undefined,
           vibe,
+          locationName,
           selected: true
         });
       }
@@ -487,5 +496,61 @@ Analiza la solicitud y devuelve un JSON con:
       }))
     };
   }
+
+  /**
+   * Generates a warm, narrative monthly recap of life experiences
+   */
+  public static async generateMonthlySummary(tasks: TaskItem[], monthName?: string): Promise<string> {
+    if (!tasks || tasks.length === 0) {
+      return `No tienes vivencias registradas en ${monthName || 'este mes'} todavía. ¡Añade recuerdos con tus personas cercanas para crear tu memoria mensual!`;
+    }
+
+    const uniquePeople = Array.from(new Set(tasks.flatMap(t => t.people || [])));
+    const uniqueLocations = Array.from(new Set(tasks.map(t => t.locationName).filter(Boolean)));
+    const sampleMemories = tasks.slice(0, 4).map(t => t.title).join(', ');
+
+    // Check if cloud LLM is configured
+    const config = this.getConfig();
+    if (config.apiKey && config.provider === 'gemini') {
+      try {
+        const prompt = `Actúa como el cronista personal y biógrafo empático de Apple Journal. Redacta un resumen mensual cálido, emotivo y estructurado para ${monthName || 'este mes'} en español.
+Total vivencias: ${tasks.length}
+Vivencias destacadas:
+${tasks.slice(0, 10).map(t => `- ${t.title} ${t.people?.length ? '(con ' + t.people.join(', ') + ')' : ''} ${t.locationName ? 'en ' + t.locationName : ''}`).join('\n')}
+Redacta 2 o 3 párrafos de lectura agradable con emojis sutiles.`;
+
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${config.apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) return text.trim();
+        }
+      } catch (err) {
+        console.warn('Gemini monthly summary error:', err);
+      }
+    }
+
+    // High quality offline semantic narrative generator
+    const companionsText = uniquePeople.length > 0
+      ? `Las personas que más te han acompañado han sido **${uniquePeople.slice(0, 3).join(', ')}**${uniquePeople.length > 3 ? ` y ${uniquePeople.length - 3} personas más` : ''}.`
+      : 'Has disfrutado de momentos de desarrollo e introspección personal.';
+
+    const locationText = uniqueLocations.length > 0
+      ? `Tus pasos te llevaron por lugares como **${uniqueLocations.join(', ')}**.`
+      : '';
+
+    return `✨ **Memoria de ${monthName || 'este mes'}:**
+
+Ha sido un período lleno de vivencias y movimiento, sumando un total de **${tasks.length} momentos registrados en tu bitácora de vida**. Entre los momentos más señalados destacan: *${sampleMemories}*.
+
+${companionsText} ${locationText}
+
+Cada uno de estos instantes es un pedacito de tu historia personal. ¡Sigue coleccionando experiencias! 🌟`;
+  }
 }
+
 

@@ -12,6 +12,7 @@ import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { isCompletedInCurrentPeriod, calculateHabitStreak, calculateExpirationStatus } from '../../services/TaskService';
 import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
+import { ConfettiService } from '../../services/ConfettiService';
 import { ConfirmModal } from '../ui/ConfirmModal';
 
 interface TaskCardProps {
@@ -517,6 +518,9 @@ export const TaskCard = React.memo(function TaskCard({
               
               if (isNextFinal) {
                 SoundService.playComplete();
+                if (hasTargetCount || task.vibe?.includes('Celebración') || task.vibe?.includes('Especial')) {
+                  ConfettiService.fire({ count: 55 });
+                }
               } else {
                 SoundService.playPop();
               }
@@ -770,6 +774,7 @@ export const TaskCard = React.memo(function TaskCard({
                     const isNextFinal = effectiveCurrentCount + 1 >= targetCount;
                     if (isNextFinal) {
                       SoundService.playComplete();
+                      ConfettiService.fire({ count: 55 });
                     } else {
                       SoundService.playPop();
                     }
@@ -941,6 +946,55 @@ export const TaskCard = React.memo(function TaskCard({
                   </span>
                 ))}
               </div>
+            )}
+            {task.locationName && (
+              <span
+                className="apple-location-pill"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3,
+                  padding: '1.5px 7px',
+                  borderRadius: 12,
+                  fontSize: '0.72rem',
+                  fontWeight: 550,
+                  background: 'rgba(52, 199, 89, 0.12)',
+                  color: '#34C759',
+                  border: '1px solid rgba(52, 199, 89, 0.22)',
+                  lineHeight: '1.2'
+                }}
+                title={`Ubicación: ${task.locationName}`}
+              >
+                <span>📍</span>
+                <span>{task.locationName}</span>
+              </span>
+            )}
+            {task.managementUrl && (
+              <a
+                href={task.managementUrl.startsWith('http') ? task.managementUrl : `https://${task.managementUrl}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="apple-manage-url-btn"
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3.5,
+                  padding: '1.5px 7px',
+                  borderRadius: 6,
+                  fontSize: '0.72rem',
+                  fontWeight: 600,
+                  background: 'rgba(0, 122, 255, 0.1)',
+                  color: 'var(--accent-primary)',
+                  border: '1px solid rgba(0, 122, 255, 0.2)',
+                  textDecoration: 'none',
+                  lineHeight: '1.2'
+                }}
+                title="Gestionar o cancelar suscripción en la web oficial"
+              >
+                <span>🔗</span>
+                <span>Gestionar</span>
+              </a>
             )}
           </div>
 

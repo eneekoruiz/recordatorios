@@ -93,6 +93,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   const [issuerMask, setIssuerMask] = useState<string>('');
   const [autoRollover, setAutoRollover] = useState<boolean>(true);
   const [subscriptionPeriod, setSubscriptionPeriod] = useState<'monthly' | 'yearly'>('monthly');
+  const [managementUrl, setManagementUrl] = useState<string>('');
 
   // Suggested chips purely for visual feedback
   const [suggestedChips, setSuggestedChips] = useState<{type: 'time'|'date'|'cycle', label: string}[]>([]);
@@ -158,6 +159,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setIssuerMask(task.issuerMask || '');
         setAutoRollover(task.autoRollover ?? true);
         setSubscriptionPeriod(task.subscriptionPeriod || 'monthly');
+        setManagementUrl(task.managementUrl || '');
         
         // Open cards dynamically if they have values configured
         setCardTimeOpen(!!task.dueDate || !!task.alerts?.some(a => a.type === 'at_time') || !!task.timeOfDay);
@@ -216,6 +218,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setCardPeopleOpen(defaultCategoryId === 'que_he_hecho');
         setCycleId(undefined);
         setTimeOfDay(undefined);
+        setManagementUrl('');
       }
     }
   }, [isOpen, taskId, task, defaultCategoryId, defaultSectionId]);
@@ -469,7 +472,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
       vibe: vibe || undefined,
       issuerMask: issuerMask.trim() || undefined,
       autoRollover: expirationType === 'subscription' ? autoRollover : undefined,
-      subscriptionPeriod: expirationType === 'subscription' ? subscriptionPeriod : undefined
+      subscriptionPeriod: expirationType === 'subscription' ? subscriptionPeriod : undefined,
+      managementUrl: managementUrl.trim() || undefined
     };
 
     if (taskId) {
@@ -512,6 +516,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
     setIssuerMask('');
     setAutoRollover(true);
     setSubscriptionPeriod('monthly');
+    setManagementUrl('');
     onClose();
   };
 
@@ -1716,6 +1721,28 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                               Anual
                             </button>
                           </div>
+                        </div>
+
+                        {/* Enlace para gestionar o cancelar suscripción */}
+                        <div style={{ marginTop: 4 }}>
+                          <label style={{ display: 'block', fontSize: '0.76rem', color: 'var(--text-secondary)', marginBottom: 5 }}>
+                            🔗 Enlace para gestionar o cancelar suscripción:
+                          </label>
+                          <input
+                            type="url"
+                            value={managementUrl}
+                            onChange={e => setManagementUrl(e.target.value)}
+                            placeholder="https://netflix.com/youraccount, spotify.com..."
+                            style={{
+                              width: '100%',
+                              padding: '7px 10px',
+                              borderRadius: 8,
+                              border: '1px solid var(--border-subtle)',
+                              background: 'var(--bg-surface)',
+                              color: 'var(--text-primary)',
+                              fontSize: '0.82rem'
+                            }}
+                          />
                         </div>
                       </div>
                     )}

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Sparkles, X, ArrowUp, Check, Bot, User, Settings, Mic, MicOff, 
-  Calendar, CheckCircle2
+  Calendar, CheckCircle2, Volume2, VolumeX
 } from 'lucide-react';
 import { AIService, type ProposedBatch, type AIConfig } from '../../services/AIService';
 import { useAppStore } from '../../store/useAppStore';
@@ -80,6 +80,44 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
       }
     }
   };
+
+  const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
+
+  const toggleSpeak = (msgId: string, text: string) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+
+    if (speakingMsgId === msgId) {
+      window.speechSynthesis.cancel();
+      setSpeakingMsgId(null);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const cleanText = text.replace(/[*_#`~✓✅]/g, '').trim();
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'es-ES';
+    utterance.rate = 1.05;
+    utterance.pitch = 1.0;
+
+    const voices = window.speechSynthesis.getVoices();
+    const esVoice = voices.find(v => v.lang.startsWith('es'));
+    if (esVoice) utterance.voice = esVoice;
+
+    utterance.onend = () => setSpeakingMsgId(null);
+    utterance.onerror = () => setSpeakingMsgId(null);
+
+    setSpeakingMsgId(msgId);
+    window.speechSynthesis.speak(utterance);
+    HapticService.selection();
+  };
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   // Process initial prompt when opened with text
   useEffect(() => {
@@ -223,6 +261,7 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
         cycle_id: t.cycle,
         people: t.people,
         vibe: t.vibe,
+        locationName: t.locationName,
         status: 'pending' as const,
         created_at: new Date().toISOString()
       };
@@ -516,19 +555,47 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
                     {msg.sender === 'user' ? <User size={14} color="white" /> : <Bot size={14} color="var(--accent-primary)" />}
                   </div>
 
-                  <div style={{
-                    padding: '12px 16px',
-                    borderRadius: 18,
-                    background: msg.sender === 'user' ? 'var(--accent-primary)' : 'var(--bg-surface)',
-                    color: msg.sender === 'user' ? '#ffffff' : 'var(--text-primary)',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                    fontSize: '0.92rem',
-                    lineHeight: '1.45',
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                    border: msg.sender === 'user' ? 'none' : '1px solid var(--border-subtle)'
-                  }}>
-                    {msg.text}
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+                    <div style={{
+                      padding: '12px 16px',
+                      borderRadius: 18,
+                      background: msg.sender === 'user' ? 'var(--accent-primary)' : 'var(--bg-surface)',
+                      color: msg.sender === 'user' ? '#ffffff' : 'var(--text-primary)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                      fontSize: '0.92rem',
+                      lineHeight: '1.45',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      border: msg.sender === 'user' ? 'none' : '1px solid var(--border-subtle)'
+                    }}>
+                      {msg.text}
+                    </div>
+
+                    {msg.sender === 'assistant' && (
+                      <button
+                        type="button"
+                        data-testid="ai-tts-btn"
+                        onClick={() => toggleSpeak(msg.id, msg.text)}
+                        style={{
+                          background: speakingMsgId === msg.id ? 'var(--accent-primary)' : 'var(--bg-surface)',
+                          border: '1px solid var(--border-subtle)',
+                          color: speakingMsgId === msg.id ? 'white' : 'var(--text-secondary)',
+                          borderRadius: '50%',
+                          width: 28,
+                          height: 28,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                          marginBottom: 4,
+                          transition: 'all 0.15s ease'
+                        }}
+                        title={speakingMsgId === msg.id ? 'Detener voz' : 'Escuchar respuesta en voz alta'}
+                      >
+                        {speakingMsgId === msg.id ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -646,6 +713,11 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
                               {t.vibe && (
                                 <span style={{ fontSize: '0.72rem', color: '#ff9500', background: 'rgba(255, 149, 0, 0.12)', padding: '1px 6px', borderRadius: 999, fontWeight: 600 }}>
                                   {t.vibe}
+                                </span>
+                              )}
+                              {t.locationName && (
+                                <span style={{ fontSize: '0.72rem', color: '#34c759', background: 'rgba(52, 199, 89, 0.12)', padding: '1px 6px', borderRadius: 999, fontWeight: 600 }}>
+                                  📍 {t.locationName}
                                 </span>
                               )}
                             </div>
