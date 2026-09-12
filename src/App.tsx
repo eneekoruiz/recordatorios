@@ -176,12 +176,42 @@ function App() {
         { id: 'limpieza_semanal', name: 'Semanal', color: '#0a84ff', icon: 'list', parentId: 'limpieza' },
         { id: 'limpieza_mensual', name: 'Mensual', color: '#0a84ff', icon: 'list', parentId: 'limpieza' },
         { id: 'limpieza_anual', name: 'Anual', color: '#0a84ff', icon: 'list', parentId: 'limpieza' },
+        { id: 'caducidades', name: 'Caducidades', color: '#ff9500', icon: 'credit-card' },
+        { id: 'que_he_hecho', name: 'Qué he hecho', color: '#5856d6', icon: 'book-open' },
       ];
       initial.forEach((l) => state.addList(l));
+      state.addListSection({ id: 'sec_tarjetas', listId: 'caducidades', name: 'Tarjetas y Documentos', order: 0 });
+      state.addListSection({ id: 'sec_suscripciones', listId: 'caducidades', name: 'Suscripciones', order: 1 });
     } else {
       if (!lists.some(l => l.id === 'primeros_pasos') && !isHidden) {
         state.addList({ id: 'primeros_pasos', name: 'Primeros Pasos', color: '#ff2d55', icon: 'rocket', isPinned: true });
       }
+      if (!lists.some(l => l.id === 'caducidades')) {
+        state.addList({ id: 'caducidades', name: 'Caducidades', color: '#ff9500', icon: 'credit-card' });
+      }
+      if (!lists.some(l => l.id === 'que_he_hecho')) {
+        state.addList({ id: 'que_he_hecho', name: 'Qué he hecho', color: '#5856d6', icon: 'book-open' });
+      }
+
+      // Secciones de Caducidades
+      const sections = state.listSections || [];
+      if (!sections.some(s => s.id === 'sec_tarjetas' || (s.listId === 'caducidades' && s.name.toLowerCase().includes('tarjeta')))) {
+        state.addListSection({
+          id: 'sec_tarjetas',
+          listId: 'caducidades',
+          name: 'Tarjetas y Documentos',
+          order: 0
+        });
+      }
+      if (!sections.some(s => s.id === 'sec_suscripciones' || (s.listId === 'caducidades' && s.name.toLowerCase().includes('suscrip')))) {
+        state.addListSection({
+          id: 'sec_suscripciones',
+          listId: 'caducidades',
+          name: 'Suscripciones',
+          order: 1
+        });
+      }
+
       // Asegurar que la estructura de Limpieza coincida con las sublistas
       const limpiezaList = lists.find(l => l.id === 'limpieza');
       if (limpiezaList && !limpiezaList.isFolder) {

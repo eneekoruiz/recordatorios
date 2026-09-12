@@ -4,6 +4,7 @@ import { Sparkles, SlidersHorizontal, ArrowUp } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { parseNaturalLanguage } from '../../utils/nlp';
 import { SoundService } from '../../services/SoundService';
+import { extractPeopleFromText, getAnticipationAlerts } from '../../services/TaskService';
 
 interface QuickAddBarProps {
   currentView: string;
@@ -18,6 +19,7 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
   const lists = useAppStore(state => state.lists);
 
   const nlp = parseNaturalLanguage(text);
+  const extractedPeople = extractPeopleFromText(text);
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -34,6 +36,28 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
       if (matchingList) {
         targetCategory = matchingList.id;
       }
+    }
+
+    // Auto-detección para Caducidades y Suscripciones
+    let expirationType: 'card' | 'subscription' | 'other' | undefined = undefined;
+    let targetSectionId: string | undefined = undefined;
+
+    if (targetCategory === 'caducidades' || /caduca|tarjeta|suscrip|renovaci/i.test(text)) {
+      if (/tarjeta|banco|dni|carnet|pasaporte/i.test(text)) {
+        expirationType = 'card';
+        targetCategory = 'caducidades';
+        targetSectionId = 'sec_tarjetas';
+      } else if (/suscrip|netflix|spotify|gimnasio|cloud|hosting|mensualidad/i.test(text)) {
+        expirationType = 'subscription';
+        targetCategory = 'caducidades';
+        targetSectionId = 'sec_suscripciones';
+      }
+    }
+
+    // Si tiene menciones de personas y estamos en que_he_hecho o no hay categoría fija
+    const people = extractedPeople;
+    if (targetCategory === 'inbox' && people.length > 0 && currentView === 'list_que_he_hecho') {
+      targetCategory = 'que_he_hecho';
     }
 
     // Determinar ciclo por defecto
@@ -53,20 +77,32 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
     }
 
     // Alertas por hora
-    const alerts = nlp.times.map(t => ({
+    let alerts: import('../../models/Task').AlertDef[] = nlp.times.map(t => ({
       id: `alert_${Date.now()}_${t}`,
       type: 'at_time' as const,
       time: t
     }));
 
+    // Alertas preventivas automáticas para tarjetas y suscripciones
+    if (expirationType && targetDueDate) {
+      const autoAlerts = getAnticipationAlerts(expirationType).map(a => ({
+        ...a,
+        id: `alert_auto_${Date.now()}_${a.offsetMinutes}`
+      }));
+      alerts = [...alerts, ...autoAlerts];
+    }
+
     addTask({
       id: crypto.randomUUID(),
       title: cleanTitle,
       categoryId: targetCategory,
+      sectionId: targetSectionId,
       cycle_id: targetCycleId,
       dueDate: targetDueDate,
       priority: nlp.suggestedPriority || 'none',
       alerts: alerts.length > 0 ? alerts : undefined,
+      people: people.length > 0 ? people : undefined,
+      expirationType,
       status: 'pending',
       created_at: new Date().toISOString()
     });
@@ -76,7 +112,7 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
     inputRef.current?.blur();
   };
 
-  const hasChips = nlp.times.length > 0 || nlp.suggestedDueDate || nlp.suggestedCycleId || nlp.suggestedPriority || nlp.suggestedCategory;
+  const hasChips = nlp.times.length > 0 || nlp.suggestedDueDate || nlp.suggestedCycleId || nlp.suggestedPriority || nlp.suggestedCategory || extractedPeople.length > 0;
 
   return (
     <div 
@@ -145,6 +181,11 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
               {nlp.suggestedCycleId && (
                 <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: 'rgba(255, 149, 0, 0.15)', color: 'var(--accent-orange)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                   🔄 Ciclo
+                </span>
+              )}
+              {extractedPeople.length > 0 && (
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: 'rgba(88, 86, 214, 0.15)', color: '#5856d6', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  👥 {extractedPeople.join(', ')}
                 </span>
               )}
             </motion.div>

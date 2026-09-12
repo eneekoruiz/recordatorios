@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, ChevronDown, ChevronLeft, FolderPlus, Settings, Trash2, MoreHorizontal, Edit3, X, Check, ArrowUpDown, Sparkles } from 'lucide-react';
+import { Plus, ChevronDown, ChevronLeft, FolderPlus, Settings, Trash2, MoreHorizontal, Edit3, X, Check, ArrowUpDown, Sparkles, Users, CreditCard, ShieldAlert, Clock } from 'lucide-react';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { usePromptStore } from '../../store/usePromptStore';
 import type { TaskItem } from '../../models/Task';
@@ -15,6 +15,7 @@ import { QuickAddBar } from '../ui/QuickAddBar';
 import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
 import { DailyBriefingBanner } from './DailyBriefingBanner';
+import { extractPeopleFromText, calculateExpirationStatus } from '../../services/TaskService';
 
 interface MainContentProps {
   currentView: string;
@@ -232,6 +233,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const [dailyTimeFilter, setDailyTimeFilter] = useState<'all' | 'morning' | 'afternoon' | 'night'>('all');
   // Aislamiento contextual de sección (Ocultar el resto / Ver todas)
   const [isolatedSectionKey, setIsolatedSectionKey] = useState<string | null>(null);
+  // Vista especial para "Qué he hecho": Por Personas o Línea de Tiempo (Timeline)
+  const [lifeLogViewMode, setLifeLogViewMode] = useState<'people' | 'timeline'>('people');
 
   // Resetear filtros al cambiar de vista o lista
   useEffect(() => {
@@ -432,7 +435,69 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     } else if (isSmartView) {
       rawGrouped = getTasksForSmartView(resolvedShowCompleted, recentlyCompletedIds);
     } else if (isListView) {
-      rawGrouped = getTasksByList(currentView.replace('list_', ''), resolvedShowCompleted, recentlyCompletedIds);
+      if (currentView === 'list_que_he_hecho') {
+        const allTasks = Object.values(tasks).filter((t: any) => !t.deleted_at && (t.categoryId === 'que_he_hecho' || (t as any).category_id === 'que_he_hecho'));
+        const validTasks = resolvedShowCompleted 
+          ? allTasks 
+          : allTasks.filter((t: any) => !isTaskCompleted(t) || recentlyCompletedIds.includes(t.id));
+
+        const grouped: Record<string, TaskItem[]> = {};
+
+        if (lifeLogViewMode === 'people') {
+          // Extract all unique people across valid tasks
+          const peopleSet = new Set<string>();
+          validTasks.forEach((t: any) => {
+            const tPeople = (t.people && t.people.length > 0) ? t.people : extractPeopleFromText(`${t.title || ''} ${t.description || ''}`);
+            tPeople.forEach((p: string) => peopleSet.add(p));
+          });
+
+          const sortedPeople = Array.from(peopleSet).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+
+          // Pre-initialize person groups
+          sortedPeople.forEach((p: string) => {
+            grouped[`persona_${p}`] = [];
+          });
+          grouped['persona_solo'] = [];
+
+          validTasks.forEach((t: any) => {
+            const tPeople = (t.people && t.people.length > 0) ? t.people : extractPeopleFromText(`${t.title || ''} ${t.description || ''}`);
+            if (tPeople.length === 0) {
+              grouped['persona_solo'].push(t);
+            } else {
+              // Multi-association: appears under each person's section
+              tPeople.forEach((p: string) => {
+                const key = `persona_${p}`;
+                if (!grouped[key]) grouped[key] = [];
+                grouped[key].push(t);
+              });
+            }
+          });
+
+          if (grouped['persona_solo'].length === 0) {
+            delete grouped['persona_solo'];
+          }
+        } else {
+          // Timeline mode: Group by Year and Month
+          const sortedByDate = [...validTasks].sort((a, b) => {
+            const dateA = a.dueDate ? new Date(a.dueDate).getTime() : new Date(a.created_at).getTime();
+            const dateB = b.dueDate ? new Date(b.dueDate).getTime() : new Date(b.created_at).getTime();
+            return dateB - dateA;
+          });
+
+          sortedByDate.forEach((t: any) => {
+            const d = t.dueDate ? new Date(t.dueDate) : new Date(t.created_at);
+            const year = isNaN(d.getTime()) ? new Date().getFullYear() : d.getFullYear();
+            const month = isNaN(d.getTime()) ? new Date().getMonth() : d.getMonth();
+            const groupKey = `timeline_${year}_${String(month + 1).padStart(2, '0')}`;
+            if (!grouped[groupKey]) grouped[groupKey] = [];
+            grouped[groupKey].push(t);
+          });
+        }
+
+        rawGrouped = grouped;
+      } else {
+        rawGrouped = getTasksByList(currentView.replace('list_', ''), resolvedShowCompleted, recentlyCompletedIds);
+      }
     } else {
       rawGrouped = getTasksByCycle(currentView, resolvedShowCompleted, recentlyCompletedIds);
     }
@@ -524,7 +589,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     }
 
     return rawGrouped;
-  }, [currentView, isFolderView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, resolvedShowCompleted, recentlyCompletedIds, lists, currentCycle, cycleInclusion, listSectionFilter, dailyTimeFilter, resolveTimeOfDay, currentList, sortBy, sortTaskList]);
+  }, [currentView, isFolderView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, resolvedShowCompleted, recentlyCompletedIds, lists, currentCycle, cycleInclusion, listSectionFilter, dailyTimeFilter, resolveTimeOfDay, currentList, sortBy, sortTaskList, lifeLogViewMode]);
     
   const smartTasks = useMemo(() => currentView === 'cycle_day' ? getSmartSortTasks() : [], [currentView, getSmartSortTasks, tasks]);
 
@@ -541,7 +606,29 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
   const visibleTasks = useMemo(() => Object.values(groupedTasks).flat(), [groupedTasks]);
   const activeVisibleCount = useMemo(() => visibleTasks.filter(t => !isTaskCompleted(t)).length, [visibleTasks]);
-  const completedVisibleCount = useMemo(() => visibleTasks.filter(t => isTaskCompleted(t)).length, [visibleTasks]);
+  const completedVisibleCount = useMemo(() => visibleTasks.filter(t => !isTaskCompleted(t) ? false : true).length, [visibleTasks]);
+
+  const caducidadesStats = useMemo(() => {
+    if (currentView !== 'list_caducidades') return null;
+    const allCaducidades = Object.values(tasks).filter((t: any) => !t.deleted_at && (t.categoryId === 'caducidades' || (t as any).category_id === 'caducidades'));
+    const cards = allCaducidades.filter((t: any) => t.expirationType === 'card' || t.sectionId === 'sec_tarjetas' || /tarjeta|banco|dni|carnet|pasaporte/i.test(t.title));
+    const subs = allCaducidades.filter((t: any) => t.expirationType === 'subscription' || t.sectionId === 'sec_suscripciones' || /suscrip|netflix|spotify|gimnasio|cloud|hosting/i.test(t.title));
+    let criticalCount = 0;
+    allCaducidades.forEach((t: any) => {
+      if (t.dueDate && !isTaskCompleted(t)) {
+        const status = calculateExpirationStatus(t.dueDate);
+        if (status && (status.status === 'expired' || status.status === 'imminent')) {
+          criticalCount++;
+        }
+      }
+    });
+    return {
+      total: allCaducidades.length,
+      cards: cards.length,
+      subs: subs.length,
+      critical: criticalCount
+    };
+  }, [currentView, tasks]);
 
   const totalCompletedInCurrentView = useMemo(() => {
     const all = Object.values(tasks).filter(t => !t.deleted_at && isTaskCompleted(t));
@@ -854,7 +941,55 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       // isListView
       const color = currentList?.color || '#34c759';
       
-      // 1. Uncategorized (no_section)
+      if (currentView === 'list_que_he_hecho') {
+        const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+        Object.entries(groupedTasks).forEach(([groupKey, groupTasks]) => {
+          if (isolatedSectionKey && isolatedSectionKey !== groupKey) return;
+
+          let headerTitle = groupKey;
+          if (groupKey.startsWith('persona_')) {
+            const pName = groupKey.replace('persona_', '');
+            headerTitle = groupKey === 'persona_solo' ? '👤 Individual / Sin personas' : `👥 ${pName}`;
+          } else if (groupKey.startsWith('timeline_')) {
+            const parts = groupKey.replace('timeline_', '').split('_');
+            const y = parts[0];
+            const m = parseInt(parts[1], 10) - 1;
+            headerTitle = `⏳ ${monthNames[m] || ''} ${y}`;
+          }
+
+          flat.push({
+            type: 'header',
+            title: headerTitle,
+            category: groupKey,
+            color: '#5856D6',
+            depth: 0
+          });
+
+          if (!isCatCollapsed(groupKey)) {
+            if (groupTasks.length === 0) {
+              flat.push({
+                type: 'empty-section',
+                title: 'Aquí no hay recuerdos',
+                category: groupKey,
+                color: '#5856D6',
+                depth: 0
+              });
+            } else {
+              const roots = groupTasks.filter(t => !t.parentId);
+              const processNode = (task: TaskItem, depthLevel: number) => {
+                flat.push({ type: 'task', task, depth: depthLevel });
+                if (!isCatCollapsed(`task_${task.id}`)) {
+                  const children = groupTasks.filter(t => t.parentId === task.id);
+                  children.forEach(c => processNode(c, depthLevel + 1));
+                }
+              };
+              roots.forEach(r => processNode(r, 0));
+            }
+          }
+        });
+      } else {
+        // 1. Uncategorized (no_section)
       if (groupedTasks['no_section'] && groupedTasks['no_section'].length > 0) {
         if (!isolatedSectionKey || isolatedSectionKey === 'no_section') {
           if (!collapsed['no_section']) {
@@ -973,6 +1108,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       // Start with root sections
       const rootSections = sectionsForList.filter(s => !s.parentId);
       rootSections.forEach(rs => processSection(rs.id, 0));
+      }
     }
 
     // Identify first and last tasks in sections for Apple-style rounding
@@ -1001,7 +1137,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     if (item.type === 'page-header') return 'page-header';
     if (item.type === 'header') return `header-${item.category || ''}-${item.sectionId || ''}-${item.title || ''}-${index}`;
     if (item.type === 'empty-section') return `empty-${item.category || ''}-${item.sectionId || ''}-${index}`;
-    if (item.type === 'task') return `task-${item.task.id}`;
+    if (item.type === 'task') return `task-${item.task.id}-${index}`;
     return index;
   }, []);
 
@@ -1473,6 +1609,94 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                   <X size={13} />
                 </button>
               </span>
+            </div>
+          )}
+
+          {currentView === 'list_que_he_hecho' && (
+            <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ display: 'inline-flex', background: 'var(--bg-card, rgba(0,0,0,0.05))', padding: '3px', borderRadius: 10, border: '1px solid var(--border-subtle)' }}>
+                <button
+                  type="button"
+                  onClick={() => { HapticService.selection(); setLifeLogViewMode('people'); }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '6px 14px',
+                    borderRadius: 7,
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: lifeLogViewMode === 'people' ? 'var(--bg-elevated, #fff)' : 'transparent',
+                    color: lifeLogViewMode === 'people' ? '#5856d6' : 'var(--text-secondary)',
+                    boxShadow: lifeLogViewMode === 'people' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <Users size={14} />
+                  <span>Por Personas</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { HapticService.selection(); setLifeLogViewMode('timeline'); }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '6px 14px',
+                    borderRadius: 7,
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: lifeLogViewMode === 'timeline' ? 'var(--bg-elevated, #fff)' : 'transparent',
+                    color: lifeLogViewMode === 'timeline' ? '#5856d6' : 'var(--text-secondary)',
+                    boxShadow: lifeLogViewMode === 'timeline' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <Clock size={14} />
+                  <span>Línea de Tiempo</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {currentView === 'list_caducidades' && caducidadesStats && (
+            <div style={{
+              marginTop: 10,
+              display: 'flex',
+              gap: 14,
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              padding: '10px 14px',
+              borderRadius: 12,
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border-subtle)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+            }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <CreditCard size={15} color="#ff9500" />
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Tarjetas:</span>
+                <span style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-primary)' }}>{caducidadesStats.cards}</span>
+              </div>
+              <div style={{ width: 1, height: 16, background: 'var(--border-subtle)' }} />
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Clock size={15} color="#007aff" />
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Suscripciones:</span>
+                <span style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-primary)' }}>{caducidadesStats.subs}</span>
+              </div>
+              {caducidadesStats.critical > 0 && (
+                <>
+                  <div style={{ width: 1, height: 16, background: 'var(--border-subtle)' }} />
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#ff3b30' }}>
+                    <ShieldAlert size={15} />
+                    <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>Atención inmediata:</span>
+                    <span style={{ fontSize: '0.86rem', fontWeight: 700 }}>{caducidadesStats.critical}</span>
+                  </div>
+                </>
+              )}
             </div>
           )}
       </header>

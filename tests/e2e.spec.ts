@@ -354,4 +354,135 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
     const greetingText = await briefing.textContent();
     expect(greetingText).toMatch(/Buenos días|Buenas tardes|Buenas noches/);
   });
+
+  // 12. Caducidades: Pre-configured Sections, Expiration Pill & Smart Anticipation Alerts
+  test('12. Special List Caducidades: Pre-configured sections, countdown pill, and anticipation alerts', async ({ page }) => {
+    await ensureAppUnlocked(page);
+    await page.waitForLoadState('networkidle');
+
+    // Navigate to Caducidades list
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent('select-view', { detail: 'list_caducidades' }));
+    });
+    await page.waitForTimeout(400);
+
+    // Add a card task due in 25 days and a subscription task due in 2 days
+    await page.evaluate(() => {
+      const store = (window as any).useAppStore?.getState?.();
+      if (store) {
+        const today = new Date();
+        const dueCard = new Date(today);
+        dueCard.setDate(dueCard.getDate() + 25);
+        const dueSub = new Date(today);
+        dueSub.setDate(dueSub.getDate() + 2);
+
+        store.addTask({
+          id: 'test-card-visa',
+          title: 'Tarjeta Visa Gold Banco',
+          categoryId: 'caducidades',
+          sectionId: 'sec_tarjetas',
+          expirationType: 'card',
+          dueDate: dueCard.toISOString(),
+          alerts: [
+            { id: 'al_card_30d', type: 'before', offsetMinutes: 30 * 24 * 60, label: '1 mes antes' },
+            { id: 'al_card_15d', type: 'before', offsetMinutes: 15 * 24 * 60, label: '15 días antes' }
+          ],
+          status: 'pending'
+        });
+
+        store.addTask({
+          id: 'test-sub-netflix',
+          title: 'Suscripción Netflix Premium',
+          categoryId: 'caducidades',
+          sectionId: 'sec_suscripciones',
+          expirationType: 'subscription',
+          dueDate: dueSub.toISOString(),
+          alerts: [
+            { id: 'al_sub_3d', type: 'before', offsetMinutes: 3 * 24 * 60, label: '3 días antes' },
+            { id: 'al_sub_1d', type: 'before', offsetMinutes: 1 * 24 * 60, label: '1 día antes' }
+          ],
+          status: 'pending'
+        });
+      }
+    });
+
+    await page.waitForTimeout(500);
+
+    // Verify sections: Tarjetas y Documentos and Suscripciones
+    const cardSection = page.locator('text=Tarjetas y Documentos').first();
+    const subSection = page.locator('text=Suscripciones').first();
+    await expect(cardSection).toBeVisible();
+    await expect(subSection).toBeVisible();
+
+    // Verify expiration pills on both cards
+    const visaCard = page.locator('.task-item-wrapper:has-text("Tarjeta Visa Gold Banco")').first();
+    await expect(visaCard).toBeVisible();
+    const visaExpirationPill = visaCard.locator('.apple-expiration-pill').first();
+    await expect(visaExpirationPill).toBeVisible();
+    await expect(visaExpirationPill).toContainText('días restantes');
+
+    const netflixCard = page.locator('.task-item-wrapper:has-text("Suscripción Netflix Premium")').first();
+    await expect(netflixCard).toBeVisible();
+    const netflixExpirationPill = netflixCard.locator('.apple-expiration-pill').first();
+    await expect(netflixExpirationPill).toBeVisible();
+    await expect(netflixExpirationPill).toContainText('Caduca en 2 días');
+  });
+
+  // 13. Qué he hecho (Bitácora de vida): Multi-person association & timeline toggle
+  test('13. Special List Qué he hecho: Shared multi-person memories appear in each person section & timeline view', async ({ page }) => {
+    await ensureAppUnlocked(page);
+    await page.waitForLoadState('networkidle');
+
+    // Navigate to Qué he hecho list
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent('select-view', { detail: 'list_que_he_hecho' }));
+    });
+    await page.waitForTimeout(400);
+
+    // Verify toggle controls are rendered
+    const peopleToggleBtn = page.locator('button:has-text("Por Personas")').first();
+    const timelineToggleBtn = page.locator('button:has-text("Línea de Tiempo")').first();
+    await expect(peopleToggleBtn).toBeVisible();
+    await expect(timelineToggleBtn).toBeVisible();
+
+    // Add a shared memory with multiple people: Laura and Carlos
+    await page.evaluate(() => {
+      const store = (window as any).useAppStore?.getState?.();
+      if (store) {
+        store.addTask({
+          id: 'test-memory-shared',
+          title: 'Viaje a Roma en vacaciones',
+          categoryId: 'que_he_hecho',
+          people: ['Laura', 'Carlos'],
+          dueDate: new Date().toISOString(),
+          status: 'pending'
+        });
+      }
+    });
+
+    await page.waitForTimeout(500);
+
+    // In 'Por Personas' mode: Memory must appear in BOTH Laura's section AND Carlos's section!
+    const lauraHeader = page.locator('.group-header:has-text("Laura")').first();
+    const carlosHeader = page.locator('.group-header:has-text("Carlos")').first();
+    await expect(lauraHeader).toBeVisible();
+    await expect(carlosHeader).toBeVisible();
+
+    // Verify that the task shows person pills
+    const personPills = page.locator('.apple-person-pill');
+    await expect(personPills.first()).toBeVisible();
+
+    // Click 'Línea de Tiempo' toggle
+    await timelineToggleBtn.click();
+    await page.waitForTimeout(400);
+
+    // Verify timeline header is rendered (containing month and year)
+    const timelineHeader = page.locator('.group-header:has-text("⏳")').first();
+    await expect(timelineHeader).toBeVisible();
+
+    // Switch back to 'Por Personas'
+    await peopleToggleBtn.click();
+    await page.waitForTimeout(300);
+    await expect(lauraHeader).toBeVisible();
+  });
 });

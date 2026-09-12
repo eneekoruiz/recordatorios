@@ -16,13 +16,13 @@ export default defineConfig({
     {
       command: 'node server/index.js',
       url: 'http://127.0.0.1:3001/api/health',
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 60000,
     },
     {
       command: 'npx vite --host 0.0.0.0 --port 5173',
       url: 'http://127.0.0.1:5173',
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 60000,
     }
   ],
