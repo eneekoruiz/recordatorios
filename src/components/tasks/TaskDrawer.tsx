@@ -15,6 +15,7 @@ interface TaskDrawerProps {
 }
 import { CustomSelect } from '../ui/CustomSelect';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { isCaducidadesList, isQueHeHechoList } from '../../utils/specialLists';
 
 export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionId, taskId }: TaskDrawerProps) {
   const addTask = useAppStore(state => state.addTask);
@@ -154,7 +155,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setHasTime(!!task.alerts?.some(a => a.type === 'at_time'));
         
         setPeople(task.people || []);
-        setExpirationType(task.expirationType || (task.categoryId === 'caducidades' ? (task.sectionId === 'sec_suscripciones' ? 'subscription' : 'card') : undefined));
+        const taskIsCad = isCaducidadesList(task.categoryId);
+        const taskIsSub = task.sectionId?.includes('suscrip');
+        setExpirationType(task.expirationType || (taskIsCad ? (taskIsSub ? 'subscription' : 'card') : undefined));
         setVibe(task.vibe);
         setIssuerMask(task.issuerMask || '');
         setAutoRollover(task.autoRollover ?? true);
@@ -167,8 +170,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setCardReqOpen(!!(task.blockedBy && task.blockedBy.length > 0));
         setCardDetailsOpen(task.priority !== 'none' || !!task.flagged || !!task.url || !!task.image || !!task.targetCount);
         setCardFinanceOpen(!!task.isDetailed || task.price !== undefined);
-        setCardCaducidadOpen(task.categoryId === 'caducidades' || !!task.expirationType);
-        setCardPeopleOpen(task.categoryId === 'que_he_hecho' || (!!task.people && task.people.length > 0) || !!task.vibe);
+        setCardCaducidadOpen(taskIsCad || !!task.expirationType);
+        setCardPeopleOpen(isQueHeHechoList(task.categoryId) || (!!task.people && task.people.length > 0) || !!task.vibe);
       } else {
         // Nueva tarea
         setTitle('');
@@ -200,8 +203,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setHasDate(false);
         setHasTime(false);
         setPeople([]);
-        const isCad = defaultCategoryId === 'caducidades';
-        const isSub = defaultSectionId === 'sec_suscripciones';
+        const isCad = isCaducidadesList(defaultCategoryId);
+        const isSub = defaultSectionId?.includes('suscrip');
         setExpirationType(isCad ? (isSub ? 'subscription' : 'card') : undefined);
         setVibe(undefined);
         setIssuerMask('');
@@ -213,6 +216,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setCardRepeatOpen(true);
         setCardReqOpen(true);
         setCardDetailsOpen(true);
+        if (isCad) setCardCaducidadOpen(true);
         setCardFinanceOpen(true);
         setCardCaducidadOpen(isCad);
         setCardPeopleOpen(defaultCategoryId === 'que_he_hecho');
@@ -861,7 +865,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                     )}
 
                     {/* Alertas preventivas inteligentes de caducidad */}
-                    {(category === 'caducidades' || expirationType || hasDate) && (
+                    {(category === 'caducidades' || isCaducidadesList(category) || expirationType || hasDate) && (
                       <div style={{ marginTop: 10, padding: '10px 12px', background: 'var(--bg-card, rgba(0,0,0,0.03))', borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
                         <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>
                           ⚡ Alertas preventivas rápidas:

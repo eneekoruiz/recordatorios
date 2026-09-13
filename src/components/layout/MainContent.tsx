@@ -18,6 +18,7 @@ import { DailyBriefingBanner } from './DailyBriefingBanner';
 import { extractPeopleFromText, calculateExpirationStatus, calculateSubscriptionCosts, findFlashbackMemories } from '../../services/TaskService';
 import { PersonProfileModal } from '../people/PersonProfileModal';
 import { AIService } from '../../services/AIService';
+import { isCaducidadesList, isQueHeHechoList, ensureCaducidadesSections } from '../../utils/specialLists';
 
 interface MainContentProps {
   currentView: string;
@@ -643,14 +644,42 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const activeVisibleCount = useMemo(() => visibleTasks.filter(t => !isTaskCompleted(t)).length, [visibleTasks]);
   const completedVisibleCount = useMemo(() => visibleTasks.filter(t => !isTaskCompleted(t) ? false : true).length, [visibleTasks]);
 
-  const allTasksArray = useMemo(() => Object.values(tasks), [tasks]);
-  const flashbackMemories = useMemo(() => currentView === 'list_que_he_hecho' ? findFlashbackMemories(allTasksArray) : [], [currentView, allTasksArray]);
+   const allTasksArray = useMemo(() => Object.values(tasks), [tasks]);
+  const flashbackMemories = useMemo(() => 
+    isQueHeHechoList(currentView, currentList) ? findFlashbackMemories(allTasksArray) : [], 
+    [currentView, currentList, allTasksArray]
+  );
+
+  // Auto-inicializar secciones de Caducidades para cualquier lista que sea de caducidades
+  useEffect(() => {
+    if (currentList && isCaducidadesList(currentList.id, currentList)) {
+      ensureCaducidadesSections(currentList.id, listSections, addListSection);
+    }
+  }, [currentList, listSections, addListSection]);
 
   const caducidadesStats = useMemo(() => {
-    if (currentView !== 'list_caducidades') return null;
-    const allCaducidades = Object.values(tasks).filter((t: any) => !t.deleted_at && (t.categoryId === 'caducidades' || (t as any).category_id === 'caducidades'));
-    const cards = allCaducidades.filter((t: any) => t.expirationType === 'card' || t.sectionId === 'sec_tarjetas' || /tarjeta|banco|dni|carnet|pasaporte/i.test(t.title));
-    const subs = allCaducidades.filter((t: any) => t.expirationType === 'subscription' || t.sectionId === 'sec_suscripciones' || /suscrip|netflix|spotify|gimnasio|cloud|hosting/i.test(t.title));
+    if (!isCaducidadesList(currentView, currentList)) return null;
+    const targetCatId = currentList?.id || 'caducidades';
+    const allCaducidades = Object.values(tasks).filter((t: any) => 
+      !t.deleted_at && (
+        t.categoryId === targetCatId || 
+        (t as any).category_id === targetCatId || 
+        t.categoryId === 'caducidades' ||
+        isCaducidadesList(t.categoryId)
+      )
+    );
+    const cards = allCaducidades.filter((t: any) => 
+      t.expirationType === 'card' || 
+      t.sectionId === 'sec_tarjetas' || 
+      t.sectionId?.includes('tarjeta') ||
+      /tarjeta|banco|dni|carnet|pasaporte/i.test(t.title)
+    );
+    const subs = allCaducidades.filter((t: any) => 
+      t.expirationType === 'subscription' || 
+      t.sectionId === 'sec_suscripciones' || 
+      t.sectionId?.includes('suscrip') ||
+      /suscrip|netflix|spotify|gimnasio|cloud|hosting/i.test(t.title)
+    );
     let criticalCount = 0;
     allCaducidades.forEach((t: any) => {
       if (t.dueDate && !isTaskCompleted(t)) {
@@ -668,7 +697,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       critical: criticalCount,
       subCosts
     };
-  }, [currentView, tasks]);
+  }, [currentView, currentList, tasks]);
 
   const totalCompletedInCurrentView = useMemo(() => {
     const all = Object.values(tasks).filter(t => !t.deleted_at && isTaskCompleted(t));
@@ -1479,10 +1508,82 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               <div key={itemKey} data-index={index} style={{...itemStyle, zIndex: 20, margin: 0, boxSizing: 'border-box'}}>
                 <header 
                   className="content-header" 
-                  style={{ padding: '4px 16px 20px 16px', display: 'flex', flexDirection: 'column', gap: '16px', flexShrink: 0, margin: '0', borderBottom: 'none', boxSizing: 'border-box' }}
+                  style={{ padding: '4px 16px 20px 16px', display: 'flex', flexDirection: 'column', gap: '12px', flexShrink: 0, margin: '0', borderBottom: 'none', boxSizing: 'border-box' }}
                 >
-        {/* Línea del Título (Debajo del Top Bar) - Estilo Apple Reminders */}
-        <div style={{ width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                  {/* Apple Top Navigation Bar: Back button < Listas + List Options */}
+                  <div 
+                    className="apple-content-nav-bar" 
+                    style={{ 
+                      width: '100%', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between', 
+                      minHeight: 34,
+                      boxSizing: 'border-box' 
+                    }}
+                  >
+                    {/* Botón Volver a Listas (visible en móvil o si onBackToSidebar existe) */}
+                    {(isMobile || onBackToSidebar) ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          HapticService.selection();
+                          onBackToSidebar?.();
+                        }}
+                        data-testid="content-back-btn"
+                        className="apple-nav-back-btn"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 3,
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'var(--accent-primary)',
+                          fontSize: '1.02rem',
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          padding: '4px 6px 4px 0',
+                          borderRadius: 8,
+                          transition: 'opacity 0.15s ease'
+                        }}
+                        title="Volver a las listas"
+                      >
+                        <ChevronLeft size={24} strokeWidth={2.4} />
+                        <span>Listas</span>
+                      </button>
+                    ) : <div />}
+
+                    {/* Menú de opciones de lista a la derecha */}
+                    {currentList && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          HapticService.selection();
+                          setIsListConfigOpen(true);
+                        }}
+                        data-testid="list-options-btn"
+                        className="apple-nav-action-btn"
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: '50%',
+                          background: 'var(--bg-elevated)',
+                          border: '1px solid var(--border-subtle)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          color: 'var(--text-secondary)'
+                        }}
+                        title="Configuración de la lista"
+                      >
+                        <MoreHorizontal size={17} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Línea del Título (Debajo del Top Bar) - Estilo Apple Reminders */}
+                  <div style={{ width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
           <h1 className="text-display" style={{ 
             fontSize: '34px', 
             fontWeight: 700,
@@ -1653,7 +1754,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             </div>
           )}
 
-          {currentView === 'list_que_he_hecho' && (
+          {isQueHeHechoList(currentView, currentList) && (
             <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ display: 'inline-flex', background: 'var(--bg-card, rgba(0,0,0,0.05))', padding: '3px', borderRadius: 10, border: '1px solid var(--border-subtle)' }}>
@@ -1811,7 +1912,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             </div>
           )}
 
-          {currentView === 'list_caducidades' && caducidadesStats && (
+          {isCaducidadesList(currentView, currentList) && caducidadesStats && (
             <div style={{
               marginTop: 10,
               display: 'flex',
@@ -2361,12 +2462,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         listId={currentList?.id} 
       />
 
-      {createPortal(
-        <button className="fab" onClick={() => onOpenNewTask()} title="Añadir Tarea" style={{ zIndex: 99999 }}>
-          <Plus size={24} />
-        </button>,
-        document.body
-      )}
       <ConfirmModal
         isOpen={isConfirmOpen}
         onCancel={() => setIsConfirmOpen(false)}

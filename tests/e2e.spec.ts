@@ -317,8 +317,15 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
     const isVisible = await searchInput.isVisible().catch(() => false);
     if (!isVisible) {
       // In headless Chrome, Control+k can be trapped by Chrome address bar shortcut; trigger via UI button
-      const searchBtn = page.locator('.sidebar-header').locator('text=Buscar');
-      await searchBtn.click();
+      const searchBtn = page.locator('[data-testid="sidebar-search-btn"]');
+      if (await searchBtn.isVisible()) {
+        await searchBtn.click();
+        await page.waitForTimeout(200);
+      }
+      const expandedBar = page.locator('[data-testid="sidebar-search-expanded-bar"]').or(page.locator('.sidebar-header').locator('text=Buscar...')).first();
+      if (await expandedBar.isVisible()) {
+        await expandedBar.click();
+      }
     }
 
     await expect(searchInput).toBeVisible({ timeout: 5000 });
@@ -802,4 +809,113 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
     await expect(summaryContent).toBeVisible();
     await expect(summaryContent).toContainText('Memoria');
   });
+
+  // 20. Top Navigation: Back button in header takes user back to lists
+  test('20. Top Navigation: Back button in header takes user back to lists', async ({ page }) => {
+    await ensureAppUnlocked(page);
+    await page.waitForLoadState('networkidle');
+
+    // Navigate to a list
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent('select-view', { detail: 'list_caducidades' }));
+    });
+    await page.waitForTimeout(400);
+
+    // Verify back button is visible in header
+    const backBtn = page.locator('[data-testid="content-back-btn"]').first();
+    await expect(backBtn).toBeVisible();
+    await expect(backBtn).toContainText('Listas');
+
+    // Click back button
+    await backBtn.click();
+    await page.waitForTimeout(300);
+
+    // Verify app-container transitioned to sidebar view or sidebar is visible
+    const sidebar = page.locator('.sidebar');
+    await expect(sidebar).toBeVisible();
+  });
+
+  // 21. Custom Special List: Creating a list named Caducidades auto-configures sections & metrics
+  test('21. Custom Special List: Creating a list named Caducidades auto-configures sections & metrics', async ({ page }) => {
+    await ensureAppUnlocked(page);
+    await page.waitForLoadState('networkidle');
+
+    // Create custom list with template Caducidades
+    const customListId = 'test-custom-caducidades-' + Date.now();
+    await page.evaluate((id) => {
+      const store = (window as any).useAppStore?.getState?.();
+      if (store) {
+        store.addList({
+          id,
+          name: 'Caducidades Personales',
+          color: '#ff9500',
+          icon: 'credit-card',
+          specialType: 'caducidades',
+          isFinancial: true
+        });
+      }
+    }, customListId);
+    await page.waitForTimeout(400);
+
+    // Seed a card task in custom Caducidades list
+    await page.evaluate((id) => {
+      const store = (window as any).useAppStore?.getState?.();
+      if (store) {
+        store.addTask({
+          id: 'test-custom-card',
+          title: 'Tarjeta de Débito',
+          categoryId: id,
+          sectionId: `sec_tarjetas_${id}`,
+          expirationType: 'card',
+          dueDate: new Date(Date.now() + 10 * 86400000).toISOString(),
+          status: 'pending'
+        });
+      }
+    }, customListId);
+    await page.waitForTimeout(400);
+
+    // Navigate to this new custom list
+    await page.evaluate((id) => {
+      window.dispatchEvent(new CustomEvent('select-view', { detail: `list_${id}` }));
+    }, customListId);
+    await page.waitForTimeout(600);
+
+    // Verify the special Caducidades sections were auto-created
+    const tarjetaSection = page.locator('text=Tarjetas y Documentos').first();
+    await expect(tarjetaSection).toBeVisible();
+    const suscripcionSection = page.locator('text=Suscripciones').first();
+    await expect(suscripcionSection).toBeVisible();
+
+    // Verify the floating plus button (.fab) is NOT present or overlapping
+    const fab = page.locator('button.fab');
+    await expect(fab).toHaveCount(0);
+  });
+
+  // 22. Collapsible Circular Search: starts folded as a circle and expands/collapses cleanly
+  test('22. Collapsible Circular Search: starts folded as a circle and expands/collapses cleanly', async ({ page }) => {
+    await ensureAppUnlocked(page);
+    await page.waitForLoadState('networkidle');
+
+    // Verify circular search trigger is rendered
+    const searchBtn = page.locator('[data-testid="sidebar-search-btn"]').first();
+    await expect(searchBtn).toBeVisible();
+
+    // Click circular search button to expand
+    await searchBtn.click();
+    await page.waitForTimeout(200);
+
+    // Verify search bar expands with input and close button
+    const expandedInput = page.locator('.sidebar-header').locator('text=Buscar...').first();
+    await expect(expandedInput).toBeVisible();
+    const closeBtn = page.locator('[data-testid="sidebar-search-close-btn"]').first();
+    await expect(closeBtn).toBeVisible();
+
+    // Close it via close button
+    await closeBtn.click();
+    await page.waitForTimeout(200);
+
+    // Verify it is collapsed back to the circular button
+    await expect(searchBtn).toBeVisible();
+  });
 });
+

@@ -35,10 +35,14 @@ const ICONS: Record<string, any> = {
   'glasses': Glasses, 'headphones': Headphones, 'watch': Watch, 'shield': Shield, 'key': Key, 'lock': Lock, 'bell': Bell
 };
 
+import { isCaducidadesList, isQueHeHechoList, ensureCaducidadesSections } from '../../utils/specialLists';
+
 export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFolder }: ListConfigModalProps) {
   const lists = useAppStore(state => state.lists);
   const addList = useAppStore(state => state.addList);
   const updateList = useAppStore(state => state.updateList);
+  const addListSection = useAppStore(state => state.addListSection);
+  const listSections = useAppStore(state => state.listSections);
   
   const existingList = listId ? lists.find(l => l.id === listId) : null;
   
@@ -47,6 +51,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
   const [icon, setIcon] = useState('list');
   const [isFocused, setIsFocused] = useState(false);
   const [isFolder, setIsFolder] = useState(defaultIsFolder || false);
+  const [specialType, setSpecialType] = useState<'standard' | 'caducidades' | 'que_he_hecho'>('standard');
   const [showAllColors, setShowAllColors] = useState(false);
   const [showAllIcons, setShowAllIcons] = useState(false);
 
@@ -58,6 +63,11 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
         const initialIcon = existingList.icon || (existingList.isFolder ? 'folder' : 'list');
         setIcon(initialIcon);
         setIsFolder(!!existingList.isFolder);
+        setSpecialType(
+          existingList.specialType || 
+          (isCaducidadesList(existingList.id, existingList) ? 'caducidades' : 
+          (isQueHeHechoList(existingList.id, existingList) ? 'que_he_hecho' : 'standard'))
+        );
         setShowAllColors(!COLORS.slice(0, 8).includes(existingList.color));
         setShowAllIcons(!Object.keys(ICONS).slice(0, 12).includes(initialIcon));
       } else {
@@ -67,6 +77,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
         const initialIcon = defaultIsFolder ? 'folder' : 'list';
         setIcon(initialIcon);
         setIsFolder(!!defaultIsFolder);
+        setSpecialType('standard');
         setShowAllColors(false);
         setShowAllIcons(false);
       }
@@ -74,6 +85,21 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
   }, [isOpen, existingList, defaultIsFolder]);
 
   if (!isOpen) return null;
+
+  const handleNameChange = (val: string) => {
+    setName(val);
+    if (!existingList && !isFolder) {
+      if (/caduca|suscrip|vencimiento/i.test(val)) {
+        setSpecialType('caducidades');
+        setColor('#ff9500');
+        setIcon('credit-card');
+      } else if (/qu[eé]\s*he\s*hecho|bitacora|vivencia/i.test(val)) {
+        setSpecialType('que_he_hecho');
+        setColor('#5856d6');
+        setIcon('book-open');
+      }
+    }
+  };
 
   const handleSave = () => {
     if (!name.trim()) return;
@@ -83,21 +109,30 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
         name: name.trim(),
         color,
         icon,
-        isFolder
+        isFolder,
+        specialType: specialType === 'standard' ? undefined : specialType
       });
+      if (specialType === 'caducidades' || isCaducidadesList(existingList.id, { ...existingList, name: name.trim(), specialType: specialType === 'standard' ? undefined : specialType })) {
+        ensureCaducidadesSections(existingList.id, listSections, addListSection);
+      }
       window.dispatchEvent(new CustomEvent('show-toast', { detail: `${isFolder ? 'Carpeta' : 'Lista'} "${name.trim()}" actualizada` }));
     } else {
       const newId = name.trim().toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
-      addList({
+      const listData = {
         id: newId,
         parentId,
         name: name.trim(),
         color,
         icon: isFolder && icon === 'list' ? 'folder' : icon,
-        isFinancial: false,
+        isFinancial: specialType === 'caducidades',
         showCompleted: false,
-        isFolder
-      });
+        isFolder,
+        specialType: specialType === 'standard' ? undefined : specialType
+      };
+      addList(listData);
+      if (specialType === 'caducidades' || isCaducidadesList(newId, listData)) {
+        ensureCaducidadesSections(newId, listSections, addListSection);
+      }
       window.dispatchEvent(new CustomEvent('show-toast', { detail: parentId ? `${isFolder ? 'Subcarpeta' : 'Lista anidada'} "${name.trim()}" creada con éxito` : `${isFolder ? 'Carpeta' : 'Lista'} "${name.trim()}" creada con éxito` }));
     }
     onClose();
@@ -163,7 +198,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
               <input 
                 type="text" 
                 value={name} 
-                onChange={e => setName(e.target.value)}
+                onChange={e => handleNameChange(e.target.value)}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
                 placeholder={isFolder ? "Nombre de la carpeta" : "Nombre de la lista"} 
@@ -184,6 +219,97 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                 }}
               />
             </div>
+
+            {/* Selector de Tipo de Lista (Estándar, Caducidades, Qué he hecho) */}
+            {!isFolder && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Tipo de Lista
+                </span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSpecialType('standard');
+                    }}
+                    style={{
+                      padding: '10px 6px',
+                      borderRadius: 12,
+                      border: specialType === 'standard' ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                      background: specialType === 'standard' ? 'rgba(10, 132, 255, 0.12)' : 'var(--bg-elevated)',
+                      color: specialType === 'standard' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                      fontSize: '0.80rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 4,
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <span style={{ fontSize: '1.15rem' }}>📝</span>
+                    <span>Estándar</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    data-testid="template-caducidades-btn"
+                    onClick={() => {
+                      setSpecialType('caducidades');
+                      setColor('#ff9500');
+                      setIcon('credit-card');
+                    }}
+                    style={{
+                      padding: '10px 6px',
+                      borderRadius: 12,
+                      border: specialType === 'caducidades' ? '1.5px solid #ff9500' : '1px solid var(--border-subtle)',
+                      background: specialType === 'caducidades' ? 'rgba(255, 149, 0, 0.15)' : 'var(--bg-elevated)',
+                      color: specialType === 'caducidades' ? '#ff9500' : 'var(--text-secondary)',
+                      fontSize: '0.80rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 4,
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <span style={{ fontSize: '1.15rem' }}>💳</span>
+                    <span>Caducidades</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    data-testid="template-quehehecho-btn"
+                    onClick={() => {
+                      setSpecialType('que_he_hecho');
+                      setColor('#5856d6');
+                      setIcon('book-open');
+                    }}
+                    style={{
+                      padding: '10px 6px',
+                      borderRadius: 12,
+                      border: specialType === 'que_he_hecho' ? '1.5px solid #5856d6' : '1px solid var(--border-subtle)',
+                      background: specialType === 'que_he_hecho' ? 'rgba(88, 86, 214, 0.15)' : 'var(--bg-elevated)',
+                      color: specialType === 'que_he_hecho' ? '#5856d6' : 'var(--text-secondary)',
+                      fontSize: '0.80rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 4,
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <span style={{ fontSize: '1.15rem' }}>📖</span>
+                    <span>Qué he hecho</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Is Folder Switch */}
             <div style={{ 
