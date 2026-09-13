@@ -26,7 +26,8 @@ import {
   Moon,
   Smartphone,
   Search,
-  Sparkles
+  Sparkles,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -694,11 +695,20 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   const [isNewFolderDefault, setIsNewFolderDefault] = useState(false);
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(SoundService.enabled);
 
   useEffect(() => {
     setIsProfileOpen(false);
   }, [currentView]);
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsSearchExpanded(false);
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, []);
 
   const handleAddList = () => {
     setEditingListId(undefined);
@@ -709,88 +719,157 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
 
   return (
     <aside className="sidebar" onScroll={() => window.dispatchEvent(new Event('close-list-menus'))}>
-      {/* 1 & 2. STICKY HEADER: SEARCH BAR + USER PROFILE IN THE SAME ROW */}
-      <div className="sidebar-header" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'nowrap', alignItems: 'center', gap: 10, padding: '12px 14px 8px', width: '100%', boxSizing: 'border-box' }}>
-        {/* Search Bar on the left */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div 
-            onClick={() => window.dispatchEvent(new Event('open-command-palette'))}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 10,
-              padding: '7px 10px',
-              cursor: 'pointer',
-              color: 'var(--text-tertiary)',
-              fontSize: '0.88rem',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <Search size={15} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
-            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Buscar</span>
-            <kbd style={{
-              fontSize: '0.68rem',
-              fontWeight: 600,
-              background: 'var(--bg-card)',
-              color: 'var(--text-tertiary)',
-              padding: '1px 5px',
-              borderRadius: 4,
-              border: '1px solid var(--border-subtle)',
-              flexShrink: 0
-            }}>⌘K</kbd>
-          </div>
-        </div>
-
-        {/* User Profile Avatar Trigger on the right */}
-        <div 
-          ref={userProfileRef}
-          className="user-profile-trigger"
-          onClick={(e) => { e.stopPropagation(); setIsProfileOpen((prev) => !prev); }}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            cursor: 'pointer',
-            position: 'relative',
-            flexShrink: 0,
-            borderRadius: '50%',
-            padding: 2
-          }}
-          title={`${user.name} (${user.email})`}
-        >
-          <div style={{ position: 'relative' }}>
-            <div className="avatar" style={{
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-purple))',
-              color: 'white',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 700,
-              fontSize: '0.9rem',
-              boxShadow: 'var(--shadow-sm)'
-            }}>
-              {user.name.charAt(0)}
+      {/* 1 & 2. STICKY HEADER: COLLAPSIBLE CIRCULAR SEARCH + USER PROFILE */}
+      <div className="sidebar-header" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 14px 8px', width: '100%', boxSizing: 'border-box' }}>
+        {!isSearchExpanded ? (
+          <>
+            {/* Header Title / Logo */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+              <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                Recordatorios
+              </span>
             </div>
-            {/* Sync status micro-dot */}
-            <span style={{
-              position: 'absolute',
-              bottom: -1,
-              right: -1,
-              width: 9,
-              height: 9,
-              borderRadius: '50%',
-              background: syncStatus === 'synced' ? '#34c759' : syncStatus === 'syncing' ? '#0a84ff' : syncStatus === 'error' ? '#ff3b30' : '#8e8e93',
-              border: '2px solid var(--bg-base)'
-            }} />
-          </div>
-        </div>
 
-        {/* PROFILE DROPDOWN (PORTALED TO BODY FOR 100% RELIABLE CLICK OUTSIDE) */}
+            {/* Actions: Circular Search Button + Profile Button */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              <button
+                type="button"
+                data-testid="sidebar-search-btn"
+                onClick={() => {
+                  HapticService.selection();
+                  setIsSearchExpanded(true);
+                }}
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: '50%',
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-subtle)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: 'var(--text-secondary)',
+                  transition: 'all 0.18s ease',
+                  overflow: 'hidden'
+                }}
+                title="Buscar (⌘K)"
+                aria-label="Buscar"
+              >
+                <Search size={16} style={{ flexShrink: 0 }} />
+              </button>
+
+              <div 
+                ref={userProfileRef}
+                className="user-profile-trigger"
+                onClick={(e) => { e.stopPropagation(); setIsProfileOpen((prev) => !prev); }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  flexShrink: 0,
+                  borderRadius: '50%',
+                  padding: 1
+                }}
+                title={`${user.name} (${user.email})`}
+              >
+                <div style={{ position: 'relative' }}>
+                  <div className="avatar" style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-purple))',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 700,
+                    fontSize: '0.84rem',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.12)'
+                  }}>
+                    {user.name.charAt(0)}
+                  </div>
+                  {/* Sync status micro-dot */}
+                  <span style={{
+                    position: 'absolute',
+                    bottom: -1,
+                    right: -1,
+                    width: 9,
+                    height: 9,
+                    borderRadius: '50%',
+                    background: syncStatus === 'synced' ? '#34c759' : syncStatus === 'syncing' ? '#0a84ff' : syncStatus === 'error' ? '#ff3b30' : '#8e8e93',
+                    border: '2px solid var(--bg-base)'
+                  }} />
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          /* Expanded Search Bar */
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
+            <div 
+              data-testid="sidebar-search-expanded-bar"
+              onClick={() => window.dispatchEvent(new Event('open-command-palette'))}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--accent-primary)',
+                borderRadius: 12,
+                padding: '7px 10px',
+                cursor: 'pointer',
+                color: 'var(--text-primary)',
+                fontSize: '0.88rem',
+                flex: 1,
+                minWidth: 0,
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Search size={15} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Buscar...</span>
+              <kbd style={{
+                fontSize: '0.68rem',
+                fontWeight: 600,
+                background: 'var(--bg-card)',
+                color: 'var(--text-tertiary)',
+                padding: '1px 5px',
+                borderRadius: 4,
+                border: '1px solid var(--border-subtle)',
+                flexShrink: 0
+              }}>⌘K</kbd>
+            </div>
+
+            <button
+              type="button"
+              data-testid="sidebar-search-close-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsSearchExpanded(false);
+              }}
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: '50%',
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: 'var(--text-secondary)',
+                flexShrink: 0
+              }}
+              title="Cerrar búsqueda"
+            >
+              <X size={15} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* PROFILE DROPDOWN (PORTALED TO BODY FOR 100% RELIABLE CLICK OUTSIDE) */}
         {isProfileOpen && typeof document !== 'undefined' && createPortal(
           <AnimatePresence>
             <motion.div 
@@ -978,7 +1057,6 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
           </AnimatePresence>,
           document.body
         )}
-      </div>
 
       {/* 3. SCROLLABLE AREA */}
       <div 

@@ -14,6 +14,7 @@ import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
 import { ConfettiService } from '../../services/ConfettiService';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { isCaducidadesList } from '../../utils/specialLists';
 
 interface TaskCardProps {
   task: TaskItem;
@@ -351,7 +352,7 @@ export const TaskCard = React.memo(function TaskCard({
     : (totalAlerts > 1 ? (completedAlertsCount / totalAlerts) * 100 : 0);
 
   const habitStreak = calculateHabitStreak(task, cycles);
-  const isCaducidad = task.categoryId === 'caducidades' || !!task.expirationType;
+  const isCaducidad = isCaducidadesList(task.categoryId) || !!task.expirationType;
   const expirationStatus = (isCaducidad || task.dueDate) ? calculateExpirationStatus(task.dueDate) : null;
 
   return (

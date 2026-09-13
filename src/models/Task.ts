@@ -23,6 +23,7 @@ export interface CustomList {
   showCompleted?: boolean; // Persist preference to show completed tasks for this list
   isPinned?: boolean; // Pinned lists appear as large cards at the top of sidebar
   isFolder?: boolean; // Habilita comportamiento de carpeta organizativa (contiene listas/subcarpetas)
+  specialType?: 'caducidades' | 'que_he_hecho'; // Tipo especial para comportamiento enriquecido
   updated_at?: string;
   _is_dirty?: boolean;
 }
