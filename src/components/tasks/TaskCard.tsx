@@ -2,10 +2,8 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useMotionValue, useTransform, AnimatePresence, useMotionValueEvent } from 'framer-motion';
 import {
-  CheckCircle, Trash2, Lock, Link2, Flag, MapPin,
-  Image as ImageIcon, MoreHorizontal, Edit3,
-  ChevronDown, Copy, IndentIncrease, IndentDecrease, X, Play, Calendar, Info,
-  AlertCircle, CalendarDays, CalendarX, Clock, Sun, ChevronRight, ArrowLeft, FolderInput, LayoutList
+  Lock, MapPin, Image as ImageIcon, MoreHorizontal,
+  ChevronDown, X, Play, Info, RotateCcw, Flag
 } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -15,6 +13,11 @@ import { HapticService } from '../../services/HapticService';
 import { ConfettiService } from '../../services/ConfettiService';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { isCaducidadesList } from '../../utils/specialLists';
+import { TaskContextMenu } from './card/TaskContextMenu';
+import { TaskSwipeBackground } from './card/TaskSwipeBackground';
+import { TaskMetaBadges } from './card/TaskMetaBadges';
+import { TaskHabitCounter } from './card/TaskHabitCounter';
+import { TaskNoteEditor } from './card/TaskNoteEditor';
 
 interface TaskCardProps {
   task: TaskItem;
@@ -34,10 +37,11 @@ interface TaskCardProps {
   indent?: number;
   onNavigateView?: (view: string) => void;
   onPersonClick?: (person: string) => void;
+  isGracePeriod?: boolean;
 }
 
 export const TaskCard = React.memo(function TaskCard({
-  task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, showListName = true, isFirstInSection, isLastInSection, previousTaskId, hasChildren, isExpanded, onToggleExpand, indent = 0, onNavigateView, onPersonClick
+  task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, showListName = true, isFirstInSection, isLastInSection, previousTaskId, hasChildren, isExpanded, onToggleExpand, indent = 0, onNavigateView, onPersonClick, isGracePeriod
 }: TaskCardProps) {
   const cycles = useAppStore(state => state.cycles);
   const tasks = useAppStore(state => state.tasks);
@@ -55,136 +59,59 @@ export const TaskCard = React.memo(function TaskCard({
     else dueDateColor = 'var(--text-tertiary)';
   }
 
-  // Helper para franja horaria diaria (Mañana 🌅, Tarde ☀️, Noche 🌙)
+  // Helper para franja horaria diaria: solo si el usuario la configuró explícitamente en la tarea
   const timeOfDayInfo = (() => {
-    let tag: 'morning' | 'afternoon' | 'night' | null = task.timeOfDay || null;
-    
-    if (!tag && task.alerts && task.alerts.length > 0) {
-      const timeAlert = task.alerts.find(a => a.type === 'at_time' && a.time);
-      if (timeAlert && timeAlert.time) {
-        const hour = parseInt(timeAlert.time.split(':')[0], 10);
-        if (!isNaN(hour)) {
-          if (hour >= 6 && hour < 14) tag = 'morning';
-          else if (hour >= 14 && hour < 20) tag = 'afternoon';
-          else tag = 'night';
-        }
-      }
-    }
+    if (!task.timeOfDay) return null;
 
-    if (!tag) {
-      const text = `${task.title || ''} ${task.description || ''}`.toLowerCase();
-      if (/\b(mañana|mañanero|despertar|despertarse|desayun|desayunar|aseo|dientes)\b/i.test(text)) {
-        tag = 'morning';
-      } else if (/\b(tarde|almuerz|almorzar|comida|comer|meriend|merendar|siesta)\b/i.test(text)) {
-        tag = 'afternoon';
-      } else if (/\b(noche|cenar|cena|dormir|acostar|acostarse|skin-care|skincare|serum)\b/i.test(text)) {
-        tag = 'night';
-      }
-    }
-
-    // Mostrar el tag si está configurado explícitamente, o si es una tarea de ciclo diario / recurrente
-    const isDaily = task.cycle_id === 'cycle_day' || 
-      !!task.targetCount || 
-      (task.sectionId && (task.sectionId.includes('diaria') || task.sectionId.includes('recurrent'))) ||
-      task.categoryId === 'limpieza_diaria' || task.categoryId === 'care_diaria';
-
-    if (!tag && !isDaily) return null;
-    const resolvedTag = tag || 'morning';
-
-    switch (resolvedTag) {
+    switch (task.timeOfDay) {
       case 'morning':
-        return {
-          tag: 'morning' as const,
-          label: 'Mañana',
-          icon: '🌅',
-          next: 'afternoon' as const,
-          color: '#FF9500',
-          bg: 'rgba(255, 149, 0, 0.1)',
-          border: 'rgba(255, 149, 0, 0.22)'
-        };
+        return { tag: 'morning' as const, label: 'Mañana', next: 'afternoon' as const };
       case 'afternoon':
-        return {
-          tag: 'afternoon' as const,
-          label: 'Tarde',
-          icon: '☀️',
-          next: 'night' as const,
-          color: '#007AFF',
-          bg: 'rgba(0, 122, 255, 0.1)',
-          border: 'rgba(0, 122, 255, 0.22)'
-        };
+        return { tag: 'afternoon' as const, label: 'Tarde', next: 'night' as const };
       case 'night':
-        return {
-          tag: 'night' as const,
-          label: 'Noche',
-          icon: '🌙',
-          next: 'morning' as const,
-          color: '#AF52DE',
-          bg: 'rgba(175, 82, 222, 0.1)',
-          border: 'rgba(175, 82, 222, 0.22)'
-        };
+        return { tag: 'night' as const, label: 'Noche', next: 'morning' as const };
     }
   })();
 
-  // Helper para píldora de frecuencia elegante estilo Apple Reminders
+  // Helper para etiqueta de frecuencia sobria: solo si la tarea tiene un ciclo explícito asignado
+  // y no coincide redundantemente con el nombre de su sección o lista
   const cycleBadge = (() => {
-    const cycleId = task.cycle_id || (
-      task.categoryId === 'limpieza_diaria' || (task.sectionId && (task.sectionId.includes('diaria') || task.sectionId.includes('recurrentes'))) ? 'cycle_day' :
-      task.categoryId === 'limpieza_semanal' || (task.sectionId && task.sectionId.includes('semanal')) ? 'cycle_week' :
-      task.categoryId === 'limpieza_mensual' || (task.sectionId && task.sectionId.includes('mensual')) ? 'cycle_month' :
-      task.categoryId === 'limpieza_anual' || (task.sectionId && task.sectionId.includes('anual')) ? 'cycle_year' : null
-    );
-
+    const cycleId = task.cycle_id;
     if (!cycleId) return null;
 
-    if (cycleId === 'cycle_day') {
-      return {
-        label: 'Diario',
-        icon: '☀️',
-        color: '#FF9500',
-        bg: 'rgba(255, 149, 0, 0.09)',
-        border: '1px solid rgba(255, 149, 0, 0.22)'
-      };
-    }
-    if (cycleId === 'cycle_week') {
-      return {
-        label: 'Semanal',
-        icon: '📅',
-        color: '#007AFF',
-        bg: 'rgba(0, 122, 255, 0.09)',
-        border: '1px solid rgba(0, 122, 255, 0.22)'
-      };
-    }
-    if (cycleId === 'cycle_month') {
-      return {
-        label: 'Mensual',
-        icon: '🌙',
-        color: '#AF52DE',
-        bg: 'rgba(175, 82, 222, 0.09)',
-        border: '1px solid rgba(175, 82, 222, 0.22)'
-      };
-    }
-    if (cycleId === 'cycle_year') {
-      return {
-        label: 'Anual',
-        icon: '🎆',
-        color: '#5856D6',
-        bg: 'rgba(88, 86, 214, 0.09)',
-        border: '1px solid rgba(88, 86, 214, 0.22)'
-      };
+    // Evitar badge redundante si la sección ya indica la periodicidad
+    if (task.sectionId) {
+      const sec = task.sectionId.toLowerCase();
+      if (cycleId === 'cycle_day' && (sec.includes('diaria') || sec.includes('diario'))) return null;
+      if (cycleId === 'cycle_week' && sec.includes('semanal')) return null;
+      if (cycleId === 'cycle_month' && sec.includes('mensual')) return null;
+      if (cycleId === 'cycle_year' && sec.includes('anual')) return null;
     }
 
-    const custom = cycles.find(c => c.id === cycleId);
-    return {
-      label: custom?.name || cycleId,
-      icon: '🔄',
-      color: 'var(--accent-primary)',
-      bg: 'var(--accent-glow)',
-      border: '1px solid rgba(0, 122, 255, 0.2)'
-    };
+    // Evitar badge redundante si la lista o sublista ya indica la periodicidad
+    if (task.categoryId) {
+      const cat = task.categoryId.toLowerCase();
+      if (cycleId === 'cycle_day' && (cat.includes('diaria') || cat.includes('diario'))) return null;
+      if (cycleId === 'cycle_week' && cat.includes('semanal')) return null;
+      if (cycleId === 'cycle_month' && cat.includes('mensual')) return null;
+      if (cycleId === 'cycle_year' && cat.includes('anual')) return null;
+    }
+
+    let label = 'Repetir';
+    if (cycleId === 'cycle_day') label = 'Diario';
+    else if (cycleId === 'cycle_week') label = 'Semanal';
+    else if (cycleId === 'cycle_month') label = 'Mensual';
+    else if (cycleId === 'cycle_year') label = 'Anual';
+    else {
+      const custom = cycles.find(c => c.id === cycleId);
+      label = custom?.name || cycleId;
+    }
+
+    return { label };
   })();
 
   const [contextMenuOpen, setContextMenuOpen] = useState(false);
-  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+  const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number; maxHeight: number }>({ x: 0, y: 0, maxHeight: 400 });
 
   useEffect(() => {
     if (!contextMenuOpen) return;
@@ -196,12 +123,8 @@ export const TaskCard = React.memo(function TaskCard({
       setContextMenuOpen(false);
     };
     window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
-    window.addEventListener('wheel', handleScroll, { capture: true, passive: true });
-    window.addEventListener('touchmove', handleScroll, { capture: true, passive: true });
     return () => {
       window.removeEventListener('scroll', handleScroll, true);
-      window.removeEventListener('wheel', handleScroll, true);
-      window.removeEventListener('touchmove', handleScroll, true);
     };
   }, [contextMenuOpen]);
 
@@ -227,34 +150,58 @@ export const TaskCard = React.memo(function TaskCard({
   const cardRef = useRef<HTMLDivElement>(null);
   const updateTask = useAppStore(state => state.updateTask);
 
+
   const openContextMenu = useCallback(() => {
     HapticService.impact('medium');
     if (cardRef.current) {
       const rect = cardRef.current.getBoundingClientRect();
-      const menuWidth = Math.min(270, window.innerWidth - 24);
-      const estimatedMenuHeight = 440;
+      const viewportH = window.innerHeight;
+      const viewportW = window.innerWidth;
+      const menuWidth = Math.min(270, viewportW - 24);
+      const estimatedMenuHeight = 480;
+      const padding = 12;
       
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const spaceAbove = rect.top;
+      const spaceBelow = viewportH - rect.bottom - padding;
+      const spaceAbove = rect.top - padding;
       
       let top: number;
-      if (spaceBelow >= 360) {
-        top = rect.bottom + 8;
-      } else if (spaceAbove >= 360) {
-        top = Math.max(12, rect.top - estimatedMenuHeight - 8);
+      let maxH: number;
+      
+      if (spaceBelow >= estimatedMenuHeight) {
+        // Cabe entero debajo
+        top = rect.bottom + 6;
+        maxH = spaceBelow;
+      } else if (spaceAbove >= estimatedMenuHeight) {
+        // Cabe entero arriba
+        top = Math.max(padding, rect.top - estimatedMenuHeight - 6);
+        maxH = rect.top - top - 6;
+      } else if (spaceBelow >= spaceAbove && spaceBelow >= 240) {
+        // Más espacio abajo que arriba y espacio suficiente para scroll
+        top = rect.bottom + 6;
+        maxH = spaceBelow;
+      } else if (spaceAbove > spaceBelow && spaceAbove >= 240) {
+        // Más espacio arriba
+        const targetH = Math.min(estimatedMenuHeight, spaceAbove);
+        top = Math.max(padding, rect.top - targetH - 6);
+        maxH = rect.top - top - 6;
       } else {
-        top = Math.max(12, (window.innerHeight - estimatedMenuHeight) / 2);
-      }
-      top = Math.max(12, Math.min(window.innerHeight - estimatedMenuHeight - 12, top));
-        
-      let left = rect.right - menuWidth;
-      if (window.innerWidth <= 640) {
-        left = Math.max(12, (window.innerWidth - menuWidth) / 2);
-      } else {
-        left = Math.max(12, Math.min(window.innerWidth - menuWidth - 16, left));
+        // Pantalla muy pequeña o con poco espacio vertical
+        top = padding;
+        maxH = viewportH - (padding * 2);
       }
 
-      setContextMenuPosition({ x: left, y: top });
+      // Garantizar límites seguros: nunca sobresalir de la pantalla
+      top = Math.max(padding, Math.min(viewportH - 180, top));
+      maxH = Math.max(180, Math.min(maxH, viewportH - top - padding));
+        
+      let left = rect.right - menuWidth;
+      if (viewportW <= 640) {
+        left = Math.max(padding, (viewportW - menuWidth) / 2);
+      } else {
+        left = Math.max(padding, Math.min(viewportW - menuWidth - 16, left));
+      }
+
+      setContextMenuPosition({ x: left, y: top, maxHeight: maxH });
     }
     setContextMenuOpen(true);
   }, []);
@@ -290,6 +237,7 @@ export const TaskCard = React.memo(function TaskCard({
 
   const isBlocked = task.blockedBy && task.blockedBy.some(id => tasks[id] && tasks[id].status === 'pending');
   const isCompletedPeriod = isCompletedInCurrentPeriod(task, cycles);
+  const isEffectivelyDone = isCompletedPeriod || !!isGracePeriod || isTaskCompleted(task);
 
   // --- SWIPE (iOS-style: card physically moves) ---
   const x = useMotionValue(0);
@@ -329,13 +277,13 @@ export const TaskCard = React.memo(function TaskCard({
     if (offsetX > SWIPE_COMPLETE_THRESHOLD && !isBlocked) {
       HapticService.notification('success');
       // Always toggle: if completed → uncomplete, if pending → complete
-      if (!isCompletedPeriod) SoundService.playComplete(); else SoundService.playUncomplete();
-      onToggle(task.id, isCompletedPeriod);
+      if (!isEffectivelyDone) SoundService.playComplete(); else SoundService.playUncomplete();
+      onToggle(task.id, isEffectivelyDone);
     } else if (offsetX < SWIPE_DELETE_THRESHOLD) {
       HapticService.impact('heavy');
       setIsDeleteConfirmOpen(true);
     }
-  }, [isBlocked, isCompletedPeriod, onToggle, task.id]);
+  }, [isBlocked, isEffectivelyDone, onToggle, task.id]);
 
   const totalAlerts = task.alerts?.length || 0;
   const completedAlertsCount = task.completedAlerts?.length || 0;
@@ -413,40 +361,15 @@ export const TaskCard = React.memo(function TaskCard({
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Fixed swipe action backgrounds */}
-      {/* Left = Complete/Uncomplete */}
-      <motion.div
-        style={{
-          position: 'absolute', top: 0, left: 0, bottom: 0,
-          width: '50%',
-          background: isCompletedPeriod ? 'var(--accent-orange)' : 'var(--accent-green)',
-          display: 'flex', alignItems: 'center', paddingLeft: 24,
-          opacity: leftBgOpacity, zIndex: 0,
-          overflow: 'hidden'
-        }}
-      >
-        <motion.div style={{ scale: leftIconScale, x: leftIconX }}>
-          {isCompletedPeriod
-            ? <CheckCircle color="white" size={26} style={{ opacity: 0.9 }} />
-            : <CheckCircle color="white" size={26} />
-          }
-        </motion.div>
-      </motion.div>
-
-      {/* Right = Delete */}
-      <motion.div
-        style={{
-          position: 'absolute', top: 0, right: 0, bottom: 0,
-          width: '50%',
-          background: 'var(--accent-red)',
-          display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 24,
-          opacity: rightBgOpacity, zIndex: 0,
-          overflow: 'hidden'
-        }}
-      >
-        <motion.div style={{ scale: rightIconScale, x: rightIconX }}>
-          <Trash2 color="white" size={26} />
-        </motion.div>
-      </motion.div>
+      <TaskSwipeBackground
+        isEffectivelyDone={isEffectivelyDone}
+        leftBgOpacity={leftBgOpacity}
+        leftIconScale={leftIconScale}
+        leftIconX={leftIconX}
+        rightBgOpacity={rightBgOpacity}
+        rightIconScale={rightIconScale}
+        rightIconX={rightIconX}
+      />
 
       {/* Main card — physically slides */}
       <motion.div
@@ -458,11 +381,11 @@ export const TaskCard = React.memo(function TaskCard({
         dragTransition={{ bounceStiffness: 500, bounceDamping: 35 }}
         onDragEnd={(_, info) => handleSwipeEnd(info.offset.x)}
         animate={{
-          scale: contextMenuOpen ? 1.025 : 1,
+          scale: contextMenuOpen ? 1.015 : 1,
           boxShadow: contextMenuOpen 
-            ? '0 18px 45px rgba(0,0,0,0.22), 0 4px 14px rgba(0,0,0,0.1)' 
+            ? '0 0 0 2px var(--accent-primary, #007aff), 0 10px 30px rgba(0,0,0,0.18)' 
             : 'none',
-          borderRadius: contextMenuOpen ? 14 : (isFirstInSection ? 10 : isLastInSection ? 10 : 0),
+          borderRadius: contextMenuOpen ? 12 : (isFirstInSection ? 10 : isLastInSection ? 10 : 0),
         }}
         transition={{ type: 'spring', damping: 25, stiffness: 400 }}
         style={{
@@ -476,7 +399,7 @@ export const TaskCard = React.memo(function TaskCard({
           margin: 0,
           width: '100%',
           boxSizing: 'border-box',
-          background: 'var(--bg-elevated)',
+          background: contextMenuOpen ? 'var(--bg-hover, var(--bg-elevated))' : 'var(--bg-elevated)',
           borderRadius: `${isFirstInSection ? 10 : 0}px ${isFirstInSection ? 10 : 0}px ${isLastInSection ? 10 : 0}px ${isLastInSection ? 10 : 0}px`,
           borderBottom: 'none',
           opacity: isBlocked ? 0.5 : 1,
@@ -501,7 +424,7 @@ export const TaskCard = React.memo(function TaskCard({
         {/* Checkbox */}
         <motion.button
           whileTap={{ scale: 0.85 }}
-          aria-label={isCompletedPeriod ? 'Marcar como pendiente' : 'Completar tarea'}
+          aria-label={isEffectivelyDone ? 'Marcar como pendiente' : 'Completar tarea'}
           disabled={!!isBlocked}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e: React.MouseEvent) => {
@@ -509,7 +432,7 @@ export const TaskCard = React.memo(function TaskCard({
             if (isBlocked) return;
             if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate([8]);
             
-            if (isCompletedPeriod) {
+            if (isEffectivelyDone) {
               SoundService.playUncomplete();
               onToggle(task.id, true);
             } else {
@@ -544,7 +467,7 @@ export const TaskCard = React.memo(function TaskCard({
         >
           {/* Halo expansivo al completar */}
           <AnimatePresence>
-            {isCompletedPeriod && (
+            {isEffectivelyDone && (
               <motion.div
                 key="complete-glow-burst"
                 initial={{ scale: 0.6, opacity: 0.75 }}
@@ -562,7 +485,7 @@ export const TaskCard = React.memo(function TaskCard({
             )}
           </AnimatePresence>
 
-          {isPartial && !isCompletedPeriod && (
+          {isPartial && !isEffectivelyDone && (
             <div style={{
               position: 'absolute',
               width: 22, height: 22,
@@ -594,8 +517,8 @@ export const TaskCard = React.memo(function TaskCard({
 
           <motion.div
             animate={{
-              scale: isCompletedPeriod ? [1, 1.25, 0.94, 1] : 1,
-              backgroundColor: isCompletedPeriod ? taskColor : 'rgba(0,0,0,0)'
+              scale: isEffectivelyDone ? [1, 1.25, 0.94, 1] : 1,
+              backgroundColor: isEffectivelyDone ? taskColor : 'rgba(0,0,0,0)'
             }}
             transition={{
               scale: { type: 'spring', stiffness: 500, damping: 22 },
@@ -604,9 +527,9 @@ export const TaskCard = React.memo(function TaskCard({
             style={{
               width: 22, height: 22,
               borderRadius: '50%',
-              border: (isCompletedPeriod || isPartial) ? 'none' : `1.5px solid ${isHovered ? taskColor : 'var(--border-color)'}`,
+              border: (isEffectivelyDone || isPartial) ? 'none' : `1.5px solid ${isHovered ? taskColor : 'var(--border-color)'}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: isCompletedPeriod ? `0 2px 8px ${taskColor}40` : 'none',
+              boxShadow: isEffectivelyDone ? `0 2px 8px ${taskColor}40` : 'none',
               transition: 'border-color 0.15s ease'
             }}
           >
@@ -620,8 +543,8 @@ export const TaskCard = React.memo(function TaskCard({
                 fill="none"
                 initial={{ pathLength: 0, opacity: 0 }}
                 animate={{ 
-                  pathLength: isCompletedPeriod ? 1 : 0,
-                  opacity: isCompletedPeriod ? 1 : 0
+                  pathLength: isEffectivelyDone ? 1 : 0,
+                  opacity: isEffectivelyDone ? 1 : 0
                 }}
                 transition={{
                   pathLength: { type: 'spring', stiffness: 420, damping: 26, delay: 0.02 },
@@ -686,8 +609,8 @@ export const TaskCard = React.memo(function TaskCard({
                 onClick={() => setIsEditingTitle(true)}
                 className="task-title"
                 animate={{
-                  color: isCompletedPeriod ? 'var(--text-tertiary)' : 'var(--text-primary)',
-                  opacity: isCompletedPeriod ? 0.65 : 1
+                  color: isEffectivelyDone ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                  opacity: isEffectivelyDone ? 0.65 : 1
                 }}
                 transition={{ duration: 0.25, ease: 'easeOut' }}
                 style={{
@@ -713,7 +636,7 @@ export const TaskCard = React.memo(function TaskCard({
                 {/* Línea de tachado animada de izquierda a derecha */}
                 <motion.span
                   initial={{ scaleX: 0 }}
-                  animate={{ scaleX: isCompletedPeriod ? 1 : 0 }}
+                  animate={{ scaleX: isEffectivelyDone ? 1 : 0 }}
                   transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
                   style={{
                     position: 'absolute',
@@ -727,6 +650,41 @@ export const TaskCard = React.memo(function TaskCard({
                   }}
                 />
               </motion.span>
+            )}
+            {isGracePeriod && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.85, x: -4 }}
+                animate={{ opacity: 1, scale: 1, x: 0 }}
+                exit={{ opacity: 0, scale: 0.85 }}
+                transition={{ duration: 0.2 }}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  HapticService.impact('light');
+                  SoundService.playUncomplete();
+                  onToggle(task.id, true);
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  padding: '2px 8px',
+                  borderRadius: 999,
+                  fontSize: '0.74rem',
+                  fontWeight: 600,
+                  background: 'rgba(0, 122, 255, 0.1)',
+                  border: '1px solid rgba(0, 122, 255, 0.25)',
+                  color: 'var(--accent-primary, #007aff)',
+                  cursor: 'pointer',
+                  marginLeft: 4,
+                  verticalAlign: 'middle',
+                  lineHeight: '1.2'
+                }}
+                title="Deshacer y mantener pendiente"
+              >
+                <RotateCcw size={11} />
+                <span>Deshacer</span>
+              </motion.button>
             )}
             {task.flagged && <Flag size={13} color="var(--accent-orange)" fill="var(--accent-orange)" />}
             {task.locationName && <MapPin size={13} color="var(--accent-blue)" />}
@@ -763,58 +721,13 @@ export const TaskCard = React.memo(function TaskCard({
               </span>
             )}
             {task.targetCount && task.targetCount > 1 && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate([6]);
-                  if (isCompletedPeriod) {
-                    SoundService.playUncomplete();
-                    onToggle(task.id, true);
-                  } else {
-                    const isNextFinal = effectiveCurrentCount + 1 >= targetCount;
-                    if (isNextFinal) {
-                      SoundService.playComplete();
-                      ConfettiService.fire({ count: 55 });
-                    } else {
-                      SoundService.playPop();
-                    }
-                    onToggle(task.id, false);
-                  }
-                  HapticService.selection();
-                }}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate([6]);
-                  SoundService.playUncomplete();
-                  onToggle(task.id, true);
-                }}
-                title="Clic: avanzar progreso (+1). Clic derecho: retroceder progreso (-1)."
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  padding: '2px 8px',
-                  borderRadius: 12,
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  background: isCompletedPeriod ? 'rgba(52, 199, 89, 0.15)' : 'rgba(0, 122, 255, 0.12)',
-                  color: isCompletedPeriod ? '#34C759' : '#007AFF',
-                  border: 'none',
-                  cursor: 'pointer',
-                  verticalAlign: 'middle',
-                  lineHeight: '1.2'
-                }}
-              >
-                <span>
-                  {task.title.toLowerCase().includes('agua') ? '💧' :
-                   task.title.toLowerCase().includes('diente') ? '🪥' :
-                   task.title.toLowerCase().includes('mano') ? '🧼' :
-                   task.title.toLowerCase().includes('aplicacion') ? '🧴' : '⚡'}
-                </span>
-                <span>{effectiveCurrentCount}/{task.targetCount}</span>
-              </button>
+              <TaskHabitCounter
+                task={task}
+                effectiveCurrentCount={effectiveCurrentCount}
+                isEffectivelyDone={isEffectivelyDone}
+                targetCount={targetCount}
+                onToggle={onToggle}
+              />
             )}
             {habitStreak.count >= 2 && (
               <span
@@ -1000,317 +913,32 @@ export const TaskCard = React.memo(function TaskCard({
           </div>
 
           {/* Note */}
-          {(task.description || isEditingNote || isEditingTitle) && (
-            <div style={{ marginTop: 2 }}>
-              {isEditingNote ? (
-                <textarea
-                  className="task-note-textarea"
-                  ref={(el) => {
-                    if (el && isEditingNote) {
-                      setTimeout(() => {
-                        el.focus();
-                        el.style.height = 'auto';
-                        el.style.height = `${el.scrollHeight}px`;
-                      }, 50);
-                    }
-                  }}
-                  value={editNote}
-                  autoFocus
-                  placeholder="Añadir nota..."
-                  onChange={e => {
-                    setEditNote(e.target.value);
-                    e.target.style.height = 'auto';
-                    e.target.style.height = `${e.target.scrollHeight}px`;
-                  }}
-                  onBlur={handleNoteSubmit}
-                  onKeyDown={e => {
-                    e.stopPropagation();
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleNoteSubmit();
-                    }
-                  }}
-                  onClick={e => e.stopPropagation()}
-                  onPointerDown={e => e.stopPropagation()}
-                  onPointerDownCapture={e => e.stopPropagation()}
-                  onFocus={e => {
-                    const val = e.target.value;
-                    e.target.value = '';
-                    e.target.value = val;
-                  }}
-                  style={{
-                    fontSize: '0.84rem',
-                    lineHeight: '1.35',
-                    width: '100%',
-                    border: 'none',
-                    background: 'transparent',
-                    outline: 'none',
-                    boxShadow: 'none',
-                    WebkitBoxShadow: 'none',
-                    color: 'var(--text-secondary)',
-                    padding: 0,
-                    margin: 0,
-                    resize: 'none',
-                    minHeight: 18,
-                    fontFamily: 'inherit',
-                    display: 'block'
-                  }}
-                />
-              ) : (
-                <span
-                  className="task-note-preview"
-                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); startEditingNote(); }}
-                  onClick={(e) => { e.stopPropagation(); startEditingNote(); }}
-                  onPointerDownCapture={(e) => e.stopPropagation()}
-                  onPointerDown={(e) => { e.stopPropagation(); startEditingNote(); }}
-                  style={{
-                    fontSize: '0.84rem',
-                    lineHeight: '1.35',
-                    color: task.description ? 'var(--text-secondary)' : 'var(--text-tertiary)',
-                    opacity: task.description ? 1 : (isHovered || isEditingTitle ? 0.8 : 0.4),
-                    wordBreak: 'break-word',
-                    cursor: 'text',
-                    display: 'block',
-                    minHeight: (task.description || (!isTaskCompleted(task) && !isCompletedPeriod)) ? 18 : 0,
-                    padding: 0,
-                    margin: 0,
-                    outline: 'none',
-                    border: 'none',
-                    boxShadow: 'none',
-                    WebkitBoxShadow: 'none',
-                    boxSizing: 'border-box'
-                  }}
-                >
-                  {task.description ? (
-                    task.description.split(/(https?:\/\/[^\s]+|app:\/\/[^\s]+)/g).map((part, i) => {
-                      const isCareLink = part.startsWith('app://list/care') || (part.includes('icloud.com/reminders') && part.includes('Care'));
-                      const isAppList = part.startsWith('app://list/');
-                      if (isCareLink || isAppList) {
-                        const targetListId = isCareLink ? 'care' : part.replace('app://list/', '');
-                        const targetList = lists?.find(l => l.id === targetListId);
-                        return (
-                          <button
-                            key={i}
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              onNavigateView?.(`list_${targetListId}`);
-                            }}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 4,
-                              padding: '2px 8px',
-                              borderRadius: 6,
-                              background: 'rgba(0, 122, 255, 0.12)',
-                              color: 'var(--accent-primary)',
-                              border: 'none',
-                              cursor: 'pointer',
-                              fontWeight: 600,
-                              fontSize: '0.8rem',
-                              margin: '2px 4px 2px 0',
-                              verticalAlign: 'middle'
-                            }}
-                          >
-                            <LayoutList size={12} />
-                            <span>Abrir lista {targetList?.name || targetListId}</span>
-                          </button>
-                        );
-                      }
-                      if (part.startsWith('app://')) {
-                        return null;
-                      }
-                      if (part.match(/^https?:\/\//)) {
-                        return (
-                          <a key={i} href={part} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>
-                            {part}
-                          </a>
-                        );
-                      }
-                      return part;
-                    })
-                  ) : (!isTaskCompleted(task) && !isCompletedPeriod ? 'Añadir nota...' : '')}
-                </span>
-              )}
-            </div>
-          )}
+          <TaskNoteEditor
+            task={task}
+            isEditingNote={isEditingNote}
+            isEditingTitle={isEditingTitle}
+            editNote={editNote}
+            setEditNote={setEditNote}
+            handleNoteSubmit={handleNoteSubmit}
+            startEditingNote={startEditingNote}
+            isHovered={isHovered}
+            isEffectivelyDone={isEffectivelyDone}
+            lists={lists}
+            onNavigateView={onNavigateView}
+          />
 
           {/* Meta row - Native iOS HIG Style */}
-          {(showListName || task.dueDate || cycleBadge || timeOfDayInfo) && (
-            <div style={{ display: 'flex', gap: '6px', marginTop: 3, alignItems: 'center', flexWrap: 'wrap', fontSize: '0.8rem', color: 'var(--text-tertiary)', lineHeight: '1.3' }}>
-              {showListName && taskList && (
-                <span style={{ 
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                  background: 'var(--bg-hover, rgba(0,0,0,0.04))', padding: '1px 7px', borderRadius: '6px',
-                  fontWeight: 500, fontSize: '0.75rem', color: taskList.color || 'var(--text-secondary)'
-                }}>
-                  {taskList.name}
-                </span>
-              )}
-              {task.dueDate && (
-                <span 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(task.id);
-                  }}
-                  style={{ 
-                    display: 'inline-flex', alignItems: 'center', gap: 4, 
-                    color: dueDateColor, fontWeight: dueDateColor === '#FF3B30' ? 600 : 400,
-                    cursor: 'pointer'
-                  }}
-                  title="Fecha de vencimiento (Toca para editar)"
-                >
-                  <Calendar size={11} style={{ flexShrink: 0 }} /> {(() => {
-                    const due = new Date(task.dueDate);
-                    const today = new Date(); today.setHours(0, 0, 0, 0);
-                    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
-                    const dueZero = new Date(due); dueZero.setHours(0, 0, 0, 0);
-                    if (dueZero.getTime() === today.getTime()) return 'Hoy';
-                    if (dueZero.getTime() === tomorrow.getTime()) return 'Mañana';
-                    return due.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-                  })()}
-                </span>
-              )}
-              {cycleBadge && (
-                <span 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(task.id);
-                  }}
-                  style={{ 
-                    display: 'inline-flex', 
-                    alignItems: 'center', 
-                    gap: 3.5, 
-                    color: cycleBadge.color,
-                    background: cycleBadge.bg,
-                    border: cycleBadge.border,
-                    padding: '1.5px 7px',
-                    borderRadius: 6,
-                    fontSize: '0.74rem',
-                    fontWeight: 550,
-                    letterSpacing: '-0.1px',
-                    cursor: 'pointer'
-                  }}
-                  title={`Frecuencia de repetición: ${cycleBadge.label} (Toca para editar)`}
-                >
-                  <span style={{ fontSize: '0.78rem' }}>{cycleBadge.icon}</span>
-                  <span>{cycleBadge.label}</span>
-                </span>
-              )}
-              {timeOfDayInfo && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    updateTask(task.id, { timeOfDay: timeOfDayInfo.next });
-                    HapticService.selection();
-                  }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 3,
-                    padding: '1.5px 7px',
-                    borderRadius: 6,
-                    fontSize: '0.74rem',
-                    fontWeight: 600,
-                    background: timeOfDayInfo.bg,
-                    color: timeOfDayInfo.color,
-                    border: `1px solid ${timeOfDayInfo.border}`,
-                    cursor: 'pointer',
-                    letterSpacing: '-0.1px'
-                  }}
-                  title={`Momento del día: ${timeOfDayInfo.label}. Pulsa para cambiar (Mañana ➔ Tarde ➔ Noche).`}
-                >
-                  <span style={{ fontSize: '0.8rem' }}>{timeOfDayInfo.icon}</span>
-                  <span>{timeOfDayInfo.label}</span>
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* In-app list navigation button if URL is Care or an in-app list */}
-          {(() => {
-            if (!task.url) return null;
-            const isCareUrl = task.url.startsWith('app://list/care') || (task.url.includes('icloud.com/reminders') && task.url.includes('Care')) || task.title.toLowerCase().includes('skin-care') || task.title.toLowerCase().includes('skincare');
-            const isAppListUrl = task.url.startsWith('app://list/');
-            
-            if (isCareUrl || isAppListUrl) {
-              const targetListId = isCareUrl ? 'care' : task.url.replace('app://list/', '');
-              const targetList = lists?.find(l => l.id === targetListId);
-              return (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onNavigateView?.(`list_${targetListId}`);
-                  }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    marginTop: 8,
-                    padding: '7px 14px',
-                    borderRadius: 10,
-                    background: 'rgba(0, 122, 255, 0.12)',
-                    color: 'var(--accent-primary)',
-                    border: '1px solid rgba(0, 122, 255, 0.25)',
-                    fontWeight: 600,
-                    fontSize: '0.84rem',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <LayoutList size={15} />
-                  <span>Ir a lista {targetList?.name || 'Care'}</span>
-                  <ChevronRight size={14} style={{ opacity: 0.7 }} />
-                </button>
-              );
-            }
-
-            // External URLs (exclude app:// so Safari doesn't throw invalid scheme error)
-            if (task.url.startsWith('http')) {
-              return (
-                <a
-                  href={task.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 12,
-                    textDecoration: 'none', color: 'var(--text-primary)',
-                    marginTop: 8,
-                    padding: '8px 12px',
-                    borderRadius: '12px',
-                    background: 'var(--bg-elevated)',
-                    border: '1px solid var(--border-subtle)',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-                    boxSizing: 'border-box',
-                    maxWidth: '100%',
-                    overflow: 'hidden'
-                  }}
-                  onClick={e => e.stopPropagation()}
-                >
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    {task.url.includes('drive.google.com') || task.url.includes('docs.google.com') ? (
-                      <span style={{ fontSize: '1.1rem' }}>📁</span>
-                    ) : (
-                      <Link2 size={16} color="var(--accent-primary)" />
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
-                    <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--accent-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {task.url.includes('drive.google.com') ? 'Google Drive' : task.url.includes('docs.google.com') ? 'Google Docs' : task.url}
-                    </span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {(() => { try { return new URL(task.url).hostname.replace('www.', ''); } catch { return 'Enlace web'; } })()}
-                    </span>
-                  </div>
-                </a>
-              );
-            }
-
-            return null;
-          })()}
+          <TaskMetaBadges
+            task={task}
+            showListName={showListName}
+            taskList={taskList}
+            dueDateColor={dueDateColor}
+            cycleBadge={cycleBadge}
+            timeOfDayInfo={timeOfDayInfo}
+            onEdit={onEdit}
+            onNavigateView={onNavigateView}
+            lists={lists}
+          />
         </div>
 
         {/* Subtask Chevron */}
@@ -1438,69 +1066,19 @@ export const TaskCard = React.memo(function TaskCard({
       </motion.div>
 
       {/* ── Context Menu (Universal Floating Popover) ── */}
-      {createPortal(
-        <AnimatePresence>
-          {contextMenuOpen && (
-            <>
-              {/* Backdrop */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.18 }}
-                style={{
-                  position: 'fixed', inset: 0, zIndex: 99998,
-                  background: 'rgba(0, 0, 0, 0.28)',
-                  backdropFilter: 'blur(10px)',
-                  WebkitBackdropFilter: 'blur(10px)',
-                }}
-                onClick={() => setContextMenuOpen(false)}
-                onContextMenu={(e) => { e.preventDefault(); setContextMenuOpen(false); }}
-              />
-
-              {/* Floating Popover Container */}
-              <motion.div
-                className="ios-dropdown-menu"
-                initial={{ opacity: 0, scale: 0.92, y: -6 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                transition={{ type: 'spring', damping: 26, stiffness: 450 }}
-                style={{
-                  position: 'fixed', zIndex: 100000,
-                  top: contextMenuPosition.y,
-                  left: contextMenuPosition.x,
-                  width: Math.min(270, window.innerWidth - 24),
-                  background: 'var(--bg-material, rgba(255,255,255,0.85))',
-                  backdropFilter: 'blur(35px) saturate(190%)',
-                  WebkitBackdropFilter: 'blur(35px) saturate(190%)',
-                  borderRadius: '14px',
-                  boxShadow: '0 14px 40px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.06)',
-                  border: '1px solid var(--border-subtle)',
-                  padding: '6px 0',
-                  display: 'flex', flexDirection: 'column',
-                  maxHeight: 'calc(100vh - 24px)',
-                  overflowY: 'auto'
-                }}
-                onClick={e => e.stopPropagation()}
-              >
-                <MenuActions 
-                  task={task} 
-                  setContextMenuOpen={setContextMenuOpen} 
-                  onEdit={onEdit} 
-                  nestTask={nestTask} 
-                  previousTaskId={previousTaskId} 
-                  setIsDeleteConfirmOpen={setIsDeleteConfirmOpen} 
-                  updateTask={updateTask} 
-                  onOpenZenMode={onOpenZenMode}
-                  onToggle={onToggle}
-                  isCompleted={isCompletedPeriod}
-                />
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
+      <TaskContextMenu
+        task={task}
+        isOpen={contextMenuOpen}
+        onClose={() => setContextMenuOpen(false)}
+        position={contextMenuPosition}
+        onEdit={onEdit}
+        nestTask={nestTask}
+        previousTaskId={previousTaskId}
+        setIsDeleteConfirmOpen={setIsDeleteConfirmOpen}
+        onOpenZenMode={onOpenZenMode}
+        onToggle={onToggle}
+        isCompleted={isCompletedPeriod}
+      />
 
       <ConfirmModal
         isOpen={isDeleteConfirmOpen}
@@ -1542,532 +1120,3 @@ export const TaskCard = React.memo(function TaskCard({
     </div>
   );
 });
-
-interface MenuActionsProps {
-  task: TaskItem;
-  setContextMenuOpen: (open: boolean) => void;
-  onEdit: (id: string) => void;
-  nestTask: (taskId: string, parentId?: string) => void;
-  previousTaskId?: string;
-  setIsDeleteConfirmOpen: (open: boolean) => void;
-  updateTask: (id: string, updates: Partial<TaskItem>) => void;
-  onOpenZenMode?: (id: string) => void;
-  onToggle: (id: string, forceReverse?: boolean) => void;
-  isCompleted: boolean;
-}
-
-// ── MenuActions Component ──────────────────────────────────────
-function MenuActions({
-  task,
-  setContextMenuOpen,
-  onEdit,
-  nestTask,
-  previousTaskId,
-  setIsDeleteConfirmOpen,
-  updateTask,
-  onOpenZenMode,
-  onToggle,
-  isCompleted
-}: MenuActionsProps) {
-  const addTask = useAppStore(state => state.addTask);
-  const lists = useAppStore(state => state.lists);
-  const listSections = useAppStore(state => state.listSections);
-  const [currentSubmenu, setCurrentSubmenu] = useState<'main' | 'move_list' | 'move_section' | 'due_date' | 'priority'>('main');
-
-  const availableSections = (listSections || []).filter(
-    s => s.listId === task.categoryId && !s.deleted_at
-  );
-
-  // Submenu: Mover a lista
-  if (currentSubmenu === 'move_list') {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
-          <button 
-            onClick={() => setCurrentSubmenu('main')}
-            style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, padding: 0 }}
-          >
-            <ArrowLeft size={16} /> Volver
-          </button>
-          <span style={{ flex: 1, textAlign: 'center', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginRight: 20 }}>
-            Trasladar a lista
-          </span>
-        </div>
-        <div style={{ maxHeight: 280, overflowY: 'auto', padding: '4px 0' }}>
-          {lists?.map(list => {
-            const isCurrent = task.categoryId === list.id;
-            return (
-              <button
-                key={list.id}
-                onClick={() => {
-                  updateTask(task.id, { categoryId: list.id, sectionId: undefined });
-                  setContextMenuOpen(false);
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '9px 14px',
-                  width: '100%',
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  color: isCurrent ? 'var(--accent-primary)' : 'var(--text-primary)',
-                  textAlign: 'left',
-                  fontSize: '0.92rem',
-                  borderRadius: 6
-                }}
-                onPointerDown={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                onPointerUp={e => { e.currentTarget.style.background = 'transparent'; }}
-                onPointerLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-              >
-                <span style={{ width: 10, height: 10, borderRadius: '50%', background: list.color || 'var(--accent-primary)', flexShrink: 0 }} />
-                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{list.name}</span>
-                {isCurrent && <CheckCircle size={15} color="var(--accent-primary)" />}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  // Submenu: Trasladar a sección
-  if (currentSubmenu === 'move_section') {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
-          <button 
-            onClick={() => setCurrentSubmenu('main')}
-            style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, padding: 0 }}
-          >
-            <ArrowLeft size={16} /> Volver
-          </button>
-          <span style={{ flex: 1, textAlign: 'center', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginRight: 20 }}>
-            Trasladar a sección
-          </span>
-        </div>
-        <div style={{ maxHeight: 280, overflowY: 'auto', padding: '4px 0' }}>
-          <button
-            onClick={() => {
-              updateTask(task.id, { sectionId: undefined });
-              setContextMenuOpen(false);
-            }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '9px 14px',
-              width: '100%',
-              border: 'none',
-              background: 'transparent',
-              cursor: 'pointer',
-              color: !task.sectionId ? 'var(--accent-primary)' : 'var(--text-primary)',
-              textAlign: 'left',
-              fontSize: '0.92rem',
-              borderRadius: 6
-            }}
-            onPointerDown={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
-            onPointerUp={e => { e.currentTarget.style.background = 'transparent'; }}
-            onPointerLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-          >
-            <span>Sin sección</span>
-            {!task.sectionId && <CheckCircle size={15} color="var(--accent-primary)" />}
-          </button>
-          {availableSections.map(sec => {
-            const isCurrent = task.sectionId === sec.id;
-            return (
-              <button
-                key={sec.id}
-                onClick={() => {
-                  updateTask(task.id, { sectionId: sec.id });
-                  setContextMenuOpen(false);
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '9px 14px',
-                  width: '100%',
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  color: isCurrent ? 'var(--accent-primary)' : 'var(--text-primary)',
-                  textAlign: 'left',
-                  fontSize: '0.92rem',
-                  borderRadius: 6
-                }}
-                onPointerDown={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                onPointerUp={e => { e.currentTarget.style.background = 'transparent'; }}
-                onPointerLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-              >
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sec.name}</span>
-                {isCurrent && <CheckCircle size={15} color="var(--accent-primary)" />}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  // Submenu: Fecha límite
-  if (currentSubmenu === 'due_date') {
-    const handleSetDueDate = (iso?: string) => {
-      updateTask(task.id, { dueDate: iso });
-      setContextMenuOpen(false);
-    };
-
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
-          <button 
-            onClick={() => setCurrentSubmenu('main')}
-            style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, padding: 0 }}
-          >
-            <ArrowLeft size={16} /> Volver
-          </button>
-          <span style={{ flex: 1, textAlign: 'center', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginRight: 20 }}>
-            Fecha límite
-          </span>
-        </div>
-        <div style={{ padding: '4px 0' }}>
-          <ActionRow 
-            icon={<Sun size={17} color="#007aff" />} 
-            label="Hoy" 
-            sublabel="18:00"
-            onClick={() => {
-              const d = new Date(); d.setHours(18, 0, 0, 0);
-              handleSetDueDate(d.toISOString());
-            }} 
-          />
-          <ActionRow 
-            icon={<Calendar size={17} color="#ff9500" />} 
-            label="Mañana" 
-            sublabel="09:00"
-            onClick={() => {
-              const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0);
-              handleSetDueDate(d.toISOString());
-            }} 
-          />
-          <ActionRow 
-            icon={<CalendarDays size={17} color="#5856d6" />} 
-            label="Este fin de semana" 
-            sublabel="Sábado 10:00"
-            onClick={() => {
-              const d = new Date();
-              const day = d.getDay();
-              const diff = day === 6 ? 7 : (6 - day);
-              d.setDate(d.getDate() + diff); d.setHours(10, 0, 0, 0);
-              handleSetDueDate(d.toISOString());
-            }} 
-          />
-          <ActionRow 
-            icon={<Clock size={17} color="#34c759" />} 
-            label="Próxima semana" 
-            sublabel="Lunes 09:00"
-            onClick={() => {
-              const d = new Date();
-              const day = d.getDay();
-              const diff = (day === 0 ? 1 : 8 - day);
-              d.setDate(d.getDate() + diff); d.setHours(9, 0, 0, 0);
-              handleSetDueDate(d.toISOString());
-            }} 
-          />
-          {task.dueDate && (
-            <>
-              <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
-              <ActionRow 
-                icon={<CalendarX size={17} color="var(--accent-red)" />} 
-                label="Sin fecha límite" 
-                labelColor="var(--accent-red)"
-                onClick={() => handleSetDueDate(undefined)} 
-              />
-            </>
-          )}
-          <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
-          <ActionRow 
-            icon={<Edit3 size={17} color="var(--accent-primary)" />} 
-            label="Personalizar fecha..." 
-            onClick={() => {
-              setContextMenuOpen(false);
-              onEdit(task.id);
-            }} 
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // Submenu: Prioridad
-  if (currentSubmenu === 'priority') {
-    const priorities: { value: 'none' | 'low' | 'medium' | 'high'; label: string; marks: string; color: string }[] = [
-      { value: 'none', label: 'Ninguna', marks: '', color: 'var(--text-primary)' },
-      { value: 'low', label: 'Baja', marks: '!', color: '#34c759' },
-      { value: 'medium', label: 'Media', marks: '!!', color: '#ff9500' },
-      { value: 'high', label: 'Alta (Urgente)', marks: '!!!', color: '#ff3b30' },
-    ];
-
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
-          <button 
-            onClick={() => setCurrentSubmenu('main')}
-            style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, padding: 0 }}
-          >
-            <ArrowLeft size={16} /> Volver
-          </button>
-          <span style={{ flex: 1, textAlign: 'center', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginRight: 20 }}>
-            Prioridad
-          </span>
-        </div>
-        <div style={{ padding: '4px 0' }}>
-          {priorities.map(p => {
-            const isCurrent = (task.priority || 'none') === p.value;
-            return (
-              <button
-                key={p.value}
-                onClick={() => {
-                  updateTask(task.id, { priority: p.value });
-                  setContextMenuOpen(false);
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '9px 14px',
-                  width: '100%',
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  color: isCurrent ? 'var(--accent-primary)' : 'var(--text-primary)',
-                  textAlign: 'left',
-                  fontSize: '0.92rem',
-                  borderRadius: 6
-                }}
-                onPointerDown={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                onPointerUp={e => { e.currentTarget.style.background = 'transparent'; }}
-                onPointerLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {p.marks && <span style={{ fontWeight: 800, color: p.color, width: 22 }}>{p.marks}</span>}
-                  <span>{p.label}</span>
-                </div>
-                {isCurrent && <CheckCircle size={15} color="var(--accent-primary)" />}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  // Vista Principal
-  const isUrgent = task.priority === 'high';
-
-  return (
-    <>
-      {/* 1. Marcar como completado */}
-      <ActionRow 
-        icon={<CheckCircle size={18} color="var(--accent-primary)" />} 
-        label={isCompleted ? "Marcar como pendiente" : "Marcar como completado"} 
-        onClick={() => { 
-          setContextMenuOpen(false); 
-          onToggle(task.id); 
-        }} 
-      />
-
-      {/* 2. Editar recordatorio (Panel de metadatos) */}
-      <ActionRow 
-        icon={<Info size={18} color="var(--accent-primary)" />} 
-        label="Editar recordatorio" 
-        sublabel="Metadatos y notas"
-        trailing={<span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>ℹ️</span>}
-        onClick={() => { 
-          setContextMenuOpen(false); 
-          onEdit(task.id); 
-        }} 
-      />
-
-      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
-
-      {/* 3. Sangrar / Anular sangría de recordatorio */}
-      {task.parentId ? (
-        <ActionRow 
-          icon={<IndentDecrease size={18} color="var(--accent-primary)" />} 
-          label="Anular sangría" 
-          sublabel="Convertir en principal"
-          onClick={() => { 
-            setContextMenuOpen(false); 
-            nestTask(task.id, undefined); 
-          }} 
-        />
-      ) : previousTaskId ? (
-        <ActionRow 
-          icon={<IndentIncrease size={18} color="var(--accent-primary)" />} 
-          label="Sangrar recordatorio" 
-          sublabel="Hacer subtarea"
-          onClick={() => { 
-            setContextMenuOpen(false); 
-            nestTask(task.id, previousTaskId); 
-          }} 
-        />
-      ) : (
-        <ActionRow 
-          icon={<IndentIncrease size={18} color="var(--text-tertiary)" />} 
-          label="Sangrar recordatorio" 
-          sublabel="Requiere tarea previa"
-          disabled={true}
-          onClick={() => {}} 
-        />
-      )}
-
-      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
-
-      {/* 4. Fecha límite */}
-      <ActionRow 
-        icon={<Calendar size={18} color="#007aff" />} 
-        label="Fecha límite"
-        sublabel={task.dueDate ? new Date(task.dueDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : undefined}
-        trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
-        onClick={() => setCurrentSubmenu('due_date')} 
-      />
-
-      {/* 5. Marcar como urgente / Prioridad */}
-      <ActionRow 
-        icon={<AlertCircle size={18} color={isUrgent ? '#ff3b30' : 'var(--text-primary)'} />} 
-        label={isUrgent ? "Quitar urgencia" : "Marcar como urgente"}
-        trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
-        onClick={() => setCurrentSubmenu('priority')} 
-      />
-
-      {/* 6. Con marca */}
-      <ActionRow 
-        icon={<Flag size={18} color={task.flagged ? '#ff9500' : 'var(--text-primary)'} fill={task.flagged ? '#ff9500' : 'none'} />} 
-        label={task.flagged ? "Quitar marca" : "Con marca"} 
-        onClick={() => { 
-          setContextMenuOpen(false); 
-          updateTask(task.id, { flagged: !task.flagged }); 
-        }} 
-      />
-
-      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
-
-      {/* 7. Trasladar a lista */}
-      <ActionRow 
-        icon={<FolderInput size={18} />} 
-        label="Trasladar a lista..." 
-        trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
-        onClick={() => setCurrentSubmenu('move_list')} 
-      />
-
-      {/* 8. Trasladar a sección (si hay secciones disponibles en esta lista) */}
-      {availableSections.length > 0 && (
-        <ActionRow 
-          icon={<LayoutList size={18} />} 
-          label="Trasladar a sección..." 
-          trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
-          onClick={() => setCurrentSubmenu('move_section')} 
-        />
-      )}
-
-      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
-
-      {/* 9. Duplicar */}
-      <ActionRow 
-        icon={<Copy size={18} />} 
-        label="Duplicar" 
-        onClick={() => { 
-          addTask({ 
-            ...task, 
-            id: crypto.randomUUID(), 
-            title: `${task.title} (copia)`, 
-            created_at: new Date().toISOString(), 
-            updated_at: new Date().toISOString(),
-            status: 'pending'
-          }); 
-          setContextMenuOpen(false); 
-        }} 
-      />
-
-      {/* 10. Modo Enfoque Zen (opcional) */}
-      {onOpenZenMode && (
-        <ActionRow 
-          icon={<Play size={18} color="var(--accent-primary)" fill="var(--accent-primary)" />} 
-          label="Modo Enfoque Zen" 
-          onClick={() => { setContextMenuOpen(false); onOpenZenMode(task.id); }} 
-        />
-      )}
-
-      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
-
-      {/* 11. Eliminar recordatorio */}
-      <ActionRow 
-        icon={<Trash2 size={18} color="var(--accent-red)" />} 
-        label="Eliminar" 
-        labelColor="var(--accent-red)" 
-        onClick={() => { setContextMenuOpen(false); setIsDeleteConfirmOpen(true); }} 
-      />
-    </>
-  );
-}
-
-function ActionRow({
-  icon, label, sublabel, trailing, onClick, labelColor, disabled
-}: {
-  icon: React.ReactNode;
-  label: string;
-  sublabel?: string;
-  trailing?: React.ReactNode;
-  onClick: () => void;
-  labelColor?: string;
-  disabled?: boolean;
-}) {
-  return (
-    <motion.button
-      whileTap={disabled ? undefined : { scale: 0.98, backgroundColor: 'var(--bg-hover)' }}
-      transition={{ type: 'spring', damping: 25, stiffness: 450 }}
-      onClick={disabled ? undefined : onClick}
-      disabled={disabled}
-      style={{
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        padding: '0 14px',
-        background: 'none',
-        border: 'none',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        textAlign: 'left',
-        WebkitTapHighlightColor: 'transparent',
-        height: 42,
-        borderRadius: 8,
-        transition: 'background-color 0.12s ease',
-        opacity: disabled ? 0.38 : 1,
-        pointerEvents: disabled ? 'none' : 'auto'
-      }}
-      onPointerDown={e => { if (!disabled) e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
-      onPointerUp={e => { if (!disabled) e.currentTarget.style.backgroundColor = 'transparent'; }}
-      onPointerLeave={e => { if (!disabled) e.currentTarget.style.backgroundColor = 'transparent'; }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, color: labelColor || 'var(--text-primary)', flexShrink: 0 }}>
-        {icon}
-      </div>
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        <span style={{ fontSize: '0.9rem', fontWeight: 450, color: labelColor || 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {label}
-        </span>
-      </div>
-      {sublabel && (
-        <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', flexShrink: 0, marginRight: trailing ? 4 : 0 }}>
-          {sublabel}
-        </span>
-      )}
-      {trailing && (
-        <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-          {trailing}
-        </div>
-      )}
-    </motion.button>
-  );
-}

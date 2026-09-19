@@ -8,34 +8,30 @@ export function OnboardingGuideCard() {
   const [isVisible, setIsVisible] = useState(false);
 
   const tasksMap = useAppStore((state) => state.tasks);
+  const lists = useAppStore((state) => state.lists);
   const toggleTask = useAppStore((state) => state.toggleTask);
-  const removeList = useAppStore((state) => state.removeList);
-  const deleteTask = useAppStore((state) => state.deleteTask);
+  const dismissOnboarding = useAppStore((state) => state.dismissOnboarding);
 
   useEffect(() => {
-    const isHidden = localStorage.getItem('hide_onboarding_guide') === 'true';
-    if (!isHidden) {
+    const isLocalHidden = localStorage.getItem('hide_onboarding_guide') === 'true';
+    const isCloudHidden = lists?.some((l: any) => l.id === 'user_preferences_onboarding');
+    const hasRealTasks = Object.values(tasksMap).some(t => !t.deleted_at && t.categoryId !== 'primeros_pasos');
+    if (!isLocalHidden && !isCloudHidden && !hasRealTasks) {
       setIsVisible(true);
+    } else {
+      setIsVisible(false);
     }
-  }, []);
+  }, [lists, tasksMap]);
 
   const handleDismiss = () => {
-    localStorage.setItem('hide_onboarding_guide', 'true');
+    dismissOnboarding();
     setIsVisible(false);
     SoundService.playPop();
   };
 
   const handleSkipAndRemoveList = () => {
-    localStorage.setItem('hide_onboarding_guide', 'true');
+    dismissOnboarding();
     setIsVisible(false);
-
-    // Eliminar las tareas de onboarding y la lista 'primeros_pasos'
-    Object.values(tasksMap).forEach((t) => {
-      if (t.categoryId === 'primeros_pasos') {
-        deleteTask(t.id);
-      }
-    });
-    removeList('primeros_pasos');
     SoundService.playPop();
   };
 

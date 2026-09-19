@@ -9,9 +9,11 @@ import { handleMcpRequest, MCP_TOOLS } from './mcp.js';
 dotenv.config();
 
 const app = express();
-const defaultDbUrl = "postgresql://user:password@localhost:5432/recordatorios_test?sslmode=disable";
-const dbUrl = process.env.DATABASE_URL || defaultDbUrl;
-const prisma = new PrismaClient({ datasourceUrl: dbUrl });
+const dbUrl = process.env.DATABASE_URL;
+if (!dbUrl) {
+  console.warn('⚠️ DATABASE_URL no está configurada en las variables de entorno.');
+}
+const prisma = new PrismaClient(dbUrl ? { datasourceUrl: dbUrl } : undefined);
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_for_recordatorios';
 const clients = new Map(); // userId -> Set of Response objects
@@ -101,7 +103,7 @@ app.post(['/api/auth/register', '/auth/register'], authRateLimiter, async (req, 
     });
 
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET);
-    res.json({ token, user: { id: user.id, email: user.email } });
+    res.json({ token, user: { id: user.id, email: user.email }, preferences: user.preferences || null });
   } catch (error) {
     console.error('Register error:', error);
     res.status(500).json({ error: 'Error al registrar la cuenta. Por favor, inténtalo de nuevo.' });
@@ -146,7 +148,7 @@ app.post(['/api/auth/login', '/auth/login'], authRateLimiter, async (req, res) =
     }
 
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET);
-    res.json({ token, user: { id: user.id, email: user.email } });
+    res.json({ token, user: { id: user.id, email: user.email }, preferences: user.preferences || null });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Error en el servidor de autenticación' });
@@ -180,6 +182,7 @@ app.post(['/api/auth/reset-password', '/auth/reset-password'], authRateLimiter, 
     res.json({ 
       token, 
       user: { id: updated.id, email: updated.email }, 
+      preferences: updated.preferences || null,
       message: 'Contraseña actualizada y sesión iniciada correctamente' 
     });
   } catch (error) {
@@ -190,7 +193,7 @@ app.post(['/api/auth/reset-password', '/auth/reset-password'], authRateLimiter, 
 
 // --- SYNC ---
 app.post(['/api/sync/push', '/sync/push'], authenticateToken, async (req, res) => {
-  const { tasks, cycles, lists, listSections } = req.body;
+  const { tasks, cycles, lists, listSections, preferences } = req.body;
   const userId = req.user.id;
 
   try {
@@ -264,6 +267,16 @@ app.post(['/api/sync/push', '/sync/push'], authenticateToken, async (req, res) =
       }
     }
 
+    // Preferencias de usuario persistidas permanentemente en base de datos
+    if (preferences && typeof preferences === 'object') {
+      transaction.push(
+        prisma.user.update({
+          where: { id: userId },
+          data: { preferences }
+        })
+      );
+    }
+
     await prisma.$transaction(transaction);
     res.json({ success: true });
 
@@ -286,6 +299,11 @@ app.get(['/api/sync/pull', '/sync/pull'], authenticateToken, async (req, res) =>
   const lastDate = new Date(lastToken);
 
   try {
+    const userRecord = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { preferences: true }
+    });
+
     const tasks = await prisma.task.findMany({
       where: { userId, updatedAt: { gt: lastDate } }
     });
@@ -342,6 +360,7 @@ app.get(['/api/sync/pull', '/sync/pull'], authenticateToken, async (req, res) =>
       activeTaskIds: allActiveTasks.map(t => t.id),
       activeListIds: allActiveLists.map(l => l.id),
       activeSectionIds: allActiveSections.map(s => s.id),
+      preferences: userRecord?.preferences || null,
       serverTime: Date.now()
     });
   } catch (error) {

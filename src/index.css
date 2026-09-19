@@ -642,14 +642,22 @@ input:checked + .slider::before {
   min-width: 200px;
   max-height: calc(100vh - 40px);
   overflow-y: auto;
-  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 120, 128, 0.25) transparent;
 }
 .ios-dropdown-menu::-webkit-scrollbar {
-  display: none;
+  display: block;
+  width: 5px;
 }
-.ios-dropdown-menu {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+.ios-dropdown-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ios-dropdown-menu::-webkit-scrollbar-thumb {
+  background-color: rgba(120, 120, 128, 0.25);
+  border-radius: 9999px;
+}
+.ios-dropdown-menu::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(120, 120, 128, 0.45);
 }
 
 [data-theme="dark"] .ios-dropdown-menu {
@@ -889,12 +897,15 @@ button { -webkit-tap-highlight-color: transparent; }
   min-height: 100dvh;
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(280px, 520px) minmax(320px, 430px);
+  grid-template-columns: minmax(280px, 490px) minmax(320px, 420px);
   align-items: center;
+  align-items: safe center;
   justify-content: center;
-  gap: clamp(28px, 6vw, 86px);
-  padding: clamp(22px, 5vw, 64px);
+  gap: clamp(16px, 3.5vw, 48px);
+  padding: clamp(20px, 3.5vh, 48px) clamp(16px, 3vw, 36px);
   background: transparent;
+  box-sizing: border-box;
+  overflow-y: auto;
 }
 .auth-hero-panel,
 .auth-card {
@@ -903,11 +914,12 @@ button { -webkit-tap-highlight-color: transparent; }
   box-shadow: 0 28px 90px rgba(20,24,38,0.14), inset 0 1px 0 rgba(255,255,255,0.82);
   backdrop-filter: blur(28px) saturate(1.18);
   -webkit-backdrop-filter: blur(28px) saturate(1.18);
+  margin: auto 0;
 }
 .auth-hero-panel {
-  min-height: 520px;
+  min-height: min(480px, 75vh);
   border-radius: 28px;
-  padding: clamp(26px, 4vw, 44px);
+  padding: clamp(22px, 3.5vh, 38px) clamp(22px, 3.5vw, 38px);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -992,10 +1004,10 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 .auth-card {
   border-radius: 24px;
-  padding: 28px;
+  padding: clamp(18px, 2.6vh, 26px) clamp(18px, 2.6vw, 26px);
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: clamp(12px, 1.8vh, 18px);
 }
 .auth-card-header { display: flex; align-items: center; gap: 14px; }
 .auth-icon {
@@ -1074,6 +1086,68 @@ button { -webkit-tap-highlight-color: transparent; }
   .auth-hero-panel { min-height: 250px; border-radius: 24px; }
   .auth-proof-grid { display: none; }
   .auth-card { padding: 22px; }
+}
+
+@media (max-height: 780px) {
+  .auth-stage {
+    padding: 14px;
+    gap: 18px;
+  }
+  .auth-hero-panel {
+    min-height: auto;
+    padding: 20px 24px;
+  }
+  .auth-hero-panel h1 {
+    font-size: clamp(1.8rem, 2.5vw, 2.4rem);
+  }
+  .auth-hero-panel p {
+    margin: 8px 0 0;
+    font-size: 0.9rem;
+  }
+  .auth-brand-lock {
+    width: 48px;
+    height: 48px;
+    border-radius: 15px;
+  }
+  .auth-proof-grid span {
+    min-height: 30px;
+    padding: 4px 9px;
+    font-size: 0.78rem;
+  }
+  .auth-card {
+    padding: 16px 20px;
+    gap: 12px;
+    border-radius: 20px;
+  }
+  .auth-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+  }
+  .auth-card h2 {
+    font-size: 1.22rem;
+  }
+  .auth-field {
+    gap: 5px;
+  }
+  .auth-field input {
+    height: 42px;
+  }
+  .auth-submit {
+    height: 44px;
+    margin-top: 2px;
+  }
+}
+
+@media (max-height: 640px) {
+  .auth-stage {
+    align-items: flex-start;
+    padding-top: 16px;
+    padding-bottom: 20px;
+  }
+  .auth-hero-panel {
+    min-height: 300px;
+  }
 }
 
 [data-theme="dark"] .auth-hero-panel,
@@ -1690,10 +1764,22 @@ html, body {
   }
 }
 
-@media (min-width: 900px) {
+@media (min-width: 900px) and (min-height: 600px) {
   .desktop-shortcut-bar {
     display: flex !important;
   }
+}
+
+.desktop-fab {
+  display: flex !important;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+}
+.desktop-fab:hover {
+  transform: scale(1.08);
+  box-shadow: 0 10px 28px rgba(0, 122, 255, 0.45) !important;
+}
+.desktop-fab:active {
+  transform: scale(0.92);
 }
 
 @keyframes spin-anim {

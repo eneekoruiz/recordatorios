@@ -3,9 +3,9 @@ export function BottomShortcutBar() {
     <div
       style={{
         position: 'fixed',
-        bottom: 16,
-        right: 16,
-        zIndex: 40,
+        bottom: 80,
+        right: 20,
+        zIndex: 44,
         display: 'none',
         alignItems: 'center',
         gap: 6,

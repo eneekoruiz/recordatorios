@@ -139,8 +139,17 @@ class SyncManager {
     const cycles = state.cycles.filter((c: any) => c._is_dirty);
     const lists = state.lists.filter((l: any) => l._is_dirty);
     const listSections = (state.listSections || []).filter((s: any) => s._is_dirty);
+    const hasDirtyPrefs = !!(state as any)._preferences_dirty;
 
-    if (tasks.length === 0 && cycles.length === 0 && lists.length === 0 && listSections.length === 0) return;
+    if (tasks.length === 0 && cycles.length === 0 && lists.length === 0 && listSections.length === 0 && !hasDirtyPrefs) return;
+
+    // Build preferences payload if dirty
+    const preferences = hasDirtyPrefs ? {
+      smartListVisibility: state.smartListVisibility,
+      pinnedSmartLists: state.pinnedSmartLists,
+      cycleVisibility: state.cycleVisibility,
+      hideOnboarding: localStorage.getItem('hide_onboarding_guide') === 'true'
+    } : undefined;
 
     // Send payload to backend
     const response = await fetch(PUSH_URL(), {
@@ -149,7 +158,7 @@ class SyncManager {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ tasks, cycles, lists, listSections })
+      body: JSON.stringify({ tasks, cycles, lists, listSections, preferences })
     });
 
     if (response.status === 401 || response.status === 403) {
@@ -181,6 +190,11 @@ class SyncManager {
         listSections.find((dirty: any) => dirty.id === s.id) ? { ...s, _is_dirty: false } : s
       );
       useAppStore.setState({ listSections: newSections });
+    }
+
+    // Clear preferences dirty flag
+    if (hasDirtyPrefs) {
+      useAppStore.setState({ _preferences_dirty: false } as any);
     }
   }
 
@@ -269,6 +283,18 @@ class SyncManager {
           return;
         }
 
+        if (serverList.id === 'user_preferences_onboarding') {
+          try {
+            const parsed = JSON.parse(serverList.icon);
+            if (parsed.hidden || parsed.completed) {
+              localStorage.setItem('hide_onboarding_guide', 'true');
+            }
+          } catch (e) {
+            console.error('Failed to parse onboarding settings:', e);
+          }
+          return;
+        }
+
         const localList = state.lists.find(l => l.id === serverList.id);
         if (!localList) {
           state.addList({ ...serverList, _is_dirty: false });
@@ -335,8 +361,7 @@ class SyncManager {
       const reconciledLists = currentLists.filter(l => 
         (l as any)._is_dirty || 
         activeListSet.has(l.id) || 
-        l.id.startsWith('user_preferences_') || 
-        l.id === 'primeros_pasos'
+        l.id.startsWith('user_preferences_')
       );
       if (reconciledLists.length !== currentLists.length) {
         useAppStore.setState({ lists: reconciledLists });
@@ -349,6 +374,27 @@ class SyncManager {
       const reconciledSections = currentSections.filter(s => (s as any)._is_dirty || activeSectionSet.has(s.id));
       if (reconciledSections.length !== currentSections.length) {
         useAppStore.setState({ listSections: reconciledSections });
+      }
+    }
+
+    // Ingest user preferences from dedicated User.preferences column
+    if (data.preferences && typeof data.preferences === 'object') {
+      const prefs = data.preferences;
+      const prefsUpdate: any = {};
+      if (prefs.smartListVisibility && typeof prefs.smartListVisibility === 'object') {
+        prefsUpdate.smartListVisibility = { ...useAppStore.getState().smartListVisibility, ...prefs.smartListVisibility };
+      }
+      if (Array.isArray(prefs.pinnedSmartLists)) {
+        prefsUpdate.pinnedSmartLists = prefs.pinnedSmartLists;
+      }
+      if (prefs.cycleVisibility && typeof prefs.cycleVisibility === 'object') {
+        prefsUpdate.cycleVisibility = { ...useAppStore.getState().cycleVisibility, ...prefs.cycleVisibility };
+      }
+      if (prefs.hideOnboarding) {
+        try { localStorage.setItem('hide_onboarding_guide', 'true'); } catch {}
+      }
+      if (Object.keys(prefsUpdate).length > 0) {
+        useAppStore.setState(prefsUpdate);
       }
     }
 
@@ -367,8 +413,9 @@ useAppStore.subscribe((state) => {
   const hasDirtyCycles = state.cycles.some((c: any) => c._is_dirty);
   const hasDirtyLists = state.lists.some((l: any) => l._is_dirty);
   const hasDirtySections = (state.listSections || []).some((s: any) => s._is_dirty);
+  const hasDirtyPrefs = !!(state as any)._preferences_dirty;
 
-  if (hasDirtyTasks || hasDirtyCycles || hasDirtyLists || hasDirtySections) {
+  if (hasDirtyTasks || hasDirtyCycles || hasDirtyLists || hasDirtySections || hasDirtyPrefs) {
     syncManager.triggerDebouncedSync();
   }
 });

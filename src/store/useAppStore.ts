@@ -46,12 +46,14 @@ interface AppState {
   smartListVisibility: Record<string, boolean>;
   pinnedSmartLists: string[];
   cycleVisibility: Record<string, boolean>;
+  _preferences_dirty?: boolean;
   
   toggleSmartList: (listId: string) => void;
   togglePinSmartList: (listId: string) => void;
   toggleCycleVisibility: (cycleId: string) => void;
   globalCyclesEnabled: boolean;
   toggleGlobalCycles: () => void;
+  dismissOnboarding: () => void;
   
   addTask: (task: Partial<TaskItem>) => void;
   addTasksBatch: (tasks: Partial<TaskItem>[], options?: { createList?: CustomList }) => void;
@@ -78,7 +80,7 @@ interface AppState {
 
   getTasksByCycle: (cycle_id: string, includeCompleted?: boolean, temporarilyShowIds?: string[]) => Record<string, TaskItem[]>;
   getTasksByList: (listId: string, includeCompleted?: boolean, temporarilyShowIds?: string[]) => Record<string, TaskItem[]>;
-  getSmartSortTasks: () => TaskItem[]; 
+  getSmartSortTasks: (temporarilyShowIds?: string[]) => TaskItem[]; 
 
   exportData: () => string;
   importData: (jsonData: string) => void;
@@ -128,14 +130,14 @@ export const useAppStore = create<AppState>()(
         return { theme: newTheme };
       }),
       smartListVisibility: {
-        smart_primeros_pasos: true,
+        smart_primeros_pasos: false,
         smart_today: true,
         smart_scheduled: true,
         smart_all: true,
         smart_flagged: true,
         smart_completed: false
       },
-      pinnedSmartLists: ['smart_primeros_pasos'],
+      pinnedSmartLists: [],
       cycleVisibility: {},  // All hidden by default; auto-activates when a task with that cycle_id is created
       globalCyclesEnabled: false,
 
@@ -162,7 +164,7 @@ export const useAppStore = create<AppState>()(
       toggleGlobalCycles: () => set((state: any) => ({ globalCyclesEnabled: !state.globalCyclesEnabled })),
 
       togglePinSmartList: (listId) => optimisticUpdate(get, set, (state: any) => {
-        const currentPinned = state.pinnedSmartLists || ['smart_primeros_pasos'];
+        const currentPinned = state.pinnedSmartLists || [];
         const isPinned = currentPinned.includes(listId);
         const newPinned = isPinned
           ? currentPinned.filter((id: string) => id !== listId)
@@ -186,7 +188,8 @@ export const useAppStore = create<AppState>()(
 
         return {
           pinnedSmartLists: newPinned,
-          lists: newLists
+          lists: newLists,
+          _preferences_dirty: true
         };
       }),
 
@@ -214,7 +217,8 @@ export const useAppStore = create<AppState>()(
 
         return {
           smartListVisibility: newVisibility,
-          lists: newLists
+          lists: newLists,
+          _preferences_dirty: true
         };
       }),
 
@@ -241,7 +245,51 @@ export const useAppStore = create<AppState>()(
 
         return {
           cycleVisibility: newVisibility,
-          lists: newLists
+          lists: newLists,
+          _preferences_dirty: true
+        };
+      }),
+
+      dismissOnboarding: () => optimisticUpdate(get, set, (state: any) => {
+        try {
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('hide_onboarding_guide', 'true');
+          }
+        } catch (e) {}
+
+        const settingsId = 'user_preferences_onboarding';
+        const updatedSettingList: any = {
+          id: settingsId,
+          name: 'Onboarding Settings',
+          color: '#000000',
+          icon: JSON.stringify({ hidden: true, completed: true }),
+          _is_dirty: true,
+          updated_at: new Date().toISOString()
+        };
+
+        const filteredLists = state.lists.filter((l: any) => l.id !== 'primeros_pasos' && l.id !== settingsId);
+        const newLists = [...filteredLists, updatedSettingList];
+
+        const updatedTasks = { ...state.tasks };
+        Object.values(state.tasks).forEach((t: any) => {
+          if (t.categoryId === 'primeros_pasos' || t.id.startsWith('task_onboarding_')) {
+            updatedTasks[t.id] = { ...t, deleted_at: new Date().toISOString(), _is_dirty: true };
+          }
+        });
+
+        const newPinned = (state.pinnedSmartLists || []).filter((id: string) => id !== 'smart_primeros_pasos');
+
+        const newSmartListVisibility = {
+          ...state.smartListVisibility,
+          smart_primeros_pasos: false
+        };
+
+        return {
+          lists: newLists,
+          tasks: updatedTasks,
+          pinnedSmartLists: newPinned,
+          smartListVisibility: newSmartListVisibility,
+          _preferences_dirty: true
         };
       }),
 
@@ -307,7 +355,8 @@ export const useAppStore = create<AppState>()(
         const targetCount = existingTask.targetCount || 1;
         
         // Auto-detect reverse if already completed or if forceReverse is explicitly passed
-        const shouldReverse = forceReverse || isTaskCompleted(existingTask);
+        const isDone = isTaskCompleted(existingTask) || isCompletedInCurrentPeriod(existingTask, state.cycles);
+        const shouldReverse = forceReverse !== undefined ? forceReverse : isDone;
         
         if (shouldReverse) {
           const newHistory = [...(existingTask.completionHistory || [])];
@@ -588,6 +637,7 @@ export const useAppStore = create<AppState>()(
       getTasksByList: (listId, includeCompleted = false, temporarilyShowIds = []) => {
         const tasks = get().tasks as Record<string, TaskItem>;
         const lists = get().lists as CustomList[];
+        const cycles = get().cycles as CustomCycle[];
         const listSections = get().listSections as ListSection[];
         const validListIds = new Set(lists.map((l: any) => l.id));
         const filtered = (Object.values(tasks) as TaskItem[]).filter((t: any) => {
@@ -600,7 +650,8 @@ export const useAppStore = create<AppState>()(
           const matchesList = listId === 'inbox' 
             ? (effectiveCat === 'inbox' || !effectiveCat)
             : effectiveCat === listId;
-          return matchesList && (includeCompleted || !isTaskCompleted(t) || temporarilyShowIds.includes(t.id));
+          const isDone = isTaskCompleted(t) || isCompletedInCurrentPeriod(t, cycles);
+          return matchesList && (includeCompleted || !isDone || temporarilyShowIds.includes(t.id));
         });
         
         const grouped: Record<string, TaskItem[]> = {};
@@ -640,10 +691,13 @@ export const useAppStore = create<AppState>()(
         return grouped;
       },
 
-      getSmartSortTasks: () => {
+      getSmartSortTasks: (temporarilyShowIds = []) => {
         const tasks = get().tasks as Record<string, TaskItem>;
         const cycles = get().cycles as CustomCycle[];
-        const tasksArray = (Object.values(tasks) as TaskItem[]).filter((t: any) => t.status === 'pending' && !t.deleted_at && t.categoryId !== 'primeros_pasos');
+        const tasksArray = (Object.values(tasks) as TaskItem[]).filter((t: any) => 
+          !t.deleted_at && t.categoryId !== 'primeros_pasos' && 
+          (t.status === 'pending' || temporarilyShowIds.includes(t.id))
+        );
         const now = new Date();
         const currentHours = now.getHours();
 
@@ -886,6 +940,7 @@ export const useAppStore = create<AppState>()(
       partialize: (state) => {
         const rest = { ...state };
         delete (rest as Partial<AppState>).hasHydrated;
+        delete (rest as any)._preferences_dirty;
         return rest;
       },
       merge: (persistedState: any, currentState: any) => {
@@ -918,7 +973,7 @@ export const useAppStore = create<AppState>()(
           } catch (e) {}
         }
 
-        let mergedPinnedSmartLists = persistedState?.pinnedSmartLists || currentState.pinnedSmartLists || ['smart_primeros_pasos'];
+        let mergedPinnedSmartLists = persistedState?.pinnedSmartLists || currentState.pinnedSmartLists || [];
         const pinnedSettings = uniqueLists.find((l: any) => l.id === 'user_preferences_pinned_smart_lists');
         if (pinnedSettings?.icon) {
           try {

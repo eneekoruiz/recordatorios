@@ -18,6 +18,7 @@ import { NavigationFrame } from './components/layout/NavigationFrame';
 import { AuthScreen } from './components/auth/AuthScreen';
 import { InstallPromptModal } from './components/layout/InstallPromptModal';
 import { ShortcutsModal } from './components/layout/ShortcutsModal';
+import { DailyGreetingModal } from './components/layout/DailyGreetingModal';
 import { BottomShortcutBar } from './components/layout/BottomShortcutBar';
 import { syncManager } from './sync/syncManager';
 import { TaskSkeletonLoader } from './components/ui/TaskSkeletonLoader';
@@ -104,7 +105,8 @@ function App() {
   const navStack = useNavigation((state) => state.stack);
   const navView = useNavigation((state) => state.currentView());
   const { pop: navPop, reset: navReset } = useNavigation();
-  const [globalToast, setGlobalToast] = useState<string | null>(null);
+  const [globalToast, setGlobalToast] = useState<{ message: string; onUndo?: () => void } | string | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
   const theme = useAppStore((state) => state.theme) || 'light';
 
   // ── Theme synchronization (Always light mode by default) ─────────
@@ -125,11 +127,16 @@ function App() {
 
   useEffect(() => {
     const handleToast = (e: any) => {
+      if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
       setGlobalToast(e.detail);
-      window.setTimeout(() => setGlobalToast(null), 3500);
+      const timeoutMs = (typeof e.detail === 'object' && e.detail?.onUndo) ? 6000 : 3500;
+      toastTimerRef.current = window.setTimeout(() => setGlobalToast(null), timeoutMs);
     };
     window.addEventListener('show-toast', handleToast);
-    return () => window.removeEventListener('show-toast', handleToast);
+    return () => {
+      window.removeEventListener('show-toast', handleToast);
+      if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    };
   }, []);
 
   // ── Resize listener ──────────────────────────────────────────────
@@ -163,11 +170,53 @@ function App() {
   useEffect(() => {
     const state = useAppStore.getState();
     const lists = state.lists;
-    const isHidden = localStorage.getItem('hide_onboarding_guide') === 'true';
+
+    // Verificar si la guía ya fue ocultada o completada (localmente o en la nube)
+    const onboardingSetting = lists?.find(l => l.id === 'user_preferences_onboarding');
+    let isCloudHidden = false;
+    if (onboardingSetting?.icon) {
+      try {
+        const parsed = JSON.parse(onboardingSetting.icon);
+        isCloudHidden = parsed.hidden || parsed.completed;
+      } catch (e) {}
+    }
+    const isLocalHidden = localStorage.getItem('hide_onboarding_guide') === 'true';
+
+    // Comprobar si el usuario ya es un usuario con datos reales (tareas o listas personalizadas)
+    const existingTasksList = Object.values(state.tasks || {});
+    const hasRealTasks = existingTasksList.some(t => !t.deleted_at && t.categoryId !== 'primeros_pasos');
+    const hasCustomLists = (lists || []).some(l => 
+      l.id !== 'primeros_pasos' && 
+      l.id !== 'inbox' && 
+      !l.id.startsWith('user_preferences_') &&
+      !['compras', 'care', 'quehaceres', 'limpieza', 'limpieza_diaria', 'limpieza_semanal', 'limpieza_mensual', 'limpieza_anual', 'caducidades', 'que_he_hecho'].includes(l.id)
+    );
+    const isEstablishedUser = hasRealTasks || hasCustomLists;
+    const isHidden = isLocalHidden || isCloudHidden || isEstablishedUser;
+
+    if (isEstablishedUser && !isLocalHidden) {
+      localStorage.setItem('hide_onboarding_guide', 'true');
+    }
+
+    if (isHidden) {
+      if (state.pinnedSmartLists?.includes('smart_primeros_pasos')) {
+        const cleaned = state.pinnedSmartLists.filter(id => id !== 'smart_primeros_pasos');
+        state.togglePinSmartList('smart_primeros_pasos');
+        useAppStore.setState({ pinnedSmartLists: cleaned });
+      }
+      if (lists?.some(l => l.id === 'primeros_pasos')) {
+        state.removeList('primeros_pasos');
+      }
+      existingTasksList.forEach(t => {
+        if (t.categoryId === 'primeros_pasos' || t.id.startsWith('task_onboarding_')) {
+          state.deleteTask(t.id);
+        }
+      });
+    }
 
     if (!lists || lists.length === 0) {
       const initial = [
-        { id: 'primeros_pasos', name: 'Primeros Pasos', color: '#ff2d55', icon: 'rocket', isPinned: true },
+        ...(isHidden ? [] : [{ id: 'primeros_pasos', name: 'Primeros Pasos', color: '#ff2d55', icon: 'rocket', isPinned: false }]),
         { id: 'compras', name: 'Compras', color: '#ff9500', icon: 'shopping-cart' },
         { id: 'care', name: 'Care', color: '#af52de', icon: 'heart' },
         { id: 'quehaceres', name: 'Quehaceres', color: '#34c759', icon: 'check-square' },
@@ -184,7 +233,7 @@ function App() {
       state.addListSection({ id: 'sec_suscripciones', listId: 'caducidades', name: 'Suscripciones', order: 1 });
     } else {
       if (!lists.some(l => l.id === 'primeros_pasos') && !isHidden) {
-        state.addList({ id: 'primeros_pasos', name: 'Primeros Pasos', color: '#ff2d55', icon: 'rocket', isPinned: true });
+        state.addList({ id: 'primeros_pasos', name: 'Primeros Pasos', color: '#ff2d55', icon: 'rocket', isPinned: false });
       }
       if (!lists.some(l => l.id === 'caducidades')) {
         state.addList({ id: 'caducidades', name: 'Caducidades', color: '#ff9500', icon: 'credit-card' });
@@ -250,6 +299,16 @@ function App() {
       try {
         const parsed = JSON.parse(pinnedSettings.icon);
         useAppStore.setState({ pinnedSmartLists: parsed });
+      } catch (e) {}
+    }
+
+    const onboardingSettingFromLists = lists.find(l => l.id === 'user_preferences_onboarding');
+    if (onboardingSettingFromLists?.icon) {
+      try {
+        const parsed = JSON.parse(onboardingSettingFromLists.icon);
+        if (parsed.hidden || parsed.completed) {
+          localStorage.setItem('hide_onboarding_guide', 'true');
+        }
       } catch (e) {}
     }
 
@@ -556,6 +615,7 @@ function App() {
         onEditTask={(taskId) => { setEditingTaskId(taskId); setIsDrawerOpen(true); }}
       />
       <InstallPromptModal />
+      <DailyGreetingModal onSelectView={handleSelectView} />
       <ShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
       <BottomShortcutBar />
 
@@ -564,7 +624,16 @@ function App() {
           <motion.div
             className="premium-toast"
             role="status"
-            style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between', minWidth: 260, boxSizing: 'border-box' }}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 12, 
+              justifyContent: 'space-between', 
+              minWidth: 280, 
+              maxWidth: '90vw', 
+              boxSizing: 'border-box',
+              zIndex: 999999 
+            }}
             initial={{ opacity: 0, y: 16, x: "-50%" }}
             animate={{ opacity: 1, y: 0, x: "-50%" }}
             exit={{ opacity: 0, y: 16, x: "-50%" }}
@@ -573,14 +642,40 @@ function App() {
             dragConstraints={{ left: -100, right: 100 }}
             onDragEnd={(_, info) => { if (Math.abs(info.offset.x) > 50) setGlobalToast(null); }}
           >
-            <span>{globalToast}</span>
-            <button
-              onClick={() => setGlobalToast(null)}
-              style={{ background: 'transparent', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', padding: 4 }}
-              title="Cerrar"
-            >
-              <X size={16} />
-            </button>
+            <span style={{ fontSize: '0.86rem', fontWeight: 550 }}>
+              {typeof globalToast === 'string' ? globalToast : globalToast.message}
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              {typeof globalToast !== 'string' && globalToast.onUndo && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    globalToast.onUndo?.();
+                    setGlobalToast(null);
+                  }}
+                  style={{
+                    background: 'var(--accent-primary, #007aff)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '4px 10px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(0, 122, 255, 0.3)'
+                  }}
+                >
+                  Deshacer
+                </button>
+              )}
+              <button
+                onClick={() => setGlobalToast(null)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', padding: 4 }}
+                title="Cerrar"
+              >
+                <X size={16} />
+              </button>
+            </div>
           </motion.div>
         </AnimatePresence>,
         document.body

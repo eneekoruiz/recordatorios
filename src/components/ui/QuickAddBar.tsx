@@ -121,7 +121,7 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
         bottom: 0,
         left: 0,
         right: 0,
-        padding: '8px 16px',
+        padding: '8px clamp(16px, 5vw, 84px) 8px 16px',
         paddingBottom: 'max(10px, env(safe-area-inset-bottom))',
         background: 'linear-gradient(to top, var(--bg-elevated) 75%, transparent)',
         zIndex: 40,

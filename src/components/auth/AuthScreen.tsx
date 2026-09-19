@@ -129,6 +129,26 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
         setToken(data.token, data.user.id);
         localStorage.setItem('userEmail', data.user.email || cleanEmail);
         if (name.trim()) localStorage.setItem('userName', name.trim());
+        // Apply server-side preferences immediately on login
+        if (data.preferences && typeof data.preferences === 'object') {
+          const prefs = data.preferences;
+          const prefsUpdate: any = {};
+          if (prefs.smartListVisibility && typeof prefs.smartListVisibility === 'object') {
+            prefsUpdate.smartListVisibility = { ...useAppStore.getState().smartListVisibility, ...prefs.smartListVisibility };
+          }
+          if (Array.isArray(prefs.pinnedSmartLists)) {
+            prefsUpdate.pinnedSmartLists = prefs.pinnedSmartLists;
+          }
+          if (prefs.cycleVisibility && typeof prefs.cycleVisibility === 'object') {
+            prefsUpdate.cycleVisibility = { ...useAppStore.getState().cycleVisibility, ...prefs.cycleVisibility };
+          }
+          if (prefs.hideOnboarding) {
+            try { localStorage.setItem('hide_onboarding_guide', 'true'); } catch {}
+          }
+          if (Object.keys(prefsUpdate).length > 0) {
+            useAppStore.setState(prefsUpdate);
+          }
+        }
         onSuccess();
       } else if (data.message) {
         setSuccessMsg(data.message);
@@ -188,16 +208,16 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
         transition={{ type: 'spring', stiffness: 300, damping: 30, delay: 0.06 }}
       >
         {/* Header with segmented switch */}
-        <div className="auth-card-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 14 }}>
+        <div className="auth-card-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div className="auth-icon">
-              {mode === 'register' ? <UserPlus size={24} /> : mode === 'reset' ? <KeyRound size={24} /> : <LogIn size={24} />}
+              {mode === 'register' ? <UserPlus size={22} /> : mode === 'reset' ? <KeyRound size={22} /> : <LogIn size={22} />}
             </div>
             <div>
-              <h2 style={{ margin: 0, fontSize: '1.35rem' }}>
+              <h2 style={{ margin: 0, fontSize: '1.28rem' }}>
                 {mode === 'register' ? 'Crear nueva cuenta' : mode === 'reset' ? 'Restablecer contraseña' : 'Iniciar sesión'}
               </h2>
-              <p style={{ margin: '3px 0 0', fontSize: '0.84rem' }}>
+              <p style={{ margin: '2px 0 0', fontSize: '0.82rem' }}>
                 {mode === 'register'
                   ? 'Crea tu bóveda personal en la nube con acceso multiplataforma.'
                   : mode === 'reset'
@@ -270,7 +290,7 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
               style={{ display: 'flex', flexDirection: 'column', gap: 6 }}
             >
               <span>{error}</span>
-              {isExistingUserConflict && (
+              {(isExistingUserConflict || error.toLowerCase().includes('restablecer') || error.toLowerCase().includes('contraseña incorrecta')) && (
                 <button
                   type="button"
                   onClick={() => { setMode('reset'); setError(''); setIsExistingUserConflict(false); }}
@@ -287,7 +307,7 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
                     marginTop: 4
                   }}
                 >
-                  ¿Deseas restablecer la contraseña de esta cuenta?
+                  ¿Deseas restablecer tu contraseña ahora?
                 </button>
               )}
             </motion.div>
@@ -482,27 +502,15 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
         </form>
 
         {/* Secondary Actions */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
-          {mode === 'reset' ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center', marginTop: 2 }}>
+          {mode === 'reset' && (
             <button
               onClick={() => { setMode('login'); setError(''); setIsExistingUserConflict(false); }}
               type="button"
               className="auth-switch"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.84rem' }}
             >
-              <RotateCcw size={15} /> Volver a Iniciar sesión
-            </button>
-          ) : (
-            <button
-              onClick={() => {
-                setMode(mode === 'login' ? 'register' : 'login');
-                setError('');
-                setIsExistingUserConflict(false);
-              }}
-              type="button"
-              className="auth-switch"
-            >
-              {mode === 'login' ? '¿No tienes cuenta? Crear una cuenta nueva' : '¿Ya tienes cuenta? Iniciar sesión'}
+              <RotateCcw size={14} /> Volver a Iniciar sesión
             </button>
           )}
 
@@ -515,20 +523,20 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
               background: 'transparent',
               border: 'none',
               color: 'var(--text-tertiary)',
-              fontSize: '0.8rem',
+              fontSize: '0.78rem',
               fontWeight: 500,
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: 6,
-              padding: '6px 12px',
+              gap: 5,
+              padding: '4px 10px',
               borderRadius: 8,
               transition: 'color 0.15s ease'
             }}
             onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
             onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-tertiary)'; }}
           >
-            <WifiOff size={14} /> Continuar sin cuenta (Modo local offline)
+            <WifiOff size={13} /> Continuar sin cuenta (Modo local offline)
           </button>
         </div>
       </motion.div>
