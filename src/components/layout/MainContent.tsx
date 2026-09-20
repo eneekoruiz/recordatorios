@@ -1409,7 +1409,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             }}
             style={{
               flex: 1,
-              overflowY: isActuallyEmpty ? 'hidden' : 'auto',
+              overflowY: 'auto',
               overflowX: 'hidden',
               width: '100%',
               overscrollBehaviorY: 'contain',
@@ -1422,7 +1422,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             <div style={{
               width: '100%',
               position: 'relative',
-              paddingBottom: isActuallyEmpty ? 'calc(50px + env(safe-area-inset-bottom, 0px))' : 'calc(110px + env(safe-area-inset-bottom, 0px))',
+              paddingBottom: 'calc(130px + env(safe-area-inset-bottom, 0px))',
               boxSizing: 'border-box',
               flex: isActuallyEmpty ? 1 : undefined,
               display: isActuallyEmpty ? 'flex' : undefined,
@@ -1601,6 +1601,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               justifyContent: 'center',
               width: '100%',
               minHeight: 0,
+              paddingBottom: 'calc(60px + env(safe-area-inset-bottom, 0px))',
               boxSizing: 'border-box'
             }}>
               <div style={{ width: '100%', maxWidth: 420, padding: '0 16px' }}>

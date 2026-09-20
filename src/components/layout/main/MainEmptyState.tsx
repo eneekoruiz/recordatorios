@@ -13,13 +13,9 @@ export const MainEmptyState: React.FC<MainEmptyStateProps> = ({
   currentView,
   currentList,
   currentCycle,
-  onOpenNewTask
+  onOpenNewTask: _onOpenNewTask
 }) => {
   const emptyStateProps = useMemo(() => {
-    const handleNewTask = () => {
-      onOpenNewTask(currentView.startsWith('list_') ? currentView.replace('list_', '') : undefined);
-    };
-
     switch (currentView) {
       case 'smart_primeros_pasos':
         return {
@@ -34,32 +30,32 @@ export const MainEmptyState: React.FC<MainEmptyStateProps> = ({
           title: "Todo al día para hoy",
           subtitle: "No tienes tareas programadas para el día de hoy. Disfruta tu tiempo o añade algo nuevo.",
           iconName: "today",
-          ctaText: "Añadir tarea para hoy",
-          onAction: handleNewTask
+          ctaText: undefined,
+          onAction: undefined
         };
       case 'smart_scheduled':
         return {
           title: "Sin tareas programadas",
           subtitle: "Planifica tus próximos días añadiendo tareas con fecha límite.",
           iconName: "scheduled",
-          ctaText: "Programar tarea",
-          onAction: handleNewTask
+          ctaText: undefined,
+          onAction: undefined
         };
       case 'smart_all':
         return {
           title: "No hay tareas en absoluto",
           subtitle: "Tienes todo bajo control. Relájate o añade un nuevo recordatorio.",
           iconName: "sparkles",
-          ctaText: "Nueva tarea",
-          onAction: handleNewTask
+          ctaText: undefined,
+          onAction: undefined
         };
       case 'smart_flagged':
         return {
           title: "Sin tareas destacadas",
           subtitle: "Marca tareas importantes con una bandera para tenerlas siempre a la mano.",
           iconName: "flagged",
-          ctaText: "Añadir tarea destacada",
-          onAction: handleNewTask
+          ctaText: undefined,
+          onAction: undefined
         };
       case 'smart_completed':
         return {
@@ -82,8 +78,8 @@ export const MainEmptyState: React.FC<MainEmptyStateProps> = ({
           title: "Bandeja de entrada vacía",
           subtitle: "Todos tus pendientes rápidos están procesados. ¡Gran productividad!",
           iconName: "inbox",
-          ctaText: "Añadir a bandeja",
-          onAction: () => onOpenNewTask('inbox')
+          ctaText: undefined,
+          onAction: undefined
         };
       case 'TRASH':
         return {
@@ -98,16 +94,16 @@ export const MainEmptyState: React.FC<MainEmptyStateProps> = ({
           title: "Día libre de ciclos",
           subtitle: "No hay tareas activas para tu ciclo diario actual.",
           iconName: "clock",
-          ctaText: "Crear tarea diaria",
-          onAction: handleNewTask
+          ctaText: undefined,
+          onAction: undefined
         };
       case 'cycle_week':
         return {
           title: "Semana despejada",
           subtitle: "No hay tareas asignadas para tu ciclo semanal actual.",
           iconName: "clock",
-          ctaText: "Crear tarea semanal",
-          onAction: handleNewTask
+          ctaText: undefined,
+          onAction: undefined
         };
       case 'cycle_month':
       case 'cycle_year':
@@ -115,8 +111,8 @@ export const MainEmptyState: React.FC<MainEmptyStateProps> = ({
           title: "Ciclo temporal despejado",
           subtitle: "No tienes objetivos o recordatorios para este ciclo temporal.",
           iconName: "clock",
-          ctaText: "Añadir a ciclo",
-          onAction: handleNewTask
+          ctaText: undefined,
+          onAction: undefined
         };
       default: {
         const isFolder = currentList?.isFolder;
@@ -128,15 +124,15 @@ export const MainEmptyState: React.FC<MainEmptyStateProps> = ({
             ? "Esta carpeta no contiene sublistas ni tareas activas. Puedes añadir una nueva lista o crear un recordatorio dentro."
             : "Esta lista está vacía en este momento. Empieza añadiendo tu primer ítem.",
           iconName: isFolder ? "folder" : "list",
-          ctaText: isFolder ? "Añadir a la carpeta" : "Añadir tarea",
-          onAction: handleNewTask
+          ctaText: undefined,
+          onAction: undefined
         };
       }
     }
-  }, [currentView, currentList, currentCycle, onOpenNewTask]);
+  }, [currentView, currentList, currentCycle]);
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', width: '100%', padding: '32px 16px', boxSizing: 'border-box' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', width: '100%', padding: '16px', boxSizing: 'border-box' }}>
       <EmptyState {...emptyStateProps} />
     </div>
   );
