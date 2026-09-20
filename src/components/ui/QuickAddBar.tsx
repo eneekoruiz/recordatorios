@@ -5,6 +5,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { parseNaturalLanguage } from '../../utils/nlp';
 import { SoundService } from '../../services/SoundService';
 import { extractPeopleFromText, getAnticipationAlerts } from '../../services/TaskService';
+import { isCaducidadesList } from '../../utils/specialLists';
 
 interface QuickAddBarProps {
   currentView: string;
@@ -19,6 +20,7 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const addTask = useAppStore(state => state.addTask);
   const lists = useAppStore(state => state.lists);
+  const listSections = useAppStore(state => state.listSections);
 
   const nlp = parseNaturalLanguage(text);
   // «@Compras» es una lista, no una persona: evitamos mostrarlo dos veces.
@@ -53,16 +55,22 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
     let expirationType: 'card' | 'subscription' | 'other' | undefined = undefined;
     let targetSectionId: string | undefined = undefined;
 
-    if (targetCategory === 'caducidades' || /caduca|tarjeta|suscrip|renovaci/i.test(text)) {
-      if (/tarjeta|banco|dni|carnet|pasaporte/i.test(text)) {
-        expirationType = 'card';
+    const isCad = isCaducidadesList(targetCategory) || /caduca|tarjeta|suscrip|renovaci/i.test(text);
+    if (isCad) {
+      if (!isCaducidadesList(targetCategory)) {
         targetCategory = 'caducidades';
-        targetSectionId = 'sec_tarjetas';
-      } else if (/suscrip|netflix|spotify|gimnasio|cloud|hosting|mensualidad/i.test(text)) {
-        expirationType = 'subscription';
-        targetCategory = 'caducidades';
-        targetSectionId = 'sec_suscripciones';
       }
+      const isSub = /suscrip|netflix|spotify|gimnasio|cloud|hosting|mensualidad|seguro|alquiler|cuota|disney|prime|apple|hbo|youtube/i.test(text);
+      expirationType = isSub ? 'subscription' : 'card';
+      
+      const matchingSec = listSections.find(s => 
+        s.listId === targetCategory && 
+        (isSub ? /suscrip|recurrente/i.test(s.name) : /tarjeta|doc|banco/i.test(s.name))
+      );
+      targetSectionId = matchingSec?.id || (isSub 
+        ? (targetCategory === 'caducidades' ? 'sec_suscripciones' : `sec_suscripciones_${targetCategory}`)
+        : (targetCategory === 'caducidades' ? 'sec_tarjetas' : `sec_tarjetas_${targetCategory}`)
+      );
     }
 
     // Si tiene menciones de personas y estamos en que_he_hecho o no hay categoría fija

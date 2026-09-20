@@ -77,14 +77,17 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
                   }
                 }}
                 style={{
-                  // Tarjeta neutra; el color solo tiñe la seleccionada (menos ruido, más jerarquía).
-                  background: isActive ? `color-mix(in srgb, ${list.color} 13%, var(--bg-elevated))` : 'var(--bg-elevated)',
-                  border: isActive
-                    ? `1px solid color-mix(in srgb, ${list.color} 42%, transparent)`
-                    : '0.5px solid var(--border-subtle)',
-                  boxShadow: isActive ? 'none' : 'var(--shadow-sm)',
+                  background: isActive 
+                    ? list.color 
+                    : `color-mix(in srgb, ${list.color} 15%, var(--bg-elevated))`,
+                  border: isActive 
+                    ? `1.5px solid ${list.color}` 
+                    : `1.5px solid color-mix(in srgb, ${list.color} 28%, transparent)`,
+                  boxShadow: isActive 
+                    ? `0 8px 22px ${list.color}45` 
+                    : `0 3px 10px ${list.color}15`,
                   opacity: isEditMode && !smartListVisibility[list.id] ? 0.5 : 1,
-                  transition: 'background-color 180ms ease, border-color 180ms ease'
+                  transition: 'all 180ms cubic-bezier(0.16, 1, 0.3, 1)'
                 }}
               >
                 {isEditMode && (
@@ -120,10 +123,10 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
                   layoutId={"smart-icon-" + list.id} 
                   className="icon-circle" 
                   style={{
-                    backgroundColor: list.color,
-                    boxShadow: 'none',
+                    backgroundColor: isActive ? 'rgba(255, 255, 255, 0.28)' : list.color,
+                    boxShadow: isActive ? 'none' : `0 4px 12px ${list.color}40`,
                     border: 'none',
-                    transition: 'background-color 150ms ease'
+                    transition: 'all 150ms ease'
                   }}
                 >
                   <Icon size={18} color="white" />
@@ -133,7 +136,7 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
                     className="count" 
                     style={{ 
                       fontSize: getTaskCount(list.id) >= 100 ? '1.4rem' : getTaskCount(list.id) >= 10 ? '1.7rem' : '2rem',
-                      color: isActive ? list.color : 'var(--text-primary)',
+                      color: isActive ? '#ffffff' : 'var(--text-primary)',
                       transition: 'color 150ms ease'
                     }}
                   >
@@ -141,7 +144,7 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
                   </span>
                 )}
                 <h3 style={{ 
-                  color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', 
+                  color: isActive ? '#ffffff' : 'var(--text-primary)', 
                   fontWeight: 600,
                   fontSize: '0.84rem',
                   letterSpacing: '-0.2px',

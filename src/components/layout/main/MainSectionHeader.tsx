@@ -308,7 +308,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
             </div>
           )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, justifyContent: 'flex-end' }}>
           {/* Si esta sección está plegada, mostrar solo un sutil conteo numérico estilo Apple */}
           {isCatCollapsed(data.category) && data.routineCounts && (
             <span style={{ 
@@ -322,108 +322,6 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
             </span>
           )}
 
-          {/* Si esta sección tiene periodicidad y ESTÁ DESPLEGADA, conmutador estilo Apple Segmented Control */}
-          {!isCatCollapsed(data.category) && data.periodicity && data.routineCounts && (() => {
-            const rawTitle = data.title.replace(/^[\p{Emoji}\s⏳]+/gu, '').trim() || 'sección';
-            const cleanName = rawTitle.length > 0 
-              ? rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1).toLowerCase() 
-              : 'sección';
-            const shortName = cleanName.length > 14 ? 'sección' : cleanName;
-
-            return (
-              <div 
-                style={{ 
-                  display: 'inline-flex', 
-                  alignItems: 'center', 
-                  background: 'var(--bg-material, rgba(120, 120, 128, 0.12))', 
-                  padding: '3px', 
-                  borderRadius: '8px', 
-                  gap: '2px',
-                  border: '1px solid var(--border-subtle, rgba(0, 0, 0, 0.05))'
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    HapticService.selection();
-                    toggleSectionRoutineMode?.(data.category, 'only_section');
-                    _setIsolatedSectionKey?.(null);
-                  }}
-                  style={{
-                    border: 'none',
-                    borderRadius: '6px',
-                    padding: '3.5px 9px',
-                    fontSize: '0.72rem',
-                    fontWeight: currentSectionRoutineMode === 'only_section' ? 600 : 500,
-                    background: currentSectionRoutineMode === 'only_section' ? 'var(--bg-elevated, #ffffff)' : 'transparent',
-                    color: currentSectionRoutineMode === 'only_section' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    boxShadow: currentSectionRoutineMode === 'only_section' ? '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.06)' : 'none',
-                    cursor: 'pointer',
-                    transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
-                  }}
-                  title={`Ver únicamente las tareas directas de ${cleanName}`}
-                >
-                  Solo {shortName} ({data.routineCounts.only})
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    HapticService.selection();
-                    toggleSectionRoutineMode?.(data.category, 'full_routine');
-                    _setIsolatedSectionKey?.(null);
-                  }}
-                  style={{
-                    border: 'none',
-                    borderRadius: '6px',
-                    padding: '3.5px 9px',
-                    fontSize: '0.72rem',
-                    fontWeight: currentSectionRoutineMode === 'full_routine' ? 600 : 500,
-                    background: currentSectionRoutineMode === 'full_routine' ? 'var(--bg-elevated, #ffffff)' : 'transparent',
-                    color: currentSectionRoutineMode === 'full_routine' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    boxShadow: currentSectionRoutineMode === 'full_routine' ? '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.06)' : 'none',
-                    cursor: 'pointer',
-                    transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
-                  }}
-                  title="Ver todas las tareas de la rutina periódica"
-                >
-                  Todas ({data.routineCounts.full})
-                </button>
-              </div>
-            );
-          })()}
-          {/* Botón Empezar Sección (Modo Secuencia Apple Focus) — solo visible con sección desplegada */}
-          {onStartSectionSequence && !isCatCollapsed(data.category) && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                HapticService.selection();
-                onStartSectionSequence();
-              }}
-              title={`Empezar secuencia de ${data.title.replace(/^[\p{Emoji}\s⏳]+/gu, '').trim() || 'sección'} (${pendingTaskCount ?? 0} pendientes)`}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-                padding: '3px 10px',
-                borderRadius: 999,
-                background: 'var(--bg-elevated, #ffffff)',
-                border: '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
-                color: data.color || 'var(--accent-primary)',
-                fontWeight: 650,
-                fontSize: '0.74rem',
-                cursor: 'pointer',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-                transition: 'all 0.15s ease',
-                flexShrink: 0
-              }}
-            >
-              <Play size={10} fill="currentColor" />
-              <span>Empezar</span>
-            </button>
-          )}
           <ChevronDown 
             size={18} 
             color="var(--text-tertiary)" 
@@ -431,6 +329,84 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           />
         </div>
       </div>
+
+      {/* Si esta sección tiene periodicidad y ESTÁ DESPLEGADA, conmutador estilo Apple Segmented Control en fila dedicada */}
+      {!isCatCollapsed(data.category) && data.periodicity && data.routineCounts && (() => {
+        const rawTitle = data.title.replace(/^[\p{Emoji}\s⏳]+/gu, '').trim() || 'sección';
+        const cleanName = rawTitle.length > 0 
+          ? rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1).toLowerCase() 
+          : 'sección';
+        const shortName = cleanName.length > 14 ? 'sección' : cleanName;
+
+        return (
+          <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', paddingLeft: 2 }}>
+            <div 
+              style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                background: 'var(--bg-material, rgba(120, 120, 128, 0.12))', 
+                padding: '3px', 
+                borderRadius: '8px', 
+                gap: '2px',
+                border: '1px solid var(--border-subtle, rgba(0, 0, 0, 0.05))',
+                maxWidth: '100%',
+                boxSizing: 'border-box'
+              }}
+            >
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  HapticService.selection();
+                  toggleSectionRoutineMode?.(data.category, 'only_section');
+                  _setIsolatedSectionKey?.(null);
+                }}
+                style={{
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '3.5px 9px',
+                  fontSize: '0.72rem',
+                  fontWeight: currentSectionRoutineMode === 'only_section' ? 600 : 500,
+                  background: currentSectionRoutineMode === 'only_section' ? 'var(--bg-elevated, #ffffff)' : 'transparent',
+                  color: currentSectionRoutineMode === 'only_section' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  boxShadow: currentSectionRoutineMode === 'only_section' ? '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.06)' : 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
+                  whiteSpace: 'nowrap'
+                }}
+                title={`Ver únicamente las tareas directas de ${cleanName}`}
+              >
+                Solo {shortName} ({data.routineCounts.only})
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  HapticService.selection();
+                  toggleSectionRoutineMode?.(data.category, 'full_routine');
+                  _setIsolatedSectionKey?.(null);
+                }}
+                style={{
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '3.5px 9px',
+                  fontSize: '0.72rem',
+                  fontWeight: currentSectionRoutineMode === 'full_routine' ? 600 : 500,
+                  background: currentSectionRoutineMode === 'full_routine' ? 'var(--bg-elevated, #ffffff)' : 'transparent',
+                  color: currentSectionRoutineMode === 'full_routine' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  boxShadow: currentSectionRoutineMode === 'full_routine' ? '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.06)' : 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
+                  whiteSpace: 'nowrap'
+                }}
+                title="Ver todas las tareas de la rutina periódica"
+              >
+                Todas ({data.routineCounts.full})
+              </button>
+            </div>
+          </div>
+        );
+      })()}
       {isCustomSection && dragOverSectionId === data.sectionId && (
         <span style={{ fontSize: '0.8rem', color: data.color }}>Mover aquí</span>
       )}

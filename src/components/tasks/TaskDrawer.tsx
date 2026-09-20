@@ -215,11 +215,11 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setQuantity(1);
         setBrand('');
         setDuration('');
-        setHasDate(false);
-        setHasTime(false);
-        setPeople([]);
         const isCad = isCaducidadesList(defaultCategoryId);
         const isSub = defaultSectionId?.includes('suscrip');
+        setHasDate(isCad);
+        setHasTime(false);
+        setPeople([]);
         setExpirationType(isCad ? (isSub ? 'subscription' : 'card') : undefined);
         setVibe(undefined);
         setIssuerMask('');
@@ -477,7 +477,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
       targetCount: targetCount && targetCount > 1 ? Number(targetCount) : undefined,
       currentCount: targetCount && targetCount > 1 ? (currentCount || 0) : undefined,
       people: people.length > 0 ? people : undefined,
-      expirationType: expirationType || (category === 'caducidades' ? (sectionId === 'sec_suscripciones' ? 'subscription' : 'card') : undefined),
+      expirationType: expirationType || (isCaducidadesList(category) ? (sectionId?.includes('suscrip') ? 'subscription' : 'card') : undefined),
       vibe: vibe || undefined,
       issuerMask: issuerMask.trim() || undefined,
       autoRollover: expirationType === 'subscription' ? autoRollover : undefined,

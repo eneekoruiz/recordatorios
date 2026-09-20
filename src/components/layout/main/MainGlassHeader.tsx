@@ -236,9 +236,10 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                             setIsMenuOpen(false);
                             onStartSequence();
                           }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 10 }}
                         >
-                          <Play size={15} color="var(--accent-primary)" fill="var(--accent-primary)" />
-                          <span>Empezar lista</span>
+                          <Play size={14} color="var(--accent-primary)" fill="var(--accent-primary)" />
+                          <span style={{ whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>Empezar lista</span>
                         </button>
                         <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
                       </>

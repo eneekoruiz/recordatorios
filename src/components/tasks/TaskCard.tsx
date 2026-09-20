@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { motion, useMotionValue, useTransform, AnimatePresence, useMotionValueEvent } from 'framer-motion';
 import {
   Lock, MapPin, Image as ImageIcon, MoreHorizontal,
-  ChevronDown, X, Info, RotateCcw, Flag
+  ChevronDown, X, Info, RotateCcw, Flag,
+  ShieldAlert, Clock, CheckCircle2, CreditCard
 } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -850,9 +851,10 @@ export const TaskCard = React.memo(function TaskCard({
                 }}
               >
                 <span>
-                  {expirationStatus.status === 'expired' ? '🔴' :
-                   expirationStatus.status === 'imminent' ? '⚠️' :
-                   expirationStatus.status === 'warning' ? '⏳' : '✅'}
+                  {expirationStatus.status === 'expired' ? <ShieldAlert size={12} strokeWidth={2.2} /> :
+                   expirationStatus.status === 'imminent' ? <ShieldAlert size={12} strokeWidth={2.2} /> :
+                   expirationStatus.status === 'warning' ? <Clock size={12} strokeWidth={2.2} /> : 
+                   <CheckCircle2 size={12} strokeWidth={2.2} />}
                 </span>
                 <span>{expirationStatus.label}</span>
               </span>
@@ -863,7 +865,7 @@ export const TaskCard = React.memo(function TaskCard({
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 3.5,
+                  gap: 4,
                   padding: '1.5px 7px',
                   borderRadius: 6,
                   fontSize: '0.72rem',
@@ -876,7 +878,7 @@ export const TaskCard = React.memo(function TaskCard({
                 }}
                 title={`Identificador de tarjeta/documento: ${task.issuerMask}`}
               >
-                <span>💳</span>
+                <CreditCard size={12} color="var(--accent-primary)" />
                 <span>{task.issuerMask}</span>
               </span>
             )}

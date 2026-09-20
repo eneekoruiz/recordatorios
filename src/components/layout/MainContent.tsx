@@ -1555,16 +1555,41 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                     ...itemStyle, 
                     paddingLeft: `calc(16px + ${data.depth * 24}px)`,
                     paddingRight: '16px',
-                    minHeight: 44,
-                    margin: 0,
+                    margin: '6px 0 14px 0',
                     boxSizing: 'border-box',
                     display: 'flex',
-                    alignItems: 'center'
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    gap: 6
                   }}
                 >
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
-                    {data.title}
+                  <span style={{ fontSize: '0.84rem', color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
+                    {data.title || 'Aquí no hay tareas'}
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      HapticService.selection();
+                      onOpenNewTask(data.sectionId);
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '4px 0',
+                      background: 'transparent',
+                      border: 'none',
+                      color: data.color || 'var(--accent-primary)',
+                      fontSize: '0.86rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'opacity 0.15s ease'
+                    }}
+                    title="Añadir un nuevo recordatorio a esta sección"
+                  >
+                    <Plus size={16} strokeWidth={2.2} />
+                    <span>Nuevo recordatorio</span>
+                  </button>
                 </div>
               );
             } else if (data.type === 'task') {

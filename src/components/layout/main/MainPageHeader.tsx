@@ -5,8 +5,7 @@ import {
   Users, 
   Clock, 
   CreditCard, 
-  ShieldAlert,
-  Play
+  ShieldAlert
 } from 'lucide-react';
 import { HapticService } from '../../../services/HapticService';
 import { isCaducidadesList, isQueHeHechoList } from '../../../utils/specialLists';
@@ -85,7 +84,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   flashbackMemories,
   onEditTask,
   caducidadesStats,
-  onStartSequence
+  onStartSequence: _onStartSequence
 }) => {
   return (
     <>
@@ -202,37 +201,9 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
             )}
           </div>
 
-          {/* Gran Contador Apple Reminders en el color de la lista y Botón Empezar Lista */}
+          {/* Gran Contador Apple Reminders en el color de la lista */}
           {!currentCycle && currentView !== 'TRASH' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-              {onStartSequence && activeVisibleCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    HapticService.selection();
-                    onStartSequence();
-                  }}
-                  title="Empezar secuencia de tareas en orden con temporizador"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '6px 13px',
-                    borderRadius: 999,
-                    background: 'var(--bg-elevated, #ffffff)',
-                    border: '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
-                    color: viewColor || 'var(--accent-primary)',
-                    fontWeight: 650,
-                    fontSize: '0.83rem',
-                    cursor: 'pointer',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <Play size={12} fill="currentColor" />
-                  <span>Empezar lista</span>
-                </button>
-              )}
               {totalCost > 0 && (
                 <span 
                   style={{

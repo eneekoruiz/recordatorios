@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, CreditCard, RefreshCw, FileText } from 'lucide-react';
 
 interface DrawerExpirationSectionProps {
   cardCaducidadOpen: boolean;
@@ -39,7 +39,7 @@ export const DrawerExpirationSection: React.FC<DrawerExpirationSectionProps> = (
         onClick={() => setCardCaducidadOpen(!cardCaducidadOpen)}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 14 }}>💳</span>
+          <CreditCard size={15} color="var(--accent-primary)" />
           Tipo de Caducidad {expirationType ? `(${expirationType === 'card' ? 'Tarjeta' : expirationType === 'subscription' ? 'Suscripción' : 'Otro'})` : ''}
         </span>
         <ChevronDown size={18} style={{ transform: cardCaducidadOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
@@ -53,7 +53,7 @@ export const DrawerExpirationSection: React.FC<DrawerExpirationSectionProps> = (
                   type="button"
                   onClick={() => setExpirationType(expirationType === 'card' ? undefined : 'card')}
                   style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '10px 6px',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '10px 6px',
                     borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s ease',
                     background: expirationType === 'card' ? 'rgba(255, 149, 0, 0.16)' : 'var(--bg-surface)',
                     border: expirationType === 'card' ? '1.5px solid #ff9500' : '1px solid var(--border-subtle)',
@@ -61,14 +61,14 @@ export const DrawerExpirationSection: React.FC<DrawerExpirationSectionProps> = (
                     fontWeight: expirationType === 'card' ? 600 : 400
                   }}
                 >
-                  <span style={{ fontSize: '1.2rem' }}>💳</span>
+                  <CreditCard size={20} strokeWidth={2} />
                   <span style={{ fontSize: '0.78rem' }}>Tarjeta / Doc</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setExpirationType(expirationType === 'subscription' ? undefined : 'subscription')}
                   style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '10px 6px',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '10px 6px',
                     borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s ease',
                     background: expirationType === 'subscription' ? 'rgba(0, 122, 255, 0.16)' : 'var(--bg-surface)',
                     border: expirationType === 'subscription' ? '1.5px solid #007aff' : '1px solid var(--border-subtle)',
@@ -76,14 +76,14 @@ export const DrawerExpirationSection: React.FC<DrawerExpirationSectionProps> = (
                     fontWeight: expirationType === 'subscription' ? 600 : 400
                   }}
                 >
-                  <span style={{ fontSize: '1.2rem' }}>📱</span>
+                  <RefreshCw size={20} strokeWidth={2} />
                   <span style={{ fontSize: '0.78rem' }}>Suscripción</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setExpirationType(expirationType === 'other' ? undefined : 'other')}
                   style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '10px 6px',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '10px 6px',
                     borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s ease',
                     background: expirationType === 'other' ? 'rgba(142, 142, 147, 0.16)' : 'var(--bg-surface)',
                     border: expirationType === 'other' ? '1.5px solid #8e8e93' : '1px solid var(--border-subtle)',
@@ -91,7 +91,7 @@ export const DrawerExpirationSection: React.FC<DrawerExpirationSectionProps> = (
                     fontWeight: expirationType === 'other' ? 600 : 400
                   }}
                 >
-                  <span style={{ fontSize: '1.2rem' }}>📋</span>
+                  <FileText size={20} strokeWidth={2} />
                   <span style={{ fontSize: '0.78rem' }}>Otro</span>
                 </button>
               </div>
