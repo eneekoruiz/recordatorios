@@ -1398,7 +1398,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
       {/* Main Scrollable View */}
       {(() => {
-        const isActuallyEmpty = visibleTasks.length === 0 && smartTasks.length === 0;
+        const hasSections = flattenedData.some(item => item.type === 'header' || item.type === 'empty-section');
+        const isActuallyEmpty = visibleTasks.length === 0 && smartTasks.length === 0 && !hasSections;
         return (
           <div 
             ref={parentRef}
@@ -1409,10 +1410,11 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             }}
             style={{
               flex: 1,
-              overflowY: 'auto',
+              overflowY: isActuallyEmpty ? 'hidden' : 'auto',
               overflowX: 'hidden',
               width: '100%',
-              overscrollBehaviorY: 'contain',
+              overscrollBehaviorY: isActuallyEmpty ? 'none' : 'contain',
+              touchAction: isActuallyEmpty ? 'none' : 'auto',
               WebkitOverflowScrolling: 'touch',
               position: 'relative',
               display: isActuallyEmpty ? 'flex' : 'block',
@@ -1422,7 +1424,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             <div style={{
               width: '100%',
               position: 'relative',
-              paddingBottom: 'calc(130px + env(safe-area-inset-bottom, 0px))',
+              paddingBottom: isActuallyEmpty ? 0 : 'calc(110px + env(safe-area-inset-bottom, 0px))',
               boxSizing: 'border-box',
               flex: isActuallyEmpty ? 1 : undefined,
               display: isActuallyEmpty ? 'flex' : undefined,

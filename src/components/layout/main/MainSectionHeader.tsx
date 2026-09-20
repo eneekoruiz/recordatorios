@@ -393,8 +393,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               </div>
             );
           })()}
-          {/* Botón Empezar Sección (Modo Secuencia Apple Focus) */}
-          {onStartSectionSequence && (
+          {/* Botón Empezar Sección (Modo Secuencia Apple Focus) — solo visible con sección desplegada */}
+          {onStartSectionSequence && !isCatCollapsed(data.category) && (
             <button
               type="button"
               onClick={(e) => {

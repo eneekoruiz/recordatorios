@@ -283,29 +283,6 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
           </div>
         )}
 
-        {totalCost > 0 && (
-          <div 
-            style={{ 
-              marginTop: 10, 
-              display: 'inline-flex', 
-              alignItems: 'center', 
-              gap: 6,
-              background: 'var(--bg-elevated)', 
-              color: 'var(--text-secondary)', 
-              padding: '4px 12px', 
-              borderRadius: 8, 
-              fontWeight: 500, 
-              fontSize: '0.84rem',
-              border: '1px solid var(--border-subtle)',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-            }}
-          >
-            <span style={{ color: 'var(--text-tertiary)' }}>Total estimado:</span>
-            <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, color: 'var(--text-primary)' }}>
-              {totalCost.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €
-            </span>
-          </div>
-        )}
 
         {sortBy !== 'manual' && (
           <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>

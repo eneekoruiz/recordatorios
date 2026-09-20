@@ -168,36 +168,6 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
           </button>
         )}
 
-        {/* Configuración de la lista */}
-        {currentList && (
-          <button
-            type="button"
-            className="icon-btn apple-nav-action-btn"
-            data-testid="list-options-btn"
-            onClick={() => {
-              HapticService.selection();
-              setIsListConfigOpen(true);
-            }}
-            title="Configuración de la lista"
-            aria-label="Configuración de la lista"
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border-subtle)',
-              cursor: 'pointer',
-              color: 'var(--accent-primary)',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <Settings size={18} strokeWidth={2.2} />
-          </button>
-        )}
-
         {/* Opciones de lista */}
         {(isListView || isSmartView || isFolderView) && (
           <div style={{ position: 'relative' }}>
@@ -228,18 +198,27 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                 <>
                   <motion.div 
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(0,0,0,0.15)' }} 
+                    style={{ position: 'fixed', inset: 0, zIndex: 180, background: 'rgba(0,0,0,0.2)' }} 
                     onClick={() => setIsMenuOpen(false)} 
                   />
                   <motion.div 
-                    className="ios-dropdown-menu glass-panel"
-                    initial={{ opacity: 0, scale: 0.92, y: -6, transformOrigin: 'top right' }}
+                    className="ios-dropdown-menu"
+                    initial={{ opacity: 0, scale: 0.95, y: -4, transformOrigin: 'top right' }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.92, y: -6 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                     style={{ 
-                      position: 'absolute', right: 0, top: '100%', marginTop: 10, 
-                      zIndex: 100, minWidth: 210,
+                      position: 'absolute', 
+                      right: 0, 
+                      top: '100%', 
+                      marginTop: 8, 
+                      zIndex: 200, 
+                      minWidth: 245,
+                      background: 'var(--bg-elevated, #ffffff)',
+                      border: '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
+                      boxShadow: '0 16px 44px rgba(0,0,0,0.22), 0 4px 14px rgba(0,0,0,0.1)',
+                      borderRadius: 14,
+                      padding: 6,
                       maxHeight: 'calc(100dvh - 120px)',
                       overflowY: 'auto',
                       overscrollBehavior: 'contain',
@@ -350,16 +329,20 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                         <button 
                           className="ios-dropdown-item"
                           onClick={() => { updateList(currentList.id, { isFinancial: !currentList.isFinancial }); setIsMenuOpen(false); }}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
                         >
-                          <input type="checkbox" checked={!!currentList.isFinancial} readOnly style={{ marginRight: 12, pointerEvents: 'none', accentColor: 'var(--accent-primary)' }} />
-                          Modo Financiero
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <Check size={14} color="var(--accent-primary)" style={{ opacity: currentList.isFinancial ? 1 : 0 }} />
+                            <span style={{ whiteSpace: 'nowrap' }}>Modo financiero</span>
+                          </div>
                         </button>
                         <button 
                           className="ios-dropdown-item"
                           onClick={() => { setIsListConfigOpen(true); setIsMenuOpen(false); }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
                         >
-                          <Settings size={16} />
-                          Personalizar Lista
+                          <Settings size={15} color="var(--text-secondary)" />
+                          <span style={{ whiteSpace: 'nowrap' }}>Personalizar lista</span>
                         </button>
                       </>
                     )}
