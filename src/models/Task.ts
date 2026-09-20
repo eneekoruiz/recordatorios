@@ -25,6 +25,8 @@ export interface CustomList {
   isFolder?: boolean; // Habilita comportamiento de carpeta organizativa (contiene listas/subcarpetas)
   specialType?: 'caducidades' | 'que_he_hecho'; // Tipo especial para comportamiento enriquecido
   updated_at?: string;
+  deleted_at?: string;
+  version?: number;
   _is_dirty?: boolean;
 }
 

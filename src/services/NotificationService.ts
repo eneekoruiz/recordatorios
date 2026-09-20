@@ -91,7 +91,7 @@ export class NotificationService {
     try {
       const notification = new Notification('Recordatorio', {
         body: title,
-        icon: '/vite.svg',
+        icon: '/icons/icon-192.png',
         requireInteraction: true 
       });
 

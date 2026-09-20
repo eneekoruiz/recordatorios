@@ -23,6 +23,8 @@ import { BottomShortcutBar } from './components/layout/BottomShortcutBar';
 import { syncManager } from './sync/syncManager';
 import { TaskSkeletonLoader } from './components/ui/TaskSkeletonLoader';
 import { AIAssistantModal } from './components/ai/AIAssistantModal';
+import { ConfirmHost } from './components/ui/confirmDialog';
+import { SharedListView } from './components/share/SharedListView';
 import type { TaskItem } from './models/Task';
 
 function App() {
@@ -31,18 +33,8 @@ function App() {
   const tasks = useAppStore((state) => state.tasks); // Subscribing to tasks
   const [currentView, setCurrentView] = useState(() => {
     try {
-      const raw = localStorage.getItem('reminders_store');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        const storedTasks = Object.values(parsed?.state?.tasks || {});
-        if (storedTasks.length > 0) {
-          const pendingOnboarding = storedTasks.filter((t: any) => t.categoryId === 'primeros_pasos' && !t.deleted_at && t.status !== 'completed');
-          if (pendingOnboarding.length === 0) {
-            return 'smart_today';
-          }
-        }
-      }
-    } catch {}
+      if (localStorage.getItem('hide_onboarding_guide') === 'true') return 'smart_today';
+    } catch { /* sin almacenamiento */ }
     return 'smart_primeros_pasos';
   });
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -55,6 +47,14 @@ function App() {
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   const [aiInitialPrompt, setAiInitialPrompt] = useState('');
   const hasHydrated = useAppStore((state) => state.hasHydrated);
+  // Enlaces especiales: recuperación de contraseña (?reset=) y lista compartida (?share=)
+  const [resetToken, setResetToken] = useState(() => new URLSearchParams(window.location.search).get('reset'));
+  const [shareToken, setShareToken] = useState(() => new URLSearchParams(window.location.search).get('share'));
+  const clearUrlParam = (param: string) => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete(param);
+    window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+  };
 
   // Global listener for AI Assistant (shortcut Ctrl+J / Cmd+J and custom event)
   useEffect(() => {
@@ -167,19 +167,17 @@ function App() {
   }, [tasks]); // Re-evaluar cuando cambien las tareas
 
   // ── Default lists initialization & Data Hygiene ──────────────────
+  // Se ejecuta una sola vez, cuando los datos locales ya se han cargado de IndexedDB
+  // (antes se lanzaba sobre un estado vacío y su efecto dependía de una carrera).
+  const initDoneRef = useRef(false);
   useEffect(() => {
+    if (!hasHydrated || initDoneRef.current) return;
+    initDoneRef.current = true;
     const state = useAppStore.getState();
     const lists = state.lists;
 
     // Verificar si la guía ya fue ocultada o completada (localmente o en la nube)
-    const onboardingSetting = lists?.find(l => l.id === 'user_preferences_onboarding');
-    let isCloudHidden = false;
-    if (onboardingSetting?.icon) {
-      try {
-        const parsed = JSON.parse(onboardingSetting.icon);
-        isCloudHidden = parsed.hidden || parsed.completed;
-      } catch (e) {}
-    }
+    const isCloudHidden = false; // la preferencia de la nube llega vía User.preferences (hideOnboarding)
     const isLocalHidden = localStorage.getItem('hide_onboarding_guide') === 'true';
 
     // Comprobar si el usuario ya es un usuario con datos reales (tareas o listas personalizadas)
@@ -189,7 +187,7 @@ function App() {
       l.id !== 'primeros_pasos' && 
       l.id !== 'inbox' && 
       !l.id.startsWith('user_preferences_') &&
-      !['compras', 'care', 'quehaceres', 'limpieza', 'limpieza_diaria', 'limpieza_semanal', 'limpieza_mensual', 'limpieza_anual', 'caducidades', 'que_he_hecho'].includes(l.id)
+      !['compras', 'personal', 'trabajo', 'care', 'quehaceres', 'limpieza', 'limpieza_diaria', 'limpieza_semanal', 'limpieza_mensual', 'limpieza_anual', 'caducidades', 'que_he_hecho'].includes(l.id)
     );
     const isEstablishedUser = hasRealTasks || hasCustomLists;
     const isHidden = isLocalHidden || isCloudHidden || isEstablishedUser;
@@ -214,32 +212,30 @@ function App() {
       });
     }
 
+    // Las listas por defecto llevan fecha "epoch": si la cuenta ya tiene esas listas en la nube
+    // (personalizadas), el Last-Write-Wins del servidor conserva las suyas en lugar de estas.
+    const EPOCH = new Date(0).toISOString();
     if (!lists || lists.length === 0) {
       const initial = [
         ...(isHidden ? [] : [{ id: 'primeros_pasos', name: 'Primeros Pasos', color: '#ff2d55', icon: 'rocket', isPinned: false }]),
         { id: 'compras', name: 'Compras', color: '#ff9500', icon: 'shopping-cart' },
-        { id: 'care', name: 'Care', color: '#af52de', icon: 'heart' },
-        { id: 'quehaceres', name: 'Quehaceres', color: '#34c759', icon: 'check-square' },
-        { id: 'limpieza', name: 'Limpieza', color: '#0a84ff', icon: 'folder', isFolder: true },
-        { id: 'limpieza_diaria', name: 'Diaria', color: '#0a84ff', icon: 'list', parentId: 'limpieza' },
-        { id: 'limpieza_semanal', name: 'Semanal', color: '#0a84ff', icon: 'list', parentId: 'limpieza' },
-        { id: 'limpieza_mensual', name: 'Mensual', color: '#0a84ff', icon: 'list', parentId: 'limpieza' },
-        { id: 'limpieza_anual', name: 'Anual', color: '#0a84ff', icon: 'list', parentId: 'limpieza' },
+        { id: 'personal', name: 'Personal', color: '#af52de', icon: 'heart' },
+        { id: 'trabajo', name: 'Trabajo', color: '#0a84ff', icon: 'briefcase' },
         { id: 'caducidades', name: 'Caducidades', color: '#ff9500', icon: 'credit-card' },
         { id: 'que_he_hecho', name: 'Qué he hecho', color: '#5856d6', icon: 'book-open' },
       ];
-      initial.forEach((l) => state.addList(l));
-      state.addListSection({ id: 'sec_tarjetas', listId: 'caducidades', name: 'Tarjetas y Documentos', order: 0 });
-      state.addListSection({ id: 'sec_suscripciones', listId: 'caducidades', name: 'Suscripciones', order: 1 });
+      initial.forEach((l) => state.addList({ ...l, updated_at: EPOCH }));
+      state.addListSection({ id: 'sec_tarjetas', listId: 'caducidades', name: 'Tarjetas y Documentos', order: 0, updated_at: EPOCH });
+      state.addListSection({ id: 'sec_suscripciones', listId: 'caducidades', name: 'Suscripciones', order: 1, updated_at: EPOCH });
     } else {
       if (!lists.some(l => l.id === 'primeros_pasos') && !isHidden) {
-        state.addList({ id: 'primeros_pasos', name: 'Primeros Pasos', color: '#ff2d55', icon: 'rocket', isPinned: false });
+        state.addList({ id: 'primeros_pasos', name: 'Primeros Pasos', color: '#ff2d55', icon: 'rocket', isPinned: false, updated_at: EPOCH });
       }
       if (!lists.some(l => l.id === 'caducidades')) {
-        state.addList({ id: 'caducidades', name: 'Caducidades', color: '#ff9500', icon: 'credit-card' });
+        state.addList({ id: 'caducidades', name: 'Caducidades', color: '#ff9500', icon: 'credit-card', updated_at: EPOCH });
       }
       if (!lists.some(l => l.id === 'que_he_hecho')) {
-        state.addList({ id: 'que_he_hecho', name: 'Qué he hecho', color: '#5856d6', icon: 'book-open' });
+        state.addList({ id: 'que_he_hecho', name: 'Qué he hecho', color: '#5856d6', icon: 'book-open', updated_at: EPOCH });
       }
 
       // Secciones de Caducidades
@@ -249,7 +245,7 @@ function App() {
           id: 'sec_tarjetas',
           listId: 'caducidades',
           name: 'Tarjetas y Documentos',
-          order: 0
+          order: 0, updated_at: EPOCH
         });
       }
       if (!sections.some(s => s.id === 'sec_suscripciones' || (s.listId === 'caducidades' && s.name.toLowerCase().includes('suscrip')))) {
@@ -257,7 +253,7 @@ function App() {
           id: 'sec_suscripciones',
           listId: 'caducidades',
           name: 'Suscripciones',
-          order: 1
+          order: 1, updated_at: EPOCH
         });
       }
 
@@ -272,44 +268,13 @@ function App() {
         { id: 'limpieza_mensual', name: 'Mensual' },
         { id: 'limpieza_anual', name: 'Anual' },
       ];
-      sublists.forEach(sub => {
-        if (!lists.some(l => l.id === sub.id || (l.name === sub.name && l.parentId === 'limpieza'))) {
-          state.addList({ id: sub.id, name: sub.name, color: '#0a84ff', icon: 'list', parentId: 'limpieza' });
-        }
-      });
-    }
-
-    // Hydrate user preferences from settings list objects
-    const cycleSettings = lists.find(l => l.id === 'user_preferences_cycle_visibility');
-    if (cycleSettings?.icon) {
-      try {
-        const parsed = JSON.parse(cycleSettings.icon);
-        useAppStore.setState(prev => ({ cycleVisibility: { ...prev.cycleVisibility, ...parsed } }));
-      } catch (e) {}
-    }
-    const smartSettings = lists.find(l => l.id === 'user_preferences_smart_lists');
-    if (smartSettings?.icon) {
-      try {
-        const parsed = JSON.parse(smartSettings.icon);
-        useAppStore.setState(prev => ({ smartListVisibility: { ...prev.smartListVisibility, ...parsed } }));
-      } catch (e) {}
-    }
-    const pinnedSettings = lists.find(l => l.id === 'user_preferences_pinned_smart_lists');
-    if (pinnedSettings?.icon) {
-      try {
-        const parsed = JSON.parse(pinnedSettings.icon);
-        useAppStore.setState({ pinnedSmartLists: parsed });
-      } catch (e) {}
-    }
-
-    const onboardingSettingFromLists = lists.find(l => l.id === 'user_preferences_onboarding');
-    if (onboardingSettingFromLists?.icon) {
-      try {
-        const parsed = JSON.parse(onboardingSettingFromLists.icon);
-        if (parsed.hidden || parsed.completed) {
-          localStorage.setItem('hide_onboarding_guide', 'true');
-        }
-      } catch (e) {}
+      if (limpiezaList) {
+        sublists.forEach(sub => {
+          if (!lists.some(l => l.id === sub.id || (l.name === sub.name && l.parentId === 'limpieza'))) {
+            state.addList({ id: sub.id, name: sub.name, color: '#0a84ff', icon: 'list', parentId: 'limpieza', updated_at: EPOCH });
+          }
+        });
+      }
     }
 
     // Inicializar tareas de Primeros Pasos si no se ha ocultado la guía
@@ -336,7 +301,7 @@ function App() {
             priority: 'high',
             status: 'pending',
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
+            updated_at: EPOCH,
           },
           {
             id: 'task_onboarding_2',
@@ -346,17 +311,17 @@ function App() {
             priority: 'medium',
             status: 'pending',
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
+            updated_at: EPOCH,
           },
           {
             id: 'task_onboarding_3',
             categoryId: 'primeros_pasos',
             title: 'Activar el Modo Enfoque Zen con Audio',
-            description: 'Pasa el ratón sobre cualquier recordatorio o abre sus opciones (...) y elige "Modo Enfoque Zen".',
+            description: 'Abre las opciones de cualquier recordatorio (clic derecho o pulsación larga) y elige "Modo Enfoque Zen".',
             priority: 'low',
             status: 'pending',
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
+            updated_at: EPOCH,
           },
           {
             id: 'task_onboarding_4',
@@ -366,17 +331,17 @@ function App() {
             priority: 'medium',
             status: 'pending',
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
+            updated_at: EPOCH,
           },
           {
             id: 'task_onboarding_5',
             categoryId: 'primeros_pasos',
-            title: '☁️ Sincronizar en la Nube con PostgreSQL Neon',
-            description: 'Tus tareas se guardan de forma local y se respaldan automáticamente al iniciar sesión.',
+            title: 'Tus recordatorios, en todos tus dispositivos',
+            description: 'Todo se guarda en este dispositivo y, si inicias sesión, se sincroniza solo con tu móvil y tu ordenador.',
             priority: 'none',
             status: 'pending',
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
+            updated_at: EPOCH,
           },
         ];
         defaultTasks.forEach((t) => state.addTask(t));
@@ -384,7 +349,7 @@ function App() {
     }
 
     state.cleanupDataHygiene();
-  }, []);
+  }, [hasHydrated]);
 
   // ── Sync Manager lifecycle and listeners ──────────────────────────
   useEffect(() => {
@@ -503,6 +468,19 @@ function App() {
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Atajo del icono de la PWA: /?action=new abre directamente un recordatorio nuevo.
+  useEffect(() => {
+    if (!token || !hasHydrated) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('action') === 'new') {
+      clearUrlParam('action');
+      setEditingTaskId(null);
+      setDefaultSectionId(undefined);
+      setIsDrawerOpen(true);
+    }
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, hasHydrated]);
+
   useEffect(() => {
     const handleOpenShortcuts = () => setIsShortcutsOpen(true);
     const handleOpenNewTask = () => {
@@ -537,6 +515,20 @@ function App() {
       }}>
         <TaskSkeletonLoader />
       </div>
+    );
+  }
+
+  if (shareToken) {
+    return <SharedListView token={shareToken} onExit={() => { clearUrlParam('share'); setShareToken(null); }} />;
+  }
+
+  if (resetToken) {
+    return (
+      <AuthScreen
+        resetToken={resetToken}
+        onSuccess={() => {}}
+        onResetFinished={() => { clearUrlParam('reset'); setResetToken(null); }}
+      />
     );
   }
 
@@ -618,6 +610,7 @@ function App() {
       <DailyGreetingModal onSelectView={handleSelectView} />
       <ShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
       <BottomShortcutBar />
+      <ConfirmHost />
 
       {globalToast && createPortal(
         <AnimatePresence>

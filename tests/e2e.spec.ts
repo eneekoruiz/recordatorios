@@ -37,11 +37,23 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
     const badLoginRes = await request.post('http://localhost:3001/api/auth/login', {
       data: { email: testEmail, password: 'WrongPassword' }
     });
-    expect(badLoginRes.status()).toBe(400);
+    expect(badLoginRes.status()).toBe(401);
 
-    // Reset password
-    const resetRes = await request.post('http://localhost:3001/api/auth/reset-password', {
+    // El restablecimiento ya NO acepta solo el email (antes permitía secuestrar cuentas)
+    const insecureReset = await request.post('http://localhost:3001/api/auth/reset-password', {
       data: { email: testEmail, newPassword: updatedPassword }
+    });
+    expect(insecureReset.status()).toBe(400);
+
+    // Flujo seguro: solicitar enlace firmado y usarlo
+    const forgotRes = await request.post('http://localhost:3001/api/auth/forgot-password', {
+      data: { email: testEmail }
+    });
+    expect(forgotRes.status()).toBe(200);
+    const { devResetUrl } = await forgotRes.json();
+    const resetToken = new URL(devResetUrl).searchParams.get('reset');
+    const resetRes = await request.post('http://localhost:3001/api/auth/reset-password', {
+      data: { token: resetToken, newPassword: updatedPassword }
     });
     expect(resetRes.status()).toBe(200);
 
@@ -65,7 +77,7 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
       (window as any).useAppStore?.getState()?.setToken('local_offline_token', 'local_guest_e2e');
     });
 
-    const guestBtn = page.locator('button:has-text("Continuar sin cuenta")').first();
+    const guestBtn = page.locator('button:has-text("Usar sin cuenta")').first();
     try {
       await guestBtn.click({ timeout: 1500 });
     } catch {
@@ -174,8 +186,14 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
     const rpcListData = await rpcListRes.json();
     expect(rpcListData.result.tools.length).toBeGreaterThanOrEqual(4);
 
+    // tools/call requiere sesión
+    const mcpEmail = `mcp_${Date.now()}@example.com`;
+    const reg = await request.post('http://localhost:3001/api/auth/register', { data: { email: mcpEmail, password: 'Password123!' } });
+    const { token: mcpToken } = await reg.json();
+
     // Test POST /api/mcp JSON-RPC tools/call create_reminders
     const rpcCallRes = await request.post('http://localhost:3001/api/mcp', {
+      headers: { Authorization: `Bearer ${mcpToken}` },
       data: {
         jsonrpc: '2.0',
         id: 102,
@@ -815,6 +833,8 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
 
   // 20. Top Navigation: Back button in header takes user back to lists
   test('20. Top Navigation: Back button in header takes user back to lists', async ({ page }) => {
+    // En escritorio la barra lateral siempre está visible; el botón «Listas» es de la vista móvil.
+    await page.setViewportSize({ width: 390, height: 844 });
     await ensureAppUnlocked(page);
     await page.waitForLoadState('networkidle');
 
@@ -834,8 +854,7 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
     await page.waitForTimeout(300);
 
     // Verify app-container transitioned to sidebar view or sidebar is visible
-    const sidebar = page.locator('.sidebar');
-    await expect(sidebar).toBeVisible();
+    await expect(page.locator('.ios-smart-card').first()).toBeVisible();
   });
 
   // 21. Custom Special List: Creating a list named Caducidades auto-configures sections & metrics

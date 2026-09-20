@@ -1,102 +1,120 @@
 import { useAppStore } from '../store/useAppStore';
-import type { TaskItem } from '../models/Task';
+import type { CustomList, CustomCycle, ListSection } from '../models/Task';
+import {
+  mergeServerTasks,
+  mergeServerCollection,
+  clearDirtyIfUnchanged,
+  reconcileTasks,
+  normalizeServerTask,
+  serverWins,
+  chunk,
+} from './merge';
 
-// Always use relative URLs so they work on any domain (avoids ERR_NAME_NOT_RESOLVED from stale VITE_API_URL)
-// Dynamically resolve API URL so mobile devices on LAN connect to the correct host
-const isDev = import.meta.env.DEV;
+// En producción se usan URLs relativas (mismo dominio). En desarrollo, el backend corre en :3001
+// del mismo host para que los móviles de la red local también puedan conectarse.
 const getApiBase = () => {
-  if (!isDev) return '';
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (!import.meta.env.DEV) return '';
   if (typeof window !== 'undefined' && window.location.hostname) {
     return `http://${window.location.hostname}:3001`;
   }
   return 'http://localhost:3001';
 };
-const PULL_URL = () => `${getApiBase()}/api/sync/pull`;
-const PUSH_URL = () => `${getApiBase()}/api/sync/push`;
-const LIVE_URL = () => `${getApiBase()}/api/sync/live`;
-const SYNC_INTERVAL_MS = 30 * 1000; // 30 seconds
+export const apiUrl = (path: string) => `${getApiBase()}${path}`;
+
+const SYNC_INTERVAL_MS = 30 * 1000;
+const PUSH_CHUNK_SIZE = 400;
+const SETTINGS_LIST_PREFIX = 'user_preferences_';
+
+export const isOfflineToken = (token: string | null | undefined) =>
+  !token || token.startsWith('local_offline') || token.startsWith('offline_');
+
+class AuthExpiredError extends Error {}
+
+type Syncable = { id: string; updated_at?: string; version?: number; _is_dirty?: boolean };
 
 class SyncManager {
-  private syncInterval: any = null;
+  private syncInterval: ReturnType<typeof setInterval> | null = null;
   private isSyncing = false;
-  private isOnline = navigator.onLine;
+  private pendingResync = false;
+  private isOnline = typeof navigator === 'undefined' ? true : navigator.onLine;
   private eventSource: EventSource | null = null;
-  private debounceTimeout: any = null;
-
-  triggerDebouncedSync() {
-    if (this.debounceTimeout) {
-      clearTimeout(this.debounceTimeout);
-    }
-    this.debounceTimeout = setTimeout(() => {
-      this.syncNow();
-    }, 1000); // 1-second debounce to group batch edits
-  }
+  private realtimeUnsupported = false;
+  private realtimeFailures = 0;
+  private debounceTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
+    if (typeof window === 'undefined') return;
     window.addEventListener('online', () => {
       this.isOnline = true;
-      const token = useAppStore.getState().token;
-      if (token && !this.eventSource) {
-        this.setupRealtime(token);
-      }
       this.syncNow();
     });
     window.addEventListener('offline', () => {
       this.isOnline = false;
       useAppStore.getState().setSyncStatus('offline');
     });
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && this.isOnline) {
-        this.syncNow();
-      }
-    });
+  }
+
+  triggerDebouncedSync() {
+    if (this.debounceTimeout) clearTimeout(this.debounceTimeout);
+    this.debounceTimeout = setTimeout(() => this.syncNow(), 1000);
   }
 
   start() {
     if (this.syncInterval) return;
-    this.syncInterval = setInterval(() => this.syncNow(), SYNC_INTERVAL_MS);
-    this.syncNow(true); // Full authoritative reconciliation on app launch
+    this.syncInterval = setInterval(() => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') this.syncNow();
+    }, SYNC_INTERVAL_MS);
+    this.syncNow(true); // reconciliación completa al abrir la app
   }
 
   stop() {
-    if (this.syncInterval) {
-      clearInterval(this.syncInterval);
-      this.syncInterval = null;
+    if (this.syncInterval) clearInterval(this.syncInterval);
+    this.syncInterval = null;
+    this.eventSource?.close();
+    this.eventSource = null;
+  }
+
+  /** Gestiona la respuesta común: renovación de token y sesión caducada. */
+  private handleAuth(response: Response) {
+    const refreshed = response.headers.get('X-Refreshed-Token');
+    if (refreshed) {
+      const { userId } = useAppStore.getState();
+      useAppStore.getState().setToken(refreshed, userId);
     }
-    if (this.eventSource) {
-      this.eventSource.close();
-      this.eventSource = null;
+    if (response.status === 401 || response.status === 403) {
+      useAppStore.getState().expireSession();
+      throw new AuthExpiredError('Sesión caducada');
     }
   }
 
   private setupRealtime(token: string) {
-    if (!token || token.startsWith('local_offline') || token.startsWith('offline_')) {
-      return;
-    }
+    if (this.realtimeUnsupported || isOfflineToken(token) || typeof EventSource === 'undefined') return;
+    this.eventSource?.close();
 
-    if (this.eventSource) {
-      this.eventSource.close();
-    }
+    const source = new EventSource(`${apiUrl('/api/sync/live')}?token=${encodeURIComponent(token)}`);
+    this.eventSource = source;
+    let opened = false;
 
-    const url = `${LIVE_URL()}?token=${encodeURIComponent(token)}`;
-    this.eventSource = new EventSource(url);
-
-    this.eventSource.onmessage = (event) => {
-      if (event.data === 'check_sync') {
-        this.pull(token).catch(err => console.error('Silent pull failed:', err));
-      }
+    source.onopen = () => {
+      opened = true;
+      this.realtimeFailures = 0;
     };
-
-    this.eventSource.onerror = () => {
-      this.eventSource?.close();
-      this.eventSource = null;
-      // Reconnect after 5s if still logged in
+    source.onmessage = (event) => {
+      if (event.data === 'check_sync') this.syncNow();
+    };
+    source.onerror = () => {
+      source.close();
+      if (this.eventSource === source) this.eventSource = null;
+      // Un 204 (servidor sin tiempo real, p. ej. Vercel) cierra sin llegar a abrir: dejamos de insistir.
+      if (!opened) this.realtimeFailures += 1;
+      if (this.realtimeFailures >= 2) {
+        this.realtimeUnsupported = true;
+        return;
+      }
       setTimeout(() => {
-        const currentToken = useAppStore.getState().token;
-        if (currentToken && this.isOnline && !currentToken.startsWith('local_offline') && !currentToken.startsWith('offline_')) {
-          this.setupRealtime(currentToken);
-        }
+        const current = useAppStore.getState().token;
+        if (current && this.isOnline && !isOfflineToken(current) && !this.eventSource) this.setupRealtime(current);
       }, 5000);
     };
   }
@@ -106,316 +124,251 @@ class SyncManager {
       useAppStore.getState().setSyncStatus('offline');
       return;
     }
-    if (this.isSyncing) return;
     const { token } = useAppStore.getState();
-    if (!token || token.startsWith('local_offline') || token.startsWith('offline_')) {
+    if (!token || isOfflineToken(token)) {
       useAppStore.getState().setSyncStatus('idle');
       return;
     }
-
-    if (!this.eventSource) {
-      this.setupRealtime(token);
+    if (this.isSyncing) {
+      // Llegan cambios mientras sincronizamos: repetir al terminar.
+      this.pendingResync = true;
+      return;
     }
+
+    if (!this.eventSource) this.setupRealtime(token);
 
     this.isSyncing = true;
     useAppStore.getState().setSyncStatus('syncing');
-
     try {
       await this.push(token);
-      await this.pull(token, forceFullPull);
+      await this.pull(useAppStore.getState().token || token, forceFullPull);
       useAppStore.getState().setSyncStatus('synced');
       useAppStore.getState().setLastSyncedAt(Date.now());
     } catch (error) {
-      console.error('Sync failed:', error);
+      if (!(error instanceof AuthExpiredError)) console.error('Sync failed:', error);
       useAppStore.getState().setSyncStatus('error');
     } finally {
       this.isSyncing = false;
+      if (this.pendingResync) {
+        this.pendingResync = false;
+        this.triggerDebouncedSync();
+      }
     }
+  }
+
+  /** ¿Quedan cambios locales sin subir? */
+  hasPendingChanges() {
+    const s = useAppStore.getState();
+    return (
+      !!s._preferences_dirty ||
+      s.tombstones.lists.length > 0 ||
+      s.tombstones.cycles.length > 0 ||
+      s.lists.some((l) => l._is_dirty) ||
+      s.cycles.some((c) => c._is_dirty) ||
+      (s.listSections || []).some((x) => x._is_dirty) ||
+      Object.values(s.tasks).some((t) => t._is_dirty)
+    );
   }
 
   private async push(token: string) {
     const state = useAppStore.getState();
-    const tasks = Object.values(state.tasks).filter(t => t._is_dirty);
-    const cycles = state.cycles.filter((c: any) => c._is_dirty);
-    const lists = state.lists.filter((l: any) => l._is_dirty);
-    const listSections = (state.listSections || []).filter((s: any) => s._is_dirty);
-    const hasDirtyPrefs = !!(state as any)._preferences_dirty;
+    const tasks = Object.values(state.tasks).filter((t) => t._is_dirty);
+    const cycles = state.cycles.filter((c) => c._is_dirty);
+    const lists = state.lists.filter((l) => l._is_dirty && !l.id.startsWith(SETTINGS_LIST_PREFIX));
+    const listSections = (state.listSections || []).filter((s) => s._is_dirty);
+    const tombstones = state.tombstones || { lists: [], cycles: [] };
+    const hasDirtyPrefs = !!state._preferences_dirty;
 
-    if (tasks.length === 0 && cycles.length === 0 && lists.length === 0 && listSections.length === 0 && !hasDirtyPrefs) return;
+    const allLists = [...lists, ...tombstones.lists];
+    const allCycles = [...cycles, ...tombstones.cycles];
+    if (!tasks.length && !allCycles.length && !allLists.length && !listSections.length && !hasDirtyPrefs) return;
 
-    // Build preferences payload if dirty
-    const preferences = hasDirtyPrefs ? {
-      smartListVisibility: state.smartListVisibility,
-      pinnedSmartLists: state.pinnedSmartLists,
-      cycleVisibility: state.cycleVisibility,
-      hideOnboarding: localStorage.getItem('hide_onboarding_guide') === 'true'
-    } : undefined;
+    const preferences = hasDirtyPrefs
+      ? {
+          smartListVisibility: state.smartListVisibility,
+          pinnedSmartLists: state.pinnedSmartLists,
+          cycleVisibility: state.cycleVisibility,
+          hideOnboarding: safeLocalStorageGet('hide_onboarding_guide') === 'true',
+        }
+      : undefined;
 
-    // Send payload to backend
-    const response = await fetch(PUSH_URL(), {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ tasks, cycles, lists, listSections, preferences })
+    // Listas, ciclos y secciones viajan en la primera petición; las tareas, en lotes.
+    const taskChunks = tasks.length ? chunk(tasks, PUSH_CHUNK_SIZE) : [[]];
+    const staleTasks: any[] = [];
+    let staleLists: any[] = [];
+    let staleCycles: any[] = [];
+    let staleSections: any[] = [];
+
+    for (let i = 0; i < taskChunks.length; i++) {
+      const first = i === 0;
+      const body = first
+        ? { tasks: taskChunks[i], cycles: allCycles, lists: allLists, listSections, preferences }
+        : { tasks: taskChunks[i] };
+      const response = await fetch(apiUrl('/api/sync/push'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      });
+      this.handleAuth(response);
+      if (!response.ok) throw new Error(`Push failed (${response.status})`);
+      const data = await response.json().catch(() => ({}));
+      if (data?.stale?.tasks) staleTasks.push(...data.stale.tasks);
+      if (first) {
+        staleLists = data?.stale?.lists || [];
+        staleCycles = data?.stale?.cycles || [];
+        staleSections = data?.stale?.listSections || [];
+      }
+    }
+
+    // Marcar como sincronizado solo lo que no cambió mientras la petición estaba en vuelo.
+    useAppStore.setState((current) => {
+      const nextTasks = { ...current.tasks };
+      for (const sent of tasks) {
+        const cleared = clearDirtyIfUnchanged(current.tasks[sent.id], sent);
+        if (cleared) nextTasks[sent.id] = cleared;
+      }
+      // El servidor conservaba una versión más nueva: la adoptamos.
+      for (const raw of staleTasks) {
+        const local = nextTasks[raw.id];
+        if (!local || !local._is_dirty || serverWins(raw, local)) nextTasks[raw.id] = normalizeServerTask(raw);
+      }
+
+      const clearArray = <T extends Syncable>(arr: T[], sent: T[]): T[] => {
+        if (!sent.length) return arr;
+        const sentById = new Map(sent.map((s) => [s.id, s]));
+        return arr.map((item) => {
+          const s = sentById.get(item.id);
+          return (s && clearDirtyIfUnchanged(item, s)) || item;
+        });
+      };
+
+      const nextLists = mergeServerCollection(clearArray(current.lists, lists), staleLists).items;
+      const nextCycles = mergeServerCollection(clearArray(current.cycles, cycles), staleCycles).items;
+      const nextSections = mergeServerCollection(clearArray(current.listSections || [], listSections), staleSections).items;
+
+      const sentTombLists = new Set(tombstones.lists.map((t) => t.id));
+      const sentTombCycles = new Set(tombstones.cycles.map((t) => t.id));
+
+      return {
+        tasks: nextTasks,
+        lists: nextLists,
+        cycles: nextCycles,
+        listSections: nextSections,
+        tombstones: {
+          lists: current.tombstones.lists.filter((t) => !sentTombLists.has(t.id)),
+          cycles: current.tombstones.cycles.filter((t) => !sentTombCycles.has(t.id)),
+        },
+        ...(hasDirtyPrefs ? { _preferences_dirty: false } : {}),
+      };
     });
-
-    if (response.status === 401 || response.status === 403) {
-      console.warn('Sync auth expired, logging out to prompt re-login');
-      useAppStore.getState().logout();
-      throw new Error('Auth expired');
-    }
-    if (!response.ok) throw new Error(`Push failed (${response.status})`);
-
-    // Remove dirty flag locally
-    const updatedTasks = tasks.map(t => ({ ...t, _is_dirty: false }));
-    updatedTasks.forEach(t => state.updateTaskRaw(t));
-    
-    if (cycles.length > 0) {
-      cycles.forEach((c: any) => {
-        state.updateCycle(c.id, { _is_dirty: false } as any);
-      });
-    }
-    
-    if (lists.length > 0) {
-      lists.forEach((l: any) => {
-        state.updateList(l.id, { _is_dirty: false });
-      });
-    }
-
-    if (listSections.length > 0) {
-      const allSections = state.listSections || [];
-      const newSections = allSections.map((s: any) => 
-        listSections.find((dirty: any) => dirty.id === s.id) ? { ...s, _is_dirty: false } : s
-      );
-      useAppStore.setState({ listSections: newSections });
-    }
-
-    // Clear preferences dirty flag
-    if (hasDirtyPrefs) {
-      useAppStore.setState({ _preferences_dirty: false } as any);
-    }
   }
 
   private async pull(token: string, forceFullPull = false) {
     const state = useAppStore.getState();
-    // Use userId if available; fall back to a hash of the token itself to avoid
-    // all devices sharing a single 'sync_token_null' key and missing all server data.
-    const resolvedUserId = (state as any).userId || token.slice(-16);
-    const tokenKey = 'sync_token_' + resolvedUserId;
-    // If the stored key was previously null-based, reset it so we do a full pull
-    const legacyKey = 'sync_token_null';
-    if (localStorage.getItem(legacyKey)) {
-      localStorage.removeItem(legacyKey);
-    }
+    const tokenKey = `sync_token_${state.userId || token.slice(-16)}`;
     const isLocalEmpty = Object.keys(state.tasks).length === 0;
-    const lastToken = (forceFullPull || isLocalEmpty) ? '0' : (localStorage.getItem(tokenKey) || '0');
+    const lastToken = forceFullPull || isLocalEmpty ? '0' : safeLocalStorageGet(tokenKey) || '0';
 
-    const pullUrl = PULL_URL();
-    const url = new URL(pullUrl, window.location.origin);
-    url.searchParams.append('lastToken', lastToken);
-
-    const response = await fetch(url.toString(), {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    if (response.status === 401 || response.status === 403) {
-      console.warn('Sync auth expired, logging out to prompt re-login');
-      useAppStore.getState().logout();
-      throw new Error('Auth expired');
-    }
+    const url = new URL(apiUrl('/api/sync/pull'), window.location.origin);
+    url.searchParams.set('lastToken', lastToken);
+    const response = await fetch(url.toString(), { headers: { Authorization: `Bearer ${token}` } });
+    this.handleAuth(response);
     if (!response.ok) throw new Error(`Pull failed (${response.status})`);
-
     const data = await response.json();
-    
-    // Upsert pulled data into Zustand
-    if (data.tasks && Array.isArray(data.tasks)) {
-      data.tasks.forEach((rawTask: any) => {
-        // Normalize legacy snake_case fields from server payload
-        const serverTask: TaskItem = {
-          ...rawTask,
-          categoryId: rawTask.categoryId || rawTask.category_id || undefined,
-          sectionId: rawTask.sectionId || rawTask.section_id || undefined,
-          cycle_id: rawTask.cycle_id || rawTask.cycleId || undefined,
-        };
-        const localTask = state.tasks[serverTask.id];
-        // Last Write Wins (Version-based first, fallback to timestamp)
-        if (!localTask || 
-            (serverTask.version || 0) > (localTask.version || 0) || 
-            ((serverTask.version || 0) === (localTask.version || 0) && new Date(serverTask.updated_at).getTime() >= new Date(localTask.updated_at).getTime())) {
-           state.updateTaskRaw({ ...serverTask, _is_dirty: false });
-        }
-      });
-    }
 
-    // Ingest lists
-    if (data.lists && Array.isArray(data.lists)) {
-      data.lists.forEach((serverList: any) => {
-        if (serverList.id === 'user_preferences_smart_lists') {
-          try {
-            const parsed = JSON.parse(serverList.icon);
-            useAppStore.setState({ smartListVisibility: parsed });
-          } catch (e) {
-            console.error('Failed to parse smart list visibility:', e);
-          }
-          return;
-        }
+    useAppStore.setState((current) => {
+      const update: Record<string, unknown> = {};
+      const isSettings = (l: any) => typeof l?.id === 'string' && l.id.startsWith(SETTINGS_LIST_PREFIX);
 
-        if (serverList.id === 'user_preferences_pinned_smart_lists') {
-          try {
-            const parsed = JSON.parse(serverList.icon);
-            useAppStore.setState({ pinnedSmartLists: parsed });
-          } catch (e) {
-            console.error('Failed to parse pinned smart lists:', e);
-          }
-          return;
-        }
+      // Tareas
+      let tasks = current.tasks;
+      if (Array.isArray(data.tasks) && data.tasks.length) tasks = mergeServerTasks(tasks, data.tasks).tasks;
+      if (Array.isArray(data.activeTaskIds)) {
+        const incomingIds = new Set<string>((data.tasks || []).map((t: any) => t.id));
+        tasks = reconcileTasks(tasks, data.activeTaskIds, incomingIds).tasks;
+      }
+      if (tasks !== current.tasks) update.tasks = tasks;
 
-        if (serverList.id === 'user_preferences_cycle_visibility') {
-          try {
-            const parsed = JSON.parse(serverList.icon);
-            useAppStore.setState({ cycleVisibility: parsed });
-          } catch (e) {
-            console.error('Failed to parse cycle visibility:', e);
-          }
-          return;
-        }
+      // Listas (los antiguos registros de ajustes "user_preferences_*" se ignoran)
+      let lists = current.lists;
+      if (Array.isArray(data.lists) && data.lists.length) {
+        lists = mergeServerCollection<CustomList>(lists, data.lists, { skip: isSettings }).items;
+      }
+      if (Array.isArray(data.activeListIds)) {
+        const active = new Set<string>(data.activeListIds);
+        const filtered = lists.filter((l) => l._is_dirty || active.has(l.id) || isSettings(l));
+        if (filtered.length !== lists.length) lists = filtered;
+      }
+      if (lists !== current.lists) update.lists = lists;
 
-        if (serverList.id === 'user_preferences_onboarding') {
-          try {
-            const parsed = JSON.parse(serverList.icon);
-            if (parsed.hidden || parsed.completed) {
-              localStorage.setItem('hide_onboarding_guide', 'true');
-            }
-          } catch (e) {
-            console.error('Failed to parse onboarding settings:', e);
-          }
-          return;
-        }
-
-        const localList = state.lists.find(l => l.id === serverList.id);
-        if (!localList) {
-          state.addList({ ...serverList, _is_dirty: false });
-        } else if (!localList.updated_at || new Date(serverList.updated_at).getTime() > new Date(localList.updated_at).getTime()) {
-          state.updateList(serverList.id, { ...serverList, _is_dirty: false });
-        }
-      });
-    }
-
-    // Ingest cycles
-    if (data.cycles && Array.isArray(data.cycles)) {
-      data.cycles.forEach((serverCycle: any) => {
-        const localCycle = state.cycles.find(c => c.id === serverCycle.id);
-        if (!localCycle) {
-          state.addCycle({ ...serverCycle, _is_dirty: false });
-        } else if (!localCycle.updated_at || new Date(serverCycle.updated_at).getTime() > new Date(localCycle.updated_at).getTime()) {
-          state.updateCycle(serverCycle.id, { ...serverCycle, _is_dirty: false });
-        }
-      });
-    }
-
-    // Ingest listSections
-    if (data.listSections && Array.isArray(data.listSections)) {
-      data.listSections.forEach((serverSection: any) => {
-        const currentSections = useAppStore.getState().listSections || [];
-        const localSection = currentSections.find(s => s.id === serverSection.id);
-        if (!localSection) {
-          useAppStore.setState({ listSections: [...currentSections, { ...serverSection, _is_dirty: false }] });
-        } else if (!localSection.updated_at || new Date(serverSection.updated_at).getTime() > new Date(localSection.updated_at).getTime()) {
-          useAppStore.setState({
-            listSections: currentSections.map(s => s.id === serverSection.id ? { ...serverSection, _is_dirty: false } : s)
-          });
-        }
-      });
-    }
-
-    // Authoritative Reconciliation: Purge deleted/ghost records that no longer exist on server
-    if (data.activeTaskIds && Array.isArray(data.activeTaskIds)) {
-      const activeTaskSet = new Set(data.activeTaskIds);
-      const incomingTaskIds = new Set((data.tasks || []).map((t: any) => t.id));
-      const currentTasks = useAppStore.getState().tasks;
-      let tasksChanged = false;
-      const reconciledTasks = { ...currentTasks };
-
-      for (const [id, localTask] of Object.entries(currentTasks)) {
-        // If local task is clean and not active on server:
-        if (!localTask._is_dirty && !activeTaskSet.has(id)) {
-          // If server didn't send it in this batch as soft-deleted, it was permanently deleted
-          if (!incomingTaskIds.has(id)) {
-            delete reconciledTasks[id];
-            tasksChanged = true;
-          }
-        }
+      // Ciclos
+      if (Array.isArray(data.cycles) && data.cycles.length) {
+        const merged = mergeServerCollection<CustomCycle>(current.cycles, data.cycles);
+        if (merged.changed) update.cycles = [...merged.items].sort((a, b) => a.daysValue - b.daysValue);
       }
 
-      if (tasksChanged) {
-        useAppStore.setState({ tasks: reconciledTasks });
+      // Secciones
+      const currentSections = current.listSections || [];
+      let sections = currentSections;
+      if (Array.isArray(data.listSections) && data.listSections.length) {
+        sections = mergeServerCollection<ListSection>(sections, data.listSections).items;
       }
-    }
-
-    if (data.activeListIds && Array.isArray(data.activeListIds)) {
-      const activeListSet = new Set(data.activeListIds);
-      const currentLists = useAppStore.getState().lists;
-      const reconciledLists = currentLists.filter(l => 
-        (l as any)._is_dirty || 
-        activeListSet.has(l.id) || 
-        l.id.startsWith('user_preferences_')
-      );
-      if (reconciledLists.length !== currentLists.length) {
-        useAppStore.setState({ lists: reconciledLists });
+      if (Array.isArray(data.activeSectionIds)) {
+        const active = new Set<string>(data.activeSectionIds);
+        const filtered = sections.filter((s) => s._is_dirty || active.has(s.id));
+        if (filtered.length !== sections.length) sections = filtered;
       }
-    }
+      if (sections !== currentSections) update.listSections = sections;
 
-    if (data.activeSectionIds && Array.isArray(data.activeSectionIds)) {
-      const activeSectionSet = new Set(data.activeSectionIds);
-      const currentSections = useAppStore.getState().listSections || [];
-      const reconciledSections = currentSections.filter(s => (s as any)._is_dirty || activeSectionSet.has(s.id));
-      if (reconciledSections.length !== currentSections.length) {
-        useAppStore.setState({ listSections: reconciledSections });
-      }
-    }
-
-    // Ingest user preferences from dedicated User.preferences column
-    if (data.preferences && typeof data.preferences === 'object') {
+      // Preferencias (columna User.preferences); los cambios locales pendientes tienen prioridad.
       const prefs = data.preferences;
-      const prefsUpdate: any = {};
-      if (prefs.smartListVisibility && typeof prefs.smartListVisibility === 'object') {
-        prefsUpdate.smartListVisibility = { ...useAppStore.getState().smartListVisibility, ...prefs.smartListVisibility };
+      if (prefs && typeof prefs === 'object' && !current._preferences_dirty) {
+        if (prefs.smartListVisibility && typeof prefs.smartListVisibility === 'object') {
+          update.smartListVisibility = { ...current.smartListVisibility, ...prefs.smartListVisibility };
+        }
+        if (Array.isArray(prefs.pinnedSmartLists)) update.pinnedSmartLists = prefs.pinnedSmartLists;
+        if (prefs.cycleVisibility && typeof prefs.cycleVisibility === 'object') {
+          update.cycleVisibility = { ...current.cycleVisibility, ...prefs.cycleVisibility };
+        }
+        if (prefs.hideOnboarding) safeLocalStorageSet('hide_onboarding_guide', 'true');
       }
-      if (Array.isArray(prefs.pinnedSmartLists)) {
-        prefsUpdate.pinnedSmartLists = prefs.pinnedSmartLists;
-      }
-      if (prefs.cycleVisibility && typeof prefs.cycleVisibility === 'object') {
-        prefsUpdate.cycleVisibility = { ...useAppStore.getState().cycleVisibility, ...prefs.cycleVisibility };
-      }
-      if (prefs.hideOnboarding) {
-        try { localStorage.setItem('hide_onboarding_guide', 'true'); } catch {}
-      }
-      if (Object.keys(prefsUpdate).length > 0) {
-        useAppStore.setState(prefsUpdate);
-      }
-    }
 
-    if (data.serverTime) {
-      const resolvedUserIdForSave = (useAppStore.getState() as any).userId || token.slice(-16);
-      localStorage.setItem('sync_token_' + resolvedUserIdForSave, data.serverTime.toString());
-    }
+      return update;
+    });
+
+    if (data.serverTime) safeLocalStorageSet(tokenKey, String(data.serverTime));
+  }
+}
+
+function safeLocalStorageGet(key: string) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+function safeLocalStorageSet(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    /* almacenamiento no disponible */
   }
 }
 
 export const syncManager = new SyncManager();
 
-// Automatically trigger sync when CRUD changes flags an item as _is_dirty
-useAppStore.subscribe((state) => {
-  const hasDirtyTasks = Object.values(state.tasks).some(t => t._is_dirty);
-  const hasDirtyCycles = state.cycles.some((c: any) => c._is_dirty);
-  const hasDirtyLists = state.lists.some((l: any) => l._is_dirty);
-  const hasDirtySections = (state.listSections || []).some((s: any) => s._is_dirty);
-  const hasDirtyPrefs = !!(state as any)._preferences_dirty;
-
-  if (hasDirtyTasks || hasDirtyCycles || hasDirtyLists || hasDirtySections || hasDirtyPrefs) {
-    syncManager.triggerDebouncedSync();
+// Sincroniza automáticamente cuando alguna colección cambia y contiene cambios pendientes.
+useAppStore.subscribe((state, prev) => {
+  if (
+    state.tasks === prev.tasks &&
+    state.lists === prev.lists &&
+    state.cycles === prev.cycles &&
+    state.listSections === prev.listSections &&
+    state.tombstones === prev.tombstones &&
+    state._preferences_dirty === prev._preferences_dirty
+  ) {
+    return;
   }
+  if (syncManager.hasPendingChanges()) syncManager.triggerDebouncedSync();
 });
+

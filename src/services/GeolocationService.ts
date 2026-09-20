@@ -105,7 +105,7 @@ export class GeolocationService {
       if (Notification.permission === 'granted') {
         new Notification('Has llegado a tu destino', {
           body: title,
-          icon: '/vite.svg',
+          icon: '/icons/icon-192.png',
           requireInteraction: true
         });
       }

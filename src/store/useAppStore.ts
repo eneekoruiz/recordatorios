@@ -47,6 +47,8 @@ interface AppState {
   pinnedSmartLists: string[];
   cycleVisibility: Record<string, boolean>;
   _preferences_dirty?: boolean;
+  /** Borrados de listas/ciclos pendientes de comunicar al servidor. */
+  tombstones: { lists: CustomList[]; cycles: CustomCycle[] };
   
   toggleSmartList: (listId: string) => void;
   togglePinSmartList: (listId: string) => void;
@@ -69,8 +71,8 @@ interface AppState {
 
   addList: (list: CustomList) => void;
   updateList: (id: string, data: Partial<CustomList>) => void;
-  deleteList: (id: string) => void;
-  removeList: (id: string) => void;
+  deleteList: (id: string) => { lists: number; tasks: number; undo: () => void };
+  removeList: (id: string) => { lists: number; tasks: number; undo: () => void };
 
   addListSection: (section: ListSection) => void;
   updateListSection: (id: string, name: string) => void;
@@ -104,6 +106,9 @@ interface AppState {
   setTheme: (theme: 'light' | 'dark') => void;
   toggleTheme: () => void;
   logout: () => void;
+  /** La sesión caducó: se pide login de nuevo pero se conservan los datos locales. */
+  expireSession: () => void;
+  sessionExpired: boolean;
   cleanupDataHygiene: () => void;
 }
 
@@ -114,6 +119,8 @@ export const useAppStore = create<AppState>()(
       cycles: INITIAL_CYCLES,
       lists: INITIAL_LISTS,
       listSections: [],
+      tombstones: { lists: [], cycles: [] },
+      sessionExpired: false,
       token: null,
       userId: null,
       syncStatus: 'idle',
@@ -142,7 +149,30 @@ export const useAppStore = create<AppState>()(
       cycleVisibility: {},  // All hidden by default; auto-activates when a task with that cycle_id is created
       globalCyclesEnabled: false,
 
-      setToken: (token, userId) => set({ token, userId }),
+      setToken: (token, userId) => {
+        const prevUserId = get().userId;
+        const isRealUser = (id: string | null) => !!id && !id.startsWith('local_guest');
+        // Si otra cuenta real inicia sesión en este dispositivo, no mezclamos sus datos.
+        if (isRealUser(prevUserId) && isRealUser(userId) && prevUserId !== userId) {
+          try {
+            localStorage.removeItem('sync_token_' + prevUserId);
+          } catch { /* sin almacenamiento */ }
+          set({
+            token,
+            userId,
+            sessionExpired: false,
+            tasks: {},
+            lists: INITIAL_LISTS,
+            cycles: INITIAL_CYCLES,
+            listSections: [],
+            tombstones: { lists: [], cycles: [] },
+            _preferences_dirty: false,
+          });
+          return;
+        }
+        set({ token, userId, sessionExpired: false });
+      },
+      expireSession: () => set({ token: null, sessionExpired: true }),
       logout: () => {
         // Clear sync token from localStorage before wiping state
         const currentUserId = useAppStore.getState().userId;
@@ -157,6 +187,9 @@ export const useAppStore = create<AppState>()(
           lists: INITIAL_LISTS,
           cycles: INITIAL_CYCLES,
           listSections: [],
+          tombstones: { lists: [], cycles: [] },
+          sessionExpired: false,
+          _preferences_dirty: false,
         });
       },
       hasHydrated: false,
@@ -164,135 +197,50 @@ export const useAppStore = create<AppState>()(
 
       toggleGlobalCycles: () => set((state: any) => ({ globalCyclesEnabled: !state.globalCyclesEnabled })),
 
-      togglePinSmartList: (listId) => optimisticUpdate(get, set, (state: any) => {
+      togglePinSmartList: (listId) => optimisticUpdate(get, set, (state) => {
         const currentPinned = state.pinnedSmartLists || [];
-        const isPinned = currentPinned.includes(listId);
-        const newPinned = isPinned
+        const pinnedSmartLists = currentPinned.includes(listId)
           ? currentPinned.filter((id: string) => id !== listId)
           : [...currentPinned, listId];
-
-        // Guardar como registro de configuración en la nube para sincronización entre dispositivos
-        const settingsId = 'user_preferences_pinned_smart_lists';
-        const existingSettings = state.lists.find((l: any) => l.id === settingsId);
-        const updatedList: any = {
-          id: settingsId,
-          name: 'Settings Pinned',
-          color: '#000000',
-          icon: JSON.stringify(newPinned),
-          _is_dirty: true,
-          updated_at: new Date().toISOString()
-        };
-
-        const newLists = existingSettings
-          ? state.lists.map((l: any) => l.id === settingsId ? updatedList : l)
-          : [...state.lists, updatedList];
-
-        return {
-          pinnedSmartLists: newPinned,
-          lists: newLists,
-          _preferences_dirty: true
-        };
+        return { pinnedSmartLists, _preferences_dirty: true };
       }),
 
-      toggleSmartList: (listId) => optimisticUpdate(get, set, (state: any) => {
-        const newVisibility = {
-          ...state.smartListVisibility,
-          [listId]: !state.smartListVisibility[listId]
-        };
-        
-        // Save to lists as a settings record so it syncs
-        const settingsId = 'user_preferences_smart_lists';
-        const existingSettings = state.lists.find((l: any) => l.id === settingsId);
-        const updatedList: any = {
-          id: settingsId,
-          name: 'Settings',
-          color: '#000000',
-          icon: JSON.stringify(newVisibility),
-          _is_dirty: true,
-          updated_at: new Date().toISOString()
-        };
-        
-        const newLists = existingSettings
-          ? state.lists.map((l: any) => l.id === settingsId ? updatedList : l)
-          : [...state.lists, updatedList];
+      toggleSmartList: (listId) => optimisticUpdate(get, set, (state) => ({
+        smartListVisibility: { ...state.smartListVisibility, [listId]: !state.smartListVisibility[listId] },
+        _preferences_dirty: true,
+      })),
 
-        return {
-          smartListVisibility: newVisibility,
-          lists: newLists,
-          _preferences_dirty: true
-        };
-      }),
+      toggleCycleVisibility: (cycleId) => optimisticUpdate(get, set, (state) => ({
+        cycleVisibility: { ...state.cycleVisibility, [cycleId]: !state.cycleVisibility[cycleId] },
+        _preferences_dirty: true,
+      })),
 
-      toggleCycleVisibility: (cycleId) => optimisticUpdate(get, set, (state: any) => {
-        const newVisibility = {
-          ...state.cycleVisibility,
-          [cycleId]: !state.cycleVisibility[cycleId]
-        };
-
-        const settingsId = 'user_preferences_cycle_visibility';
-        const existingSettings = state.lists.find((l: any) => l.id === settingsId);
-        const updatedList: any = {
-          id: settingsId,
-          name: 'CycleSettings',
-          color: '#000000',
-          icon: JSON.stringify(newVisibility),
-          _is_dirty: true,
-          updated_at: new Date().toISOString()
-        };
-        
-        const newLists = existingSettings
-          ? state.lists.map((l: any) => l.id === settingsId ? updatedList : l)
-          : [...state.lists, updatedList];
-
-        return {
-          cycleVisibility: newVisibility,
-          lists: newLists,
-          _preferences_dirty: true
-        };
-      }),
-
-      dismissOnboarding: () => optimisticUpdate(get, set, (state: any) => {
+      dismissOnboarding: () => {
         try {
-          if (typeof localStorage !== 'undefined') {
-            localStorage.setItem('hide_onboarding_guide', 'true');
+          localStorage.setItem('hide_onboarding_guide', 'true');
+        } catch { /* sin almacenamiento */ }
+        const state: AppState = get();
+        if (state.lists.some((l) => l.id === 'primeros_pasos')) {
+          get().removeList('primeros_pasos');
+        }
+        optimisticUpdate(get, set, (current) => {
+          const now = new Date().toISOString();
+          const tasks = { ...current.tasks };
+          let changed = false;
+          for (const t of Object.values(current.tasks) as TaskItem[]) {
+            if ((t.categoryId === 'primeros_pasos' || t.id.startsWith('task_onboarding_')) && !t.deleted_at) {
+              tasks[t.id] = TaskRepository.update(t, { deleted_at: now });
+              changed = true;
+            }
           }
-        } catch (e) {}
-
-        const settingsId = 'user_preferences_onboarding';
-        const updatedSettingList: any = {
-          id: settingsId,
-          name: 'Onboarding Settings',
-          color: '#000000',
-          icon: JSON.stringify({ hidden: true, completed: true }),
-          _is_dirty: true,
-          updated_at: new Date().toISOString()
-        };
-
-        const filteredLists = state.lists.filter((l: any) => l.id !== 'primeros_pasos' && l.id !== settingsId);
-        const newLists = [...filteredLists, updatedSettingList];
-
-        const updatedTasks = { ...state.tasks };
-        Object.values(state.tasks).forEach((t: any) => {
-          if (t.categoryId === 'primeros_pasos' || t.id.startsWith('task_onboarding_')) {
-            updatedTasks[t.id] = { ...t, deleted_at: new Date().toISOString(), _is_dirty: true };
-          }
+          return {
+            ...(changed ? { tasks } : {}),
+            pinnedSmartLists: (current.pinnedSmartLists || []).filter((id: string) => id !== 'smart_primeros_pasos'),
+            smartListVisibility: { ...current.smartListVisibility, smart_primeros_pasos: false },
+            _preferences_dirty: true,
+          };
         });
-
-        const newPinned = (state.pinnedSmartLists || []).filter((id: string) => id !== 'smart_primeros_pasos');
-
-        const newSmartListVisibility = {
-          ...state.smartListVisibility,
-          smart_primeros_pasos: false
-        };
-
-        return {
-          lists: newLists,
-          tasks: updatedTasks,
-          pinnedSmartLists: newPinned,
-          smartListVisibility: newSmartListVisibility,
-          _preferences_dirty: true
-        };
-      }),
+      },
 
       addTask: (payload) => optimisticUpdate(get, set, (state) => {
         const newTask = TaskRepository.create(payload);
@@ -446,11 +394,13 @@ export const useAppStore = create<AppState>()(
               if (isAutoRollover && existingTask.dueDate) {
                 const currentDue = new Date(existingTask.dueDate);
                 const period = existingTask.subscriptionPeriod || 'monthly';
-                if (period === 'yearly') {
-                  currentDue.setFullYear(currentDue.getFullYear() + 1);
-                } else {
-                  currentDue.setMonth(currentDue.getMonth() + 1);
-                }
+                // Sumar meses sin desbordar (31 ene + 1 mes = 28/29 feb, no 3 mar).
+                const monthsToAdd = period === 'yearly' ? 12 : 1;
+                const day = currentDue.getDate();
+                currentDue.setDate(1);
+                currentDue.setMonth(currentDue.getMonth() + monthsToAdd);
+                const lastDay = new Date(currentDue.getFullYear(), currentDue.getMonth() + 1, 0).getDate();
+                currentDue.setDate(Math.min(day, lastDay));
                 const nextDueDateStr = currentDue.toISOString();
                 updatedTask = TaskRepository.update(existingTask, {
                   status: 'pending',
@@ -537,9 +487,27 @@ export const useAppStore = create<AppState>()(
         } : c).sort((a, b) => a.daysValue - b.daysValue)
       })),
 
-      deleteCycle: (id) => optimisticUpdate(get, set, (state) => ({
-        cycles: state.cycles.filter(c => c.id !== id)
-      })),
+      deleteCycle: (id) => optimisticUpdate(get, set, (state) => {
+        const cycle = state.cycles.find((c) => c.id === id);
+        if (!cycle) return state;
+        const now = new Date().toISOString();
+        const tasks = { ...state.tasks };
+        let changed = false;
+        for (const t of Object.values(state.tasks) as TaskItem[]) {
+          if (t.cycle_id === id) {
+            tasks[t.id] = TaskRepository.update(t, { cycle_id: undefined });
+            changed = true;
+          }
+        }
+        return {
+          cycles: state.cycles.filter((c) => c.id !== id),
+          tombstones: {
+            ...state.tombstones,
+            cycles: [...state.tombstones.cycles.filter((c) => c.id !== id), { ...cycle, deleted_at: now, updated_at: now, _is_dirty: true }],
+          },
+          ...(changed ? { tasks } : {}),
+        };
+      }),
 
       addList: (list) => optimisticUpdate(get, set, (state) => ({
         lists: [...state.lists.filter(l => l.id !== list.id), { 
@@ -558,12 +526,77 @@ export const useAppStore = create<AppState>()(
         } : l)
       })),
 
-      removeList: (id) => optimisticUpdate(get, set, (state) => ({
-        lists: state.lists.filter(l => l.id !== id && l.parentId !== id) // Remove list and its sublists
-      })),
+      removeList: (id) => {
+        const state: AppState = get();
+        // Recoger la lista y todas sus sublistas (a cualquier profundidad).
+        const doomed = new Set<string>([id]);
+        let grew = true;
+        while (grew) {
+          grew = false;
+          for (const l of state.lists) {
+            if (l.parentId && doomed.has(l.parentId) && !doomed.has(l.id)) {
+              doomed.add(l.id);
+              grew = true;
+            }
+          }
+        }
+        const now = new Date().toISOString();
+        const removedLists = state.lists.filter((l) => doomed.has(l.id));
+        const tasks = { ...state.tasks };
+        const deletedTaskIds: string[] = [];
+        for (const t of Object.values(state.tasks) as TaskItem[]) {
+          if (t.categoryId && doomed.has(t.categoryId) && !t.deleted_at) {
+            tasks[t.id] = TaskRepository.markAsDeleted(t);
+            deletedTaskIds.push(t.id);
+          }
+        }
+        const deletedSectionIds = (state.listSections || []).filter((s) => doomed.has(s.listId) && !s.deleted_at).map((s) => s.id);
+        optimisticUpdate(get, set, (current) => ({
+          lists: current.lists.filter((l) => !doomed.has(l.id)),
+          listSections: (current.listSections || []).map((s) =>
+            doomed.has(s.listId) && !s.deleted_at ? { ...s, deleted_at: now, updated_at: now, _is_dirty: true } : s
+          ),
+          tasks,
+          tombstones: {
+            ...current.tombstones,
+            lists: [
+              ...current.tombstones.lists.filter((l) => !doomed.has(l.id)),
+              ...removedLists.map((l) => ({ ...l, deleted_at: now, updated_at: now, _is_dirty: true })),
+            ],
+          },
+        }));
+        const undo = () => {
+          const restoredAt = new Date().toISOString();
+          const sectionSet = new Set(deletedSectionIds);
+          optimisticUpdate(get, set, (current) => {
+            const restoredTasks = { ...current.tasks };
+            for (const tid of deletedTaskIds) {
+              const t = restoredTasks[tid];
+              if (t) restoredTasks[tid] = TaskRepository.update(t, { deleted_at: undefined });
+            }
+            const existing = new Set(current.lists.map((l) => l.id));
+            return {
+              lists: [
+                ...current.lists,
+                ...removedLists
+                  .filter((l) => !existing.has(l.id))
+                  .map((l) => ({ ...l, deleted_at: undefined, updated_at: restoredAt, _is_dirty: true })),
+              ],
+              listSections: (current.listSections || []).map((s) =>
+                sectionSet.has(s.id) ? { ...s, deleted_at: undefined, updated_at: restoredAt, _is_dirty: true } : s
+              ),
+              tasks: restoredTasks,
+              tombstones: { ...current.tombstones, lists: current.tombstones.lists.filter((l) => !doomed.has(l.id)) },
+            };
+          });
+        };
+        return { lists: removedLists.length, tasks: deletedTaskIds.length, undo };
+      },
+
+      deleteList: (id) => get().removeList(id),
 
       addListSection: (section) => set((state: any) => ({
-        listSections: [...(state.listSections || []).filter((s: any) => s.id !== section.id), { ...section, _is_dirty: true, updated_at: new Date().toISOString() }]
+        listSections: [...(state.listSections || []).filter((s: any) => s.id !== section.id), { ...section, _is_dirty: true, updated_at: section.updated_at || new Date().toISOString() }]
       })),
 
       updateListSection: (id, name) => set((state: any) => ({
@@ -844,7 +877,7 @@ export const useAppStore = create<AppState>()(
         
         // Validación de Deadlock (ciclos de dependencia)
         if (wouldCreateDependencyCycle(targetTaskId, blockedByTaskId, state.tasks)) {
-          alert('Error: Añadir esta dependencia crearía un ciclo infinito.');
+          window.dispatchEvent(new CustomEvent('show-toast', { detail: 'No se puede: esa dependencia crearía un ciclo.' }));
           return state;
         }
         
@@ -902,59 +935,51 @@ export const useAppStore = create<AppState>()(
       }),
 
       cleanupDataHygiene: () => optimisticUpdate(get, set, (state) => {
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        const todayTimestamp = now.getTime();
-        
-        const validListIds = new Set(state.lists.map(l => l.id));
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayTimestamp = today.getTime();
+        const RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
         const cleanedTasks: Record<string, TaskItem> = {};
-        
+        let changed = false;
+
         Object.entries(state.tasks).forEach(([id, t]) => {
-          let updatedTask = { ...t };
-          
-          // Política de retención en papelera: 30 días según estándar de Apple Reminders
-          if (updatedTask.deleted_at) {
-            const delTimestamp = new Date(updatedTask.deleted_at).getTime();
-            if (!isNaN(delTimestamp) && (Date.now() - delTimestamp > 30 * 24 * 60 * 60 * 1000)) {
-              return; // Eliminar definitivamente tras 30 días
+          // Papelera: se vacía definitivamente tras 30 días (como Recordatorios de Apple).
+          if (t.deleted_at) {
+            const delTimestamp = new Date(t.deleted_at).getTime();
+            if (!isNaN(delTimestamp) && Date.now() - delTimestamp > RETENTION_MS && !t._is_dirty) {
+              changed = true;
+              return;
             }
-            cleanedTasks[id] = updatedTask;
+            cleanedTasks[id] = t;
             return;
           }
 
-          const listId = updatedTask.categoryId || (updatedTask as any).category_id || (updatedTask as any).listId;
-          // Proteger tareas de bandeja de entrada ('inbox' o sin lista) y verificar listas válidas
-          if (listId === 'user_preferences_smart_lists' || (listId && listId !== 'inbox' && !validListIds.has(listId) && !String(listId).startsWith('cycle_'))) {
-            return;
-          }
-          
-          const isCompleted = isTaskCompleted(updatedTask) || (updatedTask as any).completed;
-          // Quitar fecha de tareas retrasadas no completadas ni borradas
-          if (updatedTask.dueDate && !isCompleted && !updatedTask.deleted_at) {
-            const dueDateTimestamp = new Date(updatedTask.dueDate).getTime();
-            if (!isNaN(dueDateTimestamp) && dueDateTimestamp < todayTimestamp) {
-              delete updatedTask.dueDate;
-              updatedTask._is_dirty = true;
-              updatedTask.updated_at = new Date().toISOString();
+          // Las tareas vencidas y no completadas pierden la fecha (política de "sin agobio").
+          const isCompleted = isTaskCompleted(t) || (t as any).completed;
+          if (t.dueDate && !isCompleted) {
+            const due = new Date(t.dueDate).getTime();
+            if (!isNaN(due) && due < todayTimestamp) {
+              cleanedTasks[id] = TaskRepository.update(t, { dueDate: undefined });
+              changed = true;
+              return;
             }
           }
-          cleanedTasks[id] = updatedTask;
+          cleanedTasks[id] = t;
         });
 
-        return { tasks: cleanedTasks };
+        return changed ? { tasks: cleanedTasks } : state;
       })
     }),
     {
       name: 'reminders-storage',
       storage: createJSONStorage(() => idbStorage),
-      version: 8,
+      version: 9,
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },
       partialize: (state) => {
         const rest = { ...state };
         delete (rest as Partial<AppState>).hasHydrated;
-        delete (rest as any)._preferences_dirty;
         return rest;
       },
       merge: (persistedState: any, currentState: any) => {
@@ -1173,7 +1198,27 @@ export const useAppStore = create<AppState>()(
           }
           state = { ...state, tasks: taggedTasks };
         }
-        
+
+        if (version < 9) {
+          // v8 -> v9: el servidor ahora aísla los datos por usuario. Re-subimos todo una vez
+          // para reconstruir en la nube cualquier registro que otra cuenta hubiera "pisado".
+          // Es seguro: el servidor aplica Last-Write-Wins y descarta lo que sea más antiguo.
+          const isSettings = (l: any) => typeof l?.id === 'string' && l.id.startsWith('user_preferences_');
+          const markDirty = (x: any) => ({ ...x, _is_dirty: true });
+          const dirtyTasks: Record<string, TaskItem> = {};
+          Object.entries(state.tasks || {}).forEach(([id, t]: [string, any]) => {
+            dirtyTasks[id] = markDirty(t);
+          });
+          state = {
+            ...state,
+            tasks: dirtyTasks,
+            lists: (state.lists || []).filter((l: any) => !isSettings(l)).map(markDirty),
+            cycles: (state.cycles || []).map(markDirty),
+            listSections: (state.listSections || []).map(markDirty),
+            tombstones: { lists: [], cycles: [] },
+          };
+        }
+
         return state as AppState;
       },
     }

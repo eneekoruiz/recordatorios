@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -11,6 +12,10 @@ export default defineConfig({
   preview: {
     host: true,
     port: 5173
+  },
+  test: {
+    include: ['tests/unit/**/*.test.{js,ts}'],
+    environment: 'node',
   },
   build: {
     chunkSizeWarningLimit: 1000,
@@ -35,37 +40,32 @@ export default defineConfig({
         skipWaiting: true,
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api/],
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}']
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Solo precacheamos las fuentes latinas (español); el resto se descarga bajo demanda.
+        globIgnores: ['**/*cyrillic*', '**/*greek*', '**/*vietnamese*']
       },
-      includeAssets: ['favicon.ico', 'favicon.svg', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icons/*.png'],
       manifest: {
         id: '/',
         name: 'Recordatorios Élite',
         short_name: 'Recordatorios',
-        description: 'PWA de productividad personal y laboral',
+        description: 'Recordatorios, listas, hábitos y caducidades. Funciona sin conexión y se sincroniza entre dispositivos.',
+        lang: 'es',
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',
         scope: '/',
+        categories: ['productivity', 'utilities'],
         icons: [
-          {
-            src: 'favicon.svg',
-            sizes: '192x192',
-            type: 'image/svg+xml'
-          },
-          {
-            src: 'favicon.svg',
-            sizes: '512x512',
-            type: 'image/svg+xml'
-          },
-          {
-            src: 'favicon.svg',
-            sizes: '512x512',
-            type: 'image/svg+xml',
-            purpose: 'any maskable'
-          }
+          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }
+        ],
+        shortcuts: [
+          { name: 'Nuevo recordatorio', short_name: 'Nuevo', url: '/?action=new', icons: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }] }
         ]
       }
     })
