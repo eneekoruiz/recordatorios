@@ -72,6 +72,7 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
     // Unlock store directly via state and silence greeting overlay
     await page.evaluate(() => {
       (window as any).__E2E__ = true;
+      sessionStorage.setItem('__E2E__', 'true');
       sessionStorage.setItem('daily_greeting_seen_session', 'true');
       localStorage.setItem('daily_greeting_dismissed_day', new Date().toDateString());
       (window as any).useAppStore?.getState()?.setToken('local_offline_token', 'local_guest_e2e');

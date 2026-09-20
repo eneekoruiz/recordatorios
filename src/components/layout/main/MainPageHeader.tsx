@@ -184,6 +184,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                   <>
                     <span style={{ width: 1, height: 12, background: 'var(--border-subtle, rgba(0,0,0,0.1))' }} />
                     <span style={{ color: '#34c759', fontWeight: 650, fontVariantNumeric: 'tabular-nums' }}>
+                      <span style={{ fontWeight: 500, color: 'var(--text-secondary)', marginRight: 4 }}>Gasto recurrente:</span>
                       {caducidadesStats.subCosts.formattedMonthly}/mes
                     </span>
                   </>
