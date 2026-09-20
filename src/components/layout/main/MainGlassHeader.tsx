@@ -33,6 +33,7 @@ interface MainGlassHeaderProps {
   setIsListConfigOpen: (val: boolean) => void;
   onAddSection: () => void;
   onStartSequence?: () => void;
+  completedCount?: number;
 }
 
 export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
@@ -54,7 +55,8 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
   updateList,
   setIsListConfigOpen,
   onAddSection,
-  onStartSequence
+  onStartSequence,
+  completedCount
 }) => {
   return (
     <header 
@@ -266,9 +268,29 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                     <button 
                       className="ios-dropdown-item"
                       onClick={() => { toggleShowCompleted(); setIsMenuOpen(false); }}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
                     >
-                      <input type="checkbox" checked={resolvedShowCompleted} readOnly style={{ marginRight: 12, pointerEvents: 'none', accentColor: 'var(--accent-primary)' }} />
-                      Mostrar Completados
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Check 
+                          size={15} 
+                          color="var(--accent-primary)" 
+                          style={{ opacity: resolvedShowCompleted ? 1 : 0, transition: 'opacity 0.15s ease' }} 
+                        />
+                        <span>{resolvedShowCompleted ? 'Ocultar completados' : 'Mostrar completados'}</span>
+                      </div>
+                      {completedCount !== undefined && completedCount > 0 && (
+                        <span style={{ 
+                          fontSize: '0.78rem', 
+                          fontWeight: 600, 
+                          color: 'var(--text-tertiary)',
+                          background: 'var(--bg-hover, rgba(0,0,0,0.05))',
+                          padding: '1.5px 7px',
+                          borderRadius: 999,
+                          fontVariantNumeric: 'tabular-nums' 
+                        }}>
+                          {completedCount}
+                        </span>
+                      )}
                     </button>
 
                     <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />

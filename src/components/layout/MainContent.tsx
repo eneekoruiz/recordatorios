@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import { Plus, ChevronDown, Check } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import type { TaskItem } from '../../models/Task';
 import { TaskCard } from '../tasks/TaskCard';
@@ -1387,6 +1387,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         updateList={updateList}
         setIsListConfigOpen={setIsListConfigOpen}
         onAddSection={handleAddSection}
+        completedCount={totalCompletedInCurrentView || completedVisibleCount}
         onStartSequence={onStartSequence ? () => {
           const pendingTasks = visibleTasks.filter(t => !isTaskCompleted(t));
           if (pendingTasks.length > 0) {
@@ -1610,42 +1611,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                   onOpenNewTask={onOpenNewTask}
                 />
               </div>
-            </div>
-          )}
-
-          {(totalCompletedInCurrentView > 0 || completedVisibleCount > 0) && currentView !== 'TRASH' && currentView !== 'smart_completed' && (
-            <div style={{ padding: '20px 16px 32px', display: 'flex', justifyContent: 'center' }}>
-              <button
-                onClick={toggleShowCompleted}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '8px 16px',
-                  borderRadius: 20,
-                  background: 'var(--bg-card)',
-                  border: '1px solid var(--border-subtle)',
-                  color: 'var(--text-secondary)',
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <Check size={14} color="var(--accent-primary)" />
-                <span>{totalCompletedInCurrentView || completedVisibleCount} completadas</span>
-                <span style={{ opacity: 0.4 }}>•</span>
-                <span style={{ color: 'var(--accent-primary)' }}>
-                  {resolvedShowCompleted ? 'Ocultar' : 'Mostrar'}
-                </span>
-                <ChevronDown 
-                  size={14} 
-                  style={{ 
-                    transform: resolvedShowCompleted ? 'rotate(180deg)' : 'none', 
-                    transition: 'transform 0.2s ease' 
-                  }} 
-                />
-              </button>
             </div>
           )}
         </div>
