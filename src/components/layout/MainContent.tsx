@@ -1418,7 +1418,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               overflowX: 'hidden',
               width: '100%',
               overscrollBehaviorY: isActuallyEmpty ? 'none' : 'contain',
-              touchAction: isActuallyEmpty ? 'none' : 'auto',
+              touchAction: 'pan-y',
               WebkitOverflowScrolling: 'touch',
               position: 'relative',
               display: isActuallyEmpty ? 'flex' : 'block',
@@ -1518,6 +1518,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                   setDragOverSectionId={setDragOverSectionId}
                   updateTaskSection={updateTaskSection}
                   setSectionMenu={setSectionMenu}
+                  sectionMenu={sectionMenu}
                   sectionTouchTimer={sectionTouchTimer}
                   editingSectionId={editingSectionId}
                   editingSectionName={editingSectionName}

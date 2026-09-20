@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { MoreHorizontal, ChevronDown } from 'lucide-react';
 import { HapticService } from '../../../services/HapticService';
 import type { SectionMenuState } from './SectionContextMenu';
@@ -50,6 +50,7 @@ interface MainSectionHeaderProps {
   onStartSectionSequence?: () => void;
   pendingTaskCount?: number;
   isMobile?: boolean;
+  sectionMenu?: SectionMenuState;
 }
 
 export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
@@ -87,9 +88,20 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   dragOverSectionId,
   onStartSectionSequence: _onStartSectionSequence,
   pendingTaskCount,
-  isMobile
+  isMobile,
+  sectionMenu
 }) => {
   const currentSectionRoutineMode = sectionRoutineModes[data.category] || 'only_section';
+  const [isPressed, setIsPressed] = useState(false);
+  const didSectionLongPressRef = useRef(false);
+  const touchStartPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  const isMenuOpenForThisSection = Boolean(
+    sectionMenu?.open && (
+      (sectionMenu.sectionId && sectionMenu.sectionId === data.sectionId) ||
+      (sectionMenu.category && sectionMenu.category === data.category)
+    )
+  );
 
   return (
     <div 
@@ -100,7 +112,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         ...itemStyle, 
         borderBottom: 'none',
         borderTop: 'none',
-        paddingLeft: `calc(32px + ${data.depth * 24}px)`,
+        paddingLeft: `calc(28px + ${data.depth * 24}px)`,
         paddingRight: '16px',
         minHeight: showDivider ? 56 : 44,
         paddingTop: showDivider ? 16 : 8,
@@ -111,10 +123,30 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         flexDirection: 'column',
         justifyContent: 'center',
         outline: isDraggingOver ? `2px solid ${data.color}` : undefined,
-        background: isDraggingOver ? `${data.color}14` : 'transparent',
-        zIndex: 10
+        background: isDraggingOver 
+          ? `${data.color}14` 
+          : isMenuOpenForThisSection
+          ? 'var(--bg-hover, rgba(0,0,0,0.06))'
+          : isPressed
+          ? 'var(--bg-hover, rgba(0,0,0,0.04))'
+          : 'transparent',
+        borderRadius: (isMenuOpenForThisSection || isPressed) ? 10 : 0,
+        transform: isPressed ? 'scale(0.985)' : 'none',
+        borderLeft: isMenuOpenForThisSection 
+          ? `4px solid ${data.color || 'var(--accent-primary)'}` 
+          : isPressed 
+          ? '4px solid var(--border-subtle)' 
+          : '4px solid transparent',
+        transition: 'background 0.15s ease, transform 0.15s ease, border-color 0.15s ease, border-radius 0.15s ease',
+        zIndex: isMenuOpenForThisSection ? 12 : 10
       }}
       onClick={() => toggleCategory(data.category)}
+      onClickCapture={(e) => {
+        if (didSectionLongPressRef.current) {
+          e.stopPropagation();
+          e.preventDefault();
+        }
+      }}
       onDragOver={isCustomSection ? (e) => { e.preventDefault(); setDragOverSectionId(data.sectionId!); } : undefined}
       onDragLeave={isCustomSection ? () => setDragOverSectionId(null) : undefined}
       onDrop={isCustomSection ? (e) => {
@@ -125,6 +157,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       } : undefined}
       onContextMenu={(e) => {
         e.preventDefault();
+        HapticService.selection();
         setSectionMenu({ 
           open: true, 
           x: e.clientX, 
@@ -138,6 +171,9 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       }}
       onPointerDown={(e) => {
         if ((e.target as HTMLElement).closest('button, input')) return;
+        setIsPressed(true);
+        didSectionLongPressRef.current = false;
+        touchStartPos.current = { x: e.clientX, y: e.clientY };
         if (sectionTouchTimer.current) clearTimeout(sectionTouchTimer.current);
         const clientX = e.clientX;
         const clientY = e.clientY;
@@ -147,6 +183,9 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         const clr = data.color;
         const cat = data.category;
         sectionTouchTimer.current = setTimeout(() => {
+          setIsPressed(false);
+          didSectionLongPressRef.current = true;
+          HapticService.impact('medium');
           setSectionMenu({ 
             open: true, 
             x: clientX, 
@@ -157,11 +196,26 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
             color: clr,
             category: cat
           });
-        }, 400);
+        }, 380);
       }}
-      onPointerUp={() => { if (sectionTouchTimer.current) clearTimeout(sectionTouchTimer.current); }}
-      onPointerCancel={() => { if (sectionTouchTimer.current) clearTimeout(sectionTouchTimer.current); }}
-      onPointerMove={() => { if (sectionTouchTimer.current) clearTimeout(sectionTouchTimer.current); }}
+      onPointerUp={() => { 
+        setIsPressed(false);
+        if (sectionTouchTimer.current) clearTimeout(sectionTouchTimer.current); 
+      }}
+      onPointerCancel={() => { 
+        setIsPressed(false);
+        if (sectionTouchTimer.current) clearTimeout(sectionTouchTimer.current); 
+      }}
+      onPointerMove={(e) => { 
+        if (isPressed) {
+          const dx = Math.abs(e.clientX - touchStartPos.current.x);
+          const dy = Math.abs(e.clientY - touchStartPos.current.y);
+          if (dx > 12 || dy > 12) {
+            setIsPressed(false);
+            if (sectionTouchTimer.current) clearTimeout(sectionTouchTimer.current);
+          }
+        }
+      }}
     >
       {showDivider && (
         <div className="ios-section-divider" style={{ height: '0.5px', background: 'var(--separator-color, rgba(142, 142, 147, 0.3))', margin: '0 0 12px 0', width: '100%' }} />

@@ -47,6 +47,7 @@ export function TaskContextMenu({
   canMoveDown
 }: TaskContextMenuProps) {
   const updateTask = useAppStore(state => state.updateTask);
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
 
   // Escape cierra el menú (antes el fondo invisible seguía bloqueando los clics).
   useEffect(() => {
@@ -62,7 +63,7 @@ export function TaskContextMenu({
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop: sin desenfoque global para mantener la nitidez */}
+          {/* Backdrop matching SectionContextMenu */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -71,35 +72,58 @@ export function TaskContextMenu({
             style={{
               position: 'fixed',
               inset: 0,
-              zIndex: 99998,
-              background: 'rgba(0, 0, 0, 0.12)',
+              zIndex: 999990,
+              background: 'rgba(0, 0, 0, 0.22)',
+              backdropFilter: 'blur(2px)',
+              WebkitBackdropFilter: 'blur(2px)'
             }}
             onClick={onClose}
             onWheel={onClose}
             onContextMenu={(e) => { e.preventDefault(); onClose(); }}
           />
 
-          {/* Floating Popover Container */}
+          {/* Floating Popover Container / Mobile Bottom Action Sheet */}
           <motion.div
             className="ios-dropdown-menu"
-            initial={{ opacity: 0, scale: 0.92, y: -6 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -4 }}
-            transition={{ type: 'spring', damping: 26, stiffness: 450 }}
-            style={{
+            initial={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.95, y: -4 }}
+            animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }}
+            exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.95, y: -4 }}
+            transition={{ type: 'spring', damping: 28, stiffness: 450 }}
+            style={isMobile ? {
               position: 'fixed',
-              zIndex: 100000,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 999995,
+              background: 'var(--bg-elevated, #ffffff)',
+              backdropFilter: 'blur(35px) saturate(190%)',
+              WebkitBackdropFilter: 'blur(35px) saturate(190%)',
+              borderTop: '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
+              borderRadius: '20px 20px 0 0',
+              padding: '12px 16px max(24px, env(safe-area-inset-bottom))',
+              boxShadow: '0 -10px 40px rgba(0,0,0,0.3)',
+              display: 'flex',
+              flexDirection: 'column',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              boxSizing: 'border-box',
+              overscrollBehavior: 'contain',
+              WebkitOverflowScrolling: 'touch',
+            } : {
+              position: 'fixed',
+              zIndex: 999995,
               top: position.y,
               left: position.x,
               width: Math.min(300, window.innerWidth - 24),
               minWidth: 280,
-              background: 'var(--bg-material, rgba(255,255,255,0.92))',
+              background: 'var(--bg-elevated, #ffffff)',
               backdropFilter: 'blur(35px) saturate(190%)',
               WebkitBackdropFilter: 'blur(35px) saturate(190%)',
               borderRadius: '14px',
               boxShadow: '0 14px 40px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.06)',
-              border: '1px solid var(--border-subtle)',
-              padding: '6px 0',
+              border: '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
+              padding: '6px',
               display: 'flex',
               flexDirection: 'column',
               maxHeight: `${position.maxHeight}px`,
@@ -111,6 +135,9 @@ export function TaskContextMenu({
             }}
             onClick={e => e.stopPropagation()}
           >
+            {isMobile && (
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border-subtle, rgba(142, 142, 147, 0.4))', margin: '0 auto 10px', flexShrink: 0 }} />
+            )}
             <MenuActions 
               task={task} 
               setContextMenuOpen={(open) => { if (!open) onClose(); }} 
@@ -182,8 +209,9 @@ function MenuActions({
   if (currentSubmenu === 'move_list') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px 8px' }}>
           <button 
+            type="button"
             onClick={() => setCurrentSubmenu('main')}
             style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, padding: 0 }}
           >
@@ -193,12 +221,15 @@ function MenuActions({
             Trasladar a lista
           </span>
         </div>
+        <div className="ios-dropdown-divider" />
         <div style={{ maxHeight: 280, overflowY: 'auto', padding: '4px 0' }}>
           {lists?.map(list => {
             const isCurrent = task.categoryId === list.id;
             return (
               <button
                 key={list.id}
+                type="button"
+                className="ios-dropdown-item"
                 onClick={() => {
                   updateTask(task.id, { categoryId: list.id, sectionId: undefined });
                   setContextMenuOpen(false);
@@ -207,19 +238,10 @@ function MenuActions({
                   display: 'flex',
                   alignItems: 'center',
                   gap: 10,
-                  padding: '9px 14px',
                   width: '100%',
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
                   color: isCurrent ? 'var(--accent-primary)' : 'var(--text-primary)',
-                  textAlign: 'left',
-                  fontSize: '0.92rem',
-                  borderRadius: 6
+                  fontWeight: isCurrent ? 600 : 500,
                 }}
-                onPointerDown={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                onPointerUp={e => { e.currentTarget.style.background = 'transparent'; }}
-                onPointerLeave={e => { e.currentTarget.style.background = 'transparent'; }}
               >
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: list.color || 'var(--accent-primary)', flexShrink: 0 }} />
                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{list.name}</span>
@@ -236,8 +258,9 @@ function MenuActions({
   if (currentSubmenu === 'move_section') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px 8px' }}>
           <button 
+            type="button"
             onClick={() => setCurrentSubmenu('main')}
             style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, padding: 0 }}
           >
@@ -247,8 +270,11 @@ function MenuActions({
             Trasladar a sección
           </span>
         </div>
+        <div className="ios-dropdown-divider" />
         <div style={{ maxHeight: 280, overflowY: 'auto', padding: '4px 0' }}>
           <button
+            type="button"
+            className="ios-dropdown-item"
             onClick={() => {
               updateTask(task.id, { sectionId: undefined });
               setContextMenuOpen(false);
@@ -257,19 +283,10 @@ function MenuActions({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: '9px 14px',
               width: '100%',
-              border: 'none',
-              background: 'transparent',
-              cursor: 'pointer',
               color: !task.sectionId ? 'var(--accent-primary)' : 'var(--text-primary)',
-              textAlign: 'left',
-              fontSize: '0.92rem',
-              borderRadius: 6
+              fontWeight: !task.sectionId ? 600 : 500,
             }}
-            onPointerDown={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
-            onPointerUp={e => { e.currentTarget.style.background = 'transparent'; }}
-            onPointerLeave={e => { e.currentTarget.style.background = 'transparent'; }}
           >
             <span>Sin sección</span>
             {!task.sectionId && <CheckCircle size={15} color="var(--accent-primary)" />}
@@ -279,6 +296,8 @@ function MenuActions({
             return (
               <button
                 key={sec.id}
+                type="button"
+                className="ios-dropdown-item"
                 onClick={() => {
                   updateTask(task.id, { sectionId: sec.id });
                   setContextMenuOpen(false);
@@ -287,19 +306,10 @@ function MenuActions({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '9px 14px',
                   width: '100%',
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
                   color: isCurrent ? 'var(--accent-primary)' : 'var(--text-primary)',
-                  textAlign: 'left',
-                  fontSize: '0.92rem',
-                  borderRadius: 6
+                  fontWeight: isCurrent ? 600 : 500,
                 }}
-                onPointerDown={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                onPointerUp={e => { e.currentTarget.style.background = 'transparent'; }}
-                onPointerLeave={e => { e.currentTarget.style.background = 'transparent'; }}
               >
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sec.name}</span>
                 {isCurrent && <CheckCircle size={15} color="var(--accent-primary)" />}
@@ -320,8 +330,9 @@ function MenuActions({
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px 8px' }}>
           <button 
+            type="button"
             onClick={() => setCurrentSubmenu('main')}
             style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, padding: 0 }}
           >
@@ -331,9 +342,10 @@ function MenuActions({
             Fecha límite
           </span>
         </div>
+        <div className="ios-dropdown-divider" />
         <div style={{ padding: '4px 0' }}>
           <ActionRow 
-            icon={<Sun size={17} color="#007aff" />} 
+            icon={<Sun size={16} color="#007aff" />} 
             label="Hoy" 
             sublabel="18:00"
             onClick={() => {
@@ -342,7 +354,7 @@ function MenuActions({
             }} 
           />
           <ActionRow 
-            icon={<Calendar size={17} color="#ff9500" />} 
+            icon={<Calendar size={16} color="#ff9500" />} 
             label="Mañana" 
             sublabel="09:00"
             onClick={() => {
@@ -351,7 +363,7 @@ function MenuActions({
             }} 
           />
           <ActionRow 
-            icon={<CalendarDays size={17} color="#5856d6" />} 
+            icon={<CalendarDays size={16} color="#5856d6" />} 
             label="Este fin de semana" 
             sublabel="Sábado 10:00"
             onClick={() => {
@@ -363,7 +375,7 @@ function MenuActions({
             }} 
           />
           <ActionRow 
-            icon={<Clock size={17} color="#34c759" />} 
+            icon={<Clock size={16} color="#34c759" />} 
             label="Próxima semana" 
             sublabel="Lunes 09:00"
             onClick={() => {
@@ -376,18 +388,18 @@ function MenuActions({
           />
           {task.dueDate && (
             <>
-              <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
+              <div className="ios-dropdown-divider" />
               <ActionRow 
-                icon={<CalendarX size={17} color="var(--accent-red)" />} 
+                icon={<CalendarX size={16} color="var(--accent-red)" />} 
                 label="Sin fecha límite" 
                 labelColor="var(--accent-red)"
                 onClick={() => handleSetDueDate(undefined)} 
               />
             </>
           )}
-          <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
+          <div className="ios-dropdown-divider" />
           <ActionRow 
-            icon={<Edit3 size={17} color="var(--accent-primary)" />} 
+            icon={<Edit3 size={16} color="var(--accent-primary)" />} 
             label="Personalizar fecha..." 
             onClick={() => {
               setContextMenuOpen(false);
@@ -410,8 +422,9 @@ function MenuActions({
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px 8px' }}>
           <button 
+            type="button"
             onClick={() => setCurrentSubmenu('main')}
             style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, padding: 0 }}
           >
@@ -421,12 +434,15 @@ function MenuActions({
             Prioridad
           </span>
         </div>
+        <div className="ios-dropdown-divider" />
         <div style={{ padding: '4px 0' }}>
           {priorities.map(p => {
             const isCurrent = (task.priority || 'none') === p.value;
             return (
               <button
                 key={p.value}
+                type="button"
+                className="ios-dropdown-item"
                 onClick={() => {
                   updateTask(task.id, { priority: p.value });
                   setContextMenuOpen(false);
@@ -435,19 +451,10 @@ function MenuActions({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '9px 14px',
                   width: '100%',
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
                   color: isCurrent ? 'var(--accent-primary)' : 'var(--text-primary)',
-                  textAlign: 'left',
-                  fontSize: '0.92rem',
-                  borderRadius: 6
+                  fontWeight: isCurrent ? 600 : 500,
                 }}
-                onPointerDown={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                onPointerUp={e => { e.currentTarget.style.background = 'transparent'; }}
-                onPointerLeave={e => { e.currentTarget.style.background = 'transparent'; }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {p.marks && <span style={{ fontWeight: 800, color: p.color, width: 22 }}>{p.marks}</span>}
@@ -467,53 +474,18 @@ function MenuActions({
 
   return (
     <>
-      {/* Header: Selected Reminder Title */}
-      <div style={{
-        padding: '8px 14px 8px 14px',
-        borderBottom: '1px solid var(--border-subtle)',
-        marginBottom: '4px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        background: 'rgba(0, 122, 255, 0.05)',
-        borderTopLeftRadius: 10,
-        borderTopRightRadius: 10,
-      }}>
-        <div style={{
-          width: 7,
-          height: 7,
-          borderRadius: '50%',
-          background: 'var(--accent-primary)',
-          flexShrink: 0
-        }} />
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{
-            fontSize: '0.68rem',
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.04em',
-            color: 'var(--accent-primary)',
-            lineHeight: 1.2,
-            marginBottom: 2
-          }}>
-            Recordatorio seleccionado
-          </div>
-          <div style={{
-            fontSize: '0.86rem',
-            fontWeight: 600,
-            color: 'var(--text-primary)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap'
-          }}>
-            {task.title || 'Sin título'}
-          </div>
-        </div>
+      {/* Header: Reminder Title Header matching SectionContextMenu */}
+      <div style={{ padding: '2px 8px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent-primary)', flexShrink: 0 }} />
+        <span style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {task.title || 'Recordatorio'}
+        </span>
       </div>
+      <div className="ios-dropdown-divider" />
 
       {/* 1. Marcar como completado */}
       <ActionRow 
-        icon={<CheckCircle size={18} color="var(--accent-primary)" />} 
+        icon={<CheckCircle size={16} color="var(--accent-primary)" />} 
         label={isCompleted ? "Marcar como pendiente" : "Marcar como completado"} 
         onClick={() => { 
           setContextMenuOpen(false); 
@@ -523,7 +495,7 @@ function MenuActions({
 
       {/* 2. Editar recordatorio (Panel de metadatos) */}
       <ActionRow 
-        icon={<Info size={18} color="var(--accent-primary)" />} 
+        icon={<Info size={16} color="var(--accent-primary)" />} 
         label="Editar recordatorio" 
         sublabel="Metadatos y notas"
         trailing={<span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>ℹ️</span>}
@@ -533,11 +505,11 @@ function MenuActions({
         }} 
       />
 
-      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
+      <div className="ios-dropdown-divider" />
 
       {/* 3. Fecha límite */}
       <ActionRow 
-        icon={<Calendar size={18} color="#007aff" />} 
+        icon={<Calendar size={16} color="#007aff" />} 
         label="Fecha límite"
         sublabel={task.dueDate ? new Date(task.dueDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : undefined}
         trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
@@ -546,7 +518,7 @@ function MenuActions({
 
       {/* 4. Marcar como urgente / Prioridad */}
       <ActionRow 
-        icon={<AlertCircle size={18} color={isUrgent ? '#ff3b30' : 'var(--text-primary)'} />} 
+        icon={<AlertCircle size={16} color={isUrgent ? '#ff3b30' : 'var(--text-secondary)'} />} 
         label={isUrgent ? "Quitar urgencia" : "Marcar como urgente"}
         trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
         onClick={() => setCurrentSubmenu('priority')} 
@@ -554,7 +526,7 @@ function MenuActions({
 
       {/* 5. Con marca */}
       <ActionRow 
-        icon={<Flag size={18} color={task.flagged ? '#ff9500' : 'var(--text-primary)'} fill={task.flagged ? '#ff9500' : 'none'} />} 
+        icon={<Flag size={16} color={task.flagged ? '#ff9500' : 'var(--text-secondary)'} fill={task.flagged ? '#ff9500' : 'none'} />} 
         label={task.flagged ? "Quitar marca" : "Con marca"} 
         onClick={() => { 
           setContextMenuOpen(false); 
@@ -562,11 +534,12 @@ function MenuActions({
         }} 
       />
 
-      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
+      <div className="ios-dropdown-divider" />
 
       {/* Botón desplegable: Más opciones... */}
       <button
         type="button"
+        className="ios-dropdown-item"
         onClick={() => {
           HapticService.selection();
           setShowMoreActions(prev => !prev);
@@ -575,21 +548,19 @@ function MenuActions({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          width: 'calc(100% - 16px)',
-          margin: '2px 8px',
-          padding: '8px 10px',
+          width: '100%',
           background: showMoreActions ? 'var(--bg-hover, rgba(0,0,0,0.04))' : 'transparent',
           border: 'none',
           cursor: 'pointer',
           color: 'var(--text-secondary)',
-          fontSize: '0.84rem',
-          fontWeight: 600,
+          fontSize: '0.86rem',
+          fontWeight: 500,
           borderRadius: 8,
           transition: 'all 0.15s ease'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <SlidersHorizontal size={15} color="var(--text-tertiary)" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <SlidersHorizontal size={16} color="var(--text-secondary)" />
           <span>{showMoreActions ? 'Menos opciones' : 'Más opciones...'}</span>
         </div>
         <ChevronDown size={14} style={{ transform: showMoreActions ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
@@ -599,7 +570,7 @@ function MenuActions({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '2px 0' }}>
           {/* Reordenación manual rápida: Mover arriba / Mover abajo */}
           {(onMoveUp || onMoveDown) && (
-            <div style={{ display: 'flex', gap: 6, padding: '4px 12px 2px' }}>
+            <div style={{ display: 'flex', gap: 6, padding: '4px 6px' }}>
               <button
                 type="button"
                 disabled={!canMoveUp}
@@ -607,6 +578,7 @@ function MenuActions({
                   setContextMenuOpen(false);
                   onMoveUp?.();
                 }}
+                className="ios-dropdown-item"
                 style={{
                   flex: 1,
                   display: 'inline-flex',
@@ -622,7 +594,7 @@ function MenuActions({
                   fontWeight: 600,
                   cursor: canMoveUp ? 'pointer' : 'default',
                   opacity: canMoveUp ? 1 : 0.4,
-                  transition: 'all 0.15s ease'
+                  minHeight: 34,
                 }}
                 title="Subir posición en la lista"
               >
@@ -636,6 +608,7 @@ function MenuActions({
                   setContextMenuOpen(false);
                   onMoveDown?.();
                 }}
+                className="ios-dropdown-item"
                 style={{
                   flex: 1,
                   display: 'inline-flex',
@@ -651,7 +624,7 @@ function MenuActions({
                   fontWeight: 600,
                   cursor: canMoveDown ? 'pointer' : 'default',
                   opacity: canMoveDown ? 1 : 0.4,
-                  transition: 'all 0.15s ease'
+                  minHeight: 34,
                 }}
                 title="Bajar posición en la lista"
               >
@@ -664,7 +637,7 @@ function MenuActions({
           {/* Sangrar / Anular sangría de recordatorio */}
           {task.parentId ? (
             <ActionRow 
-              icon={<IndentDecrease size={18} color="var(--accent-primary)" />} 
+              icon={<IndentDecrease size={16} color="var(--accent-primary)" />} 
               label="Anular sangría" 
               sublabel="Convertir en principal"
               onClick={() => { 
@@ -674,7 +647,7 @@ function MenuActions({
             />
           ) : previousTaskId ? (
             <ActionRow 
-              icon={<IndentIncrease size={18} color="var(--accent-primary)" />} 
+              icon={<IndentIncrease size={16} color="var(--accent-primary)" />} 
               label="Sangrar recordatorio" 
               sublabel="Hacer subtarea"
               onClick={() => { 
@@ -686,7 +659,7 @@ function MenuActions({
 
           {/* Trasladar a lista */}
           <ActionRow 
-            icon={<FolderInput size={18} />} 
+            icon={<FolderInput size={16} />} 
             label="Trasladar a lista..." 
             trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
             onClick={() => setCurrentSubmenu('move_list')} 
@@ -695,7 +668,7 @@ function MenuActions({
           {/* Trasladar a sección (si hay secciones disponibles en esta lista) */}
           {availableSections.length > 0 && (
             <ActionRow 
-              icon={<LayoutList size={18} />} 
+              icon={<LayoutList size={16} />} 
               label="Trasladar a sección..." 
               trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
               onClick={() => setCurrentSubmenu('move_section')} 
@@ -704,7 +677,7 @@ function MenuActions({
 
           {/* Duplicar */}
           <ActionRow 
-            icon={<Copy size={18} />} 
+            icon={<Copy size={16} />} 
             label="Duplicar" 
             onClick={() => { 
               addTask({ 
@@ -722,7 +695,7 @@ function MenuActions({
           {/* Modo Enfoque Zen (opcional) */}
           {onOpenZenMode && (
             <ActionRow 
-              icon={<Play size={18} color="var(--accent-primary)" fill="var(--accent-primary)" />} 
+              icon={<Play size={16} color="var(--accent-primary)" fill="var(--accent-primary)" />} 
               label="Modo Enfoque Zen" 
               onClick={() => { setContextMenuOpen(false); onOpenZenMode(task.id); }} 
             />
@@ -730,11 +703,11 @@ function MenuActions({
         </div>
       )}
 
-      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
+      <div className="ios-dropdown-divider" />
 
       {/* 6. Eliminar recordatorio */}
       <ActionRow 
-        icon={<Trash2 size={18} color="var(--accent-red)" />} 
+        icon={<Trash2 size={16} color="var(--accent-red)" />} 
         label="Eliminar" 
         labelColor="var(--accent-red)" 
         onClick={() => { setContextMenuOpen(false); setIsDeleteConfirmOpen(true); }} 
@@ -755,9 +728,9 @@ function ActionRow({
   disabled?: boolean;
 }) {
   return (
-    <motion.button
-      whileTap={disabled ? undefined : { scale: 0.98, backgroundColor: 'var(--bg-hover)' }}
-      transition={{ type: 'spring', damping: 25, stiffness: 450 }}
+    <button
+      type="button"
+      className={`ios-dropdown-item ${labelColor === 'var(--accent-red)' ? 'danger' : ''}`}
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
       style={{
@@ -765,42 +738,30 @@ function ActionRow({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: 10,
-        padding: '0 14px',
-        background: 'none',
-        border: 'none',
         cursor: disabled ? 'not-allowed' : 'pointer',
-        textAlign: 'left',
-        WebkitTapHighlightColor: 'transparent',
-        minHeight: 42,
-        borderRadius: 8,
-        transition: 'background-color 0.12s ease',
         opacity: disabled ? 0.38 : 1,
         pointerEvents: disabled ? 'none' : 'auto',
-        boxSizing: 'border-box'
+        color: labelColor || 'inherit',
       }}
-      onPointerDown={e => { if (!disabled) e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
-      onPointerUp={e => { if (!disabled) e.currentTarget.style.backgroundColor = 'transparent'; }}
-      onPointerLeave={e => { if (!disabled) e.currentTarget.style.backgroundColor = 'transparent'; }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: '1 0 auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, color: labelColor || 'var(--text-primary)', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, color: labelColor || 'var(--text-secondary)', flexShrink: 0 }}>
           {icon}
         </div>
-        <span style={{ fontSize: '0.89rem', fontWeight: 450, color: labelColor || 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+        <span style={{ fontSize: '0.88rem', fontWeight: 500, color: labelColor || 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {label}
         </span>
       </div>
       {(sublabel || trailing) && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 1, minWidth: 0, marginLeft: 8, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 8 }}>
           {sublabel && (
-            <span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>
               {sublabel}
             </span>
           )}
           {trailing}
         </div>
       )}
-    </motion.button>
+    </button>
   );
 }

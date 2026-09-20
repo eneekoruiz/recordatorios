@@ -116,11 +116,11 @@ export function NavigationFrame({
             <div
               style={{
                 position: 'absolute',
-                top: 0,
+                top: 'calc(env(safe-area-inset-top, 0px) + 60px)',
                 bottom: 0,
                 left: 0,
-                width: 28,
-                zIndex: 9999,
+                width: 24,
+                zIndex: 90,
                 touchAction: 'none',
                 cursor: 'grab'
               }}

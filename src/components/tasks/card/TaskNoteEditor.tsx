@@ -92,10 +92,7 @@ export const TaskNoteEditor: React.FC<TaskNoteEditorProps> = ({
       ) : (
         <span
           className="task-note-preview"
-          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); startEditingNote(); }}
           onClick={(e) => { e.stopPropagation(); startEditingNote(); }}
-          onPointerDownCapture={(e) => e.stopPropagation()}
-          onPointerDown={(e) => { e.stopPropagation(); startEditingNote(); }}
           style={{
             fontSize: '0.84rem',
             lineHeight: '1.35',

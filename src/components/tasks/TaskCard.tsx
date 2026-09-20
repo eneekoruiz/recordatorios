@@ -137,6 +137,7 @@ export const TaskCard = React.memo(function TaskCard({
   const touchStartY = useRef<number>(0);
   const hasCrossedLeftThreshold = useRef(false);
   const hasCrossedRightThreshold = useRef(false);
+  const didLongPressRef = useRef(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -366,12 +367,20 @@ export const TaskCard = React.memo(function TaskCard({
       onPointerDown={(e) => {
         if (isEditingTitle || isEditingNote) return;
         if (e.pointerType === 'mouse' && e.button !== 0) return;
+        didLongPressRef.current = false;
         touchStartX.current = e.clientX;
         touchStartY.current = e.clientY;
         if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
         longPressTimer.current = window.setTimeout(() => {
+          didLongPressRef.current = true;
           openContextMenu();
         }, 380);
+      }}
+      onClickCapture={(e) => {
+        if (didLongPressRef.current) {
+          e.stopPropagation();
+          e.preventDefault();
+        }
       }}
       onPointerMove={(e) => {
         if (!longPressTimer.current) return;

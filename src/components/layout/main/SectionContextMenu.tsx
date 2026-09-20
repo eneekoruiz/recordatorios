@@ -35,6 +35,8 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
 }) => {
   if (!sectionMenu.open) return null;
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+
   // Garantizar que no se desborde fuera de la pantalla en móvil o escritorio
   const menuWidth = 235;
   const menuHeight = 220;
@@ -44,17 +46,33 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
   return createPortal(
     <>
       <div
-        style={{ position: 'fixed', inset: 0, zIndex: 999990, background: 'rgba(0,0,0,0.18)' }}
+        style={{ position: 'fixed', inset: 0, zIndex: 999990, background: 'rgba(0,0,0,0.22)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)' }}
         onClick={onClose}
         onContextMenu={(e) => { e.preventDefault(); onClose(); }}
       />
       <motion.div
         className="ios-dropdown-menu"
-        initial={{ opacity: 0, scale: 0.95, y: -4 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: -4 }}
-        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-        style={{
+        initial={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.95, y: -4 }}
+        animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }}
+        exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.95, y: -4 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 450 }}
+        style={isMobile ? {
+          position: 'fixed',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 999995,
+          background: 'var(--bg-elevated, #ffffff)',
+          backdropFilter: 'blur(35px) saturate(190%)',
+          WebkitBackdropFilter: 'blur(35px) saturate(190%)',
+          borderTop: '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
+          borderRadius: '20px 20px 0 0',
+          padding: '12px 16px max(24px, env(safe-area-inset-bottom))',
+          boxShadow: '0 -10px 40px rgba(0,0,0,0.3)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 4
+        } : {
           position: 'fixed',
           left: targetX,
           top: targetY,
@@ -67,6 +85,18 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
         }}
         onClick={(e) => e.stopPropagation()}
       >
+        {isMobile && (
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border-subtle, rgba(142, 142, 147, 0.4))', margin: '0 auto 10px' }} />
+        )}
+
+        {/* Section Title Header */}
+        <div style={{ padding: '2px 8px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: sectionMenu.color || 'var(--accent-primary)', flexShrink: 0 }} />
+          <span style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {sectionMenu.sectionName || 'Sección'}
+          </span>
+        </div>
+        <div className="ios-dropdown-divider" />
         {onStartSequence && (sectionMenu.pendingTaskCount ?? 0) > 0 && (
           <>
             <button 

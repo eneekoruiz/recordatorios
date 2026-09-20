@@ -77,7 +77,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
         width: '100%', 
         alignItems: 'center', 
         justifyContent: 'space-between', 
-        zIndex: 100,
+        zIndex: 1000,
         boxSizing: 'border-box',
         background: isScrolled ? 'var(--bg-surface-glass)' : 'transparent',
         borderBottom: isScrolled ? '0.5px solid var(--border-subtle)' : '0.5px solid transparent',
