@@ -1,4 +1,4 @@
-import { Calendar, Sun, Clock, Moon, LayoutList, ChevronRight, Link2 } from 'lucide-react';
+import { Calendar, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat } from 'lucide-react';
 import type { TaskItem, CustomList } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
@@ -23,7 +23,7 @@ export function TaskMetaBadges({
   hideDueDate,
   taskList,
   dueDateColor,
-  cycleBadge: _cycleBadge,
+  cycleBadge,
   timeOfDayInfo,
   onEdit,
   onNavigateView,
@@ -44,7 +44,7 @@ export function TaskMetaBadges({
   })();
 
   const showDueDate = !!task.dueDate && !hideDueDate;
-  const hasMeta = showListName || showDueDate || timeOfDayInfo || Boolean(inAppListTarget);
+  const hasMeta = showListName || showDueDate || Boolean(cycleBadge) || timeOfDayInfo || Boolean(inAppListTarget);
 
   return (
     <>
@@ -82,6 +82,27 @@ export function TaskMetaBadges({
                 if (dueZero.getTime() === tomorrow.getTime()) return 'Mañana';
                 return due.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
               })()}
+            </span>
+          )}
+          {cycleBadge && (
+            <span 
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(task.id);
+              }}
+              style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: 3.5, 
+                color: 'var(--text-tertiary)', 
+                fontWeight: 400,
+                cursor: 'pointer',
+                lineHeight: 1.2
+              }}
+              title={`Frecuencia: ${cycleBadge.label} (Toca para editar)`}
+            >
+              <Repeat size={11} strokeWidth={2.2} style={{ flexShrink: 0, opacity: 0.85 }} />
+              <span>{cycleBadge.label}</span>
             </span>
           )}
           {timeOfDayInfo && (
