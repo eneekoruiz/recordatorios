@@ -1,3 +1,5 @@
+const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+
 export function BottomShortcutBar() {
   return (
     <div
@@ -35,7 +37,7 @@ export function BottomShortcutBar() {
           borderRadius: 4
         }}
       >
-        <kbd style={{ background: 'var(--bg-elevated)', padding: '1px 5px', borderRadius: 4, border: '1px solid var(--border-subtle)', fontWeight: 600 }}>Ctrl+K</kbd>
+        <kbd style={{ background: 'var(--bg-elevated)', padding: '1px 5px', borderRadius: 4, border: '1px solid var(--border-subtle)', fontWeight: 600 }}>{isMac ? '⌘K' : 'Ctrl+K'}</kbd>
         <span>Buscar</span>
       </button>
 

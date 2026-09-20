@@ -157,7 +157,7 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
             >
               {nlp.suggestedDueDate && (
                 <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: 'var(--accent-glow)', color: 'var(--accent-primary)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  📅 {nlp.suggestedDueDate.toLocaleDateString()}
+                  📅 {nlp.suggestedDueDate.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
                 </span>
               )}
               {nlp.times.map(t => (

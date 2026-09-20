@@ -297,7 +297,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
       if (nlp.suggestedDueDate) {
         setDueDate(nlp.suggestedDueDate);
         setHasDate(true);
-        newChips.push({ type: 'date', label: `📅 ${nlp.suggestedDueDate.toLocaleDateString()}` });
+        newChips.push({ type: 'date', label: `📅 ${nlp.suggestedDueDate.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}` });
       }
 
       if (nlp.suggestedCycleId) {

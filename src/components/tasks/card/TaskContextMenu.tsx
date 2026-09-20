@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -46,6 +46,16 @@ export function TaskContextMenu({
   canMoveDown
 }: TaskContextMenuProps) {
   const updateTask = useAppStore(state => state.updateTask);
+
+  // Escape cierra el menú (antes el fondo invisible seguía bloqueando los clics).
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
 
   return createPortal(
     <AnimatePresence>
@@ -748,7 +758,7 @@ function ActionRow({
       onPointerUp={e => { if (!disabled) e.currentTarget.style.backgroundColor = 'transparent'; }}
       onPointerLeave={e => { if (!disabled) e.currentTarget.style.backgroundColor = 'transparent'; }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: '1 0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, color: labelColor || 'var(--text-primary)', flexShrink: 0 }}>
           {icon}
         </div>
@@ -757,9 +767,9 @@ function ActionRow({
         </span>
       </div>
       {(sublabel || trailing) && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 1, minWidth: 0, marginLeft: 8, overflow: 'hidden' }}>
           {sublabel && (
-            <span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {sublabel}
             </span>
           )}

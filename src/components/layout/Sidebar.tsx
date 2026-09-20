@@ -24,6 +24,7 @@ import { PinnedListsSection } from './sidebar/PinnedListsSection';
 import { SmartListsGrid } from './sidebar/SmartListsGrid';
 import { CyclesListSection } from './sidebar/CyclesListSection';
 import { UserProfileDropdown } from './sidebar/UserProfileDropdown';
+import { getUserDisplayName, getUserEmail } from '../../utils/userIdentity';
 
 interface SidebarProps {
   currentView: string;
@@ -111,7 +112,11 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
     }
   };
 
-  const user = { name: 'Eneko Ruiz', email: localStorage.getItem('userEmail') || 'eneekoruiz@gmail.com' };
+  const isGuest = useAppStore((state) => !state.token || state.token.startsWith('local_offline'));
+  const user = {
+    name: getUserDisplayName() || (isGuest ? 'Sin cuenta' : 'Mi cuenta'),
+    email: isGuest ? 'Datos solo en este dispositivo' : getUserEmail(),
+  };
   const userProfileRef = useRef<HTMLDivElement>(null);
 
   const [isEditMode, setIsEditMode] = useState(false);
@@ -401,19 +406,15 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               <motion.div 
                 className={`ios-list-item ${currentView === 'smart_primeros_pasos' || currentView === 'list_primeros_pasos' ? 'active' : ''}`}
                 onClick={() => onSelectView('smart_primeros_pasos')}
-                style={{ 
-                  background: 'rgba(255, 45, 85, 0.08)',
-                  borderBottom: '1px solid rgba(255, 45, 85, 0.15)',
-                  transition: 'background-color 150ms ease'
-                }}
+                style={{ transition: 'background-color 150ms ease' }}
               >
                 <div className="list-icon" style={{ backgroundColor: '#ff2d55', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Rocket size={12} color="white" />
+                  <Rocket size={15} color="white" strokeWidth={2.4} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
                   <span className="title" style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Primeros Pasos</span>
                 </div>
-                <span className="count" style={{ background: 'rgba(255, 45, 85, 0.15)', color: '#ff2d55', fontWeight: 700 }}>
+                <span className="count" style={{ color: '#ff2d55', fontWeight: 700 }}>
                   {getTaskCount('smart_primeros_pasos')}
                 </span>
                 
@@ -504,7 +505,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               style={{ transition: 'background-color 150ms ease' }}
             >
               <div className="list-icon" style={{ backgroundColor: '#0a84ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Inbox size={12} color="white" />
+                <Inbox size={15} color="white" strokeWidth={2.4} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
                 <span className="title" style={{ color: currentView === 'list_inbox' ? 'var(--accent-primary)' : 'var(--text-primary)' }}>Bandeja de entrada</span>
@@ -539,7 +540,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               style={{ transition: 'background-color 150ms ease' }}
             >
               <div className="list-icon" style={{ backgroundColor: '#8e8e93', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Trash2 size={12} color="white" />
+                <Trash2 size={15} color="white" strokeWidth={2.4} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
                 <span className="title" style={{ color: currentView === 'TRASH' ? 'var(--accent-primary)' : 'var(--text-primary)' }}>Papelera</span>

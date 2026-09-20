@@ -123,7 +123,7 @@ export const CyclesListSection: React.FC<CyclesListSectionProps> = ({
                 }}
               >
                 <div className="list-icon" style={{ backgroundColor: '#8e8e93', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Icon size={12} color="white" />
+                  <Icon size={15} color="white" strokeWidth={2.4} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
                   <span className="title" style={{ color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)' }}>{cycle.name}</span>

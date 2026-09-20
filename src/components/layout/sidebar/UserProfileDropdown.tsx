@@ -16,6 +16,7 @@ import { useAppStore } from '../../../store/useAppStore';
 import { SoundService } from '../../../services/SoundService';
 import { HapticService } from '../../../services/HapticService';
 import { syncManager } from '../../../sync/syncManager';
+import { confirmDialog } from '../../ui/confirmDialog';
 
 interface UserProfileDropdownProps {
   isOpen: boolean;
@@ -242,7 +243,22 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
         <div className="ios-dropdown-divider" />
         <div 
           className="ios-dropdown-item delete"
-          onClick={(e) => { e.stopPropagation(); useAppStore.getState().logout(); onClose(); }}
+          onClick={async (e) => {
+            e.stopPropagation();
+            onClose();
+            // Subir lo pendiente antes de cerrar sesión (cerrar sesión borra los datos de este dispositivo).
+            await syncManager.syncNow();
+            if (syncManager.hasPendingChanges()) {
+              const ok = await confirmDialog({
+                title: 'Hay cambios sin sincronizar',
+                message: 'Algunos cambios de este dispositivo aún no se han subido a la nube. Si cierras sesión ahora se perderán.',
+                confirmText: 'Cerrar sesión igualmente',
+              });
+              if (!ok) return;
+            }
+            syncManager.stop();
+            useAppStore.getState().logout();
+          }}
           style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', cursor: 'pointer' }}
         >
           <LogOut size={16} /> Cerrar Sesión

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { 
+import { Share2, Link2Off,
   ChevronDown, 
   Plus, 
   Trash2, 
@@ -17,6 +17,9 @@ import {
 import { motion } from 'framer-motion';
 import { useAppStore } from '../../../store/useAppStore';
 import type { CustomList } from '../../../models/Task';
+import { confirmDialog } from '../../ui/confirmDialog';
+import { shareList, unshareList } from '../../../services/ShareService';
+import { getListIcon } from '../../../constants/icons';
 
 interface ListHierarchyProps {
   lists: CustomList[];
@@ -270,7 +273,15 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
               {list.isFolder ? (
                 isExpanded ? <FolderOpen size={depth > 0 ? 14 : 18} color={list.color} style={{ marginRight: depth > 0 ? 8 : 10, flexShrink: 0 }} /> : <Folder size={depth > 0 ? 14 : 18} color={list.color} style={{ marginRight: depth > 0 ? 8 : 10, flexShrink: 0 }} />
               ) : (
-                <div className="list-icon" style={{ backgroundColor: list.color, width: depth > 0 ? 16 : undefined, height: depth > 0 ? 16 : undefined, marginRight: depth > 0 ? 8 : undefined }} />
+                (() => {
+                  const ListIcon = getListIcon(list.icon);
+                  const small = depth > 0;
+                  return (
+                    <div className={`list-icon${small ? ' list-icon--small' : ''}`} style={{ backgroundColor: list.color }}>
+                      <ListIcon size={small ? 11 : 15} color="#fff" strokeWidth={2.4} />
+                    </div>
+                  );
+                })()
               )}
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
                 <span 
@@ -494,6 +505,34 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                             <IndentDecrease size={16} /> Des-sangrar (Subir de nivel)
                           </button>
                         )}
+                        {!list.isFolder && (
+                          <>
+                            <button
+                              type="button"
+                              className="ios-dropdown-item"
+                              onClick={() => {
+                                setActiveMenuId(null);
+                                setMenuCoords(null);
+                                shareList(list.id, list.name);
+                              }}
+                              style={isMobile ? mobileItemStyle : undefined}
+                            >
+                              <Share2 size={16} /> Compartir enlace (solo lectura)
+                            </button>
+                            <button
+                              type="button"
+                              className="ios-dropdown-item"
+                              onClick={() => {
+                                setActiveMenuId(null);
+                                setMenuCoords(null);
+                                unshareList(list.id, list.name);
+                              }}
+                              style={isMobile ? mobileItemStyle : undefined}
+                            >
+                              <Link2Off size={16} /> Dejar de compartir
+                            </button>
+                          </>
+                        )}
                         <button 
                           type="button"
                           className="ios-dropdown-item"
@@ -512,12 +551,24 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                         <button 
                           type="button"
                           className="ios-dropdown-item danger"
-                          onClick={() => {
-                            if (confirm(`¿Seguro que quieres borrar ${list.isFolder ? 'la carpeta' : 'la lista'} "${list.name}" y su contenido anidado?`)) {
-                              removeList(list.id);
-                            }
+                          onClick={async () => {
                             setActiveMenuId(null);
                             setMenuCoords(null);
+                            const kind = list.isFolder ? 'la carpeta' : 'la lista';
+                            const ok = await confirmDialog({
+                              title: `Eliminar ${list.isFolder ? 'carpeta' : 'lista'}`,
+                              message: `Se eliminará ${kind} "${list.name}"${list.isFolder ? ', sus sublistas' : ''} y sus recordatorios pasarán a la papelera (podrás recuperarlos durante 30 días).`,
+                              confirmText: 'Eliminar',
+                            });
+                            if (ok) {
+                              const result = removeList(list.id);
+                              window.dispatchEvent(new CustomEvent('show-toast', {
+                                detail: {
+                                  message: `«${list.name}» eliminada${result.tasks ? ` · ${result.tasks} recordatorio${result.tasks === 1 ? '' : 's'} en la papelera` : ''}`,
+                                  onUndo: result.undo,
+                                },
+                              }));
+                            }
                           }}
                           style={isMobile ? { ...mobileItemStyle, color: 'var(--accent-danger, #ff3b30)' } : undefined}
                           onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}

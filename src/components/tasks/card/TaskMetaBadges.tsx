@@ -64,7 +64,7 @@ export function TaskMetaBadges({
                 const dueZero = new Date(due); dueZero.setHours(0, 0, 0, 0);
                 if (dueZero.getTime() === today.getTime()) return 'Hoy';
                 if (dueZero.getTime() === tomorrow.getTime()) return 'Mañana';
-                return due.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+                return due.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
               })()}
             </span>
           )}

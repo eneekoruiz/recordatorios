@@ -1,6 +1,7 @@
 import React from 'react';
 import { Plus, FolderPlus, Trash2, MoreHorizontal, ChevronDown } from 'lucide-react';
 import { HapticService } from '../../../services/HapticService';
+import { confirmDialog } from '../../ui/confirmDialog';
 
 interface SectionData {
   title: string;
@@ -270,11 +271,14 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                     <div className="ios-dropdown-divider" />
                     <button
                       className="ios-dropdown-item danger"
-                      onClick={() => {
+                      onClick={async () => {
                         setSectionMenuId(null);
-                        if (confirm('¿Seguro que quieres borrar esta sección? Las tareas no se borrarán, solo quedarán sin sección.')) {
-                          deleteListSection(data.sectionId!);
-                        }
+                        const ok = await confirmDialog({
+                          title: 'Eliminar sección',
+                          message: 'La sección desaparecerá, pero sus recordatorios se conservarán sin sección.',
+                          confirmText: 'Eliminar',
+                        });
+                        if (ok) deleteListSection(data.sectionId!);
                       }}
                     >
                       <Trash2 size={16} /> Eliminar sección

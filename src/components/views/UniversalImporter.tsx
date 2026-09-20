@@ -5,6 +5,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { detectFormatAndParse } from '../../utils/importerParser';
 import type { ParseResult } from '../../utils/importerParser';
 import { useNavigation } from '../../hooks/useNavigation';
+import { notify } from '../ui/confirmDialog';
 
 interface UniversalImporterProps {
   onBack?: () => void;
@@ -43,7 +44,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
       const result = detectFormatAndParse(inputText, { cycles });
       setPreview(result);
     } catch (e: any) {
-      alert(e.message || "Error al procesar los datos.");
+      notify(e.message || 'Error al procesar los datos.');
     }
   };
 
@@ -59,7 +60,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
           const result = detectFormatAndParse(text, { cycles });
           setPreview(result);
         } catch (err: any) {
-          alert(err.message || "Error al procesar el archivo.");
+          notify(err.message || 'Error al procesar el archivo.');
         }
       }
     };

@@ -8,6 +8,7 @@ import {
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { calculateHabitStreak } from '../../services/TaskService';
 import { HapticService } from '../../services/HapticService';
+import { getUserFirstName } from '../../utils/userIdentity';
 
 interface DailyGreetingModalProps {
   onSelectView?: (view: string) => void;
@@ -16,7 +17,7 @@ interface DailyGreetingModalProps {
 export const DailyGreetingModal: React.FC<DailyGreetingModalProps> = ({ onSelectView }) => {
   const tasks = useAppStore(state => state.tasks);
   const cycles = useAppStore(state => state.cycles);
-  const userName = (typeof window !== 'undefined' ? (localStorage.getItem('userName') || 'Eneko') : 'Eneko').split(' ')[0];
+  const userName = getUserFirstName();
 
   const [isOpen, setIsOpen] = useState(false);
   const [dontShowAgainToday, setDontShowAgainToday] = useState(false);

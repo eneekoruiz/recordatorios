@@ -307,7 +307,7 @@ export const TaskCard = React.memo(function TaskCard({
 
   const habitStreak = calculateHabitStreak(task, cycles);
   const isCaducidad = isCaducidadesList(task.categoryId) || !!task.expirationType;
-  const expirationStatus = (isCaducidad || task.dueDate) ? calculateExpirationStatus(task.dueDate) : null;
+  const expirationStatus = isCaducidad ? calculateExpirationStatus(task.dueDate) : null;
 
   const [dragOverPosition, setDragOverPosition] = useState<'top' | 'bottom' | null>(null);
 
@@ -490,17 +490,10 @@ export const TaskCard = React.memo(function TaskCard({
           cursor: 'default',
         }}
       >
-        {/* iOS Ultra-Thin Separator (except for last item) */}
-        {!isLastInSection && !contextMenuOpen && (
-          <div style={{
-            position: 'absolute',
-            bottom: 0,
-            left: `${34 + indent}px`,
-            right: 0,
-            height: '0.5px',
-            background: 'var(--border-subtle, rgba(0,0,0,0.06))',
-            zIndex: 0
-          }} />
+        {/* Separador fino estilo iOS: se dibuja arriba de cada fila (salvo la primera) para que
+            ninguna fila vecina lo tape por redondeo de subpíxeles. */}
+        {!isFirstInSection && !contextMenuOpen && (
+          <div aria-hidden="true" className="task-row-separator" style={{ left: `${40 + indent}px` }} />
         )}
 
         {/* Checkbox */}
@@ -700,11 +693,14 @@ export const TaskCard = React.memo(function TaskCard({
                   fontSize: '1.05rem',
                   lineHeight: '1.4',
                   whiteSpace: 'normal',
-                  wordBreak: 'break-word',
+                  wordBreak: 'normal',
+                  overflowWrap: 'anywhere',
                   overflow: 'visible',
                   cursor: 'text',
                   position: 'relative',
-                  display: 'inline-block'
+                  display: 'inline-block',
+                  flex: '1 1 12ch',
+                  minWidth: 0
                 }}
               >
                 {(task.title || '').replace(/^\[(D|S|M|A|Diario|Semanal|Mensual|Anual)\]\s*/i, '').split(/(https?:\/\/[^\s]+)/g).map((part, i) => 

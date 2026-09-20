@@ -1,0 +1,180 @@
+/* ==========================================================================
+   Capa final de pulido visual.
+   Se carga después de index.css y Layout.css para unificar criterios que
+   estaban repartidos en varias capas: tipografía sin cortes de palabra,
+   paleta oscura coherente con iOS, barra lateral limpia y columna de lectura.
+   ========================================================================== */
+
+/* ---------- Paleta ---------- */
+:root {
+  --text-secondary: rgba(60, 60, 67, 0.72);
+  --text-tertiary: rgba(60, 60, 67, 0.46);
+  --separator: rgba(60, 60, 67, 0.16);
+  --sidebar-width: 320px;
+  --content-max-width: 920px;
+  --bg-material: rgba(255, 255, 255, 0.84);
+}
+
+[data-theme="dark"], [data-theme="dark"] :root, html.dark, body.dark {
+  --bg-base: #000000;
+  --bg-surface: #1c1c1e;
+  --bg-surface-glass: rgba(28, 28, 30, 0.82);
+  --bg-elevated: #1c1c1e;
+  --bg-card: #1c1c1e;
+  --bg-hover: rgba(255, 255, 255, 0.07);
+  --bg-pressed: rgba(255, 255, 255, 0.11);
+  --accent-primary: #0a84ff;
+  --accent-blue: #0a84ff;
+  --accent-glow: rgba(10, 132, 255, 0.24);
+  --accent-purple: #bf5af2;
+  --accent-green: #30d158;
+  --accent-red: #ff453a;
+  --accent-orange: #ff9f0a;
+  --accent-yellow: #ffd60a;
+  --text-primary: #f5f5f7;
+  --text-secondary: rgba(235, 235, 245, 0.68);
+  --text-tertiary: rgba(235, 235, 245, 0.4);
+  --border-subtle: rgba(84, 84, 88, 0.5);
+  --border-color: rgba(84, 84, 88, 0.6);
+  --border-focus: rgba(10, 132, 255, 0.5);
+  --separator: rgba(84, 84, 88, 0.45);
+  --card-bg: #1c1c1e;
+  --bg-material: rgba(44, 44, 46, 0.82);
+}
+
+/* ---------- Tipografía: nunca partir palabras a mitad ---------- */
+h1, h2, h3,
+.content-header h1,
+.group-header h3,
+.ios-smart-card h3 {
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  hyphens: manual;
+  text-wrap: balance;
+}
+.task-title, .task-item-wrapper p, .task-item-wrapper span {
+  word-break: normal;
+  overflow-wrap: anywhere; /* solo parte URLs o palabras imposibles */
+}
+
+/* ---------- Barra lateral ---------- */
+@media (min-width: 769px) {
+  .sidebar-container {
+    width: var(--sidebar-width) !important;
+  }
+}
+
+.ios-smart-card h3 {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  font-size: 0.95rem;
+}
+
+/* Filas de lista: sin separadores sueltos (estilo barra lateral de macOS), nombre en una línea */
+.ios-list-item::after,
+.ios-list-item:not(:last-child)::after {
+  display: none !important;
+}
+.ios-list-item {
+  min-height: 44px !important;
+  margin: 1px 6px !important;
+  padding: 7px 10px !important;
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+}
+.ios-list-item.active {
+  background: color-mix(in srgb, var(--accent-primary) 12%, transparent) !important;
+  border-color: transparent !important;
+}
+.ios-list-item .title,
+.ios-list-item span.title {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  word-break: normal !important;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.ios-list-item .list-icon {
+  width: 28px !important;
+  height: 28px !important;
+  margin-right: 11px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: none !important;
+}
+.ios-list-item .list-icon--small {
+  width: 20px !important;
+  height: 20px !important;
+  margin-right: 9px !important;
+}
+.ios-list-item .count {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+}
+
+/* ---------- Columna de contenido ---------- */
+@media (min-width: 769px) {
+  .content-scroll > div {
+    max-width: var(--content-max-width);
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+  }
+}
+
+/* ---------- Filas de tareas ---------- */
+.task-row-separator {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 0.5px;
+  background: var(--separator);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Botón de info: discreto hasta que se pasa por encima */
+.task-info-btn {
+  color: var(--text-tertiary) !important;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+.task-item-wrapper:hover .task-info-btn,
+.task-info-btn:focus-visible {
+  opacity: 1;
+  color: var(--accent-primary) !important;
+}
+@media (hover: none) {
+  .task-info-btn { opacity: 0.8; }
+}
+
+/* ---------- Accesibilidad ---------- */
+:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+input:focus-visible, textarea:focus-visible { outline: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Detalle de tarea: el contenedor ya marca el foco; evitamos el doble anillo en título y notas */
+.title-input:focus-visible,
+.notes-input:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+.input-group:focus-within {
+  box-shadow: 0 0 0 4px var(--accent-glow);
+}

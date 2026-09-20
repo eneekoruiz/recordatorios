@@ -20,20 +20,8 @@ const COLORS = [
   '#264653', '#1D3557', '#457B9D', '#E63946', '#6D6875', '#B5838D', '#E5989B', '#4A4E69'
 ];
 
-import { 
-  ShoppingCart, Briefcase, Heart, Book, Coffee, CheckSquare, Plane, Music, Video, Zap, Home,
-  Gamepad2, Dumbbell, Palette, GraduationCap, Code, Scissors, Camera, Utensils, Droplets, Flame, Sun, Moon,
-  Star, Trophy, Car, Bike, Train, Ticket, Glasses, Headphones, Watch, Shield, Key, Lock, Bell, Check, Folder, FolderOpen
-} from 'lucide-react';
-
-const ICONS: Record<string, any> = {
-  'list': CheckSquare, 'folder': Folder, 'folder-open': FolderOpen, 'cart': ShoppingCart, 'briefcase': Briefcase, 'heart': Heart, 'book': Book,
-  'coffee': Coffee, 'plane': Plane, 'music': Music, 'video': Video, 'zap': Zap, 'home': Home,
-  'gamepad': Gamepad2, 'dumbbell': Dumbbell, 'palette': Palette, 'cap': GraduationCap, 'code': Code,
-  'scissors': Scissors, 'camera': Camera, 'food': Utensils, 'water': Droplets, 'fire': Flame, 'sun': Sun,
-  'moon': Moon, 'star': Star, 'trophy': Trophy, 'car': Car, 'bike': Bike, 'train': Train, 'ticket': Ticket,
-  'glasses': Glasses, 'headphones': Headphones, 'watch': Watch, 'shield': Shield, 'key': Key, 'lock': Lock, 'bell': Bell
-};
+import { LIST_ICON_MAP as ICONS } from '../../constants/icons';
+import { CheckSquare, Folder, Check } from 'lucide-react';
 
 import { isCaducidadesList, isQueHeHechoList, ensureCaducidadesSections } from '../../utils/specialLists';
 

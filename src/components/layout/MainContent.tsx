@@ -32,6 +32,7 @@ import { SectionContextMenu } from './main/SectionContextMenu';
 import { MonthlySummaryModal } from './main/MonthlySummaryModal';
 import { MainPageHeader } from './main/MainPageHeader';
 import { DailyBriefingBanner } from './DailyBriefingBanner';
+import { confirmDialog } from '../ui/confirmDialog';
 
 interface MainContentProps {
   currentView: string;
@@ -551,6 +552,14 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     return Object.values(groupedTasks).flat();
   }, [groupedTasks, isolatedSectionKey, isolatedRoutineMode, listSections, lists]);
 
+  // Índices precalculados: evitan recorrer todas las tareas por cada fila renderizada (O(n²)).
+  const parentIdsWithChildren = useMemo(() => {
+    const ids = new Set<string>();
+    for (const t of Object.values(tasks)) if (t.parentId && !t.deleted_at) ids.add(t.parentId);
+    return ids;
+  }, [tasks]);
+  const visibleIndexById = useMemo(() => new Map(visibleTasks.map((t, i) => [t.id, i])), [visibleTasks]);
+
   // Reordenación manual de tareas
   const handleMoveTaskUp = useCallback((taskId: string) => {
     const idx = visibleTasks.findIndex(t => t.id === taskId);
@@ -831,14 +840,16 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     }
   }, [sectionMenu, onOpenNewTask]);
 
-  const handleDeleteSectionMenu = useCallback(() => {
-    if (sectionMenu.sectionId) {
-      const confirmDelete = window.confirm('¿Seguro que quieres eliminar esta sección? Las tareas se conservarán.');
-      if (confirmDelete) {
-        deleteListSection(sectionMenu.sectionId);
-        setSectionMenu({ open: false, x: 0, y: 0 });
-      }
-    }
+  const handleDeleteSectionMenu = useCallback(async () => {
+    const sectionId = sectionMenu.sectionId;
+    if (!sectionId) return;
+    setSectionMenu({ open: false, x: 0, y: 0 });
+    const ok = await confirmDialog({
+      title: 'Eliminar sección',
+      message: 'La sección desaparecerá, pero sus recordatorios se conservarán sin sección.',
+      confirmText: 'Eliminar',
+    });
+    if (ok) deleteListSection(sectionId);
   }, [sectionMenu, deleteListSection]);
 
   // 1. Flatten Data para Virtualización (QA Performance Optimization)
@@ -1265,9 +1276,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   }, []);
 
   const renderTask = useCallback((task: TaskItem, itemStyle: React.CSSProperties, index: number, depth: number, isFirst: boolean, isLast: boolean, previousTaskId?: string, itemKey?: React.Key) => {
-    const hasChildren = Object.values(tasks).some(t => t.parentId === task.id && !t.deleted_at);
+    const hasChildren = parentIdsWithChildren.has(task.id);
     const isExpanded = !isCatCollapsed(`task_${task.id}`);
-    const taskIdxInVisible = visibleTasks.findIndex(t => t.id === task.id);
+    const taskIdxInVisible = visibleIndexById.get(task.id) ?? -1;
     const canMoveUp = taskIdxInVisible > 0;
     const canMoveDown = taskIdxInVisible >= 0 && taskIdxInVisible < visibleTasks.length - 1;
 
@@ -1300,7 +1311,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             onOpenZenMode={onOpenZenMode}
             onEdit={onEditTask || NOOP}
             index={index}
-            showListName={isSmartView || currentView === 'cycles'}
+            showListName={(isSmartView && currentView !== 'smart_primeros_pasos') || currentView === 'cycles'}
             isFirstInSection={isFirst}
             isLastInSection={isLast}
             previousTaskId={previousTaskId}
@@ -1321,7 +1332,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         </div>
       </motion.div>
     );
-  }, [tasks, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, onSelectView, isSmartView, currentView, setSelectedPersonForProfile, recentlyCompletedIds, visibleTasks, handleMoveTaskUp, handleMoveTaskDown, handleReorderTasks]);
+  }, [parentIdsWithChildren, visibleIndexById, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, onSelectView, isSmartView, currentView, setSelectedPersonForProfile, recentlyCompletedIds, visibleTasks, handleMoveTaskUp, handleMoveTaskDown, handleReorderTasks]);
 
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
   const smartListInfo = isSmartView ? SMART_LISTS.find(l => l.id === currentView) : null;

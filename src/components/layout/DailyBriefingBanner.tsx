@@ -6,11 +6,12 @@ import {
 } from 'lucide-react';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { calculateHabitStreak } from '../../services/TaskService';
+import { getUserFirstName } from '../../utils/userIdentity';
 
 export function DailyBriefingBanner() {
   const tasks = useAppStore(state => state.tasks);
   const cycles = useAppStore(state => state.cycles);
-  const userName = (typeof window !== 'undefined' ? (localStorage.getItem('userName') || 'Eneko') : 'Eneko').split(' ')[0];
+  const userName = getUserFirstName();
 
   const [isCollapsed, setIsCollapsed] = useState(() => {
     return localStorage.getItem('daily_briefing_collapsed') === 'true';
