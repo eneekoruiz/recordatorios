@@ -53,3 +53,9 @@ tmp/
 .vercel
 test-results/  
 playwright-report/ 
+
+# Datos personales / exportaciones locales (nunca al repositorio público)
+extracted_data*.txt
+*.csv
+exports/
+scripts/local/

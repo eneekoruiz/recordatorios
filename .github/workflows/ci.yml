@@ -35,8 +35,9 @@ jobs:
 
     env:
       CI: 'true'
-      DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://test_user:test_password@localhost:5432/recordatorios_test?sslmode=disable' }}
-      JWT_SECRET: ${{ secrets.JWT_SECRET || 'super_secret_jwt_key_for_recordatorios' }}
+      # Siempre la base de datos efímera del job: los tests crean usuarios y nunca deben tocar producción.
+      DATABASE_URL: 'postgresql://test_user:test_password@localhost:5432/recordatorios_test?sslmode=disable'
+      JWT_SECRET: 'ci-only-secret-not-used-anywhere-else'
       PORT: 3001
 
     steps:
@@ -59,6 +60,12 @@ jobs:
 
       - name: Push Database Schema
         run: npx prisma db push --skip-generate
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests (API, sincronización, NLP)
+        run: npm test
 
       - name: Typecheck & Build Frontend
         run: npm run build

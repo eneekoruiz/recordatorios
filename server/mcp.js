@@ -1,4 +1,7 @@
-﻿// MCP (Model Context Protocol) Server implementation
+import { randomUUID } from 'node:crypto';
+import { scopedId, toClientPayload } from './syncUtils.js';
+
+// MCP (Model Context Protocol) Server implementation
 // Implements JSON-RPC 2.0 endpoints for tools/list and tools/call
 
 export const MCP_TOOLS = [
@@ -66,186 +69,144 @@ export const MCP_TOOLS = [
   }
 ];
 
-export async function handleMcpRequest(reqBody, prisma, userId) {
-  const { jsonrpc, id, method, params } = reqBody || {};
+const rpcResult = (id, data) => ({
+  jsonrpc: '2.0',
+  id,
+  result: { content: [{ type: 'text', text: JSON.stringify(data) }] },
+});
+const rpcError = (id, code, message) => ({ jsonrpc: '2.0', id, error: { code, message } });
 
-  if (jsonrpc !== '2.0' && !method) {
-    // También aceptamos llamadas directas tipo REST
-    return {
-      jsonrpc: '2.0',
-      id: id || 1,
-      error: { code: -32600, message: 'Invalid Request: se requiere JSON-RPC 2.0' }
-    };
+const VALID_PRIORITIES = new Set(['none', 'low', 'medium', 'high']);
+const VALID_TIMES = new Set(['morning', 'afternoon', 'night']);
+const VALID_CYCLES = new Set(['cycle_day', 'cycle_week', 'cycle_month', 'cycle_year']);
+const cleanString = (v, max = 500) => (typeof v === 'string' ? v.trim().slice(0, max) : undefined);
+const cleanNumber = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
+const isSettingsList = (l) => typeof l?.id === 'string' && l.id.startsWith('user_preferences_');
+
+export async function handleMcpRequest(reqBody, prisma, userId) {
+  const { jsonrpc, id = null, method, params } = reqBody || {};
+
+  if (jsonrpc !== '2.0' || typeof method !== 'string') {
+    return rpcError(id, -32600, 'Invalid Request: se requiere JSON-RPC 2.0');
   }
 
-  // 1. tools/list
-  if (method === 'tools/list') {
+  if (method === 'initialize') {
     return {
       jsonrpc: '2.0',
       id,
       result: {
-        tools: MCP_TOOLS
-      }
+        protocolVersion: '2024-11-05',
+        serverInfo: { name: 'Recordatorios MCP Server', version: '1.1.0' },
+        capabilities: { tools: {} },
+      },
     };
   }
 
-  // 2. tools/call
-  if (method === 'tools/call') {
-    const toolName = params?.name;
-    const toolArgs = params?.arguments || {};
-
-    if (!toolName) {
-      return {
-        jsonrpc: '2.0',
-        id,
-        error: { code: -32602, message: 'Falta el nombre de la herramienta en params.name' }
-      };
-    }
-
-    try {
-      if (toolName === 'list_lists') {
-        let lists = [];
-        if (userId && prisma) {
-          lists = await prisma.list.findMany({ where: { userId, deletedAt: null } });
-        }
-        return {
-          jsonrpc: '2.0',
-          id,
-          result: {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify({ lists: lists.map(l => l.payload || l) })
-              }
-            ]
-          }
-        };
-      }
-
-      if (toolName === 'create_list') {
-        const { name, color = '#007aff', icon = 'list' } = toolArgs;
-        const newListId = `list_${Date.now()}`;
-        const listPayload = {
-          id: newListId,
-          name,
-          color,
-          icon,
-          created_at: new Date().toISOString()
-        };
-
-        if (userId && prisma) {
-          await prisma.list.create({
-            data: {
-              id: newListId,
-              userId,
-              name,
-              color,
-              payload: listPayload
-            }
-          });
-        }
-
-        return {
-          jsonrpc: '2.0',
-          id,
-          result: {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify({ success: true, list: listPayload })
-              }
-            ]
-          }
-        };
-      }
-
-      if (toolName === 'create_reminders') {
-        const reminders = toolArgs.reminders || [];
-        const created = reminders.map(r => ({
-          id: `task_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-          title: r.title,
-          description: r.description || '',
-          categoryId: r.listId || (r.listName ? `list_${r.listName.toLowerCase().replace(/\s+/g, '_')}` : 'inbox'),
-          dueDate: r.dueDate,
-          timeOfDay: r.timeOfDay,
-          price: r.price,
-          quantity: r.quantity,
-          priority: r.priority || 'none',
-          cycle_id: r.cycle,
-          status: 'pending',
-          created_at: new Date().toISOString()
-        }));
-
-        if (userId && prisma && created.length > 0) {
-          for (const item of created) {
-            await prisma.task.create({
-              data: {
-                id: item.id,
-                userId,
-                title: item.title,
-                status: 'pending',
-                payload: item
-              }
-            });
-          }
-        }
-
-        return {
-          jsonrpc: '2.0',
-          id,
-          result: {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify({ success: true, count: created.length, reminders: created })
-              }
-            ]
-          }
-        };
-      }
-
-      if (toolName === 'query_reminders') {
-        const query = (toolArgs.query || '').toLowerCase();
-        let tasks = [];
-        if (userId && prisma) {
-          const allTasks = await prisma.task.findMany({ where: { userId, deletedAt: null } });
-          tasks = allTasks
-            .map(t => t.payload || t)
-            .filter(t => !query || (t.title && t.title.toLowerCase().includes(query)));
-        }
-
-        return {
-          jsonrpc: '2.0',
-          id,
-          result: {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify({ count: tasks.length, tasks })
-              }
-            ]
-          }
-        };
-      }
-
-      return {
-        jsonrpc: '2.0',
-        id,
-        error: { code: -32601, message: `Herramienta no encontrada: ${toolName}` }
-      };
-    } catch (err) {
-      console.error('MCP execution error:', err);
-      return {
-        jsonrpc: '2.0',
-        id,
-        error: { code: -32000, message: err.message || 'Error interno ejecutando la herramienta MCP' }
-      };
-    }
+  if (method === 'tools/list') {
+    return { jsonrpc: '2.0', id, result: { tools: MCP_TOOLS } };
   }
 
-  return {
-    jsonrpc: '2.0',
-    id,
-    error: { code: -32601, message: `Método JSON-RPC no soportado: ${method}` }
-  };
+  if (method !== 'tools/call') {
+    return rpcError(id, -32601, `Método JSON-RPC no soportado: ${method}`);
+  }
+
+  const toolName = params?.name;
+  const args = params?.arguments || {};
+  if (!toolName) return rpcError(id, -32602, 'Falta el nombre de la herramienta en params.name');
+  if (!MCP_TOOLS.some((t) => t.name === toolName)) return rpcError(id, -32601, `Herramienta no encontrada: ${toolName}`);
+  if (!userId) {
+    return rpcError(id, -32001, 'Autenticación requerida: envía "Authorization: Bearer <token>" de tu sesión.');
+  }
+
+  try {
+    if (toolName === 'list_lists') {
+      const rows = await prisma.list.findMany({ where: { userId, deletedAt: null } });
+      const lists = rows.map((r) => toClientPayload(userId, r)).filter((l) => !isSettingsList(l));
+      return rpcResult(id, { lists: lists.map(({ id: lid, name, color, icon, parentId, isFolder }) => ({ id: lid, name, color, icon, parentId, isFolder })) });
+    }
+
+    if (toolName === 'create_list') {
+      const name = cleanString(args.name, 120);
+      if (!name) return rpcError(id, -32602, 'El nombre de la lista es obligatorio');
+      const now = new Date().toISOString();
+      const clientId = `list_${randomUUID()}`;
+      const payload = {
+        id: clientId,
+        name,
+        color: cleanString(args.color, 32) || '#007aff',
+        icon: cleanString(args.icon, 40) || 'list',
+        created_at: now,
+        updated_at: now,
+      };
+      await prisma.list.create({ data: { id: scopedId(userId, clientId), userId, payload } });
+      return rpcResult(id, { success: true, list: payload });
+    }
+
+    if (toolName === 'create_reminders') {
+      const reminders = Array.isArray(args.reminders) ? args.reminders.slice(0, 100) : [];
+      if (reminders.length === 0) return rpcError(id, -32602, 'Debes enviar al menos un recordatorio');
+
+      // Resolver listName -> id existente del usuario (por nombre, sin distinguir mayúsculas).
+      const listRows = await prisma.list.findMany({ where: { userId, deletedAt: null } });
+      const userLists = listRows.map((r) => toClientPayload(userId, r)).filter((l) => !isSettingsList(l));
+      const resolveList = (r) => {
+        const explicit = cleanString(r.listId, 200);
+        if (explicit && userLists.some((l) => l.id === explicit)) return explicit;
+        const byName = cleanString(r.listName, 120)?.toLowerCase();
+        const match = byName && userLists.find((l) => String(l.name || '').toLowerCase() === byName);
+        return match ? match.id : 'inbox';
+      };
+
+      const now = new Date().toISOString();
+      const created = [];
+      for (const r of reminders) {
+        const title = cleanString(r?.title, 300);
+        if (!title) continue;
+        const dueDate = r.dueDate && !Number.isNaN(new Date(r.dueDate).getTime()) ? new Date(r.dueDate).toISOString() : undefined;
+        const task = {
+          id: randomUUID(),
+          user_id: userId,
+          type: 'task',
+          title,
+          description: cleanString(r.description, 2000) || undefined,
+          categoryId: resolveList(r),
+          dueDate,
+          timeOfDay: VALID_TIMES.has(r.timeOfDay) ? r.timeOfDay : undefined,
+          price: cleanNumber(r.price),
+          quantity: cleanNumber(r.quantity),
+          priority: VALID_PRIORITIES.has(r.priority) ? r.priority : 'none',
+          cycle_id: VALID_CYCLES.has(r.cycle) ? r.cycle : undefined,
+          status: 'pending',
+          version: 1,
+          created_at: now,
+          updated_at: now,
+        };
+        Object.keys(task).forEach((k) => task[k] === undefined && delete task[k]);
+        created.push(task);
+      }
+      if (created.length === 0) return rpcError(id, -32602, 'Ningún recordatorio tenía título');
+
+      await prisma.$transaction(
+        created.map((task) => prisma.task.create({ data: { id: scopedId(userId, task.id), userId, payload: task } }))
+      );
+      return rpcResult(id, { success: true, count: created.length, reminders: created });
+    }
+
+    if (toolName === 'query_reminders') {
+      const query = (cleanString(args.query, 200) || '').toLowerCase();
+      const listId = cleanString(args.listId, 200);
+      const rows = await prisma.task.findMany({ where: { userId, deletedAt: null } });
+      const tasks = rows
+        .map((r) => toClientPayload(userId, r))
+        .filter((t) => !query || String(t.title || '').toLowerCase().includes(query))
+        .filter((t) => !listId || t.categoryId === listId)
+        .slice(0, 200);
+      return rpcResult(id, { count: tasks.length, tasks });
+    }
+
+    return rpcError(id, -32601, `Herramienta no encontrada: ${toolName}`);
+  } catch (err) {
+    console.error('MCP execution error:', err);
+    return rpcError(id, -32000, 'Error interno ejecutando la herramienta MCP');
+  }
 }
