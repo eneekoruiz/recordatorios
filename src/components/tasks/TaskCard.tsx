@@ -637,6 +637,7 @@ export const TaskCard = React.memo(function TaskCard({
             )}
             {isEditingTitle ? (
               <motion.input
+                className="task-title-input"
                 value={editTitle}
                 autoFocus
                 onChange={e => setEditTitle(e.target.value)}
@@ -667,8 +668,9 @@ export const TaskCard = React.memo(function TaskCard({
                   }
                 }}
                 style={{
-                  fontSize: '1rem', fontWeight: 500, width: '100%',
+                  fontSize: '1.05rem', fontWeight: 400, width: '100%',
                   border: 'none', background: 'transparent', outline: 'none',
+                  boxShadow: 'none', WebkitBoxShadow: 'none',
                   color: 'var(--text-primary)', padding: 0, lineHeight: '1.4', boxSizing: 'border-box'
                 }}
               />

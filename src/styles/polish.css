@@ -160,11 +160,29 @@ h1, h2, h3,
 }
 
 /* ---------- Accesibilidad ---------- */
-:focus-visible {
+:where(button, [role="button"], a, select):focus-visible {
   outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
 }
-input:focus-visible, textarea:focus-visible { outline: none; }
+input:focus, input:focus-visible, textarea:focus, textarea:focus-visible { 
+  outline: none !important; 
+  outline-color: transparent !important;
+  box-shadow: none !important; 
+  -webkit-box-shadow: none !important;
+}
+
+.task-title-input,
+.task-title-input:focus,
+.task-title-input:focus-visible,
+.task-note-textarea,
+.task-note-textarea:focus,
+.task-note-textarea:focus-visible {
+  outline: none !important;
+  outline-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  border: none !important;
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
