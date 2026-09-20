@@ -24,11 +24,15 @@ type AmbientType = 'off' | 'rain' | 'waves' | 'binaural';
 function DurationPicker({
   taskTitle,
   onConfirm,
-  onSkip
+  onSkip,
+  isDark,
+  listColor = '#0a84ff'
 }: {
   taskTitle: string;
   onConfirm: (mins: number) => void;
   onSkip: () => void;
+  isDark: boolean;
+  listColor?: string;
 }) {
   const [mins, setMins] = useState('15');
   const PRESETS = [5, 10, 15, 25, 45, 60];
@@ -40,57 +44,82 @@ function DurationPicker({
       exit={{ scale: 0.92, opacity: 0 }}
       transition={{ type: 'spring', damping: 26, stiffness: 350 }}
       style={{
-        background: 'rgba(28, 30, 46, 0.92)',
-        border: '1px solid rgba(255,255,255,0.14)',
+        background: isDark ? 'rgba(28, 30, 46, 0.92)' : 'var(--bg-elevated, #ffffff)',
+        border: isDark ? '1px solid rgba(255,255,255,0.14)' : '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
         borderRadius: 28,
         padding: '32px 28px 28px',
         maxWidth: 420,
         width: '100%',
-        boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
+        boxShadow: isDark 
+          ? '0 24px 64px rgba(0,0,0,0.6)' 
+          : '0 24px 64px rgba(0,0,0,0.12), 0 4px 16px rgba(0,0,0,0.04)',
+        backdropFilter: 'blur(28px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(28px) saturate(180%)',
         textAlign: 'center',
         margin: 'auto'
       }}
     >
       <div style={{
         width: 60, height: 60, borderRadius: '50%',
-        background: 'rgba(10,132,255,0.15)', color: '#0a84ff',
+        background: isDark ? 'rgba(10,132,255,0.15)' : `color-mix(in srgb, ${listColor} 14%, transparent)`,
+        color: listColor,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         margin: '0 auto 20px'
       }}>
         <Clock size={28} />
       </div>
 
-      <h3 style={{ fontSize: '1.35rem', fontWeight: 700, color: 'white', margin: '0 0 6px', letterSpacing: '-0.025em' }}>
+      <h3 style={{
+        fontSize: '1.35rem',
+        fontWeight: 700,
+        color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)',
+        margin: '0 0 6px',
+        letterSpacing: '-0.025em'
+      }}>
         ¿Cuánto tiempo?
       </h3>
-      <p style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.55)', margin: '0 0 24px', lineHeight: 1.5 }}>
+      <p style={{
+        fontSize: '0.88rem',
+        color: isDark ? 'rgba(255,255,255,0.55)' : 'var(--text-secondary, #636366)',
+        margin: '0 0 24px',
+        lineHeight: 1.5
+      }}>
         Duración estimada para<br />
-        <strong style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>"{taskTitle}"</strong>
+        <strong style={{ color: isDark ? 'rgba(255,255,255,0.85)' : 'var(--text-primary, #1c1c1e)', fontWeight: 600 }}>
+          "{taskTitle}"
+        </strong>
       </p>
 
       {/* Presets */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 18 }}>
-        {PRESETS.map(p => (
-          <button
-            key={p}
-            onClick={() => setMins(String(p))}
-            style={{
-              padding: '8px 14px',
-              borderRadius: 999,
-              background: mins === String(p) ? '#0a84ff' : 'rgba(255,255,255,0.08)',
-              color: 'white',
-              border: mins === String(p) ? 'none' : '1px solid rgba(255,255,255,0.1)',
-              fontWeight: 600,
-              fontSize: '0.88rem',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            {p} min
-          </button>
-        ))}
+        {PRESETS.map(p => {
+          const isSelected = mins === String(p);
+          return (
+            <button
+              key={p}
+              onClick={() => setMins(String(p))}
+              style={{
+                padding: '8px 14px',
+                borderRadius: 999,
+                background: isSelected 
+                  ? listColor 
+                  : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'),
+                color: isSelected 
+                  ? 'white' 
+                  : (isDark ? 'white' : 'var(--text-primary, #1c1c1e)'),
+                border: isSelected 
+                  ? 'none' 
+                  : (isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)'),
+                fontWeight: 600,
+                fontSize: '0.88rem',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {p} min
+            </button>
+          );
+        })}
       </div>
 
       {/* Custom input */}
@@ -101,11 +130,15 @@ function DurationPicker({
           onChange={e => setMins(e.target.value)}
           style={{
             width: 86, padding: '10px 12px', borderRadius: 14,
-            background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.18)',
-            color: 'white', fontSize: '1.25rem', fontWeight: 700, textAlign: 'center', outline: 'none'
+            background: isDark ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.04)',
+            border: isDark ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(0,0,0,0.12)',
+            color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)',
+            fontSize: '1.25rem', fontWeight: 700, textAlign: 'center', outline: 'none'
           }}
         />
-        <span style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 500, fontSize: '0.9rem' }}>minutos</span>
+        <span style={{ color: isDark ? 'rgba(255,255,255,0.6)' : 'var(--text-secondary, #636366)', fontWeight: 500, fontSize: '0.9rem' }}>
+          minutos
+        </span>
       </div>
 
       <motion.button
@@ -113,10 +146,10 @@ function DurationPicker({
         whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
         style={{
           width: '100%', padding: '15px 0', borderRadius: 18,
-          background: '#0a84ff', color: 'white', border: 'none',
+          background: listColor, color: 'white', border: 'none',
           fontWeight: 700, fontSize: '1rem', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          boxShadow: '0 8px 24px rgba(10,132,255,0.45)'
+          boxShadow: `0 8px 24px ${listColor}45`
         }}
       >
         Empezar <ArrowRight size={18} />
@@ -127,7 +160,8 @@ function DurationPicker({
         style={{
           marginTop: 12, width: '100%', padding: '10px 0',
           borderRadius: 12, background: 'transparent',
-          color: 'rgba(255,255,255,0.4)', border: 'none',
+          color: isDark ? 'rgba(255,255,255,0.4)' : 'var(--text-tertiary, #8e8e93)',
+          border: 'none',
           fontSize: '0.85rem', fontWeight: 500, cursor: 'pointer'
         }}
       >
@@ -141,7 +175,8 @@ function DurationPicker({
 // Main component
 // ────────────────────────────────────────────────────────────────────────────
 export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onClose }: ListSequenceModeProps) {
-  const { tasks, toggleTask, updateTask } = useAppStore();
+  const { tasks, toggleTask, updateTask, theme } = useAppStore();
+  const isDark = theme === 'dark';
 
   // Sequence state
   const [index, setIndex] = useState(0);
@@ -263,7 +298,9 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
         exit={{ opacity: 0 }}
         style={{
           position: 'fixed', inset: 0, zIndex: 99999,
-          background: 'radial-gradient(ellipse at center, rgba(18,22,38,0.98) 0%, rgba(8,10,18,1) 100%)',
+          background: isDark 
+            ? 'radial-gradient(ellipse at center, rgba(18,22,38,0.98) 0%, rgba(8,10,18,1) 100%)' 
+            : 'radial-gradient(ellipse at center, rgba(246,248,252,0.98) 0%, rgba(235,238,245,1) 100%)',
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
           padding: 32, boxSizing: 'border-box', textAlign: 'center'
@@ -277,11 +314,11 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
         >
           🎉
         </motion.div>
-        <h2 style={{ fontSize: '2.2rem', fontWeight: 800, color: 'white', margin: '0 0 12px', letterSpacing: '-0.03em' }}>
+        <h2 style={{ fontSize: '2.2rem', fontWeight: 800, color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)', margin: '0 0 12px', letterSpacing: '-0.03em' }}>
           ¡Lista completada!
         </h2>
-        <p style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.6)', marginBottom: 32, maxWidth: 320, lineHeight: 1.5 }}>
-          Has recorrido <strong style={{ color: 'white' }}>{listName}</strong> de principio a fin.{' '}
+        <p style={{ fontSize: '1rem', color: isDark ? 'rgba(255,255,255,0.6)' : 'var(--text-secondary, #636366)', marginBottom: 32, maxWidth: 320, lineHeight: 1.5 }}>
+          Has recorrido <strong style={{ color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)' }}>{listName}</strong> de principio a fin.{' '}
           {completedIds.length} tarea{completedIds.length !== 1 ? 's' : ''} completada{completedIds.length !== 1 ? 's' : ''}.
           {skippedIds.length > 0 && ` ${skippedIds.length} omitida${skippedIds.length !== 1 ? 's' : ''}.`}
         </p>
@@ -312,7 +349,9 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
         exit={{ opacity: 0 }}
         style={{
           position: 'fixed', inset: 0, zIndex: 99999,
-          background: 'radial-gradient(ellipse at center, rgba(18,22,38,0.98) 0%, rgba(8,10,18,1) 100%)',
+          background: isDark 
+            ? 'radial-gradient(ellipse at center, rgba(18,22,38,0.98) 0%, rgba(8,10,18,1) 100%)' 
+            : 'radial-gradient(ellipse at center, rgba(246,248,252,0.98) 0%, rgba(235,238,245,1) 100%)',
           backdropFilter: 'blur(32px)',
           WebkitBackdropFilter: 'blur(32px)',
           display: 'flex', flexDirection: 'column',
@@ -336,7 +375,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                   style={{
                     width: i < index ? 20 : (i === index ? 28 : 12),
                     height: 4, borderRadius: 2,
-                    background: i < index ? '#30d158' : i === index ? listColor : 'rgba(255,255,255,0.15)',
+                    background: i < index ? '#30d158' : i === index ? listColor : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'),
                     transition: 'all 0.3s ease'
                   }}
                 />
@@ -349,8 +388,10 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
             onClick={() => { SoundService.stopAmbientSound(); onClose(); }}
             style={{
               width: 40, height: 40, borderRadius: '50%',
-              background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
-              color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+              border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
+              color: isDark ? 'rgba(255,255,255,0.6)' : 'var(--text-secondary, #636366)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer'
             }}
             title="Salir (Esc)"
@@ -367,6 +408,8 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
               taskTitle={currentTask.title}
               onConfirm={handleDurationConfirm}
               onSkip={handleSkipTask}
+              isDark={isDark}
+              listColor={listColor}
             />
           ) : (
             <motion.div
@@ -378,7 +421,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
               style={{ textAlign: 'center', maxWidth: 660, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', margin: 'auto 0', gap: 0 }}
             >
               {/* Step indicator */}
-              <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', fontWeight: 600, marginBottom: 12, letterSpacing: '0.05em' }}>
+              <div style={{ fontSize: '0.8rem', color: isDark ? 'rgba(255,255,255,0.4)' : 'var(--text-tertiary, #8e8e93)', fontWeight: 600, marginBottom: 12, letterSpacing: '0.05em' }}>
                 {index + 1} / {activeTaskIds.length}
               </div>
 
@@ -386,14 +429,21 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
               <h2 style={{
                 fontSize: 'clamp(1.6rem, 4vw, 2.6rem)',
                 fontWeight: 700, lineHeight: 1.18,
-                color: 'white', fontFamily: 'var(--font-display)',
+                color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)',
+                fontFamily: 'var(--font-display)',
                 letterSpacing: '-0.025em', margin: '0 0 8px', wordBreak: 'break-word'
               }}>
                 {currentTask?.title}
               </h2>
 
               {currentTask?.description && (
-                <p style={{ fontSize: '0.95rem', color: 'rgba(255,255,255,0.55)', margin: '0 0 28px', lineHeight: 1.5, maxWidth: 480 }}>
+                <p style={{
+                  fontSize: '0.95rem',
+                  color: isDark ? 'rgba(255,255,255,0.55)' : 'var(--text-secondary, #636366)',
+                  margin: '0 0 28px',
+                  lineHeight: 1.5,
+                  maxWidth: 480
+                }}>
                   {currentTask.description}
                 </p>
               )}
@@ -406,7 +456,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                   title={isActive ? 'Pausar' : 'Reanudar'}
                 >
                   <svg width="260" height="260" style={{ transform: 'rotate(-90deg)', position: 'absolute', inset: 0 }}>
-                    <circle cx="130" cy="130" r={strokeR} stroke="rgba(255,255,255,0.07)" strokeWidth="8" fill="none" />
+                    <circle cx="130" cy="130" r={strokeR} stroke={isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)"} strokeWidth="8" fill="none" />
                     <circle
                       cx="130" cy="130" r={strokeR}
                       stroke={`url(#seqGrad-${listColor.replace('#', '')})`}
@@ -422,18 +472,19 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                     </defs>
                   </svg>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1, gap: 8 }}>
-                    <span style={{ fontSize: '3.6rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: 'white', letterSpacing: '-0.03em', lineHeight: 1 }}>
+                    <span style={{ fontSize: '3.6rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)', letterSpacing: '-0.03em', lineHeight: 1 }}>
                       {formatTime(timeLeft)}
                     </span>
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: 5,
                       padding: '5px 14px', borderRadius: 999,
-                      background: isActive ? 'rgba(255,255,255,0.1)' : listColor,
-                      color: 'white', fontSize: '0.8rem', fontWeight: 700,
+                      background: isActive ? (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)') : listColor,
+                      color: isActive ? (isDark ? 'white' : 'var(--text-secondary, #636366)') : 'white',
+                      fontSize: '0.8rem', fontWeight: 700,
                       boxShadow: isActive ? 'none' : `0 4px 14px ${listColor}60`,
                       transition: 'all 0.2s ease'
                     }}>
-                      {isActive ? <><Pause size={13} fill="white" /> EN PROGRESO</> : <><Play size={13} fill="white" style={{ marginLeft: 2 }} /> REANUDAR</>}
+                      {isActive ? <><Pause size={13} fill={isDark ? "white" : "currentColor"} /> EN PROGRESO</> : <><Play size={13} fill="white" style={{ marginLeft: 2 }} /> REANUDAR</>}
                     </div>
                   </div>
                 </div>
@@ -461,20 +512,22 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
               {/* Ambient sound mini bar */}
               <div style={{
                 width: '100%', maxWidth: 460, padding: '12px 16px',
-                background: 'rgba(255,255,255,0.04)', borderRadius: 16,
-                border: '1px solid rgba(255,255,255,0.08)',
+                background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                borderRadius: 16,
+                border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)',
                 display: 'flex', gap: 8, alignItems: 'center', marginBottom: 20
               }}>
                 <Sparkles size={14} color={listColor} />
-                <span style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.4)', fontWeight: 600, marginRight: 'auto' }}>SONIDO</span>
+                <span style={{ fontSize: '0.76rem', color: isDark ? 'rgba(255,255,255,0.4)' : 'var(--text-tertiary, #8e8e93)', fontWeight: 600, marginRight: 'auto' }}>SONIDO</span>
                 {(['off', 'rain', 'waves', 'binaural'] as AmbientType[]).map(type => (
                   <button
                     key={type}
                     onClick={() => setAmbient(type)}
                     style={{
                       padding: '4px 10px', borderRadius: 999,
-                      background: ambient === type ? listColor : 'rgba(255,255,255,0.06)',
-                      border: 'none', color: 'white',
+                      background: ambient === type ? listColor : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'),
+                      border: 'none',
+                      color: ambient === type ? 'white' : (isDark ? 'white' : 'var(--text-secondary, #636366)'),
                       fontSize: '0.76rem', fontWeight: 600, cursor: 'pointer',
                       display: 'flex', alignItems: 'center', gap: 4,
                       transition: 'all 0.15s ease'
@@ -496,7 +549,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                     onClick={() => setIsActive(v => !v)}
                     style={{
                       flex: 1, padding: '15px 0', borderRadius: 18,
-                      background: isActive ? 'rgba(255,149,0,0.18)' : listColor,
+                      background: isActive ? (isDark ? 'rgba(255,149,0,0.18)' : 'rgba(255,149,0,0.12)') : listColor,
                       color: isActive ? '#ff9500' : 'white',
                       border: isActive ? '1px solid rgba(255,149,0,0.4)' : 'none',
                       fontWeight: 700, fontSize: '1rem', cursor: 'pointer',
@@ -527,9 +580,10 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                   onClick={handleSkipTask}
                   style={{
                     width: 52, height: 52, borderRadius: 16,
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    color: 'rgba(255,255,255,0.5)', cursor: 'pointer',
+                    background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+                    border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
+                    color: isDark ? 'rgba(255,255,255,0.5)' : 'var(--text-secondary, #636366)',
+                    cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     flexShrink: 0
                   }}
@@ -543,8 +597,8 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
         </AnimatePresence>
 
         {/* ── FOOTER ──────────────────────────────────────────────────────── */}
-        <div style={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.78rem', textAlign: 'center' }}>
-          <kbd style={{ background: 'rgba(255,255,255,0.08)', padding: '2px 6px', borderRadius: 4, color: 'rgba(255,255,255,0.5)' }}>Esc</kbd> para salir
+        <div style={{ color: isDark ? 'rgba(255,255,255,0.28)' : 'var(--text-tertiary, #8e8e93)', fontSize: '0.78rem', textAlign: 'center' }}>
+          <kbd style={{ background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', padding: '2px 6px', borderRadius: 4, color: isDark ? 'rgba(255,255,255,0.5)' : 'var(--text-secondary, #636366)' }}>Esc</kbd> para salir
         </div>
       </motion.div>
     </AnimatePresence>

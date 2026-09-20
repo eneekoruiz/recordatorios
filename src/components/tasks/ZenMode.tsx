@@ -13,7 +13,8 @@ interface ZenModeProps {
 }
 
 export function ZenMode({ taskId, onClose }: ZenModeProps) {
-  const { tasks, toggleTask, updateTask } = useAppStore();
+  const { tasks, toggleTask, updateTask, theme } = useAppStore();
+  const isDark = theme === 'dark';
   const task = taskId ? tasks[taskId] : null;
 
   const [initialDuration, setInitialDuration] = useState<number>(25 * 60);
@@ -129,7 +130,9 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'radial-gradient(ellipse at center, rgba(20, 24, 38, 0.98) 0%, rgba(10, 12, 18, 1) 100%)',
+          background: isDark
+            ? 'radial-gradient(ellipse at center, rgba(20, 24, 38, 0.98) 0%, rgba(10, 12, 18, 1) 100%)'
+            : 'radial-gradient(ellipse at center, rgba(246, 248, 252, 0.98) 0%, rgba(235, 238, 245, 1) 100%)',
           backdropFilter: 'blur(32px)',
           WebkitBackdropFilter: 'blur(32px)',
           zIndex: 99999,
@@ -157,9 +160,9 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
               width: 44,
               height: 44,
               borderRadius: '50%',
-              background: 'rgba(255, 255, 255, 0.08)',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              color: 'var(--text-secondary)',
+              background: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+              border: isDark ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(0, 0, 0, 0.08)',
+              color: isDark ? 'rgba(255, 255, 255, 0.6)' : 'var(--text-secondary, #636366)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -179,27 +182,27 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.92, opacity: 0 }}
             style={{
-              background: 'rgba(30, 35, 52, 0.85)',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
+              background: isDark ? 'rgba(30, 35, 52, 0.85)' : 'var(--bg-elevated, #ffffff)',
+              border: isDark ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid var(--border-subtle, rgba(0, 0, 0, 0.08))',
               borderRadius: 24,
               padding: '32px 28px',
               maxWidth: 480,
               width: '100%',
-              boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+              boxShadow: isDark ? '0 20px 50px rgba(0,0,0,0.5)' : '0 20px 50px rgba(0, 0, 0, 0.1)',
               textAlign: 'center',
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
               margin: 'auto'
             }}
           >
-            <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(10, 132, 255, 0.15)', color: 'var(--accent-primary, #0a84ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <div style={{ width: 56, height: 56, borderRadius: '50%', background: isDark ? 'rgba(10, 132, 255, 0.15)' : 'rgba(10, 132, 255, 0.1)', color: 'var(--accent-primary, #0a84ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
               <Clock size={28} />
             </div>
 
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'white', margin: '0 0 8px' }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)', margin: '0 0 8px' }}>
               ¿Cuánto durará este recordatorio?
             </h3>
-            <p style={{ fontSize: '0.95rem', color: 'rgba(255,255,255,0.7)', margin: '0 0 24px', lineHeight: 1.4 }}>
+            <p style={{ fontSize: '0.95rem', color: isDark ? 'rgba(255,255,255,0.7)' : 'var(--text-secondary, #636366)', margin: '0 0 24px', lineHeight: 1.4 }}>
               Define el tiempo estimado para "{task.title}". Guardaremos esta duración para futuras sesiones de enfoque.
             </p>
 
@@ -212,9 +215,15 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   style={{
                     padding: '8px 16px',
                     borderRadius: 999,
-                    background: promptMinutes === mins.toString() ? 'var(--accent-primary, #0a84ff)' : 'rgba(255,255,255,0.08)',
-                    color: 'white',
-                    border: promptMinutes === mins.toString() ? 'none' : '1px solid rgba(255,255,255,0.12)',
+                    background: promptMinutes === mins.toString()
+                      ? 'var(--accent-primary, #0a84ff)'
+                      : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'),
+                    color: promptMinutes === mins.toString()
+                      ? 'white'
+                      : (isDark ? 'rgba(255,255,255,0.85)' : 'var(--text-secondary, #636366)'),
+                    border: promptMinutes === mins.toString()
+                      ? 'none'
+                      : (isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)'),
                     fontWeight: 600,
                     fontSize: '0.9rem',
                     cursor: 'pointer',
@@ -238,16 +247,16 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   width: 90,
                   padding: '10px 14px',
                   borderRadius: 12,
-                  background: 'rgba(0,0,0,0.3)',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  color: 'white',
+                  background: isDark ? 'rgba(0,0,0,0.3)' : 'var(--bg-surface, #f2f2f7)',
+                  border: isDark ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.15)',
+                  color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)',
                   fontSize: '1.2rem',
                   fontWeight: 700,
                   textAlign: 'center',
                   outline: 'none'
                 }}
               />
-              <span style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>minutos</span>
+              <span style={{ color: isDark ? 'rgba(255,255,255,0.7)' : 'var(--text-secondary, #636366)', fontWeight: 600 }}>minutos</span>
             </div>
 
             <button
@@ -286,7 +295,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
               fontWeight: 700,
               lineHeight: 1.15,
               margin: '0 0 8px 0',
-              color: 'white',
+              color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)',
               fontFamily: 'var(--font-display)',
               letterSpacing: '-0.02em',
               wordBreak: 'break-word'
@@ -297,7 +306,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
             {task.description && (
               <p style={{
                 fontSize: 'clamp(0.95rem, 2vw, 1.15rem)',
-                color: 'rgba(255,255,255,0.7)',
+                color: isDark ? 'rgba(255,255,255,0.7)' : 'var(--text-secondary, #636366)',
                 margin: '0 0 24px 0',
                 lineHeight: 1.4,
                 maxWidth: 520,
@@ -324,7 +333,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
             >
               <svg width="280" height="280" style={{ transform: 'rotate(-90deg)', position: 'absolute', inset: 0 }}>
                 {/* Background circle */}
-                <circle cx="140" cy="140" r="130" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="8" fill="none" />
+                <circle cx="140" cy="140" r="130" stroke={isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.07)"} strokeWidth="8" fill="none" />
                 {/* Progress circle */}
                 <circle
                   cx="140"
@@ -352,7 +361,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   fontSize: '4.2rem',
                   fontWeight: 800,
                   fontVariantNumeric: 'tabular-nums',
-                  color: 'white',
+                  color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)',
                   letterSpacing: '-0.03em',
                   lineHeight: 1
                 }}>
@@ -366,14 +375,16 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   gap: 6,
                   padding: '6px 14px',
                   borderRadius: 999,
-                  background: isActive ? 'rgba(255, 255, 255, 0.12)' : 'var(--accent-primary, #0a84ff)',
-                  color: 'white',
+                  background: isActive 
+                    ? (isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)') 
+                    : 'var(--accent-primary, #0a84ff)',
+                  color: isActive ? (isDark ? 'white' : 'var(--text-secondary, #636366)') : 'white',
                   fontSize: '0.85rem',
                   fontWeight: 700,
                   boxShadow: isActive ? 'none' : '0 4px 14px rgba(10, 132, 255, 0.4)',
                   transition: 'all 0.2s ease'
                 }}>
-                  {isActive ? <><Pause size={14} fill="white" /> EN PROGRESO</> : <><Play size={14} fill="white" style={{ marginLeft: 2 }} /> REANUDAR</>}
+                  {isActive ? <><Pause size={14} fill={isDark ? "white" : "currentColor"} /> EN PROGRESO</> : <><Play size={14} fill="white" style={{ marginLeft: 2 }} /> REANUDAR</>}
                 </div>
               </div>
             </div>
@@ -384,16 +395,16 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
               maxWidth: 500,
               margin: '0 0 28px 0',
               padding: '14px 20px',
-              background: 'rgba(255, 255, 255, 0.05)',
+              background: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
               borderRadius: 20,
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+              border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.06)',
+              boxShadow: isDark ? '0 8px 24px rgba(0,0,0,0.2)' : '0 8px 24px rgba(0,0,0,0.04)',
               display: 'flex',
               flexDirection: 'column',
               gap: 12
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Headphones size={16} color="var(--accent-primary, #0a84ff)" /> SONIDO AMBIENTAL ZEN
                 </span>
                 {ambientType !== 'off' && isActive && (
@@ -411,9 +422,9 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   style={{
                     padding: '8px 6px',
                     borderRadius: 12,
-                    background: ambientType === 'off' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.04)',
-                    border: ambientType === 'off' ? '1px solid rgba(255,255,255,0.3)' : '1px solid transparent',
-                    color: ambientType === 'off' ? 'white' : 'rgba(255, 255, 255, 0.6)',
+                    background: ambientType === 'off' ? (isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.12)') : (isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)'),
+                    border: ambientType === 'off' ? (isDark ? '1px solid rgba(255,255,255,0.3)' : '1px solid rgba(0,0,0,0.15)') : '1px solid transparent',
+                    color: ambientType === 'off' ? (isDark ? 'white' : 'var(--text-primary, #1c1c1e)') : (isDark ? 'rgba(255, 255, 255, 0.6)' : 'var(--text-secondary, #636366)'),
                     fontSize: '0.8rem',
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -432,9 +443,9 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   style={{
                     padding: '8px 6px',
                     borderRadius: 12,
-                    background: ambientType === 'rain' ? 'var(--accent-primary, #0a84ff)' : 'rgba(255, 255, 255, 0.04)',
+                    background: ambientType === 'rain' ? 'var(--accent-primary, #0a84ff)' : (isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)'),
                     border: ambientType === 'rain' ? '1px solid rgba(10,132,255,0.5)' : '1px solid transparent',
-                    color: 'white',
+                    color: ambientType === 'rain' ? 'white' : (isDark ? 'rgba(255, 255, 255, 0.6)' : 'var(--text-secondary, #636366)'),
                     fontSize: '0.8rem',
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -453,9 +464,9 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   style={{
                     padding: '8px 6px',
                     borderRadius: 12,
-                    background: ambientType === 'waves' ? 'var(--accent-primary, #0a84ff)' : 'rgba(255, 255, 255, 0.04)',
+                    background: ambientType === 'waves' ? 'var(--accent-primary, #0a84ff)' : (isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)'),
                     border: ambientType === 'waves' ? '1px solid rgba(10,132,255,0.5)' : '1px solid transparent',
-                    color: 'white',
+                    color: ambientType === 'waves' ? 'white' : (isDark ? 'rgba(255, 255, 255, 0.6)' : 'var(--text-secondary, #636366)'),
                     fontSize: '0.8rem',
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -474,9 +485,9 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   style={{
                     padding: '8px 6px',
                     borderRadius: 12,
-                    background: ambientType === 'binaural' ? 'var(--accent-primary, #0a84ff)' : 'rgba(255, 255, 255, 0.04)',
+                    background: ambientType === 'binaural' ? 'var(--accent-primary, #0a84ff)' : (isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)'),
                     border: ambientType === 'binaural' ? '1px solid rgba(10,132,255,0.5)' : '1px solid transparent',
-                    color: 'white',
+                    color: ambientType === 'binaural' ? 'white' : (isDark ? 'rgba(255, 255, 255, 0.6)' : 'var(--text-secondary, #636366)'),
                     fontSize: '0.8rem',
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -503,9 +514,9 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   justifyContent: 'center',
                   gap: 8,
                   padding: '16px 20px',
-                  background: isActive ? 'rgba(255, 149, 0, 0.2)' : 'var(--accent-primary, #0a84ff)',
+                  background: isActive ? (isDark ? 'rgba(255, 149, 0, 0.2)' : 'rgba(255, 149, 0, 0.15)') : 'var(--accent-primary, #0a84ff)',
                   color: isActive ? '#ff9500' : 'white',
-                  border: isActive ? '1px solid rgba(255, 149, 0, 0.5)' : 'none',
+                  border: isActive ? '1px solid rgba(255, 149, 0, 0.4)' : 'none',
                   borderRadius: 16,
                   fontSize: '1.05rem',
                   fontWeight: 700,
@@ -545,9 +556,9 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                 style={{
                   padding: '16px',
                   borderRadius: 16,
-                  background: 'rgba(255,255,255,0.08)',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  color: 'white',
+                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
+                  color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -562,8 +573,8 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
         )}
 
         {/* Footer Hint */}
-        <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.8rem', textAlign: 'center' }}>
-          Pulsa <kbd style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: 4, color: 'white' }}>Esc</kbd> para salir en cualquier momento
+        <div style={{ color: isDark ? 'rgba(255,255,255,0.35)' : 'var(--text-tertiary, #8e8e93)', fontSize: '0.8rem', textAlign: 'center' }}>
+          Pulsa <kbd style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)', padding: '2px 6px', borderRadius: 4, color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)' }}>Esc</kbd> para salir en cualquier momento
         </div>
       </motion.div>
     </AnimatePresence>
