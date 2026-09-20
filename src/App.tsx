@@ -11,6 +11,7 @@ import { PromptModal } from './components/layout/PromptModal';
 import { UniversalImporter } from './components/views/UniversalImporter';
 import { SpotlightModal } from './components/search/SpotlightModal';
 import { ZenMode } from './components/tasks/ZenMode';
+import { ListSequenceMode } from './components/tasks/ListSequenceMode';
 import { GeolocationService } from './services/GeolocationService';
 import { useAppStore, isTaskCompleted } from './store/useAppStore';
 import { useNavigation } from './hooks/useNavigation';
@@ -42,6 +43,7 @@ function App() {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [defaultSectionId, setDefaultSectionId] = useState<string | undefined>(undefined);
   const [zenModeTaskId, setZenModeTaskId] = useState<string | null>(null);
+  const [sequenceMode, setSequenceMode] = useState<{ taskIds: string[]; listName: string; listColor?: string } | null>(null);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   const [aiInitialPrompt, setAiInitialPrompt] = useState('');
@@ -631,6 +633,9 @@ function App() {
               onBackToSidebar={() => setMobileView('sidebar')}
               onSelectView={handleSelectView}
               isMobile={isMobile}
+              onStartSequence={(taskIds, listName, listColor) => {
+                setSequenceMode({ taskIds, listName, listColor });
+              }}
             />
           )}
           {navView === 'UNIVERSAL_IMPORTER' && <UniversalImporter onBack={handleBack} />}
@@ -659,6 +664,15 @@ function App() {
 
       {zenModeTaskId && (
         <ZenMode taskId={zenModeTaskId} onClose={() => setZenModeTaskId(null)} />
+      )}
+
+      {sequenceMode && (
+        <ListSequenceMode
+          taskIds={sequenceMode.taskIds}
+          listName={sequenceMode.listName}
+          listColor={sequenceMode.listColor}
+          onClose={() => setSequenceMode(null)}
+        />
       )}
 
       <SpotlightModal

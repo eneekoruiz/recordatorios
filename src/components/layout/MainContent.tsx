@@ -43,6 +43,7 @@ interface MainContentProps {
   onBackToSidebar?: () => void;
   onSelectView?: (view: string) => void;
   isMobile?: boolean;
+  onStartSequence?: (taskIds: string[], listName: string, listColor?: string) => void;
 }
 
 type VirtualItemType = 
@@ -73,7 +74,7 @@ const SMART_COLORS: Record<string, string> = {
   'smart_overdue': 'var(--accent-red)'
 };
 
-export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditTask, onBackToSidebar, onSelectView, isMobile }: MainContentProps) {
+export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditTask, onBackToSidebar, onSelectView, isMobile, onStartSequence }: MainContentProps) {
   // Store selectors
   const tasks = useAppStore((state) => state.tasks);
   const lists = useAppStore((state) => state.lists);
@@ -781,11 +782,14 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
   const toggleCategory = useCallback((category: string) => {
     HapticService.selection();
-    setCollapsed(prev => ({ ...prev, [category]: !prev[category] }));
+    setCollapsed(prev => {
+      const isCurrentlyCollapsed = prev[category] !== undefined ? prev[category] : true;
+      return { ...prev, [category]: !isCurrentlyCollapsed };
+    });
   }, []);
 
   const isCatCollapsed = useCallback((category: string) => {
-    return !!collapsed[category];
+    return collapsed[category] !== undefined ? collapsed[category] : true;
   }, [collapsed]);
 
   const handleAddSection = useCallback((parentId?: string) => {
@@ -1369,85 +1373,105 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         updateList={updateList}
         setIsListConfigOpen={setIsListConfigOpen}
         onAddSection={handleAddSection}
+        onStartSequence={onStartSequence ? () => {
+          const pendingTasks = visibleTasks.filter(t => !isTaskCompleted(t));
+          if (pendingTasks.length > 0) {
+            onStartSequence(pendingTasks.map(t => t.id), getTitle(), viewColor);
+          }
+        } : undefined}
       />
 
       {/* Main Scrollable View */}
-      <div 
-        ref={parentRef}
-        className="content-scroll" 
-        onScroll={(e) => {
-          const top = e.currentTarget.scrollTop;
-          setIsScrolled(top > 20);
-        }}
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          width: '100%',
-          overscrollBehaviorY: 'contain',
-          WebkitOverflowScrolling: 'touch',
-          position: 'relative'
-        }}
-      >
-        <div style={{
-          width: '100%',
-          position: 'relative',
-          paddingBottom: 'calc(110px + env(safe-area-inset-bottom, 0px))',
-          boxSizing: 'border-box'
-        }}>
-          {flattenedData.map((item, index) => {
-            const data = item as any;
-            const itemKey = getItemKey(item, index);
-            const itemStyle: React.CSSProperties = {
+      {(() => {
+        const isActuallyEmpty = visibleTasks.length === 0 && smartTasks.length === 0;
+        return (
+          <div 
+            ref={parentRef}
+            className="content-scroll" 
+            onScroll={(e) => {
+              const top = e.currentTarget.scrollTop;
+              setIsScrolled(top > 20);
+            }}
+            style={{
+              flex: 1,
+              overflowY: isActuallyEmpty ? 'hidden' : 'auto',
+              overflowX: 'hidden',
               width: '100%',
-              boxSizing: 'border-box'
-            };
+              overscrollBehaviorY: 'contain',
+              WebkitOverflowScrolling: 'touch',
+              position: 'relative',
+              display: isActuallyEmpty ? 'flex' : 'block',
+              flexDirection: isActuallyEmpty ? 'column' : undefined
+            }}
+          >
+            <div style={{
+              width: '100%',
+              position: 'relative',
+              paddingBottom: isActuallyEmpty ? 'calc(50px + env(safe-area-inset-bottom, 0px))' : 'calc(110px + env(safe-area-inset-bottom, 0px))',
+              boxSizing: 'border-box',
+              flex: isActuallyEmpty ? 1 : undefined,
+              display: isActuallyEmpty ? 'flex' : undefined,
+              flexDirection: isActuallyEmpty ? 'column' : undefined
+            }}>
+              {flattenedData.map((item, index) => {
+                const data = item as any;
+                const itemKey = getItemKey(item, index);
+                const itemStyle: React.CSSProperties = {
+                  width: '100%',
+                  boxSizing: 'border-box'
+                };
 
-            if (data.type === 'page-header') {
-              return (
-                <div key={itemKey} data-index={index} style={{ ...itemStyle, padding: 0 }}>
-                  <MainPageHeader
-                    isMobile={isMobile}
-                    onBackToSidebar={onBackToSidebar}
-                    currentList={currentList}
-                    setIsListConfigOpen={setIsListConfigOpen}
-                    viewColor={viewColor}
-                    CycleIcon={CycleIcon}
-                    SmartIcon={SmartIcon}
-                    smartListInfo={smartListInfo}
-                    isEditingCycle={isEditingCycle}
-                    currentCycle={currentCycle}
-                    cycleEditName={cycleEditName}
-                    setCycleEditName={setCycleEditName}
-                    updateCycle={updateCycle}
-                    setIsEditingCycle={setIsEditingCycle}
-                    getTitle={getTitle}
-                    currentView={currentView}
-                    totalCost={totalCost}
-                    activeVisibleCount={activeVisibleCount}
-                    completedVisibleCount={completedVisibleCount}
-                    setConfirmProps={setConfirmProps}
-                    setIsConfirmOpen={setIsConfirmOpen}
-                    deleteCycle={deleteCycle}
-                    sortBy={sortBy}
-                    setSortBy={setSortBy}
-                    lifeLogViewMode={lifeLogViewMode}
-                    setLifeLogViewMode={setLifeLogViewMode}
-                    handleOpenMonthlySummary={handleOpenMonthlySummary}
-                    allTasksArray={allTasksArray}
-                    extractPeopleFromText={extractPeopleFromText}
-                    selectedPersonFilter={selectedPersonFilter}
-                    setSelectedPersonFilter={setSelectedPersonFilter}
-                    flashbackMemories={flashbackMemories}
-                    onEditTask={onEditTask}
-                    caducidadesStats={caducidadesStats}
-                  />
-                  {currentView === 'smart_today' && (
-                    <DailyBriefingBanner />
-                  )}
-                </div>
-              );
-            } else if (data.type === 'header') {
+                if (data.type === 'page-header') {
+                  return (
+                    <div key={itemKey} data-index={index} style={{ ...itemStyle, padding: 0 }}>
+                      <MainPageHeader
+                        isMobile={isMobile}
+                        onBackToSidebar={onBackToSidebar}
+                        currentList={currentList}
+                        setIsListConfigOpen={setIsListConfigOpen}
+                        viewColor={viewColor}
+                        CycleIcon={CycleIcon}
+                        SmartIcon={SmartIcon}
+                        smartListInfo={smartListInfo}
+                        isEditingCycle={isEditingCycle}
+                        currentCycle={currentCycle}
+                        cycleEditName={cycleEditName}
+                        setCycleEditName={setCycleEditName}
+                        updateCycle={updateCycle}
+                        setIsEditingCycle={setIsEditingCycle}
+                        getTitle={getTitle}
+                        currentView={currentView}
+                        totalCost={totalCost}
+                        activeVisibleCount={activeVisibleCount}
+                        completedVisibleCount={completedVisibleCount}
+                        setConfirmProps={setConfirmProps}
+                        setIsConfirmOpen={setIsConfirmOpen}
+                        deleteCycle={deleteCycle}
+                        sortBy={sortBy}
+                        setSortBy={setSortBy}
+                        lifeLogViewMode={lifeLogViewMode}
+                        setLifeLogViewMode={setLifeLogViewMode}
+                        handleOpenMonthlySummary={handleOpenMonthlySummary}
+                        allTasksArray={allTasksArray}
+                        extractPeopleFromText={extractPeopleFromText}
+                        selectedPersonFilter={selectedPersonFilter}
+                        setSelectedPersonFilter={setSelectedPersonFilter}
+                        flashbackMemories={flashbackMemories}
+                        onEditTask={onEditTask}
+                        caducidadesStats={caducidadesStats}
+                        onStartSequence={onStartSequence ? () => {
+                          const pendingTasks = visibleTasks.filter(t => !isTaskCompleted(t));
+                          if (pendingTasks.length > 0) {
+                            onStartSequence(pendingTasks.map(t => t.id), getTitle(), viewColor);
+                          }
+                        } : undefined}
+                      />
+                      {currentView === 'smart_today' && (
+                        <DailyBriefingBanner />
+                      )}
+                    </div>
+                  );
+                } else if (data.type === 'header') {
               const isCustomSection = data.sectionId !== undefined;
               const sectionId = data.sectionId;
               const isDraggingOver = dragOverSectionId === sectionId && isCustomSection;
@@ -1544,13 +1568,25 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             inlineInputRef={inlineInputRef}
           />
 
-          {visibleTasks.length === 0 && smartTasks.length === 0 && (
-            <MainEmptyState
-              currentView={currentView}
-              currentList={currentList}
-              currentCycle={currentCycle}
-              onOpenNewTask={onOpenNewTask}
-            />
+          {isActuallyEmpty && (
+            <div style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '100%',
+              minHeight: 0,
+              boxSizing: 'border-box'
+            }}>
+              <div style={{ width: '100%', maxWidth: 420, padding: '0 16px' }}>
+                <MainEmptyState
+                  currentView={currentView}
+                  currentList={currentList}
+                  currentCycle={currentCycle}
+                  onOpenNewTask={onOpenNewTask}
+                />
+              </div>
+            </div>
           )}
 
           {(totalCompletedInCurrentView > 0 || completedVisibleCount > 0) && currentView !== 'TRASH' && currentView !== 'smart_completed' && (
@@ -1590,6 +1626,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           )}
         </div>
       </div>
+    );
+  })()}
 
       <ListConfigModal 
         isOpen={isListConfigOpen} 

@@ -5,7 +5,8 @@ import {
   Users, 
   Clock, 
   CreditCard, 
-  ShieldAlert 
+  ShieldAlert,
+  Play
 } from 'lucide-react';
 import { HapticService } from '../../../services/HapticService';
 import { isCaducidadesList, isQueHeHechoList } from '../../../utils/specialLists';
@@ -46,6 +47,7 @@ interface MainPageHeaderProps {
   flashbackMemories: TaskItem[];
   onEditTask?: (id: string) => void;
   caducidadesStats: any;
+  onStartSequence?: () => void;
 }
 
 export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
@@ -82,7 +84,8 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   setSelectedPersonFilter,
   flashbackMemories,
   onEditTask,
-  caducidadesStats
+  caducidadesStats,
+  onStartSequence
 }) => {
   return (
     <>
@@ -91,70 +94,144 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
         style={{ padding: '2px 16px 16px 16px', display: 'flex', flexDirection: 'column', gap: '12px', flexShrink: 0, margin: '0', borderBottom: 'none', boxSizing: 'border-box' }}
       >
         {/* Línea del Título - Estilo Apple Reminders */}
-        <div style={{ width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-          <h1 className="text-display" style={{ 
-            fontSize: '34px', 
-            fontWeight: 700,
-            lineHeight: '1.2',
-            wordBreak: 'break-word',
-            letterSpacing: '-0.5px',
-            color: viewColor,
-            display: 'flex', alignItems: 'center', margin: 0,
-            padding: 0,
-            boxSizing: 'border-box',
-            flex: 1,
-            minWidth: 0
-          }}>
-            {CycleIcon && <CycleIcon size={32} color="var(--accent-primary)" style={{ marginRight: 12 }} />}
-            {SmartIcon && smartListInfo && (
+        <div style={{ width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: '1 1 auto', flexWrap: 'wrap' }}>
+            <h1 className="text-display" style={{ 
+              fontSize: '34px', 
+              fontWeight: 700,
+              lineHeight: '1.2',
+              wordBreak: 'break-word',
+              letterSpacing: '-0.5px',
+              color: viewColor,
+              display: 'flex', alignItems: 'center', margin: 0,
+              padding: 0,
+              boxSizing: 'border-box',
+              minWidth: 0
+            }}>
+              {CycleIcon && <CycleIcon size={32} color="var(--accent-primary)" style={{ marginRight: 12 }} />}
+              {SmartIcon && smartListInfo && (
+                <div style={{
+                  marginRight: 12,
+                  width: 38, height: 38, borderRadius: '50%',
+                  backgroundColor: smartListInfo.color,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: `0 4px 12px ${smartListInfo.color}40`,
+                  flexShrink: 0
+                }}>
+                  <SmartIcon size={22} color="white" />
+                </div>
+              )}
+              
+              {isEditingCycle && currentCycle ? (
+                <input 
+                  type="text" 
+                  value={cycleEditName}
+                  onChange={e => setCycleEditName(e.target.value)}
+                  onBlur={() => {
+                    if (cycleEditName.trim()) {
+                      updateCycle(currentCycle.id, { name: cycleEditName.trim() });
+                    }
+                    setIsEditingCycle(false);
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') e.currentTarget.blur();
+                  }}
+                  autoFocus
+                  style={{ background: 'transparent', border: 'none', borderBottom: '2px solid var(--accent-primary)', color: 'inherit', fontSize: 'inherit', fontFamily: 'inherit', outline: 'none', width: 'auto' }}
+                />
+              ) : (
+                <span 
+                  onDoubleClick={() => {
+                    if (currentCycle) {
+                      setCycleEditName(currentCycle.name);
+                      setIsEditingCycle(true);
+                    }
+                  }}
+                  style={{ cursor: currentCycle ? 'text' : 'default', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                  title={currentCycle ? "Doble click para editar nombre" : undefined}
+                >
+                  {getTitle()}
+                </span>
+              )}
+            </h1>
+
+            {/* Caducidades stats en la misma línea del título — diseño Apple con iconos profesionales sin emojis */}
+            {isCaducidadesList(currentView, currentList) && caducidadesStats && (
               <div style={{
-                marginRight: 12,
-                width: 38, height: 38, borderRadius: '50%',
-                backgroundColor: smartListInfo.color,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: `0 4px 12px ${smartListInfo.color}40`,
-                flexShrink: 0
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '4px 12px',
+                borderRadius: 999,
+                background: 'var(--bg-card, rgba(0,0,0,0.03))',
+                border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                fontSize: '0.80rem',
+                color: 'var(--text-secondary)'
               }}>
-                <SmartIcon size={22} color="white" />
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 500 }}>
+                  <CreditCard size={14} color="#ff9500" />
+                  <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{caducidadesStats.cards}</strong>
+                  <span>tarjetas</span>
+                </span>
+                <span style={{ width: 1, height: 12, background: 'var(--border-subtle, rgba(0,0,0,0.1))' }} />
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 500 }}>
+                  <Clock size={14} color="#0a84ff" />
+                  <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{caducidadesStats.subs}</strong>
+                  <span>suscripciones</span>
+                </span>
+                {caducidadesStats.subCosts && caducidadesStats.subCosts.count > 0 && (
+                  <>
+                    <span style={{ width: 1, height: 12, background: 'var(--border-subtle, rgba(0,0,0,0.1))' }} />
+                    <span style={{ color: '#34c759', fontWeight: 650, fontVariantNumeric: 'tabular-nums' }}>
+                      {caducidadesStats.subCosts.formattedMonthly}/mes
+                    </span>
+                  </>
+                )}
+                {caducidadesStats.critical > 0 && (
+                  <>
+                    <span style={{ width: 1, height: 12, background: 'var(--border-subtle, rgba(0,0,0,0.1))' }} />
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#ff3b30', fontWeight: 650 }}>
+                      <ShieldAlert size={13} />
+                      <span>{caducidadesStats.critical} por vencer</span>
+                    </span>
+                  </>
+                )}
               </div>
             )}
-            
-            {isEditingCycle && currentCycle ? (
-              <input 
-                type="text" 
-                value={cycleEditName}
-                onChange={e => setCycleEditName(e.target.value)}
-                onBlur={() => {
-                  if (cycleEditName.trim()) {
-                    updateCycle(currentCycle.id, { name: cycleEditName.trim() });
-                  }
-                  setIsEditingCycle(false);
-                }}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') e.currentTarget.blur();
-                }}
-                autoFocus
-                style={{ background: 'transparent', border: 'none', borderBottom: '2px solid var(--accent-primary)', color: 'inherit', fontSize: 'inherit', fontFamily: 'inherit', outline: 'none', width: 'auto' }}
-              />
-            ) : (
-              <span 
-                onDoubleClick={() => {
-                  if (currentCycle) {
-                    setCycleEditName(currentCycle.name);
-                    setIsEditingCycle(true);
-                  }
-                }}
-                style={{ cursor: currentCycle ? 'text' : 'default', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                title={currentCycle ? "Doble click para editar nombre" : undefined}
-              >
-                {getTitle()}
-              </span>
-            )}
-          </h1>
+          </div>
 
-          {/* Gran Contador Apple Reminders en el color de la lista y Total Presupuesto */}
+          {/* Gran Contador Apple Reminders en el color de la lista y Botón Empezar Lista */}
           {!currentCycle && currentView !== 'TRASH' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+              {onStartSequence && activeVisibleCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    HapticService.selection();
+                    onStartSequence();
+                  }}
+                  title="Empezar secuencia de tareas en orden con temporizador"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '6px 13px',
+                    borderRadius: 999,
+                    background: 'var(--bg-elevated, #ffffff)',
+                    border: '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
+                    color: viewColor || 'var(--accent-primary)',
+                    fontWeight: 650,
+                    fontSize: '0.83rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <Play size={12} fill="currentColor" />
+                  <span>Empezar lista</span>
+                </button>
+              )}
               {totalCost > 0 && (
                 <span 
                   style={{
@@ -417,57 +494,6 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                 </div>
                 <span style={{ fontSize: '0.74rem', color: '#5856D6', fontWeight: 650 }}>Ver recuerdo →</span>
               </div>
-            )}
-          </div>
-        )}
-
-        {isCaducidadesList(currentView, currentList) && caducidadesStats && (
-          <div style={{
-            marginTop: 10,
-            display: 'flex',
-            gap: 14,
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            padding: '10px 14px',
-            borderRadius: 12,
-            background: 'var(--bg-elevated)',
-            border: '1px solid var(--border-subtle)',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-          }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <CreditCard size={15} color="#ff9500" />
-              <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Tarjetas:</span>
-              <span style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-primary)' }}>{caducidadesStats.cards}</span>
-            </div>
-            <div style={{ width: 1, height: 16, background: 'var(--border-subtle)' }} />
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <Clock size={15} color="#007aff" />
-              <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Suscripciones:</span>
-              <span style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-primary)' }}>{caducidadesStats.subs}</span>
-            </div>
-            {caducidadesStats.subCosts && caducidadesStats.subCosts.count > 0 && (
-              <>
-                <div style={{ width: 1, height: 16, background: 'var(--border-subtle)' }} />
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-primary)' }}>
-                  <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Gasto recurrente:</span>
-                  <span style={{ fontSize: '0.86rem', fontWeight: 700, color: '#34c759' }}>
-                    {caducidadesStats.subCosts.formattedMonthly}/mes
-                  </span>
-                  <span style={{ fontSize: '0.74rem', color: 'var(--text-tertiary)' }}>
-                    ({caducidadesStats.subCosts.formattedYearly}/año)
-                  </span>
-                </div>
-              </>
-            )}
-            {caducidadesStats.critical > 0 && (
-              <>
-                <div style={{ width: 1, height: 16, background: 'var(--border-subtle)' }} />
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#ff3b30' }}>
-                  <ShieldAlert size={15} />
-                  <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>Atención inmediata:</span>
-                  <span style={{ fontSize: '0.86rem', fontWeight: 700 }}>{caducidadesStats.critical}</span>
-                </div>
-              </>
             )}
           </div>
         )}

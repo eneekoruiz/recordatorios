@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, MoreHorizontal, Check, Settings, FolderPlus } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Check, Settings, FolderPlus, Play } from 'lucide-react';
 import type { CustomList } from '../../../models/Task';
 import { HapticService } from '../../../services/HapticService';
 
@@ -32,6 +32,7 @@ interface MainGlassHeaderProps {
   updateList: (id: string, updates: Partial<CustomList>) => void;
   setIsListConfigOpen: (val: boolean) => void;
   onAddSection: () => void;
+  onStartSequence?: () => void;
 }
 
 export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
@@ -52,7 +53,8 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
   setSortBy,
   updateList,
   setIsListConfigOpen,
-  onAddSection
+  onAddSection,
+  onStartSequence
 }) => {
   return (
     <header 
@@ -244,6 +246,23 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                     onClick={(e) => e.stopPropagation()}
                     onWheel={(e) => e.stopPropagation()}
                   >
+                    {onStartSequence && (
+                      <>
+                        <button 
+                          className="ios-dropdown-item"
+                          onClick={() => {
+                            HapticService.selection();
+                            setIsMenuOpen(false);
+                            onStartSequence();
+                          }}
+                        >
+                          <Play size={15} color="var(--accent-primary)" fill="var(--accent-primary)" />
+                          <span>Empezar lista</span>
+                        </button>
+                        <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
+                      </>
+                    )}
+
                     <button 
                       className="ios-dropdown-item"
                       onClick={() => { toggleShowCompleted(); setIsMenuOpen(false); }}

@@ -3,9 +3,9 @@ import { Sparkles, Calendar, Clock, Flag, CheckCircle2, AlertCircle, Inbox, Tras
 import { motion } from 'framer-motion';
 
 const getIconByName = (name?: string, fallbackNode?: React.ReactNode) => {
-  const size = 40;
+  const size = 32;
   const color = "var(--accent-primary)";
-  const strokeWidth = 1.5;
+  const strokeWidth = 1.7;
   switch (name) {
     case 'today':
     case 'sun': return <Sun size={size} color={color} strokeWidth={strokeWidth} />;
@@ -55,31 +55,32 @@ export function EmptyState({
     <motion.div 
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
       style={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         height: '100%',
-        minHeight: '160px',
-        padding: '16px 20px',
+        minHeight: '120px',
+        padding: '12px 16px',
         textAlign: 'center',
+        boxSizing: 'border-box'
       }}
     >
       <motion.div 
-        initial={{ opacity: 0, y: 12 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0, ease: [0.22, 1, 0.36, 1] }}
-        style={{ position: 'relative', marginBottom: 'var(--space-24)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        transition={{ duration: 0.4, delay: 0, ease: [0.22, 1, 0.36, 1] }}
+        style={{ position: 'relative', marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       >
         {/* Breathing background ambient glow */}
         <motion.div
-          animate={{ scale: [1, 1.2, 1], opacity: [0.35, 0.65, 0.35] }}
+          animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.55, 0.3] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
           style={{
             position: 'absolute',
-            inset: -28,
+            inset: -20,
             background: 'radial-gradient(circle, var(--accent-glow) 0%, transparent 70%)',
             borderRadius: '50%',
             zIndex: 0,
@@ -95,13 +96,13 @@ export function EmptyState({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: 84,
-            height: 84,
+            width: 66,
+            height: 66,
             background: 'var(--bg-surface-glass)',
             backdropFilter: 'blur(16px)',
             WebkitBackdropFilter: 'blur(16px)',
             borderRadius: '50%',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px var(--border-subtle)',
+            boxShadow: '0 6px 24px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--border-subtle)',
             border: '1.5px solid var(--border-color)',
             transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease'
           }}
@@ -115,51 +116,51 @@ export function EmptyState({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
         style={{
-        fontSize: '1.35rem',
+        fontSize: '1.2rem',
         fontWeight: 700,
         color: 'var(--text-primary)',
-        marginBottom: 'var(--space-8)',
+        marginBottom: '6px',
         fontFamily: 'var(--font-display)',
-        letterSpacing: '-0.01em'
+        letterSpacing: '-0.015em'
       }}>
         {title}
       </motion.h3>
       
       <motion.p 
-        initial={{ opacity: 0, y: 12 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: 0.4, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
         style={{
-        fontSize: '1rem',
+        fontSize: '0.90rem',
         color: 'var(--text-secondary)',
-        maxWidth: 320,
-        lineHeight: 1.5,
-        marginBottom: resolvedCtaText && onAction ? 'var(--space-24)' : 0
+        maxWidth: 300,
+        lineHeight: 1.45,
+        marginBottom: resolvedCtaText && onAction ? '18px' : 0
       }}>
         {resolvedMessage}
       </motion.p>
 
       {resolvedCtaText && onAction && (
         <motion.button
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+          transition={{ duration: 0.4, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.96 }}
           onClick={onAction}
           style={{
-            padding: '12px 24px',
+            padding: '10px 22px',
             background: 'var(--accent-primary)',
             color: 'white',
             border: 'none',
             borderRadius: 'var(--radius-full)',
             fontWeight: 600,
-            fontSize: '0.95rem',
+            fontSize: '0.90rem',
             cursor: 'pointer',
-            boxShadow: '0 8px 20px var(--accent-glow)',
+            boxShadow: '0 6px 16px var(--accent-glow)',
             display: 'flex',
             alignItems: 'center',
-            gap: 8,
+            gap: 7,
             transition: 'background 0.2s'
           }}
         >

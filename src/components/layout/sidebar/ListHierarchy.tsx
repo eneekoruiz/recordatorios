@@ -106,7 +106,7 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
     <div style={{ marginLeft: depth > 0 ? 16 : 0 }}>
       {currentLevelLists.map((list: any) => {
         const hasChildren = uniqueLists.some((l: any) => l.parentId === list.id);
-        const isExpanded = expanded[list.id] !== undefined ? expanded[list.id] : true;
+        const isExpanded = expanded[list.id] !== undefined ? expanded[list.id] : false;
         const isActive = !list.isFolder && currentView === `list_${list.id}`;
         const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
         const mobileItemStyle = {

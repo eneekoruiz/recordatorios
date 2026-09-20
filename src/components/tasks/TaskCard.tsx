@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, useMotionValue, useTransform, AnimatePresence, useMotionValueEvent } from 'framer-motion';
 import {
   Lock, MapPin, Image as ImageIcon, MoreHorizontal,
-  ChevronDown, X, Play, Info, RotateCcw, Flag, GripVertical
+  ChevronDown, X, Info, RotateCcw, Flag
 } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -79,29 +79,24 @@ export const TaskCard = React.memo(function TaskCard({
     }
   })();
 
-  // Helper para etiqueta de frecuencia sobria: solo si la tarea tiene un ciclo explícito asignado
-  // y no coincide redundantemente con el nombre de su sección o lista
+  // Helper para etiqueta de frecuencia sobria: solo si la tarea tiene un ciclo explícito asignado o inferido
   const cycleBadge = (() => {
-    const cycleId = task.cycle_id;
-    if (!cycleId) return null;
-
-    // Evitar badge redundante si la sección ya indica la periodicidad
-    if (task.sectionId) {
+    let cycleId = task.cycle_id;
+    if (!cycleId && task.sectionId) {
       const sec = task.sectionId.toLowerCase();
-      if (cycleId === 'cycle_day' && (sec.includes('diaria') || sec.includes('diario'))) return null;
-      if (cycleId === 'cycle_week' && sec.includes('semanal')) return null;
-      if (cycleId === 'cycle_month' && sec.includes('mensual')) return null;
-      if (cycleId === 'cycle_year' && sec.includes('anual')) return null;
+      if (sec.includes('diari')) cycleId = 'cycle_day';
+      else if (sec.includes('seman')) cycleId = 'cycle_week';
+      else if (sec.includes('mensu')) cycleId = 'cycle_month';
+      else if (sec.includes('anual')) cycleId = 'cycle_year';
     }
-
-    // Evitar badge redundante si la lista o sublista ya indica la periodicidad
-    if (task.categoryId) {
+    if (!cycleId && task.categoryId) {
       const cat = task.categoryId.toLowerCase();
-      if (cycleId === 'cycle_day' && (cat.includes('diaria') || cat.includes('diario'))) return null;
-      if (cycleId === 'cycle_week' && cat.includes('semanal')) return null;
-      if (cycleId === 'cycle_month' && cat.includes('mensual')) return null;
-      if (cycleId === 'cycle_year' && cat.includes('anual')) return null;
+      if (cat.includes('diari')) cycleId = 'cycle_day';
+      else if (cat.includes('seman')) cycleId = 'cycle_week';
+      else if (cat.includes('mensu')) cycleId = 'cycle_month';
+      else if (cat.includes('anual')) cycleId = 'cycle_year';
     }
+    if (!cycleId) return null;
 
     let label = 'Repetir';
     if (cycleId === 'cycle_day') label = 'Diario';
@@ -1056,37 +1051,9 @@ export const TaskCard = React.memo(function TaskCard({
           </button>
         )}
 
-        {/* Zen Mode Play Button on Hover & More button */}
+        {/* Apple Reminders Info (i) button & subtle more options */}
         {!isBlocked && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            {onOpenZenMode && (
-              <button
-                className="task-zen-btn"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenZenMode(task.id);
-                }}
-                aria-label="Modo Enfoque Zen"
-                title="Modo Enfoque Zen ▶️"
-                style={{
-                  width: 32, height: 32,
-                  borderRadius: '50%',
-                  display: isMobile ? 'none' : 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: 'var(--accent-glow)',
-                  border: '1px solid rgba(10, 132, 255, 0.25)',
-                  cursor: 'pointer',
-                  opacity: isHovered || contextMenuOpen ? 1 : 0,
-                  transition: 'opacity 0.2s ease, transform 0.15s ease',
-                  WebkitTapHighlightColor: 'transparent'
-                }}
-              >
-                <Play size={14} color="var(--accent-primary)" fill="var(--accent-primary)" style={{ marginLeft: 2 }} />
-              </button>
-            )}
-            {/* Apple Reminders Info (i) button */}
             <button
               className="task-info-btn"
               onPointerDown={(e) => e.stopPropagation()}
@@ -1098,7 +1065,7 @@ export const TaskCard = React.memo(function TaskCard({
               aria-label="Detalles del recordatorio"
               title="Información y detalles (i)"
               style={{
-                width: 34, height: 34,
+                width: 32, height: 32,
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
@@ -1113,7 +1080,7 @@ export const TaskCard = React.memo(function TaskCard({
                 flexShrink: 0
               }}
             >
-              <Info size={18} strokeWidth={2.2} />
+              <Info size={17} strokeWidth={2.2} />
             </button>
 
             <button
@@ -1123,43 +1090,23 @@ export const TaskCard = React.memo(function TaskCard({
                 openContextMenu();
               }}
               aria-label="Más opciones"
+              title="Más opciones"
               style={{
-                width: 32, height: 32,
+                width: 30, height: 30,
                 display: isMobile ? 'none' : 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 background: 'transparent',
                 border: 'none',
                 cursor: 'pointer',
-                opacity: isHovered || contextMenuOpen ? 0.8 : 0,
+                opacity: isHovered || contextMenuOpen ? 0.75 : 0,
                 transition: 'opacity 0.2s ease',
-                WebkitTapHighlightColor: 'transparent'
+                WebkitTapHighlightColor: 'transparent',
+                flexShrink: 0
               }}
             >
-              <MoreHorizontal size={18} color="var(--text-tertiary)" />
+              <MoreHorizontal size={17} color="var(--text-tertiary)" />
             </button>
-
-            {/* Desktop Drag Handle */}
-            {onReorderTasks && (
-              <div
-                className="task-drag-handle"
-                title="Arrastrar para reordenar tarea"
-                style={{
-                  width: 20,
-                  height: 32,
-                  display: isMobile ? 'none' : 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'grab',
-                  opacity: isHovered ? 0.35 : 0,
-                  transition: 'opacity 0.2s ease',
-                  color: 'var(--text-tertiary)',
-                  flexShrink: 0
-                }}
-              >
-                <GripVertical size={15} />
-              </div>
-            )}
           </div>
         )}
 
