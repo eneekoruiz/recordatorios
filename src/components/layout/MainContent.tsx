@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import { ChevronDown, Check } from 'lucide-react';
+import { Plus, ChevronDown, Check } from 'lucide-react';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import type { TaskItem } from '../../models/Task';
 import { TaskCard } from '../tasks/TaskCard';
@@ -78,6 +78,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const listSections = useAppStore((state) => state.listSections);
   const cycles = useAppStore((state) => state.cycles);
   const updateTask = useAppStore((state) => state.updateTask);
+  const reorderTasks = useAppStore((state) => state.reorderTasks);
   const updateList = useAppStore((state) => state.updateList);
   const addListSection = useAppStore((state) => state.addListSection);
   const updateListSection = useAppStore((state) => state.updateListSection);
@@ -240,7 +241,14 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
   // Helper de ordenamiento
   const sortTaskList = useCallback((taskList: TaskItem[]): TaskItem[] => {
-    if (sortBy === 'manual') return taskList;
+    if (sortBy === 'manual') {
+      return [...taskList].sort((a, b) => {
+        const orderA = a.order ?? 0;
+        const orderB = b.order ?? 0;
+        if (orderA !== orderB) return orderA - orderB;
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      });
+    }
     return [...taskList].sort((a, b) => {
       if (sortBy === 'dueDate') {
         if (!a.dueDate) return 1;
@@ -516,15 +524,11 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       rawGrouped = filteredGrouped;
     }
 
-    if (sortBy !== 'manual') {
-      const sortedGrouped: Record<string, TaskItem[]> = {};
-      Object.entries(rawGrouped).forEach(([key, taskList]) => {
-        sortedGrouped[key] = sortTaskList(taskList);
-      });
-      return sortedGrouped;
-    }
-
-    return rawGrouped;
+    const sortedGrouped: Record<string, TaskItem[]> = {};
+    Object.entries(rawGrouped).forEach(([key, taskList]) => {
+      sortedGrouped[key] = sortTaskList(taskList);
+    });
+    return sortedGrouped;
   }, [currentView, isFolderView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, resolvedShowCompleted, recentlyCompletedIds, lists, currentCycle, cycleInclusion, listSectionFilter, dailyTimeFilter, resolveTimeOfDay, currentList, sortBy, sortTaskList, lifeLogViewMode, selectedPersonFilter]);
     
   const smartTasks = useMemo(() => currentView === 'cycle_day' ? getSmartSortTasks(recentlyCompletedIds) : [], [currentView, getSmartSortTasks, tasks, recentlyCompletedIds]);
@@ -546,6 +550,61 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     }
     return Object.values(groupedTasks).flat();
   }, [groupedTasks, isolatedSectionKey, isolatedRoutineMode, listSections, lists]);
+
+  // Reordenación manual de tareas
+  const handleMoveTaskUp = useCallback((taskId: string) => {
+    const idx = visibleTasks.findIndex(t => t.id === taskId);
+    if (idx <= 0) return;
+
+    if (sortBy !== 'manual') {
+      setSortBy('manual');
+    }
+
+    const reordered = [...visibleTasks];
+    const temp = reordered[idx];
+    reordered[idx] = reordered[idx - 1];
+    reordered[idx - 1] = temp;
+
+    reorderTasks(reordered.map(t => t.id));
+    HapticService.selection();
+  }, [visibleTasks, reorderTasks, sortBy]);
+
+  const handleMoveTaskDown = useCallback((taskId: string) => {
+    const idx = visibleTasks.findIndex(t => t.id === taskId);
+    if (idx < 0 || idx >= visibleTasks.length - 1) return;
+
+    if (sortBy !== 'manual') {
+      setSortBy('manual');
+    }
+
+    const reordered = [...visibleTasks];
+    const temp = reordered[idx];
+    reordered[idx] = reordered[idx + 1];
+    reordered[idx + 1] = temp;
+
+    reorderTasks(reordered.map(t => t.id));
+    HapticService.selection();
+  }, [visibleTasks, reorderTasks, sortBy]);
+
+  const handleReorderTasks = useCallback((sourceTaskId: string, targetTaskId: string, position: 'before' | 'after' = 'before') => {
+    if (sourceTaskId === targetTaskId) return;
+    const sourceIdx = visibleTasks.findIndex(t => t.id === sourceTaskId);
+    const targetIdx = visibleTasks.findIndex(t => t.id === targetTaskId);
+    if (sourceIdx === -1 || targetIdx === -1) return;
+
+    if (sortBy !== 'manual') {
+      setSortBy('manual');
+    }
+
+    const reordered = [...visibleTasks];
+    const [removed] = reordered.splice(sourceIdx, 1);
+    const newTargetIdx = reordered.findIndex(t => t.id === targetTaskId);
+    const insertIdx = position === 'after' ? newTargetIdx + 1 : newTargetIdx;
+    reordered.splice(insertIdx, 0, removed);
+
+    reorderTasks(reordered.map(t => t.id));
+    HapticService.selection();
+  }, [visibleTasks, reorderTasks, sortBy]);
 
   // Calcular Resumen Financiero Total
   const totalCost = useMemo(() => {
@@ -1201,13 +1260,16 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     if (item.type === 'page-header') return 'page-header';
     if (item.type === 'header') return `header-${item.category || ''}-${item.sectionId || ''}-${item.title || ''}`;
     if (item.type === 'empty-section') return `empty-${item.category || ''}-${item.sectionId || ''}`;
-    if (item.type === 'task') return (item as any).isUpNext ? `task-upnext-${item.task.id}` : `task-${item.task.id}`;
+    if (item.type === 'task') return (item as any).isUpNext ? `task-upnext-${item.task.id}-${index}` : `task-${item.task.id}-${index}`;
     return index;
   }, []);
 
   const renderTask = useCallback((task: TaskItem, itemStyle: React.CSSProperties, index: number, depth: number, isFirst: boolean, isLast: boolean, previousTaskId?: string, itemKey?: React.Key) => {
     const hasChildren = Object.values(tasks).some(t => t.parentId === task.id && !t.deleted_at);
     const isExpanded = !isCatCollapsed(`task_${task.id}`);
+    const taskIdxInVisible = visibleTasks.findIndex(t => t.id === task.id);
+    const canMoveUp = taskIdxInVisible > 0;
+    const canMoveDown = taskIdxInVisible >= 0 && taskIdxInVisible < visibleTasks.length - 1;
 
     return (
       <motion.div
@@ -1245,6 +1307,11 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             onNavigateView={onSelectView}
             onPersonClick={(p) => setSelectedPersonForProfile(p)}
             isGracePeriod={recentlyCompletedIds.includes(task.id)}
+            onMoveUp={handleMoveTaskUp}
+            onMoveDown={handleMoveTaskDown}
+            canMoveUp={canMoveUp}
+            canMoveDown={canMoveDown}
+            onReorderTasks={handleReorderTasks}
             {...({
               hasChildren,
               isExpanded,
@@ -1254,7 +1321,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         </div>
       </motion.div>
     );
-  }, [tasks, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, onSelectView, isSmartView, currentView, setSelectedPersonForProfile, recentlyCompletedIds]);
+  }, [tasks, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, onSelectView, isSmartView, currentView, setSelectedPersonForProfile, recentlyCompletedIds, visibleTasks, handleMoveTaskUp, handleMoveTaskDown, handleReorderTasks]);
 
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
   const smartListInfo = isSmartView ? SMART_LISTS.find(l => l.id === currentView) : null;
@@ -1592,7 +1659,38 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       />
 
       {currentView !== 'TRASH' && (
-        <QuickAddBar currentView={currentView} onExpandDrawer={() => onOpenNewTask()} />
+        <>
+          <QuickAddBar currentView={currentView} onExpandDrawer={() => onOpenNewTask()} />
+          <motion.button
+            type="button"
+            data-testid="desktop-fab"
+            className="desktop-fab"
+            onClick={() => onOpenNewTask()}
+            whileHover={{ scale: 1.06 }}
+            whileTap={{ scale: 0.94 }}
+            title="Añadir nuevo recordatorio (N)"
+            aria-label="Añadir nuevo recordatorio"
+            style={{
+              position: 'fixed',
+              bottom: 20,
+              right: 22,
+              width: 48,
+              height: 48,
+              borderRadius: '50%',
+              background: 'var(--accent-primary, #007AFF)',
+              color: '#ffffff',
+              border: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              boxShadow: '0 6px 20px rgba(0, 122, 255, 0.4)',
+              zIndex: 45
+            }}
+          >
+            <Plus size={24} strokeWidth={2.4} />
+          </motion.button>
+        </>
       )}
 
       <DeletedTaskToast

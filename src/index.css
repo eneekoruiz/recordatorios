@@ -1764,9 +1764,14 @@ html, body {
   }
 }
 
-@media (min-width: 900px) and (min-height: 600px) {
+@media (min-width: 768px) {
   .desktop-shortcut-bar {
     display: flex !important;
+  }
+}
+@media (max-width: 767px) {
+  .desktop-shortcut-bar {
+    display: none !important;
   }
 }
 

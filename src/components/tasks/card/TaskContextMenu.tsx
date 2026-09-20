@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   CheckCircle, Info, IndentIncrease, IndentDecrease, Calendar, 
   AlertCircle, Flag, FolderInput, LayoutList, Copy, Play, Trash2, 
-  ChevronRight, ArrowLeft, Sun, CalendarDays, Clock, CalendarX, Edit3 
+  ChevronRight, ArrowLeft, Sun, CalendarDays, Clock, CalendarX, Edit3,
+  ArrowUp, ArrowDown
 } from 'lucide-react';
 import type { TaskItem } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
@@ -21,6 +22,10 @@ export interface TaskContextMenuProps {
   onOpenZenMode?: (id: string) => void;
   onToggle: (id: string, forceReverse?: boolean) => void;
   isCompleted: boolean;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
 }
 
 export function TaskContextMenu({
@@ -34,7 +39,11 @@ export function TaskContextMenu({
   setIsDeleteConfirmOpen,
   onOpenZenMode,
   onToggle,
-  isCompleted
+  isCompleted,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown
 }: TaskContextMenuProps) {
   const updateTask = useAppStore(state => state.updateTask);
 
@@ -102,6 +111,10 @@ export function TaskContextMenu({
               onOpenZenMode={onOpenZenMode}
               onToggle={onToggle}
               isCompleted={isCompleted}
+              onMoveUp={onMoveUp}
+              onMoveDown={onMoveDown}
+              canMoveUp={canMoveUp}
+              canMoveDown={canMoveDown}
             />
           </motion.div>
         </>
@@ -122,6 +135,10 @@ interface MenuActionsProps {
   onOpenZenMode?: (id: string) => void;
   onToggle: (id: string, forceReverse?: boolean) => void;
   isCompleted: boolean;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
 }
 
 function MenuActions({
@@ -134,7 +151,11 @@ function MenuActions({
   updateTask,
   onOpenZenMode,
   onToggle,
-  isCompleted
+  isCompleted,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown
 }: MenuActionsProps) {
   const addTask = useAppStore(state => state.addTask);
   const lists = useAppStore(state => state.lists);
@@ -499,6 +520,70 @@ function MenuActions({
           onEdit(task.id); 
         }} 
       />
+
+      {/* Reordenación manual rápida: Mover arriba / Mover abajo */}
+      {(onMoveUp || onMoveDown) && (
+        <div style={{ display: 'flex', gap: 6, padding: '4px 12px 2px' }}>
+          <button
+            type="button"
+            disabled={!canMoveUp}
+            onClick={() => {
+              setContextMenuOpen(false);
+              onMoveUp?.();
+            }}
+            style={{
+              flex: 1,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 5,
+              padding: '6px 8px',
+              borderRadius: 8,
+              background: canMoveUp ? 'var(--bg-hover, rgba(0,0,0,0.06))' : 'transparent',
+              color: canMoveUp ? 'var(--text-primary)' : 'var(--text-tertiary)',
+              border: '1px solid var(--border-subtle)',
+              fontSize: '0.80rem',
+              fontWeight: 600,
+              cursor: canMoveUp ? 'pointer' : 'default',
+              opacity: canMoveUp ? 1 : 0.4,
+              transition: 'all 0.15s ease'
+            }}
+            title="Subir posición en la lista"
+          >
+            <ArrowUp size={13} strokeWidth={2.5} />
+            <span>Mover arriba</span>
+          </button>
+          <button
+            type="button"
+            disabled={!canMoveDown}
+            onClick={() => {
+              setContextMenuOpen(false);
+              onMoveDown?.();
+            }}
+            style={{
+              flex: 1,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 5,
+              padding: '6px 8px',
+              borderRadius: 8,
+              background: canMoveDown ? 'var(--bg-hover, rgba(0,0,0,0.06))' : 'transparent',
+              color: canMoveDown ? 'var(--text-primary)' : 'var(--text-tertiary)',
+              border: '1px solid var(--border-subtle)',
+              fontSize: '0.80rem',
+              fontWeight: 600,
+              cursor: canMoveDown ? 'pointer' : 'default',
+              opacity: canMoveDown ? 1 : 0.4,
+              transition: 'all 0.15s ease'
+            }}
+            title="Bajar posición en la lista"
+          >
+            <ArrowDown size={13} strokeWidth={2.5} />
+            <span>Mover abajo</span>
+          </button>
+        </div>
+      )}
 
       <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
 

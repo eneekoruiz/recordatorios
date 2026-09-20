@@ -61,6 +61,7 @@ interface AppState {
   toggleTask: (id: string, forceReverse?: boolean) => void;
   deleteTask: (id: string) => void;
   updateTask: (id: string, updates: Partial<TaskItem>) => void;
+  reorderTasks: (orderedTaskIds: string[]) => void;
   
   addCycle: (cycle: CustomCycle) => void;
   updateCycle: (id: string, updates: Partial<CustomCycle>) => void;
@@ -504,6 +505,19 @@ export const useAppStore = create<AppState>()(
             [id]: updated
           }
         };
+      }),
+
+      reorderTasks: (orderedTaskIds) => optimisticUpdate(get, set, (state) => {
+        const newTasks = { ...state.tasks };
+        let changed = false;
+        orderedTaskIds.forEach((id, index) => {
+          const t = newTasks[id];
+          if (t && t.order !== index) {
+            newTasks[id] = TaskRepository.update(t, { order: index });
+            changed = true;
+          }
+        });
+        return changed ? { tasks: newTasks } : state;
       }),
 
       addCycle: (cycle) => optimisticUpdate(get, set, (state) => ({

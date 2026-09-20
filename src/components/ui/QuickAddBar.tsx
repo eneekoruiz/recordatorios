@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, SlidersHorizontal, ArrowUp, Plus } from 'lucide-react';
+import { Sparkles, SlidersHorizontal, ArrowUp } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { parseNaturalLanguage } from '../../utils/nlp';
 import { SoundService } from '../../services/SoundService';
@@ -124,8 +124,8 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
         bottom: 'max(18px, env(safe-area-inset-bottom))',
         left: '50%',
         transform: 'translateX(-50%)',
-        width: 'min(92vw, 660px)',
-        zIndex: 90,
+        width: 'min(90vw, 560px)',
+        zIndex: 42,
         boxSizing: 'border-box'
       }}
     >
@@ -259,7 +259,7 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
           <button
             type="button"
             onClick={onExpandDrawer}
-            title="Opciones detalladas"
+            title="Opciones detalladas (editor completo)"
             style={{
               background: 'transparent',
               border: 'none',
@@ -276,26 +276,28 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
             <SlidersHorizontal size={17} />
           </button>
 
-          {/* Quick Submit or New Task Button */}
+          {/* Quick Submit Button */}
           <button
             type="submit"
-            title={text.trim() ? "Guardar recordatorio" : "Añadir nuevo recordatorio"}
+            disabled={!text.trim()}
+            title="Añadir recordatorio rápido (Enter)"
             style={{
-              width: 32,
-              height: 32,
+              width: 30,
+              height: 30,
               borderRadius: '50%',
-              background: 'var(--accent-primary)',
-              color: '#ffffff',
+              background: text.trim() ? 'var(--accent-primary)' : 'var(--border-subtle, rgba(0,0,0,0.08))',
+              color: text.trim() ? '#ffffff' : 'var(--text-tertiary)',
               border: 'none',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              cursor: 'pointer',
+              cursor: text.trim() ? 'pointer' : 'default',
               transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-              boxShadow: '0 2px 8px rgba(0, 122, 255, 0.35)'
+              boxShadow: text.trim() ? '0 2px 8px rgba(0, 122, 255, 0.35)' : 'none',
+              opacity: text.trim() ? 1 : 0.4
             }}
           >
-            {text.trim() ? <ArrowUp size={16} strokeWidth={2.5} /> : <Plus size={18} strokeWidth={2.5} />}
+            <ArrowUp size={15} strokeWidth={2.5} />
           </button>
         </form>
       </div>

@@ -286,66 +286,77 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          {/* Si esta sección tiene periodicidad, permitir conmutar entre Rutina completa y Solo esta sección */}
-          {data.periodicity && data.routineCounts && (
-            <div 
-              style={{ 
-                display: 'inline-flex', 
-                alignItems: 'center', 
-                background: 'var(--bg-hover, rgba(0,0,0,0.06))', 
-                padding: '2px', 
-                borderRadius: 999, 
-                gap: 2 
-              }}
-            >
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  HapticService.selection();
-                  toggleSectionRoutineMode?.(data.category, 'full_routine');
-                  _setIsolatedSectionKey?.(null);
+          {/* Si esta sección tiene periodicidad, conmutador estilo Apple Segmented Control */}
+          {data.periodicity && data.routineCounts && (() => {
+            const rawTitle = data.title.replace(/^[\p{Emoji}\s⏳]+/gu, '').trim() || 'sección';
+            const cleanName = rawTitle.length > 0 
+              ? rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1).toLowerCase() 
+              : 'sección';
+            const shortName = cleanName.length > 14 ? 'sección' : cleanName;
+
+            return (
+              <div 
+                style={{ 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  background: 'var(--bg-material, rgba(120, 120, 128, 0.12))', 
+                  padding: '3px', 
+                  borderRadius: '8px', 
+                  gap: '2px',
+                  border: '1px solid var(--border-subtle, rgba(0, 0, 0, 0.05))'
                 }}
-                style={{
-                  border: 'none',
-                  borderRadius: 999,
-                  padding: '3px 10px',
-                  fontSize: '0.72rem',
-                  fontWeight: currentSectionRoutineMode === 'full_routine' ? 700 : 500,
-                  background: currentSectionRoutineMode === 'full_routine' ? 'var(--accent-primary)' : 'transparent',
-                  color: currentSectionRoutineMode === 'full_routine' ? '#ffffff' : 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-                title="Ver todos los recordatorios acumulativos que tocan en esta rutina (ej. anuales, mensuales, semanales y diarias)"
               >
-                Rutina completa ({data.routineCounts.full})
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  HapticService.selection();
-                  toggleSectionRoutineMode?.(data.category, 'only_section');
-                  _setIsolatedSectionKey?.(null);
-                }}
-                style={{
-                  border: 'none',
-                  borderRadius: 999,
-                  padding: '3px 10px',
-                  fontSize: '0.72rem',
-                  fontWeight: currentSectionRoutineMode === 'only_section' ? 700 : 500,
-                  background: currentSectionRoutineMode === 'only_section' ? 'var(--accent-primary)' : 'transparent',
-                  color: currentSectionRoutineMode === 'only_section' ? '#ffffff' : 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-                title={`Ver únicamente los recordatorios estrictamente asignados a ${data.title}`}
-              >
-                Solo {data.title.replace(/^⏳\s*/, '')} ({data.routineCounts.only})
-              </button>
-            </div>
-          )}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    HapticService.selection();
+                    toggleSectionRoutineMode?.(data.category, 'full_routine');
+                    _setIsolatedSectionKey?.(null);
+                  }}
+                  style={{
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '3.5px 9px',
+                    fontSize: '0.72rem',
+                    fontWeight: currentSectionRoutineMode === 'full_routine' ? 600 : 500,
+                    background: currentSectionRoutineMode === 'full_routine' ? 'var(--bg-elevated, #ffffff)' : 'transparent',
+                    color: currentSectionRoutineMode === 'full_routine' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    boxShadow: currentSectionRoutineMode === 'full_routine' ? '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.06)' : 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
+                  }}
+                  title="Ver todas las tareas de la rutina periódica"
+                >
+                  Todas ({data.routineCounts.full})
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    HapticService.selection();
+                    toggleSectionRoutineMode?.(data.category, 'only_section');
+                    _setIsolatedSectionKey?.(null);
+                  }}
+                  style={{
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '3.5px 9px',
+                    fontSize: '0.72rem',
+                    fontWeight: currentSectionRoutineMode === 'only_section' ? 600 : 500,
+                    background: currentSectionRoutineMode === 'only_section' ? 'var(--bg-elevated, #ffffff)' : 'transparent',
+                    color: currentSectionRoutineMode === 'only_section' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    boxShadow: currentSectionRoutineMode === 'only_section' ? '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.06)' : 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
+                  }}
+                  title={`Ver únicamente las tareas directas de ${cleanName}`}
+                >
+                  Solo {shortName} ({data.routineCounts.only})
+                </button>
+              </div>
+            );
+          })()}
           <ChevronDown 
             size={18} 
             color="var(--text-tertiary)" 

@@ -3,19 +3,18 @@ export function BottomShortcutBar() {
     <div
       style={{
         position: 'fixed',
-        bottom: 80,
-        right: 20,
+        bottom: 78,
+        right: 22,
         zIndex: 44,
-        display: 'none',
         alignItems: 'center',
         gap: 6,
-        background: 'var(--bg-surface-glass)',
-        backdropFilter: 'blur(20px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-        border: '1px solid var(--border-color)',
+        background: 'var(--bg-material, rgba(255, 255, 255, 0.88))',
+        backdropFilter: 'blur(25px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(25px) saturate(180%)',
+        border: '1px solid var(--border-subtle, rgba(0, 0, 0, 0.12))',
         borderRadius: 999,
         padding: '5px 12px',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
         fontSize: '0.75rem',
         color: 'var(--text-tertiary)'
       }}

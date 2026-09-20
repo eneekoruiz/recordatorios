@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, useMotionValue, useTransform, AnimatePresence, useMotionValueEvent } from 'framer-motion';
 import {
   Lock, MapPin, Image as ImageIcon, MoreHorizontal,
-  ChevronDown, X, Play, Info, RotateCcw, Flag
+  ChevronDown, X, Play, Info, RotateCcw, Flag, GripVertical
 } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -38,10 +38,16 @@ interface TaskCardProps {
   onNavigateView?: (view: string) => void;
   onPersonClick?: (person: string) => void;
   isGracePeriod?: boolean;
+  onMoveUp?: (id: string) => void;
+  onMoveDown?: (id: string) => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
+  onReorderTasks?: (sourceId: string, targetId: string, position: 'before' | 'after') => void;
 }
 
 export const TaskCard = React.memo(function TaskCard({
-  task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, showListName = true, isFirstInSection, isLastInSection, previousTaskId, hasChildren, isExpanded, onToggleExpand, indent = 0, onNavigateView, onPersonClick, isGracePeriod
+  task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, showListName = true, isFirstInSection, isLastInSection, previousTaskId, hasChildren, isExpanded, onToggleExpand, indent = 0, onNavigateView, onPersonClick, isGracePeriod,
+  onMoveUp, onMoveDown, canMoveUp, canMoveDown, onReorderTasks
 }: TaskCardProps) {
   const cycles = useAppStore(state => state.cycles);
   const tasks = useAppStore(state => state.tasks);
@@ -303,9 +309,53 @@ export const TaskCard = React.memo(function TaskCard({
   const isCaducidad = isCaducidadesList(task.categoryId) || !!task.expirationType;
   const expirationStatus = (isCaducidad || task.dueDate) ? calculateExpirationStatus(task.dueDate) : null;
 
+  const [dragOverPosition, setDragOverPosition] = useState<'top' | 'bottom' | null>(null);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!onReorderTasks) return;
+    if (e.dataTransfer.types.includes('text/task-id') || e.dataTransfer.types.includes('text/plain')) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = 'move';
+      const rect = e.currentTarget.getBoundingClientRect();
+      const isBottom = e.clientY > rect.top + rect.height / 2;
+      setDragOverPosition(isBottom ? 'bottom' : 'top');
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverPosition(null);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    if (!onReorderTasks) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const sourceId = e.dataTransfer.getData('text/task-id') || e.dataTransfer.getData('text/plain');
+    const pos = dragOverPosition || (e.clientY > e.currentTarget.getBoundingClientRect().top + e.currentTarget.getBoundingClientRect().height / 2 ? 'bottom' : 'top');
+    setDragOverPosition(null);
+    if (sourceId && sourceId !== task.id) {
+      onReorderTasks(sourceId, task.id, pos === 'bottom' ? 'after' : 'before');
+    }
+  };
+
+  const handleDragStart = (e: React.DragEvent) => {
+    e.stopPropagation();
+    e.dataTransfer.setData('text/task-id', task.id);
+    e.dataTransfer.setData('text/plain', task.id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
   return (
     <div
       className="task-item-wrapper"
+      draggable={!isBlocked && !isEditingTitle && !isEditingNote && !contextMenuOpen && Boolean(onReorderTasks)}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
       style={{
         ...virtualStyle,
         position: 'relative',
@@ -360,6 +410,38 @@ export const TaskCard = React.memo(function TaskCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
+      {/* Drop Target Indicator Line for manual reordering */}
+      {dragOverPosition === 'top' && (
+        <div 
+          style={{
+            position: 'absolute',
+            top: -1,
+            left: 8,
+            right: 8,
+            height: 3,
+            background: 'var(--accent-primary, #007aff)',
+            borderRadius: 2,
+            zIndex: 9999,
+            boxShadow: '0 0 8px rgba(0, 122, 255, 0.7)'
+          }} 
+        />
+      )}
+      {dragOverPosition === 'bottom' && (
+        <div 
+          style={{
+            position: 'absolute',
+            bottom: -1,
+            left: 8,
+            right: 8,
+            height: 3,
+            background: 'var(--accent-primary, #007aff)',
+            borderRadius: 2,
+            zIndex: 9999,
+            boxShadow: '0 0 8px rgba(0, 122, 255, 0.7)'
+          }} 
+        />
+      )}
+
       {/* Fixed swipe action backgrounds */}
       <TaskSwipeBackground
         isEffectivelyDone={isEffectivelyDone}
@@ -1060,6 +1142,28 @@ export const TaskCard = React.memo(function TaskCard({
             >
               <MoreHorizontal size={18} color="var(--text-tertiary)" />
             </button>
+
+            {/* Desktop Drag Handle */}
+            {onReorderTasks && (
+              <div
+                className="task-drag-handle"
+                title="Arrastrar para reordenar tarea"
+                style={{
+                  width: 20,
+                  height: 32,
+                  display: isMobile ? 'none' : 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'grab',
+                  opacity: isHovered ? 0.35 : 0,
+                  transition: 'opacity 0.2s ease',
+                  color: 'var(--text-tertiary)',
+                  flexShrink: 0
+                }}
+              >
+                <GripVertical size={15} />
+              </div>
+            )}
           </div>
         )}
 
@@ -1078,6 +1182,10 @@ export const TaskCard = React.memo(function TaskCard({
         onOpenZenMode={onOpenZenMode}
         onToggle={onToggle}
         isCompleted={isCompletedPeriod}
+        onMoveUp={onMoveUp ? () => onMoveUp(task.id) : undefined}
+        onMoveDown={onMoveDown ? () => onMoveDown(task.id) : undefined}
+        canMoveUp={canMoveUp}
+        canMoveDown={canMoveDown}
       />
 
       <ConfirmModal
