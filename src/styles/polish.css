@@ -182,7 +182,19 @@ input:focus-visible, textarea:focus-visible { outline: none; }
   box-shadow: none !important;
 }
 .input-group:focus-within {
-  box-shadow: 0 0 0 4px var(--accent-glow);
+  border-color: color-mix(in srgb, var(--accent-primary) 45%, transparent) !important;
+  box-shadow: none;
+}
+/* Los campos dentro de una tarjeta ya marcan el foco con el borde del contenedor. */
+.input-group :where(input, textarea):focus-visible,
+.quick-add-shell :where(input, textarea):focus-visible,
+.auth-field input:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+.auth-field input:focus-visible {
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 0 4px var(--accent-glow) !important;
 }
 
 /* ---------- Desenfoque y degradado inferior para controles flotantes ---------- */
@@ -208,3 +220,40 @@ input:focus-visible, textarea:focus-visible { outline: none; }
   mask-image: linear-gradient(to bottom, transparent 0%, black 28%, black 100%);
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 28%, black 100%);
 }
+
+/* ── Barra de añadido rápido: fichas detectadas por lenguaje natural ── */
+.qa-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--accent-primary) 11%, transparent);
+  color: var(--accent-primary);
+  white-space: nowrap;
+}
+.qa-chip--priority { background: color-mix(in srgb, var(--accent-red) 12%, transparent); color: var(--accent-red); }
+.qa-chip--list { background: color-mix(in srgb, var(--accent-green) 14%, transparent); color: var(--accent-green); }
+.qa-chip--cycle { background: color-mix(in srgb, var(--accent-orange) 14%, transparent); color: var(--accent-orange); }
+.qa-chip--people { background: color-mix(in srgb, var(--accent-purple) 14%, transparent); color: var(--accent-purple); }
+
+/* ── Hoja de detalles: cabecera en frase, como en iOS ── */
+.drawer-header h3 {
+  font-size: 1.02rem !important;
+  font-weight: 650 !important;
+  letter-spacing: -0.01em !important;
+  text-transform: none !important;
+  color: var(--text-primary) !important;
+}
+.drawer-header .save-btn {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--accent-primary);
+  color: #fff;
+  font-weight: 600;
+}
+.drawer-header .save-btn:disabled { opacity: 0.45; }
+.section-title { text-transform: none !important; letter-spacing: 0 !important; font-size: 0.82rem !important; }

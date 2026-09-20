@@ -330,7 +330,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       let listName = lists?.find(l => l.id === catId)?.name;
       if (!listName) {
         listName = (catId === 'primeros_pasos' || currentView === 'smart_primeros_pasos')
-          ? 'Guía de Inicio'
+          ? 'Guía de inicio'
           : 'Sin Lista';
       }
       if (!grouped[listName]) grouped[listName] = [];
@@ -899,8 +899,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         let headerTitle = categoryOrCycle;
         let headerDepth = 0;
 
-        if (categoryOrCycle === 'primeros_pasos' || categoryOrCycle === 'Guía de Inicio' || currentView === 'smart_primeros_pasos') {
-          headerTitle = 'Guía de Inicio';
+        if (categoryOrCycle === 'primeros_pasos' || categoryOrCycle === 'Guía de inicio' || currentView === 'smart_primeros_pasos') {
+          headerTitle = 'Guía de inicio';
           color = '#ff2d55';
         } else if (categoryOrCycle === 'inbox' || categoryOrCycle === 'undefined' || !categoryOrCycle) {
           headerTitle = 'Sin lista';
@@ -1330,7 +1330,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             onOpenZenMode={onOpenZenMode}
             onEdit={onEditTask || NOOP}
             index={index}
-            showListName={(isSmartView && currentView !== 'smart_primeros_pasos') || currentView === 'cycles'}
+            // Las tareas se agrupan bajo la cabecera de su lista: repetirla en cada fila sobra.
+            showListName={false}
+            hideDueDate={currentView === 'smart_today'}
             isFirstInSection={isFirst}
             isLastInSection={isLast}
             previousTaskId={previousTaskId}

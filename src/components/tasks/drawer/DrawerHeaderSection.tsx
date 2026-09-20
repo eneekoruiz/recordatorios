@@ -96,7 +96,7 @@ export const DrawerHeaderSection: React.FC<DrawerHeaderSectionProps> = ({
       {/* List and Type pickers */}
       <div className="details-group" style={{ marginBottom: '20px' }}>
         <div className="detail-row" style={{ padding: '12px 0' }}>
-          <span className="detail-label">Mover a Lista</span>
+          <span className="detail-label">Lista</span>
           <CustomSelect 
             className="detail-select"
             value={category}
@@ -111,14 +111,14 @@ export const DrawerHeaderSection: React.FC<DrawerHeaderSectionProps> = ({
         <div className="divider"></div>
         
         <div className="detail-row" style={{ padding: '12px 0' }}>
-          <span className="detail-label">Tipo de Recordatorio</span>
+          <span className="detail-label">Tipo</span>
           <CustomSelect 
             className="detail-select"
             value={type}
             onChange={val => setType(val as 'task' | 'log')}
             options={[
-              { value: 'task', label: 'Acción (Checklist)' },
-              { value: 'log', label: 'Registro (Historial)' }
+              { value: 'task', label: 'Tarea por hacer' },
+              { value: 'log', label: 'Algo que ya hice' }
             ]}
           />
         </div>

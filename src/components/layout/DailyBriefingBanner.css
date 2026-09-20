@@ -1,0 +1,82 @@
+/* Resumen del día en la vista «Hoy»: informativo y discreto. */
+.daily-briefing-container {
+  margin: 0 16px 14px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: var(--bg-elevated);
+  border: 0.5px solid var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.briefing-top { display: flex; align-items: flex-start; gap: 12px; }
+.briefing-icon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--briefing-accent) 14%, transparent);
+  color: var(--briefing-accent);
+}
+.briefing-heading { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.briefing-greeting {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+}
+.briefing-date { font-size: 0.8rem; color: var(--text-tertiary); }
+.briefing-toggle {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.briefing-toggle:hover { background: var(--bg-hover); }
+
+.briefing-body { display: flex; flex-direction: column; gap: 10px; }
+.briefing-lead { margin: 0; font-size: 0.95rem; line-height: 1.45; color: var(--text-secondary); }
+.briefing-lead strong { color: var(--text-primary); font-weight: 600; }
+
+.briefing-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.briefing-stats b { color: var(--text-primary); font-weight: 650; font-variant-numeric: tabular-nums; }
+.briefing-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--accent-orange) 12%, transparent);
+  color: var(--accent-orange);
+  max-width: 100%;
+}
+.briefing-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.briefing-chip--urgent {
+  background: color-mix(in srgb, var(--accent-red) 12%, transparent);
+  color: var(--accent-red);
+}
+
+@media (max-width: 768px) {
+  .daily-briefing-container { margin: 0 16px 12px; padding: 14px 16px; }
+}

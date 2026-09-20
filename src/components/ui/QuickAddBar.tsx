@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, SlidersHorizontal, ArrowUp } from 'lucide-react';
+import { Sparkles, SlidersHorizontal, ArrowUp, Calendar, Clock, AlertCircle, List as ListIcon, Repeat, Users } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { parseNaturalLanguage } from '../../utils/nlp';
 import { SoundService } from '../../services/SoundService';
@@ -11,6 +11,8 @@ interface QuickAddBarProps {
   onExpandDrawer: () => void;
 }
 
+const PRIORITY_LABELS: Record<string, string> = { high: 'alta', medium: 'media', low: 'baja' };
+
 export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
   const [text, setText] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -19,7 +21,13 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
   const lists = useAppStore(state => state.lists);
 
   const nlp = parseNaturalLanguage(text);
-  const extractedPeople = extractPeopleFromText(text);
+  // «@Compras» es una lista, no una persona: evitamos mostrarlo dos veces.
+  const matchedList = nlp.suggestedCategory
+    ? lists.find((l) => l.name.toLowerCase() === nlp.suggestedCategory!.toLowerCase())
+    : undefined;
+  const extractedPeople = extractPeopleFromText(text).filter(
+    (person) => person.toLowerCase() !== (nlp.suggestedCategory || '').toLowerCase()
+  );
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -125,6 +133,7 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
       }}
     >
       <div
+        className="quick-add-shell"
         style={{
           width: '100%',
           background: 'var(--bg-material, rgba(255, 255, 255, 0.88))',
@@ -151,33 +160,33 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
               style={{ display: 'flex', gap: 6, flexWrap: 'wrap', overflow: 'hidden' }}
             >
               {nlp.suggestedDueDate && (
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: 'var(--accent-glow)', color: 'var(--accent-primary)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  📅 {nlp.suggestedDueDate.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
+                <span className="qa-chip">
+                  <Calendar size={12} /> {nlp.suggestedDueDate.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
                 </span>
               )}
               {nlp.times.map(t => (
-                <span key={t} style={{ fontSize: '0.75rem', fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: 'var(--accent-glow)', color: 'var(--accent-primary)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  ⏰ {t}
+                <span key={t} className="qa-chip">
+                  <Clock size={12} /> {t}
                 </span>
               ))}
               {nlp.suggestedPriority && (
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: 'rgba(255, 59, 48, 0.15)', color: 'var(--accent-red)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  🚨 Prioridad {nlp.suggestedPriority}
+                <span className="qa-chip qa-chip--priority">
+                  <AlertCircle size={12} /> Prioridad {PRIORITY_LABELS[nlp.suggestedPriority] || nlp.suggestedPriority}
                 </span>
               )}
               {nlp.suggestedCategory && (
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: 'rgba(52, 199, 89, 0.15)', color: 'var(--accent-green)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  📁 @{nlp.suggestedCategory}
+                <span className="qa-chip qa-chip--list">
+                  <ListIcon size={12} /> {matchedList?.name || nlp.suggestedCategory}
                 </span>
               )}
               {nlp.suggestedCycleId && (
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: 'rgba(255, 149, 0, 0.15)', color: 'var(--accent-orange)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  🔄 Ciclo
+                <span className="qa-chip qa-chip--cycle">
+                  <Repeat size={12} /> Se repite
                 </span>
               )}
               {extractedPeople.length > 0 && (
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: 'rgba(88, 86, 214, 0.15)', color: '#5856d6', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  👥 {extractedPeople.join(', ')}
+                <span className="qa-chip qa-chip--people">
+                  <Users size={12} /> {extractedPeople.join(', ')}
                 </span>
               )}
             </motion.div>
@@ -237,7 +246,7 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
                 }
               }
             }}
-            placeholder="Añadir rápido: 'Comprar pan mañana a las 18:00 !alta'..."
+            placeholder="Nuevo recordatorio"
             style={{
               flex: 1,
               border: 'none',

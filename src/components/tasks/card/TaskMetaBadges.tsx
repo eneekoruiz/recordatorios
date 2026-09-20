@@ -6,6 +6,8 @@ import { HapticService } from '../../../services/HapticService';
 export interface TaskMetaBadgesProps {
   task: TaskItem;
   showListName?: boolean;
+  /** En la vista «Hoy» la fecha es obvia: se oculta para no repetir información. */
+  hideDueDate?: boolean;
   taskList?: CustomList;
   dueDateColor: string;
   cycleBadge?: { label: string } | null;
@@ -18,6 +20,7 @@ export interface TaskMetaBadgesProps {
 export function TaskMetaBadges({
   task,
   showListName,
+  hideDueDate,
   taskList,
   dueDateColor,
   cycleBadge,
@@ -40,7 +43,8 @@ export function TaskMetaBadges({
     return null;
   })();
 
-  const hasMeta = showListName || task.dueDate || cycleBadge || timeOfDayInfo || Boolean(inAppListTarget);
+  const showDueDate = !!task.dueDate && !hideDueDate;
+  const hasMeta = showListName || showDueDate || cycleBadge || timeOfDayInfo || Boolean(inAppListTarget);
 
   return (
     <>
@@ -56,7 +60,7 @@ export function TaskMetaBadges({
               {taskList.name}
             </span>
           )}
-          {task.dueDate && (
+          {showDueDate && (
             <span 
               onClick={(e) => {
                 e.stopPropagation();
@@ -70,7 +74,7 @@ export function TaskMetaBadges({
               title="Fecha de vencimiento (Toca para editar)"
             >
               <Calendar size={11} style={{ flexShrink: 0 }} /> {(() => {
-                const due = new Date(task.dueDate);
+                const due = new Date(task.dueDate!);
                 const today = new Date(); today.setHours(0, 0, 0, 0);
                 const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
                 const dueZero = new Date(due); dueZero.setHours(0, 0, 0, 0);

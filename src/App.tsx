@@ -358,8 +358,8 @@ function App() {
           {
             id: 'task_onboarding_1',
             categoryId: 'primeros_pasos',
-            title: 'Crear tu primer recordatorio en lenguaje natural',
-            description: 'Escribe abajo: "Reunión mañana a las 10:00 !alta @Trabajo" y pulsa Enter.',
+            title: 'Escribe tu primer recordatorio',
+            description: 'Prueba abajo con «Reunión mañana a las 10:00 !alta @Trabajo»: la fecha, la hora y la lista se rellenan solas.',
             priority: 'high',
             status: 'pending',
             created_at: new Date().toISOString(),
@@ -368,8 +368,8 @@ function App() {
           {
             id: 'task_onboarding_2',
             categoryId: 'primeros_pasos',
-            title: 'Abrir la Paleta de Comandos (Ctrl + K)',
-            description: 'Pulsa Ctrl+K o "/" en tu teclado para buscar cualquier tarea, ciclo o lista en milisegundos.',
+            title: 'Encuentra cualquier cosa al instante',
+            description: 'Pulsa Ctrl+K (⌘K en Mac) para buscar entre tus recordatorios, listas y ciclos.',
             priority: 'medium',
             status: 'pending',
             created_at: new Date().toISOString(),
@@ -378,8 +378,8 @@ function App() {
           {
             id: 'task_onboarding_3',
             categoryId: 'primeros_pasos',
-            title: 'Activar el Modo Enfoque Zen con Audio',
-            description: 'Abre las opciones de cualquier recordatorio (clic derecho o pulsación larga) y elige "Modo Enfoque Zen".',
+            title: 'Concéntrate con el Modo Zen',
+            description: 'Abre las opciones de un recordatorio (clic derecho o pulsación larga) y elige «Modo Enfoque Zen».',
             priority: 'low',
             status: 'pending',
             created_at: new Date().toISOString(),
@@ -388,8 +388,8 @@ function App() {
           {
             id: 'task_onboarding_4',
             categoryId: 'primeros_pasos',
-            title: 'Organizar con Prioridades y Listas',
-            description: 'Asigna prioridades (!alta, !media, !baja) y agrupa tus pendientes en distintas listas temáticas.',
+            title: 'Ordena con listas y prioridades',
+            description: 'Crea listas desde la barra lateral y marca lo importante escribiendo !alta, !media o !baja.',
             priority: 'medium',
             status: 'pending',
             created_at: new Date().toISOString(),
@@ -398,8 +398,8 @@ function App() {
           {
             id: 'task_onboarding_5',
             categoryId: 'primeros_pasos',
-            title: 'Tus recordatorios, en todos tus dispositivos',
-            description: 'Todo se guarda en este dispositivo y, si inicias sesión, se sincroniza solo con tu móvil y tu ordenador.',
+            title: 'Llévalos a todos tus dispositivos',
+            description: 'Todo se guarda en este dispositivo. Al crear una cuenta, se sincroniza solo con tu móvil y tu ordenador.',
             priority: 'none',
             status: 'pending',
             created_at: new Date().toISOString(),
@@ -681,7 +681,10 @@ function App() {
         onEditTask={(taskId) => { setEditingTaskId(taskId); setIsDrawerOpen(true); }}
       />
       <InstallPromptModal />
-      <DailyGreetingModal onSelectView={handleSelectView} />
+      <DailyGreetingModal
+        onSelectView={handleSelectView}
+        onOpenTask={(taskId) => { handleSelectView('smart_today'); setEditingTaskId(taskId); setIsDrawerOpen(true); }}
+      />
       <ShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
       <ConfirmHost />
 

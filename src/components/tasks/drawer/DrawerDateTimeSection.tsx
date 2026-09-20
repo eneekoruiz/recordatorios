@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar as CalendarIcon, ChevronDown, Clock, PlusCircle, X } from 'lucide-react';
 import type { AlertDef } from '../../../models/Task';
 import { isCaducidadesList } from '../../../utils/specialLists';
+import { Sunrise, Sun, Moon } from 'lucide-react';
 
 interface DrawerDateTimeSectionProps {
   cardTimeOpen: boolean;
@@ -50,7 +51,7 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <CalendarIcon size={16} color="var(--accent-red)" />
-          Fecha y Horarios
+          Fecha y hora
         </span>
         <ChevronDown size={18} style={{ transform: cardTimeOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
       </button>
@@ -138,9 +139,9 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, width: '100%' }}>
                   {[
-                    { id: 'morning', label: 'Mañana', icon: '🌅', color: '#FF9500' },
-                    { id: 'afternoon', label: 'Tarde', icon: '☀️', color: '#007AFF' },
-                    { id: 'night', label: 'Noche', icon: '🌙', color: '#AF52DE' }
+                    { id: 'morning', label: 'Mañana', Icon: Sunrise, color: 'var(--accent-orange)' },
+                    { id: 'afternoon', label: 'Tarde', Icon: Sun, color: 'var(--accent-primary)' },
+                    { id: 'night', label: 'Noche', Icon: Moon, color: 'var(--accent-purple)' }
                   ].map(item => {
                     const isSelected = timeOfDay === item.id;
                     return (
@@ -157,14 +158,14 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                           borderRadius: 10,
                           fontSize: '0.82rem',
                           fontWeight: isSelected ? 600 : 450,
-                          background: isSelected ? `${item.color}18` : 'var(--bg-card, rgba(0,0,0,0.03))',
+                          background: isSelected ? `color-mix(in srgb, ${item.color} 12%, transparent)` : 'transparent',
                           color: isSelected ? item.color : 'var(--text-secondary)',
-                          border: isSelected ? `1.5px solid ${item.color}` : '1px solid var(--border-subtle)',
+                          border: `1px solid ${isSelected ? `color-mix(in srgb, ${item.color} 40%, transparent)` : 'var(--border-subtle)'}`,
                           cursor: 'pointer',
                           transition: 'all 0.15s ease'
                         }}
                       >
-                        <span style={{ fontSize: '0.95rem' }}>{item.icon}</span>
+                        <item.Icon size={15} strokeWidth={2.2} />
                         <span>{item.label}</span>
                       </button>
                     );

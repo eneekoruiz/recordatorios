@@ -1,0 +1,240 @@
+/* ==========================================================================
+   Resumen del día — hoja de bienvenida
+   Escritorio: tarjeta centrada. Móvil: hoja inferior con asa, como en iOS.
+   ========================================================================== */
+.greeting-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.greeting-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(18px) saturate(1.1);
+  -webkit-backdrop-filter: blur(18px) saturate(1.1);
+}
+[data-theme='dark'] .greeting-backdrop { background: rgba(0, 0, 0, 0.55); }
+
+.greeting-sheet {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  padding: 30px 28px 22px;
+  border-radius: 28px;
+  background: var(--bg-elevated);
+  border: 0.5px solid var(--border-subtle);
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.24), 0 2px 8px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.greeting-grabber { display: none; }
+
+.greeting-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.greeting-close:hover { background: var(--bg-pressed, var(--bg-hover)); color: var(--text-primary); }
+
+/* ── Cabecera ── */
+.greeting-head { display: flex; flex-direction: column; gap: 10px; }
+.greeting-sun {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--greeting-accent) 14%, transparent);
+  color: var(--greeting-accent);
+}
+.greeting-date {
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.greeting-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.024em;
+  color: var(--text-primary);
+  text-wrap: balance;
+}
+.greeting-lead {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+.greeting-lead strong { color: var(--text-primary); font-weight: 600; }
+
+/* ── Tareas destacadas ── */
+.greeting-focus { display: flex; flex-direction: column; }
+.greeting-focus-label {
+  margin-bottom: 8px;
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.greeting-task {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 10px 2px;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background 0.15s ease;
+}
+.greeting-task + .greeting-task { box-shadow: inset 0 0.5px 0 var(--separator, var(--border-subtle)); }
+.greeting-task:hover { background: var(--bg-hover); }
+.greeting-task-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--text-tertiary);
+}
+.greeting-task-dot[data-priority='high'] { background: var(--accent-red); }
+.greeting-task-dot[data-priority='medium'] { background: var(--accent-orange); }
+.greeting-task-text { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.greeting-task-title {
+  font-size: 0.97rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.greeting-task-meta { font-size: 0.8rem; color: var(--text-secondary); }
+
+/* ── Datos del día ── */
+.greeting-stats {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding-top: 16px;
+  border-top: 0.5px solid var(--separator, var(--border-subtle));
+}
+.greeting-stat { display: flex; flex-direction: column; gap: 2px; }
+.greeting-stat b {
+  font-size: 1.15rem;
+  font-weight: 650;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.greeting-stat span { font-size: 0.78rem; color: var(--text-secondary); }
+.greeting-streak {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-orange) 12%, transparent);
+  color: var(--accent-orange);
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.greeting-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+.greeting-note svg { flex-shrink: 0; margin-top: 1px; color: var(--accent-orange); }
+
+/* ── Acciones ── */
+.greeting-actions { display: flex; flex-direction: column; gap: 4px; }
+.greeting-primary {
+  min-height: 48px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--accent-primary);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.16s var(--ease-spring), filter 0.16s ease;
+}
+.greeting-primary:hover { filter: brightness(1.06); }
+.greeting-primary:active { transform: scale(0.985); }
+.greeting-secondary {
+  min-height: 40px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  font-weight: 550;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.greeting-secondary:hover { color: var(--text-primary); background: var(--bg-hover); }
+.greeting-secondary svg { opacity: 0; transition: opacity 0.15s ease; }
+.greeting-secondary[aria-pressed='true'] { color: var(--accent-primary); }
+.greeting-secondary[aria-pressed='true'] svg { opacity: 1; }
+
+/* ── Móvil: hoja inferior ── */
+@media (max-width: 560px) {
+  .greeting-overlay { align-items: flex-end; padding: 0; }
+  .greeting-sheet {
+    max-width: none;
+    border-radius: 24px 24px 0 0;
+    padding: 12px 22px calc(20px + env(safe-area-inset-bottom));
+    gap: 20px;
+    max-height: 88dvh;
+  }
+  .greeting-grabber {
+    display: block;
+    width: 38px;
+    height: 5px;
+    margin: 0 auto 6px;
+    border-radius: 3px;
+    background: var(--text-tertiary);
+    opacity: 0.35;
+  }
+  .greeting-close { top: 14px; right: 14px; }
+  .greeting-title { font-size: 1.6rem; }
+}

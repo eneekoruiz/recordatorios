@@ -1,523 +1,264 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Sun, Moon, Sunset, CheckCircle2, 
-  AlertCircle, Flame, Calendar, CreditCard, ArrowRight, Sparkles
-} from 'lucide-react';
-import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
-import { calculateHabitStreak } from '../../services/TaskService';
+import { ArrowRight, Check, CreditCard, Flame, Moon, Sun, Sunset, X } from 'lucide-react';
+import { useAppStore } from '../../store/useAppStore';
+import { buildDailyBriefing } from '../../services/DailyBriefingService';
 import { HapticService } from '../../services/HapticService';
 import { getUserFirstName } from '../../utils/userIdentity';
+import { formatRelativeDay, formatTime, plural } from '../../utils/format';
+import './DailyGreetingModal.css';
 
 interface DailyGreetingModalProps {
   onSelectView?: (view: string) => void;
+  onOpenTask?: (taskId: string) => void;
 }
 
-// Toggle iOS-style custom para evitar el checkbox nativo
-function IOSToggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <motion.button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      style={{
-        width: 42,
-        height: 24,
-        borderRadius: 999,
-        background: checked ? '#34c759' : 'var(--border-color, rgba(0,0,0,0.15))',
-        border: 'none',
-        cursor: 'pointer',
-        position: 'relative',
-        padding: 0,
-        flexShrink: 0,
-        transition: 'background 0.22s cubic-bezier(0.16,1,0.3,1)'
-      }}
-      whileTap={{ scale: 0.92 }}
-    >
-      <motion.div
-        animate={{ x: checked ? 20 : 2 }}
-        transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-        style={{
-          width: 20,
-          height: 20,
-          borderRadius: '50%',
-          background: '#ffffff',
-          position: 'absolute',
-          top: 2,
-          boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
-        }}
-      />
-    </motion.button>
-  );
-}
+const PERIOD_STYLE = {
+  morning: { Icon: Sun, accent: '#ff9f0a' },
+  afternoon: { Icon: Sunset, accent: '#ff6b3d' },
+  evening: { Icon: Moon, accent: '#5e5ce6' },
+} as const;
 
-export const DailyGreetingModal: React.FC<DailyGreetingModalProps> = ({ onSelectView }) => {
-  const tasks = useAppStore(state => state.tasks);
-  const cycles = useAppStore(state => state.cycles);
-  const userName = getUserFirstName();
+const DISMISSED_KEY = 'daily_greeting_dismissed_day';
+const MUTED_KEY = 'daily_greeting_muted';
+const SESSION_KEY = 'daily_greeting_seen_session';
+
+const read = (storage: Storage, key: string) => {
+  try {
+    return storage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+const write = (storage: Storage, key: string, value: string) => {
+  try {
+    storage.setItem(key, value);
+  } catch {
+    /* almacenamiento no disponible */
+  }
+};
+
+export const DailyGreetingModal: React.FC<DailyGreetingModalProps> = ({ onSelectView, onOpenTask }) => {
+  const tasks = useAppStore((state) => state.tasks);
+  const cycles = useAppStore((state) => state.cycles);
 
   const [isOpen, setIsOpen] = useState(false);
-  const [dontShowAgainToday, setDontShowAgainToday] = useState(false);
+  const [muted, setMuted] = useState(() => read(localStorage, MUTED_KEY) === 'true');
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const previouslyFocused = useRef<Element | null>(null);
 
-  // Mostrar modal al cargar si no fue descartado hoy
+  const briefing = useMemo(
+    () => buildDailyBriefing(tasks, cycles, { name: getUserFirstName() }),
+    [tasks, cycles]
+  );
+
+  const handleClose = useCallback(() => {
+    HapticService.selection();
+    setIsOpen(false);
+  }, []);
+
+  // Apertura automática una vez al día. Nunca interrumpe si no hay nada que contar,
+  // si el usuario lo ha silenciado, o mientras está haciendo la guía de inicio.
   useEffect(() => {
-    if (typeof navigator !== 'undefined' && (navigator.webdriver || (window as any).__E2E__)) {
+    if (typeof navigator !== 'undefined' && (navigator.webdriver || (window as any).__E2E__)) return;
+    if (muted) return;
+    if (read(localStorage, DISMISSED_KEY) === new Date().toDateString()) return;
+    if (read(sessionStorage, SESSION_KEY)) return;
+    if (read(localStorage, 'hide_onboarding_guide') !== 'true') return; // aún en la guía de inicio
+    if (briefing.isQuiet) return;
+
+    const timer = window.setTimeout(() => {
+      setIsOpen(true);
+      write(sessionStorage, SESSION_KEY, 'true');
+      write(localStorage, DISMISSED_KEY, new Date().toDateString());
+    }, 900);
+    return () => window.clearTimeout(timer);
+    // Solo se evalúa al montar: no queremos que reaparezca al cambiar una tarea.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const open = () => setIsOpen(true);
+    window.addEventListener('open-daily-greeting', open);
+    return () => window.removeEventListener('open-daily-greeting', open);
+  }, []);
+
+  // Foco y teclado mientras la hoja está abierta.
+  useEffect(() => {
+    if (!isOpen) {
+      (previouslyFocused.current as HTMLElement | null)?.focus?.();
       return;
     }
+    previouslyFocused.current = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const focusTimer = window.setTimeout(() => {
+      sheetRef.current?.querySelector<HTMLElement>('.greeting-primary')?.focus();
+    }, 120);
 
-    const todayKey = new Date().toDateString();
-    const lastDismissedDay = localStorage.getItem('daily_greeting_dismissed_day');
-    const sessionSeen = sessionStorage.getItem('daily_greeting_seen_session');
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        handleClose();
+        return;
+      }
+      if (event.key !== 'Tab' || !sheetRef.current) return;
+      const focusables = sheetRef.current.querySelectorAll<HTMLElement>('button, [href], input, [tabindex]:not([tabindex="-1"])');
+      if (!focusables.length) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
 
-    if (lastDismissedDay === todayKey) return;
-    if (sessionSeen) return;
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => {
+      window.clearTimeout(focusTimer);
+      window.removeEventListener('keydown', onKeyDown, true);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen, handleClose]);
 
-    const timer = setTimeout(() => {
-      setIsOpen(true);
-      sessionStorage.setItem('daily_greeting_seen_session', 'true');
-    }, 800);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Permite reabrirlo desde cualquier punto de la app
-  useEffect(() => {
-    const handleOpen = () => setIsOpen(true);
-    window.addEventListener('open-daily-greeting', handleOpen);
-    return () => window.removeEventListener('open-daily-greeting', handleOpen);
-  }, []);
-
-  const handleClose = () => {
-    HapticService.selection();
-    if (dontShowAgainToday) {
-      localStorage.setItem('daily_greeting_dismissed_day', new Date().toDateString());
-    }
-    setIsOpen(false);
+  const toggleMuted = () => {
+    setMuted((current) => {
+      const next = !current;
+      write(localStorage, MUTED_KEY, String(next));
+      return next;
+    });
   };
 
-  const briefing = useMemo(() => {
-    const now = new Date();
-    const hour = now.getHours();
-    const todayStr = now.toDateString();
+  const goToToday = () => {
+    HapticService.selection();
+    setIsOpen(false);
+    onSelectView?.('smart_today');
+  };
 
-    let greeting = 'Buenos días';
-    let GreetingIcon = Sun;
-    let iconColor = '#ff9500';
-    let accentGradient = 'linear-gradient(135deg, #ff9500 0%, #ff6b35 100%)';
-    let bgGradient = 'linear-gradient(160deg, rgba(255,149,0,0.10) 0%, rgba(255,107,53,0.06) 100%)';
-
-    if (hour >= 13 && hour < 20) {
-      greeting = 'Buenas tardes';
-      GreetingIcon = Sunset;
-      iconColor = '#ff5e3a';
-      accentGradient = 'linear-gradient(135deg, #ff5e3a 0%, #ff2d55 100%)';
-      bgGradient = 'linear-gradient(160deg, rgba(255,94,58,0.10) 0%, rgba(255,45,85,0.06) 100%)';
-    } else if (hour >= 20 || hour < 6) {
-      greeting = 'Buenas noches';
-      GreetingIcon = Moon;
-      iconColor = '#5856d6';
-      accentGradient = 'linear-gradient(135deg, #5856d6 0%, #007aff 100%)';
-      bgGradient = 'linear-gradient(160deg, rgba(88,86,214,0.10) 0%, rgba(0,122,255,0.06) 100%)';
-    }
-
-    const formattedDate = now.toLocaleDateString('es-ES', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long'
-    });
-    const capitalizedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
-
-    const allTasks = Object.values(tasks || {}).filter(t => !t.deleted_at);
-    const todayTasks = allTasks.filter(t => t.dueDate && new Date(t.dueDate).toDateString() === todayStr);
-    const pendingToday = todayTasks.filter(t => !isTaskCompleted(t));
-    const completedToday = todayTasks.filter(t => isTaskCompleted(t));
-    const highPriorityToday = pendingToday.filter(t => t.priority === 'high');
-
-    const dailyHabits = allTasks.filter(t => t.cycle_id === 'cycle_day' || (t.targetCount && t.targetCount > 1));
-    const completedHabits = dailyHabits.filter(t => isTaskCompleted(t));
-
-    let topStreak = 0;
-    dailyHabits.forEach(habit => {
-      const streak = calculateHabitStreak(habit, cycles);
-      if (streak.count > topStreak) topStreak = streak.count;
-    });
-
-    const upcomingCaducidades = allTasks.filter(t => {
-      if ((t.categoryId === 'caducidades' || t.expirationType) && t.dueDate && !isTaskCompleted(t)) {
-        const diffHours = (new Date(t.dueDate).getTime() - now.getTime()) / (1000 * 3600);
-        return diffHours >= -12 && diffHours <= 48;
-      }
-      return false;
-    });
-
-    return {
-      greeting,
-      GreetingIcon,
-      iconColor,
-      accentGradient,
-      bgGradient,
-      date: capitalizedDate,
-      totalToday: todayTasks.length,
-      pendingCount: pendingToday.length,
-      completedCount: completedToday.length,
-      highPriorityCount: highPriorityToday.length,
-      habitsTotal: dailyHabits.length,
-      habitsCompleted: completedHabits.length,
-      topStreak,
-      upcomingCaducidades
-    };
-  }, [tasks, cycles]);
+  const openTask = (taskId: string) => {
+    setIsOpen(false);
+    if (onOpenTask) onOpenTask(taskId);
+    else onSelectView?.('smart_today');
+  };
 
   if (typeof document === 'undefined') return null;
-
-  // Mensaje motivacional sin emojis en el texto (van como icono separado)
-  const motivationText = briefing.pendingCount === 0
-    ? '¡Todo al día! No tienes recordatorios pendientes para hoy.'
-    : briefing.highPriorityCount > 0
-      ? `Tienes ${briefing.highPriorityCount} tarea${briefing.highPriorityCount > 1 ? 's' : ''} urgente${briefing.highPriorityCount > 1 ? 's' : ''} para hoy. Da el primer paso.`
-      : `Tienes ${briefing.pendingCount} recordatorio${briefing.pendingCount > 1 ? 's' : ''} para hoy. ¡Vamos a por ello!`;
-
-  const motivationEmoji = briefing.pendingCount === 0 ? '🎉' : briefing.highPriorityCount > 0 ? '🎯' : '💡';
+  const { Icon, accent } = PERIOD_STYLE[briefing.period];
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 560;
 
   return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div
-          className="daily-greeting-overlay"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 99999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px 16px',
-            boxSizing: 'border-box'
-          }}
-        >
-          {/* Backdrop difuminado */}
+        <div className="greeting-overlay">
           <motion.div
+            className="greeting-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.22 }}
             onClick={handleClose}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(0, 0, 0, 0.35)',
-              backdropFilter: 'blur(20px) saturate(150%)',
-              WebkitBackdropFilter: 'blur(20px) saturate(150%)'
-            }}
           />
 
-          {/* Modal Card — Apple sheet style */}
           <motion.div
+            ref={sheetRef}
+            className="greeting-sheet"
             role="dialog"
             aria-modal="true"
             aria-labelledby="greeting-title"
-            initial={{ opacity: 0, scale: 0.88, y: 32 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.90, y: 24 }}
-            transition={{ type: 'spring', damping: 28, stiffness: 380, mass: 0.8 }}
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              position: 'relative',
-              width: '100%',
-              maxWidth: 420,
-              background: 'var(--bg-elevated, #ffffff)',
-              borderRadius: 28,
-              boxShadow: '0 40px 80px rgba(0,0,0,0.25), 0 8px 20px rgba(0,0,0,0.08), 0 0 0 0.5px rgba(0,0,0,0.04)',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              zIndex: 1
+            style={{ ['--greeting-accent' as string]: accent }}
+            initial={isMobile ? { y: '100%' } : { opacity: 0, y: 14, scale: 0.97 }}
+            animate={isMobile ? { y: 0 } : { opacity: 1, y: 0, scale: 1 }}
+            exit={isMobile ? { y: '100%' } : { opacity: 0, y: 10, scale: 0.98 }}
+            transition={{ type: 'spring', damping: 32, stiffness: 340, mass: 0.9 }}
+            drag={isMobile ? 'y' : false}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.4 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 90 || info.velocity.y > 600) handleClose();
             }}
           >
-            {/* ── Header ── */}
-            <div style={{
-              position: 'relative',
-              padding: '32px 24px 24px',
-              background: briefing.bgGradient,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              textAlign: 'center',
-              gap: 0
-            }}>
-              {/* Icono del momento del día con glow ring */}
-              <div style={{ position: 'relative', marginBottom: 16 }}>
-                {/* Glow ring difuso */}
-                <div style={{
-                  position: 'absolute',
-                  inset: -8,
-                  borderRadius: '50%',
-                  background: `radial-gradient(circle, ${briefing.iconColor}30 0%, transparent 70%)`,
-                  pointerEvents: 'none'
-                }} />
-                <motion.div
-                  initial={{ scale: 0.6, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: 'spring', damping: 18, stiffness: 300, delay: 0.12 }}
-                  style={{
-                    width: 68,
-                    height: 68,
-                    borderRadius: '50%',
-                    background: briefing.accentGradient,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: `0 10px 30px ${briefing.iconColor}50, inset 0 1px 0 rgba(255,255,255,0.25)`,
-                    position: 'relative'
-                  }}
-                >
-                  <briefing.GreetingIcon size={34} color="#ffffff" strokeWidth={1.8} />
-                </motion.div>
-              </div>
+            <div className="greeting-grabber" aria-hidden="true" />
+            <button type="button" className="greeting-close" onClick={handleClose} aria-label="Cerrar resumen">
+              <X size={16} strokeWidth={2.4} />
+            </button>
 
-              {/* Saludo */}
-              <motion.h2
-                id="greeting-title"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.18, duration: 0.4 }}
-                style={{
-                  margin: '0 0 4px 0',
-                  fontSize: '1.55rem',
-                  fontWeight: 700,
-                  color: 'var(--text-primary)',
-                  letterSpacing: '-0.03em',
-                  lineHeight: 1.2
-                }}
-              >
-                {briefing.greeting}{userName ? `, ${userName}` : ''}
-              </motion.h2>
+            <header className="greeting-head">
+              <span className="greeting-sun" aria-hidden="true"><Icon size={21} strokeWidth={2.1} /></span>
+              <span className="greeting-date">{briefing.date}</span>
+              <h2 id="greeting-title" className="greeting-title">{briefing.greeting}</h2>
+              <p className="greeting-lead">
+                <strong>{briefing.headline}</strong>
+                {briefing.detail ? ` ${briefing.detail}` : ''}
+              </p>
+            </header>
 
-              {/* Fecha */}
-              <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.24, duration: 0.4 }}
-                style={{
-                  fontSize: '0.88rem',
-                  color: 'var(--text-secondary)',
-                  fontWeight: 500,
-                  letterSpacing: '0.01em'
-                }}
-              >
-                {briefing.date}
-              </motion.span>
+            {briefing.focus.length > 0 && (
+              <section className="greeting-focus">
+                <span className="greeting-focus-label">Por dónde empezar</span>
+                {briefing.focus.map((task) => {
+                  const due = task.dueDate ? new Date(task.dueDate) : null;
+                  const hasTime = due && (due.getHours() !== 0 || due.getMinutes() !== 0);
+                  return (
+                    <button type="button" key={task.id} className="greeting-task" onClick={() => openTask(task.id)}>
+                      <span className="greeting-task-dot" data-priority={task.priority || 'none'} aria-hidden="true" />
+                      <span className="greeting-task-text">
+                        <span className="greeting-task-title">{task.title}</span>
+                        {due && (
+                          <span className="greeting-task-meta">
+                            {hasTime ? `${formatRelativeDay(due)} · ${formatTime(due)}` : formatRelativeDay(due)}
+                          </span>
+                        )}
+                      </span>
+                    </button>
+                  );
+                })}
+              </section>
+            )}
 
-              {/* Badge de racha */}
-              {briefing.topStreak >= 2 && (
-                <motion.div
-                  initial={{ scale: 0.7, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: 'spring', delay: 0.3, stiffness: 400 }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    marginTop: 12,
-                    padding: '5px 13px',
-                    borderRadius: 999,
-                    background: 'rgba(255, 149, 0, 0.15)',
-                    border: '1px solid rgba(255, 149, 0, 0.3)',
-                    color: '#ff9500',
-                    fontWeight: 700,
-                    fontSize: '0.80rem'
-                  }}
-                >
-                  <Flame size={13} />
-                  <span>¡Racha de {briefing.topStreak} días!</span>
-                </motion.div>
-              )}
-            </div>
-
-            {/* ── Métricas ── */}
-            <div style={{ padding: '20px 20px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {/* Grid de stats 2-col */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                {/* Pendientes hoy */}
-                <StatCard
-                  icon={<Calendar size={16} color="#007aff" />}
-                  label="Pendientes hoy"
-                  value={briefing.pendingCount > 0 ? `${briefing.pendingCount}` : 'Al día ✓'}
-                  valueColor={briefing.pendingCount === 0 ? 'var(--accent-green, #34c759)' : 'var(--text-primary)'}
-                />
-
-                {/* Hábitos diarios */}
-                <StatCard
-                  icon={<Sparkles size={16} color="#af52de" />}
-                  label="Hábitos"
-                  value={briefing.habitsTotal > 0 ? `${briefing.habitsCompleted}/${briefing.habitsTotal}` : 'Sin hábitos'}
-                  valueColor="var(--text-primary)"
-                />
-              </div>
-
-              {/* Alerta prioridad alta */}
-              {briefing.highPriorityCount > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, x: -6 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2 }}
-                  style={{
-                    padding: '10px 14px',
-                    borderRadius: 14,
-                    background: 'rgba(255, 59, 48, 0.07)',
-                    border: '1px solid rgba(255, 59, 48, 0.18)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 9,
-                    fontSize: '0.84rem',
-                    color: 'var(--accent-red, #ff3b30)',
-                    fontWeight: 600
-                  }}
-                >
-                  <AlertCircle size={16} />
-                  <span>{briefing.highPriorityCount} tarea{briefing.highPriorityCount > 1 ? 's' : ''} urgente{briefing.highPriorityCount > 1 ? 's' : ''} para hoy</span>
-                </motion.div>
-              )}
-
-              {/* Completadas hoy */}
-              {briefing.completedCount > 0 && (
-                <div style={{
-                  padding: '10px 14px',
-                  borderRadius: 14,
-                  background: 'rgba(52, 199, 89, 0.07)',
-                  border: '1px solid rgba(52, 199, 89, 0.18)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 9,
-                  fontSize: '0.84rem',
-                  color: 'var(--accent-green, #34c759)',
-                  fontWeight: 600
-                }}>
-                  <CheckCircle2 size={16} />
-                  <span>{briefing.completedCount} tarea{briefing.completedCount > 1 ? 's' : ''} ya completada{briefing.completedCount > 1 ? 's' : ''} hoy</span>
+            {(briefing.completedToday > 0 || briefing.habitsTotal > 0 || briefing.pendingToday.length > 0) && (
+              <div className="greeting-stats">
+                <div className="greeting-stat">
+                  <b>{briefing.pendingToday.length}</b>
+                  <span>{briefing.pendingToday.length === 1 ? 'pendiente' : 'pendientes'}</span>
                 </div>
-              )}
-
-              {/* Mensaje motivacional — sin borde izquierdo, más limpio */}
-              <div style={{
-                padding: '13px 15px',
-                borderRadius: 14,
-                background: 'var(--bg-hover, rgba(0,0,0,0.03))',
-                border: '1px solid var(--border-subtle)',
-                fontSize: '0.85rem',
-                color: 'var(--text-secondary)',
-                lineHeight: 1.5,
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: 9
-              }}>
-                <span style={{ fontSize: '1.05rem', flexShrink: 0 }}>{motivationEmoji}</span>
-                <span>{motivationText}</span>
-              </div>
-
-              {/* Aviso de caducidad */}
-              {briefing.upcomingCaducidades.length > 0 && (
-                <div style={{
-                  padding: '10px 14px',
-                  borderRadius: 14,
-                  background: 'rgba(255, 149, 0, 0.08)',
-                  border: '1px solid rgba(255, 149, 0, 0.22)',
-                  fontSize: '0.82rem',
-                  color: '#ff9500',
-                  lineHeight: 1.45,
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 9
-                }}>
-                  <CreditCard size={15} style={{ flexShrink: 0, marginTop: 1 }} />
-                  <div>
-                    <strong>Caducidad próxima: </strong>
-                    {briefing.upcomingCaducidades[0].title}
-                    {briefing.upcomingCaducidades[0].price ? ` — ${briefing.upcomingCaducidades[0].price} €` : ''}
+                {briefing.completedToday > 0 && (
+                  <div className="greeting-stat">
+                    <b>{briefing.completedToday}</b>
+                    <span>{briefing.completedToday === 1 ? 'completada' : 'completadas'}</span>
                   </div>
-                </div>
-              )}
-            </div>
-
-            {/* ── Footer ── */}
-            <div style={{
-              padding: '16px 20px 24px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 14
-            }}>
-              {/* CTA principal */}
-              <motion.button
-                type="button"
-                onClick={() => {
-                  handleClose();
-                  onSelectView?.('smart_today');
-                }}
-                whileHover={{ scale: 1.02, boxShadow: '0 8px 28px rgba(0,122,255,0.45)' }}
-                whileTap={{ scale: 0.97 }}
-                style={{
-                  width: '100%',
-                  padding: '14px 18px',
-                  borderRadius: 16,
-                  border: 'none',
-                  background: 'var(--accent-primary, #007aff)',
-                  color: '#ffffff',
-                  fontSize: '0.97rem',
-                  fontWeight: 650,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  boxShadow: '0 6px 20px rgba(0,122,255,0.35)',
-                  transition: 'box-shadow 0.2s ease'
-                }}
-              >
-                <span>Ver mis tareas de hoy</span>
-                <ArrowRight size={17} strokeWidth={2.2} />
-              </motion.button>
-
-              {/* Toggle iOS de "no mostrar hoy" */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '0 2px',
-                gap: 12
-              }}>
-                <span style={{
-                  fontSize: '0.80rem',
-                  color: 'var(--text-tertiary)',
-                  lineHeight: 1.4,
-                  userSelect: 'none'
-                }}>
-                  No volver a mostrar hoy
-                </span>
-                <IOSToggle
-                  checked={dontShowAgainToday}
-                  onChange={setDontShowAgainToday}
-                />
+                )}
+                {briefing.habitsTotal > 0 && (
+                  <div className="greeting-stat">
+                    <b>{briefing.habitsDone}/{briefing.habitsTotal}</b>
+                    <span>hábitos</span>
+                  </div>
+                )}
+                {briefing.topStreak >= 2 && (
+                  <span className="greeting-streak"><Flame size={14} /> {plural(briefing.topStreak, 'día')}</span>
+                )}
               </div>
+            )}
 
-              {/* Botón cerrar secundario — solo texto, sin border */}
-              <button
-                type="button"
-                onClick={handleClose}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--text-tertiary)',
-                  fontSize: '0.84rem',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  padding: '4px 0 0',
-                  textAlign: 'center',
-                  letterSpacing: '0.005em'
-                }}
-              >
-                Cerrar
+            {briefing.expiring.length > 0 && (
+              <p className="greeting-note">
+                <CreditCard size={16} />
+                <span>
+                  <strong>{briefing.expiring[0].title}</strong> vence{' '}
+                  {formatRelativeDay(new Date(briefing.expiring[0].dueDate!)).toLowerCase()}
+                  {briefing.expiring.length > 1 ? ` · y ${plural(briefing.expiring.length - 1, 'aviso más', 'avisos más')}` : ''}.
+                </span>
+              </p>
+            )}
+
+            <div className="greeting-actions">
+              <button type="button" className="greeting-primary" onClick={goToToday}>
+                Ver mi día <ArrowRight size={17} strokeWidth={2.4} />
+              </button>
+              <button type="button" className="greeting-secondary" onClick={toggleMuted} aria-pressed={muted}>
+                <Check size={15} strokeWidth={3} /> No mostrar este resumen al abrir
               </button>
             </div>
           </motion.div>
@@ -527,51 +268,3 @@ export const DailyGreetingModal: React.FC<DailyGreetingModalProps> = ({ onSelect
     document.body
   );
 };
-
-// ── Sub-componente de tarjeta de estadística ──
-function StatCard({
-  icon,
-  label,
-  value,
-  valueColor = 'var(--text-primary)'
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  valueColor?: string;
-}) {
-  return (
-    <div style={{
-      padding: '13px 14px',
-      borderRadius: 16,
-      background: 'var(--bg-hover, rgba(0,0,0,0.025))',
-      border: '1px solid var(--border-subtle)',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 6
-    }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        color: 'var(--text-secondary)',
-        fontSize: '0.77rem',
-        fontWeight: 600,
-        textTransform: 'uppercase',
-        letterSpacing: '0.04em'
-      }}>
-        {icon}
-        <span>{label}</span>
-      </div>
-      <span style={{
-        fontSize: '1.35rem',
-        fontWeight: 700,
-        color: valueColor,
-        letterSpacing: '-0.02em',
-        lineHeight: 1
-      }}>
-        {value}
-      </span>
-    </div>
-  );
-}

@@ -29,6 +29,8 @@ interface TaskCardProps {
   onEdit: (id: string) => void;
   index?: number;
   showListName?: boolean;
+  /** Oculta la fecha en vistas donde ya es obvia (p. ej. «Hoy»). */
+  hideDueDate?: boolean;
   isFirstInSection?: boolean;
   isLastInSection?: boolean;
   previousTaskId?: string;
@@ -47,7 +49,7 @@ interface TaskCardProps {
 }
 
 export const TaskCard = React.memo(function TaskCard({
-  task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, showListName = true, isFirstInSection, isLastInSection, previousTaskId, hasChildren, isExpanded, onToggleExpand, indent = 0, onNavigateView, onPersonClick, isGracePeriod,
+  task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, showListName = true, hideDueDate = false, isFirstInSection, isLastInSection, previousTaskId, hasChildren, isExpanded, onToggleExpand, indent = 0, onNavigateView, onPersonClick, isGracePeriod,
   onMoveUp, onMoveDown, canMoveUp, canMoveDown, onReorderTasks
 }: TaskCardProps) {
   const cycles = useAppStore(state => state.cycles);
@@ -1002,6 +1004,7 @@ export const TaskCard = React.memo(function TaskCard({
           <TaskMetaBadges
             task={task}
             showListName={showListName}
+            hideDueDate={hideDueDate}
             taskList={taskList}
             dueDateColor={dueDateColor}
             cycleBadge={cycleBadge}

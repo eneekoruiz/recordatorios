@@ -625,10 +625,10 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                     }}
                   />
                 )}
-                <h3 id="drawer-title">{taskId ? 'Detalles de Tarea' : 'Nueva Tarea'}</h3>
+                <h3 id="drawer-title">{taskId ? 'Detalles' : 'Nuevo recordatorio'}</h3>
               </div>
               <button className="save-btn" onClick={handleSave} disabled={!title.trim()} aria-label={taskId ? 'Guardar cambios' : 'Guardar nueva tarea'}>
-                {taskId ? 'Aceptar' : 'Añadir'}
+                {taskId ? 'Listo' : 'Añadir'}
               </button>
             </div>
 
