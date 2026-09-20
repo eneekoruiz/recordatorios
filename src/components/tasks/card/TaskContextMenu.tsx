@@ -5,7 +5,7 @@ import {
   CheckCircle, Info, IndentIncrease, IndentDecrease, Calendar, 
   AlertCircle, Flag, FolderInput, LayoutList, Copy, Play, Trash2, 
   ChevronRight, ArrowLeft, Sun, CalendarDays, Clock, CalendarX, Edit3,
-  ArrowUp, ArrowDown, ChevronDown, SlidersHorizontal
+  ArrowUp, ArrowDown, ChevronDown, SlidersHorizontal, Coins
 } from 'lucide-react';
 import type { TaskItem } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
@@ -207,7 +207,7 @@ function MenuActions({
   const addTask = useAppStore(state => state.addTask);
   const lists = useAppStore(state => state.lists);
   const listSections = useAppStore(state => state.listSections);
-  const [currentSubmenu, setCurrentSubmenu] = useState<'main' | 'move_list' | 'move_section' | 'due_date' | 'priority'>('main');
+  const [currentSubmenu, setCurrentSubmenu] = useState<'main' | 'move_list' | 'move_section' | 'due_date' | 'priority' | 'price'>('main');
   const [showMoreActions, setShowMoreActions] = useState(false);
 
   const availableSections = (listSections || []).filter(
@@ -478,6 +478,111 @@ function MenuActions({
     );
   }
 
+  // Submenu: Precio / Coste
+  if (currentSubmenu === 'price') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px 4px' }}>
+          <button 
+            type="button"
+            onClick={() => setCurrentSubmenu('main')}
+            style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, padding: 0 }}
+          >
+            <ArrowLeft size={16} /> Volver
+          </button>
+          <span style={{ flex: 1, textAlign: 'center', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginRight: 20 }}>
+            Precio / Coste
+          </span>
+        </div>
+        <div className="ios-dropdown-divider" />
+        
+        {/* Input numérico directo */}
+        <div style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', flex: 1 }}>Importe (€):</span>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            autoFocus
+            placeholder="0.00"
+            defaultValue={task.price !== undefined ? task.price : ''}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const val = parseFloat((e.target as HTMLInputElement).value);
+                updateTask(task.id, { price: !isNaN(val) && val > 0 ? val : undefined });
+                setContextMenuOpen(false);
+              }
+            }}
+            onBlur={(e) => {
+              const val = parseFloat(e.target.value);
+              updateTask(task.id, { price: !isNaN(val) && val > 0 ? val : undefined });
+            }}
+            style={{
+              width: 90,
+              padding: '5px 8px',
+              borderRadius: 8,
+              border: '1px solid var(--border-subtle)',
+              background: 'var(--bg-surface)',
+              color: 'var(--text-primary)',
+              fontSize: '0.92rem',
+              fontWeight: 600,
+              textAlign: 'right'
+            }}
+          />
+        </div>
+
+        {/* Botones rápidos de importes */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, padding: '0 8px 6px' }}>
+          {[10, 20, 50, 100].map(amt => (
+            <button
+              key={amt}
+              type="button"
+              onClick={() => {
+                updateTask(task.id, { price: amt });
+                setContextMenuOpen(false);
+              }}
+              className="ios-dropdown-item"
+              style={{
+                justifyContent: 'center',
+                padding: '6px 0',
+                borderRadius: 8,
+                background: task.price === amt ? 'rgba(0, 122, 255, 0.15)' : 'var(--bg-hover, rgba(0,0,0,0.04))',
+                color: task.price === amt ? 'var(--accent-primary)' : 'var(--text-primary)',
+                fontWeight: 600,
+                fontSize: '0.82rem',
+                border: '1px solid var(--border-subtle)'
+              }}
+            >
+              {amt} €
+            </button>
+          ))}
+        </div>
+
+        {task.price !== undefined && task.price > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              updateTask(task.id, { price: undefined });
+              setContextMenuOpen(false);
+            }}
+            className="ios-dropdown-item"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--accent-red, #ff3b30)',
+              fontSize: '0.82rem',
+              fontWeight: 500,
+              padding: '6px 8px'
+            }}
+          >
+            Quitar precio
+          </button>
+        )}
+      </div>
+    );
+  }
+
   // Vista Principal
   const isUrgent = task.priority === 'high';
 
@@ -533,7 +638,16 @@ function MenuActions({
         onClick={() => setCurrentSubmenu('priority')} 
       />
 
-      {/* 5. Con marca */}
+      {/* 5. Precio / Coste */}
+      <ActionRow 
+        icon={<Coins size={16} color="var(--accent-primary)" />} 
+        label="Precio / Coste"
+        sublabel={task.price !== undefined && task.price > 0 ? `${task.price.toLocaleString('es-ES')} €` : undefined}
+        trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
+        onClick={() => setCurrentSubmenu('price')} 
+      />
+
+      {/* 6. Con marca */}
       <ActionRow 
         icon={<Flag size={16} color={task.flagged ? '#ff9500' : 'var(--text-secondary)'} fill={task.flagged ? '#ff9500' : 'none'} />} 
         label={task.flagged ? "Quitar marca" : "Con marca"} 

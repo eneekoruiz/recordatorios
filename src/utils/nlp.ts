@@ -1,9 +1,12 @@
+import { extractPrice } from './priceExtractor';
+
 export interface ParsedNLPResult {
   times: string[];
   suggestedCategory?: string;
   suggestedCycleId?: string;
   suggestedDueDate?: Date;
   suggestedPriority?: 'none' | 'low' | 'medium' | 'high';
+  suggestedPrice?: number;
   cleanTitle: string;
 }
 
@@ -178,12 +181,21 @@ export function parseNaturalLanguage(text: string): ParsedNLPResult {
     }
   }
 
+  // 7. Detección de Precio/Coste (100 e, 100€, 15.50 euros, etc.)
+  let suggestedPrice: number | undefined = undefined;
+  const priceExtracted = extractPrice(cleanTitle, false);
+  if (priceExtracted && priceExtracted.price > 0) {
+    suggestedPrice = priceExtracted.price;
+    cleanTitle = priceExtracted.cleanText || cleanTitle;
+  }
+
   return {
     times: [...new Set(times)],
     suggestedCategory,
     suggestedCycleId,
     suggestedDueDate,
     suggestedPriority,
+    suggestedPrice,
     cleanTitle: cleanTitle.replace(/\s+/g, ' ').trim()
   };
 }

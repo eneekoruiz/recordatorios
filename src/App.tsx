@@ -27,6 +27,7 @@ import { ConfirmHost } from './components/ui/confirmDialog';
 import { SharedListView } from './components/share/SharedListView';
 import { syncSharedStatus } from './services/ShareService';
 import { formatSectionTitle } from './utils/sectionRoutine';
+import { normalizeTaskPrices } from './utils/priceExtractor';
 import type { TaskItem } from './models/Task';
 
 function App() {
@@ -361,6 +362,14 @@ function App() {
             updated_at: new Date().toISOString(),
             _is_dirty: true
           });
+        }
+      });
+
+      // Normalización y migración automática de precios en tareas existentes (ej. "Ropa interior 100 e", "Zapatillas 200 e", notas "50 e")
+      allTasksList.forEach(t => {
+        const { task: normalized, modified } = normalizeTaskPrices(t);
+        if (modified) {
+          state.updateTaskRaw(normalized);
         }
       });
 

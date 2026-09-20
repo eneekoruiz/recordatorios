@@ -2,6 +2,7 @@ import React from 'react';
 import { Plus } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
+import { extractPrice } from '../../../utils/priceExtractor';
 
 interface MainInlineAddProps {
   currentView: string;
@@ -28,8 +29,12 @@ export const MainInlineAdd: React.FC<MainInlineAddProps> = ({
 
   const handleCommitTask = () => {
     if (inlineTitle.trim()) {
-      const newTaskTitle = inlineTitle.trim();
+      const rawText = inlineTitle.trim();
       setInlineTitle('');
+      const priceResult = extractPrice(rawText, false);
+      const newTaskTitle = (priceResult && priceResult.cleanText) ? priceResult.cleanText : rawText;
+      const extractedPrice = (priceResult && priceResult.price > 0) ? priceResult.price : undefined;
+
       const defaultCategoryId = currentView.startsWith('list_') ? currentView.replace('list_', '') : undefined;
       let dueDate: string | undefined = undefined;
       if (currentView === 'smart_today') {
@@ -43,6 +48,7 @@ export const MainInlineAdd: React.FC<MainInlineAddProps> = ({
         title: newTaskTitle,
         categoryId: defaultCategoryId,
         dueDate,
+        price: extractedPrice,
         completed: false,
         created_at: new Date().toISOString()
       } as any);

@@ -1,4 +1,5 @@
 import type { CustomList, TaskItem } from '../models/Task';
+import { extractPrice } from '../utils/priceExtractor';
 
 export interface ProposedTask {
   id: string;
@@ -169,10 +170,10 @@ export class AIService {
 
       // Extract price
       let price: number | undefined;
-      const priceMatch = segment.match(/(\d+(?:[.,]\d+)?)\s*(?:€|euros?|eur|\$)/i);
-      if (priceMatch) {
-        price = parseFloat(priceMatch[1].replace(',', '.'));
-        segment = segment.replace(priceMatch[0], '').trim();
+      const priceMatch = extractPrice(segment, false);
+      if (priceMatch && priceMatch.price > 0) {
+        price = priceMatch.price;
+        segment = priceMatch.cleanText || segment;
       }
 
       // Extract time

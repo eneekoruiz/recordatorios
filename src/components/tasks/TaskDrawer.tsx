@@ -741,20 +741,18 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
               />
 
               {/* Card 5: Modo Financiero (Costes) */}
-              {(category === 'inbox' || lists.find(l => l.id === category)?.isFinancial || (task && task.price !== undefined)) && (
-                <DrawerFinanceSection
-                  cardFinanceOpen={cardFinanceOpen}
-                  setCardFinanceOpen={setCardFinanceOpen}
-                  isDetailed={isDetailed}
-                  setIsDetailed={setIsDetailed}
-                  price={price}
-                  setPrice={setPrice}
-                  quantity={quantity}
-                  setQuantity={setQuantity}
-                  brand={brand}
-                  setBrand={setBrand}
-                />
-              )}
+              <DrawerFinanceSection
+                cardFinanceOpen={cardFinanceOpen}
+                setCardFinanceOpen={setCardFinanceOpen}
+                isDetailed={isDetailed}
+                setIsDetailed={setIsDetailed}
+                price={price}
+                setPrice={setPrice}
+                quantity={quantity}
+                setQuantity={setQuantity}
+                brand={brand}
+                setBrand={setBrand}
+              />
 
               {/* Card Especial: Personas involucradas */}
               <DrawerPeopleSection

@@ -20,6 +20,7 @@ import { TaskMetaBadges } from './card/TaskMetaBadges';
 import { TaskHabitCounter } from './card/TaskHabitCounter';
 import { TaskNoteEditor } from './card/TaskNoteEditor';
 import { getTaskPeriodicity } from '../../utils/sectionRoutine';
+import { extractPrice } from '../../utils/priceExtractor';
 
 interface TaskCardProps {
   task: TaskItem;
@@ -219,15 +220,33 @@ export const TaskCard = React.memo(function TaskCard({
     // Delay setting isEditingTitle to false to prevent race condition with clicking "Añadir nota..."
     setTimeout(() => {
       setIsEditingTitle(false);
-      if (editTitle.trim() && editTitle.trim() !== task.title) {
-        updateTask(task.id, { title: editTitle.trim() });
+      const raw = editTitle.trim();
+      if (raw && raw !== task.title) {
+        const extracted = extractPrice(raw, false);
+        if (extracted && extracted.price > 0) {
+          updateTask(task.id, {
+            title: extracted.cleanText || raw,
+            price: extracted.price
+          });
+        } else {
+          updateTask(task.id, { title: raw });
+        }
       }
     }, 150);
   };
 
   const startEditingNote = () => {
-    if (editTitle.trim() && editTitle.trim() !== task.title) {
-      updateTask(task.id, { title: editTitle.trim() });
+    const raw = editTitle.trim();
+    if (raw && raw !== task.title) {
+      const extracted = extractPrice(raw, false);
+      if (extracted && extracted.price > 0) {
+        updateTask(task.id, {
+          title: extracted.cleanText || raw,
+          price: extracted.price
+        });
+      } else {
+        updateTask(task.id, { title: raw });
+      }
     }
     setIsEditingTitle(false);
     setIsEditingNote(true);
@@ -235,7 +254,18 @@ export const TaskCard = React.memo(function TaskCard({
 
   const handleNoteSubmit = () => {
     setIsEditingNote(false);
-    if (editNote.trim() !== (task.description || '')) updateTask(task.id, { description: editNote.trim() });
+    const rawNote = editNote.trim();
+    if (rawNote !== (task.description || '')) {
+      const extracted = extractPrice(rawNote, true);
+      if (extracted && extracted.price > 0) {
+        updateTask(task.id, {
+          description: extracted.cleanText || undefined,
+          price: extracted.price
+        });
+      } else {
+        updateTask(task.id, { description: rawNote });
+      }
+    }
   };
 
   const isBlocked = task.blockedBy && task.blockedBy.some(id => tasks[id] && tasks[id].status === 'pending');

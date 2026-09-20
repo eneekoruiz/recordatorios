@@ -22,6 +22,17 @@ describe('lenguaje natural', () => {
     expect(r.times).toHaveLength(0);
   });
 
+  it('extrae precio en lenguaje natural', () => {
+    const r = parseNaturalLanguage('Ropa interior 100 e');
+    expect(r.suggestedPrice).toBe(100);
+    expect(r.cleanTitle).toBe('Ropa interior');
+
+    const r2 = parseNaturalLanguage('Zapatillas 200 e !alta');
+    expect(r2.suggestedPrice).toBe(200);
+    expect(r2.suggestedPriority).toBe('high');
+    expect(r2.cleanTitle).toBe('Zapatillas');
+  });
+
   it('entrada vacía', () => {
     expect(parseNaturalLanguage('')).toEqual({ times: [], cleanTitle: '' });
   });

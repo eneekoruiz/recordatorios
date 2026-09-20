@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, SlidersHorizontal, ArrowUp, Calendar, Clock, AlertCircle, List as ListIcon, Repeat, Users } from 'lucide-react';
+import { Sparkles, SlidersHorizontal, ArrowUp, Calendar, Clock, AlertCircle, List as ListIcon, Repeat, Users, Coins } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { parseNaturalLanguage } from '../../utils/nlp';
 import { SoundService } from '../../services/SoundService';
@@ -119,6 +119,7 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
       cycle_id: targetCycleId,
       dueDate: targetDueDate,
       priority: nlp.suggestedPriority || 'none',
+      price: nlp.suggestedPrice !== undefined && nlp.suggestedPrice > 0 ? nlp.suggestedPrice : undefined,
       alerts: alerts.length > 0 ? alerts : undefined,
       people: people.length > 0 ? people : undefined,
       expirationType,
@@ -131,7 +132,7 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
     inputRef.current?.blur();
   };
 
-  const hasChips = nlp.times.length > 0 || nlp.suggestedDueDate || nlp.suggestedCycleId || nlp.suggestedPriority || nlp.suggestedCategory || extractedPeople.length > 0;
+  const hasChips = nlp.times.length > 0 || nlp.suggestedDueDate || nlp.suggestedCycleId || nlp.suggestedPriority || nlp.suggestedCategory || extractedPeople.length > 0 || Boolean(nlp.suggestedPrice);
 
   return (
     <div 
@@ -195,6 +196,11 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
               {extractedPeople.length > 0 && (
                 <span className="qa-chip qa-chip--people">
                   <Users size={12} /> {extractedPeople.join(', ')}
+                </span>
+              )}
+              {nlp.suggestedPrice && (
+                <span className="qa-chip qa-chip--price" style={{ fontWeight: 600, color: 'var(--accent-primary)' }}>
+                  <Coins size={12} /> {nlp.suggestedPrice.toLocaleString('es-ES')} €
                 </span>
               )}
             </motion.div>
