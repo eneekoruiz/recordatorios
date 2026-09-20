@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, FolderPlus, Trash2, MoreHorizontal, ChevronDown } from 'lucide-react';
+import { Plus, FolderPlus, Trash2, MoreHorizontal, ChevronDown, Play } from 'lucide-react';
 import { HapticService } from '../../../services/HapticService';
 import { confirmDialog } from '../../ui/confirmDialog';
 
@@ -11,6 +11,7 @@ interface SectionData {
   depth: number;
   periodicity?: string | null;
   routineCounts?: { full: number; only: number } | null;
+  sectionTaskIds?: string[];
 }
 
 interface MainSectionHeaderProps {
@@ -46,6 +47,8 @@ interface MainSectionHeaderProps {
   sectionRoutineModes?: Record<string, 'full_routine' | 'only_section'>;
   toggleSectionRoutineMode?: (secKey: string, mode: 'full_routine' | 'only_section') => void;
   dragOverSectionId: string | null;
+  onStartSectionSequence?: () => void;
+  pendingTaskCount?: number;
 }
 
 export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
@@ -80,7 +83,9 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   setIsolatedRoutineMode: _setIsolatedRoutineMode,
   sectionRoutineModes = {},
   toggleSectionRoutineMode,
-  dragOverSectionId
+  dragOverSectionId,
+  onStartSectionSequence,
+  pendingTaskCount
 }) => {
   const currentSectionRoutineMode = sectionRoutineModes[data.category] || 'only_section';
 
@@ -249,6 +254,20 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                     }}
                     onClick={(e) => e.stopPropagation()}
                   >
+                    {onStartSectionSequence && (
+                      <>
+                        <button
+                          className="ios-dropdown-item"
+                          onClick={() => {
+                            setSectionMenuId(null);
+                            onStartSectionSequence();
+                          }}
+                        >
+                          <Play size={16} fill="currentColor" color={data.color} /> Empezar sección ({pendingTaskCount})
+                        </button>
+                        <div className="ios-dropdown-divider" />
+                      </>
+                    )}
                     <button
                       className="ios-dropdown-item"
                       onClick={() => {
@@ -374,6 +393,37 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               </div>
             );
           })()}
+          {/* Botón Empezar Sección (Modo Secuencia Apple Focus) */}
+          {onStartSectionSequence && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                HapticService.selection();
+                onStartSectionSequence();
+              }}
+              title={`Empezar secuencia de ${data.title.replace(/^[\p{Emoji}\s⏳]+/gu, '').trim() || 'sección'} (${pendingTaskCount ?? 0} pendientes)`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                padding: '3px 10px',
+                borderRadius: 999,
+                background: 'var(--bg-elevated, #ffffff)',
+                border: '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
+                color: data.color || 'var(--accent-primary)',
+                fontWeight: 650,
+                fontSize: '0.74rem',
+                cursor: 'pointer',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                transition: 'all 0.15s ease',
+                flexShrink: 0
+              }}
+            >
+              <Play size={10} fill="currentColor" />
+              <span>Empezar</span>
+            </button>
+          )}
           <ChevronDown 
             size={18} 
             color="var(--text-tertiary)" 

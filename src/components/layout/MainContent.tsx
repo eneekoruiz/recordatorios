@@ -58,7 +58,8 @@ type VirtualItemType =
       isFirstInSection?: boolean, 
       isLastInSection?: boolean,
       periodicity?: PeriodicityType | null,
-      routineCounts?: { full: number; only: number } | null
+      routineCounts?: { full: number; only: number } | null,
+      sectionTaskIds?: string[]
     }
   | { type: 'empty-section', title: string, category: string, color: string, sectionId?: string, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean }
   | { type: 'task', task: TaskItem, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean };
@@ -947,7 +948,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           color, 
           depth: headerDepth,
           periodicity: sectionPeriodicity,
-          routineCounts
+          routineCounts,
+          sectionTaskIds: tasksToRender.filter(t => !isTaskCompleted(t)).map(t => t.id)
         });
         
         if (!isCatCollapsed(categoryOrCycle)) {
@@ -1053,7 +1055,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             title: headerTitle,
             category: groupKey,
             color: '#5856D6',
-            depth: 0
+            depth: 0,
+            sectionTaskIds: groupTasks.filter(t => !isTaskCompleted(t)).map(t => t.id)
           });
 
           if (!isCatCollapsed(groupKey)) {
@@ -1151,7 +1154,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               color, 
               depth: 0,
               periodicity: sectionPeriodicity,
-              routineCounts
+              routineCounts,
+              sectionTaskIds: tasksToRender.filter(t => !isTaskCompleted(t)).map(t => t.id)
             });
             if (!isCatCollapsed(catKey)) {
               const roots = tasksToRender.filter(t => !t.parentId);
@@ -1229,7 +1233,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             sectionId: sec.id, 
             depth,
             periodicity: sectionPeriodicity,
-            routineCounts
+            routineCounts,
+            sectionTaskIds: tasksToRender.filter(t => !isTaskCompleted(t)).map(t => t.id)
           });
           
           if (!isCatCollapsed(categoryKey)) {
@@ -1488,6 +1493,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               const showDivider = index > 0 && flattenedData[index - 1]?.type !== 'page-header';
               const sectionTasks = groupedTasks[data.category] || [];
               const sectionTotal = sectionTasks.reduce((sum, t) => sum + (t.price && !isTaskCompleted(t) ? (Number(t.price) || 0) * (t.quantity || 1) : 0), 0);
+              const sectionPendingTaskIds = data.sectionTaskIds || sectionTasks.filter(t => !isTaskCompleted(t)).map(t => t.id);
               return (
                 <MainSectionHeader
                   key={itemKey}
@@ -1523,6 +1529,15 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                   sectionRoutineModes={sectionRoutineModes}
                   toggleSectionRoutineMode={toggleSectionRoutineMode}
                   dragOverSectionId={dragOverSectionId}
+                  onStartSectionSequence={onStartSequence && sectionPendingTaskIds.length > 0 ? () => {
+                    const rawTitle = data.title.replace(/^[\p{Emoji}\s⏳]+/gu, '').trim() || data.title;
+                    const cleanTitle = rawTitle.length > 0 
+                      ? rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1).toLowerCase() 
+                      : 'Sección';
+                    const seqTitle = currentList ? `${currentList.name} · ${cleanTitle}` : cleanTitle;
+                    onStartSequence(sectionPendingTaskIds, seqTitle, data.color);
+                  } : undefined}
+                  pendingTaskCount={sectionPendingTaskIds.length}
                 />
               );
             } else if (data.type === 'empty-section') {
