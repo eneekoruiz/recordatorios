@@ -919,14 +919,13 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         if (sectionPeriodicity) {
           const allTasksInScope = Object.values(groupedTasks).flat();
           const allowedPeriodicities = getRoutineAllowedPeriodicities(sectionPeriodicity);
-          const fullRoutineTasks = allTasksInScope.filter(t => {
+          const strictlySectionTasks = categoryTasks;
+          const otherRoutineTasks = allTasksInScope.filter(t => {
+            if (categoryTasks.some(ct => ct.id === t.id)) return false;
             const p = getTaskPeriodicity(t, listSections, lists);
             return p && allowedPeriodicities.has(p);
           });
-          const strictlySectionTasks = categoryTasks.filter(t => {
-            const p = getTaskPeriodicity(t, listSections, lists);
-            return p ? p === sectionPeriodicity : true;
-          });
+          const fullRoutineTasks = [...categoryTasks, ...otherRoutineTasks];
 
           routineCounts = {
             full: fullRoutineTasks.length,
@@ -1125,14 +1124,13 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             if (sectionPeriodicity) {
               const allTasksInList = Object.values(groupedTasks).flat();
               const allowedPeriodicities = getRoutineAllowedPeriodicities(sectionPeriodicity);
-              const fullRoutineTasks = allTasksInList.filter(t => {
+              const strictlySectionTasks = categoryTasks;
+              const otherRoutineTasks = allTasksInList.filter(t => {
+                if (categoryTasks.some(ct => ct.id === t.id)) return false;
                 const p = getTaskPeriodicity(t, listSections, lists);
                 return p && allowedPeriodicities.has(p);
               });
-              const strictlySectionTasks = categoryTasks.filter(t => {
-                const p = getTaskPeriodicity(t, listSections, lists);
-                return p ? p === sectionPeriodicity : true;
-              });
+              const fullRoutineTasks = [...categoryTasks, ...otherRoutineTasks];
 
               routineCounts = {
                 full: fullRoutineTasks.length,
@@ -1194,14 +1192,13 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           if (sectionPeriodicity) {
             const allTasksInList = Object.values(groupedTasks).flat();
             const allowedPeriodicities = getRoutineAllowedPeriodicities(sectionPeriodicity);
-            const fullRoutineTasks = allTasksInList.filter(t => {
+            const strictlySectionTasks = categoryTasks;
+            const otherRoutineTasks = allTasksInList.filter(t => {
+              if (categoryTasks.some(ct => ct.id === t.id)) return false;
               const p = getTaskPeriodicity(t, listSections, lists);
               return p && allowedPeriodicities.has(p);
             });
-            const strictlySectionTasks = categoryTasks.filter(t => {
-              const p = getTaskPeriodicity(t, listSections, lists);
-              return p ? p === sectionPeriodicity : true;
-            });
+            const fullRoutineTasks = [...categoryTasks, ...otherRoutineTasks];
 
             routineCounts = {
               full: fullRoutineTasks.length,
@@ -1277,7 +1274,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     }
 
     return flat;
-  }, [groupedTasks, smartTasks, currentCycle, collapsed, isListView, lists, listSections, currentList, isCatCollapsed, isolatedSectionKey, isolatedRoutineMode]);
+  }, [groupedTasks, smartTasks, currentCycle, collapsed, isListView, lists, listSections, currentList, isCatCollapsed, isolatedSectionKey, isolatedRoutineMode, sectionRoutineModes]);
 
   // 2. Scroll Container & Item Keys (Refactored to native fluid block layout for zero-overlap & perfect touch scroll)
   const parentRef = useRef<HTMLDivElement>(null);
