@@ -38,10 +38,12 @@ interface MainSectionHeaderProps {
   onOpenNewTask: (sectionId?: string) => void;
   onAddSection: (parentId?: string) => void;
   deleteListSection: (id: string) => void;
-  isolatedSectionKey: string | null;
-  setIsolatedSectionKey: React.Dispatch<React.SetStateAction<string | null>>;
+  isolatedSectionKey?: string | null;
+  setIsolatedSectionKey?: React.Dispatch<React.SetStateAction<string | null>>;
   isolatedRoutineMode?: 'full_routine' | 'only_section';
   setIsolatedRoutineMode?: (mode: 'full_routine' | 'only_section') => void;
+  sectionRoutineModes?: Record<string, 'full_routine' | 'only_section'>;
+  toggleSectionRoutineMode?: (secKey: string, mode: 'full_routine' | 'only_section') => void;
   dragOverSectionId: string | null;
 }
 
@@ -71,12 +73,16 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   onOpenNewTask,
   onAddSection,
   deleteListSection,
-  isolatedSectionKey,
-  setIsolatedSectionKey,
-  isolatedRoutineMode = 'full_routine',
-  setIsolatedRoutineMode,
+  isolatedSectionKey: _isolatedSectionKey,
+  setIsolatedSectionKey: _setIsolatedSectionKey,
+  isolatedRoutineMode: _isolatedRoutineMode = 'full_routine',
+  setIsolatedRoutineMode: _setIsolatedRoutineMode,
+  sectionRoutineModes = {},
+  toggleSectionRoutineMode,
   dragOverSectionId
 }) => {
+  const currentSectionRoutineMode = sectionRoutineModes[data.category] || 'full_routine';
+
   return (
     <div 
       key={itemKey} 
@@ -297,17 +303,17 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   HapticService.selection();
-                  setIsolatedSectionKey?.(data.category);
-                  setIsolatedRoutineMode?.('full_routine');
+                  toggleSectionRoutineMode?.(data.category, 'full_routine');
+                  _setIsolatedSectionKey?.(null);
                 }}
                 style={{
                   border: 'none',
                   borderRadius: 999,
                   padding: '3px 10px',
                   fontSize: '0.72rem',
-                  fontWeight: (isolatedSectionKey === data.category && isolatedRoutineMode === 'full_routine') ? 700 : 500,
-                  background: (isolatedSectionKey === data.category && isolatedRoutineMode === 'full_routine') ? 'var(--accent-primary)' : 'transparent',
-                  color: (isolatedSectionKey === data.category && isolatedRoutineMode === 'full_routine') ? '#ffffff' : 'var(--text-secondary)',
+                  fontWeight: currentSectionRoutineMode === 'full_routine' ? 700 : 500,
+                  background: currentSectionRoutineMode === 'full_routine' ? 'var(--accent-primary)' : 'transparent',
+                  color: currentSectionRoutineMode === 'full_routine' ? '#ffffff' : 'var(--text-secondary)',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease'
                 }}
@@ -320,17 +326,17 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   HapticService.selection();
-                  setIsolatedSectionKey?.(data.category);
-                  setIsolatedRoutineMode?.('only_section');
+                  toggleSectionRoutineMode?.(data.category, 'only_section');
+                  _setIsolatedSectionKey?.(null);
                 }}
                 style={{
                   border: 'none',
                   borderRadius: 999,
                   padding: '3px 10px',
                   fontSize: '0.72rem',
-                  fontWeight: (isolatedSectionKey !== data.category || isolatedRoutineMode === 'only_section') ? 700 : 500,
-                  background: (isolatedSectionKey !== data.category || isolatedRoutineMode === 'only_section') ? 'var(--accent-primary)' : 'transparent',
-                  color: (isolatedSectionKey !== data.category || isolatedRoutineMode === 'only_section') ? '#ffffff' : 'var(--text-secondary)',
+                  fontWeight: currentSectionRoutineMode === 'only_section' ? 700 : 500,
+                  background: currentSectionRoutineMode === 'only_section' ? 'var(--accent-primary)' : 'transparent',
+                  color: currentSectionRoutineMode === 'only_section' ? '#ffffff' : 'var(--text-secondary)',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease'
                 }}

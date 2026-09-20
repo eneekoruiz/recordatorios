@@ -41,7 +41,7 @@ export const TaskHabitCounter: React.FC<TaskHabitCounterProps> = ({
 
   return (
     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, verticalAlign: 'middle' }}>
-      {effectiveCurrentCount > 0 && !isEffectivelyDone && (
+      {effectiveCurrentCount > 0 && (
         <button
           type="button"
           onClick={(e) => {

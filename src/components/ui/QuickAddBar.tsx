@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, SlidersHorizontal, ArrowUp } from 'lucide-react';
+import { Sparkles, SlidersHorizontal, ArrowUp, Plus } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { parseNaturalLanguage } from '../../utils/nlp';
 import { SoundService } from '../../services/SoundService';
@@ -24,7 +24,10 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const cleanTitle = nlp.cleanTitle || text.trim();
-    if (!cleanTitle) return;
+    if (!cleanTitle) {
+      onExpandDrawer();
+      return;
+    }
 
     // Determinar categoría / lista por defecto
     let targetCategory = 'inbox';
@@ -117,30 +120,24 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
   return (
     <div 
       style={{
-        position: 'sticky',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        padding: '8px clamp(16px, 5vw, 84px) 8px 16px',
-        paddingBottom: 'max(10px, env(safe-area-inset-bottom))',
-        background: 'linear-gradient(to top, var(--bg-elevated) 75%, transparent)',
-        zIndex: 40,
-        boxSizing: 'border-box',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center'
+        position: 'fixed',
+        bottom: 'max(18px, env(safe-area-inset-bottom))',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: 'min(92vw, 660px)',
+        zIndex: 90,
+        boxSizing: 'border-box'
       }}
     >
       <div
         style={{
           width: '100%',
-          maxWidth: '720px',
-          background: 'var(--bg-surface-glass)',
-          backdropFilter: 'blur(24px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-          border: isFocused ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
-          borderRadius: 20,
-          boxShadow: isFocused ? '0 8px 30px var(--accent-glow), 0 2px 10px rgba(0,0,0,0.06)' : '0 4px 20px rgba(0,0,0,0.06)',
+          background: 'var(--bg-material, rgba(255, 255, 255, 0.88))',
+          backdropFilter: 'blur(35px) saturate(190%)',
+          WebkitBackdropFilter: 'blur(35px) saturate(190%)',
+          border: isFocused ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
+          borderRadius: 22,
+          boxShadow: isFocused ? '0 12px 36px var(--accent-glow), 0 4px 16px rgba(0,0,0,0.1)' : '0 10px 32px rgba(0,0,0,0.12)',
           padding: '8px 12px',
           display: 'flex',
           flexDirection: 'column',
@@ -203,7 +200,7 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
-              padding: 2,
+              padding: 4,
               color: text ? 'var(--accent-primary)' : isFocused ? 'var(--accent-primary)' : 'var(--text-tertiary)',
               display: 'flex',
               alignItems: 'center',
@@ -251,7 +248,7 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
               border: 'none',
               background: 'transparent',
               outline: 'none',
-              fontSize: '0.95rem',
+              fontSize: '0.94rem',
               color: 'var(--text-primary)',
               fontFamily: 'var(--font-sans)',
               padding: '4px 0'
@@ -279,27 +276,26 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
             <SlidersHorizontal size={17} />
           </button>
 
-          {/* Quick Submit Button */}
+          {/* Quick Submit or New Task Button */}
           <button
             type="submit"
-            disabled={!text.trim()}
+            title={text.trim() ? "Guardar recordatorio" : "Añadir nuevo recordatorio"}
             style={{
               width: 32,
               height: 32,
               borderRadius: '50%',
-              background: text.trim() ? 'var(--accent-primary)' : 'var(--border-color)',
-              color: 'white',
+              background: 'var(--accent-primary)',
+              color: '#ffffff',
               border: 'none',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              cursor: text.trim() ? 'pointer' : 'default',
+              cursor: 'pointer',
               transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-              transform: text.trim() ? 'scale(1)' : 'scale(0.9)',
-              opacity: text.trim() ? 1 : 0.4
+              boxShadow: '0 2px 8px rgba(0, 122, 255, 0.35)'
             }}
           >
-            <ArrowUp size={16} strokeWidth={2.5} />
+            {text.trim() ? <ArrowUp size={16} strokeWidth={2.5} /> : <Plus size={18} strokeWidth={2.5} />}
           </button>
         </form>
       </div>

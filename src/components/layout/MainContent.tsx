@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import { Plus, ChevronDown, Check } from 'lucide-react';
+import { ChevronDown, Check } from 'lucide-react';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import type { TaskItem } from '../../models/Task';
 import { TaskCard } from '../tasks/TaskCard';
@@ -12,7 +12,7 @@ import { SMART_LISTS } from '../../constants/smartLists';
 import { QuickAddBar } from '../ui/QuickAddBar';
 import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
-import { extractPeopleFromText, calculateExpirationStatus, calculateSubscriptionCosts, findFlashbackMemories } from '../../services/TaskService';
+import { extractPeopleFromText, calculateExpirationStatus, calculateSubscriptionCosts, findFlashbackMemories, isCompletedInCurrentPeriod } from '../../services/TaskService';
 import { PersonProfileModal } from '../people/PersonProfileModal';
 import { AIService } from '../../services/AIService';
 import { isCaducidadesList, isQueHeHechoList, ensureCaducidadesSections } from '../../utils/specialLists';
@@ -145,6 +145,22 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const [isolatedSectionKey, setIsolatedSectionKey] = useState<string | null>(null);
   // Modo de rutina cuando una sección periódica está aislada ('full_routine' = acumulativa con anuales/semanales/diarias, 'only_section' = estricta)
   const [isolatedRoutineMode, setIsolatedRoutineMode] = useState<'full_routine' | 'only_section'>('only_section');
+  // Modo de rutina por sección individual
+  const [sectionRoutineModes, setSectionRoutineModes] = useState<Record<string, 'full_routine' | 'only_section'>>({});
+
+  const toggleSectionRoutineMode = useCallback((secKey: string, mode: 'full_routine' | 'only_section') => {
+    setSectionRoutineModes(prev => ({ ...prev, [secKey]: mode }));
+  }, []);
+
+  const handleUndoDelete = useCallback((taskId: string) => {
+    if (deletedToast && deletedToast.timeoutId) {
+      window.clearTimeout(deletedToast.timeoutId);
+    }
+    updateTask(taskId, { deleted_at: undefined });
+    setDeletedToast(null);
+    SoundService.playUncomplete();
+    HapticService.selection();
+  }, [deletedToast, updateTask]);
   // Vista especial para "Qué he hecho": Por Personas o Línea de Tiempo (Timeline)
   const [lifeLogViewMode, setLifeLogViewMode] = useState<'people' | 'timeline'>('people');
   // Filtro de persona específica en Qué he hecho
@@ -640,7 +656,22 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const handleToggleTask = useCallback((taskId: string, forceReverse?: boolean) => {
     const task = tasks[taskId];
     if (task) {
-      const willBeCompleted = !isTaskCompleted(task);
+      const isTargetTask = Boolean(task.targetCount && task.targetCount > 1);
+      const currentCount = task.currentCount || 0;
+      const targetCount = task.targetCount || 1;
+      const isDone = isTaskCompleted(task) || isCompletedInCurrentPeriod(task, cycles);
+
+      let willBeCompleted = false;
+      if (forceReverse) {
+        willBeCompleted = false;
+      } else if (isDone) {
+        willBeCompleted = false;
+      } else if (isTargetTask) {
+        willBeCompleted = (currentCount + 1 >= targetCount);
+      } else {
+        willBeCompleted = true;
+      }
+
       if (willBeCompleted) {
         setRecentlyCompletedIds(prev => [...prev, taskId]);
         setTimeout(() => {
@@ -663,7 +694,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       }
     }
     toggleTask(taskId, forceReverse);
-  }, [tasks, toggleTask, activeVisibleCount]);
+  }, [tasks, cycles, toggleTask, activeVisibleCount]);
 
   const handleDeleteTask = useCallback((taskId: string) => {
     const task = tasks[taskId];
@@ -807,19 +838,21 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             const p = getTaskPeriodicity(t, listSections, lists);
             return p && allowedPeriodicities.has(p);
           });
-          const strictlySectionTasks = categoryTasks;
+          const strictlySectionTasks = categoryTasks.filter(t => {
+            const p = getTaskPeriodicity(t, listSections, lists);
+            return p ? p === sectionPeriodicity : true;
+          });
 
           routineCounts = {
             full: fullRoutineTasks.length,
             only: strictlySectionTasks.length
           };
 
-          if (isolatedSectionKey === categoryOrCycle) {
-            if (isolatedRoutineMode === 'full_routine') {
-              tasksToRender = sortTasksByRoutinePriority(fullRoutineTasks, sectionPeriodicity, listSections, lists);
-            } else {
-              tasksToRender = strictlySectionTasks;
-            }
+          const currentRoutineMode = sectionRoutineModes[categoryOrCycle] || 'full_routine';
+          if (currentRoutineMode === 'full_routine') {
+            tasksToRender = sortTasksByRoutinePriority(fullRoutineTasks, sectionPeriodicity, listSections, lists);
+          } else {
+            tasksToRender = strictlySectionTasks;
           }
         }
         
@@ -1009,19 +1042,21 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 const p = getTaskPeriodicity(t, listSections, lists);
                 return p && allowedPeriodicities.has(p);
               });
-              const strictlySectionTasks = categoryTasks;
+              const strictlySectionTasks = categoryTasks.filter(t => {
+                const p = getTaskPeriodicity(t, listSections, lists);
+                return p ? p === sectionPeriodicity : true;
+              });
 
               routineCounts = {
                 full: fullRoutineTasks.length,
                 only: strictlySectionTasks.length
               };
 
-              if (isolatedSectionKey === catKey) {
-                if (isolatedRoutineMode === 'full_routine') {
-                  tasksToRender = sortTasksByRoutinePriority(fullRoutineTasks, sectionPeriodicity, listSections, lists);
-                } else {
-                  tasksToRender = strictlySectionTasks;
-                }
+              const currentRoutineMode = sectionRoutineModes[catKey] || 'full_routine';
+              if (currentRoutineMode === 'full_routine') {
+                tasksToRender = sortTasksByRoutinePriority(fullRoutineTasks, sectionPeriodicity, listSections, lists);
+              } else {
+                tasksToRender = strictlySectionTasks;
               }
             }
 
@@ -1071,19 +1106,21 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               const p = getTaskPeriodicity(t, listSections, lists);
               return p && allowedPeriodicities.has(p);
             });
-            const strictlySectionTasks = categoryTasks;
+            const strictlySectionTasks = categoryTasks.filter(t => {
+              const p = getTaskPeriodicity(t, listSections, lists);
+              return p ? p === sectionPeriodicity : true;
+            });
 
             routineCounts = {
               full: fullRoutineTasks.length,
               only: strictlySectionTasks.length
             };
 
-            if (isolatedSectionKey === categoryKey) {
-              if (isolatedRoutineMode === 'full_routine') {
-                tasksToRender = sortTasksByRoutinePriority(fullRoutineTasks, sectionPeriodicity, listSections, lists);
-              } else {
-                tasksToRender = strictlySectionTasks;
-              }
+            const currentRoutineMode = sectionRoutineModes[categoryKey] || 'full_routine';
+            if (currentRoutineMode === 'full_routine') {
+              tasksToRender = sortTasksByRoutinePriority(fullRoutineTasks, sectionPeriodicity, listSections, lists);
+            } else {
+              tasksToRender = strictlySectionTasks;
             }
           }
 
@@ -1371,6 +1408,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                   setIsolatedSectionKey={setIsolatedSectionKey}
                   isolatedRoutineMode={isolatedRoutineMode}
                   setIsolatedRoutineMode={setIsolatedRoutineMode}
+                  sectionRoutineModes={sectionRoutineModes}
+                  toggleSectionRoutineMode={toggleSectionRoutineMode}
                   dragOverSectionId={dragOverSectionId}
                 />
               );
@@ -1556,36 +1595,14 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         <QuickAddBar currentView={currentView} onExpandDrawer={() => onOpenNewTask()} />
       )}
 
-      {currentView !== 'TRASH' && createPortal(
-        <motion.button
-          className="desktop-fab"
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.92 }}
-          onClick={() => onOpenNewTask()}
-          title="Añadir nuevo recordatorio (N)"
-          aria-label="Añadir nuevo recordatorio"
-          style={{
-            position: 'fixed',
-            bottom: 22,
-            right: 22,
-            width: 48,
-            height: 48,
-            borderRadius: '50%',
-            background: 'var(--accent-primary, #007aff)',
-            color: '#ffffff',
-            border: 'none',
-            boxShadow: '0 8px 24px rgba(0, 122, 255, 0.35)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            zIndex: 45
-          }}
-        >
-          <Plus size={24} strokeWidth={2.4} />
-        </motion.button>,
-        document.body
-      )}
+      <DeletedTaskToast
+        toast={deletedToast}
+        onUndo={handleUndoDelete}
+        onDismiss={() => {
+          if (deletedToast?.timeoutId) window.clearTimeout(deletedToast.timeoutId);
+          setDeletedToast(null);
+        }}
+      />
     </main>
   );
 }

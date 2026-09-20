@@ -861,6 +861,8 @@
   padding: 8px;
   max-height: calc(100dvh - 50px);
   overflow-y: auto !important;
+  overflow-x: hidden !important;
+  box-sizing: border-box !important;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;

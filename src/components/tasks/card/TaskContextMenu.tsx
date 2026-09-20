@@ -71,7 +71,8 @@ export function TaskContextMenu({
               zIndex: 100000,
               top: position.y,
               left: position.x,
-              width: Math.min(270, window.innerWidth - 24),
+              width: Math.min(300, window.innerWidth - 24),
+              minWidth: 280,
               background: 'var(--bg-material, rgba(255,255,255,0.92))',
               backdropFilter: 'blur(35px) saturate(190%)',
               WebkitBackdropFilter: 'blur(35px) saturate(190%)',
@@ -83,6 +84,8 @@ export function TaskContextMenu({
               flexDirection: 'column',
               maxHeight: `${position.maxHeight}px`,
               overflowY: 'auto',
+              overflowX: 'hidden',
+              boxSizing: 'border-box',
               overscrollBehavior: 'contain',
               WebkitOverflowScrolling: 'touch',
             }}
@@ -641,6 +644,7 @@ function ActionRow({
         width: '100%',
         display: 'flex',
         alignItems: 'center',
+        justifyContent: 'space-between',
         gap: 10,
         padding: '0 14px',
         background: 'none',
@@ -648,31 +652,32 @@ function ActionRow({
         cursor: disabled ? 'not-allowed' : 'pointer',
         textAlign: 'left',
         WebkitTapHighlightColor: 'transparent',
-        height: 42,
+        minHeight: 42,
         borderRadius: 8,
         transition: 'background-color 0.12s ease',
         opacity: disabled ? 0.38 : 1,
-        pointerEvents: disabled ? 'none' : 'auto'
+        pointerEvents: disabled ? 'none' : 'auto',
+        boxSizing: 'border-box'
       }}
       onPointerDown={e => { if (!disabled) e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
       onPointerUp={e => { if (!disabled) e.currentTarget.style.backgroundColor = 'transparent'; }}
       onPointerLeave={e => { if (!disabled) e.currentTarget.style.backgroundColor = 'transparent'; }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, color: labelColor || 'var(--text-primary)', flexShrink: 0 }}>
-        {icon}
-      </div>
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        <span style={{ fontSize: '0.9rem', fontWeight: 450, color: labelColor || 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, color: labelColor || 'var(--text-primary)', flexShrink: 0 }}>
+          {icon}
+        </div>
+        <span style={{ fontSize: '0.89rem', fontWeight: 450, color: labelColor || 'var(--text-primary)', whiteSpace: 'nowrap' }}>
           {label}
         </span>
       </div>
-      {sublabel && (
-        <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', flexShrink: 0, marginRight: trailing ? 4 : 0 }}>
-          {sublabel}
-        </span>
-      )}
-      {trailing && (
-        <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+      {(sublabel || trailing) && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 8 }}>
+          {sublabel && (
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>
+              {sublabel}
+            </span>
+          )}
           {trailing}
         </div>
       )}
