@@ -1418,7 +1418,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               overflowX: 'hidden',
               width: '100%',
               overscrollBehaviorY: isActuallyEmpty ? 'none' : 'contain',
-              touchAction: 'pan-y',
+              touchAction: isActuallyEmpty ? 'none' : 'auto',
               WebkitOverflowScrolling: 'touch',
               position: 'relative',
               display: isActuallyEmpty ? 'flex' : 'block',

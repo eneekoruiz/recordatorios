@@ -89,6 +89,14 @@ export function TaskContextMenu({
             animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }}
             exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.95, y: -4 }}
             transition={{ type: 'spring', damping: 28, stiffness: 450 }}
+            drag={isMobile ? "y" : false}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0.05, bottom: 0.7 }}
+            onDragEnd={isMobile ? (_e, info) => {
+              if (info.offset.y > 80 || info.velocity.y > 400) {
+                onClose();
+              }
+            } : undefined}
             style={isMobile ? {
               position: 'fixed',
               left: 0,
