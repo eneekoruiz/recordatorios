@@ -1404,6 +1404,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           <div 
             ref={parentRef}
             className="content-scroll" 
+            data-testid="content-scroll-container"
             onScroll={(e) => {
               const top = e.currentTarget.scrollTop;
               setIsScrolled(top > 20);

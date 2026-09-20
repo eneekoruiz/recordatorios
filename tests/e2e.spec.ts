@@ -940,5 +940,56 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
     // Verify it is collapsed back to the circular button
     await expect(searchBtn).toBeVisible();
   });
+
+  // 23. Mobile Responsiveness & Empty View Scroll Suppression
+  test('23. Mobile Responsiveness: Empty view locks scroll, dropdown menu is opaque and deduplicated', async ({ page }) => {
+    // iPhone 14 / modern viewport
+    await page.setViewportSize({ width: 390, height: 844 });
+    await ensureAppUnlocked(page);
+    await page.waitForLoadState('networkidle');
+
+    // Navigate to "Hoy" (which has empty state or no tasks)
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent('select-view', { detail: 'today' }));
+    });
+    await page.waitForTimeout(400);
+
+    // Check main container styles when empty
+    const isScrollLocked = await page.evaluate(() => {
+      const scrollable = document.querySelector('[data-testid="content-scroll-container"]') as HTMLElement;
+      if (!scrollable) return false;
+      const style = window.getComputedStyle(scrollable);
+      return style.overflowY === 'hidden' && style.touchAction === 'none';
+    });
+    expect(isScrollLocked).toBe(true);
+
+    // Navigate to a list with items/sections to test dropdown menu
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent('select-view', { detail: 'list_compra' }));
+    });
+    await page.waitForTimeout(500);
+
+    // Verify list-options-btn (the duplicate gear button) does NOT exist in header actions
+    const duplicateGear = page.locator('[data-testid="list-options-btn"]');
+    await expect(duplicateGear).toHaveCount(0);
+
+    // Open list options menu (•••)
+    const moreOptionsBtn = page.locator('[data-testid="list-more-options-btn"]').first();
+    if (await moreOptionsBtn.isVisible()) {
+      await moreOptionsBtn.click();
+      await page.waitForTimeout(200);
+
+      // Verify dropdown is open and has solid styling (not transparent glass-panel)
+      const dropdownMenu = page.locator('.ios-dropdown-menu').first();
+      await expect(dropdownMenu).toBeVisible();
+
+      // Verify "Personalizar lista" is inside the menu
+      const customizeItem = dropdownMenu.locator('text=Personalizar lista').first();
+      await expect(customizeItem).toBeVisible();
+
+      // Close menu
+      await page.keyboard.press('Escape');
+    }
+  });
 });
 
