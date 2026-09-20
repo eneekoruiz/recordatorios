@@ -28,7 +28,19 @@ export function TaskMetaBadges({
 }: TaskMetaBadgesProps) {
   const updateTask = useAppStore(state => state.updateTask);
 
-  const hasMeta = showListName || task.dueDate || cycleBadge || timeOfDayInfo;
+  const inAppListTarget = (() => {
+    const url = task.url || '';
+    const isCareUrl = url.startsWith('app://list/care') || (url.includes('icloud.com/reminders') && url.includes('Care')) || task.title.toLowerCase().includes('skin-care') || task.title.toLowerCase().includes('skincare');
+    const isAppListUrl = url.startsWith('app://list/');
+    if (isCareUrl || isAppListUrl) {
+      const targetListId = isCareUrl ? 'care' : url.replace('app://list/', '');
+      const targetList = lists?.find(l => l.id === targetListId);
+      return { id: targetListId, name: targetList?.name || 'Care' };
+    }
+    return null;
+  })();
+
+  const hasMeta = showListName || task.dueDate || cycleBadge || timeOfDayInfo || Boolean(inAppListTarget);
 
   return (
     <>
@@ -124,49 +136,42 @@ export function TaskMetaBadges({
               <span>{timeOfDayInfo.label}</span>
             </button>
           )}
-        </div>
-      )}
-
-      {/* In-app list navigation button if URL is Care or an in-app list */}
-      {(() => {
-        if (!task.url) return null;
-        const isCareUrl = task.url.startsWith('app://list/care') || (task.url.includes('icloud.com/reminders') && task.url.includes('Care')) || task.title.toLowerCase().includes('skin-care') || task.title.toLowerCase().includes('skincare');
-        const isAppListUrl = task.url.startsWith('app://list/');
-        
-        if (isCareUrl || isAppListUrl) {
-          const targetListId = isCareUrl ? 'care' : task.url.replace('app://list/', '');
-          const targetList = lists?.find(l => l.id === targetListId);
-          return (
+          {inAppListTarget && (
             <button
               type="button"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                onNavigateView?.(`list_${targetListId}`);
+                onNavigateView?.(`list_${inAppListTarget.id}`);
               }}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 8,
-                marginTop: 8,
-                padding: '7px 14px',
-                borderRadius: 10,
-                background: 'rgba(0, 122, 255, 0.12)',
-                color: 'var(--accent-primary)',
-                border: '1px solid rgba(0, 122, 255, 0.25)',
+                gap: 4,
+                padding: '1.5px 8px',
+                borderRadius: 6,
+                fontSize: '0.74rem',
                 fontWeight: 600,
-                fontSize: '0.84rem',
-                cursor: 'pointer'
+                background: 'rgba(0, 122, 255, 0.10)',
+                color: 'var(--accent-primary)',
+                border: '1px solid rgba(0, 122, 255, 0.22)',
+                cursor: 'pointer',
+                letterSpacing: '-0.1px',
+                transition: 'all 0.15s ease'
               }}
+              title={`Ir a la lista ${inAppListTarget.name}`}
             >
-              <LayoutList size={15} />
-              <span>Ir a lista {targetList?.name || 'Care'}</span>
-              <ChevronRight size={14} style={{ opacity: 0.7 }} />
+              <LayoutList size={11} />
+              <span>Ir a {inAppListTarget.name}</span>
+              <ChevronRight size={10} style={{ opacity: 0.7 }} />
             </button>
-          );
-        }
+          )}
+        </div>
+      )}
 
-        // External URLs (exclude app:// so Safari doesn't throw invalid scheme error)
+      {/* External URLs (exclude app:// so Safari doesn't throw invalid scheme error) */}
+      {(() => {
+        if (!task.url || inAppListTarget) return null;
         if (task.url.startsWith('http')) {
           return (
             <a
