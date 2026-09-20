@@ -1,7 +1,5 @@
 import React from 'react';
 import { 
-  ChevronLeft, 
-  MoreHorizontal, 
   ArrowUpDown, 
   X, 
   Users, 
@@ -51,10 +49,10 @@ interface MainPageHeaderProps {
 }
 
 export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
-  isMobile,
-  onBackToSidebar,
+  isMobile: _isMobile,
+  onBackToSidebar: _onBackToSidebar,
   currentList,
-  setIsListConfigOpen,
+  setIsListConfigOpen: _setIsListConfigOpen,
   viewColor,
   CycleIcon,
   SmartIcon,
@@ -90,81 +88,9 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
     <>
       <header 
         className="content-header" 
-        style={{ padding: '4px 16px 20px 16px', display: 'flex', flexDirection: 'column', gap: '12px', flexShrink: 0, margin: '0', borderBottom: 'none', boxSizing: 'border-box' }}
+        style={{ padding: '2px 16px 16px 16px', display: 'flex', flexDirection: 'column', gap: '12px', flexShrink: 0, margin: '0', borderBottom: 'none', boxSizing: 'border-box' }}
       >
-        {/* Apple Top Navigation Bar: Back button < Listas + List Options */}
-        <div 
-          className="apple-content-nav-bar" 
-          style={{ 
-            width: '100%', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between', 
-            minHeight: 34,
-            boxSizing: 'border-box' 
-          }}
-        >
-          {/* Botón Volver a Listas */}
-          {(isMobile || onBackToSidebar) ? (
-            <button
-              type="button"
-              onClick={() => {
-                HapticService.selection();
-                onBackToSidebar?.();
-              }}
-              data-testid="content-back-btn"
-              className="apple-nav-back-btn"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 3,
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--accent-primary)',
-                fontSize: '1.02rem',
-                fontWeight: 500,
-                cursor: 'pointer',
-                padding: '4px 6px 4px 0',
-                borderRadius: 8,
-                transition: 'opacity 0.15s ease'
-              }}
-              title="Volver a las listas"
-            >
-              <ChevronLeft size={24} strokeWidth={2.4} />
-              <span>Listas</span>
-            </button>
-          ) : <div />}
-
-          {/* Menú de opciones de lista a la derecha */}
-          {currentList && (
-            <button
-              type="button"
-              onClick={() => {
-                HapticService.selection();
-                setIsListConfigOpen(true);
-              }}
-              data-testid="list-options-btn"
-              className="apple-nav-action-btn"
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: '50%',
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border-subtle)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                color: 'var(--text-secondary)'
-              }}
-              title="Configuración de la lista"
-            >
-              <MoreHorizontal size={17} />
-            </button>
-          )}
-        </div>
-
-        {/* Línea del Título (Debajo del Top Bar) - Estilo Apple Reminders */}
+        {/* Línea del Título - Estilo Apple Reminders */}
         <div style={{ width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
           <h1 className="text-display" style={{ 
             fontSize: '34px', 

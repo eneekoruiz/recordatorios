@@ -36,7 +36,7 @@ interface MainGlassHeaderProps {
 
 export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
   isScrolled,
-  isMobile,
+  isMobile: _isMobile,
   onBackToSidebar,
   isSmartView,
   isListView,
@@ -78,29 +78,36 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
         transition: 'background 0.25s ease, border-color 0.25s ease, backdrop-filter 0.25s ease, -webkit-backdrop-filter 0.25s ease'
       }}
     >
-      {/* Left spacer / Mobile Back Button */}
-      {isMobile && onBackToSidebar ? (
+      {/* Left: Back button ("Atrás para más listas") */}
+      {onBackToSidebar ? (
         <button 
-          onClick={onBackToSidebar} 
+          type="button"
+          onClick={() => {
+            HapticService.selection();
+            onBackToSidebar();
+          }} 
           className="back-btn-ios" 
+          data-testid="content-back-btn"
           style={{ 
-            display: 'flex', 
+            display: 'inline-flex', 
             alignItems: 'center', 
-            gap: 4, 
+            gap: 3, 
             background: 'transparent', 
             border: 'none', 
             color: 'var(--accent-primary, #0a84ff)', 
             fontWeight: 500, 
-            fontSize: '1.05rem', 
+            fontSize: '1.02rem', 
             cursor: 'pointer',
             padding: '4px 8px 4px 0',
             WebkitTapHighlightColor: 'transparent',
             flexShrink: 0,
-            zIndex: 10
+            zIndex: 10,
+            transition: 'opacity 0.15s ease'
           }}
-          title="Volver a listas"
+          title="Atrás para más listas"
         >
-          <ChevronLeft size={22} /> Listas
+          <ChevronLeft size={22} strokeWidth={2.4} />
+          <span>Listas</span>
         </button>
       ) : (
         <div style={{ minWidth: 24, flexShrink: 0 }} />
@@ -126,12 +133,91 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
         {title}
       </div>
 
-      {/* Right: Actions aligned to the right */}
-      <div className="header-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center', marginLeft: 'auto', flexWrap: 'nowrap', flexShrink: 0, justifyContent: 'flex-end', position: 'relative' }}>
+      {/* Right: Actions unified in the top line */}
+      <div className="header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginLeft: 'auto', flexWrap: 'nowrap', flexShrink: 0, justifyContent: 'flex-end', position: 'relative' }}>
+        {/* Añadir sección de raíz */}
+        {isListView && (
+          <button 
+            type="button"
+            className="icon-btn apple-nav-action-btn" 
+            onClick={() => {
+              HapticService.selection();
+              onAddSection();
+            }} 
+            title="Añadir sección de raíz"
+            aria-label="Añadir sección de raíz"
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border-subtle)',
+              cursor: 'pointer',
+              color: 'var(--accent-primary)',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <FolderPlus size={18} strokeWidth={2.2} />
+          </button>
+        )}
+
+        {/* Configuración de la lista */}
+        {currentList && (
+          <button
+            type="button"
+            className="icon-btn apple-nav-action-btn"
+            data-testid="list-options-btn"
+            onClick={() => {
+              HapticService.selection();
+              setIsListConfigOpen(true);
+            }}
+            title="Configuración de la lista"
+            aria-label="Configuración de la lista"
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border-subtle)',
+              cursor: 'pointer',
+              color: 'var(--accent-primary)',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <Settings size={18} strokeWidth={2.2} />
+          </button>
+        )}
+
+        {/* Opciones de lista */}
         {(isListView || isSmartView || isFolderView) && (
           <div style={{ position: 'relative' }}>
-            <button className="icon-btn" onClick={() => setIsMenuOpen(!isMenuOpen)} title="Opciones de Lista">
-              <MoreHorizontal size={20} color="var(--accent-primary)" />
+            <button 
+              type="button"
+              className="icon-btn apple-nav-action-btn" 
+              onClick={() => setIsMenuOpen(!isMenuOpen)} 
+              title="Opciones de lista"
+              aria-label="Opciones de lista"
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                cursor: 'pointer',
+                color: 'var(--accent-primary)',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <MoreHorizontal size={18} strokeWidth={2.2} />
             </button>
             <AnimatePresence>
               {isMenuOpen && (
@@ -241,11 +327,6 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
               )}
             </AnimatePresence>
           </div>
-        )}
-        {isListView && (
-          <button className="icon-btn" onClick={onAddSection} title="Añadir Sección Raíz">
-            <FolderPlus size={20} color="var(--accent-primary)" />
-          </button>
         )}
       </div>
     </header>
