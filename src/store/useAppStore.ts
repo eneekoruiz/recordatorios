@@ -46,6 +46,7 @@ interface AppState {
   smartListVisibility: Record<string, boolean>;
   pinnedSmartLists: string[];
   cycleVisibility: Record<string, boolean>;
+  preferences_updated_at?: string;
   _preferences_dirty?: boolean;
   /** Borrados de listas/ciclos pendientes de comunicar al servidor. */
   tombstones: { lists: CustomList[]; cycles: CustomCycle[] };
@@ -202,16 +203,22 @@ export const useAppStore = create<AppState>()(
         const pinnedSmartLists = currentPinned.includes(listId)
           ? currentPinned.filter((id: string) => id !== listId)
           : [...currentPinned, listId];
-        return { pinnedSmartLists, _preferences_dirty: true };
+        return { 
+          pinnedSmartLists, 
+          preferences_updated_at: new Date().toISOString(),
+          _preferences_dirty: true 
+        };
       }),
 
       toggleSmartList: (listId) => optimisticUpdate(get, set, (state) => ({
         smartListVisibility: { ...state.smartListVisibility, [listId]: !state.smartListVisibility[listId] },
+        preferences_updated_at: new Date().toISOString(),
         _preferences_dirty: true,
       })),
 
       toggleCycleVisibility: (cycleId) => optimisticUpdate(get, set, (state) => ({
         cycleVisibility: { ...state.cycleVisibility, [cycleId]: !state.cycleVisibility[cycleId] },
+        preferences_updated_at: new Date().toISOString(),
         _preferences_dirty: true,
       })),
 
@@ -237,6 +244,7 @@ export const useAppStore = create<AppState>()(
             ...(changed ? { tasks } : {}),
             pinnedSmartLists: (current.pinnedSmartLists || []).filter((id: string) => id !== 'smart_primeros_pasos'),
             smartListVisibility: { ...current.smartListVisibility, smart_primeros_pasos: false },
+            preferences_updated_at: new Date().toISOString(),
             _preferences_dirty: true,
           };
         });
@@ -980,45 +988,29 @@ export const useAppStore = create<AppState>()(
       partialize: (state) => {
         const rest = { ...state };
         delete (rest as Partial<AppState>).hasHydrated;
+        delete (rest as Partial<AppState>)._preferences_dirty;
         return rest;
       },
       merge: (persistedState: any, currentState: any) => {
         const rawLists = persistedState?.lists || currentState.lists || [];
-        const uniqueLists: any[] = Array.from(new Map(rawLists.map((l: any) => [l.id, l])).values());
+        const cleanLists = rawLists.filter((l: any) => !l.id?.startsWith('user_preferences_'));
+        const uniqueLists: any[] = Array.from(new Map(cleanLists.map((l: any) => [l.id, l])).values());
         const rawCycles = persistedState?.cycles || currentState.cycles || [];
         const uniqueCycles: any[] = Array.from(new Map(rawCycles.map((c: any) => [c.id, c])).values());
         const rawSections = persistedState?.listSections || currentState.listSections || [];
         const uniqueSections: any[] = Array.from(new Map(rawSections.map((s: any) => [s.id, s])).values());
 
-        let mergedCycleVisibility = {
+        const mergedCycleVisibility = {
           ...currentState.cycleVisibility,
           ...(persistedState?.cycleVisibility || {})
         };
-        const cycleSettings = uniqueLists.find((l: any) => l.id === 'user_preferences_cycle_visibility');
-        if (cycleSettings?.icon) {
-          try {
-            mergedCycleVisibility = { ...mergedCycleVisibility, ...JSON.parse(cycleSettings.icon) };
-          } catch (e) {}
-        }
 
-        let mergedSmartListVisibility = {
+        const mergedSmartListVisibility = {
           ...currentState.smartListVisibility,
           ...(persistedState?.smartListVisibility || {})
         };
-        const smartSettings = uniqueLists.find((l: any) => l.id === 'user_preferences_smart_lists');
-        if (smartSettings?.icon) {
-          try {
-            mergedSmartListVisibility = { ...mergedSmartListVisibility, ...JSON.parse(smartSettings.icon) };
-          } catch (e) {}
-        }
 
-        let mergedPinnedSmartLists = persistedState?.pinnedSmartLists || currentState.pinnedSmartLists || [];
-        const pinnedSettings = uniqueLists.find((l: any) => l.id === 'user_preferences_pinned_smart_lists');
-        if (pinnedSettings?.icon) {
-          try {
-            mergedPinnedSmartLists = JSON.parse(pinnedSettings.icon);
-          } catch (e) {}
-        }
+        const mergedPinnedSmartLists = persistedState?.pinnedSmartLists || currentState.pinnedSmartLists || [];
 
         const userExplicitTheme = typeof localStorage !== 'undefined' ? localStorage.getItem('user_explicit_theme') : null;
         const resolvedTheme = userExplicitTheme === 'dark' ? 'dark' : 'light';
@@ -1026,6 +1018,7 @@ export const useAppStore = create<AppState>()(
         return {
           ...currentState,
           ...persistedState,
+          _preferences_dirty: false,
           theme: resolvedTheme,
           lists: uniqueLists,
           cycles: uniqueCycles,

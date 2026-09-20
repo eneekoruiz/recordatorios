@@ -106,3 +106,52 @@ export function ensureCaducidadesSections(
     });
   }
 }
+
+/**
+ * Determina si una lista o vista corresponde a la lista de Limpieza.
+ */
+export function isLimpiezaList(listIdOrView?: string | null, list?: CustomList | null): boolean {
+  if (!listIdOrView && !list) return false;
+  const cleanId = (listIdOrView || '').replace(/^list_/, '').toLowerCase();
+  if (cleanId === 'limpieza') return true;
+  if (list) {
+    if (list.id === 'limpieza') return true;
+    const cleanName = (list.name || '').toLowerCase();
+    if (cleanName === 'limpieza') return true;
+  }
+  return false;
+}
+
+/**
+ * Inicializa y asegura las 4 secciones estándar de Limpieza: Diaria, Semanal, Mensual, Anual.
+ */
+export function ensureLimpiezaSections(
+  listId: string,
+  sections: ListSection[],
+  addSection: (sec: ListSection) => void
+): void {
+  const currentSections = sections.filter(s => s.listId === listId && !s.deleted_at);
+  const required = [
+    { id: 'sec_limpieza_diaria', name: 'Diaria', order: 0 },
+    { id: 'sec_limpieza_semanal', name: 'Semanal', order: 1 },
+    { id: 'sec_limpieza_mensual', name: 'Mensual', order: 2 },
+    { id: 'sec_limpieza_anual', name: 'Anual', order: 3 },
+  ];
+
+  required.forEach(req => {
+    const exists = currentSections.some(s => 
+      s.id === req.id || 
+      s.id === `${req.id}_${listId}` ||
+      s.name.toLowerCase() === req.name.toLowerCase()
+    );
+    if (!exists) {
+      addSection({
+        id: listId === 'limpieza' ? req.id : `${req.id}_${listId}`,
+        listId,
+        name: req.name,
+        order: req.order
+      });
+    }
+  });
+}
+

@@ -120,12 +120,7 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
   return (
     <div 
       style={{
-        position: 'fixed',
-        bottom: 'max(18px, env(safe-area-inset-bottom))',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: 'min(90vw, 560px)',
-        zIndex: 42,
+        width: '100%',
         boxSizing: 'border-box'
       }}
     >

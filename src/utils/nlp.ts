@@ -164,7 +164,7 @@ export function parseNaturalLanguage(text: string): ParsedNLPResult {
   // 6. Inferencia temática de Categoría por defecto si no se especificó @Lista
   if (!suggestedCategory) {
     const categoryKeywords: Record<string, string[]> = {
-      'limpieza': ['limpiar', 'barrer', 'fregar', 'basura', 'polvo', 'lavadora', 'ropa', 'fregadero', 'platos'],
+      'limpieza': ['limpiar', 'barrer', 'fregar', 'basura', 'polvo', 'lavadora', 'ropa', 'fregadero', 'platos', 'aspirar', 'aspiradora', 'desinfectar', 'baño', 'cristales', 'sábanas', 'sabanas', 'ordenar'],
       'compras': ['comprar', 'supermercado', 'pan', 'leche', 'huevos', 'verdura', 'carne', 'tienda', 'amazon'],
       'salud': ['médico', 'medico', 'dentista', 'cita', 'pastillas', 'farmacia', 'entrenar', 'gym', 'ejercicio'],
       'trabajo': ['reunión', 'reunion', 'informe', 'email', 'cliente', 'proyecto', 'presentación', 'zoom', 'call']

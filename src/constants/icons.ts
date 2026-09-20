@@ -37,7 +37,7 @@ export const LIST_ICON_MAP: Record<string, ComponentType<any>> = {
   camera: Camera, food: Utensils, water: Droplets, fire: Flame, sun: Sun, moon: Moon, star: Star, trophy: Trophy,
   car: Car, bike: Bike, train: Train, ticket: Ticket, glasses: Glasses, headphones: Headphones, watch: Watch,
   shield: Shield, key: Key, lock: Lock, bell: Bell, card: CreditCard, gift: Gift, pet: PawPrint, leaf: Leaf,
-  health: Stethoscope, wallet: Wallet, baby: Baby, tools: Wrench, rocket: Rocket,
+  health: Stethoscope, wallet: Wallet, baby: Baby, tools: Wrench, rocket: Rocket, sparkles: Sparkles,
 };
 
 // Alias de nombres usados históricamente (kebab-case de Lucide, PascalCase de importaciones...).

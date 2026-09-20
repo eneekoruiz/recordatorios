@@ -68,7 +68,13 @@ h1, h2, h3,
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
-  font-size: 0.95rem;
+  font-size: 0.84rem !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.2px !important;
+  line-height: 1.25 !important;
+  padding-right: 4px !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 /* Filas de lista: sin separadores sueltos (estilo barra lateral de macOS), nombre en una línea */
@@ -177,4 +183,28 @@ input:focus-visible, textarea:focus-visible { outline: none; }
 }
 .input-group:focus-within {
   box-shadow: 0 0 0 4px var(--accent-glow);
+}
+
+/* ---------- Desenfoque y degradado inferior para controles flotantes ---------- */
+.bottom-floating-glass-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(90px + env(safe-area-inset-bottom, 0px));
+  pointer-events: none !important;
+  z-index: 40;
+  background: linear-gradient(to bottom, transparent 0%, var(--bg-base) 85%);
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    color-mix(in srgb, var(--bg-base) 25%, transparent) 22%,
+    color-mix(in srgb, var(--bg-base) 70%, transparent) 50%,
+    color-mix(in srgb, var(--bg-base) 94%, transparent) 78%,
+    var(--bg-base) 100%
+  );
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 28%, black 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 28%, black 100%);
 }

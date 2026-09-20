@@ -145,7 +145,17 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
                 )}
                 <h3 style={{ 
                   color: isActive ? '#ffffff' : 'var(--text-primary)', 
-                  fontWeight: 700,
+                  fontWeight: 600,
+                  fontSize: '0.84rem',
+                  letterSpacing: '-0.2px',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  maxWidth: '100%',
+                  paddingRight: 4,
+                  margin: 0,
+                  marginTop: 10,
+                  lineHeight: 1.25,
                   transition: 'color 150ms ease'
                 }}>
                   {list.name}

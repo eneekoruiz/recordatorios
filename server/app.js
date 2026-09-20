@@ -443,7 +443,16 @@ export function createApp({ prisma }) {
         if (JSON.stringify(preferences).length > 50_000) {
           return res.status(413).json({ error: 'Preferencias demasiado grandes' });
         }
-        transaction.push(prisma.user.update({ where: { id: userId }, data: { preferences } }));
+        const existing = await prisma.user.findUnique({ where: { id: userId }, select: { preferences: true } });
+        const existingUpdatedAt = existing?.preferences?.updated_at ? new Date(existing.preferences.updated_at).getTime() : 0;
+        const incomingUpdatedAt = preferences.updated_at ? new Date(preferences.updated_at).getTime() : Date.now();
+        if (incomingUpdatedAt >= existingUpdatedAt) {
+          const merged = {
+            ...(existing?.preferences && typeof existing.preferences === 'object' ? existing.preferences : {}),
+            ...preferences,
+          };
+          transaction.push(prisma.user.update({ where: { id: userId }, data: { preferences: merged } }));
+        }
       }
 
       if (transaction.length > 0) await prisma.$transaction(transaction);

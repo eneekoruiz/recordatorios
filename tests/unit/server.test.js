@@ -208,6 +208,34 @@ describe('sincronización multiusuario', () => {
     expect(later.tasks).toHaveLength(0);
   });
 
+  it('sincroniza preferencias con Last-Write-Wins entre dispositivos', async () => {
+    const a = await register(`prefs${Date.now()}@example.com`);
+    const t1 = new Date(Date.now() - 10000).toISOString();
+    const t2 = new Date().toISOString();
+
+    // Dispositivo 1 sube preferencias en t2 (más nuevas)
+    await post('/api/sync/push', {
+      preferences: {
+        smartListVisibility: { smart_scheduled: false, smart_flagged: false },
+        updated_at: t2,
+      },
+    }, a.token);
+
+    let pull = await (await get('/api/sync/pull?lastToken=0', a.token)).json();
+    expect(pull.preferences?.smartListVisibility?.smart_scheduled).toBe(false);
+
+    // Dispositivo 2 intenta pisar con preferencias viejas t1 (no debe pisar)
+    await post('/api/sync/push', {
+      preferences: {
+        smartListVisibility: { smart_scheduled: true, smart_flagged: true },
+        updated_at: t1,
+      },
+    }, a.token);
+
+    pull = await (await get('/api/sync/pull?lastToken=0', a.token)).json();
+    expect(pull.preferences?.smartListVisibility?.smart_scheduled).toBe(false);
+  });
+
   it('rechaza peticiones sin token', async () => {
     expect((await get('/api/sync/pull')).status).toBe(401);
     expect((await post('/api/sync/push', {})).status).toBe(401);

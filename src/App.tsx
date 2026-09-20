@@ -19,7 +19,6 @@ import { AuthScreen } from './components/auth/AuthScreen';
 import { InstallPromptModal } from './components/layout/InstallPromptModal';
 import { ShortcutsModal } from './components/layout/ShortcutsModal';
 import { DailyGreetingModal } from './components/layout/DailyGreetingModal';
-import { BottomShortcutBar } from './components/layout/BottomShortcutBar';
 import { syncManager } from './sync/syncManager';
 import { TaskSkeletonLoader } from './components/ui/TaskSkeletonLoader';
 import { AIAssistantModal } from './components/ai/AIAssistantModal';
@@ -99,6 +98,10 @@ function App() {
       if (allTasks.length > 0 && activePrimerosPasos.length === 0) {
         setCurrentView('smart_today');
       }
+    }
+
+    if (['list_limpieza_diaria', 'list_limpieza_semanal', 'list_limpieza_mensual', 'list_limpieza_anual'].includes(currentView)) {
+      setCurrentView('list_limpieza');
     }
   }, [currentView, tasks]);
 
@@ -187,7 +190,7 @@ function App() {
       l.id !== 'primeros_pasos' && 
       l.id !== 'inbox' && 
       !l.id.startsWith('user_preferences_') &&
-      !['compras', 'personal', 'trabajo', 'care', 'quehaceres', 'limpieza', 'limpieza_diaria', 'limpieza_semanal', 'limpieza_mensual', 'limpieza_anual', 'caducidades', 'que_he_hecho'].includes(l.id)
+      !['compras', 'personal', 'trabajo', 'care', 'quehaceres', 'limpieza', 'caducidades', 'que_he_hecho'].includes(l.id)
     );
     const isEstablishedUser = hasRealTasks || hasCustomLists;
     const isHidden = isLocalHidden || isCloudHidden || isEstablishedUser;
@@ -199,7 +202,6 @@ function App() {
     if (isHidden) {
       if (state.pinnedSmartLists?.includes('smart_primeros_pasos')) {
         const cleaned = state.pinnedSmartLists.filter(id => id !== 'smart_primeros_pasos');
-        state.togglePinSmartList('smart_primeros_pasos');
         useAppStore.setState({ pinnedSmartLists: cleaned });
       }
       if (lists?.some(l => l.id === 'primeros_pasos')) {
@@ -223,10 +225,15 @@ function App() {
         { id: 'trabajo', name: 'Trabajo', color: '#0a84ff', icon: 'briefcase' },
         { id: 'caducidades', name: 'Caducidades', color: '#ff9500', icon: 'credit-card' },
         { id: 'que_he_hecho', name: 'Qué he hecho', color: '#5856d6', icon: 'book-open' },
+        { id: 'limpieza', name: 'Limpieza', color: '#32ade6', icon: 'sparkles' },
       ];
       initial.forEach((l) => state.addList({ ...l, updated_at: EPOCH }));
       state.addListSection({ id: 'sec_tarjetas', listId: 'caducidades', name: 'Tarjetas y Documentos', order: 0, updated_at: EPOCH });
       state.addListSection({ id: 'sec_suscripciones', listId: 'caducidades', name: 'Suscripciones', order: 1, updated_at: EPOCH });
+      state.addListSection({ id: 'sec_limpieza_diaria', listId: 'limpieza', name: 'Diaria', order: 0, updated_at: EPOCH });
+      state.addListSection({ id: 'sec_limpieza_semanal', listId: 'limpieza', name: 'Semanal', order: 1, updated_at: EPOCH });
+      state.addListSection({ id: 'sec_limpieza_mensual', listId: 'limpieza', name: 'Mensual', order: 2, updated_at: EPOCH });
+      state.addListSection({ id: 'sec_limpieza_anual', listId: 'limpieza', name: 'Anual', order: 3, updated_at: EPOCH });
     } else {
       if (!lists.some(l => l.id === 'primeros_pasos') && !isHidden) {
         state.addList({ id: 'primeros_pasos', name: 'Primeros Pasos', color: '#ff2d55', icon: 'rocket', isPinned: false, updated_at: EPOCH });
@@ -257,24 +264,77 @@ function App() {
         });
       }
 
-      // Asegurar que la estructura de Limpieza coincida con las sublistas
+      // Asegurar que Limpieza esté unificada como una lista única con sus 4 secciones
       const limpiezaList = lists.find(l => l.id === 'limpieza');
-      if (limpiezaList && !limpiezaList.isFolder) {
-        state.updateList('limpieza', { isFolder: true });
-      }
-      const sublists = [
-        { id: 'limpieza_diaria', name: 'Diaria' },
-        { id: 'limpieza_semanal', name: 'Semanal' },
-        { id: 'limpieza_mensual', name: 'Mensual' },
-        { id: 'limpieza_anual', name: 'Anual' },
-      ];
       if (limpiezaList) {
-        sublists.forEach(sub => {
-          if (!lists.some(l => l.id === sub.id || (l.name === sub.name && l.parentId === 'limpieza'))) {
-            state.addList({ id: sub.id, name: sub.name, color: '#0a84ff', icon: 'list', parentId: 'limpieza', updated_at: EPOCH });
-          }
-        });
+        if (limpiezaList.isFolder || limpiezaList.icon === 'folder' || limpiezaList.icon === 'list' || limpiezaList.parentId) {
+          state.updateList('limpieza', { isFolder: false, icon: 'sparkles', color: limpiezaList.color || '#32ade6', parentId: undefined });
+        }
+      } else if (!isHidden) {
+        state.addList({ id: 'limpieza', name: 'Limpieza', color: '#32ade6', icon: 'sparkles', isFolder: false, updated_at: EPOCH });
       }
+
+      // Secciones de Limpieza (Diaria, Semanal, Mensual, Anual)
+      const limpiezaSections = [
+        { id: 'sec_limpieza_diaria', name: 'Diaria', order: 0 },
+        { id: 'sec_limpieza_semanal', name: 'Semanal', order: 1 },
+        { id: 'sec_limpieza_mensual', name: 'Mensual', order: 2 },
+        { id: 'sec_limpieza_anual', name: 'Anual', order: 3 },
+      ];
+      limpiezaSections.forEach(sec => {
+        if (!sections.some(s => s.id === sec.id || (s.listId === 'limpieza' && s.name.toLowerCase() === sec.name.toLowerCase()))) {
+          state.addListSection({
+            id: sec.id,
+            listId: 'limpieza',
+            name: sec.name,
+            order: sec.order,
+            updated_at: EPOCH
+          });
+        }
+      });
+
+      // Migrar tareas de sublistas de limpieza a la lista unificada con su sección
+      const allTasksList = Object.values(state.tasks || {});
+      const sublistMapping: Record<string, { secId: string; cycleId: string }> = {
+        'limpieza_diaria': { secId: 'sec_limpieza_diaria', cycleId: 'cycle_day' },
+        'limpieza_semanal': { secId: 'sec_limpieza_semanal', cycleId: 'cycle_week' },
+        'limpieza_mensual': { secId: 'sec_limpieza_mensual', cycleId: 'cycle_month' },
+        'limpieza_anual': { secId: 'sec_limpieza_anual', cycleId: 'cycle_year' }
+      };
+
+      allTasksList.forEach(t => {
+        const mapping = t.categoryId ? sublistMapping[t.categoryId] : undefined;
+        if (mapping) {
+          state.updateTaskRaw({
+            ...t,
+            categoryId: 'limpieza',
+            sectionId: mapping.secId,
+            cycle_id: t.cycle_id || mapping.cycleId,
+            updated_at: new Date().toISOString(),
+            _is_dirty: true
+          });
+        } else if (t.categoryId === 'limpieza' && !t.sectionId) {
+          const sec = t.cycle_id === 'cycle_week' ? 'sec_limpieza_semanal' :
+                      t.cycle_id === 'cycle_month' ? 'sec_limpieza_mensual' :
+                      t.cycle_id === 'cycle_year' ? 'sec_limpieza_anual' :
+                      'sec_limpieza_diaria';
+          state.updateTaskRaw({
+            ...t,
+            sectionId: sec,
+            cycle_id: t.cycle_id || (sec === 'sec_limpieza_diaria' ? 'cycle_day' : sec === 'sec_limpieza_semanal' ? 'cycle_week' : sec === 'sec_limpieza_mensual' ? 'cycle_month' : 'cycle_year'),
+            updated_at: new Date().toISOString(),
+            _is_dirty: true
+          });
+        }
+      });
+
+      // Eliminar sublistas obsoletas ahora que sus tareas están en Limpieza
+      const obsoleteSublistIds = ['limpieza_diaria', 'limpieza_semanal', 'limpieza_mensual', 'limpieza_anual'];
+      obsoleteSublistIds.forEach(id => {
+        if (lists.some(l => l.id === id)) {
+          state.removeList(id);
+        }
+      });
     }
 
     // Inicializar tareas de Primeros Pasos si no se ha ocultado la guía
@@ -609,7 +669,6 @@ function App() {
       <InstallPromptModal />
       <DailyGreetingModal onSelectView={handleSelectView} />
       <ShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
-      <BottomShortcutBar />
       <ConfirmHost />
 
       {globalToast && createPortal(

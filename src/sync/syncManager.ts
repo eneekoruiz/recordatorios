@@ -53,11 +53,23 @@ class SyncManager {
       this.isOnline = false;
       useAppStore.getState().setSyncStatus('offline');
     });
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+          if (this.hasPendingChanges()) this.syncNow();
+        } else if (document.visibilityState === 'visible') {
+          this.syncNow();
+        }
+      });
+      window.addEventListener('pagehide', () => {
+        if (this.hasPendingChanges()) this.syncNow();
+      });
+    }
   }
 
   triggerDebouncedSync() {
     if (this.debounceTimeout) clearTimeout(this.debounceTimeout);
-    this.debounceTimeout = setTimeout(() => this.syncNow(), 1000);
+    this.debounceTimeout = setTimeout(() => this.syncNow(), 400);
   }
 
   start() {
@@ -189,6 +201,7 @@ class SyncManager {
           pinnedSmartLists: state.pinnedSmartLists,
           cycleVisibility: state.cycleVisibility,
           hideOnboarding: safeLocalStorageGet('hide_onboarding_guide') === 'true',
+          updated_at: state.preferences_updated_at || new Date().toISOString(),
         }
       : undefined;
 
@@ -320,17 +333,35 @@ class SyncManager {
       }
       if (sections !== currentSections) update.listSections = sections;
 
-      // Preferencias (columna User.preferences); los cambios locales pendientes tienen prioridad.
+      // Preferencias (columna User.preferences); LWW frente a cambios locales
       const prefs = data.preferences;
-      if (prefs && typeof prefs === 'object' && !current._preferences_dirty) {
-        if (prefs.smartListVisibility && typeof prefs.smartListVisibility === 'object') {
-          update.smartListVisibility = { ...current.smartListVisibility, ...prefs.smartListVisibility };
+      if (prefs && typeof prefs === 'object') {
+        const localUpdatedAt = current.preferences_updated_at ? new Date(current.preferences_updated_at).getTime() : 0;
+        const serverUpdatedAt = prefs.updated_at ? new Date(prefs.updated_at).getTime() : 0;
+        const shouldApply = !current._preferences_dirty || (serverUpdatedAt >= localUpdatedAt);
+
+        if (shouldApply) {
+          if (prefs.smartListVisibility && typeof prefs.smartListVisibility === 'object') {
+            update.smartListVisibility = { 
+              smart_primeros_pasos: false,
+              smart_today: true,
+              smart_scheduled: true,
+              smart_all: true,
+              smart_flagged: true,
+              smart_completed: false,
+              ...prefs.smartListVisibility 
+            };
+          }
+          if (Array.isArray(prefs.pinnedSmartLists)) update.pinnedSmartLists = prefs.pinnedSmartLists;
+          if (prefs.cycleVisibility && typeof prefs.cycleVisibility === 'object') {
+            update.cycleVisibility = { ...prefs.cycleVisibility };
+          }
+          if (prefs.hideOnboarding) safeLocalStorageSet('hide_onboarding_guide', 'true');
+          if (serverUpdatedAt >= localUpdatedAt) {
+            update._preferences_dirty = false;
+            update.preferences_updated_at = prefs.updated_at;
+          }
         }
-        if (Array.isArray(prefs.pinnedSmartLists)) update.pinnedSmartLists = prefs.pinnedSmartLists;
-        if (prefs.cycleVisibility && typeof prefs.cycleVisibility === 'object') {
-          update.cycleVisibility = { ...current.cycleVisibility, ...prefs.cycleVisibility };
-        }
-        if (prefs.hideOnboarding) safeLocalStorageSet('hide_onboarding_guide', 'true');
       }
 
       return update;
@@ -357,7 +388,7 @@ function safeLocalStorageSet(key: string, value: string) {
 
 export const syncManager = new SyncManager();
 
-// Sincroniza automáticamente cuando alguna colección cambia y contiene cambios pendientes.
+// Sincroniza automáticamente cuando alguna colección o preferencia cambia y contiene cambios pendientes.
 useAppStore.subscribe((state, prev) => {
   if (
     state.tasks === prev.tasks &&
@@ -365,7 +396,10 @@ useAppStore.subscribe((state, prev) => {
     state.cycles === prev.cycles &&
     state.listSections === prev.listSections &&
     state.tombstones === prev.tombstones &&
-    state._preferences_dirty === prev._preferences_dirty
+    state._preferences_dirty === prev._preferences_dirty &&
+    state.smartListVisibility === prev.smartListVisibility &&
+    state.pinnedSmartLists === prev.pinnedSmartLists &&
+    state.cycleVisibility === prev.cycleVisibility
   ) {
     return;
   }

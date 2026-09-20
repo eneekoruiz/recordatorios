@@ -18,20 +18,29 @@ interface AuthScreenProps {
 
 function applyServerPreferences(prefs: any) {
   if (!prefs || typeof prefs !== 'object') return;
-  const state = useAppStore.getState();
   const update: Record<string, unknown> = {};
   if (prefs.smartListVisibility && typeof prefs.smartListVisibility === 'object') {
-    update.smartListVisibility = { ...state.smartListVisibility, ...prefs.smartListVisibility };
+    update.smartListVisibility = { 
+      smart_primeros_pasos: false,
+      smart_today: true,
+      smart_scheduled: true,
+      smart_all: true,
+      smart_flagged: true,
+      smart_completed: false,
+      ...prefs.smartListVisibility 
+    };
   }
   if (Array.isArray(prefs.pinnedSmartLists)) update.pinnedSmartLists = prefs.pinnedSmartLists;
   if (prefs.cycleVisibility && typeof prefs.cycleVisibility === 'object') {
-    update.cycleVisibility = { ...state.cycleVisibility, ...prefs.cycleVisibility };
+    update.cycleVisibility = { ...prefs.cycleVisibility };
   }
   if (prefs.hideOnboarding) {
     try {
       localStorage.setItem('hide_onboarding_guide', 'true');
     } catch { /* sin almacenamiento */ }
   }
+  update._preferences_dirty = false;
+  if (prefs.updated_at) update.preferences_updated_at = prefs.updated_at;
   if (Object.keys(update).length) useAppStore.setState(update);
 }
 

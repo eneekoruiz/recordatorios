@@ -10,6 +10,7 @@ import { getCycleIcon } from '../../constants/icons';
 import { ListConfigModal } from './ListConfigModal';
 import { SMART_LISTS } from '../../constants/smartLists';
 import { QuickAddBar } from '../ui/QuickAddBar';
+import { BottomShortcutBar } from './BottomShortcutBar';
 import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
 import { extractPeopleFromText, calculateExpirationStatus, calculateSubscriptionCosts, findFlashbackMemories, isCompletedInCurrentPeriod } from '../../services/TaskService';
@@ -1347,7 +1348,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   };
 
   return (
-    <main className="main-content" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden', overflowX: 'hidden', overscrollBehaviorX: 'none' }}>
+    <main className="main-content" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden', overflowX: 'hidden', overscrollBehaviorX: 'none', position: 'relative' }}>
       {/* Sticky Glass Top Bar */}
       <MainGlassHeader
         isScrolled={isScrolled}
@@ -1391,7 +1392,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         <div style={{
           width: '100%',
           position: 'relative',
-          paddingBottom: 'calc(100px + env(safe-area-inset-bottom, 0px))',
+          paddingBottom: 'calc(110px + env(safe-area-inset-bottom, 0px))',
           boxSizing: 'border-box'
         }}>
           {flattenedData.map((item, index) => {
@@ -1671,36 +1672,63 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
       {currentView !== 'TRASH' && (
         <>
-          <QuickAddBar currentView={currentView} onExpandDrawer={() => onOpenNewTask()} />
-          <motion.button
-            type="button"
-            data-testid="desktop-fab"
-            className="desktop-fab"
-            onClick={() => onOpenNewTask()}
-            whileHover={{ scale: 1.06 }}
-            whileTap={{ scale: 0.94 }}
-            title="Añadir nuevo recordatorio (N)"
-            aria-label="Añadir nuevo recordatorio"
+          {/* Capa de desenfoque y degradado inferior para controles flotantes */}
+          <div
+            className="bottom-floating-glass-bar"
+            aria-hidden="true"
+          />
+
+          <div
+            className="bottom-dock-container"
             style={{
-              position: 'fixed',
-              bottom: 20,
-              right: 22,
-              width: 48,
-              height: 48,
-              borderRadius: '50%',
-              background: 'var(--accent-primary, #007AFF)',
-              color: '#ffffff',
-              border: 'none',
+              position: 'absolute',
+              bottom: 'max(18px, env(safe-area-inset-bottom))',
+              left: 0,
+              right: 0,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              cursor: 'pointer',
-              boxShadow: '0 6px 20px rgba(0, 122, 255, 0.4)',
-              zIndex: 45
+              gap: 10,
+              padding: '0 20px',
+              pointerEvents: 'none',
+              zIndex: 42,
+              boxSizing: 'border-box'
             }}
           >
-            <Plus size={24} strokeWidth={2.4} />
-          </motion.button>
+            <div style={{ flex: 1, maxWidth: 560, minWidth: 0, pointerEvents: 'auto' }}>
+              <QuickAddBar currentView={currentView} onExpandDrawer={() => onOpenNewTask()} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, pointerEvents: 'auto', flexShrink: 0 }}>
+              <BottomShortcutBar />
+              <motion.button
+                type="button"
+                data-testid="desktop-fab"
+                className="desktop-fab"
+                onClick={() => onOpenNewTask()}
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.92 }}
+                title="Añadir nuevo recordatorio (N)"
+                aria-label="Añadir nuevo recordatorio"
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: '50%',
+                  background: 'var(--accent-primary, #007AFF)',
+                  color: '#ffffff',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 6px 20px rgba(0, 122, 255, 0.4)',
+                  padding: 0,
+                  flexShrink: 0
+                }}
+              >
+                <Plus size={22} strokeWidth={2.4} />
+              </motion.button>
+            </div>
+          </div>
         </>
       )}
 

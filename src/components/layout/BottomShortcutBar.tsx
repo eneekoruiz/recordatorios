@@ -1,87 +1,36 @@
-const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+import { Keyboard } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export function BottomShortcutBar() {
   return (
-    <div
+    <motion.button
+      type="button"
+      onClick={() => window.dispatchEvent(new Event('open-shortcuts-modal'))}
+      whileHover={{ scale: 1.08 }}
+      whileTap={{ scale: 0.92 }}
+      className="desktop-shortcut-bar"
+      title="Atajos de teclado (?)"
+      aria-label="Atajos de teclado"
       style={{
-        position: 'fixed',
-        bottom: 78,
-        right: 22,
-        zIndex: 44,
-        alignItems: 'center',
-        gap: 6,
+        width: 44,
+        height: 44,
+        borderRadius: '50%',
         background: 'var(--bg-material, rgba(255, 255, 255, 0.88))',
         backdropFilter: 'blur(25px) saturate(180%)',
         WebkitBackdropFilter: 'blur(25px) saturate(180%)',
         border: '1px solid var(--border-subtle, rgba(0, 0, 0, 0.12))',
-        borderRadius: 999,
-        padding: '5px 12px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        color: 'var(--text-secondary)',
         boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
-        fontSize: '0.75rem',
-        color: 'var(--text-tertiary)'
+        padding: 0,
+        flexShrink: 0
       }}
-      className="desktop-shortcut-bar"
     >
-      <button
-        onClick={() => window.dispatchEvent(new Event('open-command-palette'))}
-        style={{
-          background: 'transparent',
-          border: 'none',
-          color: 'var(--text-secondary)',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 4,
-          fontSize: 'inherit',
-          padding: '2px 4px',
-          borderRadius: 4
-        }}
-      >
-        <kbd style={{ background: 'var(--bg-elevated)', padding: '1px 5px', borderRadius: 4, border: '1px solid var(--border-subtle)', fontWeight: 600 }}>{isMac ? '⌘K' : 'Ctrl+K'}</kbd>
-        <span>Buscar</span>
-      </button>
-
-      <span style={{ color: 'var(--border-subtle)' }}>•</span>
-
-      <button
-        onClick={() => window.dispatchEvent(new Event('open-new-task-drawer'))}
-        style={{
-          background: 'transparent',
-          border: 'none',
-          color: 'var(--text-secondary)',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 4,
-          fontSize: 'inherit',
-          padding: '2px 4px',
-          borderRadius: 4
-        }}
-      >
-        <kbd style={{ background: 'var(--bg-elevated)', padding: '1px 5px', borderRadius: 4, border: '1px solid var(--border-subtle)', fontWeight: 600 }}>N</kbd>
-        <span>Nueva</span>
-      </button>
-
-      <span style={{ color: 'var(--border-subtle)' }}>•</span>
-
-      <button
-        onClick={() => window.dispatchEvent(new Event('open-shortcuts-modal'))}
-        style={{
-          background: 'transparent',
-          border: 'none',
-          color: 'var(--text-secondary)',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 4,
-          fontSize: 'inherit',
-          padding: '2px 4px',
-          borderRadius: 4
-        }}
-      >
-        <kbd style={{ background: 'var(--bg-elevated)', padding: '1px 5px', borderRadius: 4, border: '1px solid var(--border-subtle)', fontWeight: 600 }}>?</kbd>
-        <span>Atajos</span>
-      </button>
-    </div>
+      <Keyboard size={20} strokeWidth={2} />
+    </motion.button>
   );
 }
+
