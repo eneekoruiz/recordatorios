@@ -56,6 +56,13 @@ export const getTaskPeriodicity = (
   sections?: ListSection[],
   lists?: CustomList[]
 ): PeriodicityType | null => {
+  // 0. Prefijos en el título (ej. [D], [S], [M], [A])
+  const title = (task.title || '').trim();
+  if (/^\[D\]/i.test(title)) return 'day';
+  if (/^\[S\]/i.test(title)) return 'week';
+  if (/^\[M\]/i.test(title)) return 'month';
+  if (/^\[A\]/i.test(title)) return 'year';
+
   // 1. cycle_id explícito
   if (task.cycle_id === 'cycle_day') return 'day';
   if (task.cycle_id === 'cycle_week') return 'week';

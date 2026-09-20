@@ -144,7 +144,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   // Aislamiento contextual de sección (Ocultar el resto / Ver todas)
   const [isolatedSectionKey, setIsolatedSectionKey] = useState<string | null>(null);
   // Modo de rutina cuando una sección periódica está aislada ('full_routine' = acumulativa con anuales/semanales/diarias, 'only_section' = estricta)
-  const [isolatedRoutineMode, setIsolatedRoutineMode] = useState<'full_routine' | 'only_section'>('full_routine');
+  const [isolatedRoutineMode, setIsolatedRoutineMode] = useState<'full_routine' | 'only_section'>('only_section');
   // Vista especial para "Qué he hecho": Por Personas o Línea de Tiempo (Timeline)
   const [lifeLogViewMode, setLifeLogViewMode] = useState<'people' | 'timeline'>('people');
   // Filtro de persona específica en Qué he hecho
@@ -778,9 +778,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       });
     } else if (!isListView) {
       Object.entries(groupedTasks).forEach(([categoryOrCycle, categoryTasks]) => {
-        if (isolatedSectionKey && isolatedSectionKey !== categoryOrCycle) {
-          return;
-        }
 
         let color = '#34c759';
         let headerTitle = categoryOrCycle;
@@ -996,7 +993,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           });
 
           sortedCycles.forEach(catKey => {
-            if (isolatedSectionKey && isolatedSectionKey !== catKey) return;
             const cId = catKey.replace('cycle_', '');
             const cObj = allCycles.find(c => c.id === cId);
             const cName = cObj ? cObj.name : cId;
@@ -1056,27 +1052,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         const sectionsForList = (listSections || [])
           .filter(s => s.listId === currentList?.id && !s.deleted_at)
           .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-
-        const isDescendant = (targetCatKey: string, ancestorSecId: string) => {
-          if (!targetCatKey.startsWith('section_')) return false;
-          const targetId = targetCatKey.replace('section_', '');
-          let curr = sectionsForList.find(s => s.id === targetId);
-          while (curr) {
-            if (curr.parentId === ancestorSecId) return true;
-            curr = sectionsForList.find(s => s.id === curr?.parentId);
-          }
-          return false;
-        };
         
         const processSection = (secId: string, depth: number) => {
           const sec = sectionsForList.find(s => s.id === secId);
           if (!sec) return;
           
           const categoryKey = `section_${sec.id}`;
-
-          if (isolatedSectionKey && isolatedSectionKey !== categoryKey && !isDescendant(isolatedSectionKey, sec.id) && !isDescendant(categoryKey, isolatedSectionKey.replace('section_', ''))) {
-            return;
-          }
 
           const categoryTasks = groupedTasks[categoryKey] || [];
           const sectionPeriodicity = getSectionPeriodicity(categoryKey, sec.name, listSections, lists);

@@ -33,15 +33,18 @@ export function DailyBriefingBanner() {
     let greeting = 'Buenos días';
     let GreetingIcon = Sun;
     let iconColor = '#ff9500';
+    let iconBg = 'rgba(255, 149, 0, 0.12)';
 
     if (hour >= 13 && hour < 20) {
       greeting = 'Buenas tardes';
       GreetingIcon = Sunset;
       iconColor = '#ff5e3a';
+      iconBg = 'rgba(255, 94, 58, 0.12)';
     } else if (hour >= 20 || hour < 6) {
       greeting = 'Buenas noches';
       GreetingIcon = Moon;
       iconColor = '#5856d6';
+      iconBg = 'rgba(88, 86, 214, 0.12)';
     }
 
     // Formatear fecha
@@ -61,7 +64,7 @@ export function DailyBriefingBanner() {
     const completedToday = todayTasks.filter(t => isTaskCompleted(t));
     const highPriorityToday = pendingToday.filter(t => t.priority === 'high');
 
-    // Hábitos diarios (tareas con cycle_id === 'cycle_day' o targetCount)
+    // Hábitos diarios
     const dailyHabits = allTasks.filter(t => t.cycle_id === 'cycle_day' || (t.targetCount && t.targetCount > 1));
     const completedHabits = dailyHabits.filter(t => isTaskCompleted(t));
 
@@ -87,6 +90,7 @@ export function DailyBriefingBanner() {
       greeting,
       GreetingIcon,
       iconColor,
+      iconBg,
       date: capitalizedDate,
       totalToday: todayTasks.length,
       pendingCount: pendingToday.length,
@@ -103,14 +107,13 @@ export function DailyBriefingBanner() {
     <div 
       className="daily-briefing-container"
       style={{
-        margin: '8px 16px 16px',
-        borderRadius: 16,
-        background: 'linear-gradient(135deg, rgba(0, 122, 255, 0.07), rgba(88, 86, 214, 0.05))',
+        margin: '12px 16px 20px',
+        borderRadius: 18,
+        background: 'var(--bg-card)',
         border: '1px solid var(--border-subtle)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
         overflow: 'hidden',
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.03)'
+        transition: 'all 0.2s ease'
       }}
     >
       {/* Header bar */}
@@ -120,27 +123,27 @@ export function DailyBriefingBanner() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '12px 16px',
+          padding: '14px 18px',
           cursor: 'pointer',
           userSelect: 'none'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{
-            width: 30,
-            height: 30,
-            borderRadius: 10,
-            background: 'var(--bg-elevated)',
+            width: 36,
+            height: 36,
+            borderRadius: 12,
+            background: briefing.iconBg,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.06)'
+            flexShrink: 0
           }}>
-            <briefing.GreetingIcon size={18} color={briefing.iconColor} />
+            <briefing.GreetingIcon size={20} color={briefing.iconColor} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontWeight: 700, fontSize: '0.98rem', color: 'var(--text-primary)' }}>
+              <span style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
                 {briefing.greeting}{userName ? `, ${userName}` : ''}
               </span>
               {briefing.topStreak >= 2 && (
@@ -149,55 +152,58 @@ export function DailyBriefingBanner() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 3,
-                    padding: '2px 6px',
-                    borderRadius: 10,
-                    fontSize: '0.72rem',
+                    padding: '3px 8px',
+                    borderRadius: 12,
+                    fontSize: '0.75rem',
                     fontWeight: 700,
                     background: 'rgba(255, 149, 0, 0.15)',
                     color: '#ff9500'
                   }}
                   title={`Racha máxima de hábitos activa`}
                 >
-                  <Flame size={12} />
+                  <Flame size={13} />
                   <span>{briefing.topStreak}d</span>
                 </span>
               )}
             </div>
-            <div style={{ fontSize: '0.76rem', color: 'var(--text-tertiary)', marginTop: 1 }}>
+            <div style={{ fontSize: '0.80rem', color: 'var(--text-secondary)', marginTop: 2, fontWeight: 500 }}>
               {briefing.date}
             </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {isCollapsed && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{
-                fontSize: '0.78rem',
-                fontWeight: 600,
-                color: briefing.pendingCount > 0 ? 'var(--accent-primary)' : 'var(--accent-green)',
-                background: 'var(--bg-elevated)',
-                padding: '3px 8px',
-                borderRadius: 12,
-                border: '1px solid var(--border-subtle)'
-              }}>
-                {briefing.pendingCount > 0 ? `${briefing.pendingCount} pendientes` : 'Al día'}
-              </span>
-            </div>
+            <span style={{
+              fontSize: '0.80rem',
+              fontWeight: 600,
+              color: briefing.pendingCount > 0 ? 'var(--accent-primary)' : 'var(--accent-green)',
+              background: 'var(--bg-elevated)',
+              padding: '4px 10px',
+              borderRadius: 12,
+              border: '1px solid var(--border-subtle)'
+            }}>
+              {briefing.pendingCount > 0 ? `${briefing.pendingCount} pendientes` : 'Al día'}
+            </span>
           )}
           <button
             type="button"
             style={{
-              background: 'transparent',
-              border: 'none',
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '50%',
+              width: 28,
+              height: 28,
               cursor: 'pointer',
-              color: 'var(--text-tertiary)',
+              color: 'var(--text-secondary)',
               display: 'flex',
-              padding: 4
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 0
             }}
             aria-label={isCollapsed ? 'Expandir resumen' : 'Minimizar resumen'}
           >
-            {isCollapsed ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+            {isCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
           </button>
         </div>
       </div>
@@ -213,26 +219,26 @@ export function DailyBriefingBanner() {
             style={{ overflow: 'hidden' }}
           >
             <div style={{
-              padding: '0 16px 14px',
+              padding: '0 18px 16px',
               display: 'flex',
               flexDirection: 'column',
-              gap: 10
+              gap: 12
             }}>
               {/* Stat Chips Row */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
                 <div style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
-                  padding: '5px 10px',
-                  borderRadius: 10,
-                  background: 'var(--bg-elevated)',
-                  border: '1px solid var(--border-subtle)',
-                  fontSize: '0.82rem',
+                  padding: '6px 12px',
+                  borderRadius: 12,
+                  background: 'rgba(0, 122, 255, 0.08)',
+                  border: '1px solid rgba(0, 122, 255, 0.2)',
+                  fontSize: '0.83rem',
                   fontWeight: 600,
-                  color: 'var(--text-primary)'
+                  color: 'var(--accent-primary)'
                 }}>
-                  <Calendar size={14} color="#007aff" />
+                  <Calendar size={15} />
                   <span>{briefing.pendingCount} pendientes hoy</span>
                 </div>
 
@@ -241,15 +247,15 @@ export function DailyBriefingBanner() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 6,
-                    padding: '5px 10px',
-                    borderRadius: 10,
-                    background: 'rgba(255, 59, 48, 0.1)',
-                    border: '1px solid rgba(255, 59, 48, 0.25)',
-                    fontSize: '0.82rem',
+                    padding: '6px 12px',
+                    borderRadius: 12,
+                    background: 'rgba(255, 59, 48, 0.08)',
+                    border: '1px solid rgba(255, 59, 48, 0.2)',
+                    fontSize: '0.83rem',
                     fontWeight: 600,
                     color: 'var(--accent-red)'
                   }}>
-                    <AlertCircle size={14} />
+                    <AlertCircle size={15} />
                     <span>{briefing.highPriorityCount} alta prioridad</span>
                   </div>
                 )}
@@ -259,15 +265,15 @@ export function DailyBriefingBanner() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 6,
-                    padding: '5px 10px',
-                    borderRadius: 10,
-                    background: 'rgba(52, 199, 89, 0.1)',
-                    border: '1px solid rgba(52, 199, 89, 0.25)',
-                    fontSize: '0.82rem',
+                    padding: '6px 12px',
+                    borderRadius: 12,
+                    background: 'rgba(52, 199, 89, 0.08)',
+                    border: '1px solid rgba(52, 199, 89, 0.2)',
+                    fontSize: '0.83rem',
                     fontWeight: 600,
                     color: 'var(--accent-green)'
                   }}>
-                    <CheckCircle2 size={14} />
+                    <CheckCircle2 size={15} />
                     <span>{briefing.completedCount} completadas</span>
                   </div>
                 )}
@@ -277,15 +283,15 @@ export function DailyBriefingBanner() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 6,
-                    padding: '5px 10px',
-                    borderRadius: 10,
-                    background: 'rgba(175, 82, 222, 0.1)',
-                    border: '1px solid rgba(175, 82, 222, 0.25)',
-                    fontSize: '0.82rem',
+                    padding: '6px 12px',
+                    borderRadius: 12,
+                    background: 'rgba(175, 82, 222, 0.08)',
+                    border: '1px solid rgba(175, 82, 222, 0.2)',
+                    fontSize: '0.83rem',
                     fontWeight: 600,
                     color: '#af52de'
                   }}>
-                    <Sparkles size={14} />
+                    <Sparkles size={15} />
                     <span>{briefing.habitsCompleted}/{briefing.habitsTotal} hábitos diarios</span>
                   </div>
                 )}
@@ -297,16 +303,16 @@ export function DailyBriefingBanner() {
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 6,
-                      padding: '5px 10px',
-                      borderRadius: 10,
-                      background: 'rgba(255, 149, 0, 0.12)',
-                      border: '1px solid rgba(255, 149, 0, 0.28)',
-                      fontSize: '0.82rem',
+                      padding: '6px 12px',
+                      borderRadius: 12,
+                      background: 'rgba(255, 149, 0, 0.1)',
+                      border: '1px solid rgba(255, 149, 0, 0.25)',
+                      fontSize: '0.83rem',
                       fontWeight: 600,
                       color: '#ff9500'
                     }}
                   >
-                    <CreditCard size={14} />
+                    <CreditCard size={15} />
                     <span>
                       {briefing.upcomingCaducidades[0].title}
                       {briefing.upcomingCaducidades[0].price ? ` (${briefing.upcomingCaducidades[0].price} €)` : ''} vence pronto
@@ -317,13 +323,17 @@ export function DailyBriefingBanner() {
 
               {/* Dynamic message */}
               <div style={{
-                fontSize: '0.82rem',
-                color: 'var(--text-secondary)',
-                lineHeight: 1.4,
-                padding: '6px 10px',
-                borderRadius: 8,
-                background: 'rgba(0, 0, 0, 0.02)',
-                borderLeft: '3px solid var(--accent-primary)'
+                fontSize: '0.86rem',
+                color: 'var(--text-primary)',
+                lineHeight: 1.45,
+                padding: '10px 14px',
+                borderRadius: 12,
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                wordBreak: 'break-word'
               }}>
                 {briefing.pendingCount === 0 ? (
                   <span>🎉 ¡Todo al día! No tienes recordatorios pendientes para hoy. Disfruta tu tiempo o adelanta tareas futuras.</span>
@@ -338,13 +348,17 @@ export function DailyBriefingBanner() {
                 <div 
                   data-testid="briefing-caducidad-alert"
                   style={{
-                    fontSize: '0.80rem',
+                    fontSize: '0.84rem',
                     color: '#ff9500',
-                    lineHeight: 1.4,
-                    padding: '6px 10px',
-                    borderRadius: 8,
+                    lineHeight: 1.45,
+                    padding: '10px 14px',
+                    borderRadius: 12,
                     background: 'rgba(255, 149, 0, 0.08)',
-                    borderLeft: '3px solid #ff9500'
+                    border: '1px solid rgba(255, 149, 0, 0.25)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    wordBreak: 'break-word'
                   }}
                 >
                   <span>💳 <strong>Aviso de caducidad:</strong> {briefing.upcomingCaducidades[0].title} vence en las próximas 48h{briefing.upcomingCaducidades[0].price ? ` por ${briefing.upcomingCaducidades[0].price} €` : ''}. Comprueba tu saldo o cancélala si ya no la estás usando.</span>

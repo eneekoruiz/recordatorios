@@ -625,7 +625,7 @@ export const TaskCard = React.memo(function TaskCard({
                   display: 'inline-block'
                 }}
               >
-                {task.title.split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
+                {(task.title || '').replace(/^\[(D|S|M|A|Diario|Semanal|Mensual|Anual)\]\s*/i, '').split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
                   part.match(/^https?:\/\//) ? (
                     <a key={i} href={part} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>
                       {part}

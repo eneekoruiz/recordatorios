@@ -280,8 +280,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          {/* Si esta sección está aislada y tiene periodicidad, permitir conmutar entre Rutina completa y Solo esta sección */}
-          {isolatedSectionKey === data.category && data.periodicity && data.routineCounts && (
+          {/* Si esta sección tiene periodicidad, permitir conmutar entre Rutina completa y Solo esta sección */}
+          {data.periodicity && data.routineCounts && (
             <div 
               style={{ 
                 display: 'inline-flex', 
@@ -297,6 +297,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   HapticService.selection();
+                  setIsolatedSectionKey?.(data.category);
                   setIsolatedRoutineMode?.('full_routine');
                 }}
                 style={{
@@ -304,9 +305,9 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                   borderRadius: 999,
                   padding: '3px 10px',
                   fontSize: '0.72rem',
-                  fontWeight: isolatedRoutineMode === 'full_routine' ? 700 : 500,
-                  background: isolatedRoutineMode === 'full_routine' ? 'var(--accent-primary)' : 'transparent',
-                  color: isolatedRoutineMode === 'full_routine' ? '#ffffff' : 'var(--text-secondary)',
+                  fontWeight: (isolatedSectionKey === data.category && isolatedRoutineMode === 'full_routine') ? 700 : 500,
+                  background: (isolatedSectionKey === data.category && isolatedRoutineMode === 'full_routine') ? 'var(--accent-primary)' : 'transparent',
+                  color: (isolatedSectionKey === data.category && isolatedRoutineMode === 'full_routine') ? '#ffffff' : 'var(--text-secondary)',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease'
                 }}
@@ -319,6 +320,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   HapticService.selection();
+                  setIsolatedSectionKey?.(data.category);
                   setIsolatedRoutineMode?.('only_section');
                 }}
                 style={{
@@ -326,9 +328,9 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                   borderRadius: 999,
                   padding: '3px 10px',
                   fontSize: '0.72rem',
-                  fontWeight: isolatedRoutineMode === 'only_section' ? 700 : 500,
-                  background: isolatedRoutineMode === 'only_section' ? 'var(--accent-primary)' : 'transparent',
-                  color: isolatedRoutineMode === 'only_section' ? '#ffffff' : 'var(--text-secondary)',
+                  fontWeight: (isolatedSectionKey !== data.category || isolatedRoutineMode === 'only_section') ? 700 : 500,
+                  background: (isolatedSectionKey !== data.category || isolatedRoutineMode === 'only_section') ? 'var(--accent-primary)' : 'transparent',
+                  color: (isolatedSectionKey !== data.category || isolatedRoutineMode === 'only_section') ? '#ffffff' : 'var(--text-secondary)',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease'
                 }}
@@ -337,49 +339,6 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                 Solo {data.title.replace(/^⏳\s*/, '')} ({data.routineCounts.only})
               </button>
             </div>
-          )}
-
-          {(!isCatCollapsed(data.category) || isolatedSectionKey === data.category) && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                HapticService.selection();
-                if (isolatedSectionKey === data.category) {
-                  setIsolatedSectionKey(null);
-                } else {
-                  setIsolatedSectionKey(data.category);
-                  setIsolatedRoutineMode?.('full_routine');
-                  if (isCatCollapsed(data.category)) {
-                    toggleCategory(data.category);
-                  }
-                }
-              }}
-              style={{
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                padding: '3px 10px',
-                borderRadius: 999,
-                fontSize: '0.74rem',
-                fontWeight: isolatedSectionKey === data.category ? 700 : 500,
-                background: isolatedSectionKey === data.category ? 'var(--bg-hover, rgba(0,0,0,0.06))' : 'var(--bg-card)',
-                color: isolatedSectionKey === data.category ? 'var(--text-primary)' : 'var(--text-secondary)',
-                border: '1px solid var(--border-subtle)',
-                boxShadow: 'none',
-                transition: 'all 0.15s ease',
-                lineHeight: '1.2'
-              }}
-              title={
-                isolatedSectionKey === data.category 
-                  ? "Mostrar todas las secciones" 
-                  : data.periodicity
-                  ? `Ocultar el resto y ver rutina completa de ${data.title} con todos los recordatorios que tocan ese día`
-                  : `Ocultar el resto y ver solo ${data.title}`
-              }
-            >
-              {isolatedSectionKey === data.category ? '👁️ Ver todas' : 'Ocultar el resto'}
-            </button>
           )}
           <ChevronDown 
             size={18} 
