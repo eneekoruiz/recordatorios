@@ -5,10 +5,11 @@ import {
   CheckCircle, Info, IndentIncrease, IndentDecrease, Calendar, 
   AlertCircle, Flag, FolderInput, LayoutList, Copy, Play, Trash2, 
   ChevronRight, ArrowLeft, Sun, CalendarDays, Clock, CalendarX, Edit3,
-  ArrowUp, ArrowDown
+  ArrowUp, ArrowDown, ChevronDown, SlidersHorizontal
 } from 'lucide-react';
 import type { TaskItem } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
+import { HapticService } from '../../../services/HapticService';
 
 export interface TaskContextMenuProps {
   task: TaskItem;
@@ -171,6 +172,7 @@ function MenuActions({
   const lists = useAppStore(state => state.lists);
   const listSections = useAppStore(state => state.listSections);
   const [currentSubmenu, setCurrentSubmenu] = useState<'main' | 'move_list' | 'move_section' | 'due_date' | 'priority'>('main');
+  const [showMoreActions, setShowMoreActions] = useState(false);
 
   const availableSections = (listSections || []).filter(
     s => s.listId === task.categoryId && !s.deleted_at
@@ -531,106 +533,9 @@ function MenuActions({
         }} 
       />
 
-      {/* Reordenación manual rápida: Mover arriba / Mover abajo */}
-      {(onMoveUp || onMoveDown) && (
-        <div style={{ display: 'flex', gap: 6, padding: '4px 12px 2px' }}>
-          <button
-            type="button"
-            disabled={!canMoveUp}
-            onClick={() => {
-              setContextMenuOpen(false);
-              onMoveUp?.();
-            }}
-            style={{
-              flex: 1,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 5,
-              padding: '6px 8px',
-              borderRadius: 8,
-              background: canMoveUp ? 'var(--bg-hover, rgba(0,0,0,0.06))' : 'transparent',
-              color: canMoveUp ? 'var(--text-primary)' : 'var(--text-tertiary)',
-              border: '1px solid var(--border-subtle)',
-              fontSize: '0.80rem',
-              fontWeight: 600,
-              cursor: canMoveUp ? 'pointer' : 'default',
-              opacity: canMoveUp ? 1 : 0.4,
-              transition: 'all 0.15s ease'
-            }}
-            title="Subir posición en la lista"
-          >
-            <ArrowUp size={13} strokeWidth={2.5} />
-            <span>Mover arriba</span>
-          </button>
-          <button
-            type="button"
-            disabled={!canMoveDown}
-            onClick={() => {
-              setContextMenuOpen(false);
-              onMoveDown?.();
-            }}
-            style={{
-              flex: 1,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 5,
-              padding: '6px 8px',
-              borderRadius: 8,
-              background: canMoveDown ? 'var(--bg-hover, rgba(0,0,0,0.06))' : 'transparent',
-              color: canMoveDown ? 'var(--text-primary)' : 'var(--text-tertiary)',
-              border: '1px solid var(--border-subtle)',
-              fontSize: '0.80rem',
-              fontWeight: 600,
-              cursor: canMoveDown ? 'pointer' : 'default',
-              opacity: canMoveDown ? 1 : 0.4,
-              transition: 'all 0.15s ease'
-            }}
-            title="Bajar posición en la lista"
-          >
-            <ArrowDown size={13} strokeWidth={2.5} />
-            <span>Mover abajo</span>
-          </button>
-        </div>
-      )}
-
       <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
 
-      {/* 3. Sangrar / Anular sangría de recordatorio */}
-      {task.parentId ? (
-        <ActionRow 
-          icon={<IndentDecrease size={18} color="var(--accent-primary)" />} 
-          label="Anular sangría" 
-          sublabel="Convertir en principal"
-          onClick={() => { 
-            setContextMenuOpen(false); 
-            nestTask(task.id, undefined); 
-          }} 
-        />
-      ) : previousTaskId ? (
-        <ActionRow 
-          icon={<IndentIncrease size={18} color="var(--accent-primary)" />} 
-          label="Sangrar recordatorio" 
-          sublabel="Hacer subtarea"
-          onClick={() => { 
-            setContextMenuOpen(false); 
-            nestTask(task.id, previousTaskId); 
-          }} 
-        />
-      ) : (
-        <ActionRow 
-          icon={<IndentIncrease size={18} color="var(--text-tertiary)" />} 
-          label="Sangrar recordatorio" 
-          sublabel="Requiere tarea previa"
-          disabled={true}
-          onClick={() => {}} 
-        />
-      )}
-
-      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
-
-      {/* 4. Fecha límite */}
+      {/* 3. Fecha límite */}
       <ActionRow 
         icon={<Calendar size={18} color="#007aff" />} 
         label="Fecha límite"
@@ -639,7 +544,7 @@ function MenuActions({
         onClick={() => setCurrentSubmenu('due_date')} 
       />
 
-      {/* 5. Marcar como urgente / Prioridad */}
+      {/* 4. Marcar como urgente / Prioridad */}
       <ActionRow 
         icon={<AlertCircle size={18} color={isUrgent ? '#ff3b30' : 'var(--text-primary)'} />} 
         label={isUrgent ? "Quitar urgencia" : "Marcar como urgente"}
@@ -647,7 +552,7 @@ function MenuActions({
         onClick={() => setCurrentSubmenu('priority')} 
       />
 
-      {/* 6. Con marca */}
+      {/* 5. Con marca */}
       <ActionRow 
         icon={<Flag size={18} color={task.flagged ? '#ff9500' : 'var(--text-primary)'} fill={task.flagged ? '#ff9500' : 'none'} />} 
         label={task.flagged ? "Quitar marca" : "Con marca"} 
@@ -659,55 +564,175 @@ function MenuActions({
 
       <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
 
-      {/* 7. Trasladar a lista */}
-      <ActionRow 
-        icon={<FolderInput size={18} />} 
-        label="Trasladar a lista..." 
-        trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
-        onClick={() => setCurrentSubmenu('move_list')} 
-      />
+      {/* Botón desplegable: Más opciones... */}
+      <button
+        type="button"
+        onClick={() => {
+          HapticService.selection();
+          setShowMoreActions(prev => !prev);
+        }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          width: 'calc(100% - 16px)',
+          margin: '2px 8px',
+          padding: '8px 10px',
+          background: showMoreActions ? 'var(--bg-hover, rgba(0,0,0,0.04))' : 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          color: 'var(--text-secondary)',
+          fontSize: '0.84rem',
+          fontWeight: 600,
+          borderRadius: 8,
+          transition: 'all 0.15s ease'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <SlidersHorizontal size={15} color="var(--text-tertiary)" />
+          <span>{showMoreActions ? 'Menos opciones' : 'Más opciones...'}</span>
+        </div>
+        <ChevronDown size={14} style={{ transform: showMoreActions ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+      </button>
 
-      {/* 8. Trasladar a sección (si hay secciones disponibles en esta lista) */}
-      {availableSections.length > 0 && (
-        <ActionRow 
-          icon={<LayoutList size={18} />} 
-          label="Trasladar a sección..." 
-          trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
-          onClick={() => setCurrentSubmenu('move_section')} 
-        />
+      {showMoreActions && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '2px 0' }}>
+          {/* Reordenación manual rápida: Mover arriba / Mover abajo */}
+          {(onMoveUp || onMoveDown) && (
+            <div style={{ display: 'flex', gap: 6, padding: '4px 12px 2px' }}>
+              <button
+                type="button"
+                disabled={!canMoveUp}
+                onClick={() => {
+                  setContextMenuOpen(false);
+                  onMoveUp?.();
+                }}
+                style={{
+                  flex: 1,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 5,
+                  padding: '6px 8px',
+                  borderRadius: 8,
+                  background: canMoveUp ? 'var(--bg-hover, rgba(0,0,0,0.06))' : 'transparent',
+                  color: canMoveUp ? 'var(--text-primary)' : 'var(--text-tertiary)',
+                  border: '1px solid var(--border-subtle)',
+                  fontSize: '0.80rem',
+                  fontWeight: 600,
+                  cursor: canMoveUp ? 'pointer' : 'default',
+                  opacity: canMoveUp ? 1 : 0.4,
+                  transition: 'all 0.15s ease'
+                }}
+                title="Subir posición en la lista"
+              >
+                <ArrowUp size={13} strokeWidth={2.5} />
+                <span>Mover arriba</span>
+              </button>
+              <button
+                type="button"
+                disabled={!canMoveDown}
+                onClick={() => {
+                  setContextMenuOpen(false);
+                  onMoveDown?.();
+                }}
+                style={{
+                  flex: 1,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 5,
+                  padding: '6px 8px',
+                  borderRadius: 8,
+                  background: canMoveDown ? 'var(--bg-hover, rgba(0,0,0,0.06))' : 'transparent',
+                  color: canMoveDown ? 'var(--text-primary)' : 'var(--text-tertiary)',
+                  border: '1px solid var(--border-subtle)',
+                  fontSize: '0.80rem',
+                  fontWeight: 600,
+                  cursor: canMoveDown ? 'pointer' : 'default',
+                  opacity: canMoveDown ? 1 : 0.4,
+                  transition: 'all 0.15s ease'
+                }}
+                title="Bajar posición en la lista"
+              >
+                <ArrowDown size={13} strokeWidth={2.5} />
+                <span>Mover abajo</span>
+              </button>
+            </div>
+          )}
+
+          {/* Sangrar / Anular sangría de recordatorio */}
+          {task.parentId ? (
+            <ActionRow 
+              icon={<IndentDecrease size={18} color="var(--accent-primary)" />} 
+              label="Anular sangría" 
+              sublabel="Convertir en principal"
+              onClick={() => { 
+                setContextMenuOpen(false); 
+                nestTask(task.id, undefined); 
+              }} 
+            />
+          ) : previousTaskId ? (
+            <ActionRow 
+              icon={<IndentIncrease size={18} color="var(--accent-primary)" />} 
+              label="Sangrar recordatorio" 
+              sublabel="Hacer subtarea"
+              onClick={() => { 
+                setContextMenuOpen(false); 
+                nestTask(task.id, previousTaskId); 
+              }} 
+            />
+          ) : null}
+
+          {/* Trasladar a lista */}
+          <ActionRow 
+            icon={<FolderInput size={18} />} 
+            label="Trasladar a lista..." 
+            trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
+            onClick={() => setCurrentSubmenu('move_list')} 
+          />
+
+          {/* Trasladar a sección (si hay secciones disponibles en esta lista) */}
+          {availableSections.length > 0 && (
+            <ActionRow 
+              icon={<LayoutList size={18} />} 
+              label="Trasladar a sección..." 
+              trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
+              onClick={() => setCurrentSubmenu('move_section')} 
+            />
+          )}
+
+          {/* Duplicar */}
+          <ActionRow 
+            icon={<Copy size={18} />} 
+            label="Duplicar" 
+            onClick={() => { 
+              addTask({ 
+                ...task, 
+                id: crypto.randomUUID(), 
+                title: `${task.title} (copia)`, 
+                created_at: new Date().toISOString(), 
+                updated_at: new Date().toISOString(),
+                status: 'pending'
+              }); 
+              setContextMenuOpen(false); 
+            }} 
+          />
+
+          {/* Modo Enfoque Zen (opcional) */}
+          {onOpenZenMode && (
+            <ActionRow 
+              icon={<Play size={18} color="var(--accent-primary)" fill="var(--accent-primary)" />} 
+              label="Modo Enfoque Zen" 
+              onClick={() => { setContextMenuOpen(false); onOpenZenMode(task.id); }} 
+            />
+          )}
+        </div>
       )}
 
       <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
 
-      {/* 9. Duplicar */}
-      <ActionRow 
-        icon={<Copy size={18} />} 
-        label="Duplicar" 
-        onClick={() => { 
-          addTask({ 
-            ...task, 
-            id: crypto.randomUUID(), 
-            title: `${task.title} (copia)`, 
-            created_at: new Date().toISOString(), 
-            updated_at: new Date().toISOString(),
-            status: 'pending'
-          }); 
-          setContextMenuOpen(false); 
-        }} 
-      />
-
-      {/* 10. Modo Enfoque Zen (opcional) */}
-      {onOpenZenMode && (
-        <ActionRow 
-          icon={<Play size={18} color="var(--accent-primary)" fill="var(--accent-primary)" />} 
-          label="Modo Enfoque Zen" 
-          onClick={() => { setContextMenuOpen(false); onOpenZenMode(task.id); }} 
-        />
-      )}
-
-      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 14px' }} />
-
-      {/* 11. Eliminar recordatorio */}
+      {/* 6. Eliminar recordatorio */}
       <ActionRow 
         icon={<Trash2 size={18} color="var(--accent-red)" />} 
         label="Eliminar" 

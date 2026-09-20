@@ -335,29 +335,31 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                 </button>
               )}
               
-              <button 
-                type="button"
-                className="list-action-btn"
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  if (activeMenuId === list.id) {
-                    setActiveMenuId(null);
-                    setMenuCoords(null);
-                  } else {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    setMenuCoords({
-                      top: rect.bottom,
-                      left: rect.left - 120
-                    });
-                    setActiveMenuId(list.id);
-                  }
-                }}
-                onPointerDown={(e) => e.stopPropagation()}
-                style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 4, marginLeft: 4 }}
-                title="Acciones"
-              >
-                <MoreHorizontal size={14} />
-              </button>
+              {!isMobile && (
+                <button 
+                  type="button"
+                  className="list-action-btn desktop-only-action"
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    if (activeMenuId === list.id) {
+                      setActiveMenuId(null);
+                      setMenuCoords(null);
+                    } else {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setMenuCoords({
+                        top: rect.bottom,
+                        left: rect.left - 120
+                      });
+                      setActiveMenuId(list.id);
+                    }
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 4, marginLeft: 4 }}
+                  title="Acciones"
+                >
+                  <MoreHorizontal size={14} />
+                </button>
+              )}
 
               {activeMenuId === list.id && menuCoords && createPortal(
                 <>

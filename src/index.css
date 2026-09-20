@@ -713,6 +713,59 @@ input:checked + .slider::before {
   margin: 4px 0;
 }
 
+/* ========================================================
+   APPLE SEGMENTED CONTROL (Ultra-sleek native iOS)
+======================================================== */
+.apple-segmented-control {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(120, 120, 128, 0.12);
+  padding: 2px;
+  border-radius: 9999px;
+  gap: 2px;
+  border: 0.5px solid var(--border-subtle, rgba(0, 0, 0, 0.04));
+  user-select: none;
+  -webkit-user-select: none;
+  box-shadow: inset 0 0.5px 1.5px rgba(0, 0, 0, 0.04);
+}
+
+.apple-segmented-btn {
+  border: none;
+  border-radius: 9999px;
+  padding: 3px 9px;
+  font-size: 0.72rem;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.apple-segmented-btn:hover {
+  color: var(--text-primary);
+}
+
+.apple-segmented-btn.active {
+  font-weight: 600;
+  background: var(--bg-elevated, #ffffff);
+  color: var(--text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0.5px 1px rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="dark"] .apple-segmented-control {
+  background: rgba(118, 118, 128, 0.24);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .apple-segmented-btn.active {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
 
 /* ========================================================
    LEVEL 100 EXPERIENCE LAYER (APPLE NATIVE)

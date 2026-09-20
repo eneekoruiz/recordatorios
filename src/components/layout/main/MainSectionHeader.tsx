@@ -1,7 +1,7 @@
 import React from 'react';
-import { Plus, FolderPlus, Trash2, MoreHorizontal, ChevronDown, Play } from 'lucide-react';
+import { MoreHorizontal, ChevronDown } from 'lucide-react';
 import { HapticService } from '../../../services/HapticService';
-import { confirmDialog } from '../../ui/confirmDialog';
+import type { SectionMenuState } from './SectionContextMenu';
 
 interface SectionData {
   title: string;
@@ -24,11 +24,11 @@ interface MainSectionHeaderProps {
   isDraggingOver: boolean;
   isCatCollapsed: (cat: string) => boolean;
   toggleCategory: (cat: string) => void;
-  sectionMenuId: string | null;
-  setSectionMenuId: (id: string | null) => void;
+  sectionMenuId?: string | null;
+  setSectionMenuId?: (id: string | null) => void;
   setDragOverSectionId: (id: string | null) => void;
   updateTaskSection: (taskId: string, sectionId: string) => void;
-  setSectionMenu: (menu: { open: boolean; x: number; y: number; sectionId?: string; sectionName?: string }) => void;
+  setSectionMenu: (menu: SectionMenuState) => void;
   sectionTouchTimer: React.MutableRefObject<any>;
   editingSectionId: string | null;
   editingSectionName: string;
@@ -37,9 +37,9 @@ interface MainSectionHeaderProps {
   startEditingSection: (e: any, id: string, name: string) => void;
   setSelectedPersonForProfile: (person: string) => void;
   sectionTotal: number;
-  onOpenNewTask: (sectionId?: string) => void;
-  onAddSection: (parentId?: string) => void;
-  deleteListSection: (id: string) => void;
+  onOpenNewTask?: (sectionId?: string) => void;
+  onAddSection?: (parentId?: string) => void;
+  deleteListSection?: (id: string) => void;
   isolatedSectionKey?: string | null;
   setIsolatedSectionKey?: React.Dispatch<React.SetStateAction<string | null>>;
   isolatedRoutineMode?: 'full_routine' | 'only_section';
@@ -49,6 +49,7 @@ interface MainSectionHeaderProps {
   dragOverSectionId: string | null;
   onStartSectionSequence?: () => void;
   pendingTaskCount?: number;
+  isMobile?: boolean;
 }
 
 export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
@@ -61,8 +62,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   isDraggingOver,
   isCatCollapsed,
   toggleCategory,
-  sectionMenuId,
-  setSectionMenuId,
+  sectionMenuId: _sectionMenuId,
+  setSectionMenuId: _setSectionMenuId,
   setDragOverSectionId,
   updateTaskSection,
   setSectionMenu,
@@ -74,9 +75,9 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   startEditingSection,
   setSelectedPersonForProfile,
   sectionTotal,
-  onOpenNewTask,
-  onAddSection,
-  deleteListSection,
+  onOpenNewTask: _onOpenNewTask,
+  onAddSection: _onAddSection,
+  deleteListSection: _deleteListSection,
   isolatedSectionKey: _isolatedSectionKey,
   setIsolatedSectionKey: _setIsolatedSectionKey,
   isolatedRoutineMode: _isolatedRoutineMode = 'only_section',
@@ -84,8 +85,9 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   sectionRoutineModes = {},
   toggleSectionRoutineMode,
   dragOverSectionId,
-  onStartSectionSequence,
-  pendingTaskCount
+  onStartSectionSequence: _onStartSectionSequence,
+  pendingTaskCount,
+  isMobile
 }) => {
   const currentSectionRoutineMode = sectionRoutineModes[data.category] || 'only_section';
 
@@ -110,7 +112,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         justifyContent: 'center',
         outline: isDraggingOver ? `2px solid ${data.color}` : undefined,
         background: isDraggingOver ? `${data.color}14` : 'transparent',
-        zIndex: sectionMenuId === data.sectionId ? 50 : 10
+        zIndex: 10
       }}
       onClick={() => toggleCategory(data.category)}
       onDragOver={isCustomSection ? (e) => { e.preventDefault(); setDragOverSectionId(data.sectionId!); } : undefined}
@@ -123,16 +125,38 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       } : undefined}
       onContextMenu={(e) => {
         e.preventDefault();
-        setSectionMenu({ open: true, x: e.clientX, y: e.clientY, sectionId: data.sectionId, sectionName: data.title });
+        setSectionMenu({ 
+          open: true, 
+          x: e.clientX, 
+          y: e.clientY, 
+          sectionId: data.sectionId, 
+          sectionName: data.title,
+          pendingTaskCount,
+          color: data.color,
+          category: data.category
+        });
       }}
       onPointerDown={(e) => {
+        if ((e.target as HTMLElement).closest('button, input')) return;
         if (sectionTouchTimer.current) clearTimeout(sectionTouchTimer.current);
         const clientX = e.clientX;
         const clientY = e.clientY;
         const secId = data.sectionId;
         const secTitle = data.title;
+        const count = pendingTaskCount;
+        const clr = data.color;
+        const cat = data.category;
         sectionTouchTimer.current = setTimeout(() => {
-          setSectionMenu({ open: true, x: clientX, y: clientY, sectionId: secId, sectionName: secTitle });
+          setSectionMenu({ 
+            open: true, 
+            x: clientX, 
+            y: clientY, 
+            sectionId: secId, 
+            sectionName: secTitle,
+            pendingTaskCount: count,
+            color: clr,
+            category: cat
+          });
         }, 400);
       }}
       onPointerUp={() => { if (sectionTouchTimer.current) clearTimeout(sectionTouchTimer.current); }}
@@ -224,91 +248,65 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               {sectionTotal.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €
             </span>
           )}
-          {isCustomSection && (
-            <div style={{ position: 'relative' }}>
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSectionMenuId(sectionMenuId === data.sectionId ? null : data.sectionId!);
-                }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5, padding: 4 }}
-                title="Opciones de sección"
-              >
-                <MoreHorizontal size={16} color="var(--text-primary)" />
-              </button>
-              
-              {sectionMenuId === data.sectionId && (
-                <>
-                  <div 
-                    style={{ position: 'fixed', inset: 0, zIndex: 90 }} 
-                    onClick={(e) => { e.stopPropagation(); setSectionMenuId(null); }}
-                  />
-                  <div 
-                    className="ios-dropdown-menu"
-                    style={{ 
-                      position: 'absolute', 
-                      left: '0', 
-                      top: '100%', 
-                      marginTop: '8px',
-                      zIndex: 100
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {onStartSectionSequence && (
-                      <>
-                        <button
-                          className="ios-dropdown-item"
-                          onClick={() => {
-                            setSectionMenuId(null);
-                            onStartSectionSequence();
-                          }}
-                        >
-                          <Play size={16} fill="currentColor" color={data.color} /> Empezar sección ({pendingTaskCount})
-                        </button>
-                        <div className="ios-dropdown-divider" />
-                      </>
-                    )}
-                    <button
-                      className="ios-dropdown-item"
-                      onClick={() => {
-                        setSectionMenuId(null);
-                        onOpenNewTask(data.sectionId);
-                      }}
-                    >
-                      <Plus size={16} /> Añadir tarea
-                    </button>
-                    <button
-                      className="ios-dropdown-item"
-                      onClick={() => {
-                        setSectionMenuId(null);
-                        onAddSection(data.sectionId);
-                        if (isCatCollapsed(data.category)) toggleCategory(data.category);
-                      }}
-                    >
-                      <FolderPlus size={16} /> Añadir sección anidada
-                    </button>
-                    <div className="ios-dropdown-divider" />
-                    <button
-                      className="ios-dropdown-item danger"
-                      onClick={async () => {
-                        setSectionMenuId(null);
-                        const ok = await confirmDialog({
-                          title: 'Eliminar sección',
-                          message: 'La sección desaparecerá, pero sus recordatorios se conservarán sin sección.',
-                          confirmText: 'Eliminar',
-                        });
-                        if (ok) deleteListSection(data.sectionId!);
-                      }}
-                    >
-                      <Trash2 size={16} /> Eliminar sección
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+          {isCustomSection && !isMobile && (
+            <button 
+              type="button"
+              className="desktop-only-action"
+              onClick={(e) => {
+                e.stopPropagation();
+                HapticService.selection();
+                const rect = e.currentTarget.getBoundingClientRect();
+                setSectionMenu({
+                  open: true,
+                  x: Math.max(12, rect.right - 235),
+                  y: rect.bottom + 6,
+                  sectionId: data.sectionId,
+                  sectionName: data.title,
+                  pendingTaskCount,
+                  color: data.color,
+                  category: data.category
+                });
+              }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5, padding: 4 }}
+              title="Opciones de sección"
+            >
+              <MoreHorizontal size={16} color="var(--text-primary)" />
+            </button>
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, justifyContent: 'flex-end' }}>
+          {/* Si esta sección tiene periodicidad, ESTÁ DESPLEGADA y hay tareas acumulables (full > only), conmutador nativo Apple */}
+          {!isCatCollapsed(data.category) && data.periodicity && data.routineCounts && data.routineCounts.full > data.routineCounts.only && (
+            <div className="apple-segmented-control">
+              <button
+                type="button"
+                className={`apple-segmented-btn ${currentSectionRoutineMode === 'only_section' ? 'active' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  HapticService.selection();
+                  toggleSectionRoutineMode?.(data.category, 'only_section');
+                  _setIsolatedSectionKey?.(null);
+                }}
+                title="Ver únicamente las tareas directas de esta sección"
+              >
+                Solo ({data.routineCounts.only})
+              </button>
+              <button
+                type="button"
+                className={`apple-segmented-btn ${currentSectionRoutineMode === 'full_routine' ? 'active' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  HapticService.selection();
+                  toggleSectionRoutineMode?.(data.category, 'full_routine');
+                  _setIsolatedSectionKey?.(null);
+                }}
+                title="Ver todas las tareas de la rutina periódica"
+              >
+                Todas ({data.routineCounts.full})
+              </button>
+            </div>
+          )}
+
           {/* Si esta sección está plegada, mostrar solo un sutil conteo numérico estilo Apple */}
           {isCatCollapsed(data.category) && data.routineCounts && (
             <span style={{ 
@@ -329,84 +327,6 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           />
         </div>
       </div>
-
-      {/* Si esta sección tiene periodicidad y ESTÁ DESPLEGADA, conmutador estilo Apple Segmented Control en fila dedicada */}
-      {!isCatCollapsed(data.category) && data.periodicity && data.routineCounts && (() => {
-        const rawTitle = data.title.replace(/^[\p{Emoji}\s⏳]+/gu, '').trim() || 'sección';
-        const cleanName = rawTitle.length > 0 
-          ? rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1).toLowerCase() 
-          : 'sección';
-        const shortName = cleanName.length > 14 ? 'sección' : cleanName;
-
-        return (
-          <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', paddingLeft: 2 }}>
-            <div 
-              style={{ 
-                display: 'inline-flex', 
-                alignItems: 'center', 
-                background: 'var(--bg-material, rgba(120, 120, 128, 0.12))', 
-                padding: '3px', 
-                borderRadius: '8px', 
-                gap: '2px',
-                border: '1px solid var(--border-subtle, rgba(0, 0, 0, 0.05))',
-                maxWidth: '100%',
-                boxSizing: 'border-box'
-              }}
-            >
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  HapticService.selection();
-                  toggleSectionRoutineMode?.(data.category, 'only_section');
-                  _setIsolatedSectionKey?.(null);
-                }}
-                style={{
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '3.5px 9px',
-                  fontSize: '0.72rem',
-                  fontWeight: currentSectionRoutineMode === 'only_section' ? 600 : 500,
-                  background: currentSectionRoutineMode === 'only_section' ? 'var(--bg-elevated, #ffffff)' : 'transparent',
-                  color: currentSectionRoutineMode === 'only_section' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  boxShadow: currentSectionRoutineMode === 'only_section' ? '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.06)' : 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
-                  whiteSpace: 'nowrap'
-                }}
-                title={`Ver únicamente las tareas directas de ${cleanName}`}
-              >
-                Solo {shortName} ({data.routineCounts.only})
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  HapticService.selection();
-                  toggleSectionRoutineMode?.(data.category, 'full_routine');
-                  _setIsolatedSectionKey?.(null);
-                }}
-                style={{
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '3.5px 9px',
-                  fontSize: '0.72rem',
-                  fontWeight: currentSectionRoutineMode === 'full_routine' ? 600 : 500,
-                  background: currentSectionRoutineMode === 'full_routine' ? 'var(--bg-elevated, #ffffff)' : 'transparent',
-                  color: currentSectionRoutineMode === 'full_routine' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  boxShadow: currentSectionRoutineMode === 'full_routine' ? '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.06)' : 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
-                  whiteSpace: 'nowrap'
-                }}
-                title="Ver todas las tareas de la rutina periódica"
-              >
-                Todas ({data.routineCounts.full})
-              </button>
-            </div>
-          </div>
-        );
-      })()}
       {isCustomSection && dragOverSectionId === data.sectionId && (
         <span style={{ fontSize: '0.8rem', color: data.color }}>Mover aquí</span>
       )}

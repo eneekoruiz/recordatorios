@@ -46,14 +46,14 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   const [blockedBy, setBlockedBy] = useState<string[]>([]);
   const [sectionId, setSectionId] = useState<string | undefined>(defaultSectionId);
   
-  // Card collapsible states
-  const [cardTimeOpen, setCardTimeOpen] = useState(true);
-  const [cardRepeatOpen, setCardRepeatOpen] = useState(true);
-  const [cardReqOpen, setCardReqOpen] = useState(true);
-  const [cardDetailsOpen, setCardDetailsOpen] = useState(true);
-  const [cardFinanceOpen, setCardFinanceOpen] = useState(true);
-  const [cardCaducidadOpen, setCardCaducidadOpen] = useState(true);
-  const [cardPeopleOpen, setCardPeopleOpen] = useState(true);
+  // Card collapsible states (collapsed by default for clean learning curve)
+  const [cardTimeOpen, setCardTimeOpen] = useState(false);
+  const [cardRepeatOpen, setCardRepeatOpen] = useState(false);
+  const [cardReqOpen, setCardReqOpen] = useState(false);
+  const [cardDetailsOpen, setCardDetailsOpen] = useState(false);
+  const [cardFinanceOpen, setCardFinanceOpen] = useState(false);
+  const [cardCaducidadOpen, setCardCaducidadOpen] = useState(false);
+  const [cardPeopleOpen, setCardPeopleOpen] = useState(false);
 
   const [hasDate, setHasDate] = useState(false);
   const [hasTime, setHasTime] = useState(false);
@@ -181,14 +181,14 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setSubscriptionPeriod(task.subscriptionPeriod || 'monthly');
         setManagementUrl(task.managementUrl || '');
         
-        // Keep cards open when editing
-        setCardTimeOpen(true);
-        setCardRepeatOpen(true);
-        setCardReqOpen(true);
-        setCardDetailsOpen(true);
-        setCardFinanceOpen(true);
-        setCardCaducidadOpen(true);
-        setCardPeopleOpen(true);
+        // Abrir inteligentemente solo las tarjetas que contienen datos relevantes
+        setCardTimeOpen(Boolean(task.dueDate || task.alerts?.length));
+        setCardRepeatOpen(Boolean(task.cycle_id));
+        setCardReqOpen(Boolean(task.blockedBy?.length));
+        setCardDetailsOpen(Boolean(task.url || task.image || task.location || task.flagged || (task.priority && task.priority !== 'none')));
+        setCardFinanceOpen(task.price !== undefined || Boolean(task.brand) || (task.quantity || 1) > 1);
+        setCardCaducidadOpen(Boolean(task.expirationType) || isCaducidadesList(task.categoryId));
+        setCardPeopleOpen(Boolean(task.people?.length) || task.categoryId === 'que_he_hecho');
       } else {
         // Reset defaults
         setTitle('');
@@ -216,6 +216,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setBrand('');
         setDuration('');
         const isCad = isCaducidadesList(defaultCategoryId);
+        const isShopping = defaultCategoryId === 'compras' || defaultCategoryId?.toLowerCase().includes('compra');
         const isSub = defaultSectionId?.includes('suscrip');
         setHasDate(isCad);
         setHasTime(false);
@@ -226,12 +227,12 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setAutoRollover(true);
         setSubscriptionPeriod('monthly');
         
-        // Reset to default collapsed status on create
-        setCardTimeOpen(true);
-        setCardRepeatOpen(true);
-        setCardReqOpen(true);
-        setCardDetailsOpen(true);
-        setCardFinanceOpen(true);
+        // Al crear, mantener interfaz limpia y mínima para evitar sobrecarga cognitiva
+        setCardTimeOpen(false);
+        setCardRepeatOpen(false);
+        setCardReqOpen(false);
+        setCardDetailsOpen(false);
+        setCardFinanceOpen(Boolean(isShopping));
         setCardCaducidadOpen(isCad);
         setCardPeopleOpen(defaultCategoryId === 'que_he_hecho');
         setCycleId(undefined);

@@ -29,7 +29,7 @@ import { MainGlassHeader } from './main/MainGlassHeader';
 import { MainSectionHeader } from './main/MainSectionHeader';
 import { MainInlineAdd } from './main/MainInlineAdd';
 import { DeletedTaskToast } from './main/DeletedTaskToast';
-import { SectionContextMenu } from './main/SectionContextMenu';
+import { SectionContextMenu, type SectionMenuState } from './main/SectionContextMenu';
 import { MonthlySummaryModal } from './main/MonthlySummaryModal';
 import { MainPageHeader } from './main/MainPageHeader';
 import { DailyBriefingBanner } from './DailyBriefingBanner';
@@ -109,7 +109,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [editingSectionName, setEditingSectionName] = useState('');
   const [dragOverSectionId, setDragOverSectionId] = useState<string | null>(null);
-  const [sectionMenu, setSectionMenu] = useState<{ open: boolean; x: number; y: number; sectionId?: string; sectionName?: string }>({ open: false, x: 0, y: 0 });
+  const [sectionMenu, setSectionMenu] = useState<SectionMenuState>({ open: false, x: 0, y: 0 });
 
   // Creation inline input state
   const [isInlineAdding, setIsInlineAdding] = useState(false);
@@ -1544,6 +1544,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                     onStartSequence(sectionPendingTaskIds, seqTitle, data.color);
                   } : undefined}
                   pendingTaskCount={sectionPendingTaskIds.length}
+                  isMobile={isMobile}
                 />
               );
             } else if (data.type === 'empty-section') {
@@ -1677,6 +1678,28 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         onClose={() => setSectionMenu({ open: false, x: 0, y: 0 })}
         onRename={handleRenameSectionMenu}
         onAddTask={handleAddTaskMenu}
+        onAddNestedSection={currentList && !currentList.isFolder ? () => {
+          if (sectionMenu.sectionId) {
+            handleAddSection(sectionMenu.sectionId);
+            if (sectionMenu.category && isCatCollapsed(sectionMenu.category)) {
+              toggleCategory(sectionMenu.category);
+            }
+          }
+        } : undefined}
+        onStartSequence={onStartSequence ? () => {
+          if (sectionMenu.category) {
+            const sectionTasks = groupedTasks[sectionMenu.category] || [];
+            const pendingIds = sectionTasks.filter(t => !isTaskCompleted(t)).map(t => t.id);
+            if (pendingIds.length > 0) {
+              const rawTitle = (sectionMenu.sectionName || '').replace(/^[\p{Emoji}\s⏳]+/gu, '').trim() || sectionMenu.sectionName || 'Sección';
+              const cleanTitle = rawTitle.length > 0 
+                ? rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1).toLowerCase() 
+                : 'Sección';
+              const seqTitle = currentList ? `${currentList.name} · ${cleanTitle}` : cleanTitle;
+              onStartSequence(pendingIds, seqTitle, sectionMenu.color);
+            }
+          }
+        } : undefined}
         onDelete={handleDeleteSectionMenu}
       />
 
