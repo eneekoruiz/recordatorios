@@ -932,7 +932,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             only: strictlySectionTasks.length
           };
 
-          const currentRoutineMode = sectionRoutineModes[categoryOrCycle] || 'full_routine';
+          const currentRoutineMode = sectionRoutineModes[categoryOrCycle] || 'only_section';
           if (currentRoutineMode === 'full_routine') {
             tasksToRender = sortTasksByRoutinePriority(fullRoutineTasks, sectionPeriodicity, listSections, lists);
           } else {
@@ -1136,7 +1136,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 only: strictlySectionTasks.length
               };
 
-              const currentRoutineMode = sectionRoutineModes[catKey] || 'full_routine';
+              const currentRoutineMode = sectionRoutineModes[catKey] || 'only_section';
               if (currentRoutineMode === 'full_routine') {
                 tasksToRender = sortTasksByRoutinePriority(fullRoutineTasks, sectionPeriodicity, listSections, lists);
               } else {
@@ -1200,7 +1200,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               only: strictlySectionTasks.length
             };
 
-            const currentRoutineMode = sectionRoutineModes[categoryKey] || 'full_routine';
+            const currentRoutineMode = sectionRoutineModes[categoryKey] || 'only_section';
             if (currentRoutineMode === 'full_routine') {
               tasksToRender = sortTasksByRoutinePriority(fullRoutineTasks, sectionPeriodicity, listSections, lists);
             } else {

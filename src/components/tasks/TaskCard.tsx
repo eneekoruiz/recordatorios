@@ -18,6 +18,7 @@ import { TaskSwipeBackground } from './card/TaskSwipeBackground';
 import { TaskMetaBadges } from './card/TaskMetaBadges';
 import { TaskHabitCounter } from './card/TaskHabitCounter';
 import { TaskNoteEditor } from './card/TaskNoteEditor';
+import { getTaskPeriodicity } from '../../utils/sectionRoutine';
 
 interface TaskCardProps {
   task: TaskItem;
@@ -53,6 +54,7 @@ export const TaskCard = React.memo(function TaskCard({
   const tasks = useAppStore(state => state.tasks);
   const nestTask = useAppStore(state => state.nestTask);
   const lists = useAppStore(state => state.lists);
+  const listSections = useAppStore(state => state.listSections);
   const taskList = lists?.find(l => l.id === task.categoryId);
   const taskColor = taskList?.color || 'var(--accent-primary, #007aff)';
 
@@ -79,36 +81,32 @@ export const TaskCard = React.memo(function TaskCard({
     }
   })();
 
-  // Helper para etiqueta de frecuencia sobria: solo si la tarea tiene un ciclo explícito asignado o inferido
+  // Helper para etiqueta de frecuencia sobria: según periodicidad detectada o ciclo asignado
   const cycleBadge = (() => {
-    let cycleId = task.cycle_id;
-    if (!cycleId && task.sectionId) {
-      const sec = task.sectionId.toLowerCase();
-      if (sec.includes('diari')) cycleId = 'cycle_day';
-      else if (sec.includes('seman')) cycleId = 'cycle_week';
-      else if (sec.includes('mensu')) cycleId = 'cycle_month';
-      else if (sec.includes('anual')) cycleId = 'cycle_year';
+    // 1. Detección vía periodicidad calculada (cubre cycle_id, prefijos en título, sección manual, lista y frecuencia)
+    const periodicity = getTaskPeriodicity(task, listSections, lists);
+    if (periodicity) {
+      const labelMap: Record<string, string> = {
+        day: 'Diaria',
+        week: 'Semanal',
+        month: 'Mensual',
+        year: 'Anual'
+      };
+      return { label: labelMap[periodicity] || periodicity };
     }
-    if (!cycleId && task.categoryId) {
-      const cat = task.categoryId.toLowerCase();
-      if (cat.includes('diari')) cycleId = 'cycle_day';
-      else if (cat.includes('seman')) cycleId = 'cycle_week';
-      else if (cat.includes('mensu')) cycleId = 'cycle_month';
-      else if (cat.includes('anual')) cycleId = 'cycle_year';
-    }
-    if (!cycleId) return null;
 
-    let label = 'Repetir';
-    if (cycleId === 'cycle_day') label = 'Diario';
-    else if (cycleId === 'cycle_week') label = 'Semanal';
-    else if (cycleId === 'cycle_month') label = 'Mensual';
-    else if (cycleId === 'cycle_year') label = 'Anual';
-    else {
+    // 2. Ciclo explícito o personalizado
+    const cycleId = task.cycle_id;
+    if (cycleId) {
+      if (cycleId === 'cycle_day' || cycleId === 'day') return { label: 'Diaria' };
+      if (cycleId === 'cycle_week' || cycleId === 'week') return { label: 'Semanal' };
+      if (cycleId === 'cycle_month' || cycleId === 'month') return { label: 'Mensual' };
+      if (cycleId === 'cycle_year' || cycleId === 'year') return { label: 'Anual' };
       const custom = cycles.find(c => c.id === cycleId);
-      label = custom?.name || cycleId;
+      return { label: custom?.name || cycleId };
     }
 
-    return { label };
+    return null;
   })();
 
   const [contextMenuOpen, setContextMenuOpen] = useState(false);

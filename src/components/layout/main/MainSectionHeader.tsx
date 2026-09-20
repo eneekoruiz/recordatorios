@@ -76,13 +76,13 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   deleteListSection,
   isolatedSectionKey: _isolatedSectionKey,
   setIsolatedSectionKey: _setIsolatedSectionKey,
-  isolatedRoutineMode: _isolatedRoutineMode = 'full_routine',
+  isolatedRoutineMode: _isolatedRoutineMode = 'only_section',
   setIsolatedRoutineMode: _setIsolatedRoutineMode,
   sectionRoutineModes = {},
   toggleSectionRoutineMode,
   dragOverSectionId
 }) => {
-  const currentSectionRoutineMode = sectionRoutineModes[data.category] || 'full_routine';
+  const currentSectionRoutineMode = sectionRoutineModes[data.category] || 'only_section';
 
   return (
     <div 
@@ -290,8 +290,21 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          {/* Si esta sección tiene periodicidad, conmutador estilo Apple Segmented Control */}
-          {data.periodicity && data.routineCounts && (() => {
+          {/* Si esta sección está plegada, mostrar solo un sutil conteo numérico estilo Apple */}
+          {isCatCollapsed(data.category) && data.routineCounts && (
+            <span style={{ 
+              fontSize: '0.82rem', 
+              fontWeight: 600, 
+              color: 'var(--text-tertiary)', 
+              fontVariantNumeric: 'tabular-nums',
+              marginRight: 2
+            }}>
+              {currentSectionRoutineMode === 'full_routine' ? data.routineCounts.full : data.routineCounts.only}
+            </span>
+          )}
+
+          {/* Si esta sección tiene periodicidad y ESTÁ DESPLEGADA, conmutador estilo Apple Segmented Control */}
+          {!isCatCollapsed(data.category) && data.periodicity && data.routineCounts && (() => {
             const rawTitle = data.title.replace(/^[\p{Emoji}\s⏳]+/gu, '').trim() || 'sección';
             const cleanName = rawTitle.length > 0 
               ? rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1).toLowerCase() 
@@ -315,30 +328,6 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                   onClick={(e) => {
                     e.stopPropagation();
                     HapticService.selection();
-                    toggleSectionRoutineMode?.(data.category, 'full_routine');
-                    _setIsolatedSectionKey?.(null);
-                  }}
-                  style={{
-                    border: 'none',
-                    borderRadius: '6px',
-                    padding: '3.5px 9px',
-                    fontSize: '0.72rem',
-                    fontWeight: currentSectionRoutineMode === 'full_routine' ? 600 : 500,
-                    background: currentSectionRoutineMode === 'full_routine' ? 'var(--bg-elevated, #ffffff)' : 'transparent',
-                    color: currentSectionRoutineMode === 'full_routine' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    boxShadow: currentSectionRoutineMode === 'full_routine' ? '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.06)' : 'none',
-                    cursor: 'pointer',
-                    transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
-                  }}
-                  title="Ver todas las tareas de la rutina periódica"
-                >
-                  Todas ({data.routineCounts.full})
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    HapticService.selection();
                     toggleSectionRoutineMode?.(data.category, 'only_section');
                     _setIsolatedSectionKey?.(null);
                   }}
@@ -357,6 +346,30 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                   title={`Ver únicamente las tareas directas de ${cleanName}`}
                 >
                   Solo {shortName} ({data.routineCounts.only})
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    HapticService.selection();
+                    toggleSectionRoutineMode?.(data.category, 'full_routine');
+                    _setIsolatedSectionKey?.(null);
+                  }}
+                  style={{
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '3.5px 9px',
+                    fontSize: '0.72rem',
+                    fontWeight: currentSectionRoutineMode === 'full_routine' ? 600 : 500,
+                    background: currentSectionRoutineMode === 'full_routine' ? 'var(--bg-elevated, #ffffff)' : 'transparent',
+                    color: currentSectionRoutineMode === 'full_routine' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    boxShadow: currentSectionRoutineMode === 'full_routine' ? '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.06)' : 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
+                  }}
+                  title="Ver todas las tareas de la rutina periódica"
+                >
+                  Todas ({data.routineCounts.full})
                 </button>
               </div>
             );
