@@ -484,7 +484,7 @@ export function createApp({ prisma }) {
           prisma.user.findUnique({ where: { id: userId }, select: { preferences: true } }),
           prisma.task.findMany({ where: changedSince }),
           prisma.cycle.findMany({ where: changedSince }),
-          prisma.list.findMany({ where: changedSince }),
+          prisma.list.findMany({ where: changedSince, include: { sharedLinks: { select: { id: true } } } }),
           prisma.listSection.findMany({ where: changedSince }),
           prisma.task.findMany({ where: { userId, deletedAt: null }, select: { id: true } }),
           prisma.list.findMany({ where: { userId, deletedAt: null }, select: { id: true } }),
@@ -554,6 +554,21 @@ export function createApp({ prisma }) {
       where: { userId, deletedAt: null, id: { in: [clientListId, scopedId(userId, clientListId)] } },
     });
 
+  app.get(['/api/share/shared-list-ids', '/share/shared-list-ids'], authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const sharedLinks = await prisma.sharedLink.findMany({
+        where: { list: { userId, deletedAt: null } },
+        select: { listId: true }
+      });
+      const clientListIds = sharedLinks.map(l => clientIdOf(userId, l.listId));
+      res.json({ sharedListIds: clientListIds });
+    } catch (err) {
+      console.error('Fetch shared list ids error:', err);
+      res.status(500).json({ error: 'No se pudieron obtener las listas compartidas' });
+    }
+  });
+
   app.post(['/api/share/generate', '/share/generate'], authenticateToken, async (req, res) => {
     const userId = req.user.id;
     const { listId } = req.body || {};
@@ -565,6 +580,8 @@ export function createApp({ prisma }) {
       }
       const existing = await prisma.sharedLink.findFirst({ where: { listId: list.id } });
       const link = existing || (await prisma.sharedLink.create({ data: { listId: list.id } }));
+      const nextPayload = list.payload && typeof list.payload === 'object' ? { ...list.payload, isShared: true } : { isShared: true };
+      await prisma.list.update({ where: { id: list.id }, data: { payload: nextPayload, updatedAt: new Date() } });
       res.json({ token: link.id });
     } catch (err) {
       console.error('Share generate error:', err);
@@ -577,6 +594,8 @@ export function createApp({ prisma }) {
       const list = await findOwnedList(req.user.id, req.params.listId);
       if (!list) return res.status(404).json({ error: 'Lista no encontrada' });
       await prisma.sharedLink.deleteMany({ where: { listId: list.id } });
+      const nextPayload = list.payload && typeof list.payload === 'object' ? { ...list.payload, isShared: false } : { isShared: false };
+      await prisma.list.update({ where: { id: list.id }, data: { payload: nextPayload, updatedAt: new Date() } });
       res.json({ success: true });
     } catch (err) {
       console.error('Share revoke error:', err);

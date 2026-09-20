@@ -262,10 +262,18 @@ describe('listas compartidas', () => {
     expect(shared.list.name).toBe('Compras');
     expect(shared.tasks.map((x) => x.title)).toEqual(['Leche']);
 
+    // Comprobar endpoint de listas compartidas activas
+    const idsRes = await get('/api/share/shared-list-ids', a.token);
+    expect(idsRes.status).toBe(200);
+    expect((await idsRes.json()).sharedListIds).toContain('compras');
+
     // Revocar
     const revoke = await fetch(`${base}/api/share/list/compras`, { method: 'DELETE', headers: { Authorization: `Bearer ${a.token}` } });
     expect(revoke.status).toBe(200);
     expect((await get(`/api/share/${token}`)).status).toBe(404);
+
+    const idsAfter = await (await get('/api/share/shared-list-ids', a.token)).json();
+    expect(idsAfter.sharedListIds).not.toContain('compras');
   });
 
   it('no permite compartir listas ajenas', async () => {

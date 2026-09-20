@@ -50,6 +50,9 @@ export const toClientPayload = (userId, row) => {
   if (row.deletedAt && !payload.deleted_at) {
     payload.deleted_at = new Date(row.deletedAt).toISOString();
   }
+  if (Array.isArray(row.sharedLinks)) {
+    payload.isShared = row.sharedLinks.length > 0;
+  }
   return payload;
 };
 

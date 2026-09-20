@@ -521,18 +521,20 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                             >
                               <Share2 size={16} /> Compartir enlace (solo lectura)
                             </button>
-                            <button
-                              type="button"
-                              className="ios-dropdown-item"
-                              onClick={() => {
-                                setActiveMenuId(null);
-                                setMenuCoords(null);
-                                unshareList(list.id, list.name);
-                              }}
-                              style={isMobile ? mobileItemStyle : undefined}
-                            >
-                              <Link2Off size={16} /> Dejar de compartir
-                            </button>
+                            {list.isShared && (
+                              <button
+                                type="button"
+                                className="ios-dropdown-item"
+                                onClick={() => {
+                                  setActiveMenuId(null);
+                                  setMenuCoords(null);
+                                  unshareList(list.id, list.name);
+                                }}
+                                style={isMobile ? mobileItemStyle : undefined}
+                              >
+                                <Link2Off size={16} /> Dejar de compartir
+                              </button>
+                            )}
                           </>
                         )}
                         <button 

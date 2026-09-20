@@ -24,6 +24,7 @@ export interface CustomList {
   isPinned?: boolean; // Pinned lists appear as large cards at the top of sidebar
   isFolder?: boolean; // Habilita comportamiento de carpeta organizativa (contiene listas/subcarpetas)
   specialType?: 'caducidades' | 'que_he_hecho'; // Tipo especial para comportamiento enriquecido
+  isShared?: boolean; // True si la lista tiene un enlace público de solo lectura activo
   updated_at?: string;
   deleted_at?: string;
   version?: number;

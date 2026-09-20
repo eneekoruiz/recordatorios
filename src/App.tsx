@@ -25,6 +25,7 @@ import { TaskSkeletonLoader } from './components/ui/TaskSkeletonLoader';
 import { AIAssistantModal } from './components/ai/AIAssistantModal';
 import { ConfirmHost } from './components/ui/confirmDialog';
 import { SharedListView } from './components/share/SharedListView';
+import { syncSharedStatus } from './services/ShareService';
 import type { TaskItem } from './models/Task';
 
 function App() {
@@ -417,10 +418,12 @@ function App() {
   useEffect(() => {
     if (token) {
       syncManager.start();
+      syncSharedStatus();
       
       const handleFocusOrVisible = () => {
         if (document.visibilityState === 'visible') {
           syncManager.syncNow();
+          syncSharedStatus();
         }
       };
       
