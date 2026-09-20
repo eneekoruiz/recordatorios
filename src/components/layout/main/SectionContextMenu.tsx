@@ -2,6 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { Edit3, Plus, Trash2, FolderPlus, Play } from 'lucide-react';
+import { formatSectionTitle } from '../../../utils/sectionRoutine';
 
 export interface SectionMenuState {
   open: boolean;
@@ -101,7 +102,7 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
         <div style={{ padding: '2px 8px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: sectionMenu.color || 'var(--accent-primary)', flexShrink: 0 }} />
           <span style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {sectionMenu.sectionName || 'Sección'}
+            {formatSectionTitle(sectionMenu.sectionName) || 'Sección'}
           </span>
         </div>
         <div className="ios-dropdown-divider" />

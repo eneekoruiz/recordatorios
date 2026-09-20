@@ -26,6 +26,7 @@ import { AIAssistantModal } from './components/ai/AIAssistantModal';
 import { ConfirmHost } from './components/ui/confirmDialog';
 import { SharedListView } from './components/share/SharedListView';
 import { syncSharedStatus } from './services/ShareService';
+import { formatSectionTitle } from './utils/sectionRoutine';
 import type { TaskItem } from './models/Task';
 
 function App() {
@@ -233,10 +234,10 @@ function App() {
       initial.forEach((l) => state.addList({ ...l, updated_at: EPOCH }));
       state.addListSection({ id: 'sec_tarjetas', listId: 'caducidades', name: 'Tarjetas y Documentos', order: 0, updated_at: EPOCH });
       state.addListSection({ id: 'sec_suscripciones', listId: 'caducidades', name: 'Suscripciones', order: 1, updated_at: EPOCH });
-      state.addListSection({ id: 'sec_limpieza_diaria', listId: 'limpieza', name: 'Diaria', order: 0, updated_at: EPOCH });
-      state.addListSection({ id: 'sec_limpieza_semanal', listId: 'limpieza', name: 'Semanal', order: 1, updated_at: EPOCH });
-      state.addListSection({ id: 'sec_limpieza_mensual', listId: 'limpieza', name: 'Mensual', order: 2, updated_at: EPOCH });
-      state.addListSection({ id: 'sec_limpieza_anual', listId: 'limpieza', name: 'Anual', order: 3, updated_at: EPOCH });
+      state.addListSection({ id: 'sec_limpieza_diaria', listId: 'limpieza', name: 'Diarias', order: 0, updated_at: EPOCH });
+      state.addListSection({ id: 'sec_limpieza_semanal', listId: 'limpieza', name: 'Semanales', order: 1, updated_at: EPOCH });
+      state.addListSection({ id: 'sec_limpieza_mensual', listId: 'limpieza', name: 'Mensuales', order: 2, updated_at: EPOCH });
+      state.addListSection({ id: 'sec_limpieza_anual', listId: 'limpieza', name: 'Anuales', order: 3, updated_at: EPOCH });
     } else {
       if (!lists.some(l => l.id === 'primeros_pasos') && !isHidden) {
         state.addList({ id: 'primeros_pasos', name: 'Primeros Pasos', color: '#ff2d55', icon: 'rocket', isPinned: false, updated_at: EPOCH });
@@ -277,12 +278,12 @@ function App() {
         state.addList({ id: 'limpieza', name: 'Limpieza', color: '#32ade6', icon: 'sparkles', isFolder: false, updated_at: EPOCH });
       }
 
-      // Secciones de Limpieza (Diaria, Semanal, Mensual, Anual)
+      // Secciones de Limpieza (Diarias, Semanales, Mensuales, Anuales)
       const limpiezaSections = [
-        { id: 'sec_limpieza_diaria', name: 'Diaria', order: 0 },
-        { id: 'sec_limpieza_semanal', name: 'Semanal', order: 1 },
-        { id: 'sec_limpieza_mensual', name: 'Mensual', order: 2 },
-        { id: 'sec_limpieza_anual', name: 'Anual', order: 3 },
+        { id: 'sec_limpieza_diaria', name: 'Diarias', order: 0 },
+        { id: 'sec_limpieza_semanal', name: 'Semanales', order: 1 },
+        { id: 'sec_limpieza_mensual', name: 'Mensuales', order: 2 },
+        { id: 'sec_limpieza_anual', name: 'Anuales', order: 3 },
       ];
       limpiezaSections.forEach(sec => {
         if (!sections.some(s => s.id === sec.id || (s.listId === 'limpieza' && s.name.toLowerCase() === sec.name.toLowerCase()))) {
@@ -293,6 +294,38 @@ function App() {
             order: sec.order,
             updated_at: EPOCH
           });
+        }
+      });
+
+      // Secciones unificadas para Quehaceres si existe la lista
+      const quehaceresList = lists.find(l => l.id === 'quehaceres' || l.name.toLowerCase() === 'quehaceres');
+      if (quehaceresList) {
+        const qSections = [
+          { id: `sec_${quehaceresList.id}_diarias`, name: 'Diarias', order: 0, root: 'diari' },
+          { id: `sec_${quehaceresList.id}_semanales`, name: 'Semanales', order: 1, root: 'seman' },
+          { id: `sec_${quehaceresList.id}_mensuales`, name: 'Mensuales', order: 2, root: 'mensu' },
+          { id: `sec_${quehaceresList.id}_anuales`, name: 'Anuales', order: 3, root: 'anual' },
+        ];
+        qSections.forEach(qSec => {
+          if (!sections.some(s => s.listId === quehaceresList.id && (s.name.toLowerCase().includes(qSec.root) || (qSec.root === 'diari' && s.name.toLowerCase().includes('recurrent'))))) {
+            state.addListSection({
+              id: qSec.id,
+              listId: quehaceresList.id,
+              name: qSec.name,
+              order: qSec.order,
+              updated_at: EPOCH
+            });
+          }
+        });
+      }
+
+      // Unificación homogénea de nombres de secciones en todas las listas (Quehaceres, Limpieza, etc.)
+      // Asegura estilo limpio y coherente estilo Apple (Diarias, Semanales, Mensuales, Anuales) sin mayúsculas agresivas
+      const existingSections = state.listSections || [];
+      existingSections.forEach(sec => {
+        const unified = formatSectionTitle(sec.name);
+        if (unified && unified !== sec.name) {
+          state.updateListSection(sec.id, unified);
         }
       });
 

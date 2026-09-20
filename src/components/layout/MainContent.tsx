@@ -16,12 +16,13 @@ import { SoundService } from '../../services/SoundService';
 import { extractPeopleFromText, calculateExpirationStatus, calculateSubscriptionCosts, findFlashbackMemories, isCompletedInCurrentPeriod } from '../../services/TaskService';
 import { PersonProfileModal } from '../people/PersonProfileModal';
 import { AIService } from '../../services/AIService';
-import { isCaducidadesList, isQueHeHechoList, ensureCaducidadesSections } from '../../utils/specialLists';
+import { isCaducidadesList, isQueHeHechoList, ensureCaducidadesSections, isLimpiezaList, isRoutineList, ensureRoutineSections } from '../../utils/specialLists';
 import { 
   getSectionPeriodicity, 
   getTaskPeriodicity, 
   getRoutineAllowedPeriodicities, 
   sortTasksByRoutinePriority,
+  formatSectionTitle,
   type PeriodicityType 
 } from '../../utils/sectionRoutine';
 import { MainEmptyState } from './main/MainEmptyState';
@@ -645,6 +646,13 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     }
   }, [currentList, listSections, addListSection]);
 
+  // Auto-inicializar y asegurar secciones unificadas (Diarias, Semanales, Mensuales, Anuales) en Limpieza y Quehaceres
+  useEffect(() => {
+    if (currentList && (isLimpiezaList(currentList.id, currentList) || isRoutineList(currentList.id, currentList))) {
+      ensureRoutineSections(currentList.id, listSections, addListSection);
+    }
+  }, [currentList, listSections, addListSection]);
+
   const caducidadesStats = useMemo(() => {
     if (!isCaducidadesList(currentView, currentList)) return null;
     const targetCatId = currentList?.id || 'caducidades';
@@ -1147,7 +1155,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
             flat.push({ 
               type: 'header', 
-              title: `⏳ ${cName}`, 
+              title: formatSectionTitle(cName), 
               category: catKey, 
               color, 
               depth: 0,
@@ -1222,13 +1230,15 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           // Evitar duplicar secciones vacías manuales si ya se muestra una sección dinámica con un ciclo equivalente
           const isDuplicateEmpty = tasksToRender.length === 0 && presentCycleKeys.some(k => {
             const cName = allCycles.find(c => c.id === k.replace('cycle_', ''))?.name || '';
-            return sec.name.toLowerCase().includes(cName.toLowerCase()) || cName.toLowerCase().includes(sec.name.toLowerCase());
+            const normSec = sec.name.toLowerCase();
+            const normCycle = cName.toLowerCase();
+            return normSec.slice(0, 4) === normCycle.slice(0, 4) || normSec.includes(normCycle) || normCycle.includes(normSec);
           });
           if (isDuplicateEmpty) return;
 
           flat.push({ 
             type: 'header', 
-            title: sec.name, 
+            title: formatSectionTitle(sec.name), 
             category: categoryKey, 
             color, 
             sectionId: sec.id, 

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Repeat, ChevronDown } from 'lucide-react';
 import { CustomSelect } from '../../ui/CustomSelect';
 import type { CustomCycle, ListSection } from '../../../models/Task';
+import { formatSectionTitle } from '../../../utils/sectionRoutine';
 
 interface DrawerRecurrenceSectionProps {
   cardRepeatOpen: boolean;
@@ -89,7 +90,7 @@ export const DrawerRecurrenceSection: React.FC<DrawerRecurrenceSectionProps> = (
                     { value: 'new', label: '+ Crear nueva sección...' },
                     ...listSections
                       .filter(s => s.listId === category && !s.deleted_at)
-                      .map(s => ({ value: s.id, label: s.name }))
+                      .map(s => ({ value: s.id, label: formatSectionTitle(s.name) }))
                   ]}
                 />
                 

@@ -23,7 +23,7 @@ const COLORS = [
 import { LIST_ICON_MAP as ICONS } from '../../constants/icons';
 import { CheckSquare, Folder, Check } from 'lucide-react';
 
-import { isCaducidadesList, isQueHeHechoList, ensureCaducidadesSections } from '../../utils/specialLists';
+import { isCaducidadesList, isQueHeHechoList, ensureCaducidadesSections, isRoutineList, isLimpiezaList, ensureRoutineSections } from '../../utils/specialLists';
 
 export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFolder }: ListConfigModalProps) {
   const lists = useAppStore(state => state.lists);
@@ -103,6 +103,9 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
       if (specialType === 'caducidades' || isCaducidadesList(existingList.id, { ...existingList, name: name.trim(), specialType: specialType === 'standard' ? undefined : specialType })) {
         ensureCaducidadesSections(existingList.id, listSections, addListSection);
       }
+      if (isRoutineList(existingList.id, { ...existingList, name: name.trim() }) || isLimpiezaList(existingList.id, { ...existingList, name: name.trim() })) {
+        ensureRoutineSections(existingList.id, listSections, addListSection);
+      }
       window.dispatchEvent(new CustomEvent('show-toast', { detail: `${isFolder ? 'Carpeta' : 'Lista'} "${name.trim()}" actualizada` }));
     } else {
       const newId = name.trim().toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
@@ -120,6 +123,9 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
       addList(listData);
       if (specialType === 'caducidades' || isCaducidadesList(newId, listData)) {
         ensureCaducidadesSections(newId, listSections, addListSection);
+      }
+      if (isRoutineList(newId, listData) || isLimpiezaList(newId, listData)) {
+        ensureRoutineSections(newId, listSections, addListSection);
       }
       window.dispatchEvent(new CustomEvent('show-toast', { detail: parentId ? `${isFolder ? 'Subcarpeta' : 'Lista anidada'} "${name.trim()}" creada con éxito` : `${isFolder ? 'Carpeta' : 'Lista'} "${name.trim()}" creada con éxito` }));
     }

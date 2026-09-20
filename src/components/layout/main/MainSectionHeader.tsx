@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { MoreHorizontal, ChevronDown } from 'lucide-react';
 import { HapticService } from '../../../services/HapticService';
+import { formatSectionTitle } from '../../../utils/sectionRoutine';
 import type { SectionMenuState } from './SectionContextMenu';
 
 interface SectionData {
@@ -243,8 +244,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                 fontWeight: data.depth === 0 ? 700 : 600,
                 color: data.depth === 0 ? 'var(--text-primary)' : data.depth === 1 ? 'var(--text-secondary)' : 'var(--text-tertiary)',
                 fontSize: data.depth === 0 ? '1.2rem' : data.depth === 1 ? '1rem' : '0.85rem',
-                textTransform: data.depth >= 2 ? 'uppercase' : 'none',
-                letterSpacing: data.depth >= 2 ? '0.5px' : '0',
+                textTransform: 'none',
+                letterSpacing: '0',
                 lineHeight: '1.3',
                 minHeight: '28px',
                 wordBreak: 'break-word',
@@ -254,7 +255,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               }}
               title={isCustomSection ? "Doble click para editar" : ""}
             >
-              {data.title}
+              {formatSectionTitle(data.title)}
             </h3>
           )}
           {data.category.startsWith('persona_') && data.category !== 'persona_solo' && (

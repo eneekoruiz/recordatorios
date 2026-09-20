@@ -123,35 +123,63 @@ export function isLimpiezaList(listIdOrView?: string | null, list?: CustomList |
 }
 
 /**
- * Inicializa y asegura las 4 secciones estándar de Limpieza: Diaria, Semanal, Mensual, Anual.
+ * Determina si una lista o vista corresponde a una lista de rutinas periódicas (Limpieza, Quehaceres).
  */
-export function ensureLimpiezaSections(
+export function isRoutineList(listIdOrView?: string | null, list?: CustomList | null): boolean {
+  if (!listIdOrView && !list) return false;
+  const cleanId = (listIdOrView || '').replace(/^list_/, '').toLowerCase();
+  if (cleanId === 'limpieza' || cleanId === 'quehaceres') return true;
+  if (list) {
+    if (list.id === 'limpieza' || list.id === 'quehaceres') return true;
+    const cleanName = (list.name || '').toLowerCase();
+    if (cleanName === 'limpieza' || cleanName === 'quehaceres' || cleanName.includes('quehacer')) return true;
+  }
+  return false;
+}
+
+/**
+ * Asegura las 4 secciones unificadas estándar de rutinas (Diarias, Semanales, Mensuales, Anuales)
+ * tanto para Limpieza como para Quehaceres y cualquier otra lista de tareas periódicas.
+ */
+export function ensureRoutineSections(
   listId: string,
   sections: ListSection[],
   addSection: (sec: ListSection) => void
 ): void {
   const currentSections = sections.filter(s => s.listId === listId && !s.deleted_at);
   const required = [
-    { id: 'sec_limpieza_diaria', name: 'Diaria', order: 0 },
-    { id: 'sec_limpieza_semanal', name: 'Semanal', order: 1 },
-    { id: 'sec_limpieza_mensual', name: 'Mensual', order: 2 },
-    { id: 'sec_limpieza_anual', name: 'Anual', order: 3 },
+    { id: `sec_${listId}_diaria`, name: 'Diarias', order: 0, root: 'diari' },
+    { id: `sec_${listId}_semanal`, name: 'Semanales', order: 1, root: 'seman' },
+    { id: `sec_${listId}_mensual`, name: 'Mensuales', order: 2, root: 'mensu' },
+    { id: `sec_${listId}_anual`, name: 'Anuales', order: 3, root: 'anual' },
   ];
 
   required.forEach(req => {
     const exists = currentSections.some(s => 
       s.id === req.id || 
-      s.id === `${req.id}_${listId}` ||
-      s.name.toLowerCase() === req.name.toLowerCase()
+      s.id === `sec_limpieza_${req.root}` ||
+      s.name.toLowerCase().includes(req.root) ||
+      (req.root === 'diari' && s.name.toLowerCase().includes('recurrent'))
     );
     if (!exists) {
       addSection({
-        id: listId === 'limpieza' ? req.id : `${req.id}_${listId}`,
+        id: listId === 'limpieza' ? `sec_limpieza_${req.root}` : req.id,
         listId,
         name: req.name,
         order: req.order
       });
     }
   });
+}
+
+/**
+ * Inicializa y asegura las 4 secciones estándar de Limpieza: Diarias, Semanales, Mensuales, Anuales.
+ */
+export function ensureLimpiezaSections(
+  listId: string,
+  sections: ListSection[],
+  addSection: (sec: ListSection) => void
+): void {
+  ensureRoutineSections(listId, sections, addSection);
 }
 

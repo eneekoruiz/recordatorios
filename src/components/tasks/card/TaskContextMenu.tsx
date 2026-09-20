@@ -10,6 +10,7 @@ import {
 import type { TaskItem } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
+import { formatSectionTitle } from '../../../utils/sectionRoutine';
 
 export interface TaskContextMenuProps {
   task: TaskItem;
@@ -319,7 +320,7 @@ function MenuActions({
                   fontWeight: isCurrent ? 600 : 500,
                 }}
               >
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sec.name}</span>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formatSectionTitle(sec.name)}</span>
                 {isCurrent && <CheckCircle size={15} color="var(--accent-primary)" />}
               </button>
             );

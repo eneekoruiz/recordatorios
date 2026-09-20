@@ -172,3 +172,43 @@ export const sortTasksByRoutinePriority = (
     return valA - valB;
   });
 };
+
+/**
+ * Unifica el formato de los títulos de sección (especialmente periódicas: Diarias, Semanales, etc.)
+ * garantizando coherencia visual idéntica estilo Apple entre todas las listas (Quehaceres, Limpieza, etc.),
+ * eliminando discrepancias de mayúsculas agresivas o singular/plural.
+ */
+export function formatSectionTitle(title?: string | null): string {
+  if (!title) return '';
+  const clean = title.replace(/^⏳\s*/, '').trim();
+  const lower = clean.toLowerCase();
+
+  // Periodicidades estándar unificadas en formato plural Apple (Diarias, Semanales, Mensuales, Anuales)
+  if (lower === 'diaria' || lower === 'diarias' || lower === 'diario' || lower === 'diarios' || lower === 'recurrentes' || lower === 'recurrente') {
+    return 'Diarias';
+  }
+  if (lower === 'semanal' || lower === 'semanales') {
+    return 'Semanales';
+  }
+  if (lower === 'mensual' || lower === 'mensuales') {
+    return 'Mensuales';
+  }
+  if (lower === 'anual' || lower === 'anuales') {
+    return 'Anuales';
+  }
+  if (lower === 'otra' || lower === 'otras' || lower === 'otras tareas') {
+    return 'Otras';
+  }
+
+  // Si no es una periodicidad estándar y tiene prefijo temporal (ej. timeline "⏳ Marzo 2026"), preservar título
+  if (title.startsWith('⏳')) {
+    return title;
+  }
+
+  // Si está completamente en mayúsculas (ej. "COCINA", "NOTAS", "TARJETAS"), pasar a Title Case limpio
+  if (clean.length > 2 && clean === clean.toUpperCase() && !/^\d+$/.test(clean)) {
+    return clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+  }
+
+  return clean;
+}

@@ -3,7 +3,8 @@ import {
   getSectionPeriodicity,
   getTaskPeriodicity,
   getRoutineAllowedPeriodicities,
-  sortTasksByRoutinePriority
+  sortTasksByRoutinePriority,
+  formatSectionTitle
 } from '../../src/utils/sectionRoutine';
 import type { TaskItem, ListSection, CustomList } from '../../src/models/Task';
 
@@ -75,5 +76,31 @@ describe('sectionRoutine utility', () => {
     expect(sorted.length).toBe(18);
     expect(sorted.map(t => t.id)).toContain('task_rec_1');
     expect(sorted.map(t => t.id)).toContain('task_other_1');
+  });
+
+  it('unifies section titles to Apple-style Title Case plural (Diarias, Semanales, Mensuales, Anuales)', () => {
+    expect(formatSectionTitle('Diaria')).toBe('Diarias');
+    expect(formatSectionTitle('DIARIAS')).toBe('Diarias');
+    expect(formatSectionTitle('diarias')).toBe('Diarias');
+    expect(formatSectionTitle('⏳ Diario')).toBe('Diarias');
+    expect(formatSectionTitle('RECURRENTES')).toBe('Diarias');
+
+    expect(formatSectionTitle('Semanal')).toBe('Semanales');
+    expect(formatSectionTitle('SEMANALES')).toBe('Semanales');
+    expect(formatSectionTitle('semanales')).toBe('Semanales');
+    expect(formatSectionTitle('⏳ Semanal')).toBe('Semanales');
+
+    expect(formatSectionTitle('Mensual')).toBe('Mensuales');
+    expect(formatSectionTitle('MENSUALES')).toBe('Mensuales');
+    expect(formatSectionTitle('⏳ Mensual')).toBe('Mensuales');
+
+    expect(formatSectionTitle('Anual')).toBe('Anuales');
+    expect(formatSectionTitle('ANUALES')).toBe('Anuales');
+    expect(formatSectionTitle('⏳ Anual')).toBe('Anuales');
+
+    expect(formatSectionTitle('OTRAS')).toBe('Otras');
+    expect(formatSectionTitle('COCINA')).toBe('Cocina');
+    expect(formatSectionTitle('Tarjetas y Documentos')).toBe('Tarjetas y Documentos');
+    expect(formatSectionTitle('⏳ Marzo 2026')).toBe('⏳ Marzo 2026');
   });
 });
