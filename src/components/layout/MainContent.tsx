@@ -1158,15 +1158,19 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               sectionTaskIds: tasksToRender.filter(t => !isTaskCompleted(t)).map(t => t.id)
             });
             if (!isCatCollapsed(catKey)) {
-              const roots = tasksToRender.filter(t => !t.parentId);
-              const processNode = (task: TaskItem, depthLevel: number) => {
-                flat.push({ type: 'task', task, depth: depthLevel });
-                if (!isCatCollapsed(`task_${task.id}`)) {
-                  const children = tasksToRender.filter(t => t.parentId === task.id);
-                  children.forEach(c => processNode(c, depthLevel + 1));
-                }
-              };
-              roots.forEach(r => processNode(r, 0));
+              if (tasksToRender.length === 0) {
+                flat.push({ type: 'empty-section', title: 'Aquí no hay tareas', category: catKey, color, depth: 0 });
+              } else {
+                const roots = tasksToRender.filter(t => !t.parentId);
+                const processNode = (task: TaskItem, depthLevel: number) => {
+                  flat.push({ type: 'task', task, depth: depthLevel });
+                  if (!isCatCollapsed(`task_${task.id}`)) {
+                    const children = tasksToRender.filter(t => t.parentId === task.id);
+                    children.forEach(c => processNode(c, depthLevel + 1));
+                  }
+                };
+                roots.forEach(r => processNode(r, 0));
+              }
             }
           });
         }

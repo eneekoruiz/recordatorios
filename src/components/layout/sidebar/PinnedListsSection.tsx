@@ -73,12 +73,12 @@ export const PinnedListsSection: React.FC<PinnedListsSectionProps> = ({
                 borderRadius: 14,
                 background: isActive 
                   ? smartItem.color 
-                  : `color-mix(in srgb, ${smartItem.color} 15%, var(--bg-elevated))`,
+                  : `linear-gradient(135deg, color-mix(in srgb, ${smartItem.color} 22%, var(--bg-elevated)) 0%, color-mix(in srgb, ${smartItem.color} 12%, var(--bg-elevated)) 100%)`,
                 border: isActive 
                   ? `1.5px solid ${smartItem.color}` 
-                  : `1.5px solid color-mix(in srgb, ${smartItem.color} 30%, transparent)`,
+                  : `1px solid color-mix(in srgb, ${smartItem.color} 30%, transparent)`,
                 cursor: 'pointer',
-                boxShadow: isActive ? `0 4px 14px ${smartItem.color}40` : `0 2px 6px ${smartItem.color}15`,
+                boxShadow: isActive ? `0 4px 16px ${smartItem.color}45` : `0 2px 8px ${smartItem.color}18`,
                 transition: 'all 150ms ease'
               }}
             >
@@ -132,6 +132,7 @@ export const PinnedListsSection: React.FC<PinnedListsSectionProps> = ({
         {visiblePinnedCustomLists.map((list: any) => {
           const isActive = currentView === `list_${list.id}`;
           const count = getTaskCount(list.id);
+          const listColor = list.color || '#0a84ff';
           return (
             <motion.div
               key={"pinned-custom-" + list.id}
@@ -143,33 +144,37 @@ export const PinnedListsSection: React.FC<PinnedListsSectionProps> = ({
                 gap: 12,
                 padding: '11px 14px',
                 borderRadius: 14,
-                background: isActive ? 'var(--accent-glow)' : 'var(--bg-elevated)',
-                border: isActive ? '1px solid rgba(10, 132, 255, 0.25)' : '1px solid var(--border-subtle)',
+                background: isActive 
+                  ? listColor 
+                  : `linear-gradient(135deg, color-mix(in srgb, ${listColor} 20%, var(--bg-elevated)) 0%, color-mix(in srgb, ${listColor} 10%, var(--bg-elevated)) 100%)`,
+                border: isActive 
+                  ? `1.5px solid ${listColor}` 
+                  : `1px solid color-mix(in srgb, ${listColor} 28%, transparent)`,
                 cursor: 'pointer',
-                boxShadow: isActive ? '0 2px 8px var(--accent-glow)' : '0 1px 3px rgba(0,0,0,0.03)',
+                boxShadow: isActive ? `0 4px 16px ${listColor}45` : `0 2px 8px ${listColor}18`,
                 transition: 'all 150ms ease'
               }}
             >
               <div style={{
                 width: 30, height: 30, borderRadius: '50%',
-                background: list.color || '#0a84ff',
+                background: isActive ? 'rgba(255, 255, 255, 0.25)' : listColor,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0,
-                boxShadow: `0 2px 6px ${(list.color || '#0a84ff')}40`
+                boxShadow: isActive ? 'none' : `0 2px 6px ${listColor}40`
               }}>
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'white' }} />
               </div>
               <span style={{
-                flex: 1, fontWeight: 600, fontSize: '0.95rem',
-                color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)',
+                flex: 1, fontWeight: 650, fontSize: '0.95rem',
+                color: isActive ? '#ffffff' : 'var(--text-primary)',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
               }}>
                 {list.name}
               </span>
               <span style={{
                 fontSize: '0.85rem', fontWeight: 700,
-                color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                background: isActive ? 'rgba(10, 132, 255, 0.15)' : 'var(--bg-hover)',
+                color: isActive ? '#ffffff' : 'var(--text-secondary)',
+                background: isActive ? 'rgba(255, 255, 255, 0.22)' : 'var(--bg-hover)',
                 padding: '2px 8px', borderRadius: 999
               }}>
                 {count}

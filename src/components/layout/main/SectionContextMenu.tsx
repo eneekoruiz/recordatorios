@@ -75,7 +75,7 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
               onClick={() => { onClose(); onStartSequence(); }}
               style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
             >
-              <Play size={15} fill="currentColor" color={sectionMenu.color || 'var(--accent-primary)'} />
+              <Play size={15} fill={sectionMenu.color || '#007AFF'} color={sectionMenu.color || '#007AFF'} />
               <span style={{ whiteSpace: 'nowrap', fontWeight: 600 }}>
                 Empezar sección ({sectionMenu.pendingTaskCount})
               </span>

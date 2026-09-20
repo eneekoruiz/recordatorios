@@ -2,9 +2,9 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useMotionValue, useTransform, AnimatePresence, useMotionValueEvent } from 'framer-motion';
 import {
-  Lock, MapPin, Image as ImageIcon, MoreHorizontal,
+  Lock, Image as ImageIcon, MoreHorizontal,
   ChevronDown, X, Info, RotateCcw, Flag,
-  ShieldAlert, Clock, CheckCircle2, CreditCard
+  ShieldAlert, Clock, CheckCircle2, CreditCard, Repeat
 } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -761,7 +761,35 @@ export const TaskCard = React.memo(function TaskCard({
               </motion.button>
             )}
             {task.flagged && <Flag size={13} color="var(--accent-orange)" fill="var(--accent-orange)" />}
-            {task.locationName && <MapPin size={13} color="var(--accent-blue)" />}
+            {cycleBadge && (
+              <span 
+                className="apple-cycle-pill"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(task.id);
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3.5,
+                  padding: '1.5px 7px',
+                  borderRadius: 6,
+                  fontSize: '0.74rem',
+                  fontWeight: 500,
+                  fontVariantNumeric: 'tabular-nums',
+                  background: 'var(--bg-hover, rgba(0,0,0,0.04))',
+                  border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
+                  color: 'var(--text-secondary)',
+                  verticalAlign: 'middle',
+                  lineHeight: '1.2',
+                  cursor: 'pointer'
+                }}
+                title={`Frecuencia: ${cycleBadge.label} (Toca para editar)`}
+              >
+                <Repeat size={11} color="var(--text-tertiary)" strokeWidth={2.2} />
+                <span>{cycleBadge.label}</span>
+              </span>
+            )}
             {task.image && <ImageIcon size={13} color="var(--text-tertiary)" />}
             {task.price !== undefined && task.price > 0 && (
               <span 

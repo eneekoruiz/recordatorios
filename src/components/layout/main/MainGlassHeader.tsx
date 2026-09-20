@@ -58,6 +58,10 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
   onStartSequence,
   completedCount
 }) => {
+  const listAccentColor = isSmartView 
+    ? (SMART_COLORS[currentView] || 'var(--accent-blue, #007AFF)') 
+    : (currentList?.color || 'var(--accent-blue, #007AFF)');
+
   return (
     <header 
       className="glass-header" 
@@ -238,7 +242,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                           }}
                           style={{ display: 'flex', alignItems: 'center', gap: 10 }}
                         >
-                          <Play size={14} color="var(--accent-primary)" fill="var(--accent-primary)" />
+                          <Play size={14} color={listAccentColor} fill={listAccentColor} />
                           <span style={{ whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>Empezar lista</span>
                         </button>
                         <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />

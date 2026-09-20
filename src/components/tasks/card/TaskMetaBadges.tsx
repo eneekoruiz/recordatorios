@@ -1,4 +1,4 @@
-import { Calendar, Repeat, Sun, Clock, Moon, LayoutList, ChevronRight, Link2 } from 'lucide-react';
+import { Calendar, Sun, Clock, Moon, LayoutList, ChevronRight, Link2 } from 'lucide-react';
 import type { TaskItem, CustomList } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
@@ -23,7 +23,7 @@ export function TaskMetaBadges({
   hideDueDate,
   taskList,
   dueDateColor,
-  cycleBadge,
+  cycleBadge: _cycleBadge,
   timeOfDayInfo,
   onEdit,
   onNavigateView,
@@ -44,7 +44,7 @@ export function TaskMetaBadges({
   })();
 
   const showDueDate = !!task.dueDate && !hideDueDate;
-  const hasMeta = showListName || showDueDate || cycleBadge || timeOfDayInfo || Boolean(inAppListTarget);
+  const hasMeta = showListName || showDueDate || timeOfDayInfo || Boolean(inAppListTarget);
 
   return (
     <>
@@ -82,32 +82,6 @@ export function TaskMetaBadges({
                 if (dueZero.getTime() === tomorrow.getTime()) return 'Mañana';
                 return due.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
               })()}
-            </span>
-          )}
-          {cycleBadge && (
-            <span 
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(task.id);
-              }}
-              style={{ 
-                display: 'inline-flex', 
-                alignItems: 'center', 
-                gap: 4, 
-                color: 'var(--text-secondary)',
-                background: 'var(--bg-hover, rgba(0,0,0,0.04))',
-                border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
-                padding: '1.5px 7px',
-                borderRadius: 6,
-                fontSize: '0.74rem',
-                fontWeight: 500,
-                letterSpacing: '-0.1px',
-                cursor: 'pointer'
-              }}
-              title={`Frecuencia de repetición: ${cycleBadge.label} (Toca para editar)`}
-            >
-              <Repeat size={11} style={{ color: 'var(--text-tertiary)' }} />
-              <span>{cycleBadge.label}</span>
             </span>
           )}
           {timeOfDayInfo && (

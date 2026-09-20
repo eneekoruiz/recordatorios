@@ -2,9 +2,9 @@ import React from 'react';
 import { Sparkles, Calendar, Clock, Flag, CheckCircle2, AlertCircle, Inbox, Trash2, Folder, Sun } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const getIconByName = (name?: string, fallbackNode?: React.ReactNode) => {
+const getIconByName = (name?: string, fallbackNode?: React.ReactNode, accentColor?: string) => {
   const size = 32;
-  const color = "var(--accent-primary)";
+  const color = accentColor || "var(--accent-primary, #007AFF)";
   const strokeWidth = 1.7;
   switch (name) {
     case 'today':
@@ -12,11 +12,11 @@ const getIconByName = (name?: string, fallbackNode?: React.ReactNode) => {
     case 'scheduled':
     case 'calendar': return <Calendar size={size} color={color} strokeWidth={strokeWidth} />;
     case 'flagged':
-    case 'flag': return <Flag size={size} color={color} strokeWidth={strokeWidth} />;
+    case 'flag': return <Flag size={size} color={accentColor || "var(--accent-orange, #FF9500)"} strokeWidth={strokeWidth} />;
     case 'completed':
     case 'check': return <CheckCircle2 size={size} color={color} strokeWidth={strokeWidth} />;
     case 'overdue':
-    case 'alert': return <AlertCircle size={size} color={color} strokeWidth={strokeWidth} />;
+    case 'alert': return <AlertCircle size={size} color={accentColor || "var(--accent-red, #FF3B30)"} strokeWidth={strokeWidth} />;
     case 'trash': return <Trash2 size={size} color="var(--text-tertiary)" strokeWidth={strokeWidth} />;
     case 'inbox': return <Inbox size={size} color={color} strokeWidth={strokeWidth} />;
     case 'list':
@@ -36,6 +36,7 @@ interface EmptyStateProps {
   actionLabel?: string;
   ctaText?: string;
   onAction?: () => void;
+  accentColor?: string;
 }
 
 export function EmptyState({
@@ -46,11 +47,12 @@ export function EmptyState({
   iconName,
   actionLabel,
   ctaText,
-  onAction
+  onAction,
+  accentColor
 }: EmptyStateProps) {
   const resolvedMessage = message || subtitle || "Disfruta de la tranquilidad o añade algo nuevo para empezar.";
   const resolvedCtaText = ctaText || actionLabel;
-  const resolvedIcon = getIconByName(iconName, icon);
+  const resolvedIcon = getIconByName(iconName, icon, accentColor);
   return (
     <motion.div 
       initial={{ opacity: 0, scale: 0.95 }}
@@ -81,7 +83,9 @@ export function EmptyState({
           style={{
             position: 'absolute',
             inset: -20,
-            background: 'radial-gradient(circle, var(--accent-glow) 0%, transparent 70%)',
+            background: accentColor 
+              ? `radial-gradient(circle, ${accentColor}35 0%, transparent 70%)` 
+              : 'radial-gradient(circle, var(--accent-glow) 0%, transparent 70%)',
             borderRadius: '50%',
             zIndex: 0,
             pointerEvents: 'none'
@@ -150,18 +154,18 @@ export function EmptyState({
           onClick={onAction}
           style={{
             padding: '10px 22px',
-            background: 'var(--accent-primary)',
+            background: accentColor || 'var(--accent-primary, #007AFF)',
             color: 'white',
             border: 'none',
             borderRadius: 'var(--radius-full)',
             fontWeight: 600,
             fontSize: '0.90rem',
             cursor: 'pointer',
-            boxShadow: '0 6px 16px var(--accent-glow)',
+            boxShadow: accentColor ? `0 6px 16px ${accentColor}40` : '0 6px 16px var(--accent-glow)',
             display: 'flex',
             alignItems: 'center',
             gap: 7,
-            transition: 'background 0.2s'
+            transition: 'background 0.2s, transform 0.15s ease'
           }}
         >
           {resolvedCtaText}
