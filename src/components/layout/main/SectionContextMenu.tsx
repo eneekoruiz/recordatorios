@@ -60,7 +60,6 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
           top: targetY,
           zIndex: 999995,
           minWidth: menuWidth,
-          boxShadow: '0 16px 44px rgba(0,0,0,0.22), 0 4px 14px rgba(0,0,0,0.1)',
           border: '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
           borderRadius: 14,
           background: 'var(--bg-elevated, #ffffff)',

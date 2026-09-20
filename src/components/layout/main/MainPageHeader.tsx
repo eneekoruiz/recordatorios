@@ -90,7 +90,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
     <>
       <header 
         className="content-header" 
-        style={{ padding: '2px 16px 16px 16px', display: 'flex', flexDirection: 'column', gap: '12px', flexShrink: 0, margin: '0', borderBottom: 'none', boxSizing: 'border-box' }}
+        style={{ padding: '2px 16px 16px 16px', display: 'flex', flexDirection: 'column', gap: '12px', flexShrink: 0, margin: '0', borderBottom: 'none', boxSizing: 'border-box', background: 'transparent', backdropFilter: 'none', WebkitBackdropFilter: 'none' }}
       >
         {/* Línea del Título - Estilo Apple Reminders */}
         <div style={{ width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>

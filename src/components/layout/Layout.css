@@ -712,15 +712,15 @@
 }
 
 .content-header {
-  position: sticky;
-  top: 0;
-  z-index: var(--z-header, 100);
-  padding: 24px 0 20px;
-  margin-bottom: 24px;
-  background: linear-gradient(180deg, var(--bg-base) 60%, transparent 100%);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+  position: relative;
+  z-index: 10;
+  padding: 16px 0 12px;
+  margin-bottom: 8px;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  mask-image: none !important;
+  -webkit-mask-image: none !important;
   border-bottom: none;
 }
 .content-kicker {
@@ -859,14 +859,14 @@
 .fab:active { transform: scale(0.94); }
 
 .ios-dropdown-menu {
-  border-radius: 18px;
-  border: 1px solid var(--border-color);
-  background: #ffffff !important;
+  border-radius: 14px;
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+  background: var(--bg-elevated, #ffffff) !important;
   opacity: 1 !important;
-  box-shadow: 0 20px 48px rgba(0,0,0,0.4), 0 0 0 1px var(--border-color);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.04) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  padding: 8px;
+  padding: 6px;
   max-height: calc(100dvh - 50px);
   overflow-y: auto !important;
   overflow-x: hidden !important;
@@ -904,12 +904,16 @@
 [data-theme="dark"] .ios-smart-card {
   background: var(--bg-surface-glass);
 }
-[data-theme="dark"] .content-header {
-  background: linear-gradient(180deg, var(--bg-base) 60%, transparent 100%);
-}
 [data-theme="dark"] .ios-task-row { background: var(--bg-surface-glass); }
 [data-theme="dark"] .group-header { background: var(--bg-surface-glass); }
-[data-theme="dark"] .ios-dropdown-menu { background: #1c1c1e !important; opacity: 1 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+[data-theme="dark"] .ios-dropdown-menu { 
+  background: #1c1c1e !important; 
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), 0 2px 10px rgba(0, 0, 0, 0.35) !important;
+  opacity: 1 !important; 
+  backdrop-filter: none !important; 
+  -webkit-backdrop-filter: none !important; 
+}
 
 
 /* Level 100 title scale overrides */

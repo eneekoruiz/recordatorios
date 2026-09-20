@@ -220,7 +220,6 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                       minWidth: 245,
                       background: 'var(--bg-elevated, #ffffff)',
                       border: '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
-                      boxShadow: '0 16px 44px rgba(0,0,0,0.22), 0 4px 14px rgba(0,0,0,0.1)',
                       borderRadius: 14,
                       padding: 6,
                       maxHeight: 'calc(100dvh - 120px)',
