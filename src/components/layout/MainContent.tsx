@@ -1157,8 +1157,22 @@ let routineCounts = null;
             const categoryTasks = groupedTasks[catKey] || [];
 
             const sectionPeriodicity = getSectionPeriodicity(catKey, cName, listSections, lists);
-            let tasksToRender = categoryTasks;
-let routineCounts = null;
+            const cDays = cObj?.daysValue || 365;
+            const fullTasks = Object.values(groupedTasks)
+              .flat()
+              .filter(t => {
+                const tCycle = allCycles.find(c => c.id === t.cycle_id);
+                return tCycle && tCycle.daysValue <= cDays;
+              });
+
+            const routineCounts = sectionPeriodicity && fullTasks.length > categoryTasks.length ? {
+              only: categoryTasks.length,
+              full: fullTasks.length
+            } : null;
+
+            const mode = sectionRoutineModes[catKey] || 'only_section';
+            let tasksToRender = mode === 'full_routine' && fullTasks.length > categoryTasks.length ? fullTasks : categoryTasks;
+
             flat.push({
               type: 'header',
               title: cName,

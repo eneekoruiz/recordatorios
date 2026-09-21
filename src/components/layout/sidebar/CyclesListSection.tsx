@@ -87,7 +87,7 @@ export const CyclesListSection: React.FC<CyclesListSectionProps> = ({
         </div>
       </div>
 
-      {cycles.filter(c => c.isPinned && (cycleVisibility[c.id] || isEditCyclesMode)).length === 0 && (
+      {cycles.filter(c => c.isPinned && (cycleVisibility[c.id] !== false || isEditCyclesMode)).length === 0 && (
         <div style={{ padding: '8px 12px', color: 'var(--text-tertiary)', fontSize: '0.82rem', fontStyle: 'italic' }}>
           No hay ciclos visibles. Edita para activarlos.
         </div>
@@ -95,7 +95,7 @@ export const CyclesListSection: React.FC<CyclesListSectionProps> = ({
 
       <div className="ios-list-block">
         {Array.from(new Map((cycles || []).map((c: any) => [c.id, c])).values()).filter(c => c.isPinned).map(cycle => {
-          const isVisible = !!cycleVisibility[cycle.id];
+          const isVisible = cycleVisibility[cycle.id] !== false;
           const Icon = getCycleIcon(cycle.icon);
           const isActive = currentView === cycle.id;
           const taskCount = Object.values(tasks || {}).filter(t => {

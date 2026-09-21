@@ -44,8 +44,7 @@ export function TaskMetaBadges({
   })();
 
   const showDueDate = !!task.dueDate && !hideDueDate;
-  const showPrice = task.price !== undefined && task.price > 0;
-  const hasMeta = showListName || showDueDate || Boolean(cycleBadge) || timeOfDayInfo || Boolean(inAppListTarget) || showPrice;
+  const hasMeta = showListName || showDueDate || Boolean(cycleBadge) || timeOfDayInfo || Boolean(inAppListTarget);
 
   return (
     <>
@@ -86,34 +85,34 @@ export function TaskMetaBadges({
             </span>
           )}
           
-          {showPrice && (
+          {inAppListTarget && (
             <span 
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
-                onEdit(task.id);
+                onNavigateView?.(`list_${inAppListTarget.id}`);
               }}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 3,
+                gap: 4,
                 padding: '1.5px 7px',
                 borderRadius: 6,
                 fontSize: '0.74rem',
                 fontWeight: 600,
-                fontVariantNumeric: 'tabular-nums',
-                background: 'rgba(52, 199, 89, 0.1)',
-                border: '1px solid rgba(52, 199, 89, 0.2)',
-                color: '#248a3d',
+                background: 'rgba(0, 122, 255, 0.1)',
+                border: '1px solid rgba(0, 122, 255, 0.2)',
+                color: 'var(--accent-primary)',
                 cursor: 'pointer'
               }}
-              title={`Precio: ${task.price} €${task.quantity && task.quantity > 1 ? ` (${task.quantity} uds)` : ''} (Toca para editar)`}
+              title={`Ir a ${inAppListTarget.name}`}
             >
-              {task.quantity && task.quantity > 1 && (
-                <span style={{ opacity: 0.7, marginRight: 2 }}>{task.quantity}×</span>
-              )}
-              <span>{task.price!.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €</span>
+              <LayoutList size={11} style={{ flexShrink: 0 }} />
+              <span>Ir a {inAppListTarget.name}</span>
+              <ChevronRight size={10} style={{ opacity: 0.7, flexShrink: 0 }} />
             </span>
           )}
+          
           {cycleBadge && (
             <span 
               onClick={(e) => {
@@ -129,12 +128,14 @@ export function TaskMetaBadges({
                 cursor: 'pointer',
                 lineHeight: 1.2
               }}
-              title={`Frecuencia: ${cycleBadge.label} (Toca para editar)`}
+              title="Periodicidad (Toca para editar)"
             >
-              <Repeat size={11} strokeWidth={2.2} style={{ flexShrink: 0, opacity: 0.85 }} />
+              <Repeat size={11} style={{ flexShrink: 0 }} />
               <span>{cycleBadge.label}</span>
             </span>
           )}
+
+          {/* Time of Day Pills (Morning, Afternoon, Night) */}
           {timeOfDayInfo && (
             <button
               type="button"
@@ -144,18 +145,18 @@ export function TaskMetaBadges({
                 HapticService.selection();
               }}
               style={{
+                background: 'transparent',
+                border: 'none',
+                padding: 0,
+                margin: 0,
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 4,
-                padding: '1.5px 7px',
-                borderRadius: 6,
-                fontSize: '0.74rem',
-                fontWeight: 500,
-                background: 'var(--bg-hover, rgba(0,0,0,0.04))',
-                color: 'var(--text-secondary)',
-                border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
+                gap: 3.5,
+                color: 'var(--text-tertiary)',
+                fontWeight: 400,
                 cursor: 'pointer',
-                letterSpacing: '-0.1px'
+                fontSize: '0.8rem',
+                lineHeight: 1.2
               }}
               title={`Momento del día: ${timeOfDayInfo.label}. Pulsa para cambiar (Mañana ➔ Tarde ➔ Noche).`}
             >
@@ -168,42 +169,8 @@ export function TaskMetaBadges({
         </div>
       )}
 
-      {/* Rich Links (External URLs & In-App List Navigations) */}
+      {/* Rich Links (External URLs) */}
       {(() => {
-        if (inAppListTarget) {
-          return (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onNavigateView?.(`list_${inAppListTarget.id}`);
-              }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                marginTop: 8, padding: '8px 12px', borderRadius: '12px',
-                background: 'var(--bg-elevated)', border: '1px solid var(--accent-primary)',
-                boxShadow: '0 2px 6px rgba(0, 122, 255, 0.15)', boxSizing: 'border-box',
-                maxWidth: '100%', overflow: 'hidden', cursor: 'pointer', textAlign: 'left',
-                width: '100%'
-              }}
-            >
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <LayoutList size={18} color="var(--accent-primary)" />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden', flex: 1 }}>
-                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--accent-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  Ir a {inAppListTarget.name}
-                </span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  Abrir lista de recordatorios
-                </span>
-              </div>
-              <ChevronRight size={18} color="var(--accent-primary)" style={{ opacity: 0.8, flexShrink: 0 }} />
-            </button>
-          );
-        }
-
         if (task.url && task.url.startsWith('http')) {
           return (
             <a

@@ -1586,13 +1586,11 @@ html, body {
 
 
 
-/* Glassmorphism for Section Headers */
+/* Solid Opaque Background for Sticky Section Headers to prevent text bleeding through */
 .group-header {
   position: sticky !important;
   top: 0;
   z-index: 10;
-  background: var(--bg-surface-glass) !important;
-  backdrop-filter: blur(20px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  background: var(--bg-base) !important;
   border-bottom: 1px solid var(--border-subtle) !important;
 }

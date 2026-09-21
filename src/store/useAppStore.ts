@@ -165,7 +165,7 @@ export const useAppStore = create<AppState>()(
         smart_completed: false
       },
       pinnedSmartLists: [],
-      cycleVisibility: {},  // All hidden by default; auto-activates when a task with that cycle_id is created
+      cycleVisibility: { cycle_day: true, cycle_week: true, cycle_month: true, cycle_year: true },
       globalCyclesEnabled: true,
 
       setToken: (token, userId) => {
