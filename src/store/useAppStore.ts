@@ -19,6 +19,24 @@ const optimisticUpdate = (
   }
 };
 
+/**
+ * Tema con el que arranca la app la primerísima vez (sin nada aún persistido en
+ * este dispositivo/navegador). Sin esto, un usuario nuevo vería siempre claro
+ * durante ese primer render, aunque su sistema esté en oscuro: la función
+ * `merge` de más abajo solo corrige el tema al rehidratar datos ya guardados,
+ * así que un arranque totalmente en blanco necesita este mismo cálculo aquí.
+ */
+const getInitialTheme = (): 'light' | 'dark' => {
+  try {
+    if (localStorage.getItem('user_explicit_theme') === 'dark') return 'dark';
+    if (localStorage.getItem('user_explicit_theme') === 'light') return 'light';
+  } catch { /* sin almacenamiento */ }
+  if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  return 'light';
+};
+
 export const isTaskCompleted = (t: any) => {
   // Si la tarea tiene meta de repeticiones (ej. 3 vasos de agua), solo se considera completada si se alcanza la meta
   if (t.targetCount && t.targetCount > 1) {
@@ -128,7 +146,7 @@ export const useAppStore = create<AppState>()(
       lastSyncedAt: null,
       setSyncStatus: (syncStatus) => set({ syncStatus }),
       setLastSyncedAt: (lastSyncedAt) => set({ lastSyncedAt }),
-      theme: 'light',
+      theme: getInitialTheme(),
       setTheme: (theme) => {
         try { localStorage.setItem('user_explicit_theme', theme); } catch {}
         set({ theme });
@@ -148,7 +166,7 @@ export const useAppStore = create<AppState>()(
       },
       pinnedSmartLists: [],
       cycleVisibility: {},  // All hidden by default; auto-activates when a task with that cycle_id is created
-      globalCyclesEnabled: false,
+      globalCyclesEnabled: true,
 
       setToken: (token, userId) => {
         const prevUserId = get().userId;
@@ -419,7 +437,7 @@ export const useAppStore = create<AppState>()(
                 });
                 const formattedDate = currentDue.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
                 window.dispatchEvent(new CustomEvent('show-toast', {
-                  detail: `🔄 Renovación automática: Próximo vencimiento el ${formattedDate}`
+                  detail: `Renovación automática: próximo vencimiento el ${formattedDate}`
                 }));
               } else {
                 updatedTask = TaskRepository.update(existingTask, { 
@@ -663,9 +681,7 @@ export const useAppStore = create<AppState>()(
 
         const validCycles = cycles.filter((c: any) => c.daysValue <= targetCycle.daysValue).map((c: any) => c.id);
 
-        // Only show tasks with an explicit cycle_id — no date-based fallback for inbox tasks
-        const grouped: Record<string, TaskItem[]> = {};
-        (Object.values(tasks) as TaskItem[])
+        const matchedTasks = (Object.values(tasks) as TaskItem[])
           .filter((t: any) => !t.deleted_at && (includeCompleted || !isTaskCompleted(t) || temporarilyShowIds.includes(t.id)))
           .filter((t: any) => {
             if (t.categoryId === 'primeros_pasos') return false;
@@ -679,7 +695,24 @@ export const useAppStore = create<AppState>()(
             if (!effCycle) return false;
             return validCycles.includes(effCycle as string);
           })
-          .filter((t: any) => includeCompleted || temporarilyShowIds.includes(t.id) || !isCompletedInCurrentPeriod(t, cycles))
+          .filter((t: any) => includeCompleted || temporarilyShowIds.includes(t.id) || !isCompletedInCurrentPeriod(t, cycles));
+
+        const tasksToInclude = new Map<string, TaskItem>();
+        matchedTasks.forEach((t: any) => {
+          tasksToInclude.set(t.id, t);
+          let current = t;
+          while (current.parentId) {
+            const parent = tasks[current.parentId];
+            if (!parent || parent.deleted_at) break;
+            if (!tasksToInclude.has(parent.id)) {
+              tasksToInclude.set(parent.id, parent);
+            }
+            current = parent;
+          }
+        });
+
+        const grouped: Record<string, TaskItem[]> = {};
+        Array.from(tasksToInclude.values())
           .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
           .forEach((t: any) => {
             const listId = t.categoryId || (t as any).category_id || 'inbox';
@@ -1012,8 +1045,13 @@ export const useAppStore = create<AppState>()(
 
         const mergedPinnedSmartLists = persistedState?.pinnedSmartLists || currentState.pinnedSmartLists || [];
 
+        // Si el usuario nunca ha elegido tema a mano, seguimos la preferencia del sistema operativo
+        // (como hace cualquier app de Apple) en lugar de forzar claro siempre.
         const userExplicitTheme = typeof localStorage !== 'undefined' ? localStorage.getItem('user_explicit_theme') : null;
-        const resolvedTheme = userExplicitTheme === 'dark' ? 'dark' : 'light';
+        const systemPrefersDark = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+          ? window.matchMedia('(prefers-color-scheme: dark)').matches
+          : false;
+        const resolvedTheme = userExplicitTheme === 'dark' ? 'dark' : userExplicitTheme === 'light' ? 'light' : (systemPrefersDark ? 'dark' : 'light');
 
         return {
           ...currentState,

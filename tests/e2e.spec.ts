@@ -505,8 +505,9 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
     await timelineToggleBtn.click();
     await page.waitForTimeout(400);
 
-    // Verify timeline header is rendered (containing month and year)
-    const timelineHeader = page.locator('.group-header:has-text("⏳")').first();
+    // Verify timeline header is rendered (containing month and year; the header now
+    // uses an Hourglass icon instead of a baked-in emoji, so we match on the year text)
+    const timelineHeader = page.locator('.group-header').filter({ hasText: /20\d{2}/ }).first();
     await expect(timelineHeader).toBeVisible();
 
     // Switch back to 'Por Personas'
@@ -711,7 +712,8 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
     await page.waitForTimeout(300);
 
     // Verify location chip is present in proposed task preview
-    const locationChip = page.locator('text=📍 Donosti').first();
+    // (rendered with a MapPin icon rather than an emoji, so we match on the place name)
+    const locationChip = page.locator('text=Donosti').first();
     await expect(locationChip).toBeVisible();
 
     // Import into Qué he hecho

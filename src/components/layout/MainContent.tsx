@@ -1,7 +1,7 @@
-import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
+import { useState, useRef, useMemo, useCallback, useEffect, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import { Plus } from 'lucide-react';
+import { Plus, Hourglass, User, Users, PartyPopper } from 'lucide-react';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import type { TaskItem } from '../../models/Task';
 import { TaskCard } from '../tasks/TaskCard';
@@ -49,14 +49,15 @@ interface MainContentProps {
 
 type VirtualItemType = 
   | { type: 'page-header', isFirstInSection?: boolean, isLastInSection?: boolean, depth?: number }
-  | { 
-      type: 'header', 
-      title: string, 
-      category: string, 
-      color: string, 
-      sectionId?: string, 
-      depth: number, 
-      isFirstInSection?: boolean, 
+  | {
+      type: 'header',
+      title: string,
+      titleIcon?: ReactNode,
+      category: string,
+      color: string,
+      sectionId?: string,
+      depth: number,
+      isFirstInSection?: boolean,
       isLastInSection?: boolean,
       periodicity?: PeriodicityType | null,
       routineCounts?: { full: number; only: number } | null,
@@ -324,18 +325,28 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       }
     }
 
-    // Agrupar por lista a la que pertenecen
-    const grouped: Record<string, TaskItem[]> = {};
-    filteredTasks.forEach(task => {
-      const catId = task.categoryId || (task as any).category_id;
-      let listName = lists?.find(l => l.id === catId)?.name;
-      if (!listName) {
-        listName = (catId === 'primeros_pasos' || currentView === 'smart_primeros_pasos')
-          ? 'Guía de inicio'
-          : 'Sin Lista';
+    const tasksToInclude = new Map<string, TaskItem>();
+    filteredTasks.forEach((t: any) => {
+      tasksToInclude.set(t.id, t);
+      let current = t;
+      while (current.parentId) {
+        const parent = tasks[current.parentId];
+        if (!parent || parent.deleted_at) break;
+        if (!tasksToInclude.has(parent.id)) {
+          tasksToInclude.set(parent.id, parent);
+        }
+        current = parent;
       }
-      if (!grouped[listName]) grouped[listName] = [];
-      grouped[listName].push(task);
+    });
+
+    const grouped: Record<string, TaskItem[]> = {};
+    Array.from(tasksToInclude.values()).forEach(task => {
+      let catId = task.categoryId || (task as any).category_id;
+      if (!catId) {
+        catId = (currentView === 'smart_primeros_pasos') ? 'primeros_pasos' : 'inbox';
+      }
+      if (!grouped[catId]) grouped[catId] = [];
+      grouped[catId].push(task);
     });
     return grouped;
   }, [currentView, tasks, lists]);
@@ -496,7 +507,23 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           }
           return true;
         });
-        if (matching.length > 0) filteredGrouped[key] = matching;
+        
+        const tasksToInclude = new Map<string, TaskItem>();
+        matching.forEach(t => {
+          tasksToInclude.set(t.id, t);
+          let current = t;
+          while (current.parentId) {
+            const parent = tasks[current.parentId];
+            if (!parent || parent.deleted_at) break;
+            if (!tasksToInclude.has(parent.id)) {
+              tasksToInclude.set(parent.id, parent);
+            }
+            current = parent;
+          }
+        });
+        
+        const finalTasks = Array.from(tasksToInclude.values());
+        if (finalTasks.length > 0) filteredGrouped[key] = finalTasks;
       });
       rawGrouped = filteredGrouped;
     }
@@ -524,7 +551,23 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           if (listSectionFilter === 'only_anual') return isYear;
           return true;
         });
-        if (matching.length > 0) filteredGrouped[key] = matching;
+
+        const tasksToInclude = new Map<string, TaskItem>();
+        matching.forEach(t => {
+          tasksToInclude.set(t.id, t);
+          let current = t;
+          while (current.parentId) {
+            const parent = tasks[current.parentId];
+            if (!parent || parent.deleted_at) break;
+            if (!tasksToInclude.has(parent.id)) {
+              tasksToInclude.set(parent.id, parent);
+            }
+            current = parent;
+          }
+        });
+        
+        const finalTasks = Array.from(tasksToInclude.values());
+        if (finalTasks.length > 0) filteredGrouped[key] = finalTasks;
       });
       rawGrouped = filteredGrouped;
     }
@@ -643,13 +686,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   useEffect(() => {
     if (currentList && isCaducidadesList(currentList.id, currentList)) {
       ensureCaducidadesSections(currentList.id, listSections, addListSection);
-    }
-  }, [currentList, listSections, addListSection]);
-
-  // Auto-inicializar y asegurar secciones unificadas (Diarias, Semanales, Mensuales, Anuales) en Limpieza y Quehaceres
-  useEffect(() => {
-    if (currentList && (isLimpiezaList(currentList.id, currentList) || isRoutineList(currentList.id, currentList))) {
-      ensureRoutineSections(currentList.id, listSections, addListSection);
     }
   }, [currentList, listSections, addListSection]);
 
@@ -922,33 +958,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         // Lógica de rutina acumulativa cuando se pulsa "Ocultar el resto"
         const sectionPeriodicity = getSectionPeriodicity(categoryOrCycle, headerTitle, listSections, lists);
         let tasksToRender = categoryTasks;
-        let routineCounts: { full: number; only: number } | null = null;
-
-        if (sectionPeriodicity) {
-          const allTasksInScope = Object.values(groupedTasks).flat();
-          const allowedPeriodicities = getRoutineAllowedPeriodicities(sectionPeriodicity);
-          const strictlySectionTasks = categoryTasks;
-          const otherRoutineTasks = allTasksInScope.filter(t => {
-            if (categoryTasks.some(ct => ct.id === t.id)) return false;
-            const p = getTaskPeriodicity(t, listSections, lists);
-            return p && allowedPeriodicities.has(p);
-          });
-          const fullRoutineTasks = [...categoryTasks, ...otherRoutineTasks];
-
-          routineCounts = {
-            full: fullRoutineTasks.length,
-            only: strictlySectionTasks.length
-          };
-
-          const currentRoutineMode = sectionRoutineModes[categoryOrCycle] || 'only_section';
-          if (currentRoutineMode === 'full_routine') {
-            tasksToRender = sortTasksByRoutinePriority(fullRoutineTasks, sectionPeriodicity, listSections, lists);
-          } else {
-            tasksToRender = strictlySectionTasks;
-          }
-        }
-        
-        flat.push({ 
+let routineCounts = null;
+            flat.push({ 
           type: 'header', 
           title: headerTitle, 
           category: categoryOrCycle, 
@@ -1024,7 +1035,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               const cObj = useAppStore.getState().cycles.find(c => c.id === cId);
               const cName = cObj ? cObj.name : cId;
               const cycleSepKey = `cycle_sep_${categoryOrCycle}_${cId}`;
-              flat.push({ type: 'header', title: `⏳ ${cName}`, category: cycleSepKey, color: '#0a84ff', depth: 1 });
+              flat.push({ type: 'header', title: cName, titleIcon: <Hourglass size={14} />, category: cycleSepKey, color: '#0a84ff', depth: 1 });
 
               if (!isCatCollapsed(cycleSepKey)) {
                 const cTasks = tasksToRender.filter(t => t.cycle_id === cId);
@@ -1047,19 +1058,28 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           if (isolatedSectionKey && isolatedSectionKey !== groupKey) return;
 
           let headerTitle = groupKey;
+          let headerIcon: ReactNode = undefined;
           if (groupKey.startsWith('persona_')) {
             const pName = groupKey.replace('persona_', '');
-            headerTitle = groupKey === 'persona_solo' ? '👤 Individual / Sin personas' : `👥 ${pName}`;
+            if (groupKey === 'persona_solo') {
+              headerTitle = 'Individual / Sin personas';
+              headerIcon = <User size={15} />;
+            } else {
+              headerTitle = pName;
+              headerIcon = <Users size={15} />;
+            }
           } else if (groupKey.startsWith('timeline_')) {
             const parts = groupKey.replace('timeline_', '').split('_');
             const y = parts[0];
             const m = parseInt(parts[1], 10) - 1;
-            headerTitle = `⏳ ${monthNames[m] || ''} ${y}`;
+            headerTitle = `${monthNames[m] || ''} ${y}`;
+            headerIcon = <Hourglass size={14} />;
           }
 
           flat.push({
             type: 'header',
             title: headerTitle,
+            titleIcon: headerIcon,
             category: groupKey,
             color: '#5856D6',
             depth: 0,
@@ -1127,37 +1147,13 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
             const sectionPeriodicity = getSectionPeriodicity(catKey, cName, listSections, lists);
             let tasksToRender = categoryTasks;
-            let routineCounts: { full: number; only: number } | null = null;
-
-            if (sectionPeriodicity) {
-              const allTasksInList = Object.values(groupedTasks).flat();
-              const allowedPeriodicities = getRoutineAllowedPeriodicities(sectionPeriodicity);
-              const strictlySectionTasks = categoryTasks;
-              const otherRoutineTasks = allTasksInList.filter(t => {
-                if (categoryTasks.some(ct => ct.id === t.id)) return false;
-                const p = getTaskPeriodicity(t, listSections, lists);
-                return p && allowedPeriodicities.has(p);
-              });
-              const fullRoutineTasks = [...categoryTasks, ...otherRoutineTasks];
-
-              routineCounts = {
-                full: fullRoutineTasks.length,
-                only: strictlySectionTasks.length
-              };
-
-              const currentRoutineMode = sectionRoutineModes[catKey] || 'only_section';
-              if (currentRoutineMode === 'full_routine') {
-                tasksToRender = sortTasksByRoutinePriority(fullRoutineTasks, sectionPeriodicity, listSections, lists);
-              } else {
-                tasksToRender = strictlySectionTasks;
-              }
-            }
-
-            flat.push({ 
-              type: 'header', 
-              title: formatSectionTitle(cName), 
-              category: catKey, 
-              color, 
+let routineCounts = null;
+            flat.push({
+              type: 'header',
+              title: cName,
+              titleIcon: <Hourglass size={14} />,
+              category: catKey,
+              color,
               depth: 0,
               periodicity: sectionPeriodicity,
               routineCounts,
@@ -1195,33 +1191,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           const categoryTasks = groupedTasks[categoryKey] || [];
           const sectionPeriodicity = getSectionPeriodicity(categoryKey, sec.name, listSections, lists);
           let tasksToRender = categoryTasks;
-          let routineCounts: { full: number; only: number } | null = null;
-
-          if (sectionPeriodicity) {
-            const allTasksInList = Object.values(groupedTasks).flat();
-            const allowedPeriodicities = getRoutineAllowedPeriodicities(sectionPeriodicity);
-            const strictlySectionTasks = categoryTasks;
-            const otherRoutineTasks = allTasksInList.filter(t => {
-              if (categoryTasks.some(ct => ct.id === t.id)) return false;
-              const p = getTaskPeriodicity(t, listSections, lists);
-              return p && allowedPeriodicities.has(p);
-            });
-            const fullRoutineTasks = [...categoryTasks, ...otherRoutineTasks];
-
-            routineCounts = {
-              full: fullRoutineTasks.length,
-              only: strictlySectionTasks.length
-            };
-
-            const currentRoutineMode = sectionRoutineModes[categoryKey] || 'only_section';
-            if (currentRoutineMode === 'full_routine') {
-              tasksToRender = sortTasksByRoutinePriority(fullRoutineTasks, sectionPeriodicity, listSections, lists);
-            } else {
-              tasksToRender = strictlySectionTasks;
-            }
-          }
-
-          // Si se está filtrando por temporalidad (ej. solo semanales o solo diarias)
+let routineCounts = null;
+            // Si se está filtrando por temporalidad (ej. solo semanales o solo diarias)
           // y esta sección no tiene tareas que cumplan el filtro, no mostrar la sección vacía
           if (listSectionFilter !== 'all' && tasksToRender.length === 0) {
             return;
@@ -1374,7 +1345,11 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const getTitle = () => {
     if (isSmartView) return smartListInfo?.name || 'Recordatorios';
     if (isFolderView) return currentList?.name || 'Carpeta';
-    if (isListView) return currentList?.name || 'Lista';
+    if (isListView) {
+      if (currentList) return currentList.name;
+      // La Bandeja de entrada es una lista virtual: no tiene objeto propio en `lists`.
+      return currentView === 'list_inbox' ? 'Bandeja de entrada' : 'Lista';
+    }
     return currentCycle?.name || 'Ciclos';
   };
 
@@ -1739,7 +1714,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               pointerEvents: 'none'
             }}
           >
-            <span style={{ fontSize: '24px' }}>🎉</span>
+            <span style={{ display: 'flex', width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <PartyPopper size={17} color="#ffd60a" strokeWidth={2.2} />
+            </span>
             <div>
               <div style={{ fontWeight: 600, fontSize: '15px' }}>¡Todo completado!</div>
               <div style={{ fontSize: '12px', opacity: 0.8 }}>Gran trabajo por hoy</div>

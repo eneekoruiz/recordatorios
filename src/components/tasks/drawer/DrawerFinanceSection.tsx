@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Coins } from 'lucide-react';
+import { ChevronDown, Wallet } from 'lucide-react';
 
 interface DrawerFinanceSectionProps {
   cardFinanceOpen: boolean;
@@ -34,21 +34,8 @@ export const DrawerFinanceSection: React.FC<DrawerFinanceSectionProps> = ({
         onClick={() => setCardFinanceOpen(!cardFinanceOpen)}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Coins size={16} color="var(--accent-primary)" />
-          <span>Precio y Costes</span>
-          {price !== undefined && price > 0 && (
-            <span style={{
-              fontSize: '0.74rem',
-              fontWeight: 600,
-              padding: '1px 6px',
-              borderRadius: 5,
-              background: 'var(--bg-hover, rgba(0,0,0,0.05))',
-              color: 'var(--accent-primary)',
-              marginLeft: 4
-            }}>
-              {price.toLocaleString('es-ES')} €
-            </span>
-          )}
+          <Wallet size={15} strokeWidth={2.1} />
+          Modo Financiero (Costes)
         </span>
         <ChevronDown size={18} style={{ transform: cardFinanceOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
       </button>

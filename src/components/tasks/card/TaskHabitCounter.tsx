@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, Droplet, Sparkles, Hand, SprayCan, Zap } from 'lucide-react';
 import type { TaskItem } from '../../../models/Task';
 import { SoundService } from '../../../services/SoundService';
 import { HapticService } from '../../../services/HapticService';
@@ -32,11 +32,11 @@ export const TaskHabitCounter: React.FC<TaskHabitCounterProps> = ({
 
   const getHabitIcon = (title: string) => {
     const t = title.toLowerCase();
-    if (t.includes('agua')) return '💧';
-    if (t.includes('diente')) return '🪥';
-    if (t.includes('mano')) return '🧼';
-    if (t.includes('aplicacion')) return '🧴';
-    return '⚡';
+    if (t.includes('agua')) return <Droplet size={11} />;
+    if (t.includes('diente')) return <Sparkles size={11} />;
+    if (t.includes('mano')) return <Hand size={11} />;
+    if (t.includes('aplicacion')) return <SprayCan size={11} />;
+    return <Zap size={11} />;
   };
 
   return (

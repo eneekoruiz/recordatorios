@@ -178,6 +178,14 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
   const { tasks, toggleTask, updateTask, theme } = useAppStore();
   const isDark = theme === 'dark';
 
+  // Fondo radial compartido por la pantalla principal y la de "lista completada"
+  // (evita repetir el mismo par de gradientes en dos sitios).
+  const screenBackground = isDark
+    ? 'radial-gradient(ellipse at center, rgba(18,22,38,0.98) 0%, rgba(8,10,18,1) 100%)'
+    : 'radial-gradient(ellipse at center, rgba(246,248,252,0.98) 0%, rgba(235,238,245,1) 100%)';
+  const primaryText = isDark ? 'white' : 'var(--text-primary, #1c1c1e)';
+  const secondaryText = isDark ? 'rgba(255,255,255,0.6)' : 'var(--text-secondary, #636366)';
+
   // Sequence state
   const [index, setIndex] = useState(0);
   const [completedIds, setCompletedIds] = useState<string[]>([]);
@@ -298,9 +306,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
         exit={{ opacity: 0 }}
         style={{
           position: 'fixed', inset: 0, zIndex: 99999,
-          background: isDark 
-            ? 'radial-gradient(ellipse at center, rgba(18,22,38,0.98) 0%, rgba(8,10,18,1) 100%)' 
-            : 'radial-gradient(ellipse at center, rgba(246,248,252,0.98) 0%, rgba(235,238,245,1) 100%)',
+          background: screenBackground,
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
           padding: 32, boxSizing: 'border-box', textAlign: 'center'
@@ -310,15 +316,19 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
           initial={{ scale: 0.7, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: 'spring', damping: 18, stiffness: 280, delay: 0.1 }}
-          style={{ fontSize: '4rem', marginBottom: 20 }}
+          style={{
+            width: 88, height: 88, borderRadius: '50%', marginBottom: 20,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(52, 199, 89, 0.14)'
+          }}
         >
-          🎉
+          <CheckCircle size={44} color="#34c759" strokeWidth={2} />
         </motion.div>
-        <h2 style={{ fontSize: '2.2rem', fontWeight: 800, color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)', margin: '0 0 12px', letterSpacing: '-0.03em' }}>
+        <h2 style={{ fontSize: '2.2rem', fontWeight: 800, color: primaryText, margin: '0 0 12px', letterSpacing: '-0.03em' }}>
           ¡Lista completada!
         </h2>
-        <p style={{ fontSize: '1rem', color: isDark ? 'rgba(255,255,255,0.6)' : 'var(--text-secondary, #636366)', marginBottom: 32, maxWidth: 320, lineHeight: 1.5 }}>
-          Has recorrido <strong style={{ color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)' }}>{listName}</strong> de principio a fin.{' '}
+        <p style={{ fontSize: '1rem', color: secondaryText, marginBottom: 32, maxWidth: 320, lineHeight: 1.5 }}>
+          Has recorrido <strong style={{ color: primaryText }}>{listName}</strong> de principio a fin.{' '}
           {completedIds.length} tarea{completedIds.length !== 1 ? 's' : ''} completada{completedIds.length !== 1 ? 's' : ''}.
           {skippedIds.length > 0 && ` ${skippedIds.length} omitida${skippedIds.length !== 1 ? 's' : ''}.`}
         </p>
@@ -349,9 +359,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
         exit={{ opacity: 0 }}
         style={{
           position: 'fixed', inset: 0, zIndex: 99999,
-          background: isDark 
-            ? 'radial-gradient(ellipse at center, rgba(18,22,38,0.98) 0%, rgba(8,10,18,1) 100%)' 
-            : 'radial-gradient(ellipse at center, rgba(246,248,252,0.98) 0%, rgba(235,238,245,1) 100%)',
+          background: screenBackground,
           backdropFilter: 'blur(32px)',
           WebkitBackdropFilter: 'blur(32px)',
           display: 'flex', flexDirection: 'column',
@@ -395,6 +403,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
               cursor: 'pointer'
             }}
             title="Salir (Esc)"
+            aria-label="Salir del modo secuencia"
           >
             <X size={18} />
           </button>
@@ -429,7 +438,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
               <h2 style={{
                 fontSize: 'clamp(1.6rem, 4vw, 2.6rem)',
                 fontWeight: 700, lineHeight: 1.18,
-                color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)',
+                color: primaryText,
                 fontFamily: 'var(--font-display)',
                 letterSpacing: '-0.025em', margin: '0 0 8px', wordBreak: 'break-word'
               }}>
@@ -472,7 +481,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                     </defs>
                   </svg>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1, gap: 8 }}>
-                    <span style={{ fontSize: '3.6rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)', letterSpacing: '-0.03em', lineHeight: 1 }}>
+                    <span style={{ fontSize: '3.6rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: primaryText, letterSpacing: '-0.03em', lineHeight: 1 }}>
                       {formatTime(timeLeft)}
                     </span>
                     <div style={{
@@ -588,6 +597,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                     flexShrink: 0
                   }}
                   title="Omitir tarea"
+                  aria-label="Omitir tarea"
                 >
                   <SkipForward size={20} />
                 </button>

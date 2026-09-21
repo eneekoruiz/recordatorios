@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Sparkles, X, ArrowUp, Check, Bot, User, Settings, Mic, MicOff, 
-  Calendar, CheckCircle2, Volume2, VolumeX
+import {
+  Sparkles, X, ArrowUp, Check, Bot, User, Settings, Mic, MicOff,
+  Calendar, CheckCircle2, Volume2, VolumeX,
+  Sunrise, Sun, Moon, Repeat, MapPin,
+  CalendarRange, Luggage, ShoppingCart, SprayCan
 } from 'lucide-react';
 import { AIService, type ProposedBatch, type AIConfig } from '../../services/AIService';
 import { useAppStore } from '../../store/useAppStore';
@@ -274,7 +276,7 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
     // Notify user
     const listName = targetListToCreate?.name || lists.find(l => l.id === tasksPayload[0]?.categoryId)?.name || 'Inbox';
     window.dispatchEvent(new CustomEvent('show-toast', { 
-      detail: `✓ ${tasksPayload.length} recordatorios importados a "${listName}"` 
+      detail: `${tasksPayload.length} recordatorios importados a "${listName}"`
     }));
 
     // Mark as imported in message
@@ -286,7 +288,7 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
           ...m.batch,
           tasks: []
         },
-        text: `${m.text}\n\n✅ ¡${tasksPayload.length} recordatorios importados con éxito!`
+        text: `${m.text}\n\n¡${tasksPayload.length} recordatorios importados con éxito!`
       };
     }));
 
@@ -387,7 +389,7 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
                   Asistente IA
                 </h3>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                  {config.provider === 'auto' ? '⚡ Extractor Inteligente Local (MCP Ready)' : config.provider === 'gemini' ? '✨ Google Gemini LLM' : '🧠 OpenAI GPT'}
+                  {config.provider === 'auto' ? 'Extractor Inteligente Local (MCP Ready)' : config.provider === 'gemini' ? 'Google Gemini LLM' : 'OpenAI GPT'}
                 </span>
               </div>
             </div>
@@ -473,7 +475,7 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
                         cursor: 'pointer'
                       }}
                     >
-                      {p === 'auto' ? '⚡ Local (Zero-Config)' : p === 'gemini' ? 'Google Gemini' : 'OpenAI'}
+                      {p === 'auto' ? 'Local (Zero-Config)' : p === 'gemini' ? 'Google Gemini' : 'OpenAI'}
                     </button>
                   ))}
                 </div>
@@ -682,8 +684,9 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
                                 </span>
                               )}
                               {t.timeOfDay && (
-                                <span style={{ fontSize: '0.72rem', color: t.timeOfDay === 'morning' ? '#ff9500' : t.timeOfDay === 'afternoon' ? '#007aff' : '#af52de' }}>
-                                  {t.timeOfDay === 'morning' ? '🌅 Mañana' : t.timeOfDay === 'afternoon' ? '☀️ Tarde' : '🌙 Noche'}
+                                <span style={{ fontSize: '0.72rem', color: t.timeOfDay === 'morning' ? '#ff9500' : t.timeOfDay === 'afternoon' ? '#007aff' : '#af52de', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                                  {t.timeOfDay === 'morning' ? <Sunrise size={11} /> : t.timeOfDay === 'afternoon' ? <Sun size={11} /> : <Moon size={11} />}
+                                  {t.timeOfDay === 'morning' ? 'Mañana' : t.timeOfDay === 'afternoon' ? 'Tarde' : 'Noche'}
                                 </span>
                               )}
                               {t.price !== undefined && (
@@ -697,15 +700,15 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
                                 </span>
                               )}
                               {t.cycle && (
-                                <span style={{ fontSize: '0.72rem', color: 'var(--accent-primary)' }}>
-                                  🔄 {t.cycle === 'cycle_day' ? 'Diario' : t.cycle === 'cycle_week' ? 'Semanal' : 'Mensual'}
+                                <span style={{ fontSize: '0.72rem', color: 'var(--accent-primary)', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                                  <Repeat size={11} /> {t.cycle === 'cycle_day' ? 'Diario' : t.cycle === 'cycle_week' ? 'Semanal' : 'Mensual'}
                                 </span>
                               )}
                               {t.people && t.people.length > 0 && (
                                 <div style={{ display: 'inline-flex', gap: 3, alignItems: 'center' }}>
                                   {t.people.map(p => (
-                                    <span key={p} style={{ fontSize: '0.72rem', color: '#5856D6', background: 'rgba(88, 86, 214, 0.12)', padding: '1px 6px', borderRadius: 999, fontWeight: 600 }}>
-                                      👤 {p}
+                                    <span key={p} style={{ fontSize: '0.72rem', color: '#5856D6', background: 'rgba(88, 86, 214, 0.12)', padding: '1px 6px', borderRadius: 999, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                                      <User size={10} /> {p}
                                     </span>
                                   ))}
                                 </div>
@@ -716,8 +719,8 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
                                 </span>
                               )}
                               {t.locationName && (
-                                <span style={{ fontSize: '0.72rem', color: '#34c759', background: 'rgba(52, 199, 89, 0.12)', padding: '1px 6px', borderRadius: 999, fontWeight: 600 }}>
-                                  📍 {t.locationName}
+                                <span style={{ fontSize: '0.72rem', color: '#34c759', background: 'rgba(52, 199, 89, 0.12)', padding: '1px 6px', borderRadius: 999, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                                  <MapPin size={10} /> {t.locationName}
                                 </span>
                               )}
                             </div>
@@ -751,8 +754,8 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
                     >
                       <CheckCircle2 size={17} />
                       {msg.batch.tasks[0]?.listId === 'que_he_hecho' || msg.batch.tasks[0]?.listName?.toLowerCase().includes('qué he hecho')
-                        ? `✓ Sí, apuntar e importar todo a Qué he hecho (${msg.batch.tasks.filter(t => t.selected).length})`
-                        : `✓ Sí, importar todo (${msg.batch.tasks.filter(t => t.selected).length})`}
+                        ? `Sí, apuntar e importar todo a Qué he hecho (${msg.batch.tasks.filter(t => t.selected).length})`
+                        : `Sí, importar todo (${msg.batch.tasks.filter(t => t.selected).length})`}
                     </button>
                   </motion.div>
                 )}
@@ -781,15 +784,18 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
               flexShrink: 0
             }}>
               {[
-                '🗓️ Planificar mi semana',
-                '🧳 Hacer la maleta de viaje',
-                '🛒 Compra semanal con precios',
-                '🧹 Tareas de limpieza profunda'
+                { label: 'Planificar mi semana', Icon: CalendarRange },
+                { label: 'Hacer la maleta de viaje', Icon: Luggage },
+                { label: 'Compra semanal con precios', Icon: ShoppingCart },
+                { label: 'Tareas de limpieza profunda', Icon: SprayCan }
               ].map(chip => (
                 <button
-                  key={chip}
-                  onClick={() => handleSend(chip)}
+                  key={chip.label}
+                  onClick={() => handleSend(chip.label)}
                   style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
                     background: 'var(--bg-surface)',
                     border: '1px solid var(--border-subtle)',
                     borderRadius: 999,
@@ -800,7 +806,8 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
                     cursor: 'pointer'
                   }}
                 >
-                  {chip}
+                  <chip.Icon size={13} strokeWidth={2.2} />
+                  {chip.label}
                 </button>
               ))}
             </div>

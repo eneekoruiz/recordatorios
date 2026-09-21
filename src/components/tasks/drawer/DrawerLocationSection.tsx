@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Clock, Search } from 'lucide-react';
+import { MapPin, Clock, Search, Home, Briefcase } from 'lucide-react';
 
 interface DrawerLocationSectionProps {
   locationName: string;
@@ -110,50 +110,54 @@ export const DrawerLocationSection: React.FC<DrawerLocationSectionProps> = ({
             <button 
               type="button"
               onClick={() => selectPresetLocation('current')}
-              style={{ 
+              style={{
                 flex: 1, minWidth: '70px', padding: '6px 4px', fontSize: '0.75rem', borderRadius: 6, cursor: 'pointer', border: '1px solid var(--border-subtle)',
                 background: selectedPreset === 'current' ? 'var(--accent-glow)' : 'transparent',
                 color: selectedPreset === 'current' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                fontWeight: selectedPreset === 'current' ? 600 : 400
+                fontWeight: selectedPreset === 'current' ? 600 : 400,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4
               }}
             >
-              📍 Actual
+              <MapPin size={12} strokeWidth={2.4} /> Actual
             </button>
             <button 
               type="button"
               onClick={() => selectPresetLocation('home')}
-              style={{ 
+              style={{
                 flex: 1, minWidth: '70px', padding: '6px 4px', fontSize: '0.75rem', borderRadius: 6, cursor: 'pointer', border: '1px solid var(--border-subtle)',
                 background: selectedPreset === 'home' ? 'var(--accent-glow)' : 'transparent',
                 color: selectedPreset === 'home' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                fontWeight: selectedPreset === 'home' ? 600 : 400
+                fontWeight: selectedPreset === 'home' ? 600 : 400,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4
               }}
             >
-              🏠 Casa
+              <Home size={12} strokeWidth={2.4} /> Casa
             </button>
             <button 
               type="button"
               onClick={() => selectPresetLocation('work')}
-              style={{ 
+              style={{
                 flex: 1, minWidth: '70px', padding: '6px 4px', fontSize: '0.75rem', borderRadius: 6, cursor: 'pointer', border: '1px solid var(--border-subtle)',
                 background: selectedPreset === 'work' ? 'var(--accent-glow)' : 'transparent',
                 color: selectedPreset === 'work' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                fontWeight: selectedPreset === 'work' ? 600 : 400
+                fontWeight: selectedPreset === 'work' ? 600 : 400,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4
               }}
             >
-              💼 Trabajo
+              <Briefcase size={12} strokeWidth={2.4} /> Trabajo
             </button>
             <button 
               type="button"
               onClick={() => setSelectedPreset('custom')}
-              style={{ 
+              style={{
                 flex: 1, minWidth: '70px', padding: '6px 4px', fontSize: '0.75rem', borderRadius: 6, cursor: 'pointer', border: '1px solid var(--border-subtle)',
                 background: selectedPreset === 'custom' ? 'var(--accent-glow)' : 'transparent',
                 color: selectedPreset === 'custom' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                fontWeight: selectedPreset === 'custom' ? 600 : 400
+                fontWeight: selectedPreset === 'custom' ? 600 : 400,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4
               }}
             >
-              🔍 Buscar
+              <Search size={12} strokeWidth={2.4} /> Buscar
             </button>
           </div>
 

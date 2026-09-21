@@ -1,4 +1,4 @@
-import { Calendar, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat } from 'lucide-react';
+import { Calendar, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen } from 'lucide-react';
 import type { TaskItem, CustomList } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
@@ -135,7 +135,13 @@ export function TaskMetaBadges({
               <span>{timeOfDayInfo.label}</span>
             </button>
           )}
-          {inAppListTarget && (
+        </div>
+      )}
+
+      {/* Rich Links (External URLs & In-App List Navigations) */}
+      {(() => {
+        if (inAppListTarget) {
+          return (
             <button
               type="button"
               onClick={(e) => {
@@ -144,34 +150,31 @@ export function TaskMetaBadges({
                 onNavigateView?.(`list_${inAppListTarget.id}`);
               }}
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                padding: '1.5px 8px',
-                borderRadius: 6,
-                fontSize: '0.74rem',
-                fontWeight: 600,
-                background: 'rgba(0, 122, 255, 0.10)',
-                color: 'var(--accent-primary)',
-                border: '1px solid rgba(0, 122, 255, 0.22)',
-                cursor: 'pointer',
-                letterSpacing: '-0.1px',
-                transition: 'all 0.15s ease'
+                display: 'flex', alignItems: 'center', gap: 12,
+                marginTop: 8, padding: '8px 12px', borderRadius: '12px',
+                background: 'var(--bg-elevated)', border: '1px solid var(--accent-primary)',
+                boxShadow: '0 2px 6px rgba(0, 122, 255, 0.15)', boxSizing: 'border-box',
+                maxWidth: '100%', overflow: 'hidden', cursor: 'pointer', textAlign: 'left',
+                width: '100%'
               }}
-              title={`Ir a la lista ${inAppListTarget.name}`}
             >
-              <LayoutList size={11} />
-              <span>Ir a {inAppListTarget.name}</span>
-              <ChevronRight size={10} style={{ opacity: 0.7 }} />
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <LayoutList size={18} color="var(--accent-primary)" />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden', flex: 1 }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--accent-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  Ir a {inAppListTarget.name}
+                </span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  Abrir lista de recordatorios
+                </span>
+              </div>
+              <ChevronRight size={18} color="var(--accent-primary)" style={{ opacity: 0.8, flexShrink: 0 }} />
             </button>
-          )}
-        </div>
-      )}
+          );
+        }
 
-      {/* External URLs (exclude app:// so Safari doesn't throw invalid scheme error) */}
-      {(() => {
-        if (!task.url || inAppListTarget) return null;
-        if (task.url.startsWith('http')) {
+        if (task.url && task.url.startsWith('http')) {
           return (
             <a
               href={task.url}
@@ -180,21 +183,16 @@ export function TaskMetaBadges({
               style={{
                 display: 'flex', alignItems: 'center', gap: 12,
                 textDecoration: 'none', color: 'var(--text-primary)',
-                marginTop: 8,
-                padding: '8px 12px',
-                borderRadius: '12px',
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border-subtle)',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-                boxSizing: 'border-box',
-                maxWidth: '100%',
-                overflow: 'hidden'
+                marginTop: 8, padding: '8px 12px', borderRadius: '12px',
+                background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.02)', boxSizing: 'border-box',
+                maxWidth: '100%', overflow: 'hidden'
               }}
               onClick={e => e.stopPropagation()}
             >
               <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 {task.url.includes('drive.google.com') || task.url.includes('docs.google.com') ? (
-                  <span style={{ fontSize: '1.1rem' }}>📁</span>
+                  <FolderOpen size={16} color="var(--accent-primary)" />
                 ) : (
                   <Link2 size={16} color="var(--accent-primary)" />
                 )}

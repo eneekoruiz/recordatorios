@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar as CalendarIcon, ChevronDown, Clock, PlusCircle, X } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronDown, Clock, PlusCircle, X, Zap, CreditCard, Bell } from 'lucide-react';
 import type { AlertDef } from '../../../models/Task';
 import { isCaducidadesList } from '../../../utils/specialLists';
 import { Sunrise, Sun, Moon } from 'lucide-react';
@@ -205,37 +205,37 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
               {/* Alertas preventivas inteligentes de caducidad */}
               {(category === 'caducidades' || isCaducidadesList(category) || expirationType || hasDate) && (
                 <div style={{ marginTop: 10, padding: '10px 12px', background: 'var(--bg-card, rgba(0,0,0,0.03))', borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>
-                    ⚡ Alertas preventivas rápidas:
+                  <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
+                    <Zap size={13} strokeWidth={2.4} /> Alertas preventivas rápidas:
                   </span>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     <button
                       type="button"
                       onClick={() => addAnticipationAlert(30 * 24 * 60, '1 mes antes')}
-                      style={{ padding: '4px 10px', fontSize: '0.76rem', borderRadius: 8, border: '1px solid rgba(255, 149, 0, 0.3)', background: 'rgba(255, 149, 0, 0.1)', color: '#ff9500', fontWeight: 600, cursor: 'pointer' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', fontSize: '0.76rem', borderRadius: 8, border: '1px solid rgba(255, 149, 0, 0.3)', background: 'rgba(255, 149, 0, 0.1)', color: '#ff9500', fontWeight: 600, cursor: 'pointer' }}
                     >
-                      💳 + 1 mes antes
+                      <CreditCard size={12} strokeWidth={2.4} /> + 1 mes antes
                     </button>
                     <button
                       type="button"
                       onClick={() => addAnticipationAlert(15 * 24 * 60, '15 días antes')}
-                      style={{ padding: '4px 10px', fontSize: '0.76rem', borderRadius: 8, border: '1px solid rgba(255, 149, 0, 0.3)', background: 'rgba(255, 149, 0, 0.1)', color: '#ff9500', fontWeight: 600, cursor: 'pointer' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', fontSize: '0.76rem', borderRadius: 8, border: '1px solid rgba(255, 149, 0, 0.3)', background: 'rgba(255, 149, 0, 0.1)', color: '#ff9500', fontWeight: 600, cursor: 'pointer' }}
                     >
-                      💳 + 15 días antes
+                      <CreditCard size={12} strokeWidth={2.4} /> + 15 días antes
                     </button>
                     <button
                       type="button"
                       onClick={() => addAnticipationAlert(3 * 24 * 60, '3 días antes')}
-                      style={{ padding: '4px 10px', fontSize: '0.76rem', borderRadius: 8, border: '1px solid rgba(0, 122, 255, 0.3)', background: 'rgba(0, 122, 255, 0.1)', color: '#007aff', fontWeight: 600, cursor: 'pointer' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', fontSize: '0.76rem', borderRadius: 8, border: '1px solid rgba(0, 122, 255, 0.3)', background: 'rgba(0, 122, 255, 0.1)', color: '#007aff', fontWeight: 600, cursor: 'pointer' }}
                     >
-                      📱 + 3 días antes
+                      <Bell size={12} strokeWidth={2.4} /> + 3 días antes
                     </button>
                     <button
                       type="button"
                       onClick={() => addAnticipationAlert(1440, '1 día antes')}
-                      style={{ padding: '4px 10px', fontSize: '0.76rem', borderRadius: 8, border: '1px solid rgba(0, 122, 255, 0.3)', background: 'rgba(0, 122, 255, 0.1)', color: '#007aff', fontWeight: 600, cursor: 'pointer' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', fontSize: '0.76rem', borderRadius: 8, border: '1px solid rgba(0, 122, 255, 0.3)', background: 'rgba(0, 122, 255, 0.1)', color: '#007aff', fontWeight: 600, cursor: 'pointer' }}
                     >
-                      📱 + 1 día antes
+                      <Bell size={12} strokeWidth={2.4} /> + 1 día antes
                     </button>
                   </div>
                 </div>

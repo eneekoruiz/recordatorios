@@ -6,6 +6,7 @@ import type { SectionMenuState } from './SectionContextMenu';
 
 interface SectionData {
   title: string;
+  titleIcon?: React.ReactNode;
   category: string;
   color: string;
   sectionId?: string;
@@ -96,6 +97,12 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   const [isPressed, setIsPressed] = useState(false);
   const didSectionLongPressRef = useRef(false);
   const touchStartPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const rowRef = useRef<HTMLDivElement>(null);
+  const getRowRect = () => {
+    if (!rowRef.current) return undefined;
+    const rect = rowRef.current.getBoundingClientRect();
+    return { top: rect.top, left: rect.left, width: rect.width, height: rect.height };
+  };
 
   const isMenuOpenForThisSection = Boolean(
     sectionMenu?.open && (
@@ -105,9 +112,10 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   );
 
   return (
-    <div 
-      key={itemKey} 
-      data-index={index} 
+    <div
+      key={itemKey}
+      data-index={index}
+      ref={rowRef}
       className="group-header"
       style={{ 
         ...itemStyle, 
@@ -159,15 +167,16 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       onContextMenu={(e) => {
         e.preventDefault();
         HapticService.selection();
-        setSectionMenu({ 
-          open: true, 
-          x: e.clientX, 
-          y: e.clientY, 
-          sectionId: data.sectionId, 
+        setSectionMenu({
+          open: true,
+          x: e.clientX,
+          y: e.clientY,
+          sectionId: data.sectionId,
           sectionName: data.title,
           pendingTaskCount,
           color: data.color,
-          category: data.category
+          category: data.category,
+          triggerRect: getRowRect()
         });
       }}
       onPointerDown={(e) => {
@@ -187,15 +196,16 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           setIsPressed(false);
           didSectionLongPressRef.current = true;
           HapticService.impact('medium');
-          setSectionMenu({ 
-            open: true, 
-            x: clientX, 
-            y: clientY, 
-            sectionId: secId, 
+          setSectionMenu({
+            open: true,
+            x: clientX,
+            y: clientY,
+            sectionId: secId,
             sectionName: secTitle,
             pendingTaskCount: count,
             color: clr,
-            category: cat
+            category: cat,
+            triggerRect: getRowRect()
           });
         }, 380);
       }}
@@ -255,7 +265,12 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               }}
               title={isCustomSection ? "Doble click para editar" : ""}
             >
-              {formatSectionTitle(data.title)}
+              {data.titleIcon && (
+                <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6, opacity: 0.85 }}>
+                  {data.titleIcon}
+                </span>
+              )}
+              {data.title}
             </h3>
           )}
           {data.category.startsWith('persona_') && data.category !== 'persona_solo' && (
@@ -319,11 +334,13 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                   sectionName: data.title,
                   pendingTaskCount,
                   color: data.color,
-                  category: data.category
+                  category: data.category,
+                  triggerRect: getRowRect()
                 });
               }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5, padding: 4 }}
               title="Opciones de sección"
+              aria-label="Opciones de sección"
             >
               <MoreHorizontal size={16} color="var(--text-primary)" />
             </button>

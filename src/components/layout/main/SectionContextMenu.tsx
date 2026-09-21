@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { Edit3, Plus, Trash2, FolderPlus, Play } from 'lucide-react';
-import { formatSectionTitle } from '../../../utils/sectionRoutine';
+import { SpotlightBackdrop, type SpotlightRect } from '../../ui/SpotlightBackdrop';
 
 export interface SectionMenuState {
   open: boolean;
@@ -13,6 +13,8 @@ export interface SectionMenuState {
   pendingTaskCount?: number;
   color?: string;
   category?: string;
+  /** Rectángulo de la cabecera de sección que abrió el menú, para mantenerla nítida sobre el telón. */
+  triggerRect?: SpotlightRect | null;
 }
 
 interface SectionContextMenuProps {
@@ -34,6 +36,16 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
   onStartSequence,
   onDelete
 }) => {
+  // Escape cierra el menú, igual que en TaskContextMenu.
+  useEffect(() => {
+    if (!sectionMenu.open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [sectionMenu.open, onClose]);
+
   if (!sectionMenu.open) return null;
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
@@ -46,10 +58,10 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
 
   return createPortal(
     <>
-      <div
-        style={{ position: 'fixed', inset: 0, zIndex: 999990, background: 'rgba(0,0,0,0.22)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)' }}
-        onClick={onClose}
-        onContextMenu={(e) => { e.preventDefault(); onClose(); }}
+      <SpotlightBackdrop
+        rect={isMobile ? null : (sectionMenu.triggerRect ?? null)}
+        onClose={onClose}
+        radius={10}
       />
       <motion.div
         className="ios-dropdown-menu"

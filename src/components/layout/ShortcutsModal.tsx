@@ -1,6 +1,6 @@
 import { useEffect, type FC } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Keyboard, Navigation, Zap, CheckCircle2 } from 'lucide-react';
+import { X, Keyboard, Navigation, Zap, CheckCircle2, Lightbulb } from 'lucide-react';
 
 interface ShortcutsModalProps {
   isOpen: boolean;
@@ -145,8 +145,9 @@ export const ShortcutsModal: FC<ShortcutsModalProps> = ({ isOpen, onClose }) => 
               ))}
             </div>
 
-            <div style={{ background: 'var(--bg-elevated)', padding: '12px 16px', borderRadius: 12, fontSize: '0.85rem', color: 'var(--text-tertiary)', textAlign: 'center' }}>
-              💡 Pulsa <kbd style={{ padding: '2px 6px', borderRadius: 4, background: 'var(--bg-surface)', border: '1px solid var(--border-color)' }}>?</kbd> en cualquier momento para abrir esta guía.
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'var(--bg-elevated)', padding: '12px 16px', borderRadius: 12, fontSize: '0.85rem', color: 'var(--text-tertiary)', textAlign: 'center' }}>
+              <Lightbulb size={14} strokeWidth={2.1} style={{ flexShrink: 0 }} />
+              <span>Pulsa <kbd style={{ padding: '2px 6px', borderRadius: 4, background: 'var(--bg-surface)', border: '1px solid var(--border-color)' }}>?</kbd> en cualquier momento para abrir esta guía.</span>
             </div>
           </motion.div>
         </div>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { X, Sparkles } from 'lucide-react';
+import { X, Sparkles, Wand2 } from 'lucide-react';
 
 interface MonthlySummaryModalProps {
   modal: { open: boolean; title: string; text: string; loading: boolean };
@@ -55,7 +55,9 @@ export const MonthlySummaryModal: React.FC<MonthlySummaryModalProps> = ({
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: '1.4rem' }}>🪄</span>
+            <span style={{ display: 'flex', width: 32, height: 32, borderRadius: '50%', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'rgba(255, 149, 0, 0.14)' }}>
+              <Wand2 size={16} color="#ff9500" strokeWidth={2} />
+            </span>
             <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
               {modal.title}
             </h3>
@@ -113,7 +115,7 @@ export const MonthlySummaryModal: React.FC<MonthlySummaryModalProps> = ({
             onClick={async () => {
               if (typeof navigator !== 'undefined' && navigator.clipboard) {
                 await navigator.clipboard.writeText(modal.text);
-                window.dispatchEvent(new CustomEvent('show-toast', { detail: '✓ Resumen mensual copiado al portapapeles' }));
+                window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Resumen mensual copiado al portapapeles' }));
               }
             }}
             style={{

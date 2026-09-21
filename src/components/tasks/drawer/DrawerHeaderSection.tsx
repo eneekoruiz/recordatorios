@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Clock, Mic, MicOff, Calendar as CalendarIcon, Repeat } from 'lucide-react';
+import { Clock, Mic, MicOff, Calendar as CalendarIcon, Repeat, Flag } from 'lucide-react';
 import { CustomSelect } from '../../ui/CustomSelect';
 import type { TaskItem, CustomList } from '../../../models/Task';
 
@@ -87,6 +87,7 @@ export const DrawerHeaderSection: React.FC<DrawerHeaderSectionProps> = ({
               {chip.type === 'time' && <Clock size={12} />}
               {chip.type === 'date' && <CalendarIcon size={12} />}
               {chip.type === 'cycle' && <Repeat size={12} />}
+              {chip.type === 'priority' && <Flag size={12} />}
               {chip.label}
             </div>
           ))}

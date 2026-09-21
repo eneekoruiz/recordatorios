@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Calendar, Sparkles, Clock, Heart, Plus, Share2, Coffee } from 'lucide-react';
+import { X, Calendar, Sparkles, Clock, Heart, Plus, Share2, Coffee, MapPin } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { getPersonRelationshipStats } from '../../services/TaskService';
 import { HapticService } from '../../services/HapticService';
@@ -52,7 +52,7 @@ export const PersonProfileModal: React.FC<PersonProfileModalProps> = ({
 
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       await navigator.clipboard.writeText(shareText);
-      window.dispatchEvent(new CustomEvent('show-toast', { detail: `✓ Resumen de vivencias con ${personName} copiado al portapapeles` }));
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: `Resumen de vivencias con ${personName} copiado al portapapeles` }));
     }
   };
 
@@ -363,8 +363,8 @@ export const PersonProfileModal: React.FC<PersonProfileModalProps> = ({
                           </span>
                         )}
                         {task.locationName && (
-                          <span style={{ fontSize: '0.72rem', color: '#34c759', background: 'rgba(52, 199, 89, 0.12)', padding: '1px 6px', borderRadius: 999, fontWeight: 600 }}>
-                            📍 {task.locationName}
+                          <span style={{ fontSize: '0.72rem', color: '#34c759', background: 'rgba(52, 199, 89, 0.12)', padding: '1px 6px', borderRadius: 999, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                            <MapPin size={10} /> {task.locationName}
                           </span>
                         )}
                       </div>

@@ -82,6 +82,18 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
       window.removeEventListener('close-list-menus', handleScroll);
     };
   }, [activeMenuId, setActiveMenuId, setMenuCoords]);
+
+  useEffect(() => {
+    if (!activeMenuId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setActiveMenuId(null);
+        setMenuCoords(null);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [activeMenuId, setActiveMenuId, setMenuCoords]);
   
   const rawLists = Array.from(new Map((lists || []).map((l: any) => [l.id, l])).values());
   const seenNameParent = new Map<string, any>();

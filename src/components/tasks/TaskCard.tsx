@@ -4,7 +4,8 @@ import { motion, useMotionValue, useTransform, AnimatePresence, useMotionValueEv
 import {
   Lock, Image as ImageIcon, MoreHorizontal,
   ChevronDown, X, Info, RotateCcw, Flag,
-  ShieldAlert, Clock, CheckCircle2, CreditCard
+  ShieldAlert, Clock, CheckCircle2, CreditCard,
+  Flame, User, MapPin, Link2
 } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -13,6 +14,7 @@ import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
 import { ConfettiService } from '../../services/ConfettiService';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import type { SpotlightRect } from '../ui/SpotlightBackdrop';
 import { isCaducidadesList } from '../../utils/specialLists';
 import { TaskContextMenu } from './card/TaskContextMenu';
 import { TaskSwipeBackground } from './card/TaskSwipeBackground';
@@ -115,6 +117,7 @@ export const TaskCard = React.memo(function TaskCard({
 
   const [contextMenuOpen, setContextMenuOpen] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number; maxHeight: number }>({ x: 0, y: 0, maxHeight: 400 });
+  const [contextMenuTriggerRect, setContextMenuTriggerRect] = useState<SpotlightRect | null>(null);
 
   useEffect(() => {
     if (!contextMenuOpen) return;
@@ -159,6 +162,7 @@ export const TaskCard = React.memo(function TaskCard({
     HapticService.impact('medium');
     if (cardRef.current) {
       const rect = cardRef.current.getBoundingClientRect();
+      setContextMenuTriggerRect({ top: rect.top, left: rect.left, width: rect.width, height: rect.height });
       const viewportH = window.innerHeight;
       const viewportW = window.innerWidth;
       const menuWidth = Math.min(270, viewportW - 24);
@@ -445,36 +449,28 @@ export const TaskCard = React.memo(function TaskCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Drop Target Indicator Line for manual reordering */}
+      {/* Drop Target Indicator Line for manual reordering (Apple Native Style) */}
       {dragOverPosition === 'top' && (
         <div 
           style={{
-            position: 'absolute',
-            top: -1,
-            left: 8,
-            right: 8,
-            height: 3,
-            background: 'var(--accent-primary, #007aff)',
-            borderRadius: 2,
-            zIndex: 9999,
-            boxShadow: '0 0 8px rgba(0, 122, 255, 0.7)'
+            position: 'absolute', top: -1, left: 12, right: 12, height: 2,
+            background: 'var(--accent-primary, #007aff)', zIndex: 9999,
+            pointerEvents: 'none'
           }} 
-        />
+        >
+          <div style={{ position: 'absolute', left: -4, top: -3, width: 8, height: 8, borderRadius: '50%', border: '2px solid var(--accent-primary, #007aff)', background: 'var(--bg-elevated)', boxSizing: 'border-box' }} />
+        </div>
       )}
       {dragOverPosition === 'bottom' && (
         <div 
           style={{
-            position: 'absolute',
-            bottom: -1,
-            left: 8,
-            right: 8,
-            height: 3,
-            background: 'var(--accent-primary, #007aff)',
-            borderRadius: 2,
-            zIndex: 9999,
-            boxShadow: '0 0 8px rgba(0, 122, 255, 0.7)'
+            position: 'absolute', bottom: -1, left: 12, right: 12, height: 2,
+            background: 'var(--accent-primary, #007aff)', zIndex: 9999,
+            pointerEvents: 'none'
           }} 
-        />
+        >
+          <div style={{ position: 'absolute', left: -4, top: -3, width: 8, height: 8, borderRadius: '50%', border: '2px solid var(--accent-primary, #007aff)', background: 'var(--bg-elevated)', boxSizing: 'border-box' }} />
+        </div>
       )}
 
       {/* Fixed swipe action backgrounds */}
@@ -862,7 +858,7 @@ export const TaskCard = React.memo(function TaskCard({
                   lineHeight: '1.2'
                 }}
               >
-                <span>🔥</span>
+                <Flame size={12} strokeWidth={2.2} />
                 <span>{habitStreak.count} {habitStreak.unit}</span>
               </span>
             )}
@@ -970,7 +966,7 @@ export const TaskCard = React.memo(function TaskCard({
                       cursor: 'pointer'
                     }}
                   >
-                    <span>👤</span>
+                    <User size={11} strokeWidth={2.4} />
                     <span>{person}</span>
                   </span>
                 ))}
@@ -994,7 +990,7 @@ export const TaskCard = React.memo(function TaskCard({
                 }}
                 title={`Ubicación: ${task.locationName}`}
               >
-                <span>📍</span>
+                <MapPin size={11} strokeWidth={2.4} />
                 <span>{task.locationName}</span>
               </span>
             )}
@@ -1021,7 +1017,7 @@ export const TaskCard = React.memo(function TaskCard({
                 }}
                 title="Gestionar o cancelar suscripción en la web oficial"
               >
-                <span>🔗</span>
+                <Link2 size={11} strokeWidth={2.4} />
                 <span>Gestionar</span>
               </a>
             )}
@@ -1161,6 +1157,7 @@ export const TaskCard = React.memo(function TaskCard({
         isOpen={contextMenuOpen}
         onClose={() => setContextMenuOpen(false)}
         position={contextMenuPosition}
+        triggerRect={contextMenuTriggerRect}
         onEdit={onEdit}
         nestTask={nestTask}
         previousTaskId={previousTaskId}
