@@ -69,7 +69,7 @@ export function TaskMetaBadges({
               }}
               style={{ 
                 display: 'inline-flex', alignItems: 'center', gap: 4, 
-                color: dueDateColor, fontWeight: dueDateColor === '#FF3B30' ? 600 : 400,
+                color: dueDateColor, fontWeight: dueDateColor.toLowerCase() === '#ff3b30' ? 600 : 400,
                 cursor: 'pointer'
               }}
               title="Fecha de vencimiento (Toca para editar)"

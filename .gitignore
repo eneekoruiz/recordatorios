@@ -59,3 +59,10 @@ extracted_data*.txt
 *.csv
 exports/
 scripts/local/
+
+# Scripts sueltos de mantenimiento/migración puntual (uso local, no forman parte de la app)
+# — guárdalos en scripts/local/ si hace falta conservarlos.
+/*.mjs
+/*.bat
+/*.bundle
+/task_audit_dump.md

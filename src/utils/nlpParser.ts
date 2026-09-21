@@ -26,11 +26,14 @@ export function parseNaturalLanguage(text: string): NlpResult {
   // 1. Detect day keywords
   if (lowerText.includes('hoy')) {
     dateSet = true;
+  } else if (lowerText.includes('pasado mañana')) {
+    // Debe comprobarse antes que 'mañana': "pasado mañana" contiene la palabra
+    // "mañana" como subcadena, así que si el orden fuera al revés esta rama
+    // jamás se alcanzaría y "pasado mañana" se interpretaría como "mañana".
+    targetDate.setDate(now.getDate() + 2);
+    dateSet = true;
   } else if (lowerText.includes('mañana')) {
     targetDate.setDate(now.getDate() + 1);
-    dateSet = true;
-  } else if (lowerText.includes('pasado mañana')) {
-    targetDate.setDate(now.getDate() + 2);
     dateSet = true;
   } else {
     // Check for "el lunes", "el martes", "este viernes", etc.
