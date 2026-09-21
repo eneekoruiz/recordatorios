@@ -419,7 +419,7 @@ export const useAppStore = create<AppState>()(
                 });
                 const formattedDate = currentDue.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
                 window.dispatchEvent(new CustomEvent('show-toast', {
-                  detail: `🔄 Renovación automática: Próximo vencimiento el ${formattedDate}`
+                  detail: `Renovación automática: próximo vencimiento el ${formattedDate}`
                 }));
               } else {
                 updatedTask = TaskRepository.update(existingTask, { 
@@ -1012,8 +1012,13 @@ export const useAppStore = create<AppState>()(
 
         const mergedPinnedSmartLists = persistedState?.pinnedSmartLists || currentState.pinnedSmartLists || [];
 
+        // Si el usuario nunca ha elegido tema a mano, seguimos la preferencia del sistema operativo
+        // (como hace cualquier app de Apple) en lugar de forzar claro siempre.
         const userExplicitTheme = typeof localStorage !== 'undefined' ? localStorage.getItem('user_explicit_theme') : null;
-        const resolvedTheme = userExplicitTheme === 'dark' ? 'dark' : 'light';
+        const systemPrefersDark = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+          ? window.matchMedia('(prefers-color-scheme: dark)').matches
+          : false;
+        const resolvedTheme = userExplicitTheme === 'dark' ? 'dark' : userExplicitTheme === 'light' ? 'light' : (systemPrefersDark ? 'dark' : 'light');
 
         return {
           ...currentState,

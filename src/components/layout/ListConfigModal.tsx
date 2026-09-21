@@ -21,7 +21,7 @@ const COLORS = [
 ];
 
 import { LIST_ICON_MAP as ICONS } from '../../constants/icons';
-import { CheckSquare, Folder, Check } from 'lucide-react';
+import { CheckSquare, Folder, Check, X, NotebookPen, CreditCard, BookOpen } from 'lucide-react';
 
 import { isCaducidadesList, isQueHeHechoList, ensureCaducidadesSections } from '../../utils/specialLists';
 
@@ -152,7 +152,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
               onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
               aria-label="Cerrar modal"
             >
-              ✕
+              <X size={16} strokeWidth={2.4} />
             </button>
           </div>
           
@@ -236,7 +236,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    <span style={{ fontSize: '1.15rem' }}>📝</span>
+                    <NotebookPen size={18} strokeWidth={2.1} />
                     <span>Estándar</span>
                   </button>
 
@@ -264,7 +264,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    <span style={{ fontSize: '1.15rem' }}>💳</span>
+                    <CreditCard size={18} strokeWidth={2.1} />
                     <span>Caducidades</span>
                   </button>
 
@@ -292,7 +292,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    <span style={{ fontSize: '1.15rem' }}>📖</span>
+                    <BookOpen size={18} strokeWidth={2.1} />
                     <span>Qué he hecho</span>
                   </button>
                 </div>

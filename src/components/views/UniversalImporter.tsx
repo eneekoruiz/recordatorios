@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Download, Upload, Info, CheckCircle2, ChevronLeft, Sparkles } from 'lucide-react';
+import { Download, Upload, Info, CheckCircle2, ChevronLeft, Sparkles, Target } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 import { detectFormatAndParse } from '../../utils/importerParser';
@@ -225,7 +225,9 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
           <div className="glass-panel" style={{ padding: 'var(--space-20)', borderRadius: 'var(--radius-xl)', marginBottom: 'var(--space-24)', border: '1px solid var(--border-subtle)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-primary)' }}>🎯 Lista de destino para importación</h3>
+                <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 7, fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  <Target size={16} strokeWidth={2.1} /> Lista de destino para importación
+                </h3>
                 <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Las tareas sin lista o en bandeja de entrada se reasignarán automáticamente aquí.</p>
               </div>
               <select

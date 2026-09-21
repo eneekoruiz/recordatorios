@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Zap, CheckCircle, Play, ArrowRight, Plus } from 'lucide-react';
+import { Search, CheckCircle, Play, ArrowRight, Plus, BarChart3, Sparkles, Trash2, AlertTriangle, Repeat, FolderClosed, Sun, Inbox } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
+import { SMART_LISTS } from '../../constants/smartLists';
+import { getListIcon, getCycleIcon } from '../../constants/icons';
 
 interface CommandPaletteProps {
   onSelectView: (view: string) => void;
@@ -31,45 +33,45 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
 
     // 1. Acciones del sistema
     if ('nueva tarea'.includes(q) || 'crear'.includes(q) || 'añadir'.includes(q) || q === '') {
-      nextResults.push({ type: 'action', id: 'new_task', title: '✨ Crear nueva tarea...', subtitle: 'Acceso rápido', icon: <Plus size={16} color="var(--accent-primary)" /> });
+      nextResults.push({ type: 'action', id: 'new_task', title: 'Crear nueva tarea...', subtitle: 'Acceso rápido', icon: <Plus size={16} color="var(--accent-primary)" /> });
     }
 
     if ('brain dump'.includes(q) || 'importar texto'.includes(q)) {
-      nextResults.push({ type: 'action', id: 'brain_dump', title: '📥 Abrir Universal Importer / Brain Dump', subtitle: 'Importar en lote', icon: <Zap size={16} color="var(--accent-primary)" /> });
+      nextResults.push({ type: 'action', id: 'brain_dump', title: 'Abrir Universal Importer / Brain Dump', subtitle: 'Importar en lote', icon: <Sparkles size={16} color="var(--accent-primary)" /> });
     }
 
     if ('estadísticas'.includes(q) || 'analytics'.includes(q) || 'métricas'.includes(q)) {
-      nextResults.push({ type: 'action', id: 'analytics', title: '📊 Ver Estadísticas y Métricas', subtitle: 'Productividad', icon: <Zap size={16} color="var(--accent-primary)" /> });
+      nextResults.push({ type: 'action', id: 'analytics', title: 'Ver Estadísticas y Métricas', subtitle: 'Productividad', icon: <BarChart3 size={16} color="var(--accent-primary)" /> });
     }
 
-    // 2. Listas Inteligentes
-    const smartLists = [
-      { id: 'smart_today', name: 'Hoy', icon: '☀️' },
-      { id: 'smart_scheduled', name: 'Programados', icon: '📅' },
-      { id: 'smart_all', name: 'Todos', icon: '📋' },
-      { id: 'smart_flagged', name: 'Marcados', icon: '🚩' },
-      { id: 'smart_completed', name: 'Completados', icon: '✅' },
-      { id: 'TRASH', name: 'Papelera', icon: '🗑️' }
-    ];
-
-    smartLists.forEach(sl => {
+    // 2. Listas Inteligentes (reutiliza los mismos colores que la barra lateral; el icono de "Hoy"
+    // se sustituye por Sun porque su versión de la barra lateral pinta el número en blanco fijo,
+    // pensado para ir dentro de un círculo de color, no suelto en esta lista).
+    const smartListMatches = SMART_LISTS.filter(sl => sl.id !== 'smart_primeros_pasos' && sl.id !== 'smart_overdue');
+    smartListMatches.forEach(sl => {
       if (sl.name.toLowerCase().includes(q) || q === '') {
-        nextResults.push({ type: 'smart', id: sl.id, title: `${sl.icon} Ir a ${sl.name}`, subtitle: 'Lista inteligente', icon: <Search size={14} color="var(--text-tertiary)" /> });
+        const SmartIcon = sl.id === 'smart_today' ? Sun : sl.icon;
+        nextResults.push({ type: 'smart', id: sl.id, title: `Ir a ${sl.name}`, subtitle: 'Lista inteligente', icon: <SmartIcon size={14} color={sl.color} /> });
       }
     });
+    if ('papelera'.includes(q) || q === '') {
+      nextResults.push({ type: 'smart', id: 'TRASH', title: 'Ir a Papelera', subtitle: 'Lista inteligente', icon: <Trash2 size={14} color="var(--text-tertiary)" /> });
+    }
 
     // 3. Listas personalizadas
     const uniqueLists = Array.from(new Map((lists || []).map(l => [l.id, l])).values());
     uniqueLists.filter(l => l.id !== 'user_preferences_smart_lists').forEach(l => {
       if (l.name.toLowerCase().includes(q) || q === '') {
-        nextResults.push({ type: 'list', id: `list_${l.id}`, title: `📁 ${l.name}`, subtitle: 'Mis listas', icon: <Search size={14} color="var(--accent-primary)" /> });
+        const ListIcon = getListIcon(l.icon) || FolderClosed;
+        nextResults.push({ type: 'list', id: `list_${l.id}`, title: l.name, subtitle: 'Mis listas', icon: <ListIcon size={14} color={l.color || 'var(--accent-primary)'} /> });
       }
     });
 
     // 4. Ciclos Temporales
     cycles.forEach(c => {
       if (c.name.toLowerCase().includes(q) || q === '') {
-        nextResults.push({ type: 'cycle', id: c.id, title: `🔄 Ciclo ${c.name}`, subtitle: 'Ciclo temporal', icon: <Search size={14} color="var(--accent-orange)" /> });
+        const CycleIcon = getCycleIcon(c.icon) || Repeat;
+        nextResults.push({ type: 'cycle', id: c.id, title: `Ciclo ${c.name}`, subtitle: 'Ciclo temporal', icon: <CycleIcon size={14} color="var(--accent-orange)" /> });
       }
     });
 
@@ -79,9 +81,8 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
         const catId = t.categoryId || (t as any).category_id;
         const sub = catId === 'inbox' || !catId ? 'Bandeja de entrada' : (catId || '');
         const isHigh = t.priority === 'high' || (t.priority as any) === 1;
-        const titlePrefix = isHigh ? '🚨 ' : '';
-        nextResults.push({ type: 'task_flow', id: t.id, title: 'Modo Enfoque: ' + titlePrefix + t.title, subtitle: sub, icon: <Play size={16} /> });
-        nextResults.push({ type: 'task_complete', id: t.id, title: 'Completar: ' + titlePrefix + t.title, subtitle: sub, icon: <CheckCircle size={16} color="var(--accent-green)" /> });
+        nextResults.push({ type: 'task_flow', id: t.id, title: 'Modo Enfoque: ' + t.title, subtitle: sub, isHigh, icon: <Play size={16} /> });
+        nextResults.push({ type: 'task_complete', id: t.id, title: 'Completar: ' + t.title, subtitle: sub, isHigh, icon: isHigh ? <AlertTriangle size={16} color="var(--accent-red, #ff3b30)" /> : <CheckCircle size={16} color="var(--accent-green)" /> });
       }
     });
 
@@ -92,7 +93,7 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
     if (activeFilter === 'all') return true;
     if (activeFilter === 'cycles') return item.type === 'cycle';
     if (activeFilter === 'inbox') return item.type === 'task_complete' && (item.subtitle?.toLowerCase().includes('inbox') || item.subtitle?.toLowerCase().includes('bandeja'));
-    if (activeFilter === 'high') return item.type === 'task_complete' && item.title.toLowerCase().includes('🚨');
+    if (activeFilter === 'high') return item.type === 'task_complete' && item.isHigh;
     return true;
   });
 
@@ -228,21 +229,23 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
 
             <div style={{ display: 'flex', gap: 8, padding: '8px 16px', borderBottom: '1px solid var(--border-subtle)', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
               {[
-                { id: 'all', label: '✨ Todos' },
-                { id: 'cycles', label: '📅 Ciclos' },
-                { id: 'inbox', label: '📥 Bandeja' },
-                { id: 'high', label: '🚨 Prioridad' }
+                { id: 'all', label: 'Todos', Icon: Sparkles },
+                { id: 'cycles', label: 'Ciclos', Icon: Repeat },
+                { id: 'inbox', label: 'Bandeja', Icon: Inbox },
+                { id: 'high', label: 'Prioridad', Icon: AlertTriangle }
               ].map(pill => (
                 <button
                   key={pill.id}
                   type="button"
                   onClick={() => { setActiveFilter(pill.id as any); setSelectedIndex(0); }}
                   style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
                     background: activeFilter === pill.id ? 'var(--accent-primary)' : 'var(--bg-elevated)',
                     color: activeFilter === pill.id ? 'white' : 'var(--text-secondary)',
                     border: 'none', borderRadius: 14, padding: '4px 12px', fontSize: '0.8rem', fontWeight: 500, cursor: 'pointer', transition: 'all 0.15s ease', whiteSpace: 'nowrap'
                   }}
                 >
+                  <pill.Icon size={12} strokeWidth={2.4} />
                   {pill.label}
                 </button>
               ))}

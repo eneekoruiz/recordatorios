@@ -1,7 +1,7 @@
-import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
+import { useState, useRef, useMemo, useCallback, useEffect, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import { Plus } from 'lucide-react';
+import { Plus, Hourglass, User, Users, PartyPopper } from 'lucide-react';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import type { TaskItem } from '../../models/Task';
 import { TaskCard } from '../tasks/TaskCard';
@@ -48,14 +48,15 @@ interface MainContentProps {
 
 type VirtualItemType = 
   | { type: 'page-header', isFirstInSection?: boolean, isLastInSection?: boolean, depth?: number }
-  | { 
-      type: 'header', 
-      title: string, 
-      category: string, 
-      color: string, 
-      sectionId?: string, 
-      depth: number, 
-      isFirstInSection?: boolean, 
+  | {
+      type: 'header',
+      title: string,
+      titleIcon?: ReactNode,
+      category: string,
+      color: string,
+      sectionId?: string,
+      depth: number,
+      isFirstInSection?: boolean,
       isLastInSection?: boolean,
       periodicity?: PeriodicityType | null,
       routineCounts?: { full: number; only: number } | null,
@@ -1016,7 +1017,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               const cObj = useAppStore.getState().cycles.find(c => c.id === cId);
               const cName = cObj ? cObj.name : cId;
               const cycleSepKey = `cycle_sep_${categoryOrCycle}_${cId}`;
-              flat.push({ type: 'header', title: `⏳ ${cName}`, category: cycleSepKey, color: '#0a84ff', depth: 1 });
+              flat.push({ type: 'header', title: cName, titleIcon: <Hourglass size={14} />, category: cycleSepKey, color: '#0a84ff', depth: 1 });
 
               if (!isCatCollapsed(cycleSepKey)) {
                 const cTasks = tasksToRender.filter(t => t.cycle_id === cId);
@@ -1039,19 +1040,28 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           if (isolatedSectionKey && isolatedSectionKey !== groupKey) return;
 
           let headerTitle = groupKey;
+          let headerIcon: ReactNode = undefined;
           if (groupKey.startsWith('persona_')) {
             const pName = groupKey.replace('persona_', '');
-            headerTitle = groupKey === 'persona_solo' ? '👤 Individual / Sin personas' : `👥 ${pName}`;
+            if (groupKey === 'persona_solo') {
+              headerTitle = 'Individual / Sin personas';
+              headerIcon = <User size={15} />;
+            } else {
+              headerTitle = pName;
+              headerIcon = <Users size={15} />;
+            }
           } else if (groupKey.startsWith('timeline_')) {
             const parts = groupKey.replace('timeline_', '').split('_');
             const y = parts[0];
             const m = parseInt(parts[1], 10) - 1;
-            headerTitle = `⏳ ${monthNames[m] || ''} ${y}`;
+            headerTitle = `${monthNames[m] || ''} ${y}`;
+            headerIcon = <Hourglass size={14} />;
           }
 
           flat.push({
             type: 'header',
             title: headerTitle,
+            titleIcon: headerIcon,
             category: groupKey,
             color: '#5856D6',
             depth: 0,
@@ -1145,11 +1155,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               }
             }
 
-            flat.push({ 
-              type: 'header', 
-              title: `⏳ ${cName}`, 
-              category: catKey, 
-              color, 
+            flat.push({
+              type: 'header',
+              title: cName,
+              titleIcon: <Hourglass size={14} />,
+              category: catKey,
+              color,
               depth: 0,
               periodicity: sectionPeriodicity,
               routineCounts,
@@ -1364,7 +1375,11 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const getTitle = () => {
     if (isSmartView) return smartListInfo?.name || 'Recordatorios';
     if (isFolderView) return currentList?.name || 'Carpeta';
-    if (isListView) return currentList?.name || 'Lista';
+    if (isListView) {
+      if (currentList) return currentList.name;
+      // La Bandeja de entrada es una lista virtual: no tiene objeto propio en `lists`.
+      return currentView === 'list_inbox' ? 'Bandeja de entrada' : 'Lista';
+    }
     return currentCycle?.name || 'Ciclos';
   };
 
@@ -1729,7 +1744,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               pointerEvents: 'none'
             }}
           >
-            <span style={{ fontSize: '24px' }}>🎉</span>
+            <span style={{ display: 'flex', width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <PartyPopper size={17} color="#ffd60a" strokeWidth={2.2} />
+            </span>
             <div>
               <div style={{ fontWeight: 600, fontSize: '15px' }}>¡Todo completado!</div>
               <div style={{ fontSize: '12px', opacity: 0.8 }}>Gran trabajo por hoy</div>

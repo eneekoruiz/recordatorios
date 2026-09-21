@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, CreditCard, RefreshCw, FileText } from 'lucide-react';
+import { ChevronDown, CreditCard, RefreshCw, FileText, Link2 } from 'lucide-react';
 
 interface DrawerExpirationSectionProps {
   cardCaducidadOpen: boolean;
@@ -196,8 +196,8 @@ export const DrawerExpirationSection: React.FC<DrawerExpirationSectionProps> = (
 
                   {/* Enlace para gestionar o cancelar suscripción */}
                   <div style={{ marginTop: 4 }}>
-                    <label style={{ display: 'block', fontSize: '0.76rem', color: 'var(--text-secondary)', marginBottom: 5 }}>
-                      🔗 Enlace para gestionar o cancelar suscripción:
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.76rem', color: 'var(--text-secondary)', marginBottom: 5 }}>
+                      <Link2 size={12} strokeWidth={2.4} /> Enlace para gestionar o cancelar suscripción:
                     </label>
                     <input
                       type="url"

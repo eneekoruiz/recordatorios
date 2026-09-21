@@ -292,24 +292,24 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         if (newAlerts.length > 0) {
           setAlerts(prev => [...prev, ...newAlerts]);
         }
-        nlp.times.forEach(t => newChips.push({ type: 'time', label: `⏰ ${t}` }));
+        nlp.times.forEach(t => newChips.push({ type: 'time', label: t }));
       }
-      
+
       if (nlp.suggestedDueDate) {
         setDueDate(nlp.suggestedDueDate);
         setHasDate(true);
-        newChips.push({ type: 'date', label: `📅 ${nlp.suggestedDueDate.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}` });
+        newChips.push({ type: 'date', label: nlp.suggestedDueDate.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }) });
       }
 
       if (nlp.suggestedCycleId) {
         setCycleId(nlp.suggestedCycleId);
         const cName = cycles.find(c => c.id === nlp.suggestedCycleId)?.name || 'Ciclo';
-        newChips.push({ type: 'cycle', label: `🔄 ${cName}` });
+        newChips.push({ type: 'cycle', label: cName });
       }
 
       if (nlp.suggestedPriority) {
         setPriority(nlp.suggestedPriority);
-        const prioLabel = nlp.suggestedPriority === 'high' ? '🚨 Alta' : nlp.suggestedPriority === 'medium' ? '⚡ Media' : '🔵 Baja';
+        const prioLabel = nlp.suggestedPriority === 'high' ? 'Alta' : nlp.suggestedPriority === 'medium' ? 'Media' : 'Baja';
         newChips.push({ type: 'priority', label: prioLabel });
       }
 

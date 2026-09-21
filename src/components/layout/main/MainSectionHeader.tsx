@@ -5,6 +5,7 @@ import type { SectionMenuState } from './SectionContextMenu';
 
 interface SectionData {
   title: string;
+  titleIcon?: React.ReactNode;
   category: string;
   color: string;
   sectionId?: string;
@@ -254,6 +255,11 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               }}
               title={isCustomSection ? "Doble click para editar" : ""}
             >
+              {data.titleIcon && (
+                <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6, opacity: 0.85 }}>
+                  {data.titleIcon}
+                </span>
+              )}
               {data.title}
             </h3>
           )}
@@ -323,6 +329,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5, padding: 4 }}
               title="Opciones de sección"
+              aria-label="Opciones de sección"
             >
               <MoreHorizontal size={16} color="var(--text-primary)" />
             </button>

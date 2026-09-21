@@ -17,6 +17,13 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
   const isDark = theme === 'dark';
   const task = taskId ? tasks[taskId] : null;
 
+  // Tokens de color reutilizados en varios puntos de la pantalla, para no repetir
+  // el mismo ternario isDark en cada estilo individual.
+  const surfaceBg = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)';
+  const surfaceBorder = isDark ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(0, 0, 0, 0.08)';
+  const mutedText = isDark ? 'rgba(255, 255, 255, 0.6)' : 'var(--text-secondary, #636366)';
+  const ambientChipBgInactive = isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)';
+
   const [initialDuration, setInitialDuration] = useState<number>(25 * 60);
   const [timeLeft, setTimeLeft] = useState<number>(25 * 60);
   const [isActive, setIsActive] = useState<boolean>(false);
@@ -160,9 +167,9 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
               width: 44,
               height: 44,
               borderRadius: '50%',
-              background: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-              border: isDark ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(0, 0, 0, 0.08)',
-              color: isDark ? 'rgba(255, 255, 255, 0.6)' : 'var(--text-secondary, #636366)',
+              background: surfaceBg,
+              border: surfaceBorder,
+              color: mutedText,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -170,6 +177,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
               transition: 'all 0.2s ease'
             }}
             title="Cerrar (Esc)"
+            aria-label="Cerrar modo zen"
           >
             <X size={20} />
           </button>
@@ -422,9 +430,9 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   style={{
                     padding: '8px 6px',
                     borderRadius: 12,
-                    background: ambientType === 'off' ? (isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.12)') : (isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)'),
+                    background: ambientType === 'off' ? (isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.12)') : ambientChipBgInactive,
                     border: ambientType === 'off' ? (isDark ? '1px solid rgba(255,255,255,0.3)' : '1px solid rgba(0,0,0,0.15)') : '1px solid transparent',
-                    color: ambientType === 'off' ? (isDark ? 'white' : 'var(--text-primary, #1c1c1e)') : (isDark ? 'rgba(255, 255, 255, 0.6)' : 'var(--text-secondary, #636366)'),
+                    color: ambientType === 'off' ? (isDark ? 'white' : 'var(--text-primary, #1c1c1e)') : mutedText,
                     fontSize: '0.8rem',
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -443,9 +451,9 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   style={{
                     padding: '8px 6px',
                     borderRadius: 12,
-                    background: ambientType === 'rain' ? 'var(--accent-primary, #0a84ff)' : (isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)'),
+                    background: ambientType === 'rain' ? 'var(--accent-primary, #0a84ff)' : ambientChipBgInactive,
                     border: ambientType === 'rain' ? '1px solid rgba(10,132,255,0.5)' : '1px solid transparent',
-                    color: ambientType === 'rain' ? 'white' : (isDark ? 'rgba(255, 255, 255, 0.6)' : 'var(--text-secondary, #636366)'),
+                    color: ambientType === 'rain' ? 'white' : mutedText,
                     fontSize: '0.8rem',
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -464,9 +472,9 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   style={{
                     padding: '8px 6px',
                     borderRadius: 12,
-                    background: ambientType === 'waves' ? 'var(--accent-primary, #0a84ff)' : (isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)'),
+                    background: ambientType === 'waves' ? 'var(--accent-primary, #0a84ff)' : ambientChipBgInactive,
                     border: ambientType === 'waves' ? '1px solid rgba(10,132,255,0.5)' : '1px solid transparent',
-                    color: ambientType === 'waves' ? 'white' : (isDark ? 'rgba(255, 255, 255, 0.6)' : 'var(--text-secondary, #636366)'),
+                    color: ambientType === 'waves' ? 'white' : mutedText,
                     fontSize: '0.8rem',
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -485,9 +493,9 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   style={{
                     padding: '8px 6px',
                     borderRadius: 12,
-                    background: ambientType === 'binaural' ? 'var(--accent-primary, #0a84ff)' : (isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)'),
+                    background: ambientType === 'binaural' ? 'var(--accent-primary, #0a84ff)' : ambientChipBgInactive,
                     border: ambientType === 'binaural' ? '1px solid rgba(10,132,255,0.5)' : '1px solid transparent',
-                    color: ambientType === 'binaural' ? 'white' : (isDark ? 'rgba(255, 255, 255, 0.6)' : 'var(--text-secondary, #636366)'),
+                    color: ambientType === 'binaural' ? 'white' : mutedText,
                     fontSize: '0.8rem',
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -565,6 +573,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   justifyContent: 'center'
                 }}
                 title="Cambiar tiempo asignado"
+                aria-label="Cambiar tiempo asignado"
               >
                 <Clock size={20} />
               </button>

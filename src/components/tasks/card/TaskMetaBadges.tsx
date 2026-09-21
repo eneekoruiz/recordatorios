@@ -1,4 +1,4 @@
-import { Calendar, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat } from 'lucide-react';
+import { Calendar, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen } from 'lucide-react';
 import type { TaskItem, CustomList } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
@@ -194,7 +194,7 @@ export function TaskMetaBadges({
             >
               <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 {task.url.includes('drive.google.com') || task.url.includes('docs.google.com') ? (
-                  <span style={{ fontSize: '1.1rem' }}>📁</span>
+                  <FolderOpen size={16} color="var(--accent-primary)" />
                 ) : (
                   <Link2 size={16} color="var(--accent-primary)" />
                 )}

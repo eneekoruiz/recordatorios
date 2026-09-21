@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, X } from 'lucide-react';
+import { ChevronDown, X, Users, User } from 'lucide-react';
 
 interface DrawerPeopleSectionProps {
   cardPeopleOpen: boolean;
@@ -39,7 +39,7 @@ export const DrawerPeopleSection: React.FC<DrawerPeopleSectionProps> = ({
         onClick={() => setCardPeopleOpen(!cardPeopleOpen)}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 14 }}>👥</span>
+          <Users size={15} strokeWidth={2.1} />
           Personas involucradas ({people.length})
         </span>
         <ChevronDown size={18} style={{ transform: cardPeopleOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
@@ -58,7 +58,7 @@ export const DrawerPeopleSection: React.FC<DrawerPeopleSectionProps> = ({
                       background: 'rgba(88, 86, 214, 0.14)', color: '#5856d6', border: '1px solid rgba(88, 86, 214, 0.25)' 
                     }}
                   >
-                    <span>👤 {p}</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><User size={11} strokeWidth={2.4} /> {p}</span>
                     <button
                       type="button"
                       onClick={() => setPeople(people.filter(x => x !== p))}

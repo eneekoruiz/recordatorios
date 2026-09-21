@@ -1,11 +1,14 @@
 import React from 'react';
-import { 
-  ArrowUpDown, 
-  X, 
-  Users, 
-  Clock, 
-  CreditCard, 
-  ShieldAlert
+import {
+  ArrowUpDown,
+  X,
+  Users,
+  User,
+  Clock,
+  CreditCard,
+  ShieldAlert,
+  Wand2,
+  Star
 } from 'lucide-react';
 import { HapticService } from '../../../services/HapticService';
 import { isCaducidadesList, isQueHeHechoList } from '../../../utils/specialLists';
@@ -357,7 +360,8 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                   }}
                   title="Generar memoria y resumen mensual con IA"
                 >
-                  <span>🪄 Resumen del mes</span>
+                  <Wand2 size={13} strokeWidth={2.2} />
+                  <span>Resumen del mes</span>
                 </button>
               </div>
             </div>
@@ -399,10 +403,11 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                         border: selectedPersonFilter === p ? '1px solid #5856D6' : '1px solid var(--border-subtle)',
                         background: selectedPersonFilter === p ? '#5856D6' : 'var(--bg-elevated)',
                         color: selectedPersonFilter === p ? '#ffffff' : 'var(--text-secondary)',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        display: 'inline-flex', alignItems: 'center', gap: 4
                       }}
                     >
-                      👤 {p}
+                      <User size={11} strokeWidth={2.4} /> {p}
                     </button>
                   ))}
                 </div>
@@ -429,7 +434,9 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                 title="Toca para ver este recuerdo"
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: '1.4rem' }}>🌟</span>
+                  <span style={{ display: 'flex', width: 32, height: 32, borderRadius: '50%', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'rgba(255, 149, 0, 0.16)' }}>
+                    <Star size={16} color="#ff9500" fill="#ff9500" strokeWidth={1.5} />
+                  </span>
                   <div>
                     <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                       Un día como hoy: {flashbackMemories[0].title}

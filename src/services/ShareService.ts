@@ -42,7 +42,7 @@ export async function shareList(listId: string, listName: string) {
     }
   }
   const copied = await copyToClipboard(url);
-  toast(copied ? `🔗 Enlace de «${listName}» copiado (solo lectura)` : url);
+  toast(copied ? `Enlace de «${listName}» copiado (solo lectura)` : url);
 }
 
 export async function unshareList(listId: string, listName: string) {

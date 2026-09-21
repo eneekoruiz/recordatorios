@@ -217,18 +217,7 @@ function MenuActions({
   if (currentSubmenu === 'move_list') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px 8px' }}>
-          <button 
-            type="button"
-            onClick={() => setCurrentSubmenu('main')}
-            style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, padding: 0 }}
-          >
-            <ArrowLeft size={16} /> Volver
-          </button>
-          <span style={{ flex: 1, textAlign: 'center', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginRight: 20 }}>
-            Trasladar a lista
-          </span>
-        </div>
+        <SubmenuHeader title="Trasladar a lista" onBack={() => setCurrentSubmenu('main')} />
         <div className="ios-dropdown-divider" />
         <div style={{ maxHeight: 280, overflowY: 'auto', padding: '4px 0' }}>
           {lists?.map(list => {
@@ -266,18 +255,7 @@ function MenuActions({
   if (currentSubmenu === 'move_section') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px 8px' }}>
-          <button 
-            type="button"
-            onClick={() => setCurrentSubmenu('main')}
-            style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, padding: 0 }}
-          >
-            <ArrowLeft size={16} /> Volver
-          </button>
-          <span style={{ flex: 1, textAlign: 'center', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginRight: 20 }}>
-            Trasladar a sección
-          </span>
-        </div>
+        <SubmenuHeader title="Trasladar a sección" onBack={() => setCurrentSubmenu('main')} />
         <div className="ios-dropdown-divider" />
         <div style={{ maxHeight: 280, overflowY: 'auto', padding: '4px 0' }}>
           <button
@@ -338,18 +316,7 @@ function MenuActions({
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px 8px' }}>
-          <button 
-            type="button"
-            onClick={() => setCurrentSubmenu('main')}
-            style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, padding: 0 }}
-          >
-            <ArrowLeft size={16} /> Volver
-          </button>
-          <span style={{ flex: 1, textAlign: 'center', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginRight: 20 }}>
-            Fecha límite
-          </span>
-        </div>
+        <SubmenuHeader title="Fecha límite" onBack={() => setCurrentSubmenu('main')} />
         <div className="ios-dropdown-divider" />
         <div style={{ padding: '4px 0' }}>
           <ActionRow 
@@ -430,18 +397,7 @@ function MenuActions({
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px 8px' }}>
-          <button 
-            type="button"
-            onClick={() => setCurrentSubmenu('main')}
-            style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, padding: 0 }}
-          >
-            <ArrowLeft size={16} /> Volver
-          </button>
-          <span style={{ flex: 1, textAlign: 'center', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginRight: 20 }}>
-            Prioridad
-          </span>
-        </div>
+        <SubmenuHeader title="Prioridad" onBack={() => setCurrentSubmenu('main')} />
         <div className="ios-dropdown-divider" />
         <div style={{ padding: '4px 0' }}>
           {priorities.map(p => {
@@ -502,15 +458,14 @@ function MenuActions({
       />
 
       {/* 2. Editar recordatorio (Panel de metadatos) */}
-      <ActionRow 
-        icon={<Info size={16} color="var(--accent-primary)" />} 
-        label="Editar recordatorio" 
+      <ActionRow
+        icon={<Info size={16} color="var(--accent-primary)" />}
+        label="Editar recordatorio"
         sublabel="Metadatos y notas"
-        trailing={<span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>ℹ️</span>}
-        onClick={() => { 
-          setContextMenuOpen(false); 
-          onEdit(task.id); 
-        }} 
+        onClick={() => {
+          setContextMenuOpen(false);
+          onEdit(task.id);
+        }}
       />
 
       <div className="ios-dropdown-divider" />
@@ -721,6 +676,25 @@ function MenuActions({
         onClick={() => { setContextMenuOpen(false); setIsDeleteConfirmOpen(true); }} 
       />
     </>
+  );
+}
+
+/** Cabecera reutilizable de submenú: botón "Volver" + título centrado. */
+function SubmenuHeader({ title, onBack }: { title: string; onBack: () => void }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px 8px' }}>
+      <button
+        type="button"
+        onClick={onBack}
+        aria-label="Volver al menú anterior"
+        style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, padding: 0 }}
+      >
+        <ArrowLeft size={16} /> Volver
+      </button>
+      <span style={{ flex: 1, textAlign: 'center', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginRight: 20 }}>
+        {title}
+      </span>
+    </div>
   );
 }
 

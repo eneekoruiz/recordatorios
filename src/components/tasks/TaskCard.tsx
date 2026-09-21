@@ -4,7 +4,8 @@ import { motion, useMotionValue, useTransform, AnimatePresence, useMotionValueEv
 import {
   Lock, Image as ImageIcon, MoreHorizontal,
   ChevronDown, X, Info, RotateCcw, Flag,
-  ShieldAlert, Clock, CheckCircle2, CreditCard
+  ShieldAlert, Clock, CheckCircle2, CreditCard,
+  Flame, User, MapPin, Link2
 } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -832,7 +833,7 @@ export const TaskCard = React.memo(function TaskCard({
                   lineHeight: '1.2'
                 }}
               >
-                <span>🔥</span>
+                <Flame size={12} strokeWidth={2.2} />
                 <span>{habitStreak.count} {habitStreak.unit}</span>
               </span>
             )}
@@ -940,7 +941,7 @@ export const TaskCard = React.memo(function TaskCard({
                       cursor: 'pointer'
                     }}
                   >
-                    <span>👤</span>
+                    <User size={11} strokeWidth={2.4} />
                     <span>{person}</span>
                   </span>
                 ))}
@@ -964,7 +965,7 @@ export const TaskCard = React.memo(function TaskCard({
                 }}
                 title={`Ubicación: ${task.locationName}`}
               >
-                <span>📍</span>
+                <MapPin size={11} strokeWidth={2.4} />
                 <span>{task.locationName}</span>
               </span>
             )}
@@ -991,7 +992,7 @@ export const TaskCard = React.memo(function TaskCard({
                 }}
                 title="Gestionar o cancelar suscripción en la web oficial"
               >
-                <span>🔗</span>
+                <Link2 size={11} strokeWidth={2.4} />
                 <span>Gestionar</span>
               </a>
             )}
