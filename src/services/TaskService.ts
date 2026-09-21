@@ -1,12 +1,30 @@
-import type { TaskItem, CustomCycle } from '../models/Task';
+import type { TaskItem, CustomCycle, ListSection, CustomList } from '../models/Task';
+import { getEffectiveCycleId } from '../utils/sectionRoutine';
+
+/**
+ * Retorna el inicio de la semana actual (lunes a las 00:00:00 local).
+ */
+export function getStartOfWeek(date: Date = new Date()): Date {
+  const d = new Date(date);
+  const day = d.getDay(); // 0 es domingo, 1 es lunes...
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
 
 /**
  * Servicio puro para determinar si una tarea recurrente
- * ya fue completada dentro de su periodo actual.
+ * ya fue completada dentro de su periodo actual (hoy, esta semana, etc.).
  *
  * Aplica principios de Clean Code, Guard Clauses y tipado estricto.
  */
-export function isCompletedInCurrentPeriod(task: Partial<TaskItem>, cycles: CustomCycle[]): boolean {
+export function isCompletedInCurrentPeriod(
+  task: Partial<TaskItem>, 
+  cycles: CustomCycle[] = [],
+  sections?: ListSection[],
+  lists?: CustomList[]
+): boolean {
   // Si la tarea tiene meta de repeticiones (ej. 3 vasos de agua), no está completada hasta alcanzar la meta
   if (task.targetCount && task.targetCount > 1) {
     if ((task.currentCount || 0) < task.targetCount) {
@@ -14,18 +32,17 @@ export function isCompletedInCurrentPeriod(task: Partial<TaskItem>, cycles: Cust
     }
   }
 
+  // Deducir ciclo efectivo (explícito o por sección Diarias/Semanales, título [D], etc.)
+  const effCycleId = task.cycle_id || getEffectiveCycleId(task, sections, lists);
+
+  // Si no es una tarea de ciclo (es puntual) y tiene status completed
   const isDone = task.status === 'completed' || !!(task as any).completed_at || !!(task as any).completed;
-  
-  if (isDone && !task.cycle_id) {
-    return true;
+  if (!effCycleId) {
+    return isDone;
   }
 
-  if (!task.cycle_id || !task.completionHistory || task.completionHistory.length === 0) {
-    return false;
-  }
-
-  const cycle = cycles.find((c) => c.id === task.cycle_id);
-  if (!cycle) {
+  // Si es periódica pero no tiene historial de finalizaciones, está pendiente para el periodo actual
+  if (!task.completionHistory || task.completionHistory.length === 0) {
     return false;
   }
 
@@ -33,7 +50,34 @@ export function isCompletedInCurrentPeriod(task: Partial<TaskItem>, cycles: Cust
   const now = new Date();
   const lastDate = new Date(lastCompletion);
 
-  return checkCyclePeriodMatch(cycle.daysValue, lastDate, now, lastCompletion);
+  // 1. Ciclo diario: completada si la última finalización ocurrió HOY
+  if (effCycleId === 'cycle_day') {
+    return lastDate.toDateString() === now.toDateString();
+  }
+
+  // 2. Ciclo semanal: completada si la última finalización ocurrió durante la semana en curso (desde el lunes)
+  if (effCycleId === 'cycle_week') {
+    const startOfWeek = getStartOfWeek(now);
+    return lastCompletion >= startOfWeek.getTime();
+  }
+
+  // 3. Ciclo mensual: completada si ocurrió en el mismo mes y año
+  if (effCycleId === 'cycle_month') {
+    return lastDate.getMonth() === now.getMonth() && lastDate.getFullYear() === now.getFullYear();
+  }
+
+  // 4. Ciclo anual: completada si ocurrió en el mismo año
+  if (effCycleId === 'cycle_year') {
+    return lastDate.getFullYear() === now.getFullYear();
+  }
+
+  // 5. Ciclo personalizado por daysValue
+  const cycle = cycles.find((c) => c.id === effCycleId);
+  if (cycle) {
+    return checkCyclePeriodMatch(cycle.daysValue, lastDate, now, lastCompletion);
+  }
+
+  return lastDate.toDateString() === now.toDateString();
 }
 
 /**
@@ -45,9 +89,8 @@ function checkCyclePeriodMatch(daysValue: number, lastDate: Date, now: Date, las
   }
 
   if (daysValue === 7) {
-    const diffMs = Math.abs(now.getTime() - lastDate.getTime());
-    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-    return diffDays <= 7;
+    const startOfWeek = getStartOfWeek(now);
+    return lastCompletion >= startOfWeek.getTime();
   }
 
   if (daysValue === 30) {

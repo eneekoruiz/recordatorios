@@ -4,6 +4,8 @@ import { idbStorage } from '../utils/idbStorage';
 import type { TaskItem, CustomCycle, CustomList, ListSection } from '../models/Task';
 import { TaskRepository } from '../repositories/TaskRepository';
 import { isCompletedInCurrentPeriod, wouldCreateDependencyCycle } from '../services/TaskService';
+import { getEffectiveCycleId } from '../utils/sectionRoutine';
+import { findDuplicateTask } from '../utils/taskDeduplication';
 
 const optimisticUpdate = (
   get: () => AppState,
@@ -269,6 +271,12 @@ export const useAppStore = create<AppState>()(
       },
 
       addTask: (payload) => optimisticUpdate(get, set, (state) => {
+        // ── Duplicate guard ──────────────────────────────────────────────
+        // Silently skip insertion if an identical task (same normalized title,
+        // same list, same section) already exists and is not deleted.
+        if (findDuplicateTask(payload, state.tasks)) {
+          return state; // no-op
+        }
         const newTask = TaskRepository.create(payload);
         // Auto-activate the cycle view when a task with a cycle_id is first created
         let newCycleVisibility = state.cycleVisibility;
@@ -296,6 +304,8 @@ export const useAppStore = create<AppState>()(
         let newCycleVisibility = { ...state.cycleVisibility };
 
         tasksToCreate.forEach(payload => {
+          // Skip if an identical task already exists (dedup guard)
+          if (findDuplicateTask(payload, newTasks)) return;
           const newTask = TaskRepository.create(payload);
           newTasks[newTask.id] = newTask;
           if (newTask.cycle_id && newCycleVisibility[newTask.cycle_id] === undefined) {
@@ -324,13 +334,14 @@ export const useAppStore = create<AppState>()(
         let updatedTask: TaskItem;
         const alerts = existingTask.alerts || [];
         const completedAlerts = existingTask.completedAlerts || [];
-        const isOneOff = !existingTask.cycle_id;
+        const effCycle = existingTask.cycle_id || getEffectiveCycleId(existingTask, state.listSections, state.lists);
+        const isOneOff = !effCycle;
         const isTargetTask = Boolean(existingTask.targetCount && existingTask.targetCount > 1);
         const currentCount = existingTask.currentCount || 0;
         const targetCount = existingTask.targetCount || 1;
         
         // Auto-detect reverse if already completed or if forceReverse is explicitly passed
-        const isDone = isTaskCompleted(existingTask) || isCompletedInCurrentPeriod(existingTask, state.cycles);
+        const isDone = isTaskCompleted(existingTask) || isCompletedInCurrentPeriod(existingTask, state.cycles, state.listSections, state.lists);
         const shouldReverse = forceReverse !== undefined ? forceReverse : isDone;
         
         if (shouldReverse) {
@@ -385,6 +396,7 @@ export const useAppStore = create<AppState>()(
               const newCompletionHistory = [...(existingTask.completionHistory || []), Date.now()];
               if (!isOneOff) {
                 updatedTask = TaskRepository.update(existingTask, {
+                  cycle_id: existingTask.cycle_id || effCycle || undefined,
                   completedAlerts: [],
                   completionHistory: newCompletionHistory,
                   status: 'pending',
@@ -409,6 +421,7 @@ export const useAppStore = create<AppState>()(
             const targetCountUpdate = existingTask.targetCount ? { currentCount: existingTask.targetCount } : {};
             if (!isOneOff) {
               updatedTask = TaskRepository.update(existingTask, { 
+                cycle_id: existingTask.cycle_id || effCycle || undefined,
                 completedAlerts: [], 
                 completionHistory: newCompletionHistory,
                 status: 'pending',
@@ -685,17 +698,11 @@ export const useAppStore = create<AppState>()(
           .filter((t: any) => !t.deleted_at && (includeCompleted || !isTaskCompleted(t) || temporarilyShowIds.includes(t.id)))
           .filter((t: any) => {
             if (t.categoryId === 'primeros_pasos') return false;
-            const taskSec = (t.sectionId || (t as any).section_id || '').toLowerCase();
-            const effCycle = t.cycle_id || (
-              t.categoryId === 'limpieza_diaria' || !!t.targetCount || taskSec.includes('diaria') || taskSec.includes('recurrent') ? 'cycle_day' :
-              t.categoryId === 'limpieza_semanal' || taskSec.includes('semanal') ? 'cycle_week' :
-              t.categoryId === 'limpieza_mensual' || taskSec.includes('mensual') ? 'cycle_month' :
-              t.categoryId === 'limpieza_anual' || taskSec.includes('anual') ? 'cycle_year' : null
-            );
+            const effCycle = getEffectiveCycleId(t, get().listSections, get().lists);
             if (!effCycle) return false;
             return validCycles.includes(effCycle as string);
           })
-          .filter((t: any) => includeCompleted || temporarilyShowIds.includes(t.id) || !isCompletedInCurrentPeriod(t, cycles));
+          .filter((t: any) => includeCompleted || temporarilyShowIds.includes(t.id) || !isCompletedInCurrentPeriod(t, cycles, get().listSections, get().lists));
 
         const tasksToInclude = new Map<string, TaskItem>();
         matchedTasks.forEach((t: any) => {
@@ -729,23 +736,11 @@ export const useAppStore = create<AppState>()(
             return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
           });
           
-        if (cycleId === 'cycle_day') {
-          sortedTasks.forEach((t: any) => {
-            const tod = t.timeOfDay ? `tod_${t.timeOfDay}` : 'tod_none';
-            if (!grouped[tod]) grouped[tod] = [];
-            grouped[tod].push(t);
-          });
-          const order = ['tod_morning', 'tod_afternoon', 'tod_night', 'tod_none'];
-          const sortedGrouped: Record<string, TaskItem[]> = {};
-          order.forEach(k => { if (grouped[k]) sortedGrouped[k] = grouped[k]; });
-          return sortedGrouped;
-        } else {
-          sortedTasks.forEach((t: any) => {
-            const listId = t.categoryId || (t as any).category_id || 'inbox';
-            if (!grouped[listId]) grouped[listId] = [];
-            grouped[listId].push(t);
-          });
-        }
+        sortedTasks.forEach((t: any) => {
+          const listId = t.categoryId || (t as any).category_id || 'inbox';
+          if (!grouped[listId]) grouped[listId] = [];
+          grouped[listId].push(t);
+        });
         return grouped;
       },
 
@@ -765,7 +760,7 @@ export const useAppStore = create<AppState>()(
           const matchesList = listId === 'inbox' 
             ? (effectiveCat === 'inbox' || !effectiveCat)
             : effectiveCat === listId;
-          const isDone = isTaskCompleted(t) || isCompletedInCurrentPeriod(t, cycles);
+          const isDone = isTaskCompleted(t) || isCompletedInCurrentPeriod(t, cycles, listSections, lists);
           return matchesList && (includeCompleted || !isDone || temporarilyShowIds.includes(t.id));
         });
         

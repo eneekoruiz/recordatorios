@@ -165,11 +165,39 @@ function App() {
     };
   }, []);
 
-  // ── Resize listener ──────────────────────────────────────────────
+  // ── Resize / Orientation listener ────────────────────────────────
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const recalcLayout = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(prev => {
+        if (prev !== mobile) {
+          // Transitioning desktop → mobile: ensure content panel is visible
+          // Transitioning mobile → desktop: reset mobileView so classes are clean
+          if (!mobile) {
+            // Going desktop: reset mobileView (no panels), does not affect visible state on desktop
+            setMobileView('sidebar');
+          }
+        }
+        return mobile;
+      });
+    };
+
+    recalcLayout(); // Immediate sync on mount
+    window.addEventListener('resize', recalcLayout);
+    // orientationchange fires before resize completes on some mobile browsers;
+    // use a short delay so innerWidth has settled.
+    const handleOrientation = () => setTimeout(recalcLayout, 100);
+    window.addEventListener('orientationchange', handleOrientation);
+    if (screen.orientation) {
+      screen.orientation.addEventListener('change', recalcLayout);
+    }
+    return () => {
+      window.removeEventListener('resize', recalcLayout);
+      window.removeEventListener('orientationchange', handleOrientation);
+      if (screen.orientation) {
+        screen.orientation.removeEventListener('change', recalcLayout);
+      }
+    };
   }, []);
 
   // ── Geolocation / Geofencing (single instance) ───────────────────

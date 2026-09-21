@@ -99,6 +99,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   // Local state
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [isScrolled, setIsScrolled] = useState(false);
+  const [scrollTop, setScrollTop] = useState(0);
   const [isListConfigOpen, setIsListConfigOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [confirmProps, setConfirmProps] = useState<{ title: string; message: string; onConfirm: () => void }>({ title: '', message: '', onConfirm: () => {} });
@@ -774,7 +775,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       const isTargetTask = Boolean(task.targetCount && task.targetCount > 1);
       const currentCount = task.currentCount || 0;
       const targetCount = task.targetCount || 1;
-      const isDone = isTaskCompleted(task) || isCompletedInCurrentPeriod(task, cycles);
+      const isDone = isTaskCompleted(task) || isCompletedInCurrentPeriod(task, cycles, listSections, lists);
 
       let willBeCompleted = false;
       if (forceReverse) {
@@ -1415,6 +1416,7 @@ let routineCounts = null;
       {/* Sticky Glass Top Bar */}
       <MainGlassHeader
         isScrolled={isScrolled}
+        scrollTop={scrollTop}
         isMobile={isMobile}
         onBackToSidebar={onBackToSidebar}
         isSmartView={isSmartView}
@@ -1452,7 +1454,9 @@ let routineCounts = null;
             data-testid="content-scroll-container"
             onScroll={(e) => {
               const top = e.currentTarget.scrollTop;
-              setIsScrolled(top > 20);
+              const clamped = Math.min(60, Math.max(0, top));
+              setScrollTop(clamped);
+              setIsScrolled(top > 16);
             }}
             style={{
               flex: 1,
@@ -1464,7 +1468,14 @@ let routineCounts = null;
               WebkitOverflowScrolling: 'touch',
               position: 'relative',
               display: isActuallyEmpty ? 'flex' : 'block',
-              flexDirection: isActuallyEmpty ? 'column' : undefined
+              flexDirection: isActuallyEmpty ? 'column' : undefined,
+              WebkitMaskImage: scrollTop > 1 
+                ? 'linear-gradient(to bottom, transparent 0px, rgba(0,0,0,0.12) 6px, rgba(0,0,0,0.65) 18px, #000 32px, #000 calc(100% - 24px), rgba(0,0,0,0.5) calc(100% - 8px), transparent 100%)'
+                : 'linear-gradient(to bottom, #000 0px, #000 calc(100% - 24px), rgba(0,0,0,0.5) calc(100% - 8px), transparent 100%)',
+              maskImage: scrollTop > 1 
+                ? 'linear-gradient(to bottom, transparent 0px, rgba(0,0,0,0.12) 6px, rgba(0,0,0,0.65) 18px, #000 32px, #000 calc(100% - 24px), rgba(0,0,0,0.5) calc(100% - 8px), transparent 100%)'
+                : 'linear-gradient(to bottom, #000 0px, #000 calc(100% - 24px), rgba(0,0,0,0.5) calc(100% - 8px), transparent 100%)',
+              transition: 'mask-image 0.2s ease, -webkit-mask-image 0.2s ease'
             }}
           >
             <div style={{
@@ -1488,6 +1499,7 @@ let routineCounts = null;
                   return (
                     <div key={itemKey} data-index={index} style={{ ...itemStyle, padding: 0 }}>
                       <MainPageHeader
+                        scrollTop={scrollTop}
                         isMobile={isMobile}
                         onBackToSidebar={onBackToSidebar}
                         currentList={currentList}

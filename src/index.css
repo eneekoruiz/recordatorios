@@ -1586,11 +1586,50 @@ html, body {
 
 
 
-/* Solid Opaque Background for Sticky Section Headers to prevent text bleeding through */
+/* Section Headers: flow naturally in scroll container and dissolve softly at boundaries */
 .group-header {
-  position: sticky !important;
-  top: 0;
-  z-index: 10;
-  background: var(--bg-base) !important;
-  border-bottom: 1px solid var(--border-subtle) !important;
+  position: relative;
+  z-index: 2;
+}
+
+/* ========================================================
+   ORIENTATION / LANDSCAPE MOBILE FIXES
+   Ensure layout recalculates correctly when device rotates.
+======================================================== */
+
+/* Always use dynamic viewport units so panels fill after rotation */
+.app-container {
+  width: 100dvw;
+  height: 100dvh;
+  max-height: 100dvh;
+}
+
+@media (max-width: 768px) {
+  /* Prevent the glass header from clipping at narrow heights */
+  .glass-header {
+    min-height: calc(env(safe-area-inset-top, 0px) + 44px) !important;
+    flex-wrap: nowrap !important;
+    overflow: visible !important;
+  }
+  /* Prevent header action buttons from wrapping / overflowing */
+  .header-actions {
+    flex-wrap: nowrap !important;
+    overflow: visible !important;
+  }
+  /* On landscape (short height), tighten the page header padding */
+  @media (max-height: 500px) {
+    .content-header {
+      padding-top: 8px !important;
+      padding-bottom: 8px !important;
+    }
+    .glass-header {
+      padding-top: calc(env(safe-area-inset-top, 0px) + 6px) !important;
+      padding-bottom: 6px !important;
+    }
+  }
+}
+
+/* Prevent -webkit-tap-highlight from showing a blue box on long-press */
+* {
+  -webkit-tap-highlight-color: transparent;
 }

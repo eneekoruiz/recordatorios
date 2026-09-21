@@ -13,16 +13,18 @@ export const getSectionPeriodicity = (
 ): PeriodicityType | null => {
   const raw = `${sectionKeyOrId} ${title || ''}`.toLowerCase();
 
-  // 1. Si es un section_id manual de la lista
-  if (sectionKeyOrId.startsWith('section_') && sections) {
-    const secId = sectionKeyOrId.replace('section_', '');
-    const sec = sections.find(s => s.id === secId);
-    if (sec) {
+  // 1. Si es un section_id manual de la lista (con prefijo 'section_', 'sec_' o id directo)
+  const secIdClean = sectionKeyOrId.startsWith('section_') ? sectionKeyOrId.replace('section_', '') :
+                     sectionKeyOrId.startsWith('sec_') ? sectionKeyOrId : sectionKeyOrId;
+  if (sections) {
+    let sec = sections.find(s => s.id === secIdClean || s.id === `sec_${secIdClean}` || s.id === `section_${secIdClean}`);
+    while (sec) {
       const secNorm = `${sec.id} ${sec.name}`.toLowerCase();
       if (secNorm.includes('diari') || secNorm.includes('recurrent') || /\b(d[ií]as?)\b/i.test(secNorm)) return 'day';
       if (secNorm.includes('seman') || /\b(sem)\b/i.test(secNorm)) return 'week';
       if (secNorm.includes('mensu') || /\b(mes(es)?)\b/i.test(secNorm)) return 'month';
       if (secNorm.includes('anual') || /\b(a[ñn]os?)\b/i.test(secNorm)) return 'year';
+      sec = sec.parentId ? sections.find(s => s.id === sec!.parentId) : undefined;
     }
   }
 
@@ -101,7 +103,7 @@ export const getTaskPeriodicity = (
     }
   }
 
-  // 5. Sección manual asignada
+  // 5. Sección manual asignada (con soporte para sub-secciones jerárquicas que heredan de su sección padre)
   const secId = task.sectionId || (task as any).section_id;
   if (secId) {
     const secLower = secId.toLowerCase();
@@ -110,18 +112,38 @@ export const getTaskPeriodicity = (
     if (secLower.includes('mensu')) return 'month';
     if (secLower.includes('anual')) return 'year';
 
-    const secObj = sections?.find(s => s.id === secId);
-    if (secObj) {
-      const secText = `${secObj.name || ''} ${secId}`.toLowerCase();
+    let secObj = sections?.find(s => s.id === secId);
+    while (secObj) {
+      const secText = `${secObj.name || ''} ${secObj.id}`.toLowerCase();
       if (secText.includes('diari') || secText.includes('recurrent') || /\b(d[ií]as?)\b/i.test(secText)) return 'day';
       if (secText.includes('seman') || /\b(sem)\b/i.test(secText)) return 'week';
       if (secText.includes('mensu') || /\b(mes(es)?)\b/i.test(secText)) return 'month';
       if (secText.includes('anual') || /\b(a[ñn]os?)\b/i.test(secText)) return 'year';
+      secObj = secObj.parentId ? sections?.find(s => s.id === secObj!.parentId) : undefined;
     }
   }
 
   return null;
 };
+
+/**
+ * Retorna el cycle_id canónico ('cycle_day', 'cycle_week', etc.)
+ * ya sea explícito o deducido de la periodicidad de la tarea.
+ */
+export const getEffectiveCycleId = (
+  task: Partial<TaskItem>,
+  sections?: ListSection[],
+  lists?: CustomList[]
+): string | null => {
+  if (task.cycle_id) return task.cycle_id;
+  const p = getTaskPeriodicity(task as TaskItem, sections, lists);
+  if (p === 'day') return 'cycle_day';
+  if (p === 'week') return 'cycle_week';
+  if (p === 'month') return 'cycle_month';
+  if (p === 'year') return 'cycle_year';
+  return null;
+};
+
 
 /**
  * Retorna el conjunto de periodicidades que corresponden a la rutina de una sección.

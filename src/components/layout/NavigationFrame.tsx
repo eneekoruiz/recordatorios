@@ -1,7 +1,7 @@
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { ArrowLeft, ChevronLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 interface NavigationFrameProps {
   children: ReactNode;
@@ -21,8 +21,24 @@ export function NavigationFrame({
 }: NavigationFrameProps) {
   const showBackBar = false; // El usuario quiere mantener solo el botón azul integrado en la cabecera del contenido y eliminar este top hood negro
 
-  const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 400;
+  const [screenWidth, setScreenWidth] = useState(() => 
+    typeof window !== 'undefined' ? window.innerWidth : 400
+  );
   const dragControls = useDragControls();
+
+  // Keep screenWidth in sync so drag constraints stay correct after orientation change
+  useEffect(() => {
+    const update = () => setScreenWidth(window.innerWidth);
+    const delayed = () => setTimeout(update, 100);
+    window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', delayed);
+    if (screen.orientation) screen.orientation.addEventListener('change', update);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', delayed);
+      if (screen.orientation) screen.orientation.removeEventListener('change', update);
+    };
+  }, []);
 
   // Intercept normal browser back button / Android gesture
   useEffect(() => {

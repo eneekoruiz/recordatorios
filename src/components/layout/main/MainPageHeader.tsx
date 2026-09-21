@@ -15,6 +15,7 @@ import { isCaducidadesList, isQueHeHechoList } from '../../../utils/specialLists
 import type { TaskItem, CustomCycle, CustomList } from '../../../models/Task';
 
 interface MainPageHeaderProps {
+  scrollTop?: number;
   isMobile?: boolean;
   onBackToSidebar?: () => void;
   currentList?: CustomList;
@@ -53,6 +54,7 @@ interface MainPageHeaderProps {
 }
 
 export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
+  scrollTop,
   isMobile: _isMobile,
   onBackToSidebar: _onBackToSidebar,
   currentList,
@@ -89,14 +91,35 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   caducidadesStats,
   onStartSequence: _onStartSequence
 }) => {
+  const scrollOffset = Math.min(45, Math.max(0, scrollTop || 0));
+  const titleProgress = Math.min(1, scrollOffset / 28);
+  const titleOpacity = Math.max(0, 1 - titleProgress * 1.15);
+  const titleTranslateY = -titleProgress * 8;
+  const titleScale = 1 - titleProgress * 0.04;
+  const titleBlur = titleProgress * 2.5;
+
   return (
     <>
       <header 
         className="content-header" 
-        style={{ padding: '2px 16px 16px 16px', display: 'flex', flexDirection: 'column', gap: '12px', flexShrink: 0, margin: '0', borderBottom: 'none', boxSizing: 'border-box', background: 'transparent', backdropFilter: 'none', WebkitBackdropFilter: 'none' }}
+        style={{ padding: '8px 16px 16px 16px', display: 'flex', flexDirection: 'column', gap: '12px', flexShrink: 0, margin: '0', borderBottom: 'none', boxSizing: 'border-box', background: 'transparent', backdropFilter: 'none', WebkitBackdropFilter: 'none' }}
       >
-        {/* Línea del Título - Estilo Apple Reminders */}
-        <div style={{ width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+        {/* Línea del Título - Estilo Apple Reminders con transición fluida */}
+        <div style={{ 
+          width: '100%', 
+          boxSizing: 'border-box', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between', 
+          gap: '12px', 
+          flexWrap: 'wrap',
+          opacity: titleOpacity,
+          transform: `translateY(${titleTranslateY}px) scale(${titleScale})`,
+          filter: titleBlur > 0.1 ? `blur(${titleBlur}px)` : 'none',
+          transformOrigin: 'left center',
+          willChange: 'opacity, transform, filter',
+          transition: 'opacity 0.08s ease-out, transform 0.08s ease-out, filter 0.08s ease-out'
+        }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: '1 1 auto', flexWrap: 'wrap' }}>
             <h1 className="text-display" style={{ 
               fontSize: '34px', 

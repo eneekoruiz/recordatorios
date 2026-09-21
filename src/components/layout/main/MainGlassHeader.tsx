@@ -15,6 +15,7 @@ export const SMART_COLORS: Record<string, string> = {
 
 interface MainGlassHeaderProps {
   isScrolled: boolean;
+  scrollTop?: number;
   isMobile?: boolean;
   onBackToSidebar?: () => void;
   isSmartView: boolean;
@@ -38,6 +39,7 @@ interface MainGlassHeaderProps {
 
 export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
   isScrolled,
+  scrollTop,
   isMobile: _isMobile,
   onBackToSidebar,
   isSmartView,
@@ -62,6 +64,11 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
     ? (SMART_COLORS[currentView] || 'var(--accent-blue, #007AFF)') 
     : (currentList?.color || 'var(--accent-blue, #007AFF)');
 
+  const isGlassActive = scrollTop !== undefined ? scrollTop > 0 : isScrolled;
+  const glassProgress = scrollTop !== undefined 
+    ? Math.min(1, Math.max(0, (scrollTop - 10) / 20))
+    : (isScrolled ? 1 : 0);
+
   return (
     <header 
       className="glass-header" 
@@ -79,11 +86,11 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
         justifyContent: 'space-between', 
         zIndex: 1000,
         boxSizing: 'border-box',
-        background: isScrolled ? 'var(--bg-surface-glass)' : 'transparent',
-        borderBottom: isScrolled ? '0.5px solid var(--border-subtle)' : '0.5px solid transparent',
-        backdropFilter: isScrolled ? 'blur(20px) saturate(180%)' : 'none',
-        WebkitBackdropFilter: isScrolled ? 'blur(20px) saturate(180%)' : 'none',
-        transition: 'background 0.25s ease, border-color 0.25s ease, backdrop-filter 0.25s ease, -webkit-backdrop-filter 0.25s ease'
+        background: isGlassActive ? 'var(--bg-surface-glass)' : 'transparent',
+        borderBottom: isGlassActive ? '0.5px solid var(--border-subtle)' : '0.5px solid transparent',
+        backdropFilter: isGlassActive ? 'blur(20px) saturate(180%)' : 'none',
+        WebkitBackdropFilter: isGlassActive ? 'blur(20px) saturate(180%)' : 'none',
+        transition: 'background 0.2s ease, border-color 0.2s ease, backdrop-filter 0.2s ease, -webkit-backdrop-filter 0.2s ease'
       }}
     >
       {/* Left: Back button ("Atrás para más listas") */}
@@ -129,10 +136,11 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
         fontWeight: 600, 
         fontSize: '1rem', 
         color: isSmartView ? SMART_COLORS[currentView] : currentList ? currentList.color : 'var(--text-primary)',
-        opacity: isScrolled ? 1 : 0,
-        transform: isScrolled ? 'translateY(0)' : 'translateY(4px)',
-        transition: 'opacity 0.25s ease, transform 0.25s ease',
-        pointerEvents: isScrolled ? 'auto' : 'none',
+        opacity: glassProgress,
+        transform: `translateY(${Math.max(0, 4 * (1 - glassProgress))}px)`,
+        filter: glassProgress < 0.95 ? `blur(${Math.max(0, 1.5 * (1 - glassProgress))}px)` : 'none',
+        transition: 'opacity 0.08s ease-out, transform 0.08s ease-out, filter 0.08s ease-out',
+        pointerEvents: glassProgress > 0.5 ? 'auto' : 'none',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',

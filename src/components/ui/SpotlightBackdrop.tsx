@@ -36,8 +36,8 @@ export function SpotlightBackdrop({
   zIndex = 999990,
   padding = 6,
   radius = 14,
-  background = 'rgba(0, 0, 0, 0.28)',
-  blur = 'blur(14px)'
+  background = 'rgba(0, 0, 0, 0.14)',
+  blur = 'blur(8px)'
 }: SpotlightBackdropProps) {
   const sharedProps = {
     onClick: onClose,
@@ -65,8 +65,11 @@ export function SpotlightBackdrop({
   const y = Math.max(0, rect.top - padding);
   const w = rect.width + padding * 2;
   const h = rect.height + padding * 2;
-  const vw = typeof window !== 'undefined' ? window.innerWidth : x + w;
-  const vh = typeof window !== 'undefined' ? window.innerHeight : y + h;
+  // Use a large safe value (9999) instead of snapshotting window dimensions —
+  // this guarantees the backdrop always covers the full viewport regardless of
+  // orientation changes that happen after the component renders.
+  const vw = 9999;
+  const vh = 9999;
   const r = Math.min(radius, w / 2, h / 2);
 
   // Rectángulo del telón completo menos un rectángulo redondeado "hueco"

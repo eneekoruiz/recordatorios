@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, ChevronDown, ChevronUp, CreditCard, Flame, Moon, Sun, Sunset } from 'lucide-react';
+import { AlertCircle, ChevronDown, ChevronUp, CreditCard, Flame, Moon, Sun, Sunset, Calendar, Bell } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { buildDailyBriefing } from '../../services/DailyBriefingService';
+import { NotificationService } from '../../services/NotificationService';
 import { getUserFirstName } from '../../utils/userIdentity';
 import { formatRelativeDay, plural } from '../../utils/format';
 import './DailyBriefingBanner.css';
@@ -16,6 +17,8 @@ const PERIOD_STYLE = {
 export function DailyBriefingBanner() {
   const tasks = useAppStore((state) => state.tasks);
   const cycles = useAppStore((state) => state.cycles);
+  const listSections = useAppStore((state) => state.listSections);
+  const lists = useAppStore((state) => state.lists);
 
   const [isCollapsed, setIsCollapsed] = useState(() => {
     try {
@@ -26,9 +29,22 @@ export function DailyBriefingBanner() {
   });
 
   const briefing = useMemo(
-    () => buildDailyBriefing(tasks, cycles, { name: getUserFirstName() }),
-    [tasks, cycles]
+    () => buildDailyBriefing(tasks, cycles, { 
+      name: getUserFirstName(),
+      listSections,
+      lists
+    }),
+    [tasks, cycles, listSections, lists]
   );
+
+  useEffect(() => {
+    if (briefing.isWeeklyDay && (briefing.pendingWeekly.length > 0 || briefing.pendingDaily.length > 0)) {
+      NotificationService.getInstance().checkAndSendWeeklyNotification(
+        briefing.pendingDaily.length,
+        briefing.pendingWeekly.length
+      );
+    }
+  }, [briefing.isWeeklyDay, briefing.pendingDaily.length, briefing.pendingWeekly.length]);
 
   const toggleCollapsed = () => {
     setIsCollapsed((prev) => {
@@ -78,9 +94,15 @@ export function DailyBriefingBanner() {
             </p>
 
             <div className="briefing-stats">
-              <span><b>{briefing.pendingToday.length}</b> {briefing.pendingToday.length === 1 ? 'pendiente' : 'pendientes'}</span>
-              {briefing.completedToday > 0 && (
-                <span><b>{briefing.completedToday}</b> {briefing.completedToday === 1 ? 'completada' : 'completadas'}</span>
+              <span><b>{briefing.pendingDaily.length}</b> {briefing.pendingDaily.length === 1 ? 'diaria pendiente' : 'diarias pendientes'}</span>
+              {briefing.isWeeklyDay && (
+                <span className="briefing-chip" style={{ background: 'rgba(0, 122, 255, 0.12)', color: '#007aff', fontWeight: 600 }}>
+                  <Calendar size={14} /> 
+                  <span>{briefing.pendingWeekly.length} {briefing.pendingWeekly.length === 1 ? 'semanal pendiente' : 'semanales pendientes'}</span>
+                </span>
+              )}
+              {briefing.completedDailyToday > 0 && (
+                <span><b>{briefing.completedDailyToday}</b> completadas hoy</span>
               )}
               {briefing.habitsTotal > 0 && (
                 <span><b>{briefing.habitsDone}/{briefing.habitsTotal}</b> hábitos</span>
@@ -99,6 +121,20 @@ export function DailyBriefingBanner() {
                   <CreditCard size={14} />
                   <span>{expiring.title} vence {formatRelativeDay(new Date(expiring.dueDate!)).toLowerCase()}</span>
                 </span>
+              )}
+              {'Notification' in window && Notification.permission === 'default' && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await NotificationService.getInstance().requestPermissions();
+                  }}
+                  className="briefing-chip"
+                  style={{ cursor: 'pointer', background: 'rgba(255, 149, 0, 0.12)', color: '#ff9500', border: 'none', fontWeight: 600 }}
+                  title="Permitir notificaciones de tareas periódicas"
+                >
+                  <Bell size={13} />
+                  <span>Avisos semanales</span>
+                </button>
               )}
             </div>
           </motion.div>

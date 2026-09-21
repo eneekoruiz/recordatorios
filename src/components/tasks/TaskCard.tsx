@@ -273,7 +273,7 @@ export const TaskCard = React.memo(function TaskCard({
   };
 
   const isBlocked = task.blockedBy && task.blockedBy.some(id => tasks[id] && tasks[id].status === 'pending');
-  const isCompletedPeriod = isCompletedInCurrentPeriod(task, cycles);
+  const isCompletedPeriod = isCompletedInCurrentPeriod(task, cycles, listSections, lists);
   const isEffectivelyDone = isCompletedPeriod || !!isGracePeriod || isTaskCompleted(task);
 
   // --- SWIPE (iOS-style: card physically moves) ---

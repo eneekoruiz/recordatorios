@@ -87,6 +87,33 @@ export class NotificationService {
     });
   }
 
+  public checkAndSendWeeklyNotification(pendingDaily: number, pendingWeekly: number) {
+    if (!this.hasPermission && Notification.permission !== 'granted') return;
+    this.hasPermission = true;
+
+    const todayStr = new Date().toDateString();
+    try {
+      const lastSent = localStorage.getItem('weekly_notif_sent_date');
+      if (lastSent === todayStr) return; // Solo una vez al día
+
+      const notification = new Notification('Recordatorios: ¡Día de tareas semanales!', {
+        body: `Hoy es día de tareas semanales. Tienes ${pendingDaily} diarias y ${pendingWeekly} semanales pendientes.`,
+        icon: '/icons/icon-192.png',
+        badge: '/icons/icon-192.png',
+        requireInteraction: true
+      });
+
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
+
+      localStorage.setItem('weekly_notif_sent_date', todayStr);
+    } catch {
+      // Silencioso
+    }
+  }
+
   private fireNotification(title: string, _taskId: string) {
     try {
       const notification = new Notification('Recordatorio', {
