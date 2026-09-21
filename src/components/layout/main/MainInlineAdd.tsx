@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
 import { extractPrice } from '../../../utils/priceExtractor';
+import { parseNaturalLanguage } from '../../../utils/nlpParser';
 
 interface MainInlineAddProps {
   currentView: string;
@@ -37,7 +38,10 @@ export const MainInlineAdd: React.FC<MainInlineAddProps> = ({
 
       const defaultCategoryId = currentView.startsWith('list_') ? currentView.replace('list_', '') : undefined;
       let dueDate: string | undefined = undefined;
-      if (currentView === 'smart_today') {
+      const nlp = parseNaturalLanguage(rawText);
+      if (nlp.dueDate) {
+        dueDate = nlp.dueDate;
+      } else if (currentView === 'smart_today') {
         const today = new Date();
         today.setHours(12, 0, 0, 0);
         dueDate = today.toISOString();

@@ -1585,3 +1585,14 @@ html, body {
 
 
 
+
+/* Glassmorphism for Section Headers */
+.group-header {
+  position: sticky !important;
+  top: 0;
+  z-index: 10;
+  background: var(--bg-surface-glass) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+}
