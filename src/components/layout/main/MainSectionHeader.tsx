@@ -52,6 +52,7 @@ interface MainSectionHeaderProps {
   pendingTaskCount?: number;
   isMobile?: boolean;
   sectionMenu?: SectionMenuState;
+  isPrevHeader?: boolean;
 }
 
 export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
@@ -59,7 +60,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   itemKey,
   index,
   itemStyle,
-  showDivider,
+  showDivider: _showDivider,
   isCustomSection,
   isDraggingOver,
   isCatCollapsed,
@@ -90,7 +91,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   onStartSectionSequence: _onStartSectionSequence,
   pendingTaskCount,
   isMobile,
-  sectionMenu
+  sectionMenu,
+  isPrevHeader = false
 }) => {
   const currentSectionRoutineMode = sectionRoutineModes[data.category] || 'only_section';
   const [isPressed, setIsPressed] = useState(false);
@@ -122,8 +124,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         borderTop: 'none',
         paddingLeft: `calc(28px + ${data.depth * 24}px)`,
         paddingRight: '16px',
-        minHeight: showDivider ? 56 : 44,
-        paddingTop: showDivider ? 16 : 8,
+        minHeight: 44,
+        paddingTop: isPrevHeader ? 8 : (index > 0 ? 14 : 8),
         paddingBottom: 8,
         margin: 0,
         boxSizing: 'border-box',
@@ -227,9 +229,6 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         }
       }}
     >
-      {showDivider && (
-        <div className="ios-section-divider" style={{ height: '0.5px', background: 'var(--separator-color, rgba(142, 142, 147, 0.3))', margin: '0 0 12px 0', width: '100%' }} />
-      )}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: '100%' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
           {isCustomSection && editingSectionId === data.sectionId ? (

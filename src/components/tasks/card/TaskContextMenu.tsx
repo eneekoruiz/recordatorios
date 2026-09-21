@@ -10,7 +10,7 @@ import {
 import type { TaskItem } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
-import { SpotlightBackdrop, type SpotlightRect } from '../../ui/SpotlightBackdrop';
+import type { SpotlightRect } from '../../ui/SpotlightBackdrop';
 
 export interface TaskContextMenuProps {
   task: TaskItem;
@@ -37,7 +37,7 @@ export function TaskContextMenu({
   isOpen,
   onClose,
   position,
-  triggerRect,
+  triggerRect: _triggerRect,
   onEdit,
   nestTask,
   previousTaskId,
@@ -67,15 +67,11 @@ export function TaskContextMenu({
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Telón con hueco nítido sobre la tarjeta seleccionada, para que siempre quede
-              claro cuál es la tarjeta activa mientras el resto se atenúa. Se renderiza
-              fuera de cualquier motion.div para que sus divs `position: fixed` sigan
-              anclados al viewport (un `transform` en un antecesor los "atraparía"). */}
-          <SpotlightBackdrop
-            rect={isMobile ? null : (triggerRect ?? null)}
-            onClose={onClose}
-            onWheel={onClose}
-            radius={12}
+          {/* Telón transparente para cerrar el menú con un clic fuera, idéntico a las listas */}
+          <div 
+            style={{ position: 'fixed', inset: 0, zIndex: 999990, background: 'transparent' }} 
+            onClick={onClose} 
+            onContextMenu={(e) => { e.preventDefault(); onClose(); }}
           />
 
           {/* Floating Popover Container / Mobile Bottom Action Sheet */}
@@ -99,9 +95,9 @@ export function TaskContextMenu({
               right: 0,
               bottom: 0,
               zIndex: 999995,
-              background: 'var(--bg-elevated, #ffffff)',
-              backdropFilter: 'blur(35px) saturate(190%)',
-              WebkitBackdropFilter: 'blur(35px) saturate(190%)',
+              background: 'var(--bg-material, rgba(255,255,255,0.85))',
+              backdropFilter: 'blur(30px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(30px) saturate(180%)',
               borderTop: '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
               borderRadius: '20px 20px 0 0',
               padding: '12px 16px max(24px, env(safe-area-inset-bottom))',
@@ -117,17 +113,16 @@ export function TaskContextMenu({
             } : {
               position: 'fixed',
               zIndex: 999995,
-              top: position.y,
-              left: position.x,
-              width: Math.min(300, window.innerWidth - 24),
-              minWidth: 280,
-              background: 'var(--bg-elevated, #ffffff)',
-              backdropFilter: 'blur(35px) saturate(190%)',
-              WebkitBackdropFilter: 'blur(35px) saturate(190%)',
+              top: Math.min(position.y, window.innerHeight - 380),
+              left: Math.max(12, Math.min(position.x, window.innerWidth - 235)),
+              width: 230,
+              background: 'var(--bg-material, rgba(255,255,255,0.85))',
+              backdropFilter: 'blur(30px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(30px) saturate(180%)',
               borderRadius: '14px',
-              boxShadow: '0 14px 40px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.06)',
-              border: '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
-              padding: '6px',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.04)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              padding: '6px 0',
               display: 'flex',
               flexDirection: 'column',
               maxHeight: `${position.maxHeight}px`,
@@ -539,18 +534,9 @@ function MenuActions({
 
   return (
     <>
-      {/* Header: Reminder Title Header matching SectionContextMenu */}
-      <div style={{ padding: '2px 8px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent-primary)', flexShrink: 0 }} />
-        <span style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {task.title || 'Recordatorio'}
-        </span>
-      </div>
-      <div className="ios-dropdown-divider" />
-
       {/* 1. Marcar como completado */}
       <ActionRow 
-        icon={<CheckCircle size={16} color="var(--accent-primary)" />} 
+        icon={<CheckCircle size={16} />} 
         label={isCompleted ? "Marcar como pendiente" : "Marcar como completado"} 
         onClick={() => { 
           setContextMenuOpen(false); 
@@ -560,9 +546,8 @@ function MenuActions({
 
       {/* 2. Editar recordatorio (Panel de metadatos) */}
       <ActionRow
-        icon={<Info size={16} color="var(--accent-primary)" />}
+        icon={<Info size={16} />}
         label="Editar recordatorio"
-        sublabel="Metadatos y notas"
         onClick={() => {
           setContextMenuOpen(false);
           onEdit(task.id);
@@ -573,7 +558,7 @@ function MenuActions({
 
       {/* 3. Fecha límite */}
       <ActionRow 
-        icon={<Calendar size={16} color="#007aff" />} 
+        icon={<Calendar size={16} />} 
         label="Fecha límite"
         sublabel={task.dueDate ? new Date(task.dueDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : undefined}
         trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
@@ -582,7 +567,7 @@ function MenuActions({
 
       {/* 4. Marcar como urgente / Prioridad */}
       <ActionRow 
-        icon={<AlertCircle size={16} color={isUrgent ? '#ff3b30' : 'var(--text-secondary)'} />} 
+        icon={<AlertCircle size={16} color={isUrgent ? '#ff3b30' : undefined} />} 
         label={isUrgent ? "Quitar urgencia" : "Marcar como urgente"}
         trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
         onClick={() => setCurrentSubmenu('priority')} 
@@ -590,7 +575,7 @@ function MenuActions({
 
       {/* 5. Precio / Coste */}
       <ActionRow 
-        icon={<Coins size={16} color="var(--accent-primary)" />} 
+        icon={<Coins size={16} />} 
         label="Precio / Coste"
         sublabel={task.price !== undefined && task.price > 0 ? `${task.price.toLocaleString('es-ES')} €` : undefined}
         trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
@@ -599,7 +584,7 @@ function MenuActions({
 
       {/* 6. Con marca */}
       <ActionRow 
-        icon={<Flag size={16} color={task.flagged ? '#ff9500' : 'var(--text-secondary)'} fill={task.flagged ? '#ff9500' : 'none'} />} 
+        icon={<Flag size={16} color={task.flagged ? '#ff9500' : undefined} fill={task.flagged ? '#ff9500' : 'none'} />} 
         label={task.flagged ? "Quitar marca" : "Con marca"} 
         onClick={() => { 
           setContextMenuOpen(false); 
@@ -780,9 +765,9 @@ function MenuActions({
 
       {/* 6. Eliminar recordatorio */}
       <ActionRow 
-        icon={<Trash2 size={16} color="var(--accent-red)" />} 
-        label="Eliminar" 
-        labelColor="var(--accent-red)" 
+        icon={<Trash2 size={16} color="#ff3b30" />} 
+        label="Eliminar recordatorio" 
+        labelColor="#ff3b30" 
         onClick={() => { setContextMenuOpen(false); setIsDeleteConfirmOpen(true); }} 
       />
     </>
@@ -822,7 +807,7 @@ function ActionRow({
   return (
     <button
       type="button"
-      className={`ios-dropdown-item ${labelColor === 'var(--accent-red)' ? 'danger' : ''}`}
+      className={`ios-dropdown-item ${labelColor ? 'danger' : ''}`}
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
       style={{
@@ -833,14 +818,23 @@ function ActionRow({
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.38 : 1,
         pointerEvents: disabled ? 'none' : 'auto',
-        color: labelColor || 'inherit',
+        color: labelColor || 'var(--text-primary)',
+        padding: '8px 12px',
+        gap: 8,
+        background: 'transparent',
+        border: 'none',
+        borderRadius: 6,
+        fontSize: '0.85rem',
+        textAlign: 'left'
       }}
+      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, color: labelColor || 'var(--text-secondary)', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 16, color: labelColor || 'var(--text-primary)', flexShrink: 0 }}>
           {icon}
         </div>
-        <span style={{ fontSize: '0.88rem', fontWeight: 500, color: labelColor || 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <span style={{ fontSize: '0.85rem', fontWeight: 400, color: labelColor || 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {label}
         </span>
       </div>

@@ -1217,8 +1217,37 @@ let routineCounts = null;
           const categoryTasks = groupedTasks[categoryKey] || [];
           const sectionPeriodicity = getSectionPeriodicity(categoryKey, sec.name, listSections, lists);
           let tasksToRender = categoryTasks;
-let routineCounts = null;
-            // Si se está filtrando por temporalidad (ej. solo semanales o solo diarias)
+          let routineCounts: { full: number; only: number } | null = null;
+
+          if (sectionPeriodicity) {
+            const allTasksInList = Object.values(groupedTasks).flat();
+            const allowedPeriodicities = getRoutineAllowedPeriodicities(sectionPeriodicity);
+            const fullRoutineTasks = allTasksInList.filter(t => {
+              const p = getTaskPeriodicity(t, listSections, lists);
+              return p && allowedPeriodicities.has(p);
+            });
+            const strictlySectionTasks = categoryTasks.filter(t => {
+              const p = getTaskPeriodicity(t, listSections, lists);
+              return p ? p === sectionPeriodicity : true;
+            });
+            const onlyTasks = strictlySectionTasks.length > 0 ? strictlySectionTasks : categoryTasks;
+
+            if (fullRoutineTasks.length > onlyTasks.length) {
+              routineCounts = {
+                full: fullRoutineTasks.length,
+                only: onlyTasks.length
+              };
+
+              const currentRoutineMode = sectionRoutineModes[categoryKey] || 'only_section';
+              if (currentRoutineMode === 'full_routine') {
+                tasksToRender = sortTasksByRoutinePriority(fullRoutineTasks, sectionPeriodicity, listSections, lists);
+              } else {
+                tasksToRender = onlyTasks;
+              }
+            }
+          }
+
+          // Si se está filtrando por temporalidad (ej. solo semanales o solo diarias)
           // y esta sección no tiene tareas que cumplan el filtro, no mostrar la sección vacía
           if (listSectionFilter !== 'all' && tasksToRender.length === 0) {
             return;
@@ -1319,6 +1348,7 @@ let routineCounts = null;
         transition={{ type: 'spring', damping: 28, stiffness: 400 }}
         key={itemKey ?? `task-${task.id}`}
         data-index={index}
+        data-task-id={task.id}
         style={{ ...itemStyle, margin: 0, padding: '0 16px', boxSizing: 'border-box' }}
       >
         <div style={{ position: 'relative', width: '100%', boxSizing: 'border-box' }}>
@@ -1367,7 +1397,7 @@ let routineCounts = null;
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
   const smartListInfo = isSmartView ? SMART_LISTS.find(l => l.id === currentView) : null;
   const SmartIcon = smartListInfo ? smartListInfo.icon : null;
-  const viewColor = isSmartView ? (smartListInfo?.color || SMART_COLORS[currentView] || 'var(--accent-primary)') : (isListView && currentList) ? (currentList.color || 'var(--accent-primary)') : isFolderView ? (lists?.find(l => l.id === currentView.replace('folder_', ''))?.color || 'var(--accent-primary)') : 'var(--accent-primary)';
+  const viewColor = isSmartView ? (smartListInfo?.color || SMART_COLORS[currentView] || 'var(--accent-primary)') : (isListView && currentList) ? (currentList.color || 'var(--accent-primary)') : isFolderView ? (lists?.find(l => l.id === currentView.replace('folder_', ''))?.color || 'var(--accent-primary)') : currentCycle ? (currentCycle.id === 'cycle_day' ? '#ff9500' : currentCycle.id === 'cycle_week' ? '#007aff' : currentCycle.id === 'cycle_month' ? '#af52de' : currentCycle.id === 'cycle_year' ? '#34c759' : (currentCycle as any).color || 'var(--accent-primary)') : 'var(--accent-primary)';
 
   const getTitle = () => {
     if (isSmartView) return smartListInfo?.name || 'Recordatorios';
@@ -1559,6 +1589,7 @@ let routineCounts = null;
                   } : undefined}
                   pendingTaskCount={sectionPendingTaskIds.length}
                   isMobile={isMobile}
+                  isPrevHeader={index > 0 && flattenedData[index - 1]?.type === 'header'}
                 />
               );
             } else if (data.type === 'empty-section') {

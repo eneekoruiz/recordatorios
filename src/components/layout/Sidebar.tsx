@@ -532,8 +532,26 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               menuCoords={menuCoords}
               setMenuCoords={setMenuCoords}
             />
+          </div>
+        </div>
 
-            {/* Papelera */}
+        {/* LISTAS INTELIGENTES DE FRECUENCIA / CICLOS */}
+        <CyclesListSection
+          globalCyclesEnabled={globalCyclesEnabled}
+          cycles={cycles}
+          cycleVisibility={cycleVisibility}
+          isEditCyclesMode={isEditCyclesMode}
+          setIsEditCyclesMode={setIsEditCyclesMode}
+          currentView={currentView}
+          onSelectView={onSelectView}
+          toggleCycleVisibility={toggleCycleVisibility}
+          setIsCycleModalOpen={setIsCycleModalOpen}
+          tasks={tasks}
+        />
+
+        {/* PAPELERA (Al final de la barra lateral) */}
+        <div style={{ marginTop: 'var(--space-16)', marginBottom: 'var(--space-24)' }}>
+          <div className="ios-list-block">
             <motion.div 
               className={`ios-list-item ${currentView === 'TRASH' ? 'active' : ''}`}
               onClick={() => onSelectView('TRASH')}
@@ -551,20 +569,6 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
             </motion.div>
           </div>
         </div>
-
-        {/* CICLOS TEMPORALES */}
-        <CyclesListSection
-          globalCyclesEnabled={globalCyclesEnabled}
-          cycles={cycles}
-          cycleVisibility={cycleVisibility}
-          isEditCyclesMode={isEditCyclesMode}
-          setIsEditCyclesMode={setIsEditCyclesMode}
-          currentView={currentView}
-          onSelectView={onSelectView}
-          toggleCycleVisibility={toggleCycleVisibility}
-          setIsCycleModalOpen={setIsCycleModalOpen}
-          tasks={tasks}
-        />
       </div>
       
       {/* MODALS (OUTSIDE SCROLL) */}

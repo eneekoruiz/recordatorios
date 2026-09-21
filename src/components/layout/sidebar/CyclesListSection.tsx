@@ -7,7 +7,7 @@ import { getCycleIcon } from '../../../constants/icons';
 import type { CustomCycle, TaskItem } from '../../../models/Task';
 
 interface CyclesListSectionProps {
-  globalCyclesEnabled: boolean;
+  globalCyclesEnabled?: boolean;
   cycles: CustomCycle[];
   cycleVisibility: Record<string, boolean>;
   isEditCyclesMode: boolean;
@@ -19,8 +19,22 @@ interface CyclesListSectionProps {
   tasks: Record<string, TaskItem>;
 }
 
+const CORE_CYCLES: { id: string; name: string; daysValue: number; isPinned: boolean; icon: string; color: string }[] = [
+  { id: 'cycle_day', name: 'Diario', daysValue: 1, isPinned: true, icon: 'sun', color: '#ff9500' },
+  { id: 'cycle_week', name: 'Semanal', daysValue: 7, isPinned: true, icon: 'calendar', color: '#007aff' },
+  { id: 'cycle_month', name: 'Mensual', daysValue: 30, isPinned: true, icon: 'moon', color: '#af52de' },
+  { id: 'cycle_year', name: 'Anual', daysValue: 365, isPinned: true, icon: 'globe', color: '#34c759' },
+];
+
+const getCycleColor = (cycle: CustomCycle): string => {
+  if (cycle.id === 'cycle_day') return '#ff9500';
+  if (cycle.id === 'cycle_week') return '#007aff';
+  if (cycle.id === 'cycle_month') return '#af52de';
+  if (cycle.id === 'cycle_year') return '#34c759';
+  return (cycle as any).color || '#5856d6';
+};
+
 export const CyclesListSection: React.FC<CyclesListSectionProps> = ({
-  globalCyclesEnabled,
   cycles,
   cycleVisibility,
   isEditCyclesMode,
@@ -31,29 +45,46 @@ export const CyclesListSection: React.FC<CyclesListSectionProps> = ({
   setIsCycleModalOpen,
   tasks
 }) => {
-  if (!globalCyclesEnabled) return null;
+  // Merge core cycles with user cycles, ensuring Diario, Semanal, Mensual, and Anual are always available
+  const cyclesMap = new Map<string, CustomCycle>();
+  CORE_CYCLES.forEach(c => cyclesMap.set(c.id, { ...c } as CustomCycle));
+  (cycles || []).forEach(c => {
+    if (c && c.id) {
+      const existing = cyclesMap.get(c.id);
+      cyclesMap.set(c.id, { ...existing, ...c, isPinned: c.isPinned ?? true });
+    }
+  });
+  const allCycles = Array.from(cyclesMap.values()).sort((a, b) => (a.daysValue || 0) - (b.daysValue || 0));
+
+  const isCycleVisible = (c: CustomCycle) => {
+    if (cycleVisibility[c.id] === false) return false;
+    if (['cycle_day', 'cycle_week', 'cycle_month', 'cycle_year'].includes(c.id)) return true;
+    return c.isPinned !== false;
+  };
+
+  const visibleCycles = allCycles.filter(c => isCycleVisible(c) || isEditCyclesMode);
 
   return (
     <div style={{ marginTop: 'var(--space-16)' }}>
-      <div className="section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span>Ciclos temporales</span>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 12px 8px 16px' }}>
+        <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Frecuencia</span>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           {isEditCyclesMode && (() => {
-            const allVisible = cycles.every(c => cycleVisibility[c.id]);
+            const allVisible = allCycles.every(c => cycleVisibility[c.id] !== false);
             return (
               <div
                 onClick={(e) => {
                   e.stopPropagation();
                   const nextVisibility: Record<string, boolean> = {};
-                  cycles.forEach(c => {
+                  allCycles.forEach(c => {
                     nextVisibility[c.id] = !allVisible;
                   });
                   useAppStore.setState({ cycleVisibility: nextVisibility });
                 }}
                 style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
-                title={allVisible ? "Ocultar todos los ciclos" : "Mostrar todos los ciclos"}
+                title={allVisible ? "Ocultar todas las frecuencias" : "Mostrar todas las frecuencias"}
               >
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Todos</span>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Todas</span>
                 <div style={{
                   width: '32px', height: '18px', borderRadius: '9px',
                   background: allVisible ? 'var(--accent-primary)' : 'rgba(120,120,128,0.3)',
@@ -79,29 +110,37 @@ export const CyclesListSection: React.FC<CyclesListSectionProps> = ({
             type="button"
             className="btn-icon"
             style={{ padding: 4, cursor: 'pointer' }}
-            title="Nuevo Ciclo"
+            title="Nueva Frecuencia"
             onClick={(e) => { e.stopPropagation(); setIsCycleModalOpen(true); }}
           >
-            <Plus size={14} color="var(--text-tertiary)" />
+            <Plus size={16} color="var(--accent-primary)" />
           </button>
         </div>
       </div>
 
-      {cycles.filter(c => c.isPinned && (cycleVisibility[c.id] !== false || isEditCyclesMode)).length === 0 && (
-        <div style={{ padding: '8px 12px', color: 'var(--text-tertiary)', fontSize: '0.82rem', fontStyle: 'italic' }}>
-          No hay ciclos visibles. Edita para activarlos.
+      {visibleCycles.length === 0 && (
+        <div style={{ padding: '8px 16px', color: 'var(--text-tertiary)', fontSize: '0.82rem', fontStyle: 'italic' }}>
+          No hay frecuencias visibles. Edita para activarlas.
         </div>
       )}
 
       <div className="ios-list-block">
-        {Array.from(new Map((cycles || []).map((c: any) => [c.id, c])).values()).filter(c => c.isPinned).map(cycle => {
+        {visibleCycles.map(cycle => {
           const isVisible = cycleVisibility[cycle.id] !== false;
           const Icon = getCycleIcon(cycle.icon);
           const isActive = currentView === cycle.id;
+          const cycleColor = getCycleColor(cycle);
+
           const taskCount = Object.values(tasks || {}).filter(t => {
             if (t.deleted_at || isTaskCompleted(t) || t.categoryId === 'primeros_pasos') return false;
-            const effCycle = t.cycle_id || (t.categoryId === 'limpieza_diaria' ? 'cycle_day' : t.categoryId === 'limpieza_semanal' ? 'cycle_week' : t.categoryId === 'limpieza_mensual' ? 'cycle_month' : t.categoryId === 'limpieza_anual' ? 'cycle_year' : null);
-            return effCycle === cycle.id && !isCompletedInCurrentPeriod(t as any, cycles as any);
+            const taskSec = (t.sectionId || (t as any).section_id || '').toLowerCase();
+            const effCycle = t.cycle_id || (
+              t.categoryId === 'limpieza_diaria' || !!t.targetCount || taskSec.includes('diaria') || taskSec.includes('recurrent') ? 'cycle_day' :
+              t.categoryId === 'limpieza_semanal' || taskSec.includes('semanal') ? 'cycle_week' :
+              t.categoryId === 'limpieza_mensual' || taskSec.includes('mensual') ? 'cycle_month' :
+              t.categoryId === 'limpieza_anual' || taskSec.includes('anual') ? 'cycle_year' : null
+            );
+            return effCycle === cycle.id && !isCompletedInCurrentPeriod(t as any, allCycles as any);
           }).length;
           
           if (!isVisible && !isEditCyclesMode) return null;
@@ -122,11 +161,11 @@ export const CyclesListSection: React.FC<CyclesListSectionProps> = ({
                   }
                 }}
               >
-                <div className="list-icon" style={{ backgroundColor: '#8e8e93', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className="list-icon" style={{ backgroundColor: cycleColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Icon size={15} color="white" strokeWidth={2.4} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-                  <span className="title" style={{ color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)' }}>{cycle.name}</span>
+                  <span className="title" style={{ color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)', fontWeight: isActive ? 600 : 500 }}>{cycle.name}</span>
                 </div>
                 {!isEditCyclesMode && <span className="count">{taskCount}</span>}
               </div>
@@ -134,7 +173,7 @@ export const CyclesListSection: React.FC<CyclesListSectionProps> = ({
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); toggleCycleVisibility(cycle.id); }}
-                  title={isVisible ? 'Desactivar ciclo' : 'Activar ciclo'}
+                  title={isVisible ? 'Desactivar frecuencia' : 'Activar frecuencia'}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: isVisible ? 'var(--accent-primary)' : 'var(--text-tertiary)', padding: 4, marginLeft: 4 }}
                 >
                   {isVisible ? <Check size={14} /> : <Plus size={14} />}

@@ -110,7 +110,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
               boxSizing: 'border-box',
               minWidth: 0
             }}>
-              {CycleIcon && <CycleIcon size={32} color="var(--accent-primary)" style={{ marginRight: 12 }} />}
+              {CycleIcon && <CycleIcon size={32} color={viewColor} style={{ marginRight: 12 }} />}
               {SmartIcon && smartListInfo && (
                 <div style={{
                   marginRight: 12,

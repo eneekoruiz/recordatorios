@@ -1056,14 +1056,30 @@ export const useAppStore = create<AppState>()(
         const cleanLists = rawLists.filter((l: any) => !l.id?.startsWith('user_preferences_'));
         const uniqueLists: any[] = Array.from(new Map(cleanLists.map((l: any) => [l.id, l])).values());
         const rawCycles = persistedState?.cycles || currentState.cycles || [];
-        const uniqueCycles: any[] = Array.from(new Map(rawCycles.map((c: any) => [c.id, c])).values());
+        const cycleMap = new Map<string, any>();
+        INITIAL_CYCLES.forEach(c => cycleMap.set(c.id, { ...c }));
+        rawCycles.forEach((c: any) => {
+          if (c && c.id) {
+            const existing = cycleMap.get(c.id);
+            cycleMap.set(c.id, { ...existing, ...c, isPinned: c.isPinned ?? true });
+          }
+        });
+        const uniqueCycles: any[] = Array.from(cycleMap.values());
         const rawSections = persistedState?.listSections || currentState.listSections || [];
         const uniqueSections: any[] = Array.from(new Map(rawSections.map((s: any) => [s.id, s])).values());
 
         const mergedCycleVisibility = {
+          cycle_day: true,
+          cycle_week: true,
+          cycle_month: true,
+          cycle_year: true,
           ...currentState.cycleVisibility,
           ...(persistedState?.cycleVisibility || {})
         };
+        mergedCycleVisibility.cycle_day = mergedCycleVisibility.cycle_day !== false;
+        mergedCycleVisibility.cycle_week = mergedCycleVisibility.cycle_week !== false;
+        mergedCycleVisibility.cycle_month = mergedCycleVisibility.cycle_month !== false;
+        mergedCycleVisibility.cycle_year = mergedCycleVisibility.cycle_year !== false;
 
         const mergedSmartListVisibility = {
           ...currentState.smartListVisibility,
@@ -1083,6 +1099,7 @@ export const useAppStore = create<AppState>()(
         return {
           ...currentState,
           ...persistedState,
+          globalCyclesEnabled: true,
           _preferences_dirty: false,
           theme: resolvedTheme,
           lists: uniqueLists,

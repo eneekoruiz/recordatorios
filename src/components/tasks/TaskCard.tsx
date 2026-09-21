@@ -496,7 +496,7 @@ export const TaskCard = React.memo(function TaskCard({
         animate={{
           scale: contextMenuOpen ? 1.015 : 1,
           boxShadow: contextMenuOpen 
-            ? '0 0 0 2px var(--accent-primary, #007aff), 0 10px 30px rgba(0,0,0,0.18)' 
+            ? '0 8px 24px rgba(0,0,0,0.12)' 
             : 'none',
           borderRadius: contextMenuOpen ? 12 : (isFirstInSection ? 10 : isLastInSection ? 10 : 0),
         }}
