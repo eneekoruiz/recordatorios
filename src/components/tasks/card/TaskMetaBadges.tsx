@@ -44,7 +44,8 @@ export function TaskMetaBadges({
   })();
 
   const showDueDate = !!task.dueDate && !hideDueDate;
-  const hasMeta = showListName || showDueDate || Boolean(cycleBadge) || timeOfDayInfo || Boolean(inAppListTarget);
+  const showPrice = task.price !== undefined && task.price > 0;
+  const hasMeta = showListName || showDueDate || Boolean(cycleBadge) || timeOfDayInfo || Boolean(inAppListTarget) || showPrice;
 
   return (
     <>
@@ -82,6 +83,35 @@ export function TaskMetaBadges({
                 if (dueZero.getTime() === tomorrow.getTime()) return 'Mañana';
                 return due.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
               })()}
+            </span>
+          )}
+          
+          {showPrice && (
+            <span 
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(task.id);
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 3,
+                padding: '1.5px 7px',
+                borderRadius: 6,
+                fontSize: '0.74rem',
+                fontWeight: 600,
+                fontVariantNumeric: 'tabular-nums',
+                background: 'rgba(52, 199, 89, 0.1)',
+                border: '1px solid rgba(52, 199, 89, 0.2)',
+                color: '#248a3d',
+                cursor: 'pointer'
+              }}
+              title={`Precio: ${task.price} €${task.quantity && task.quantity > 1 ? ` (${task.quantity} uds)` : ''} (Toca para editar)`}
+            >
+              {task.quantity && task.quantity > 1 && (
+                <span style={{ opacity: 0.7, marginRight: 2 }}>{task.quantity}×</span>
+              )}
+              <span>{task.price!.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €</span>
             </span>
           )}
           {cycleBadge && (

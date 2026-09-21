@@ -712,13 +712,26 @@ export const useAppStore = create<AppState>()(
         });
 
         const grouped: Record<string, TaskItem[]> = {};
-        Array.from(tasksToInclude.values())
-          .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-          .forEach((t: any) => {
+        const sortedTasks = Array.from(tasksToInclude.values())
+          .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+          
+        if (cycleId === 'cycle_day') {
+          sortedTasks.forEach((t: any) => {
+            const tod = t.timeOfDay ? `tod_${t.timeOfDay}` : 'tod_none';
+            if (!grouped[tod]) grouped[tod] = [];
+            grouped[tod].push(t);
+          });
+          const order = ['tod_morning', 'tod_afternoon', 'tod_night', 'tod_none'];
+          const sortedGrouped: Record<string, TaskItem[]> = {};
+          order.forEach(k => { if (grouped[k]) sortedGrouped[k] = grouped[k]; });
+          return sortedGrouped;
+        } else {
+          sortedTasks.forEach((t: any) => {
             const listId = t.categoryId || (t as any).category_id || 'inbox';
             if (!grouped[listId]) grouped[listId] = [];
             grouped[listId].push(t);
           });
+        }
         return grouped;
       },
 

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { createPortal } from 'react-dom';
+import { Trash2, Calendar, createPortal } from 'react-dom';
 import { motion, useMotionValue, useTransform, AnimatePresence, useMotionValueEvent } from 'framer-motion';
 import {
   Lock, Image as ImageIcon, MoreHorizontal,
@@ -798,7 +798,7 @@ export const TaskCard = React.memo(function TaskCard({
               </motion.button>
             )}
             {task.flagged && <Flag size={13} color="var(--accent-orange)" fill="var(--accent-orange)" />}
-            {task.image && <ImageIcon size={13} color="var(--text-tertiary)" />}
+            
             {task.price !== undefined && task.price > 0 && (
               <span 
                 className="apple-price-pill"
