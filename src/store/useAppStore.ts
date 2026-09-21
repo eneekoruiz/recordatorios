@@ -19,6 +19,24 @@ const optimisticUpdate = (
   }
 };
 
+/**
+ * Tema con el que arranca la app la primerísima vez (sin nada aún persistido en
+ * este dispositivo/navegador). Sin esto, un usuario nuevo vería siempre claro
+ * durante ese primer render, aunque su sistema esté en oscuro: la función
+ * `merge` de más abajo solo corrige el tema al rehidratar datos ya guardados,
+ * así que un arranque totalmente en blanco necesita este mismo cálculo aquí.
+ */
+const getInitialTheme = (): 'light' | 'dark' => {
+  try {
+    if (localStorage.getItem('user_explicit_theme') === 'dark') return 'dark';
+    if (localStorage.getItem('user_explicit_theme') === 'light') return 'light';
+  } catch { /* sin almacenamiento */ }
+  if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  return 'light';
+};
+
 export const isTaskCompleted = (t: any) => {
   // Si la tarea tiene meta de repeticiones (ej. 3 vasos de agua), solo se considera completada si se alcanza la meta
   if (t.targetCount && t.targetCount > 1) {
@@ -128,7 +146,7 @@ export const useAppStore = create<AppState>()(
       lastSyncedAt: null,
       setSyncStatus: (syncStatus) => set({ syncStatus }),
       setLastSyncedAt: (lastSyncedAt) => set({ lastSyncedAt }),
-      theme: 'light',
+      theme: getInitialTheme(),
       setTheme: (theme) => {
         try { localStorage.setItem('user_explicit_theme', theme); } catch {}
         set({ theme });

@@ -14,6 +14,7 @@ import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
 import { ConfettiService } from '../../services/ConfettiService';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import type { SpotlightRect } from '../ui/SpotlightBackdrop';
 import { isCaducidadesList } from '../../utils/specialLists';
 import { TaskContextMenu } from './card/TaskContextMenu';
 import { TaskSwipeBackground } from './card/TaskSwipeBackground';
@@ -115,6 +116,7 @@ export const TaskCard = React.memo(function TaskCard({
 
   const [contextMenuOpen, setContextMenuOpen] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number; maxHeight: number }>({ x: 0, y: 0, maxHeight: 400 });
+  const [contextMenuTriggerRect, setContextMenuTriggerRect] = useState<SpotlightRect | null>(null);
 
   useEffect(() => {
     if (!contextMenuOpen) return;
@@ -159,6 +161,7 @@ export const TaskCard = React.memo(function TaskCard({
     HapticService.impact('medium');
     if (cardRef.current) {
       const rect = cardRef.current.getBoundingClientRect();
+      setContextMenuTriggerRect({ top: rect.top, left: rect.left, width: rect.width, height: rect.height });
       const viewportH = window.innerHeight;
       const viewportW = window.innerWidth;
       const menuWidth = Math.min(270, viewportW - 24);
@@ -1132,6 +1135,7 @@ export const TaskCard = React.memo(function TaskCard({
         isOpen={contextMenuOpen}
         onClose={() => setContextMenuOpen(false)}
         position={contextMenuPosition}
+        triggerRect={contextMenuTriggerRect}
         onEdit={onEdit}
         nestTask={nestTask}
         previousTaskId={previousTaskId}

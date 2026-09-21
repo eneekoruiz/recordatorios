@@ -10,12 +10,15 @@ import {
 import type { TaskItem } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
+import { SpotlightBackdrop, type SpotlightRect } from '../../ui/SpotlightBackdrop';
 
 export interface TaskContextMenuProps {
   task: TaskItem;
   isOpen: boolean;
   onClose: () => void;
   position: { x: number; y: number; maxHeight: number };
+  /** Rectángulo de la tarjeta que abrió el menú, para mantenerla nítida sobre el telón. */
+  triggerRect?: SpotlightRect | null;
   onEdit: (id: string) => void;
   nestTask: (taskId: string, parentId?: string) => void;
   previousTaskId?: string;
@@ -34,6 +37,7 @@ export function TaskContextMenu({
   isOpen,
   onClose,
   position,
+  triggerRect,
   onEdit,
   nestTask,
   previousTaskId,
@@ -63,23 +67,15 @@ export function TaskContextMenu({
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop matching SectionContextMenu */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 999990,
-              background: 'rgba(0, 0, 0, 0.22)',
-              backdropFilter: 'blur(2px)',
-              WebkitBackdropFilter: 'blur(2px)'
-            }}
-            onClick={onClose}
+          {/* Telón con hueco nítido sobre la tarjeta seleccionada, para que siempre quede
+              claro cuál es la tarjeta activa mientras el resto se atenúa. Se renderiza
+              fuera de cualquier motion.div para que sus divs `position: fixed` sigan
+              anclados al viewport (un `transform` en un antecesor los "atraparía"). */}
+          <SpotlightBackdrop
+            rect={isMobile ? null : (triggerRect ?? null)}
+            onClose={onClose}
             onWheel={onClose}
-            onContextMenu={(e) => { e.preventDefault(); onClose(); }}
+            radius={12}
           />
 
           {/* Floating Popover Container / Mobile Bottom Action Sheet */}

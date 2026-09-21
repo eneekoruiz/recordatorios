@@ -241,7 +241,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
                 {lists.map(l => (
                   <option key={l.id} value={l.id}>{l.icon ? `${l.name}` : l.name}</option>
                 ))}
-                <option value="inbox">📥 Bandeja de entrada (Inbox)</option>
+                <option value="inbox">Bandeja de entrada (Inbox)</option>
               </select>
             </div>
             <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
