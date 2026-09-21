@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { MoreHorizontal, ChevronDown } from 'lucide-react';
 import { HapticService } from '../../../services/HapticService';
-import { formatSectionTitle } from '../../../utils/sectionRoutine';
 import type { SectionMenuState } from './SectionContextMenu';
 
 interface SectionData {

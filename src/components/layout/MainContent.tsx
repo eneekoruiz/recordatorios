@@ -16,7 +16,7 @@ import { SoundService } from '../../services/SoundService';
 import { extractPeopleFromText, calculateExpirationStatus, calculateSubscriptionCosts, findFlashbackMemories, isCompletedInCurrentPeriod } from '../../services/TaskService';
 import { PersonProfileModal } from '../people/PersonProfileModal';
 import { AIService } from '../../services/AIService';
-import { isCaducidadesList, isQueHeHechoList, ensureCaducidadesSections, isLimpiezaList, isRoutineList, ensureRoutineSections } from '../../utils/specialLists';
+import { isCaducidadesList, isQueHeHechoList, ensureCaducidadesSections } from '../../utils/specialLists';
 import { 
   getSectionPeriodicity, 
   getTaskPeriodicity, 

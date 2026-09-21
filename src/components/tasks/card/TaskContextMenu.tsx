@@ -293,7 +293,7 @@ function MenuActions({
                   fontWeight: isCurrent ? 600 : 500,
                 }}
               >
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formatSectionTitle(sec.name)}</span>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sec.name}</span>
                 {isCurrent && <CheckCircle size={15} color="var(--accent-primary)" />}
               </button>
             );

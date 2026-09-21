@@ -23,7 +23,7 @@ const COLORS = [
 import { LIST_ICON_MAP as ICONS } from '../../constants/icons';
 import { CheckSquare, Folder, Check, X, NotebookPen, CreditCard, BookOpen } from 'lucide-react';
 
-import { isCaducidadesList, isQueHeHechoList, ensureCaducidadesSections, isRoutineList, isLimpiezaList, ensureRoutineSections } from '../../utils/specialLists';
+import { isCaducidadesList, isQueHeHechoList, isLimpiezaList, ensureCaducidadesSections, isRoutineList } from '../../utils/specialLists';
 
 export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFolder }: ListConfigModalProps) {
   const lists = useAppStore(state => state.lists);

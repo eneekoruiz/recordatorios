@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Trash2, Calendar, createPortal } from 'react-dom';
+import { createPortal } from 'react-dom';
 import { motion, useMotionValue, useTransform, AnimatePresence, useMotionValueEvent } from 'framer-motion';
 import {
-  Lock, Image as ImageIcon, MoreHorizontal,
+  Lock, MoreHorizontal,
   ChevronDown, X, Info, RotateCcw, Flag,
   ShieldAlert, Clock, CheckCircle2, CreditCard,
   Flame, User, MapPin, Link2
