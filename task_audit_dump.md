@@ -1,0 +1,684 @@
+# Task Audit
+
+## Category: care
+- [none] Poner morritos hacia la izquierda derecha izquierda derecha para hacer pómulos  (Cycle: cycle_day)
+- [none] Gimnasia facial: movimiento de labios (pómulos)  (Cycle: cycle_day)
+- [none] [D] Lavar rostro.  (Cycle: cycle_week)
+- [none] [D] Aplicar tónico facial.  (Cycle: cycle_day)
+- [none] [D] Aplicar sérum.  (Cycle: cycle_day)
+- [none] [D] Aplicar contorno de ojos.  (Cycle: cycle_day)
+- [none] [D] Aplicar crema hidratante.  (Cycle: cycle_day)
+- [none] [D] Aplicar protector solar.  (Cycle: cycle_day)
+- [none] [D] Banda facial reafirmante.  (Cycle: cycle_day)
+- [none] [D] Cuidado labial.  (Cycle: cycle_day)
+- [none] [D] Crema de noche o tratamiento específico.  (Cycle: cycle_day)
+- [none] Piedra de alumbre  (Cycle: cycle_day)
+- [none] Desodorante  (Cycle: cycle_day)
+- [none] [S] Cepillado en seco corporal.  (Cycle: cycle_month)
+- [none] [S] Exfoliar el rostro.  (Cycle: cycle_month)
+- [none] [D] Lavar rostro.  (Cycle: cycle_week)
+- [none] [S] Aplicar mascarilla facial.  (Cycle: cycle_week)
+- [none] [D] Aplicar tónico facial.  (Cycle: cycle_month)
+- [none] [D] Aplicar sérum.  (Cycle: cycle_week)
+- [none] [D] Aplicar crema facial hidratante.  (Cycle: cycle_week)
+- [none] [D] Aplicar protector solar facial.  (Cycle: cycle_month)
+- [none] [D] Piedra de alumbre en axilas y cuello.  (Cycle: cycle_week)
+- [none] [D] Aplicar desodorante corporal.  (Cycle: cycle_week)
+- [none] [S] Exfoliar el cuerpo.  (Cycle: cycle_week)
+- [none] [S] Piedra pómez.  (Cycle: cycle_week)
+- [none] [D] Aplicar crema corporal.  (Cycle: cycle_week)
+- [none] [S] Baño de pies.  (Cycle: cycle_week)
+- [none] [S] Estiramientos conscientes.  (Cycle: cycle_week)
+- [none] [D] Aplicar crema en los pies.  (Cycle: cycle_month)
+- [none] [D] Aplicar crema en las manos.  (Cycle: cycle_week)
+- [none] [D] Banda reafirmante facial.  (Cycle: cycle_week)
+- [none] [M] Baño de vapor facial.  (Cycle: cycle_month)
+- [none] [M] Mascarilla capilar casera.  (Cycle: cycle_month)
+- [none] [M] Aplicar mascarilla facial casera.  (Cycle: cycle_month)
+- [none] [S] Baño de pies.  (Cycle: cycle_month)
+- [none] [M] Masaje de pies.  (Cycle: cycle_month)
+- [none] [S] Cepillado en seco corporal.  (Cycle: cycle_month)
+- [none] [S] Exfoliar el rostro.  (Cycle: cycle_month)
+- [none] [D] Lavar el rostro.  (Cycle: cycle_month)
+- [none] [S] Exfoliar el cuerpo.  (Cycle: cycle_month)
+- [none] [S] Piedra pómez.  (Cycle: cycle_month)
+- [none] [D] Aplicar crema en los pies.  (Cycle: cycle_month)
+- [none] [D] Aplicar tónico facial.  (Cycle: cycle_month)
+- [none] [D] Aplicar crema facial hidratante.  (Cycle: cycle_month)
+- [none] [D] Aplicar protector solar facial.  (Cycle: cycle_month)
+- [none] [D] Piedra de alumbre en axilas y cuello.  (Cycle: cycle_month)
+- [none] [D] Aplicar desodorante corporal.  (Cycle: cycle_month)
+- [none] [D] Aplicar crema corporal.  (Cycle: cycle_month)
+- [none] [D] Aplicar crema en las manos.  (Cycle: cycle_month)
+- [none] [M] Cuidado especial de manos.  (Cycle: cycle_month)
+- [none] [D] Banda reafirmante facial.  (Cycle: cycle_month)
+- [none] [M] Cortar uñas de los pies.  (Cycle: cycle_month)
+- [none] [M] Cortar uñas de las manos.  (Cycle: cycle_month)
+
+## Category: compra
+- [none] La perla 10 sesiones (350€) (Cycle: undefined)
+- [none] Plantilla de pie ortopédica a medida (50€) (Cycle: undefined)
+- [none] Ropa nueva pedido hacco ya preparado (200€) (Cycle: undefined)
+- [none] Ropa interior (100€) (Cycle: undefined)
+  - [none] 5-10 Calzoncillos CK MIRAVIA
+  - [none] 10-20 Pares de calcetines marca MIRAVIA
+- [none] Skin-care  (Cycle: undefined)
+  - [none] Jabón facial
+  - [none] Tónico
+  - [none] Sérum
+  - [none] Bálsamo labial
+  - [none] Jabón sin ph
+  - [none] Recambio de afeitar máquina o lo que sea
+  - [none] Axe
+  - [none] Aceites esenciales
+- [none] Zapatillas (200€) (Cycle: undefined)
+- [none] AliExpress (60€) (Cycle: undefined)
+  - [none] Oral B 12 Cabezales (minimo) ALIEXPRESS
+  - [none] Paquetes de silicona y antipolillas con perfume
+- [none] Pendientes Swarovski  (Cycle: undefined)
+- [none] Cosas para hacer masaje  (Cycle: undefined)
+  - [none] Masajeador de cuello hombros espalda de amasamiento 4D
+  - [none] Más cosas que se ocurran
+  - [none] Manos vibradoras
+  - [none] Manta de abalorios
+  - [none] Manta de calor sanadora
+  - [none] Aceites calor frío etc
+- [none] Depiladora afeitadora máquina buena  (Cycle: undefined)
+- [none] Airtags 4 (100€) (Cycle: undefined)
+- [none] Acuario  (Cycle: undefined)
+  - [none] Pecera enorme
+  - [none] Bomba sumergible
+  - [none] Calentador
+  - [none] Termómetro agua
+  - [none] Alimentador de peces automático
+- [none] DBici (50€) (Cycle: undefined)
+- [none] Nike Tkno  (Cycle: undefined)
+- [none] Me falta de los ahorros  (Cycle: undefined)
+- [none] Ropa  (Cycle: undefined)
+  - [none] Nike Tailwind
+  - [none] Abrigo Nike
+  - [none] Un par de cinturones guapos
+- [none] !! Me falta de los ahorros  (Cycle: undefined)
+- [none] Papel para sacar de manera fácil para el cajón de la mesilla  (Cycle: undefined)
+- [none] Renovar ropa de casa, pijamas, calcetines de casa calentitos (100€) (Cycle: cycle_year)
+- [none] Celo doble cara  (Cycle: undefined)
+- [none] El oro verde, sobre todo el mechero que tiene un hueco y se abre por abajo  (Cycle: undefined)
+- [none] Antiarrugas de zapatos  (Cycle: undefined)
+- [none] AMAZON  (Cycle: undefined)
+- [none] Chanclas de marca talla 43  (Cycle: undefined)
+- [none] Nike zoom 2k  (Cycle: undefined)
+- [none] Ventilador con gancho mejor si es enchufable y con pilas con un brazo articulado de estos para poder engancharlo en el cabezal de la cama y moverlo a mi gusto  (Cycle: undefined)
+- [none] protector de sillón acolchado todo esto para la buena bici  (Cycle: undefined)
+- [none] Chaqueta reflectante  (Cycle: undefined)
+- [none] Peluquería (15€) (Cycle: cycle_month)
+- [none] Tabaco (50€) (Cycle: cycle_month)
+- [none] Gorro Carhartt  (Cycle: undefined)
+- [none] Masaje o fisio (50€) (Cycle: cycle_month)
+- [none] Spotify (6€) (Cycle: cycle_month)
+- [none] iCloud (10€) (Cycle: cycle_month)
+- [none] Ya tengo  (Cycle: cycle_year)
+  - [none] ! Plantilla de pie ortopédica a medida
+  - [none] La perla 10 sesiones
+  - [none] Ropa nueva
+- [none] Ropa interior (100€) (Cycle: cycle_year)
+  - [none] Calzoncillos CK (5 a 10 unidades)
+  - [none] Calcetines (10 a 20 pares)
+- [none] Zapatillas (200€) (Cycle: cycle_year)
+  - [none] Nike Shox
+  - [none] Botas marrones claro
+  - [none] Nike Air Force 1
+  - [none] Zapatillas Globe
+  - [none] Air 90
+  - [none] Zapatillas New Balance
+  - [none] Nike Air Max Plus (Tn)
+- [none] Tengo que  (Cycle: cycle_year)
+  - [none] Perfume Mugler
+  - [none] Mugí
+  - [none] Sábanas 2 pares invierno/ 2 pares verano algodon
+  - [none] !!! Perfume
+  - [none] Bronceamiento
+  - [none] Arreglar pantalla batería o seguro de móvil o lo que necesite
+  - [none] Seguro dental (LIMPIEZA Y BLANQUEAMIENTO DE LAPIZ)
+  - [none] Sábanas (2 pares de invierno y 2 pares de verano de algodón)
+  - [none] AliExpress
+  - [none] !!! Skin-care
+  - [none] Perfume
+- [none] Pendientes Swarovski  (Cycle: undefined)
+- [none] !!! Depiladora afeitadora máquina buena  (Cycle: undefined)
+- [none] Wonderboom para llevarlo a sitios  (Cycle: undefined)
+- [none] Piano + banqueta y sillín + micrófono profesional  (Cycle: undefined)
+- [none] Mochila con una red transpirable y un espacio entre la espalda y la mochila para el sudor (como en caravanas oiartzun)  (Cycle: undefined)
+- [none] Jagger 3L  (Cycle: undefined)
+- [none] Airtags 4 (100€) (Cycle: undefined)
+- [none] !! Cosas para hacer masaje  (Cycle: undefined)
+- [none] ! Ropa  (Cycle: undefined)
+  - [none] Nike M2K Tekno
+- [none] ! Acuario  (Cycle: undefined)
+- [none] El oro verde, sobre todo incluido el mechero que se abre por abajo para meter la droga  (Cycle: undefined)
+- [none] Bici: recambios y mantenimiento (50€) (Cycle: undefined)
+
+## Category: eventos
+- [none] Llaves  (Cycle: undefined)
+- [none] *Cartera*  (Cycle: undefined)
+- [none] *Cargador portátil*  (Cycle: undefined)
+- [none] *Bolsa de plástico*  (Cycle: undefined)
+- [none] Agua  (Cycle: undefined)
+- [none] Kleenex  (Cycle: undefined)
+- [none] Cacao  (Cycle: undefined)
+- [none] Crema de sol  (Cycle: undefined)
+- [none] Gafas de sol  (Cycle: undefined)
+- [none] Batería portátil  (Cycle: undefined)
+- [none] Buff  (Cycle: undefined)
+- [none] Guantes  (Cycle: undefined)
+- [none] Gorro  (Cycle: undefined)
+- [none] Ropa de cambiarse  (Cycle: undefined)
+- [none] Térmica  (Cycle: undefined)
+- [none] Bañador  (Cycle: undefined)
+- [none] Toalla  (Cycle: undefined)
+- [none] Ropa de cambio  (Cycle: undefined)
+- [none] Chanclas  (Cycle: undefined)
+- [none] Aftersún  (Cycle: undefined)
+- [none] Bañador  (Cycle: undefined)
+- [none] Toalla  (Cycle: undefined)
+- [none] Ropa de cambio  (Cycle: undefined)
+- [none] Chanclas  (Cycle: undefined)
+- [none] Gorro de piscina  (Cycle: undefined)
+- [none] Aftersún  (Cycle: undefined)
+- [none] Bañador  (Cycle: undefined)
+- [none] Toalla  (Cycle: undefined)
+- [none] Chanclas  (Cycle: undefined)
+- [none] Escarpines  (Cycle: undefined)
+- [none] Ropa de cambio  (Cycle: undefined)
+- [none] Aftersún  (Cycle: undefined)
+- [none] Carne  (Cycle: undefined)
+- [none] Pan  (Cycle: undefined)
+- [none] Bebidas  (Cycle: undefined)
+- [none] Hielo  (Cycle: undefined)
+- [none] Salsas  (Cycle: undefined)
+- [none] Platos  (Cycle: undefined)
+- [none] Vasos  (Cycle: undefined)
+- [none] Cubiertos  (Cycle: undefined)
+- [none] Servilletas  (Cycle: undefined)
+- [none] Bolsa de basura  (Cycle: undefined)
+- [none] Papel cocina  (Cycle: undefined)
+- [none] Carbon  (Cycle: undefined)
+- [none] Pastillas  (Cycle: undefined)
+- [none] Mechero  (Cycle: undefined)
+- [none] Pinzas  (Cycle: undefined)
+- [none] Espátula  (Cycle: undefined)
+- [none] Gorro  (Cycle: undefined)
+- [none] Chanclas  (Cycle: undefined)
+- [none] Toalla (se puede alquilar sino)  (Cycle: undefined)
+- [none] Bañador  (Cycle: undefined)
+- [none] Ropa para cambiarte  (Cycle: undefined)
+
+## Category: inbox
+- [morning] Comprar pan (1.2€) (Cycle: undefined)
+- [afternoon] Llamar al médico  (Cycle: undefined)
+- [morning] Comprar pan (1.2€) (Cycle: undefined)
+- [afternoon] Llamar al médico  (Cycle: undefined)
+- [morning] Comprar pan (1.2€) (Cycle: undefined)
+- [afternoon] Llamar al médico  (Cycle: undefined)
+- [morning] Comprar pan (1.2€) (Cycle: undefined)
+- [afternoon] Llamar al médico  (Cycle: undefined)
+- [morning] Comprar pan (1.2€) (Cycle: undefined)
+- [afternoon] Llamar al médico  (Cycle: undefined)
+- [morning] Comprar pan (1.2€) (Cycle: undefined)
+- [afternoon] Llamar al médico  (Cycle: undefined)
+- [morning] Comprar pan (1.2€) (Cycle: undefined)
+- [afternoon] Llamar al médico  (Cycle: undefined)
+- [morning] Comprar pan (1.2€) (Cycle: undefined)
+- [afternoon] Llamar al médico  (Cycle: undefined)
+
+## Category: limpieza
+- [none] Dejar toallas bien colgadas.  (Cycle: cycle_day)
+- [none] Acomodar los productos del lavabo o ducha.  (Cycle: cycle_day)
+- [none] Limpiar fregadero y grifo a fondo.  (Cycle: cycle_week)
+- [none] Limpiar zapatillas del zapatero.  (Cycle: cycle_week)
+- [none] Limpiar pre-filtro del purificador de aire.  (Cycle: cycle_week)
+- [none] Pasar agua rápida al lavabo si está sucio.  (Cycle: cycle_week)
+- [none] Limpiar horno a fondo.  (Cycle: cycle_month)
+- [none] Fregar platos o meter en lavavajillas.  (Cycle: cycle_month)
+- [none] Limpiar fregadero y grifo a fondo.  (Cycle: cycle_month)
+- [none] Limpiar silicona del escurreplatos.  (Cycle: cycle_month)
+- [none] Pasar el polvo por superficies (de arriba a abajo).  (Cycle: cycle_week)
+- [none] Barrer el balcón y retirar hojas o suciedad.  (Cycle: cycle_week)
+- [none] Limpiar campana extractora y filtros.  (Cycle: cycle_month)
+- [none] Aspirar el colchón y la base del canapé.  (Cycle: cycle_month)
+- [none] Hacer la cama / acomodar la cama.  (Cycle: cycle_month)
+- [none] Cambiar la ropa de cama.  (Cycle: cycle_month)
+- [none] Revisar encimera y mesa y recoger migas o salpicaduras.  (Cycle: cycle_week)
+- [none] Limpiar silicona del escurreplatos y utensilios de silicona.  (Cycle: cycle_week)
+- [none] Revisar y limpiar neceseres, mochilas y bolsas.  (Cycle: cycle_month)
+- [none] Pasar agua rápida al lavabo si está sucio.  (Cycle: cycle_month)
+- [none] [D] Pasar agua rápida al lavabo si está sucio.  (Cycle: cycle_day)
+- [none] [D] Revisar espejo y grifo (pasar trapo rápido si hay manchas).  (Cycle: cycle_day)
+- [none] [D] Dejar toallas bien colgadas.  (Cycle: cycle_day)
+- [none] [D] Acomodar los productos del lavabo o ducha.  (Cycle: cycle_day)
+- [none] [D] Fregar platos o meter en lavavajillas.  (Cycle: cycle_day)
+- [none] [D] Pasar un agua rápida al fregadero y secarlo.  (Cycle: cycle_day)
+- [none] Limpiar lavabo, grifos, ducha e inodoro.  (Cycle: cycle_month)
+- [none] Recoger ropa y objetos sueltos / llevar la ropa sucia al cesto.  (Cycle: cycle_month)
+- [none] [D] Poner la ropa sucia en el cesto.  (Cycle: cycle_day)
+- [none] [D] Aspirar la casa  (Cycle: cycle_day)
+- [none] [D] Revisar encimera y mesa y recoger migas o salpicaduras.  (Cycle: cycle_day)
+- [none] [D] Hacer la cama  (Cycle: cycle_day)
+- [none] [D] Dejar el escritorio y mesillas despejadas.  (Cycle: cycle_day)
+- [none] [D] Dejar toallas o bata bien colgadas.  (Cycle: cycle_day)
+- [none] [D] Recoger cosas fuera de sitio (salón, pasillo, entrada).  (Cycle: cycle_day)
+- [none] [D] Fregar platos o meter en lavavajillas.  (Cycle: cycle_day)
+- [none] [D] Pasar un agua rápida al fregadero y secarlo.  (Cycle: cycle_day)
+- [none] [S] Limpiar fregadero y grifo a fondo.  (Cycle: cycle_week)
+- [none] [D] Vaciar papeleras si están llenas.  (Cycle: cycle_day)
+- [none] Vaciar y enjuagar portacepillos.  (Cycle: cycle_month)
+- [none] Limpiar barandilla y muebles a fondo.  (Cycle: cycle_month)
+- [none] Recoger cosas fuera de sitio (salón, pasillo, entrada).  (Cycle: cycle_month)
+- [none] [D] Ventilar la habitación (abrir ventana 10 min).  (Cycle: cycle_day)
+- [none] [S] Limpiar microondas por dentro y fuera.  (Cycle: cycle_week)
+- [none] [D] Pasar agua rápida al lavabo si está sucio.  (Cycle: cycle_day)
+- [none] [S] Limpiar lavabo y grifos a fondo.  (Cycle: cycle_week)
+- [none] [M] Pasar un paño por armarios y tiradores.  (Cycle: cycle_month)
+- [none] [S] Limpiar inodoro por dentro y fuera.  (Cycle: cycle_week)
+- [none] [S] Poner una lavadora  (Cycle: cycle_week)
+- [none] [S] Limpiar ducha/bañera.  (Cycle: cycle_week)
+- [none] [S] Limpiar bandejitas y jaboneras.  (Cycle: cycle_week)
+- [none] [S] Limpiar toalleros.  (Cycle: cycle_week)
+- [none] Quitar telarañas  (Cycle: cycle_month)
+- [none] [S] Limpiar/desinfectar cepillo de dientes.  (Cycle: cycle_week)
+- [none] [S] Limpiar espejos de entrada.  (Cycle: cycle_week)
+- [none] [S] Pasar trapo por zapatero y estantes.  (Cycle: cycle_week)
+- [none] [S] Pasar trapo por tiradores y frentes accesibles.  (Cycle: cycle_week)
+- [none] [S] Pasar el polvo por superficies (de arriba a abajo).  (Cycle: cycle_week)
+- [none] [S] Aspirar y fregar suelo  (Cycle: cycle_week)
+- [none] [D] Recoger objetos sueltos  (Cycle: cycle_day)
+- [none] [S] Barrer el balcón y retirar hojas o suciedad.  (Cycle: cycle_week)
+- [none] [D] Hacer la cama  (Cycle: cycle_day)
+- [none] [S] Limpiar barandilla y muebles superficiales.  (Cycle: cycle_week)
+- [none] [S] Cambiar la ropa de cama.  (Cycle: cycle_week)
+- [none] [S] Vaciar papeleras pequeñas.  (Cycle: cycle_week)
+- [none] Limpiar puertas de los armarios  (Cycle: cycle_week)
+- [none] [S] Limpiar zapatillas del zapatero.  (Cycle: cycle_week)
+- [none] Pasar desinfectante por todas las manillas e interruptores  (Cycle: cycle_week)
+- [none] [S] Cambiar bayeta/valleta si está sucia.  (Cycle: cycle_week)
+- [none] [M] Limpiar pre-filtro del purificador de aire.  (Cycle: cycle_month)
+- [none] [D] Revisar encimera y mesa y recoger migas o salpicaduras.  (Cycle: cycle_day)
+- [none] [S] Limpiar silicona del escurreplatos y utensilios de silicona.  (Cycle: cycle_week)
+- [none] [S] Vaciar los anti-humedades si corresponde.  (Cycle: cycle_week)
+- [none] [D] Pasar agua rápida al lavabo si está sucio.  (Cycle: cycle_day)
+- [none] Barrer el balcón y retirar hojas o suciedad.  (Cycle: cycle_month)
+- [none] Ventilar la habitación (abrir ventana 10 min).  (Cycle: cycle_month)
+- [none] [S] Aspirar toda la habitación a fondo.  (Cycle: cycle_week)
+- [none] [D] Recoger ropa y objetos sueltos / llevar la ropa sucia al cesto.  (Cycle: cycle_day)
+- [none] [S] Barrer el balcón y retirar hojas o suciedad.  (Cycle: cycle_week)
+- [none] [D] Ventilar la habitación (abrir ventana 10 min).  (Cycle: cycle_day)
+- [none] [M] Cambiar ambientador o recarga.  (Cycle: cycle_month)
+- [none] [S] Pasar el polvo por superficies (de arriba a abajo).  (Cycle: cycle_week)
+- [none] [S] Fregar el suelo.  (Cycle: cycle_week)
+- [none] [S] Aspirar y fregar suelo.  (Cycle: cycle_week)
+- [none] [S] Limpiar espejos de entrada.  (Cycle: cycle_week)
+- [none] [M] Pasar aspiradora detrás de muebles accesibles.  (Cycle: cycle_month)
+- [none] [S] Limpiar lavabo, grifos, ducha e inodoro.  (Cycle: cycle_week)
+- [none] [M] Limpiar puerta de entrada por dentro.  (Cycle: cycle_month)
+- [none] [S] Limpiar silicona del escurreplatos.  (Cycle: cycle_week)
+- [none] [D] Fregar platos o meter en lavavajillas.  (Cycle: cycle_day)
+- [none] [S] Limpiar microondas por dentro y fuera.  (Cycle: cycle_week)
+- [none] [S] Pasar trapo por tiradores y frentes accesibles.  (Cycle: cycle_week)
+- [none] [S] Limpiar fregadero y grifo a fondo.  (Cycle: cycle_week)
+- [none] [M] Limpiar horno a fondo.  (Cycle: cycle_month)
+- [none] Cambiar ambientador o recarga.  (Cycle: cycle_month)
+- [none] [M] Aspirar el colchón y la base del canapé.  (Cycle: cycle_month)
+- [none] [M] Girar el colchón.  (Cycle: cycle_month)
+- [none] [S] Cambiar la ropa de cama.  (Cycle: cycle_week)
+- [none] [M] Revisar y limpiar neceseres, mochilas y bolsas.  (Cycle: cycle_month)
+- [none] [D] Pasar agua rápida al lavabo si está sucio.  (Cycle: cycle_day)
+- [none] [S] Limpiar bandejitas y jaboneras.  (Cycle: cycle_week)
+- [none] [M] Limpiar juntas y baldosas visibles.  (Cycle: cycle_month)
+- [none] [M] Limpiar rejilla y tapón del desagüe.  (Cycle: cycle_month)
+- [none] [S] Vaciar y enjuagar portacepillos.  (Cycle: cycle_week)
+- [none] Poner lavadora  (Cycle: cycle_month)
+  - [none] Protector de colchón
+  - [none] Mantas y edredón de la cama
+  - [none] Alfombrillas si son de tela
+  - [none] Si es invierno, gorros, bufandas, etc.
+  - [none] Cada 3 meses las cortinas
+  - [none] La cabeza de la fregona, si es desmontable
+  - [none] Zapatillas de estar por casa si son de tela y se pueden meter
+  - [none] Bolsas de tela
+  - [none] Mochila, gimnasio cole, etc.
+- [none] [M] Limpiar rebosadero del lavabo.  (Cycle: cycle_month)
+- [none] [D] Recoger cosas fuera de sitio (salón, pasillo, entrada).  (Cycle: cycle_day)
+- [none] [M] Vaciar los anti-humedades.  (Cycle: cycle_month)
+- [none] [M] Limpiar barandilla y muebles a fondo.  (Cycle: cycle_month)
+- [none] HABITACIÓN  (Cycle: cycle_year)
+  - [none] [D] Recoger ropa y objetos sueltos / llevar la ropa sucia al cesto.
+  - [none] [D] Ventilar la habitación (abrir ventana 10 min).
+  - [none] [S] Pasar el polvo por superficies (de arriba a abajo).
+  - [none] [M] Reorganizar mesillas y cajones.
+  - [none] [M] Girar el colchón.
+  - [none] [S] Limpiar espejos.
+  - [none] [M] Revisar y limpiar neceseres, mochilas y bolsas.
+  - [none] [M] Aspirar el colchón y la base del canapé.
+  - [none] [S] Vaciar papeleras pequeñas.
+  - [none] [D] Aspirar toda la habitación si hay pelusas visibles.
+  - [none] [D] Dejar toallas o bata bien colgadas.
+  - [none] [S] Fregar el suelo.
+  - [none] [S] Cambiar la ropa de cama.
+  - [none] [S] Aspirar toda la habitación a fondo (debajo de la cama y muebles).
+  - [none] [A] Lavar cortinas o estores.
+  - [none] [A] Lavar edredones, mantas grandes y almohadas.
+  - [none] [A] Reorganizar armario a fondo (tirar, donar, doblar).
+  - [none] [A] Limpiar persianas y marcos de ventanas.
+  - [none] [A] Aspirar detrás de muebles grandes.
+  - [none] [A] Revisar ropa de temporada (rotar/ver qué falta).
+  - [none] [A] Limpiar el canapé por dentro.
+  - [none] [D] Dejar el escritorio y mesillas despejadas.
+  - [none] [D] Hacer la cama / acomodar la cama
+- [none] COCINA  (Cycle: cycle_year)
+  - [none] [D] Revisar encimera y mesa y recoger migas o salpicaduras.
+  - [none] [D] Pasar un agua rápida al fregadero y secarlo.
+  - [none] [M] Limpiar campana extractora y filtros.
+  - [none] [S] Limpiar silicona del escurreplatos y utensilios de silicona.
+  - [none] [A] Limpiar detrás y debajo de electrodomésticos (frigo, horno, lavavajillas).
+  - [none] [M] Limpiar horno a fondo.
+  - [none] [S] Cambiar bayeta si está sucia.
+  - [none] [S] Pasar trapo por tiradores y frentes accesibles.
+  - [none] [M] Pasar un paño por armarios y tiradores.
+  - [none] [S] Limpiar microondas por dentro y fuera.
+  - [none] ç[S] Limpiar microondas por dentro y fuera. [D] Pasar trapo rápido por la vitro si está sucia.
+  - [none] [S] Limpiar fregadero y grifo a fondo.
+  - [none] [A] Aspirar y limpiar zócalos de muebles de cocina.
+  - [none] [A] Revisar y reorganizar despensa (tirar caducados, limpiar baldas).
+  - [none] [A] Limpiar interruptores, enchufes y esquinas de cocina.
+  - [none] [A] Descongelar y limpiar el frigorífico a fondo.
+  - [none] [A] Revisar utensilios y tirar los rotos o duplicados.
+  - [none] [D] Fregar platos o meter en lavavajillas.
+- [none] Limpiar microondas por dentro y fuera.  (Cycle: cycle_week)
+- [none] Pasar agua rápida al lavabo si está sucio.  (Cycle: cycle_week)
+- [none] Limpiar lavabo y grifos a fondo.  (Cycle: cycle_week)
+- [none] PASILLO / ENTRADA  (Cycle: cycle_year)
+  - [none] [S] Limpiar zapatillas del zapatero.
+  - [none] [S] Limpiar espejos de entrada.
+  - [none] [S] Pasar trapo por zapatero y estantes.
+  - [none] [M] Pasar aspiradora detrás de muebles accesibles.
+  - [none] [A] Limpiar puerta principal por fuera, bisagras y marco.
+  - [none] [D] Recoger cosas fuera de sitio.
+  - [none] [S] Aspirar y fregar suelo.
+  - [none] [A] Limpiar interruptores, zócalos y esquinas.
+  - [none] [M] Limpiar puerta de entrada por dentro.
+  - [none] [A] Limpiar lámparas o apliques de luz.
+  - [none] [A] Revisar y organizar el perchero (tirar cosas viejas).
+- [none] BAÑO  (Cycle: cycle_year)
+  - [none] [D] Acomodar los productos del lavabo o ducha.
+  - [none] [S] Limpiar lavabo y grifos a fondo.
+  - [none] [S] Limpiar inodoro por dentro y fuera.
+  - [none] [D] Revisar espejo y grifo (pasar trapo rápido si hay manchas).
+  - [none] [D] Pasar agua rápida al lavabo si está sucio.
+  - [none] [D] Dejar toallas bien colgadas.
+  - [none] [S] Vaciar los anti-humedades si corresponde.
+  - [none] [M] Limpiar juntas y baldosas visibles.
+  - [none] [S] Limpiar toalleros.
+  - [none] [M] Limpiar rebosadero del lavabo.
+  - [none] [A] Limpiar azulejos hasta el techo.
+  - [none] [S] Limpiar ducha/bañera superficialmente.
+  - [none] [S] Vaciar y enjuagar portacepillos de dientes.
+  - [none] [S] Limpiar bandejitas y jaboneras.
+  - [none] [A] Desmontar y limpiar alcachofa de la ducha.
+  - [none] [A] Limpiar interior de los armarios y tirar productos caducados.
+  - [none] [M] Limpiar rejilla y tapón del desagüe.
+  - [none] [A] Revisar toallas (tirar las viejas o guardar las buenas).
+- [none] BALCÓN  (Cycle: cycle_year)
+  - [none] [S] Limpiar barandilla y muebles superficiales.
+  - [none] [A] Limpiar profundamente muebles de exterior.
+  - [none] [A] Tratar o proteger el suelo si procede (aceite o sellador).
+  - [none] [A] Limpiar cristales o mamparas exteriores.
+  - [none] [A] Revisar macetas y eliminar suciedad o moho.
+  - [none] [M] Fregar bien el suelo con agua y jabón.
+  - [none] [S] Barrer el balcón y retirar hojas o suciedad.
+- [none] GENERAL  (Cycle: cycle_year)
+  - [none] [D] Vaciar papeleras pequeñas si están llenas.
+  - [none] [M] Cambiar ambientador o recarga.
+  - [none] [A] Limpiar marcos y rieles de ventanas.
+  - [none] [D] Revisar humedad o malos olores (abrir ventanas si hace falta).
+  - [none] [S] Aspirar y fregar zonas comunes.
+  - [none] [M] Vaciar los anti-humedades.
+  - [none] [A] Limpiar rejillas de ventilación.
+  - [none] [A] Limpiar zócalos y esquinas escondidas.
+  - [none] [A] Mover muebles grandes y aspirar detrás.
+  - [none] [A] Lavar alfombras o llevarlas a limpieza profesional.
+  - [none] [A] Lavar cortinas o estores.
+  - [none] [A] Revisar bombillas y sustituir las fundidas.
+  - [none] Revisar todo lo que hay y tirarlo que sobra
+  - [none] [A] Revisar y limpiar lámparas.
+  - [none] [A] Limpiar puertas y marcos por toda la casa.
+  - [none] [A] Revisar y tirar cajas o aparatos antiguos.
+  - [none] [A] Reemplazar el filtro principal del purificador.
+  - [none] [M] Limpiar pre-filtro del purificador de aire.
+- [none] Girar el colchón.  (Cycle: cycle_month)
+- [none] Limpiar/desinfectar cepillo de dientes.  (Cycle: cycle_week)
+- [none] Limpiar bandejitas y jaboneras.  (Cycle: cycle_week)
+- [none] Limpiar toalleros.  (Cycle: cycle_week)
+- [none] Pasar un agua rápida al fregadero y secarlo.  (Cycle: cycle_day)
+- [none] Pasar un paño por armarios y tiradores.  (Cycle: cycle_week)
+- [none] Limpiar inodoro por dentro y fuera.  (Cycle: cycle_week)
+- [none] Limpiar espejos de entrada.  (Cycle: cycle_week)
+- [none] Aspirar y fregar suelo  (Cycle: cycle_week)
+- [none] Pasar trapo por tiradores y frentes accesibles.  (Cycle: cycle_week)
+- [none] [D] Si hay, llevar la ropa sucia al cesto.  (Cycle: cycle_day)
+- [none] [D] Ventilar (abrir ventana 10 min).  (Cycle: cycle_day)
+- [none] [D] Pasar trapo rápido por la vitro con producto  (Cycle: cycle_day)
+- [none] [D] Hacer la cama / acomodar la cama.  (Cycle: cycle_day)
+- [none] Limpiar ducha/bañera.  (Cycle: cycle_week)
+- [none] [M] Limpiar campana extractora y filtros.  (Cycle: cycle_month)
+- [none] Limpiar bandejitas y jaboneras.  (Cycle: cycle_month)
+- [none] Limpiar juntas y baldosas visibles.  (Cycle: cycle_month)
+- [none] Limpiar rejilla y tapón del desagüe.  (Cycle: cycle_month)
+- [none] Limpiar rebosadero del lavabo.  (Cycle: cycle_month)
+- [none] Vaciar los anti-humedades.  (Cycle: cycle_month)
+- [none] Ventilar (abrir ventana 10 min).  (Cycle: cycle_day)
+- [none] Fregar platos o meter en lavavajillas.  (Cycle: cycle_day)
+- [none] Revisar encimera y mesa y recoger migas o salpicaduras.  (Cycle: cycle_day)
+- [none] Pasar trapo rápido por la vitro con producto  (Cycle: cycle_day)
+- [none] Vaciar papeleras si están llenas.  (Cycle: cycle_day)
+- [none] Hacer la cama  (Cycle: cycle_day)
+- [none] Poner la ropa sucia en el cesto.  (Cycle: cycle_day)
+- [none] Dejar el escritorio y mesillas despejadas.  (Cycle: cycle_day)
+- [none] Dejar toallas o bata bien colgadas.  (Cycle: cycle_day)
+- [none] Recoger cosas fuera de sitio (salón, pasillo, entrada).  (Cycle: cycle_day)
+- [none] Aspirar la casa  (Cycle: cycle_day)
+- [none] Fregar platos o meter en lavavajillas.  (Cycle: cycle_week)
+- [none] Ventilar la habitación (abrir ventana 10 min).  (Cycle: cycle_week)
+- [none] Si hay, llevar la ropa sucia al cesto.  (Cycle: cycle_week)
+- [none] Poner una lavadora  (Cycle: cycle_week)
+- [none] Pasar trapo por zapatero y estantes.  (Cycle: cycle_week)
+- [none] Limpiar barandilla y muebles superficiales.  (Cycle: cycle_week)
+- [none] Recoger objetos sueltos  (Cycle: cycle_week)
+- [none] Cambiar la ropa de cama.  (Cycle: cycle_week)
+- [none] Hacer la cama  (Cycle: cycle_week)
+- [none] Vaciar papeleras pequeñas.  (Cycle: cycle_week)
+- [none] Pasar el polvo por superficies (de arriba a abajo).  (Cycle: cycle_month)
+- [none] Aspirar toda la habitación a fondo.  (Cycle: cycle_month)
+- [none] Fregar el suelo.  (Cycle: cycle_month)
+- [none] Aspirar y fregar suelo.  (Cycle: cycle_month)
+- [none] Limpiar espejos de entrada.  (Cycle: cycle_month)
+- [none] Pasar aspiradora detrás de muebles accesibles.  (Cycle: cycle_month)
+- [none] Limpiar puerta de entrada por dentro.  (Cycle: cycle_month)
+- [none] Pasar un agua rápida al fregadero y secarlo.  (Cycle: cycle_week)
+- [none] Cambiar bayeta de la cocina si está sucia o desgastada  (Cycle: cycle_week)
+- [none] Pasar agua rápida al lavabo si está sucio.  (Cycle: cycle_day)
+- [none] Revisar espejo y grifo (pasar trapo rápido si hay manchas).  (Cycle: cycle_day)
+- [none] Vaciar los anti-humedades si corresponde.  (Cycle: cycle_week)
+- [none] Limpiar microondas por dentro y fuera.  (Cycle: cycle_month)
+- [none] Pasar trapo por tiradores y frentes accesibles.  (Cycle: cycle_month)
+
+## Category: prop_sitos_anuales
+- [none] olvidarte LO HICE  (Cycle: undefined)
+- [none] Sacar lo mejor de mi  (Cycle: undefined)
+- [none] No tener “cosas que hacer”  (Cycle: undefined)
+- [none] mantener a las personas que se lo merecen en mi vida CASI CASI  (Cycle: undefined)
+- [none] Callar más  (Cycle: undefined)
+- [none] Terminarlo y mantenerlo 🤣  (Cycle: undefined)
+- [none] Sentir que soy importante para alguien o que hago una contribución grande a algo  (Cycle: undefined)
+- [none] Entiendo que las cosas que me pasan tengo yo influencia  (Cycle: undefined)
+- [none] hacerlo HE AVANZADO  (Cycle: undefined)
+- [none] Sentirme completo  (Cycle: undefined)
+- [none] Saber soltar totalmente a las personal  (Cycle: undefined)
+- [none] Fumar muchísimo menos porfavor  (Cycle: undefined)
+- [none] 80? 85? No se tu veras pero dale porfi, esa definición que querías  (Cycle: undefined)
+- [none] Aprender cual es tu manera propia de dejar ir  (Cycle: undefined)
+- [none] valorar lo que tengo HE AVANZADO  (Cycle: undefined)
+- [none] valorarme, que soy la polla HECHO  (Cycle: undefined)
+- [none] cambiar mis reacciones a la hora de enfadarme FIFTY FIFTY  (Cycle: undefined)
+- [none] enamorarme, pero que sea diferente NADA  (Cycle: undefined)
+- [none] no desearle el mal a nadie, ni cuando me enfade NO HE AVANZADO  (Cycle: undefined)
+- [none] saber soltar algo o a alguien FIFTY  (Cycle: undefined)
+- [none] Valorar más  (Cycle: undefined)
+- [none] Enamorarme, pero que sea diferente  (Cycle: undefined)
+- [none] Estar más con mi familia  (Cycle: undefined)
+- [none] No utilizar las palabras en vano, cumplir lo que digo  (Cycle: undefined)
+- [none] Tener más paciencia  (Cycle: undefined)
+- [none] Terminar TODO lo pendiente. TO DO.  (Cycle: undefined)
+- [none] Ser constante  (Cycle: undefined)
+- [none] Seguir así  (Cycle: undefined)
+- [none] Aprender a andar recto  (Cycle: undefined)
+- [none] Fumar menos  (Cycle: undefined)
+- [none] Volver al gym  (Cycle: undefined)
+- [none] Formar una relación más sana con la comida  (Cycle: undefined)
+- [none] Terminarlo y mantenerlo BUENO  (Cycle: undefined)
+- [none] Sentir que soy capaz  (Cycle: undefined)
+- [none] intentar dejar de darle mil vueltas a todo HECHO CASI CASI  (Cycle: undefined)
+
+## Category: quehaceres
+- [none] Mirarse en el espejo  (Cycle: cycle_day)
+- [none] limpiarme las joyas del joyero con el espadachín este cómo se llame  (Cycle: cycle_year)
+- [none] Pedir analítica a la médica  (Cycle: cycle_year)
+- [none] Revisión dermatológica lunares  (Cycle: cycle_year)
+- [none] Actualiza el currículum y actualizar cuentas de LinkedIn,github  (Cycle: cycle_year)
+- [none] Que quiero aprender?  (Cycle: undefined)
+- [none] Te aburres?  (Cycle: undefined)
+- [none] Mirarse en el espejo y sonreír  (Cycle: cycle_day)
+- [none] Poner morritos hacia la izquierda, derecha, izquierda, derecha para hacer pómulo  (Cycle: cycle_day)
+- [none] Lavar rostro  (Cycle: cycle_day)
+- [none] Aplicar tónico facial  (Cycle: cycle_day)
+- [none] Revisar si alguna cuenta importante ha recibido filtraciones  (Cycle: cycle_year)
+- [none] Aplicar serum  (Cycle: cycle_day)
+- [none] Aplicar contorno de ojos  (Cycle: cycle_day)
+- [none] Aplicar crema hidratante  (Cycle: cycle_day)
+- [none] Aplicar protector solar  (Cycle: cycle_day)
+- [none] Banda facial reafirmante  (Cycle: cycle_day)
+- [none] Desinfectar pantalla del teléfono con alcohol  (Cycle: cycle_day)
+- [none] Repasar los documentos de la carpeta “podría servir en el cole”  (Cycle: cycle_day)
+- [none] 50 curls y abs  (Cycle: cycle_day)
+- [none] Leer  (Cycle: cycle_day)
+- [none] Estiramientos yoga  (Cycle: cycle_day)
+- [none] Registrar estado diario  (Cycle: cycle_day)
+- [none] Meditación  (Cycle: cycle_day)
+- [none] Vacío  (Cycle: cycle_day)
+- [none] Cargar  (Cycle: cycle_day)
+- [none] Aplicaciones permanentes 3 veces al dia  (Cycle: cycle_day)
+- [none] SEMANALES  (Cycle: cycle_week)
+  - [none] Limpieza semanal
+  - [none] Skincare semanal
+- [none] Agua 10 veces al dia  (Cycle: cycle_day)
+- [none] Hacer refill de pañuelos y mecheros  (Cycle: cycle_week)
+- [none] Lavarse los dientes 3 veces al dia  (Cycle: cycle_day)
+- [none] Masaje con los aparatos eléctricos de masaje  (Cycle: cycle_week)
+- [none] Lavarse las manos 4 veces al dia  (Cycle: cycle_day)
+- [none] DIARIAS  (Cycle: cycle_day)
+  - [none] Skin-care diaria
+  - [none] Limpieza diaria
+- [none] Limpiar dispositivos electrónicos  (Cycle: cycle_week)
+- [none] Recordatorio de respirar por la nariz  (Cycle: cycle_day)
+- [none] Cargar dispositivos eléctricos  (Cycle: cycle_week)
+- [none] Extras  (Cycle: cycle_month)
+- [none] MENSUALES  (Cycle: cycle_month)
+  - [none] Compra mensual
+  - [none] Limpieza mensual
+  - [none] Skin-care mensual
+- [none] Desayunar  (Cycle: cycle_day)
+- [none] Hacer cama  (Cycle: cycle_day)
+- [none] Regar plantas  (Cycle: cycle_month)
+- [none] Almorzar  (Cycle: cycle_day)
+- [none] Cortarme el pelo  (Cycle: cycle_month)
+- [none] Ir a la perla  (Cycle: cycle_month)
+- [none] Merendar  (Cycle: cycle_day)
+- [none] Cenar  (Cycle: cycle_day)
+- [none] Cambiar cabezal cepillo de dientes  (Cycle: cycle_month)
+- [none] Estiramientos mañaneros  (Cycle: cycle_day)
+- [none] Cambiar cuchilla  (Cycle: cycle_month)
+- [none] Despertarse  (Cycle: cycle_day)
+- [none] Revisar fotos móvil  (Cycle: cycle_month)
+- [none] Duolingo  (Cycle: cycle_day)
+- [none] Seguimiento del cuerpo  (Cycle: cycle_month)
+- [none] Ducha fría  (Cycle: cycle_day)
+- [none] Aplicar lápiz blanqueador  (Cycle: cycle_month)
+- [none] Ordenador  (Cycle: cycle_month)
+- [none] Dormir  (Cycle: cycle_day)
+- [none] Tay  (Cycle: cycle_month)
+- [none] Bici  (Cycle: cycle_month)
+- [none] ANUALES  (Cycle: cycle_year)
+  - [none] Compra anual
+  - [none] Limpieza anual
+- [none] Tirar basura de pilas  (Cycle: cycle_year)
+- [none] Pedir cita para la limpieza de boca  (Cycle: cycle_year)
+- [none] Pedir cita oculista  (Cycle: cycle_year)
+- [none] Vacunas  (Cycle: cycle_year)
+- [none] Mudar todo el tabaco, que el anterior se estará caducando  (Cycle: cycle_year)
+- [none] Arreglar mecheros acumulados para la colección  (Cycle: cycle_year)
+- [none] Asegurarse de que la privacidad de ninguna de mis cuentas ha sido vulnerada  (Cycle: cycle_year)
+- [none] Asegurarse de que todas las copias de seguridad están correctas  (Cycle: cycle_year)
+- [none] Limpieza física tecnológica  (Cycle: cycle_year)
+- [none] Vehículos  (Cycle: cycle_year)
+- [none] propósitos del año  (Cycle: cycle_year)
+
+## Category: recuerda
+- [none] Los protegidos  (Cycle: undefined)
+- [none] Call my agent  (Cycle: undefined)
+- [none] Vedex  (Cycle: undefined)
+- [none] Legends of Tomorrow  (Cycle: undefined)
+- [none] Cómo defender a un asesino  (Cycle: undefined)
+- [none] Clase Letal  (Cycle: undefined)
+- [none] Matadero  (Cycle: undefined)
+- [none] Derry Girls  (Cycle: undefined)
+- [none] Ruiz  (Cycle: undefined)
+- [none] Mollon  (Cycle: undefined)
+- [none] Jaurena  (Cycle: undefined)
+- [none] Vega  (Cycle: undefined)
+- [none] Vela  (Cycle: undefined)
+- [none] Abril  (Cycle: undefined)
+- [none] Mujica  (Cycle: undefined)
+- [none] Iraola  (Cycle: undefined)
+- [none] González  (Cycle: undefined)
+- [none] Colomo  (Cycle: undefined)
+- [none] Alberdi  (Cycle: undefined)
+- [none] Salaberria  (Cycle: undefined)
+- [none] Pérez  (Cycle: undefined)
+- [none] Goikoetxea  (Cycle: undefined)
+- [none] Koldokoak2005a  (Cycle: undefined)
+- [none] Siempre Alice  (Cycle: undefined)
+- [none] Generación porno creo que era  (Cycle: undefined)
+- [none] Maspalomas  (Cycle: undefined)
+- [none] Salvados - Redes sociales  (Cycle: undefined)
+- [none] Succes  (Cycle: undefined)
+- [none] Titanes  (Cycle: undefined)
+- [none] New Mexico  (Cycle: undefined)
+- [none] El embarcadero  (Cycle: undefined)
+- [none] skam  (Cycle: undefined)
+- [none] True Detective  (Cycle: undefined)
+- [none] Una serie de catastróficas desdichas  (Cycle: undefined)
+- [none] Érase una vez  (Cycle: undefined)
+- [none] Single parents  (Cycle: undefined)
+- [none] 19-2  (Cycle: undefined)
+- [none] Roswell  (Cycle: undefined)
+- [none] La otra mirada  (Cycle: undefined)
+- [none] Sorry For Your Loss  (Cycle: undefined)
+- [none] The Looming Tower  (Cycle: undefined)
+- [none] Stranger Things  (Cycle: undefined)
+- [none] The Crown  (Cycle: undefined)
+- [none] Los originales  (Cycle: undefined)
+- [none] Mommy be mine  (Cycle: undefined)
+- [none] Young Justice  (Cycle: undefined)
+- [none] Mr. Inbetween  (Cycle: undefined)
+- [none] Día a día  (Cycle: undefined)
+- [none] The Witcher  (Cycle: undefined)
+- [none] The blacklist  (Cycle: undefined)
+
