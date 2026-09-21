@@ -843,7 +843,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     if (isE2E) {
       return Boolean(collapsed[category]);
     }
-    return collapsed[category] !== undefined ? collapsed[category] : true;
+    // Las subtareas (task_...) y secciones empiezan DESPLEGADAS (false) por defecto
+    // para que el usuario siempre vea la lista completa de todas sus tareas.
+    if (category.startsWith('task_')) {
+      return Boolean(collapsed[category]);
+    }
+    return collapsed[category] !== undefined ? collapsed[category] : false;
   }, [collapsed, isE2E]);
 
   const handleAddSection = useCallback((parentId?: string) => {
@@ -1100,7 +1105,8 @@ let routineCounts = null;
                 depth: 0
               });
             } else {
-              const roots = groupTasks.filter(t => !t.parentId);
+              const inScope = new Set(groupTasks.map(t => t.id));
+              const roots = groupTasks.filter(t => !t.parentId || !inScope.has(t.parentId));
               const processNode = (task: TaskItem, depthLevel: number) => {
                 flat.push({ type: 'task', task, depth: depthLevel });
                 if (!isCatCollapsed(`task_${task.id}`)) {
@@ -1117,7 +1123,8 @@ let routineCounts = null;
         if (groupedTasks['no_section'] && groupedTasks['no_section'].length > 0) {
           if (!isolatedSectionKey || isolatedSectionKey === 'no_section') {
             if (!collapsed['no_section']) {
-              const roots = groupedTasks['no_section'].filter(t => !t.parentId);
+              const inScope = new Set(groupedTasks['no_section'].map(t => t.id));
+              const roots = groupedTasks['no_section'].filter(t => !t.parentId || !inScope.has(t.parentId));
               const processNode = (task: TaskItem, depth: number) => {
                 flat.push({ type: 'task', task, depth });
                 if (!isCatCollapsed(`task_${task.id}`)) {
@@ -1167,7 +1174,8 @@ let routineCounts = null;
               if (tasksToRender.length === 0) {
                 flat.push({ type: 'empty-section', title: 'Aquí no hay tareas', category: catKey, color, depth: 0 });
               } else {
-                const roots = tasksToRender.filter(t => !t.parentId);
+                const inScope = new Set(tasksToRender.map(t => t.id));
+                const roots = tasksToRender.filter(t => !t.parentId || !inScope.has(t.parentId));
                 const processNode = (task: TaskItem, depthLevel: number) => {
                   flat.push({ type: 'task', task, depth: depthLevel });
                   if (!isCatCollapsed(`task_${task.id}`)) {
@@ -1227,7 +1235,8 @@ let routineCounts = null;
             if (tasksToRender.length === 0) {
               flat.push({ type: 'empty-section', title: 'Aquí no hay tareas', category: categoryKey, color, sectionId: sec.id, depth });
             } else {
-              const roots = tasksToRender.filter(t => !t.parentId);
+              const inScope = new Set(tasksToRender.map(t => t.id));
+                const roots = tasksToRender.filter(t => !t.parentId || !inScope.has(t.parentId));
               const processNode = (task: TaskItem, depthLevel: number) => {
                 flat.push({ type: 'task', task, depth: depthLevel });
                 if (!isCatCollapsed(`task_${task.id}`)) {
