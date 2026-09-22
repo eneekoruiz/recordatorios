@@ -21,7 +21,7 @@ import { TaskSwipeBackground } from './card/TaskSwipeBackground';
 import { TaskMetaBadges } from './card/TaskMetaBadges';
 import { TaskHabitCounter } from './card/TaskHabitCounter';
 import { TaskNoteEditor } from './card/TaskNoteEditor';
-import { getTaskPeriodicity } from '../../utils/sectionRoutine';
+import { getTaskPeriodicity, stripPeriodicityPrefix } from '../../utils/sectionRoutine';
 import { extractPrice } from '../../utils/priceExtractor';
 
 interface TaskCardProps {
@@ -98,18 +98,21 @@ export const TaskCard = React.memo(function TaskCard({
         month: 'Mensual',
         year: 'Anual'
       };
-      return { label: labelMap[periodicity] || periodicity };
+      return { 
+        type: periodicity as 'day' | 'week' | 'month' | 'year', 
+        label: labelMap[periodicity] || periodicity 
+      };
     }
 
     // 2. Ciclo explícito o personalizado
     const cycleId = task.cycle_id;
     if (cycleId) {
-      if (cycleId === 'cycle_day' || cycleId === 'day') return { label: 'Diaria' };
-      if (cycleId === 'cycle_week' || cycleId === 'week') return { label: 'Semanal' };
-      if (cycleId === 'cycle_month' || cycleId === 'month') return { label: 'Mensual' };
-      if (cycleId === 'cycle_year' || cycleId === 'year') return { label: 'Anual' };
+      if (cycleId === 'cycle_day' || cycleId === 'day') return { type: 'day' as const, label: 'Diaria' };
+      if (cycleId === 'cycle_week' || cycleId === 'week') return { type: 'week' as const, label: 'Semanal' };
+      if (cycleId === 'cycle_month' || cycleId === 'month') return { type: 'month' as const, label: 'Mensual' };
+      if (cycleId === 'cycle_year' || cycleId === 'year') return { type: 'year' as const, label: 'Anual' };
       const custom = cycles.find(c => c.id === cycleId);
-      return { label: custom?.name || cycleId };
+      return { type: 'custom' as const, label: custom?.name || cycleId };
     }
 
     return null;
@@ -736,7 +739,7 @@ export const TaskCard = React.memo(function TaskCard({
                   minWidth: 0
                 }}
               >
-                {(task.title || '').replace(/^\[(D|S|M|A|Diario|Semanal|Mensual|Anual)\]\s*/i, '').split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
+                {stripPeriodicityPrefix(task.title || '').split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
                   part.match(/^https?:\/\//) ? (
                     <a key={i} href={part} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>
                       {part}

@@ -26,7 +26,13 @@ import { AIAssistantModal } from './components/ai/AIAssistantModal';
 import { ConfirmHost } from './components/ui/confirmDialog';
 import { SharedListView } from './components/share/SharedListView';
 import { syncSharedStatus } from './services/ShareService';
-import { formatSectionTitle, getTaskPeriodicity, getSectionPeriodicity } from './utils/sectionRoutine';
+import { 
+  formatSectionTitle, 
+  getTaskPeriodicity, 
+  getSectionPeriodicity,
+  stripPeriodicityPrefix,
+  getPeriodicityFromPrefix
+} from './utils/sectionRoutine';
 import { normalizeTaskPrices } from './utils/priceExtractor';
 import type { TaskItem } from './models/Task';
 
@@ -541,25 +547,37 @@ function App() {
       });
 
       // Asegurar que cualquier tarea con prefijo explícito [D], [S], [M], [A] tenga su cycle_id
-      // y sección correcta en listas de rutina (Care, Limpieza, Quehaceres)
+      // y sección correcta en listas de rutina (Care, Limpieza, Quehaceres), y eliminar el prefijo del título
       allTasksList.forEach(t => {
         const title = (t.title || '').trim();
         const p = getTaskPeriodicity(t, state.listSections, state.lists);
-        if (!p) return;
+        const prefixP = getPeriodicityFromPrefix(title);
+        const hasPrefix = Boolean(prefixP);
 
-        const expectedCycleId = p === 'day' ? 'cycle_day' :
-                                p === 'week' ? 'cycle_week' :
-                                p === 'month' ? 'cycle_month' : 'cycle_year';
+        const effectiveP = prefixP || p;
+        if (!effectiveP && !hasPrefix) return;
+
+        const expectedCycleId = effectiveP === 'day' ? 'cycle_day' :
+                                effectiveP === 'week' ? 'cycle_week' :
+                                effectiveP === 'month' ? 'cycle_month' :
+                                effectiveP === 'year' ? 'cycle_year' : undefined;
 
         let needsUpdate = false;
+        let newTitle = t.title;
         let newCycleId = t.cycle_id;
         let newSectionId = t.sectionId;
 
-        // Si tiene prefijo explícito en el título ([D], [S], [M], [A]) y el cycle_id no coincide
-        const hasPrefix = /(\[|\()(D|Diari[oa]|S|Semanal|M|Mensual|A|Anual)(\]|\))/i.test(title);
-        if (hasPrefix && t.cycle_id !== expectedCycleId) {
-          newCycleId = expectedCycleId;
-          needsUpdate = true;
+        // Si tiene prefijo en el título, limpiarlo para dejar el título natural
+        if (hasPrefix) {
+          const stripped = stripPeriodicityPrefix(t.title);
+          if (stripped && stripped !== t.title) {
+            newTitle = stripped;
+            needsUpdate = true;
+          }
+          if (expectedCycleId && t.cycle_id !== expectedCycleId) {
+            newCycleId = expectedCycleId;
+            needsUpdate = true;
+          }
         }
 
         // Si pertenece a una lista de rutinas periódicas (Care, Limpieza, Quehaceres)
@@ -568,17 +586,17 @@ function App() {
                               t.categoryId === 'quehaceres' ||
                               (quehaceresList && t.categoryId === quehaceresList.id);
 
-        if (isRoutineList) {
+        if (isRoutineList && effectiveP) {
           const currentSecPeriodicity = t.sectionId
             ? getSectionPeriodicity(t.sectionId, undefined, state.listSections, state.lists)
             : null;
 
-          // Si no tiene sección o está en una sección de periodicidad distinta (ej. tarea [D] en sección Semanal)
-          if (!t.sectionId || (hasPrefix && currentSecPeriodicity && currentSecPeriodicity !== p)) {
+          // Si no tiene sección o está en una sección de periodicidad distinta (ej. tarea diaria en sección Semanal)
+          if (!t.sectionId || (hasPrefix && currentSecPeriodicity && currentSecPeriodicity !== effectiveP)) {
             const listSectionsForThisList = (state.listSections || []).filter(s => s.listId === t.categoryId);
             const targetSec = listSectionsForThisList.find(s => {
               const secP = getSectionPeriodicity(s.id, s.name, state.listSections, state.lists);
-              return secP === p;
+              return secP === effectiveP;
             });
 
             if (targetSec && targetSec.id !== t.sectionId) {
@@ -592,6 +610,7 @@ function App() {
         if (needsUpdate) {
           state.updateTaskRaw({
             ...t,
+            title: newTitle,
             cycle_id: newCycleId,
             sectionId: newSectionId,
             updated_at: new Date().toISOString(),

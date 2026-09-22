@@ -1,4 +1,4 @@
-import { Calendar, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen } from 'lucide-react';
+import { Calendar, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen, CalendarDays, Globe } from 'lucide-react';
 import type { TaskItem, CustomList } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
@@ -10,7 +10,7 @@ export interface TaskMetaBadgesProps {
   hideDueDate?: boolean;
   taskList?: CustomList;
   dueDateColor: string;
-  cycleBadge?: { label: string } | null;
+  cycleBadge?: { type?: 'day' | 'week' | 'month' | 'year' | 'custom'; label: string } | null;
   timeOfDayInfo?: { tag: 'morning' | 'afternoon' | 'night'; label: string; next: 'morning' | 'afternoon' | 'night' } | null;
   onEdit: (id: string) => void;
   onNavigateView?: (viewId: string) => void;
@@ -122,15 +122,30 @@ export function TaskMetaBadges({
               style={{ 
                 display: 'inline-flex', 
                 alignItems: 'center', 
-                gap: 3.5, 
-                color: 'var(--text-tertiary)', 
-                fontWeight: 400,
+                gap: 4, 
+                color: 'var(--text-secondary)', 
+                fontWeight: 500,
+                fontSize: '0.73rem',
                 cursor: 'pointer',
-                lineHeight: 1.2
+                lineHeight: 1.2,
+                padding: '1.5px 6.5px',
+                borderRadius: cycleBadge.type === 'month' ? 10 : 6,
+                background: 'var(--fill-quaternary, rgba(142, 142, 147, 0.08))',
+                border: cycleBadge.type === 'week' 
+                  ? '1px solid rgba(142, 142, 147, 0.28)' 
+                  : cycleBadge.type === 'year' 
+                  ? '1px double rgba(142, 142, 147, 0.35)' 
+                  : '1px solid var(--separator-subtle, rgba(142, 142, 147, 0.16))',
+                transition: 'all 0.15s ease',
+                userSelect: 'none'
               }}
-              title="Periodicidad (Toca para editar)"
+              title={`Frecuencia: ${cycleBadge.label} (Toca para editar)`}
             >
-              <Repeat size={11} style={{ flexShrink: 0 }} />
+              {cycleBadge.type === 'day' && <Sun size={11} strokeWidth={2.2} style={{ flexShrink: 0, opacity: 0.85 }} />}
+              {cycleBadge.type === 'week' && <CalendarDays size={11} strokeWidth={2.2} style={{ flexShrink: 0, opacity: 0.85 }} />}
+              {cycleBadge.type === 'month' && <Moon size={11} strokeWidth={2.2} style={{ flexShrink: 0, opacity: 0.85 }} />}
+              {cycleBadge.type === 'year' && <Globe size={11} strokeWidth={2.2} style={{ flexShrink: 0, opacity: 0.85 }} />}
+              {(!cycleBadge.type || cycleBadge.type === 'custom') && <Repeat size={11} strokeWidth={2.2} style={{ flexShrink: 0, opacity: 0.85 }} />}
               <span>{cycleBadge.label}</span>
             </span>
           )}

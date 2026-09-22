@@ -7,7 +7,10 @@ import {
   sortTasksByRoutinePriority,
   sortTasksByUserPreference,
   formatSectionTitle,
-  getEffectiveCycleId
+  getEffectiveCycleId,
+  stripPeriodicityPrefix,
+  hasPeriodicityPrefix,
+  getPeriodicityFromPrefix
 } from '../../src/utils/sectionRoutine';
 import type { TaskItem, ListSection, CustomList } from '../../src/models/Task';
 
@@ -218,6 +221,43 @@ describe('sectionRoutine utility', () => {
         { id: 'sec_diarias', listId: 'limpieza', name: 'Diarias', order: 0 }
       ];
       expect(getEffectiveCycleId(task, sections)).toBe('cycle_day');
+    });
+  });
+
+  describe('stripPeriodicityPrefix & prefix detection', () => {
+    it('detects periodicity from various prefix styles correctly', () => {
+      expect(hasPeriodicityPrefix('[D] Lavar rostro.')).toBe(true);
+      expect(hasPeriodicityPrefix('[Diario] Hacer cama')).toBe(true);
+      expect(hasPeriodicityPrefix('(D) Cafe')).toBe(true);
+      expect(hasPeriodicityPrefix('[S] Exfoliar')).toBe(true);
+      expect(hasPeriodicityPrefix('[Semanal] Limpiar coche')).toBe(true);
+      expect(hasPeriodicityPrefix('[M] Revisar filtros')).toBe(true);
+      expect(hasPeriodicityPrefix('[A] Seguro coche')).toBe(true);
+      expect(hasPeriodicityPrefix('Tarea normal')).toBe(false);
+      expect(hasPeriodicityPrefix('')).toBe(false);
+      expect(hasPeriodicityPrefix(null)).toBe(false);
+    });
+
+    it('extracts correct periodicity from prefix', () => {
+      expect(getPeriodicityFromPrefix('[D] Tarea')).toBe('day');
+      expect(getPeriodicityFromPrefix('(Diaria) Tarea')).toBe('day');
+      expect(getPeriodicityFromPrefix('[S] Tarea')).toBe('week');
+      expect(getPeriodicityFromPrefix('[M] Tarea')).toBe('month');
+      expect(getPeriodicityFromPrefix('[A] Tarea')).toBe('year');
+      expect(getPeriodicityFromPrefix('Sin prefijo')).toBeNull();
+    });
+
+    it('strips periodicity prefix cleanly without leaving colons or stray spaces', () => {
+      expect(stripPeriodicityPrefix('[D] Lavar rostro.')).toBe('Lavar rostro.');
+      expect(stripPeriodicityPrefix('[D]: Lavar rostro.')).toBe('Lavar rostro.');
+      expect(stripPeriodicityPrefix('[D] - Lavar rostro.')).toBe('Lavar rostro.');
+      expect(stripPeriodicityPrefix('(D) Lavar rostro.')).toBe('Lavar rostro.');
+      expect(stripPeriodicityPrefix('[S] Exfoliar el rostro')).toBe('Exfoliar el rostro');
+      expect(stripPeriodicityPrefix('[M] Mascarilla profunda')).toBe('Mascarilla profunda');
+      expect(stripPeriodicityPrefix('[A] Revisión anual')).toBe('Revisión anual');
+      expect(stripPeriodicityPrefix('Comprar manzanas')).toBe('Comprar manzanas');
+      expect(stripPeriodicityPrefix('')).toBe('');
+      expect(stripPeriodicityPrefix(null)).toBe('');
     });
   });
 });

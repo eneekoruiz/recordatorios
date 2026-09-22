@@ -50,6 +50,41 @@ export const getSectionPeriodicity = (
 };
 
 /**
+ * Expresión regular para detectar prefijos de periodicidad en el título (ej. [D], [Diario], [Diaria], [S], [Semanal], [M], [Mensual], [A], [Anual] o con paréntesis).
+ */
+export const PERIODICITY_PREFIX_REGEX = /^\s*(\[|\()(D|Diari[oa]|S|Semanal|M|Mensual|A|Anual)(\]|\))\s*[:-]?\s*/i;
+
+/**
+ * Comprueba si un título contiene un prefijo de periodicidad al inicio.
+ */
+export const hasPeriodicityPrefix = (title?: string | null): boolean => {
+  if (!title) return false;
+  return PERIODICITY_PREFIX_REGEX.test(title);
+};
+
+/**
+ * Extrae la periodicidad ('day' | 'week' | 'month' | 'year') a partir del prefijo en el título.
+ */
+export const getPeriodicityFromPrefix = (title?: string | null): PeriodicityType | null => {
+  if (!title) return null;
+  const trimmed = title.trim();
+  if (/^(\[|\()(D|Diari[oa])(\]|\))/i.test(trimmed)) return 'day';
+  if (/^(\[|\()(S|Semanal)(\]|\))/i.test(trimmed)) return 'week';
+  if (/^(\[|\()(M|Mensual)(\]|\))/i.test(trimmed)) return 'month';
+  if (/^(\[|\()(A|Anual)(\]|\))/i.test(trimmed)) return 'year';
+  return null;
+};
+
+/**
+ * Elimina cualquier prefijo de periodicidad en el título de la tarea (ej. "[D] Lavar rostro." -> "Lavar rostro."),
+ * ya que la app dispone de una etiqueta visual dedicada con icono y nombre para identificar la frecuencia.
+ */
+export const stripPeriodicityPrefix = (title?: string | null): string => {
+  if (!title) return '';
+  return title.replace(PERIODICITY_PREFIX_REGEX, '').trim();
+};
+
+/**
  * Detecta la periodicidad de un recordatorio individual según su cycle_id,
  * repeticiones diarias de hábito, lista de procedencia, título o sección asignada.
  */
@@ -59,11 +94,8 @@ export const getTaskPeriodicity = (
   lists?: CustomList[]
 ): PeriodicityType | null => {
   // 0. Prefijos y etiquetas en el título (ej. [D], [Diario], [Diaria], [S], [Semanal], [M], [Mensual], [A], [Anual] o en paréntesis)
-  const title = (task.title || '').trim();
-  if (/(\[|\()(D|Diari[oa])(\]|\))/i.test(title)) return 'day';
-  if (/(\[|\()(S|Semanal)(\]|\))/i.test(title)) return 'week';
-  if (/(\[|\()(M|Mensual)(\]|\))/i.test(title)) return 'month';
-  if (/(\[|\()(A|Anual)(\]|\))/i.test(title)) return 'year';
+  const fromPrefix = getPeriodicityFromPrefix(task.title);
+  if (fromPrefix) return fromPrefix;
 
   // 1. cycle_id explícito
   if (task.cycle_id) {
