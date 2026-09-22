@@ -799,31 +799,17 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     setDeletedToast({ id: taskId, title: task.title, timeoutId });
   }, [tasks, updateTask]);
 
-  const isE2E = typeof window !== 'undefined' && Boolean(
-    (window as any).__E2E__ ||
-    (typeof navigator !== 'undefined' && navigator.webdriver) ||
-    sessionStorage.getItem('__E2E__') === 'true'
-  );
+  const isCatCollapsed = useCallback((category: string) => {
+    return Boolean(collapsed[category]);
+  }, [collapsed]);
 
   const toggleCategory = useCallback((category: string) => {
     HapticService.selection();
-    setCollapsed(prev => {
-      const isCurrentlyCollapsed = prev[category] !== undefined ? prev[category] : !isE2E;
-      return { ...prev, [category]: !isCurrentlyCollapsed };
-    });
-  }, [isE2E]);
-
-  const isCatCollapsed = useCallback((category: string) => {
-    if (isE2E) {
-      return Boolean(collapsed[category]);
-    }
-    // Las subtareas (task_...) y secciones empiezan DESPLEGADAS (false) por defecto
-    // para que el usuario siempre vea la lista completa de todas sus tareas.
-    if (category.startsWith('task_')) {
-      return Boolean(collapsed[category]);
-    }
-    return collapsed[category] !== undefined ? collapsed[category] : false;
-  }, [collapsed, isE2E]);
+    setCollapsed(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }));
+  }, []);
 
   const handleAddSection = useCallback((parentId?: string) => {
     if (!currentList) return;
@@ -1320,14 +1306,14 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           groups.push(currentGroup);
         }
         currentGroup = {
-          key: `section-group-${item.category || ''}-${item.sectionId || ''}-${i}`,
+          key: `section-group-${item.category || ''}-${item.sectionId || ''}`,
           headerItem: { item, index: i },
           items: []
         };
       } else {
         if (!currentGroup) {
           currentGroup = {
-            key: `group-no-header-${i}`,
+            key: 'group-no-header',
             items: []
           };
         }
@@ -1353,12 +1339,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   }, [currentView]);
 
   const getItemKey = useCallback((item: VirtualItemType, index: number) => {
-    if (!item) return index;
+    if (!item) return `empty-${index}`;
     if (item.type === 'page-header') return 'page-header';
-    if (item.type === 'header') return `header-${item.category || ''}-${item.sectionId || ''}-${item.title || ''}`;
+    if (item.type === 'header') return `header-${item.category || ''}-${item.sectionId || ''}`;
     if (item.type === 'empty-section') return `empty-${item.category || ''}-${item.sectionId || ''}`;
-    if (item.type === 'task') return (item as any).isUpNext ? `task-upnext-${item.task.id}-${index}` : `task-${item.task.id}-${index}`;
-    return index;
+    if (item.type === 'task') return (item as any).isUpNext ? `task-upnext-${item.task.id}` : `task-${item.task.id}`;
+    return `item-${index}`;
   }, []);
 
   const renderTask = useCallback((task: TaskItem, itemStyle: React.CSSProperties, index: number, depth: number, isFirst: boolean, isLast: boolean, previousTaskId?: string, itemKey?: React.Key) => {
@@ -1369,12 +1355,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     const canMoveDown = taskIdxInVisible >= 0 && taskIdxInVisible < visibleTasks.length - 1;
 
     return (
-      <motion.div
-        layout="position"
-        initial={{ opacity: 0, height: 0, scaleY: 0.95, overflow: 'hidden' }}
-        animate={{ opacity: 1, height: 'auto', scaleY: 1, overflow: 'visible' }}
-        exit={{ opacity: 0, height: 0, scaleY: 0.95, overflow: 'hidden' }}
-        transition={{ type: 'spring', damping: 28, stiffness: 400 }}
+      <div
         key={itemKey ?? `task-${task.id}`}
         data-index={index}
         data-task-id={task.id}
@@ -1419,7 +1400,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             } as any)}
           />
         </div>
-      </motion.div>
+      </div>
     );
   }, [parentIdsWithChildren, visibleIndexById, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, onSelectView, isSmartView, currentView, setSelectedPersonForProfile, recentlyCompletedIds, visibleTasks, handleMoveTaskUp, handleMoveTaskDown, handleReorderTasks]);
 

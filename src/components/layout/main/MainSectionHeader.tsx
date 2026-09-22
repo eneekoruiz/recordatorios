@@ -143,6 +143,9 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           : isPressed
           ? 'var(--bg-hover, rgba(0,0,0,0.04))'
           : 'var(--bg-base)',
+        cursor: 'pointer',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
         borderRadius: (isMenuOpenForThisSection || isPressed) ? 10 : 0,
         transform: isPressed ? 'scale(0.985)' : 'none',
         borderLeft: isMenuOpenForThisSection 
@@ -395,7 +398,11 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           <ChevronDown 
             size={18} 
             color="var(--text-tertiary)" 
-            style={{ transform: isCatCollapsed(data.category) ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}
+            style={{ 
+              transform: isCatCollapsed(data.category) ? 'rotate(-90deg)' : 'rotate(0deg)', 
+              transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)', 
+              flexShrink: 0 
+            }}
           />
         </div>
       </div>
