@@ -33,7 +33,7 @@ export function isCompletedInCurrentPeriod(
   }
 
   // Deducir ciclo efectivo (explícito o por sección Diarias/Semanales, título [D], etc.)
-  const effCycleId = task.cycle_id || getEffectiveCycleId(task, sections, lists);
+  const effCycleId = getEffectiveCycleId(task, sections, lists);
 
   // Si no es una tarea de ciclo (es puntual) y tiene status completed
   const isDone = task.status === 'completed' || !!(task as any).completed_at || !!(task as any).completed;

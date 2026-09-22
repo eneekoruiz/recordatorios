@@ -6,7 +6,8 @@ import {
   getPureCyclicPeriodicity,
   sortTasksByRoutinePriority,
   sortTasksByUserPreference,
-  formatSectionTitle
+  formatSectionTitle,
+  getEffectiveCycleId
 } from '../../src/utils/sectionRoutine';
 import type { TaskItem, ListSection, CustomList } from '../../src/models/Task';
 
@@ -165,5 +166,58 @@ describe('sectionRoutine utility', () => {
     const tasks = [mk('c', 3), mk('a', 1), mk('b', 2)];
     const sorted = sortTasksByUserPreference(tasks, 'manual');
     expect(sorted.map(t => t.id)).toEqual(['a', 'b', 'c']);
+  });
+
+  describe('getEffectiveCycleId', () => {
+    it('prioritizes title prefix [D] over a mismatched cycle_id (e.g. cycle_week)', () => {
+      const task: Partial<TaskItem> = {
+        title: '[D] Lavar rostro.',
+        cycle_id: 'cycle_week'
+      };
+      expect(getEffectiveCycleId(task)).toBe('cycle_day');
+    });
+
+    it('prioritizes title prefix [S] over a mismatched cycle_id', () => {
+      const task: Partial<TaskItem> = {
+        title: '[S] Exfoliar rostro.',
+        cycle_id: 'cycle_day'
+      };
+      expect(getEffectiveCycleId(task)).toBe('cycle_week');
+    });
+
+    it('prioritizes title prefix [M] over a mismatched cycle_id', () => {
+      const task: Partial<TaskItem> = {
+        title: '[M] Mascarilla profunda.',
+        cycle_id: 'cycle_week'
+      };
+      expect(getEffectiveCycleId(task)).toBe('cycle_month');
+    });
+
+    it('prioritizes title prefix [A] over a mismatched cycle_id', () => {
+      const task: Partial<TaskItem> = {
+        title: '[A] Revisión dermatológica.',
+        cycle_id: 'cycle_day'
+      };
+      expect(getEffectiveCycleId(task)).toBe('cycle_year');
+    });
+
+    it('returns explicit cycle_id when no conflicting title prefix is present', () => {
+      const task: Partial<TaskItem> = {
+        title: 'Pagar alquiler',
+        cycle_id: 'cycle_month'
+      };
+      expect(getEffectiveCycleId(task)).toBe('cycle_month');
+    });
+
+    it('returns cycle deduced from section when title and cycle_id are neutral', () => {
+      const task: Partial<TaskItem> = {
+        title: 'Pasar mopa',
+        sectionId: 'sec_diarias'
+      };
+      const sections: ListSection[] = [
+        { id: 'sec_diarias', listId: 'limpieza', name: 'Diarias', order: 0 }
+      ];
+      expect(getEffectiveCycleId(task, sections)).toBe('cycle_day');
+    });
   });
 });

@@ -4,6 +4,7 @@ import { Plus, Check } from 'lucide-react';
 import { useAppStore, isTaskCompleted } from '../../../store/useAppStore';
 import { isCompletedInCurrentPeriod } from '../../../services/TaskService';
 import { getCycleIcon } from '../../../constants/icons';
+import { getEffectiveCycleId } from '../../../utils/sectionRoutine';
 import type { CustomCycle, TaskItem } from '../../../models/Task';
 
 interface CyclesListSectionProps {
@@ -55,6 +56,8 @@ export const CyclesListSection: React.FC<CyclesListSectionProps> = ({
     }
   });
   const allCycles = Array.from(cyclesMap.values()).sort((a, b) => (a.daysValue || 0) - (b.daysValue || 0));
+  const listSections = useAppStore(state => state.listSections);
+  const lists = useAppStore(state => state.lists);
 
   const isCycleVisible = (c: CustomCycle) => {
     if (cycleVisibility[c.id] === false) return false;
@@ -133,14 +136,8 @@ export const CyclesListSection: React.FC<CyclesListSectionProps> = ({
 
           const taskCount = Object.values(tasks || {}).filter(t => {
             if (t.deleted_at || isTaskCompleted(t) || t.categoryId === 'primeros_pasos') return false;
-            const taskSec = (t.sectionId || (t as any).section_id || '').toLowerCase();
-            const effCycle = t.cycle_id || (
-              t.categoryId === 'limpieza_diaria' || !!t.targetCount || taskSec.includes('diaria') || taskSec.includes('recurrent') ? 'cycle_day' :
-              t.categoryId === 'limpieza_semanal' || taskSec.includes('semanal') ? 'cycle_week' :
-              t.categoryId === 'limpieza_mensual' || taskSec.includes('mensual') ? 'cycle_month' :
-              t.categoryId === 'limpieza_anual' || taskSec.includes('anual') ? 'cycle_year' : null
-            );
-            return effCycle === cycle.id && !isCompletedInCurrentPeriod(t as any, allCycles as any);
+            const effCycle = getEffectiveCycleId(t, listSections, lists);
+            return effCycle === cycle.id && !isCompletedInCurrentPeriod(t as any, allCycles as any, listSections, lists);
           }).length;
           
           if (!isVisible && !isEditCyclesMode) return null;

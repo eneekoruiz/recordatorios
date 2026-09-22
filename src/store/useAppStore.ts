@@ -334,7 +334,7 @@ export const useAppStore = create<AppState>()(
         let updatedTask: TaskItem;
         const alerts = existingTask.alerts || [];
         const completedAlerts = existingTask.completedAlerts || [];
-        const effCycle = existingTask.cycle_id || getEffectiveCycleId(existingTask, state.listSections, state.lists);
+        const effCycle = getEffectiveCycleId(existingTask, state.listSections, state.lists);
         const isOneOff = !effCycle;
         const isTargetTask = Boolean(existingTask.targetCount && existingTask.targetCount > 1);
         const currentCount = existingTask.currentCount || 0;

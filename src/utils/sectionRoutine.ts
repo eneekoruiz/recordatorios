@@ -128,19 +128,20 @@ export const getTaskPeriodicity = (
 
 /**
  * Retorna el cycle_id canónico ('cycle_day', 'cycle_week', etc.)
- * ya sea explícito o deducido de la periodicidad de la tarea.
+ * ya sea deducido de la periodicidad de la tarea (título [D]/[S]..., sección, lista)
+ * o explícito en el task.cycle_id.
  */
 export const getEffectiveCycleId = (
   task: Partial<TaskItem>,
   sections?: ListSection[],
   lists?: CustomList[]
 ): string | null => {
-  if (task.cycle_id) return task.cycle_id;
   const p = getTaskPeriodicity(task as TaskItem, sections, lists);
   if (p === 'day') return 'cycle_day';
   if (p === 'week') return 'cycle_week';
   if (p === 'month') return 'cycle_month';
   if (p === 'year') return 'cycle_year';
+  if (task.cycle_id) return task.cycle_id;
   return null;
 };
 
