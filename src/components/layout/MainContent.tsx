@@ -21,7 +21,8 @@ import {
   getSectionPeriodicity, 
   getTaskPeriodicity, 
   getRoutineAllowedPeriodicities, 
-  sortTasksByRoutinePriority,
+  getPureCyclicPeriodicity,
+  sortTasksByUserPreference,
   formatSectionTitle,
   type PeriodicityType 
 } from '../../utils/sectionRoutine';
@@ -246,34 +247,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     }
   };
 
-  // Helper de ordenamiento
+  // Helper de ordenamiento: delega en la única función de orden de la app (ver sectionRoutine.ts)
+  // para que el criterio sea siempre el mismo, se mezclen o no periodicidades distintas.
   const sortTaskList = useCallback((taskList: TaskItem[]): TaskItem[] => {
-    if (sortBy === 'manual') {
-      return [...taskList].sort((a, b) => {
-        const orderA = a.order ?? 0;
-        const orderB = b.order ?? 0;
-        if (orderA !== orderB) return orderA - orderB;
-        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-      });
-    }
-    return [...taskList].sort((a, b) => {
-      if (sortBy === 'dueDate') {
-        if (!a.dueDate) return 1;
-        if (!b.dueDate) return -1;
-        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-      }
-      if (sortBy === 'priority') {
-        const pMap: Record<string, number> = { high: 3, medium: 2, low: 1, none: 0 };
-        return (pMap[b.priority || 'none'] || 0) - (pMap[a.priority || 'none'] || 0);
-      }
-      if (sortBy === 'title') {
-        return (a.title || '').localeCompare(b.title || '', 'es', { sensitivity: 'base' });
-      }
-      if (sortBy === 'createdAt') {
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      }
-      return 0;
-    });
+    return sortTasksByUserPreference(taskList, sortBy);
   }, [sortBy]);
 
   // Funciones auxiliares para Smart Lists (memoized)
@@ -593,12 +570,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           const p = getTaskPeriodicity(t, listSections, lists);
           return p && allowed.has(p);
         });
-        return sortTasksByRoutinePriority(routineTasks, sectionPeriodicity, listSections, lists);
+        return sortTasksByUserPreference(routineTasks, sortBy);
       }
       return groupedTasks[isolatedSectionKey] || [];
     }
     return Object.values(groupedTasks).flat();
-  }, [groupedTasks, isolatedSectionKey, isolatedRoutineMode, listSections, lists]);
+  }, [groupedTasks, isolatedSectionKey, isolatedRoutineMode, listSections, lists, sortBy]);
 
   // Índices precalculados: evitan recorrer todas las tareas por cada fila renderizada (O(n²)).
   const parentIdsWithChildren = useMemo(() => {
@@ -1172,7 +1149,9 @@ let routineCounts = null;
             } : null;
 
             const mode = sectionRoutineModes[catKey] || 'only_section';
-            let tasksToRender = mode === 'full_routine' && fullTasks.length > categoryTasks.length ? fullTasks : categoryTasks;
+            let tasksToRender = mode === 'full_routine' && fullTasks.length > categoryTasks.length
+              ? sortTasksByUserPreference(fullTasks, sortBy)
+              : categoryTasks;
 
             flat.push({
               type: 'header',
@@ -1212,7 +1191,17 @@ let routineCounts = null;
         const processSection = (secId: string, depth: number) => {
           const sec = sectionsForList.find(s => s.id === secId);
           if (!sec) return;
-          
+
+          // Las secciones manuales que son literalmente "Diaria/Semanal/Mensual/Anual" son un
+          // duplicado de la sección dinámica de ciclo equivalente (ver getTasksByList, que ya
+          // fusiona sus tareas ahí). No se renderiza cabecera propia para ellas -evita la
+          // cabecera repetida ("Diarias" x2)-, pero sí se procesan sus posibles subsecciones hijas.
+          if (getPureCyclicPeriodicity(sec.name)) {
+            const childSections = sectionsForList.filter(s => s.parentId === sec.id);
+            childSections.forEach(child => processSection(child.id, depth));
+            return;
+          }
+
           const categoryKey = `section_${sec.id}`;
 
           const categoryTasks = groupedTasks[categoryKey] || [];
@@ -1241,7 +1230,7 @@ let routineCounts = null;
 
               const currentRoutineMode = sectionRoutineModes[categoryKey] || 'only_section';
               if (currentRoutineMode === 'full_routine') {
-                tasksToRender = sortTasksByRoutinePriority(fullRoutineTasks, sectionPeriodicity, listSections, lists);
+                tasksToRender = sortTasksByUserPreference(fullRoutineTasks, sortBy);
               } else {
                 tasksToRender = onlyTasks;
               }
@@ -1253,15 +1242,6 @@ let routineCounts = null;
           if (listSectionFilter !== 'all' && tasksToRender.length === 0) {
             return;
           }
-
-          // Evitar duplicar secciones vacías manuales si ya se muestra una sección dinámica con un ciclo equivalente
-          const isDuplicateEmpty = tasksToRender.length === 0 && presentCycleKeys.some(k => {
-            const cName = allCycles.find(c => c.id === k.replace('cycle_', ''))?.name || '';
-            const normSec = sec.name.toLowerCase();
-            const normCycle = cName.toLowerCase();
-            return normSec.slice(0, 4) === normCycle.slice(0, 4) || normSec.includes(normCycle) || normCycle.includes(normSec);
-          });
-          if (isDuplicateEmpty) return;
 
           flat.push({ 
             type: 'header', 

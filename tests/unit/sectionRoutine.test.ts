@@ -3,7 +3,9 @@ import {
   getSectionPeriodicity,
   getTaskPeriodicity,
   getRoutineAllowedPeriodicities,
+  getPureCyclicPeriodicity,
   sortTasksByRoutinePriority,
+  sortTasksByUserPreference,
   formatSectionTitle
 } from '../../src/utils/sectionRoutine';
 import type { TaskItem, ListSection, CustomList } from '../../src/models/Task';
@@ -102,5 +104,66 @@ describe('sectionRoutine utility', () => {
     expect(formatSectionTitle('COCINA')).toBe('Cocina');
     expect(formatSectionTitle('Tarjetas y Documentos')).toBe('Tarjetas y Documentos');
     expect(formatSectionTitle('⏳ Marzo 2026')).toBe('⏳ Marzo 2026');
+  });
+
+  it('getPureCyclicPeriodicity solo reconoce el nombre EXACTO de una periodicidad, no secciones personalizadas que solo la mencionan', () => {
+    expect(getPureCyclicPeriodicity('Diaria')).toBe('day');
+    expect(getPureCyclicPeriodicity('diarias')).toBe('day');
+    expect(getPureCyclicPeriodicity('RECURRENTES')).toBe('day');
+    expect(getPureCyclicPeriodicity('Semanal')).toBe('week');
+    expect(getPureCyclicPeriodicity('Mensuales')).toBe('month');
+    expect(getPureCyclicPeriodicity('⏳ Anual')).toBe('year');
+
+    // Secciones personalizadas que solo mencionan la periodicidad NO deben fusionarse
+    expect(getPureCyclicPeriodicity('Compra semanal de fruta')).toBeNull();
+    expect(getPureCyclicPeriodicity('Semana Santa')).toBeNull();
+    expect(getPureCyclicPeriodicity('Cocina')).toBeNull();
+    expect(getPureCyclicPeriodicity(undefined)).toBeNull();
+  });
+
+  it('sortTasksByUserPreference intercala tareas de distinta periodicidad por fecha, sin agruparlas en bloques', () => {
+    const mk = (id: string, dueDate: string, cycle_id?: string): TaskItem => ({
+      id,
+      user_id: 'u1',
+      type: 'task',
+      title: id,
+      status: 'pending',
+      dueDate,
+      cycle_id,
+      created_at: dueDate,
+      updated_at: dueDate,
+      version: 1
+    } as TaskItem);
+
+    // Orden cronológico deliberadamente intercalado entre periodicidades distintas
+    const monthly = mk('monthly', '2026-01-10', 'cycle_month');
+    const daily = mk('daily', '2026-01-11', 'cycle_day');
+    const weekly = mk('weekly', '2026-01-12', 'cycle_week');
+    const yearly = mk('yearly', '2026-01-13', 'cycle_year');
+
+    // Mezclados y desordenados a propósito
+    const mixed = [yearly, monthly, weekly, daily];
+    const sorted = sortTasksByUserPreference(mixed, 'dueDate');
+
+    // Debe respetar el orden cronológico real, NO agrupar primero mensuales, luego semanales, etc.
+    expect(sorted.map(t => t.id)).toEqual(['monthly', 'daily', 'weekly', 'yearly']);
+  });
+
+  it('sortTasksByUserPreference respeta el orden manual (campo order) igual que una sección normal', () => {
+    const mk = (id: string, order: number): TaskItem => ({
+      id,
+      user_id: 'u1',
+      type: 'task',
+      title: id,
+      status: 'pending',
+      order,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      version: 1
+    } as TaskItem);
+
+    const tasks = [mk('c', 3), mk('a', 1), mk('b', 2)];
+    const sorted = sortTasksByUserPreference(tasks, 'manual');
+    expect(sorted.map(t => t.id)).toEqual(['a', 'b', 'c']);
   });
 });

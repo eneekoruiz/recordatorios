@@ -4,7 +4,7 @@ import { idbStorage } from '../utils/idbStorage';
 import type { TaskItem, CustomCycle, CustomList, ListSection } from '../models/Task';
 import { TaskRepository } from '../repositories/TaskRepository';
 import { isCompletedInCurrentPeriod, wouldCreateDependencyCycle } from '../services/TaskService';
-import { getEffectiveCycleId } from '../utils/sectionRoutine';
+import { getEffectiveCycleId, getPureCyclicPeriodicity } from '../utils/sectionRoutine';
 import { findDuplicateTask } from '../utils/taskDeduplication';
 
 const optimisticUpdate = (
@@ -782,7 +782,13 @@ export const useAppStore = create<AppState>()(
           let groupKey = '';
           const taskSecId = task.sectionId || (task as any).section_id;
           if (taskSecId && activeSectionIds.has(taskSecId)) {
-            groupKey = `section_${taskSecId}`;
+            // Si la sección manual asignada es literalmente "Diaria/Semanal/Mensual/Anual"
+            // (no una sección personalizada que solo menciona la periodicidad), es un
+            // duplicado de la sección dinámica de ciclo equivalente: se fusiona con ella
+            // en origen para que nunca se rendericen dos cabeceras ("Diarias" y "Diarias").
+            const sec = sectionsForList.find((s: any) => s.id === taskSecId);
+            const purePeriodicity = sec ? getPureCyclicPeriodicity(sec.name) : null;
+            groupKey = purePeriodicity ? `cycle_cycle_${purePeriodicity}` : `section_${taskSecId}`;
           } else if (task.cycle_id) {
             groupKey = `cycle_${task.cycle_id}`;
           } else {

@@ -169,8 +169,12 @@ export const getRoutineAllowedPeriodicities = (
 };
 
 /**
- * Ordena las tareas de una rutina acumulativa de manera ordenada:
- * Primero las de la periodicidad principal, luego las anuales, semanales y diarias.
+ * @deprecated Agrupa las tareas en bloques por periodicidad (primero la principal, luego el
+ * resto). Ya no se usa para renderizar ninguna vista de la app: agrupar en bloques es
+ * precisamente el comportamiento que se reportó como no deseado ("primero todas las
+ * mensuales, luego las semanales..."). Se mantiene solo por compatibilidad con código o
+ * tests existentes que la importen; para ordenar vistas que mezclan periodicidades usa
+ * `sortTasksByUserPreference`.
  */
 export const sortTasksByRoutinePriority = (
   tasks: TaskItem[],
@@ -196,6 +200,29 @@ export const sortTasksByRoutinePriority = (
 };
 
 /**
+ * Determina si un nombre de sección es EXACTAMENTE una de las cuatro periodicidades
+ * estándar (Diaria/Semanal/Mensual/Anual), sin heurísticas de subcadena.
+ *
+ * A diferencia de `getSectionPeriodicity` (que también clasifica secciones personalizadas
+ * cuyo nombre solo *menciona* la periodicidad, p. ej. "Compra semanal de fruta" → 'week'),
+ * esta función solo devuelve una periodicidad cuando el nombre ES, literalmente, esa
+ * periodicidad (tal y como los normaliza `formatSectionTitle`).
+ *
+ * Se usa para decidir de forma segura cuándo una sección manual es un duplicado literal
+ * de la sección dinámica de ciclo (y debe fusionarse con ella) sin arrastrar accidentalmente
+ * secciones personalizadas que solo contienen esa palabra en el nombre.
+ */
+export function getPureCyclicPeriodicity(name?: string | null): PeriodicityType | null {
+  if (!name) return null;
+  const clean = name.replace(/^⏳\s*/, '').trim().toLowerCase();
+  if (['diaria', 'diarias', 'diario', 'diarios', 'recurrentes', 'recurrente'].includes(clean)) return 'day';
+  if (['semanal', 'semanales'].includes(clean)) return 'week';
+  if (['mensual', 'mensuales'].includes(clean)) return 'month';
+  if (['anual', 'anuales'].includes(clean)) return 'year';
+  return null;
+}
+
+/**
  * Unifica el formato de los títulos de sección (especialmente periódicas: Diarias, Semanales, etc.)
  * garantizando coherencia visual idéntica estilo Apple entre todas las listas (Quehaceres, Limpieza, etc.),
  * eliminando discrepancias de mayúsculas agresivas o singular/plural.
@@ -203,21 +230,15 @@ export const sortTasksByRoutinePriority = (
 export function formatSectionTitle(title?: string | null): string {
   if (!title) return '';
   const clean = title.replace(/^⏳\s*/, '').trim();
-  const lower = clean.toLowerCase();
 
   // Periodicidades estándar unificadas en formato plural Apple (Diarias, Semanales, Mensuales, Anuales)
-  if (lower === 'diaria' || lower === 'diarias' || lower === 'diario' || lower === 'diarios' || lower === 'recurrentes' || lower === 'recurrente') {
-    return 'Diarias';
-  }
-  if (lower === 'semanal' || lower === 'semanales') {
-    return 'Semanales';
-  }
-  if (lower === 'mensual' || lower === 'mensuales') {
-    return 'Mensuales';
-  }
-  if (lower === 'anual' || lower === 'anuales') {
-    return 'Anuales';
-  }
+  const pureCyclic = getPureCyclicPeriodicity(clean);
+  if (pureCyclic === 'day') return 'Diarias';
+  if (pureCyclic === 'week') return 'Semanales';
+  if (pureCyclic === 'month') return 'Mensuales';
+  if (pureCyclic === 'year') return 'Anuales';
+
+  const lower = clean.toLowerCase();
   if (lower === 'otra' || lower === 'otras' || lower === 'otras tareas') {
     return 'Otras';
   }
@@ -233,4 +254,50 @@ export function formatSectionTitle(title?: string | null): string {
   }
 
   return clean;
+}
+
+export type TaskSortMode = 'manual' | 'dueDate' | 'priority' | 'title' | 'createdAt';
+
+/**
+ * Única función de ordenación de tareas de toda la aplicación cuando se mezclan
+ * periodicidades distintas (p. ej. la "rutina completa" de un día de limpieza mensual,
+ * que junta diarias + semanales + mensuales + anuales).
+ *
+ * A propósito NO tiene en cuenta la periodicidad de la tarea: ordena únicamente según el
+ * criterio que el usuario ha elegido para la lista (manual, fecha límite, prioridad, título
+ * o creación), exactamente igual que para una sección normal. Así, al ver "todas" las tareas
+ * de una rutina, quedan intercaladas por su valor/orden cronológico real en vez de agrupadas
+ * en bloques por periodicidad (primero todas las mensuales, luego las semanales, etc.).
+ *
+ * Se usa tanto para las secciones normales (`MainContent.sortTaskList`, que delega aquí)
+ * como para cualquier vista que combine periodicidades, garantizando que el orden entre
+ * tareas es siempre el mismo en toda la app.
+ */
+export function sortTasksByUserPreference(taskList: TaskItem[], sortBy: TaskSortMode): TaskItem[] {
+  if (sortBy === 'manual') {
+    return [...taskList].sort((a, b) => {
+      const orderA = a.order ?? 0;
+      const orderB = b.order ?? 0;
+      if (orderA !== orderB) return orderA - orderB;
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    });
+  }
+  return [...taskList].sort((a, b) => {
+    if (sortBy === 'dueDate') {
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+    }
+    if (sortBy === 'priority') {
+      const pMap: Record<string, number> = { high: 3, medium: 2, low: 1, none: 0 };
+      return (pMap[b.priority || 'none'] || 0) - (pMap[a.priority || 'none'] || 0);
+    }
+    if (sortBy === 'title') {
+      return (a.title || '').localeCompare(b.title || '', 'es', { sensitivity: 'base' });
+    }
+    if (sortBy === 'createdAt') {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
+    return 0;
+  });
 }
