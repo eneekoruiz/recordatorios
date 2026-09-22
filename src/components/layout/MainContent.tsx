@@ -1669,7 +1669,7 @@ let routineCounts = null;
               justifyContent: 'center',
               width: '100%',
               minHeight: 0,
-              paddingBottom: 'calc(60px + env(safe-area-inset-bottom, 0px))',
+              paddingBottom: 'calc(100px + env(safe-area-inset-bottom, 0px))',
               boxSizing: 'border-box'
             }}>
               <div style={{ width: '100%', maxWidth: 420, padding: '0 16px' }}>
