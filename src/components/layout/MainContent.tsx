@@ -493,6 +493,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             const parentCat = parent.categoryId || (parent as any).category_id;
             const tCat = t.categoryId || (t as any).category_id;
             if (parentCat && tCat && parentCat !== tCat) break;
+            const parentEff = getEffectiveCycleId(parent, listSections, lists);
+            if (!parentEff || !allowedCycleIds.has(parentEff)) {
+              break;
+            }
             if (!tasksToInclude.has(parent.id)) {
               tasksToInclude.set(parent.id, parent);
             }
@@ -537,6 +541,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           while (current.parentId) {
             const parent = tasks[current.parentId];
             if (!parent || parent.deleted_at) break;
+            if (!matching.some(m => m.id === parent.id)) {
+              break;
+            }
             if (!tasksToInclude.has(parent.id)) {
               tasksToInclude.set(parent.id, parent);
             }
@@ -964,12 +971,39 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         if (!isCatCollapsed(categoryOrCycle)) {
           const renderSectionTreeForTasks = (tasksInScope: TaskItem[], listId: string, baseDepth: number, parentColor: string) => {
             const sectionsForList = (listSections || []).filter(s => s.listId === listId && !s.deleted_at);
-            const tasksBySectionId = new Set(tasksInScope.map(t => t.id));
+
+            const allowedCycleIds = new Set<string>();
+            if (currentCycle) {
+              if (currentCycle.id === 'cycle_day') {
+                allowedCycleIds.add('cycle_day');
+              } else if (currentCycle.id === 'cycle_week') {
+                allowedCycleIds.add('cycle_week');
+                if (cycleInclusion.weekly === 'include_daily') allowedCycleIds.add('cycle_day');
+              } else if (currentCycle.id === 'cycle_month') {
+                allowedCycleIds.add('cycle_month');
+                if (cycleInclusion.monthly === 'include_weekly') allowedCycleIds.add('cycle_week');
+                else if (cycleInclusion.monthly === 'include_all') {
+                  allowedCycleIds.add('cycle_week');
+                  allowedCycleIds.add('cycle_day');
+                }
+              } else if (currentCycle.id === 'cycle_year') {
+                allowedCycleIds.add('cycle_year');
+                if (cycleInclusion.annual === 'include_monthly') allowedCycleIds.add('cycle_month');
+                else if (cycleInclusion.annual === 'include_all') {
+                  allowedCycleIds.add('cycle_month');
+                  allowedCycleIds.add('cycle_week');
+                  allowedCycleIds.add('cycle_day');
+                }
+              } else {
+                allowedCycleIds.add(currentCycle.id);
+              }
+            }
 
             // 1. Uncategorized tasks in scope
             const uncategorized = tasksInScope.filter(t => !t.sectionId || !sectionsForList.some(s => s.id === t.sectionId));
             if (uncategorized.length > 0) {
-              const roots = uncategorized.filter(t => !t.parentId || !tasksBySectionId.has(t.parentId));
+              const inUncat = new Set(uncategorized.map(t => t.id));
+              const roots = uncategorized.filter(t => !t.parentId || !inUncat.has(t.parentId));
               const processNode = (task: TaskItem, depthLevel: number) => {
                 flat.push({ type: 'task', task, depth: depthLevel });
                 if (!isCatCollapsed(`task_${task.id}`)) {
@@ -1000,9 +1034,17 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               // sino que mostramos directamente sus tareas en este ciclo y procesamos sus posibles subsecciones hijas.
               const purePeriodicity = getPureCyclicPeriodicity(sec.name);
               if (currentCycle && purePeriodicity) {
+                const cycleOrder: Record<string, number> = { day: 1, week: 2, month: 3, year: 4 };
+                const currentCycleRank = currentCycle.id === 'cycle_day' ? 1 : currentCycle.id === 'cycle_week' ? 2 : currentCycle.id === 'cycle_month' ? 3 : 4;
+                const secRank = cycleOrder[purePeriodicity] || 1;
+                if (secRank > currentCycleRank || !allowedCycleIds.has(`cycle_${purePeriodicity}`)) {
+                  return;
+                }
+
                 const secTasks = tasksInScope.filter(t => t.sectionId === secId);
                 if (secTasks.length > 0) {
-                  const roots = secTasks.filter(t => !t.parentId || !tasksBySectionId.has(t.parentId));
+                  const inSec = new Set(secTasks.map(t => t.id));
+                  const roots = secTasks.filter(t => !t.parentId || !inSec.has(t.parentId));
                   const processNode = (task: TaskItem, d: number) => {
                     flat.push({ type: 'task', task, depth: d });
                     if (!isCatCollapsed(`task_${task.id}`)) {
@@ -1026,7 +1068,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 const cycleOrder: Record<string, number> = { day: 1, week: 2, month: 3, year: 4 };
                 const currentCycleRank = currentCycle.id === 'cycle_day' ? 1 : currentCycle.id === 'cycle_week' ? 2 : currentCycle.id === 'cycle_month' ? 3 : 4;
                 const secRank = cycleOrder[secPeriodicity] || 1;
-                if (secRank > currentCycleRank) {
+                if (secRank > currentCycleRank || !allowedCycleIds.has(`cycle_${secPeriodicity}`)) {
                   return;
                 }
               }
@@ -1048,7 +1090,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                     flat.push({ type: 'empty-section', title: 'Aquí no hay tareas', category: secKey, color: parentColor, sectionId: sec.id, depth: depthLevel });
                   }
                 } else {
-                  const roots = secTasks.filter(t => !t.parentId || !tasksBySectionId.has(t.parentId));
+                  const inSec = new Set(secTasks.map(t => t.id));
+                  const roots = secTasks.filter(t => !t.parentId || !inSec.has(t.parentId));
                   const processNode = (task: TaskItem, d: number) => {
                     flat.push({ type: 'task', task, depth: d });
                     if (!isCatCollapsed(`task_${task.id}`)) {

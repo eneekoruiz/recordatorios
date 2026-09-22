@@ -711,6 +711,10 @@ export const useAppStore = create<AppState>()(
           while (current.parentId) {
             const parent = tasks[current.parentId];
             if (!parent || parent.deleted_at) break;
+            const parentEff = getEffectiveCycleId(parent, get().listSections, get().lists);
+            if (!parentEff || !validCycles.includes(parentEff as string)) {
+              break;
+            }
             if (!tasksToInclude.has(parent.id)) {
               tasksToInclude.set(parent.id, parent);
             }

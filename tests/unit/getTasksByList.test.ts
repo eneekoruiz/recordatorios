@@ -89,3 +89,53 @@ describe('getTasksByList — fusión de secciones manuales puramente periódicas
     expect(total).toBe(8); // 3 legacy diarias + 2 ciclo diarias + 1 semanal + 2 cocina
   });
 });
+
+describe('getTasksByCycle — aislamiento estricto de ciclos temporales', () => {
+  it('no incluye una tarea padre anual en la vista diaria aunque su subtarea sea diaria', () => {
+    const lists: CustomList[] = [{ id: 'limpieza', name: 'Limpieza', color: '#34c759' }];
+    const parentTask: TaskItem = {
+      id: 'parent_room_anual',
+      user_id: 'u1',
+      categoryId: 'limpieza',
+      type: 'task',
+      title: 'HABITACIÓN',
+      cycle_id: 'cycle_year',
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      version: 1,
+    } as TaskItem;
+
+    const childTask: TaskItem = {
+      id: 'child_hacer_cama_diaria',
+      user_id: 'u1',
+      categoryId: 'limpieza',
+      type: 'task',
+      title: 'Hacer la cama',
+      cycle_id: 'cycle_day',
+      parentId: 'parent_room_anual',
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      version: 1,
+    } as TaskItem;
+
+    useAppStore.setState({
+      lists,
+      listSections: [],
+      tasks: {
+        [parentTask.id]: parentTask,
+        [childTask.id]: childTask,
+      },
+    } as any);
+
+    const dailyGrouped = useAppStore.getState().getTasksByCycle('cycle_day', true);
+    const allDailyTasks = Object.values(dailyGrouped).flat();
+
+    // La subtarea diaria DEBE estar incluida en la vista diaria
+    expect(allDailyTasks.some(t => t.id === 'child_hacer_cama_diaria')).toBe(true);
+
+    // La tarea padre anual NO DEBE estar incluida en la vista diaria
+    expect(allDailyTasks.some(t => t.id === 'parent_room_anual')).toBe(false);
+  });
+});

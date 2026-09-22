@@ -283,16 +283,22 @@ function App() {
       'skin-care diaria', 'limpieza diaria', 'skincare semanal', 'limpieza semanal',
       'skin-care mensual', 'limpieza mensual', 'compra mensual', 'compra anual', 'limpieza anual'
     ]);
+    const cleaningRoomHeaders = new Set([
+      'habitación', 'habitacion', 'cocina', 'pasillo / entrada', 'baño', 'bano', 'balcón', 'balcon', 'general'
+    ]);
+    const activeTasksMap = new Map(activeTasks.map((t: any) => [t.id, t]));
     const dummyIdsToPurge = new Set<string>();
     activeTasks.forEach((t: any) => {
       const clean = (t.title || '').trim().toLowerCase();
-      if (dummyHeaderTitles.has(clean) || dummySectionTasks.has(clean)) {
+      const cat = t.categoryId || (t as any).category_id;
+      const isCleaningRoom = cat === 'limpieza' && cleaningRoomHeaders.has(clean);
+      if (dummyHeaderTitles.has(clean) || dummySectionTasks.has(clean) || isCleaningRoom) {
         dummyIdsToPurge.add(t.id);
         state.deleteTask(t.id);
       }
     });
     activeTasks.forEach((t: any) => {
-      if (t.parentId && dummyIdsToPurge.has(t.parentId)) {
+      if (t.parentId && (dummyIdsToPurge.has(t.parentId) || !activeTasksMap.has(t.parentId))) {
         state.updateTask(t.id, { parentId: undefined });
       }
     });
