@@ -1294,6 +1294,54 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     return flat;
   }, [groupedTasks, smartTasks, currentCycle, collapsed, isListView, lists, listSections, currentList, isCatCollapsed, isolatedSectionKey, isolatedRoutineMode, sectionRoutineModes]);
 
+  // Group flattenedData into sections to enable native CSS sticky push effect between sections
+  const sectionGroups = useMemo(() => {
+    const groups: {
+      key: string;
+      headerItem?: { item: VirtualItemType; index: number };
+      items: { item: VirtualItemType; index: number }[];
+    }[] = [];
+
+    let currentGroup: {
+      key: string;
+      headerItem?: { item: VirtualItemType; index: number };
+      items: { item: VirtualItemType; index: number }[];
+    } | null = null;
+
+    for (let i = 0; i < flattenedData.length; i++) {
+      const item = flattenedData[i];
+      if (item.type === 'page-header') {
+        groups.push({
+          key: 'page-header-group',
+          items: [{ item, index: i }]
+        });
+      } else if (item.type === 'header') {
+        if (currentGroup) {
+          groups.push(currentGroup);
+        }
+        currentGroup = {
+          key: `section-group-${item.category || ''}-${item.sectionId || ''}-${i}`,
+          headerItem: { item, index: i },
+          items: []
+        };
+      } else {
+        if (!currentGroup) {
+          currentGroup = {
+            key: `group-no-header-${i}`,
+            items: []
+          };
+        }
+        currentGroup.items.push({ item, index: i });
+      }
+    }
+
+    if (currentGroup) {
+      groups.push(currentGroup);
+    }
+
+    return groups;
+  }, [flattenedData]);
+
   // 2. Scroll Container & Item Keys (Refactored to native fluid block layout for zero-overlap & perfect touch scroll)
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -1449,12 +1497,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               position: 'relative',
               display: isActuallyEmpty ? 'flex' : 'block',
               flexDirection: isActuallyEmpty ? 'column' : undefined,
-              WebkitMaskImage: scrollTop > 1 
-                ? 'linear-gradient(to bottom, transparent 0px, rgba(0,0,0,0.12) 6px, rgba(0,0,0,0.65) 18px, #000 32px, #000 calc(100% - 24px), rgba(0,0,0,0.5) calc(100% - 8px), transparent 100%)'
-                : 'linear-gradient(to bottom, #000 0px, #000 calc(100% - 24px), rgba(0,0,0,0.5) calc(100% - 8px), transparent 100%)',
-              maskImage: scrollTop > 1 
-                ? 'linear-gradient(to bottom, transparent 0px, rgba(0,0,0,0.12) 6px, rgba(0,0,0,0.65) 18px, #000 32px, #000 calc(100% - 24px), rgba(0,0,0,0.5) calc(100% - 8px), transparent 100%)'
-                : 'linear-gradient(to bottom, #000 0px, #000 calc(100% - 24px), rgba(0,0,0,0.5) calc(100% - 8px), transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(to bottom, #000 0px, #000 calc(100% - 24px), rgba(0,0,0,0.5) calc(100% - 8px), transparent 100%)',
+              maskImage: 'linear-gradient(to bottom, #000 0px, #000 calc(100% - 24px), rgba(0,0,0,0.5) calc(100% - 8px), transparent 100%)',
               transition: 'mask-image 0.2s ease, -webkit-mask-image 0.2s ease'
             }}
           >
@@ -1467,188 +1511,201 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               display: isActuallyEmpty ? 'flex' : undefined,
               flexDirection: isActuallyEmpty ? 'column' : undefined
             }}>
-              {flattenedData.map((item, index) => {
-                const data = item as any;
-                const itemKey = getItemKey(item, index);
-                const itemStyle: React.CSSProperties = {
-                  width: '100%',
-                  boxSizing: 'border-box'
+              {sectionGroups.map((group) => {
+                const renderItem = (item: any, index: number) => {
+                  const data = item as any;
+                  const itemKey = getItemKey(item, index);
+                  const itemStyle: React.CSSProperties = {
+                    width: '100%',
+                    boxSizing: 'border-box'
+                  };
+
+                  if (data.type === 'page-header') {
+                    return (
+                      <div key={itemKey} data-index={index} style={{ ...itemStyle, padding: 0 }}>
+                        <MainPageHeader
+                          scrollTop={scrollTop}
+                          isMobile={isMobile}
+                          onBackToSidebar={onBackToSidebar}
+                          currentList={currentList}
+                          setIsListConfigOpen={setIsListConfigOpen}
+                          viewColor={viewColor}
+                          CycleIcon={CycleIcon}
+                          SmartIcon={SmartIcon}
+                          smartListInfo={smartListInfo}
+                          isEditingCycle={isEditingCycle}
+                          currentCycle={currentCycle}
+                          cycleEditName={cycleEditName}
+                          setCycleEditName={setCycleEditName}
+                          updateCycle={updateCycle}
+                          setIsEditingCycle={setIsEditingCycle}
+                          getTitle={getTitle}
+                          currentView={currentView}
+                          totalCost={totalCost}
+                          activeVisibleCount={activeVisibleCount}
+                          completedVisibleCount={completedVisibleCount}
+                          setConfirmProps={setConfirmProps}
+                          setIsConfirmOpen={setIsConfirmOpen}
+                          deleteCycle={deleteCycle}
+                          sortBy={sortBy}
+                          setSortBy={setSortBy}
+                          lifeLogViewMode={lifeLogViewMode}
+                          setLifeLogViewMode={setLifeLogViewMode}
+                          handleOpenMonthlySummary={handleOpenMonthlySummary}
+                          allTasksArray={allTasksArray}
+                          extractPeopleFromText={extractPeopleFromText}
+                          selectedPersonFilter={selectedPersonFilter}
+                          setSelectedPersonFilter={setSelectedPersonFilter}
+                          flashbackMemories={flashbackMemories}
+                          onEditTask={onEditTask}
+                          caducidadesStats={caducidadesStats}
+                          onStartSequence={onStartSequence ? () => {
+                            const pendingTasks = visibleTasks.filter(t => !isTaskCompleted(t));
+                            if (pendingTasks.length > 0) {
+                              onStartSequence(pendingTasks.map(t => t.id), getTitle(), viewColor);
+                            }
+                          } : undefined}
+                        />
+                        {currentView === 'smart_today' && (
+                          <DailyBriefingBanner />
+                        )}
+                      </div>
+                    );
+                  } else if (data.type === 'header') {
+                    const isCustomSection = data.sectionId !== undefined;
+                    const sectionId = data.sectionId;
+                    const isDraggingOver = dragOverSectionId === sectionId && isCustomSection;
+
+                    const showDivider = index > 0 && flattenedData[index - 1]?.type !== 'page-header';
+                    const sectionTasks = groupedTasks[data.category] || [];
+                    const sectionTotal = sectionTasks.reduce((sum, t) => sum + (t.price && !isTaskCompleted(t) ? (Number(t.price) || 0) * (t.quantity || 1) : 0), 0);
+                    const sectionPendingTaskIds = data.sectionTaskIds || sectionTasks.filter(t => !isTaskCompleted(t)).map(t => t.id);
+                    return (
+                      <MainSectionHeader
+                        key={itemKey}
+                        data={data}
+                        itemKey={itemKey}
+                        index={index}
+                        itemStyle={itemStyle}
+                        showDivider={showDivider}
+                        isCustomSection={isCustomSection}
+                        isDraggingOver={isDraggingOver}
+                        isCatCollapsed={isCatCollapsed}
+                        toggleCategory={toggleCategory}
+                        sectionMenuId={sectionMenuId}
+                        setSectionMenuId={setSectionMenuId}
+                        setDragOverSectionId={setDragOverSectionId}
+                        updateTaskSection={updateTaskSection}
+                        setSectionMenu={setSectionMenu}
+                        sectionMenu={sectionMenu}
+                        sectionTouchTimer={sectionTouchTimer}
+                        editingSectionId={editingSectionId}
+                        editingSectionName={editingSectionName}
+                        setEditingSectionName={setEditingSectionName}
+                        saveSectionName={saveSectionName}
+                        startEditingSection={startEditingSection}
+                        setSelectedPersonForProfile={setSelectedPersonForProfile}
+                        sectionTotal={sectionTotal}
+                        onOpenNewTask={onOpenNewTask}
+                        onAddSection={handleAddSection}
+                        deleteListSection={deleteListSection}
+                        isolatedSectionKey={isolatedSectionKey}
+                        setIsolatedSectionKey={setIsolatedSectionKey}
+                        isolatedRoutineMode={isolatedRoutineMode}
+                        setIsolatedRoutineMode={setIsolatedRoutineMode}
+                        sectionRoutineModes={sectionRoutineModes}
+                        toggleSectionRoutineMode={toggleSectionRoutineMode}
+                        dragOverSectionId={dragOverSectionId}
+                        onStartSectionSequence={onStartSequence && sectionPendingTaskIds.length > 0 ? () => {
+                          const rawTitle = data.title.replace(/^[\p{Emoji}\s⏳]+/gu, '').trim() || data.title;
+                          const cleanTitle = rawTitle.length > 0 
+                            ? rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1).toLowerCase() 
+                            : 'Sección';
+                          const seqTitle = currentList ? `${currentList.name} · ${cleanTitle}` : cleanTitle;
+                          onStartSequence(sectionPendingTaskIds, seqTitle, data.color);
+                        } : undefined}
+                        pendingTaskCount={sectionPendingTaskIds.length}
+                        isMobile={isMobile}
+                        isPrevHeader={index > 0 && flattenedData[index - 1]?.type === 'header'}
+                      />
+                    );
+                  } else if (data.type === 'empty-section') {
+                    return (
+                      <div 
+                        key={itemKey}
+                        data-index={index}
+                        style={{ 
+                          ...itemStyle, 
+                          paddingLeft: `calc(16px + ${data.depth * 24}px)`,
+                          paddingRight: '16px',
+                          margin: '6px 0 14px 0',
+                          boxSizing: 'border-box',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'flex-start',
+                          gap: 6
+                        }}
+                      >
+                        <span style={{ fontSize: '0.84rem', color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
+                          {data.title || 'Aquí no hay tareas'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            HapticService.selection();
+                            onOpenNewTask(data.sectionId);
+                          }}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '4px 0',
+                            background: 'transparent',
+                            border: 'none',
+                            color: data.color || 'var(--accent-primary)',
+                            fontSize: '0.86rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'opacity 0.15s ease'
+                          }}
+                          title="Añadir un nuevo recordatorio a esta sección"
+                        >
+                          <Plus size={16} strokeWidth={2.2} />
+                          <span>Nuevo recordatorio</span>
+                        </button>
+                      </div>
+                    );
+                  } else if (data.type === 'task') {
+                    const previousTaskId = index > 0 && flattenedData[index - 1]?.type === 'task' 
+                      ? (flattenedData[index - 1] as any).task.id 
+                      : undefined;
+
+                    return renderTask(
+                      data.task, 
+                      itemStyle, 
+                      index, 
+                      data.depth, 
+                      !!data.isFirstInSection, 
+                      !!data.isLastInSection, 
+                      previousTaskId, 
+                      itemKey
+                    );
+                  }
+
+                  return null;
                 };
 
-                if (data.type === 'page-header') {
-                  return (
-                    <div key={itemKey} data-index={index} style={{ ...itemStyle, padding: 0 }}>
-                      <MainPageHeader
-                        scrollTop={scrollTop}
-                        isMobile={isMobile}
-                        onBackToSidebar={onBackToSidebar}
-                        currentList={currentList}
-                        setIsListConfigOpen={setIsListConfigOpen}
-                        viewColor={viewColor}
-                        CycleIcon={CycleIcon}
-                        SmartIcon={SmartIcon}
-                        smartListInfo={smartListInfo}
-                        isEditingCycle={isEditingCycle}
-                        currentCycle={currentCycle}
-                        cycleEditName={cycleEditName}
-                        setCycleEditName={setCycleEditName}
-                        updateCycle={updateCycle}
-                        setIsEditingCycle={setIsEditingCycle}
-                        getTitle={getTitle}
-                        currentView={currentView}
-                        totalCost={totalCost}
-                        activeVisibleCount={activeVisibleCount}
-                        completedVisibleCount={completedVisibleCount}
-                        setConfirmProps={setConfirmProps}
-                        setIsConfirmOpen={setIsConfirmOpen}
-                        deleteCycle={deleteCycle}
-                        sortBy={sortBy}
-                        setSortBy={setSortBy}
-                        lifeLogViewMode={lifeLogViewMode}
-                        setLifeLogViewMode={setLifeLogViewMode}
-                        handleOpenMonthlySummary={handleOpenMonthlySummary}
-                        allTasksArray={allTasksArray}
-                        extractPeopleFromText={extractPeopleFromText}
-                        selectedPersonFilter={selectedPersonFilter}
-                        setSelectedPersonFilter={setSelectedPersonFilter}
-                        flashbackMemories={flashbackMemories}
-                        onEditTask={onEditTask}
-                        caducidadesStats={caducidadesStats}
-                        onStartSequence={onStartSequence ? () => {
-                          const pendingTasks = visibleTasks.filter(t => !isTaskCompleted(t));
-                          if (pendingTasks.length > 0) {
-                            onStartSequence(pendingTasks.map(t => t.id), getTitle(), viewColor);
-                          }
-                        } : undefined}
-                      />
-                      {currentView === 'smart_today' && (
-                        <DailyBriefingBanner />
-                      )}
-                    </div>
-                  );
-                } else if (data.type === 'header') {
-              const isCustomSection = data.sectionId !== undefined;
-              const sectionId = data.sectionId;
-              const isDraggingOver = dragOverSectionId === sectionId && isCustomSection;
-
-              const showDivider = index > 0 && flattenedData[index - 1]?.type !== 'page-header';
-              const sectionTasks = groupedTasks[data.category] || [];
-              const sectionTotal = sectionTasks.reduce((sum, t) => sum + (t.price && !isTaskCompleted(t) ? (Number(t.price) || 0) * (t.quantity || 1) : 0), 0);
-              const sectionPendingTaskIds = data.sectionTaskIds || sectionTasks.filter(t => !isTaskCompleted(t)).map(t => t.id);
-              return (
-                <MainSectionHeader
-                  key={itemKey}
-                  data={data}
-                  itemKey={itemKey}
-                  index={index}
-                  itemStyle={itemStyle}
-                  showDivider={showDivider}
-                  isCustomSection={isCustomSection}
-                  isDraggingOver={isDraggingOver}
-                  isCatCollapsed={isCatCollapsed}
-                  toggleCategory={toggleCategory}
-                  sectionMenuId={sectionMenuId}
-                  setSectionMenuId={setSectionMenuId}
-                  setDragOverSectionId={setDragOverSectionId}
-                  updateTaskSection={updateTaskSection}
-                  setSectionMenu={setSectionMenu}
-                  sectionMenu={sectionMenu}
-                  sectionTouchTimer={sectionTouchTimer}
-                  editingSectionId={editingSectionId}
-                  editingSectionName={editingSectionName}
-                  setEditingSectionName={setEditingSectionName}
-                  saveSectionName={saveSectionName}
-                  startEditingSection={startEditingSection}
-                  setSelectedPersonForProfile={setSelectedPersonForProfile}
-                  sectionTotal={sectionTotal}
-                  onOpenNewTask={onOpenNewTask}
-                  onAddSection={handleAddSection}
-                  deleteListSection={deleteListSection}
-                  isolatedSectionKey={isolatedSectionKey}
-                  setIsolatedSectionKey={setIsolatedSectionKey}
-                  isolatedRoutineMode={isolatedRoutineMode}
-                  setIsolatedRoutineMode={setIsolatedRoutineMode}
-                  sectionRoutineModes={sectionRoutineModes}
-                  toggleSectionRoutineMode={toggleSectionRoutineMode}
-                  dragOverSectionId={dragOverSectionId}
-                  onStartSectionSequence={onStartSequence && sectionPendingTaskIds.length > 0 ? () => {
-                    const rawTitle = data.title.replace(/^[\p{Emoji}\s⏳]+/gu, '').trim() || data.title;
-                    const cleanTitle = rawTitle.length > 0 
-                      ? rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1).toLowerCase() 
-                      : 'Sección';
-                    const seqTitle = currentList ? `${currentList.name} · ${cleanTitle}` : cleanTitle;
-                    onStartSequence(sectionPendingTaskIds, seqTitle, data.color);
-                  } : undefined}
-                  pendingTaskCount={sectionPendingTaskIds.length}
-                  isMobile={isMobile}
-                  isPrevHeader={index > 0 && flattenedData[index - 1]?.type === 'header'}
-                />
-              );
-            } else if (data.type === 'empty-section') {
-              return (
-                <div 
-                  key={itemKey}
-                  data-index={index}
-                  style={{ 
-                    ...itemStyle, 
-                    paddingLeft: `calc(16px + ${data.depth * 24}px)`,
-                    paddingRight: '16px',
-                    margin: '6px 0 14px 0',
-                    boxSizing: 'border-box',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    gap: 6
-                  }}
-                >
-                  <span style={{ fontSize: '0.84rem', color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
-                    {data.title || 'Aquí no hay tareas'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      HapticService.selection();
-                      onOpenNewTask(data.sectionId);
-                    }}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      padding: '4px 0',
-                      background: 'transparent',
-                      border: 'none',
-                      color: data.color || 'var(--accent-primary)',
-                      fontSize: '0.86rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      transition: 'opacity 0.15s ease'
-                    }}
-                    title="Añadir un nuevo recordatorio a esta sección"
+                return (
+                  <div 
+                    key={group.key} 
+                    className="section-container" 
+                    style={{ position: 'relative', width: '100%', boxSizing: 'border-box' }}
                   >
-                    <Plus size={16} strokeWidth={2.2} />
-                    <span>Nuevo recordatorio</span>
-                  </button>
-                </div>
-              );
-            } else if (data.type === 'task') {
-              const previousTaskId = index > 0 && flattenedData[index - 1]?.type === 'task' 
-                ? (flattenedData[index - 1] as any).task.id 
-                : undefined;
-
-              return renderTask(
-                data.task, 
-                itemStyle, 
-                index, 
-                data.depth, 
-                !!data.isFirstInSection, 
-                !!data.isLastInSection, 
-                previousTaskId, 
-                itemKey
-              );
-            }
-
-            return null;
-          })}
+                    {group.headerItem && renderItem(group.headerItem.item, group.headerItem.index)}
+                    {group.items.map(({ item, index }) => renderItem(item, index))}
+                  </div>
+                );
+              })}
 
           {/* Quick inline row to add a task natively */}
           <MainInlineAdd

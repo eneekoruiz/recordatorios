@@ -174,34 +174,38 @@ function App() {
   // ── Resize / Orientation listener ────────────────────────────────
   useEffect(() => {
     const recalcLayout = () => {
-      const mobile = window.innerWidth <= 768;
-      setIsMobile(prev => {
-        if (prev !== mobile) {
-          // Transitioning desktop → mobile: ensure content panel is visible
-          // Transitioning mobile → desktop: reset mobileView so classes are clean
-          if (!mobile) {
-            // Going desktop: reset mobileView (no panels), does not affect visible state on desktop
-            setMobileView('sidebar');
-          }
-        }
-        return mobile;
-      });
+      const isMobileNow = 
+        window.innerWidth <= 768 ||
+        (window.innerHeight <= 500 && window.innerWidth <= 1024) ||
+        (window.matchMedia?.('(pointer: coarse)').matches && window.innerWidth <= 900);
+
+      setIsMobile(isMobileNow);
+
+      // Reset window scroll offset to prevent iOS / Android browser bars from shifting headers off-screen
+      window.scrollTo(0, 0);
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
     };
 
     recalcLayout(); // Immediate sync on mount
     window.addEventListener('resize', recalcLayout);
     // orientationchange fires before resize completes on some mobile browsers;
-    // use a short delay so innerWidth has settled.
-    const handleOrientation = () => setTimeout(recalcLayout, 100);
+    // use multiple short delays so inner dimensions and safe-areas settle.
+    const handleOrientation = () => {
+      recalcLayout();
+      setTimeout(recalcLayout, 50);
+      setTimeout(recalcLayout, 150);
+      setTimeout(recalcLayout, 300);
+    };
     window.addEventListener('orientationchange', handleOrientation);
     if (screen.orientation) {
-      screen.orientation.addEventListener('change', recalcLayout);
+      screen.orientation.addEventListener('change', handleOrientation);
     }
     return () => {
       window.removeEventListener('resize', recalcLayout);
       window.removeEventListener('orientationchange', handleOrientation);
       if (screen.orientation) {
-        screen.orientation.removeEventListener('change', recalcLayout);
+        screen.orientation.removeEventListener('change', handleOrientation);
       }
     };
   }, []);
@@ -269,6 +273,54 @@ function App() {
           state.deleteTask(t.id);
         }
       });
+    }
+
+    // Hygiene: deduplicate active tasks in store if any duplicate copies remain from previous imports
+    const activeTasks = Object.values(state.tasks || {}).filter((t: any) => !t.deleted_at);
+    const targetCategories = ['care', 'limpieza', 'compra', 'quehaceres'];
+    for (const cat of targetCategories) {
+      const catTasks = activeTasks.filter((t: any) => (t.categoryId || (t as any).category_id) === cat);
+      const titleGroups = new Map<string, any[]>();
+      for (const t of catTasks) {
+        const cleanTitle = (t.title || '')
+          .replace(/^\[[DSMA]\]\s*/i, '')
+          .trim()
+          .toLowerCase();
+        const groupKey = cat === 'quehaceres' 
+          ? `${cleanTitle}:::${t.sectionId || ''}` 
+          : cleanTitle;
+        if (!titleGroups.has(groupKey)) {
+          titleGroups.set(groupKey, []);
+        }
+        titleGroups.get(groupKey)!.push(t);
+      }
+      for (const [, items] of titleGroups.entries()) {
+        if (items.length > 1) {
+          items.sort((a, b) => {
+            const score = (p: any) => {
+              let s = 0;
+              if (p.status === 'completed') s += 100;
+              if (p.notes || (p.description && p.description.length > 15)) s += 50;
+              if (p.parentId) s += 40;
+              if (p.price && Number(p.price) > 0) s += 30;
+              if (p.cycle_id) s += 20;
+              if (p.alerts && p.alerts.length > 0) s += 10;
+              if (p.completionHistory && p.completionHistory.length > 0) s += 10;
+              s += (p.version || 1);
+              return s;
+            };
+            const diff = score(b) - score(a);
+            if (diff !== 0) return diff;
+            const tA = new Date(a.created_at || a.createdAt || 0).getTime();
+            const tB = new Date(b.created_at || b.createdAt || 0).getTime();
+            return tA - tB;
+          });
+          const duplicates = items.slice(1);
+          duplicates.forEach(dup => {
+            state.deleteTask(dup.id);
+          });
+        }
+      }
     }
 
     // Las listas por defecto llevan fecha "epoch": si la cuenta ya tiene esas listas en la nube

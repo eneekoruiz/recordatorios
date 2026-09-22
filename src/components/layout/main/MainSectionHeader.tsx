@@ -120,7 +120,10 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       className="group-header"
       style={{ 
         ...itemStyle, 
-        borderBottom: 'none',
+        position: 'sticky',
+        top: 0,
+        zIndex: isMenuOpenForThisSection ? 30 : 15,
+        borderBottom: '1px solid var(--border-subtle)',
         borderTop: 'none',
         paddingLeft: `calc(28px + ${data.depth * 24}px)`,
         paddingRight: '16px',
@@ -139,7 +142,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           ? 'var(--bg-hover, rgba(0,0,0,0.06))'
           : isPressed
           ? 'var(--bg-hover, rgba(0,0,0,0.04))'
-          : 'transparent',
+          : 'var(--bg-base)',
         borderRadius: (isMenuOpenForThisSection || isPressed) ? 10 : 0,
         transform: isPressed ? 'scale(0.985)' : 'none',
         borderLeft: isMenuOpenForThisSection 
@@ -147,8 +150,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           : isPressed 
           ? '4px solid var(--border-subtle)' 
           : '4px solid transparent',
-        transition: 'background 0.15s ease, transform 0.15s ease, border-color 0.15s ease, border-radius 0.15s ease',
-        zIndex: isMenuOpenForThisSection ? 12 : 10
+        transition: 'background 0.15s ease, transform 0.15s ease, border-color 0.15s ease, border-radius 0.15s ease'
       }}
       onClick={() => toggleCategory(data.category)}
       onClickCapture={(e) => {

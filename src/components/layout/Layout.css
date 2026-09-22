@@ -860,8 +860,8 @@
 
 
 
-@media (max-width: 768px) {
-  .sidebar { padding: 20px max(16px, env(safe-area-inset-right)) calc(30px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+@media (max-width: 768px), (max-height: 500px) and (orientation: landscape) {
+  .sidebar { padding: max(16px, calc(env(safe-area-inset-top, 0px) + 8px)) max(16px, env(safe-area-inset-right)) calc(30px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
   .sidebar-container { background: transparent; box-shadow: none; border: none; }
   .content-header { padding: 16px 0 20px; }
   .content-title-row { align-items: flex-start; flex-direction: column; gap: 12px; }

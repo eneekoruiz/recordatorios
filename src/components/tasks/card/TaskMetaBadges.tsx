@@ -113,42 +113,71 @@ export function TaskMetaBadges({
             </span>
           )}
           
-          {cycleBadge && (
-            <span 
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(task.id);
-              }}
-              style={{ 
-                display: 'inline-flex', 
-                alignItems: 'center', 
-                gap: 4, 
-                color: 'var(--text-secondary)', 
-                fontWeight: 500,
-                fontSize: '0.73rem',
-                cursor: 'pointer',
-                lineHeight: 1.2,
-                padding: '1.5px 6.5px',
-                borderRadius: cycleBadge.type === 'month' ? 10 : 6,
-                background: 'var(--fill-quaternary, rgba(142, 142, 147, 0.08))',
-                border: cycleBadge.type === 'week' 
-                  ? '1px solid rgba(142, 142, 147, 0.28)' 
-                  : cycleBadge.type === 'year' 
-                  ? '1px double rgba(142, 142, 147, 0.35)' 
-                  : '1px solid var(--separator-subtle, rgba(142, 142, 147, 0.16))',
-                transition: 'all 0.15s ease',
-                userSelect: 'none'
-              }}
-              title={`Frecuencia: ${cycleBadge.label} (Toca para editar)`}
-            >
-              {cycleBadge.type === 'day' && <Sun size={11} strokeWidth={2.2} style={{ flexShrink: 0, opacity: 0.85 }} />}
-              {cycleBadge.type === 'week' && <CalendarDays size={11} strokeWidth={2.2} style={{ flexShrink: 0, opacity: 0.85 }} />}
-              {cycleBadge.type === 'month' && <Moon size={11} strokeWidth={2.2} style={{ flexShrink: 0, opacity: 0.85 }} />}
-              {cycleBadge.type === 'year' && <Globe size={11} strokeWidth={2.2} style={{ flexShrink: 0, opacity: 0.85 }} />}
-              {(!cycleBadge.type || cycleBadge.type === 'custom') && <Repeat size={11} strokeWidth={2.2} style={{ flexShrink: 0, opacity: 0.85 }} />}
-              <span>{cycleBadge.label}</span>
-            </span>
-          )}
+          {cycleBadge && (() => {
+            const badgeStyles = {
+              day: {
+                color: 'var(--accent-orange, #ff9500)',
+                background: 'rgba(255, 149, 0, 0.09)',
+                border: '1px solid rgba(255, 149, 0, 0.22)',
+                icon: <Sun size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+              },
+              week: {
+                color: 'var(--accent-blue, #007aff)',
+                background: 'rgba(0, 122, 255, 0.09)',
+                border: '1px solid rgba(0, 122, 255, 0.22)',
+                icon: <CalendarDays size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+              },
+              month: {
+                color: 'var(--accent-purple, #af52de)',
+                background: 'rgba(175, 82, 222, 0.09)',
+                border: '1px solid rgba(175, 82, 222, 0.22)',
+                icon: <Moon size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+              },
+              year: {
+                color: 'var(--accent-green, #34c759)',
+                background: 'rgba(52, 199, 89, 0.09)',
+                border: '1px solid rgba(52, 199, 89, 0.22)',
+                icon: <Globe size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+              },
+              custom: {
+                color: 'var(--text-secondary)',
+                background: 'var(--fill-quaternary, rgba(142, 142, 147, 0.09))',
+                border: '1px solid var(--separator-subtle, rgba(142, 142, 147, 0.20))',
+                icon: <Repeat size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+              }
+            };
+
+            const currentStyle = badgeStyles[cycleBadge.type as keyof typeof badgeStyles] || badgeStyles.custom;
+
+            return (
+              <span 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(task.id);
+                }}
+                style={{ 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: 4, 
+                  color: currentStyle.color, 
+                  fontWeight: 600,
+                  fontSize: '0.73rem',
+                  cursor: 'pointer',
+                  lineHeight: 1.2,
+                  padding: '2px 7px',
+                  borderRadius: 7,
+                  background: currentStyle.background,
+                  border: currentStyle.border,
+                  transition: 'all 0.15s ease',
+                  userSelect: 'none'
+                }}
+                title={`Frecuencia: ${cycleBadge.label} (Toca para editar)`}
+              >
+                {currentStyle.icon}
+                <span>{cycleBadge.label}</span>
+              </span>
+            );
+          })()}
 
           {/* Time of Day Pills (Morning, Afternoon, Night) */}
           {timeOfDayInfo && (

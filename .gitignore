@@ -66,3 +66,4 @@ scripts/local/
 /*.bat
 /*.bundle
 /task_audit_dump.md
+*.zip

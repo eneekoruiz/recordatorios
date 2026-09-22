@@ -1426,7 +1426,7 @@ button:disabled {
 /* ========================================================
    MOBILE LAYOUT — Full-screen panels
 ======================================================== */
-@media (max-width: 768px) {
+@media (max-width: 768px), (max-height: 500px) and (orientation: landscape) {
   /* On mobile, each panel takes full viewport width. Only one is visible at a time. */
   .app-container {
     width: 100vw;
@@ -1466,6 +1466,11 @@ button:disabled {
 
 /* Enforce strict layout boundaries & prevent horizontal overscroll / bounce */
 html, body {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   overflow: hidden !important;
   overscroll-behavior-y: none !important;
   overscroll-behavior-x: none !important;
@@ -1605,10 +1610,13 @@ html, body {
 
 
 
-/* Section Headers: flow naturally in scroll container and dissolve softly at boundaries */
+/* Section Headers: sticky pinned at top while scrolling with clean separation */
 .group-header {
-  position: relative;
-  z-index: 2;
+  position: sticky !important;
+  top: 0;
+  z-index: 15;
+  background: var(--bg-base);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 /* ========================================================
@@ -1623,7 +1631,7 @@ html, body {
   max-height: 100dvh;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 768px), (max-height: 500px) and (orientation: landscape) {
   /* Prevent the glass header from clipping at narrow heights */
   .glass-header {
     min-height: calc(env(safe-area-inset-top, 0px) + 44px) !important;
@@ -1644,6 +1652,11 @@ html, body {
     .glass-header {
       padding-top: calc(env(safe-area-inset-top, 0px) + 6px) !important;
       padding-bottom: 6px !important;
+    }
+    .sidebar-header {
+      padding-top: calc(env(safe-area-inset-top, 0px) + 6px) !important;
+      padding-bottom: 6px !important;
+      min-height: 44px !important;
     }
   }
 }
