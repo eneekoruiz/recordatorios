@@ -275,8 +275,28 @@ function App() {
       });
     }
 
-    // Hygiene: deduplicate active tasks in store if any duplicate copies remain from previous imports
     const activeTasks = Object.values(state.tasks || {}).filter((t: any) => !t.deleted_at);
+
+    // Hygiene: remove dummy section header tasks imported from PDF
+    const dummyHeaderTitles = new Set(['diarias', 'semanales', 'mensuales', 'anuales']);
+    const dummySectionTasks = new Set([
+      'skin-care diaria', 'limpieza diaria', 'skincare semanal', 'limpieza semanal',
+      'skin-care mensual', 'limpieza mensual', 'compra mensual', 'compra anual', 'limpieza anual'
+    ]);
+    const dummyIdsToPurge = new Set<string>();
+    activeTasks.forEach((t: any) => {
+      const clean = (t.title || '').trim().toLowerCase();
+      if (dummyHeaderTitles.has(clean) || dummySectionTasks.has(clean)) {
+        dummyIdsToPurge.add(t.id);
+        state.deleteTask(t.id);
+      }
+    });
+    activeTasks.forEach((t: any) => {
+      if (t.parentId && dummyIdsToPurge.has(t.parentId)) {
+        state.updateTask(t.id, { parentId: undefined });
+      }
+    });
+
     const targetCategories = ['care', 'limpieza', 'compra', 'quehaceres'];
     for (const cat of targetCategories) {
       const catTasks = activeTasks.filter((t: any) => (t.categoryId || (t as any).category_id) === cat);

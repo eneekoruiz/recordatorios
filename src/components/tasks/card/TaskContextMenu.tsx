@@ -207,6 +207,14 @@ function MenuActions({
     s => s.listId === task.categoryId && !s.deleted_at
   );
 
+  const taskList = lists?.find(l => l.id === task.categoryId);
+  const isFinancialMode = Boolean(
+    taskList?.isFinancial ||
+    taskList?.id === 'compra' ||
+    taskList?.name?.toLowerCase().includes('compra') ||
+    task.price !== undefined
+  );
+
   // Submenu: Mover a lista
   if (currentSubmenu === 'move_list') {
     return (
@@ -576,14 +584,16 @@ function MenuActions({
         onClick={() => setCurrentSubmenu('priority')} 
       />
 
-      {/* 5. Precio / Coste */}
-      <ActionRow 
-        icon={<Coins size={16} />} 
-        label="Precio / Coste"
-        sublabel={task.price !== undefined && task.price > 0 ? `${task.price.toLocaleString('es-ES')} €` : undefined}
-        trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
-        onClick={() => setCurrentSubmenu('price')} 
-      />
+      {/* 5. Precio / Coste (solo si la lista es de compra, está en modo financiero o la tarea ya tiene precio) */}
+      {isFinancialMode && (
+        <ActionRow 
+          icon={<Coins size={16} />} 
+          label="Precio / Coste"
+          sublabel={task.price !== undefined && task.price > 0 ? `${task.price.toLocaleString('es-ES')} €` : undefined}
+          trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
+          onClick={() => setCurrentSubmenu('price')} 
+        />
+      )}
 
       {/* 6. Con marca */}
       <ActionRow 

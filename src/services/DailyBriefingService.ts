@@ -125,6 +125,12 @@ export function buildDailyBriefing(
 
   if (isWeeklyDay && weeklyTasks.length > 0) {
     headline = `¡Hoy es día de tareas semanales! Además de las diarias (${pendingDaily.length}), tienes que hacer las semanales (${pendingWeekly.length}).`;
+  } else if (pendingToday.length > 0) {
+    if (pendingToday.length === 1) {
+      headline = 'Tienes una tarea para hoy.';
+    } else {
+      headline = `Tienes ${pluralWord(pendingToday.length, 'tarea')} para hoy.`;
+    }
   } else if (pendingDaily.length === 0) {
     headline = completedDailyToday > 0 ? '¡Todo listo por hoy! Has completado todas tus tareas diarias.' : 'Hoy no tienes tareas diarias pendientes.';
   } else if (pendingDaily.length === 1) {

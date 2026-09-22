@@ -206,6 +206,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     setIsolatedSectionKey(null);
     setIsolatedRoutineMode('full_routine');
     setSelectedPersonFilter(null);
+    setCollapsed({});
   }, [currentView]);
 
   // Helper para resolver franja horaria de una tarea
@@ -489,6 +490,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           while (current.parentId) {
             const parent = tasks[current.parentId];
             if (!parent || parent.deleted_at) break;
+            const parentCat = parent.categoryId || (parent as any).category_id;
+            const tCat = t.categoryId || (t as any).category_id;
+            if (parentCat && tCat && parentCat !== tCat) break;
             if (!tasksToInclude.has(parent.id)) {
               tasksToInclude.set(parent.id, parent);
             }
@@ -800,15 +804,32 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   }, [tasks, updateTask]);
 
   const isCatCollapsed = useCallback((category: string) => {
-    return Boolean(collapsed[category]);
+    if (collapsed[category] !== undefined) {
+      return Boolean(collapsed[category]);
+    }
+    // Subtareas empiezan desplegadas (false = no colapsadas)
+    if (category.startsWith('task_')) {
+      return false;
+    }
+    // Secciones de listas (manuales section_ o sec_, y secciones de ciclo cycle_) empiezan colapsadas por defecto
+    if (category.startsWith('section_') || category.startsWith('sec_') || category.startsWith('cycle_')) {
+      return true;
+    }
+    // Grupos de listas principales en vista de ciclo o carpetas: desplegados por defecto
+    return false;
   }, [collapsed]);
 
   const toggleCategory = useCallback((category: string) => {
     HapticService.selection();
-    setCollapsed(prev => ({
-      ...prev,
-      [category]: !prev[category]
-    }));
+    setCollapsed(prev => {
+      const isCurrentlyCollapsed = prev[category] !== undefined
+        ? Boolean(prev[category])
+        : (category.startsWith('section_') || category.startsWith('sec_') || category.startsWith('cycle_'));
+      return {
+        ...prev,
+        [category]: !isCurrentlyCollapsed
+      };
+    });
   }, []);
 
   const handleAddSection = useCallback((parentId?: string) => {
@@ -974,9 +995,41 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 return;
               }
 
+              // Si es una sección pura de periodicidad (Diarias, Semanales, Mensuales, Anuales):
+              // en vista de ciclo no creamos una cabecera redundante ("Diarias" dentro de "Diario"),
+              // sino que mostramos directamente sus tareas en este ciclo y procesamos sus posibles subsecciones hijas.
+              const purePeriodicity = getPureCyclicPeriodicity(sec.name);
+              if (currentCycle && purePeriodicity) {
+                const secTasks = tasksInScope.filter(t => t.sectionId === secId);
+                if (secTasks.length > 0) {
+                  const roots = secTasks.filter(t => !t.parentId || !tasksBySectionId.has(t.parentId));
+                  const processNode = (task: TaskItem, d: number) => {
+                    flat.push({ type: 'task', task, depth: d });
+                    if (!isCatCollapsed(`task_${task.id}`)) {
+                      const children = secTasks.filter(t => t.parentId === task.id);
+                      children.forEach(c => processNode(c, d + 1));
+                    }
+                  };
+                  roots.forEach(r => processNode(r, depthLevel));
+                }
+                const children = sectionsForList.filter(s => s.parentId === sec.id);
+                children.forEach(c => renderSectionBranch(c.id, depthLevel));
+                return;
+              }
+
               const secTasks = tasksInScope.filter(t => t.sectionId === secId);
               const secKey = `sec_${sec.id}`;
               const secPeriodicity = getSectionPeriodicity(secKey, sec.name, listSections, lists);
+              
+              // En ciclos temporales, no mostrar secciones cuya periodicidad sea mayor al ciclo activo
+              if (currentCycle && secPeriodicity) {
+                const cycleOrder: Record<string, number> = { day: 1, week: 2, month: 3, year: 4 };
+                const currentCycleRank = currentCycle.id === 'cycle_day' ? 1 : currentCycle.id === 'cycle_week' ? 2 : currentCycle.id === 'cycle_month' ? 3 : 4;
+                const secRank = cycleOrder[secPeriodicity] || 1;
+                if (secRank > currentCycleRank) {
+                  return;
+                }
+              }
               
               flat.push({ 
                 type: 'header', 
