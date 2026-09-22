@@ -123,16 +123,16 @@ export function isLimpiezaList(listIdOrView?: string | null, list?: CustomList |
 }
 
 /**
- * Determina si una lista o vista corresponde a una lista de rutinas periódicas (Limpieza, Quehaceres).
+ * Determina si una lista o vista corresponde a una lista de rutinas periódicas (Limpieza, Quehaceres, Care).
  */
 export function isRoutineList(listIdOrView?: string | null, list?: CustomList | null): boolean {
   if (!listIdOrView && !list) return false;
   const cleanId = (listIdOrView || '').replace(/^list_/, '').toLowerCase();
-  if (cleanId === 'limpieza' || cleanId === 'quehaceres') return true;
+  if (cleanId === 'limpieza' || cleanId === 'quehaceres' || cleanId === 'care') return true;
   if (list) {
-    if (list.id === 'limpieza' || list.id === 'quehaceres') return true;
+    if (list.id === 'limpieza' || list.id === 'quehaceres' || list.id === 'care') return true;
     const cleanName = (list.name || '').toLowerCase();
-    if (cleanName === 'limpieza' || cleanName === 'quehaceres' || cleanName.includes('quehacer')) return true;
+    if (cleanName === 'limpieza' || cleanName === 'quehaceres' || cleanName.includes('quehacer') || cleanName === 'care' || cleanName.includes('cuidado') || cleanName.includes('skincare')) return true;
   }
   return false;
 }

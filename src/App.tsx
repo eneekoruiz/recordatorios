@@ -277,6 +277,8 @@ function App() {
         { id: 'caducidades', name: 'Caducidades', color: '#ff9500', icon: 'credit-card' },
         { id: 'que_he_hecho', name: 'Qué he hecho', color: '#5856d6', icon: 'book-open' },
         { id: 'limpieza', name: 'Limpieza', color: '#32ade6', icon: 'sparkles' },
+        { id: 'quehaceres', name: 'Quehaceres', color: '#ff9500', icon: 'check-square' },
+        { id: 'care', name: 'Care', color: '#af52de', icon: 'heart' },
       ];
       initial.forEach((l) => state.addList({ ...l, updated_at: EPOCH }));
       state.addListSection({ id: 'sec_tarjetas', listId: 'caducidades', name: 'Tarjetas y Documentos', order: 0, updated_at: EPOCH });
@@ -285,6 +287,14 @@ function App() {
       state.addListSection({ id: 'sec_limpieza_semanal', listId: 'limpieza', name: 'Semanales', order: 1, updated_at: EPOCH });
       state.addListSection({ id: 'sec_limpieza_mensual', listId: 'limpieza', name: 'Mensuales', order: 2, updated_at: EPOCH });
       state.addListSection({ id: 'sec_limpieza_anual', listId: 'limpieza', name: 'Anuales', order: 3, updated_at: EPOCH });
+      state.addListSection({ id: 'sec_quehaceres_diarias', listId: 'quehaceres', name: 'Diarias', order: 0, updated_at: EPOCH });
+      state.addListSection({ id: 'sec_quehaceres_semanales', listId: 'quehaceres', name: 'Semanales', order: 1, updated_at: EPOCH });
+      state.addListSection({ id: 'sec_quehaceres_mensuales', listId: 'quehaceres', name: 'Mensuales', order: 2, updated_at: EPOCH });
+      state.addListSection({ id: 'sec_quehaceres_anuales', listId: 'quehaceres', name: 'Anuales', order: 3, updated_at: EPOCH });
+      state.addListSection({ id: 'sec_care_diarias', listId: 'care', name: 'Diarias', order: 0, updated_at: EPOCH });
+      state.addListSection({ id: 'sec_care_semanales', listId: 'care', name: 'Semanales', order: 1, updated_at: EPOCH });
+      state.addListSection({ id: 'sec_care_mensuales', listId: 'care', name: 'Mensuales', order: 2, updated_at: EPOCH });
+      state.addListSection({ id: 'sec_care_anuales', listId: 'care', name: 'Anuales', order: 3, updated_at: EPOCH });
     } else {
       if (!lists.some(l => l.id === 'primeros_pasos') && !isHidden) {
         state.addList({ id: 'primeros_pasos', name: 'Primeros Pasos', color: '#ff2d55', icon: 'rocket', isPinned: false, updated_at: EPOCH });
@@ -366,6 +376,39 @@ function App() {
         });
       }
 
+      // Asegurar que Care esté presente como lista de rutinas de cuidado personal (facial, corporal, higiene)
+      const careList = lists.find(l => l.id === 'care' || l.name.toLowerCase() === 'care' || l.name.toLowerCase() === 'skincare' || l.name.toLowerCase() === 'cuidado personal');
+      const careListId = careList ? careList.id : 'care';
+      if (!careList) {
+        state.addList({
+          id: 'care',
+          name: 'Care',
+          color: '#af52de',
+          icon: 'heart',
+          isFolder: false,
+          updated_at: EPOCH
+        });
+      }
+
+      // Secciones unificadas para Care
+      const careSections = [
+        { id: `sec_${careListId}_diarias`, name: 'Diarias', order: 0, root: 'diari' },
+        { id: `sec_${careListId}_semanales`, name: 'Semanales', order: 1, root: 'seman' },
+        { id: `sec_${careListId}_mensuales`, name: 'Mensuales', order: 2, root: 'mensu' },
+        { id: `sec_${careListId}_anuales`, name: 'Anuales', order: 3, root: 'anual' },
+      ];
+      careSections.forEach(cSec => {
+        if (!sections.some(s => s.listId === careListId && (s.name.toLowerCase().includes(cSec.root) || (cSec.root === 'diari' && s.name.toLowerCase().includes('recurrent'))))) {
+          state.addListSection({
+            id: cSec.id,
+            listId: careListId,
+            name: cSec.name,
+            order: cSec.order,
+            updated_at: EPOCH
+          });
+        }
+      });
+
       // Unificación homogénea de nombres de secciones en todas las listas (Quehaceres, Limpieza, etc.)
       // Asegura estilo limpio y coherente estilo Apple (Diarias, Semanales, Mensuales, Anuales) sin mayúsculas agresivas
       const existingSections = state.listSections || [];
@@ -405,6 +448,84 @@ function App() {
             ...t,
             sectionId: sec,
             cycle_id: t.cycle_id || (sec === 'sec_limpieza_diaria' ? 'cycle_day' : sec === 'sec_limpieza_semanal' ? 'cycle_week' : sec === 'sec_limpieza_mensual' ? 'cycle_month' : 'cycle_year'),
+            updated_at: new Date().toISOString(),
+            _is_dirty: true
+          });
+        }
+      });
+
+      // Migrar tareas de cuidado personal / facial que quedaron erróneamente en Quehaceres a la lista Care
+      const careKeywords = [
+        'aseo básico', 'aseo basico',
+        'tónico facial', 'tonico facial',
+        'serum', 'sérum',
+        'contorno de ojos',
+        'crema hidratante', 'crema facial',
+        'protector solar',
+        'banda facial',
+        'lavar rostro', 'limpieza facial', 'doble limpieza',
+        'cuidado labial', 'bálsamo labial', 'balsamo labial',
+        'crema de noche', 'mascarilla nocturna',
+        'piedra de alumbre', 'desodorante',
+        'cepillado en seco',
+        'exfoliar el rostro', 'exfoliar el cuerpo',
+        'mascarilla facial', 'mascarilla capilar',
+        'arreglar uñas', 'cortar y arreglar uñas',
+        'piedra pómez', 'piedra pomez',
+        'baño de pies',
+        'crema en los pies', 'crema en las manos',
+        'ejercicios faciales', 'gimnasia facial', 'pómulo', 'pomulo', 'poner morritos',
+        'skin-care', 'skincare'
+      ];
+
+      allTasksList.forEach(t => {
+        const title = (t.title || '').toLowerCase();
+        const desc = (t.description || '').toLowerCase();
+        const url = (t.url || '').toLowerCase();
+        const isQuehaceres = t.categoryId === 'quehaceres' || (quehaceresList && t.categoryId === quehaceresList.id);
+        const isCareUrl = url.includes('care') || url.includes('skincare');
+        const isCareContent = careKeywords.some(kw => title.includes(kw) || desc.includes(kw));
+
+        if (isQuehaceres && (isCareUrl || isCareContent)) {
+          const targetSection = t.cycle_id === 'cycle_week' ? `sec_${careListId}_semanales` :
+                                t.cycle_id === 'cycle_month' ? `sec_${careListId}_mensuales` :
+                                t.cycle_id === 'cycle_year' ? `sec_${careListId}_anuales` :
+                                `sec_${careListId}_diarias`;
+          state.updateTaskRaw({
+            ...t,
+            categoryId: careListId,
+            sectionId: targetSection,
+            cycle_id: t.cycle_id || (targetSection === `sec_${careListId}_diarias` ? 'cycle_day' : targetSection === `sec_${careListId}_semanales` ? 'cycle_week' : targetSection === `sec_${careListId}_mensuales` ? 'cycle_month' : 'cycle_year'),
+            updated_at: new Date().toISOString(),
+            _is_dirty: true
+          });
+        } else if (t.categoryId === careListId && !t.sectionId) {
+          const sec = t.cycle_id === 'cycle_week' ? `sec_${careListId}_semanales` :
+                      t.cycle_id === 'cycle_month' ? `sec_${careListId}_mensuales` :
+                      t.cycle_id === 'cycle_year' ? `sec_${careListId}_anuales` :
+                      `sec_${careListId}_diarias`;
+          state.updateTaskRaw({
+            ...t,
+            sectionId: sec,
+            cycle_id: t.cycle_id || (sec === `sec_${careListId}_diarias` ? 'cycle_day' : sec === `sec_${careListId}_semanales` ? 'cycle_week' : sec === `sec_${careListId}_mensuales` ? 'cycle_month' : 'cycle_year'),
+            updated_at: new Date().toISOString(),
+            _is_dirty: true
+          });
+        }
+      });
+
+      // Asegurar que las subtareas de cualquier tarea que se mueva a Care también se muevan a Care
+      const careTaskIds = new Set(
+        allTasksList
+          .filter(t => t.categoryId === careListId)
+          .map(t => t.id)
+      );
+
+      allTasksList.forEach(t => {
+        if (t.parentId && careTaskIds.has(t.parentId) && t.categoryId !== careListId) {
+          state.updateTaskRaw({
+            ...t,
+            categoryId: careListId,
             updated_at: new Date().toISOString(),
             _is_dirty: true
           });
