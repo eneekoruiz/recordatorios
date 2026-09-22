@@ -352,7 +352,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, justifyContent: 'flex-end' }}>
           {/* Si esta sección tiene periodicidad (no diaria), ESTÁ DESPLEGADA y hay tareas acumulables (full > only), conmutador nativo Apple */}
-          {!isCatCollapsed(data.category) && data.periodicity && data.periodicity !== 'day' && data.routineCounts && data.routineCounts.full > data.routineCounts.only && (
+          {!isCatCollapsed(data.category) && data.periodicity && data.periodicity !== 'day' && data.routineCounts && data.routineCounts.full > data.routineCounts.only ? (
             <div className="apple-segmented-control">
               <button
                 type="button"
@@ -381,19 +381,28 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                 Todas ({data.routineCounts.full})
               </button>
             </div>
-          )}
-
-          {/* Si esta sección está plegada, mostrar solo un sutil conteo numérico estilo Apple */}
-          {isCatCollapsed(data.category) && data.periodicity && data.periodicity !== 'day' && data.routineCounts && (
-            <span style={{ 
-              fontSize: '0.82rem', 
-              fontWeight: 600, 
-              color: 'var(--text-tertiary)', 
-              fontVariantNumeric: 'tabular-nums',
-              marginRight: 2
-            }}>
-              {currentSectionRoutineMode === 'full_routine' ? data.routineCounts.full : data.routineCounts.only}
-            </span>
+          ) : (
+            /* Conteo numérico total estilo Apple: visible en Diario, en secciones plegadas, o en secciones sin conmutador de rutinas */
+            (() => {
+              const count = data.routineCounts 
+                ? (currentSectionRoutineMode === 'full_routine' ? data.routineCounts.full : data.routineCounts.only) 
+                : (pendingTaskCount ?? data.sectionTaskIds?.length ?? 0);
+              return count > 0 ? (
+                <span 
+                  className="section-total-count"
+                  style={{ 
+                    fontSize: '0.84rem', 
+                    fontWeight: 600, 
+                    color: 'var(--text-tertiary)', 
+                    fontVariantNumeric: 'tabular-nums',
+                    marginRight: 2
+                  }}
+                  title={`${count} tareas`}
+                >
+                  {count}
+                </span>
+              ) : null;
+            })()
           )}
 
           <ChevronDown 

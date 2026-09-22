@@ -379,6 +379,10 @@ function App() {
       state.addListSection({ id: 'sec_care_semanales', listId: 'care', name: 'Semanales', order: 1, updated_at: EPOCH });
       state.addListSection({ id: 'sec_care_mensuales', listId: 'care', name: 'Mensuales', order: 2, updated_at: EPOCH });
       state.addListSection({ id: 'sec_care_anuales', listId: 'care', name: 'Anuales', order: 3, updated_at: EPOCH });
+      state.addListSection({ id: 'sec_compras_diarias', listId: 'compras', name: 'Diarias', order: 0, updated_at: EPOCH });
+      state.addListSection({ id: 'sec_compras_semanales', listId: 'compras', name: 'Semanales', order: 1, updated_at: EPOCH });
+      state.addListSection({ id: 'sec_compras_mensuales', listId: 'compras', name: 'Mensuales', order: 2, updated_at: EPOCH });
+      state.addListSection({ id: 'sec_compras_anuales', listId: 'compras', name: 'Anuales', order: 3, updated_at: EPOCH });
     } else {
       if (!lists.some(l => l.id === 'primeros_pasos') && !isHidden) {
         state.addList({ id: 'primeros_pasos', name: 'Primeros Pasos', color: '#ff2d55', icon: 'rocket', isPinned: false, updated_at: EPOCH });
@@ -493,6 +497,29 @@ function App() {
         }
       });
 
+      // Secciones unificadas para Compra si existe la lista
+      const compraList = lists.find(l => l.id === 'compra' || l.id === 'compras' || l.name.toLowerCase().includes('compra'));
+      const compraListId = compraList ? compraList.id : 'compra';
+      if (compraList) {
+        const compraSections = [
+          { id: `sec_${compraListId}_diarias`, name: 'Diarias', order: 0, root: 'diari' },
+          { id: `sec_${compraListId}_semanales`, name: 'Semanales', order: 1, root: 'seman' },
+          { id: `sec_${compraListId}_mensuales`, name: 'Mensuales', order: 2, root: 'mensu' },
+          { id: `sec_${compraListId}_anuales`, name: 'Anuales', order: 3, root: 'anual' },
+        ];
+        compraSections.forEach(cSec => {
+          if (!sections.some(s => s.listId === compraListId && (s.name.toLowerCase().includes(cSec.root) || (cSec.root === 'diari' && s.name.toLowerCase().includes('recurrent'))))) {
+            state.addListSection({
+              id: cSec.id,
+              listId: compraListId,
+              name: cSec.name,
+              order: cSec.order,
+              updated_at: EPOCH
+            });
+          }
+        });
+      }
+
       // Unificación homogénea de nombres de secciones en todas las listas (Quehaceres, Limpieza, etc.)
       // Asegura estilo limpio y coherente estilo Apple (Diarias, Semanales, Mensuales, Anuales) sin mayúsculas agresivas
       const existingSections = state.listSections || [];
@@ -535,6 +562,24 @@ function App() {
             updated_at: new Date().toISOString(),
             _is_dirty: true
           });
+        } else if (t.categoryId === 'compra' || t.categoryId === 'compras') {
+          if (t.sectionId === 'sec_compra_mensual') {
+            state.updateTaskRaw({
+              ...t,
+              sectionId: `sec_${compraListId}_mensuales`,
+              cycle_id: 'cycle_month',
+              updated_at: new Date().toISOString(),
+              _is_dirty: true
+            });
+          } else if (t.sectionId === 'compra_anual' || t.sectionId === 'sec_compra_anual') {
+            state.updateTaskRaw({
+              ...t,
+              sectionId: `sec_${compraListId}_anuales`,
+              cycle_id: 'cycle_year',
+              updated_at: new Date().toISOString(),
+              _is_dirty: true
+            });
+          }
         }
       });
 
