@@ -210,7 +210,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                 <>
                   <motion.div 
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    style={{ position: 'fixed', inset: 0, zIndex: 180, background: 'rgba(0,0,0,0.2)' }} 
+                    style={{ position: 'fixed', inset: 0, zIndex: 180, background: 'transparent' }} 
                     onClick={() => setIsMenuOpen(false)} 
                   />
                   <motion.div 
@@ -226,14 +226,18 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                       marginTop: 8, 
                       zIndex: 200, 
                       minWidth: 245,
-                      background: 'var(--bg-elevated, #ffffff)',
-                      border: '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
+                      background: 'var(--bg-material, rgba(255,255,255,0.85))',
+                      backdropFilter: 'blur(30px) saturate(180%)',
+                      WebkitBackdropFilter: 'blur(30px) saturate(180%)',
+                      border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
+                      boxShadow: '0 10px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.04)',
                       borderRadius: 14,
                       padding: 6,
                       maxHeight: 'calc(100dvh - 120px)',
                       overflowY: 'auto',
                       overscrollBehavior: 'contain',
-                      WebkitOverflowScrolling: 'touch'
+                      WebkitOverflowScrolling: 'touch',
+                      scrollbarWidth: 'none'
                     }}
                     onClick={(e) => e.stopPropagation()}
                     onWheel={(e) => e.stopPropagation()}

@@ -113,24 +113,27 @@ export function TaskContextMenu({
             } : {
               position: 'fixed',
               zIndex: 999995,
-              top: Math.min(position.y, window.innerHeight - 380),
-              left: Math.max(12, Math.min(position.x, window.innerWidth - 235)),
-              width: 230,
+              top: Math.max(12, Math.min(position.y, window.innerHeight - 440)),
+              left: Math.max(12, Math.min(position.x, window.innerWidth - 265)),
+              width: 250,
+              minWidth: 240,
               background: 'var(--bg-material, rgba(255,255,255,0.85))',
               backdropFilter: 'blur(30px) saturate(180%)',
               WebkitBackdropFilter: 'blur(30px) saturate(180%)',
               borderRadius: '14px',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.04)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              padding: '6px 0',
+              boxShadow: '0 10px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.04)',
+              border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
+              padding: 6,
               display: 'flex',
               flexDirection: 'column',
-              maxHeight: `${position.maxHeight}px`,
+              gap: 2,
+              maxHeight: `${Math.max(position.maxHeight, 440)}px`,
               overflowY: 'auto',
               overflowX: 'hidden',
               boxSizing: 'border-box',
               overscrollBehavior: 'contain',
               WebkitOverflowScrolling: 'touch',
+              scrollbarWidth: 'none',
             }}
             onClick={e => e.stopPropagation()}
           >
@@ -607,21 +610,14 @@ function MenuActions({
           alignItems: 'center',
           justifyContent: 'space-between',
           width: '100%',
-          background: showMoreActions ? 'var(--bg-hover, rgba(0,0,0,0.04))' : 'transparent',
-          border: 'none',
-          cursor: 'pointer',
-          color: 'var(--text-secondary)',
-          fontSize: '0.86rem',
-          fontWeight: 500,
-          borderRadius: 8,
-          transition: 'all 0.15s ease'
+          background: showMoreActions ? 'var(--bg-hover)' : 'transparent',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <SlidersHorizontal size={16} color="var(--text-secondary)" />
+          <SlidersHorizontal size={16} />
           <span>{showMoreActions ? 'Menos opciones' : 'Más opciones...'}</span>
         </div>
-        <ChevronDown size={14} style={{ transform: showMoreActions ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+        <ChevronDown size={14} style={{ transform: showMoreActions ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', color: 'var(--text-tertiary)' }} />
       </button>
 
       {showMoreActions && (
@@ -777,16 +773,28 @@ function MenuActions({
 /** Cabecera reutilizable de submenú: botón "Volver" + título centrado. */
 function SubmenuHeader({ title, onBack }: { title: string; onBack: () => void }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px 8px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 6px 6px' }}>
       <button
         type="button"
         onClick={onBack}
         aria-label="Volver al menú anterior"
-        style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, padding: 0 }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          background: 'transparent',
+          border: 'none',
+          color: 'var(--accent-primary)',
+          cursor: 'pointer',
+          fontSize: '0.88rem',
+          fontWeight: 600,
+          padding: '4px 6px',
+          borderRadius: 6
+        }}
       >
         <ArrowLeft size={16} /> Volver
       </button>
-      <span style={{ flex: 1, textAlign: 'center', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginRight: 20 }}>
+      <span style={{ flex: 1, textAlign: 'center', fontSize: '0.86rem', fontWeight: 600, color: 'var(--text-secondary)', marginRight: 24 }}>
         {title}
       </span>
     </div>
@@ -818,30 +826,22 @@ function ActionRow({
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.38 : 1,
         pointerEvents: disabled ? 'none' : 'auto',
-        color: labelColor || 'var(--text-primary)',
-        padding: '8px 12px',
-        gap: 8,
-        background: 'transparent',
-        border: 'none',
-        borderRadius: 6,
-        fontSize: '0.85rem',
-        textAlign: 'left'
+        gap: 10,
+        boxSizing: 'border-box'
       }}
-      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 16, color: labelColor || 'var(--text-primary)', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 16, flexShrink: 0 }}>
           {icon}
         </div>
-        <span style={{ fontSize: '0.85rem', fontWeight: 400, color: labelColor || 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {label}
         </span>
       </div>
       {(sublabel || trailing) && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 'auto' }}>
           {sublabel && (
-            <span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>
               {sublabel}
             </span>
           )}

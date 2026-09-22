@@ -83,10 +83,12 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           overflowY: 'auto',
           overscrollBehavior: 'contain',
           WebkitOverflowScrolling: 'touch',
-          scrollbarWidth: 'thin',
-          scrollbarColor: 'rgba(120, 120, 128, 0.3) transparent',
+          scrollbarWidth: 'none',
           zIndex: 99999,
-          boxShadow: '0 20px 48px rgba(0,0,0,0.25), 0 0 0 1px var(--border-color)'
+          borderRadius: 14,
+          padding: 6,
+          border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
+          boxShadow: '0 10px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.04)'
         }}
         onClick={(e) => e.stopPropagation()}
         onWheel={(e) => e.stopPropagation()}

@@ -2,8 +2,7 @@ import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { Edit3, Plus, Trash2, FolderPlus, Play } from 'lucide-react';
-import { formatSectionTitle } from '../../../utils/sectionRoutine';
-import { SpotlightBackdrop, type SpotlightRect } from '../../ui/SpotlightBackdrop';
+import type { SpotlightRect } from '../../ui/SpotlightBackdrop';
 
 export interface SectionMenuState {
   open: boolean;
@@ -14,7 +13,7 @@ export interface SectionMenuState {
   pendingTaskCount?: number;
   color?: string;
   category?: string;
-  /** Rectángulo de la cabecera de sección que abrió el menú, para mantenerla nítida sobre el telón. */
+  /** Rectángulo de la cabecera de sección que abrió el menú. */
   triggerRect?: SpotlightRect | null;
 }
 
@@ -37,7 +36,7 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
   onStartSequence,
   onDelete
 }) => {
-  // Escape cierra el menú, igual que en TaskContextMenu.
+  // Escape cierra el menú
   useEffect(() => {
     if (!sectionMenu.open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -52,17 +51,18 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
 
   // Garantizar que no se desborde fuera de la pantalla en móvil o escritorio
-  const menuWidth = 235;
+  const menuWidth = 230;
   const menuHeight = 220;
   const targetX = Math.min(Math.max(12, sectionMenu.x), window.innerWidth - menuWidth - 12);
   const targetY = Math.min(Math.max(12, sectionMenu.y), window.innerHeight - menuHeight - 12);
 
   return createPortal(
     <>
-      <SpotlightBackdrop
-        rect={isMobile ? null : (sectionMenu.triggerRect ?? null)}
-        onClose={onClose}
-        radius={10}
+      {/* Telón transparente para cerrar con un clic fuera, idéntico al menú de listas y tareas */}
+      <div 
+        style={{ position: 'fixed', inset: 0, zIndex: 999990, background: 'transparent' }} 
+        onClick={onClose} 
+        onContextMenu={(e) => { e.preventDefault(); onClose(); }}
       />
       <motion.div
         className="ios-dropdown-menu"
@@ -84,9 +84,9 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
           right: 0,
           bottom: 0,
           zIndex: 999995,
-          background: 'var(--bg-elevated, #ffffff)',
-          backdropFilter: 'blur(35px) saturate(190%)',
-          WebkitBackdropFilter: 'blur(35px) saturate(190%)',
+          background: 'var(--bg-material, rgba(255,255,255,0.85))',
+          backdropFilter: 'blur(30px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(30px) saturate(180%)',
           borderTop: '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
           borderRadius: '20px 20px 0 0',
           padding: '12px 16px max(24px, env(safe-area-inset-bottom))',
@@ -100,10 +100,17 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
           top: targetY,
           zIndex: 999995,
           minWidth: menuWidth,
-          border: '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
+          border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
           borderRadius: 14,
-          background: 'var(--bg-elevated, #ffffff)',
-          padding: 6
+          background: 'var(--bg-material, rgba(255,255,255,0.85))',
+          backdropFilter: 'blur(30px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(30px) saturate(180%)',
+          boxShadow: '0 10px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.04)',
+          padding: 6,
+          scrollbarWidth: 'none',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -111,23 +118,15 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
           <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border-subtle, rgba(142, 142, 147, 0.4))', margin: '0 auto 10px' }} />
         )}
 
-        {/* Section Title Header */}
-        <div style={{ padding: '2px 8px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: sectionMenu.color || 'var(--accent-primary)', flexShrink: 0 }} />
-          <span style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {formatSectionTitle(sectionMenu.sectionName) || 'Sección'}
-          </span>
-        </div>
-        <div className="ios-dropdown-divider" />
         {onStartSequence && (sectionMenu.pendingTaskCount ?? 0) > 0 && (
           <>
             <button 
+              type="button"
               className="ios-dropdown-item" 
               onClick={() => { onClose(); onStartSequence(); }}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
             >
-              <Play size={15} fill={sectionMenu.color || '#007AFF'} color={sectionMenu.color || '#007AFF'} />
-              <span style={{ whiteSpace: 'nowrap', fontWeight: 600 }}>
+              <Play size={16} fill="var(--accent-primary)" color="var(--accent-primary)" />
+              <span style={{ fontWeight: 600 }}>
                 Empezar sección ({sectionMenu.pendingTaskCount})
               </span>
             </button>
@@ -137,32 +136,32 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
 
         {sectionMenu.sectionId && (
           <button 
+            type="button"
             className="ios-dropdown-item" 
             onClick={() => { onClose(); onRename(); }}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
           >
-            <Edit3 size={15} color="var(--text-secondary)" />
-            <span style={{ whiteSpace: 'nowrap' }}>Renombrar sección</span>
+            <Edit3 size={16} />
+            <span>Renombrar sección</span>
           </button>
         )}
 
         <button 
+          type="button"
           className="ios-dropdown-item" 
           onClick={() => { onClose(); onAddTask(); }}
-          style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
         >
-          <Plus size={15} color="var(--text-secondary)" />
-          <span style={{ whiteSpace: 'nowrap' }}>Añadir tarea aquí</span>
+          <Plus size={16} />
+          <span>Añadir tarea aquí</span>
         </button>
 
         {sectionMenu.sectionId && onAddNestedSection && (
           <button 
+            type="button"
             className="ios-dropdown-item" 
             onClick={() => { onClose(); onAddNestedSection(); }}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
           >
-            <FolderPlus size={15} color="var(--text-secondary)" />
-            <span style={{ whiteSpace: 'nowrap' }}>Añadir sección anidada</span>
+            <FolderPlus size={16} />
+            <span>Añadir sección anidada</span>
           </button>
         )}
 
@@ -170,12 +169,12 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
           <>
             <div className="ios-dropdown-divider" />
             <button 
+              type="button"
               className="ios-dropdown-item danger" 
-              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', color: 'var(--accent-red)' }} 
               onClick={() => { onClose(); onDelete(); }}
             >
-              <Trash2 size={15} />
-              <span style={{ whiteSpace: 'nowrap' }}>Eliminar sección</span>
+              <Trash2 size={16} />
+              <span>Eliminar sección</span>
             </button>
           </>
         )}

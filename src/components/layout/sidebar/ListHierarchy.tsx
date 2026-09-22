@@ -404,17 +404,20 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                     } : { 
                       position: 'fixed',
                       top: Math.min(menuCoords.top + 4, window.innerHeight - 400),
-                      left: Math.max(12, Math.min(menuCoords.left, window.innerWidth - 220)),
+                      left: Math.max(12, Math.min(menuCoords.left, window.innerWidth - 235)),
                       zIndex: 99999,
-                      width: 220,
-                      background: 'var(--bg-material, rgba(255,255,255,0.75))',
+                      width: 230,
+                      background: 'var(--bg-material, rgba(255,255,255,0.85))',
                       backdropFilter: 'blur(30px) saturate(180%)',
                       WebkitBackdropFilter: 'blur(30px) saturate(180%)',
                       borderRadius: '14px',
-                      boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.04)',
-                      border: '1px solid rgba(255,255,255,0.2)',
-                      padding: '8px 0',
-                      display: 'flex', flexDirection: 'column'
+                      boxShadow: '0 10px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.04)',
+                      border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
+                      padding: 6,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 2,
+                      scrollbarWidth: 'none'
                     }}
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -431,7 +434,7 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                           useAppStore.getState().dismissOnboarding();
                           onSelectView('list_inbox');
                         }}
-                        style={isMobile ? { ...mobileItemStyle, color: '#ff3b30' } : { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: '#ff3b30', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
+                        style={isMobile ? { ...mobileItemStyle, color: '#ff3b30' } : undefined}
                       >
                         <Trash2 size={16} color="#ff3b30" /> Ocultar / Eliminar guía de inicio
                       </button>
@@ -445,11 +448,9 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                             setMenuCoords(null);
                             updateList(list.id, { isPinned: !list.isPinned });
                           }}
-                          style={isMobile ? mobileItemStyle : { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: '0.85rem', width: '100%' }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                          style={isMobile ? mobileItemStyle : undefined}
                         >
-                          {list.isPinned ? <PinOff size={14} /> : <Pin size={14} />}
+                          {list.isPinned ? <PinOff size={16} /> : <Pin size={16} />}
                           {list.isPinned ? 'Desanclar' : 'Anclar'}
                         </button>
                         <button 
@@ -462,8 +463,6 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                             onAddSublist(list.id, false);
                           }}
                           style={isMobile ? mobileItemStyle : undefined}
-                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                         >
                           <Plus size={16} /> Nueva lista anidada
                         </button>
@@ -477,8 +476,6 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                             onAddSublist(list.id, true);
                           }}
                           style={isMobile ? mobileItemStyle : undefined}
-                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                         >
                           <FolderPlus size={16} /> Nueva carpeta anidada
                         </button>
@@ -495,8 +492,6 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                               setMenuCoords(null);
                             }}
                             style={isMobile ? mobileItemStyle : undefined}
-                            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                           >
                             <IndentIncrease size={16} /> Sangrar (Anidar en anterior)
                           </button>
@@ -513,8 +508,6 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                               setMenuCoords(null);
                             }}
                             style={isMobile ? mobileItemStyle : undefined}
-                            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                           >
                             <IndentDecrease size={16} /> Des-sangrar (Subir de nivel)
                           </button>
@@ -558,8 +551,6 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                             onEditList(list.id);
                           }}
                           style={isMobile ? mobileItemStyle : undefined}
-                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                         >
                           <Edit3 size={16} /> Editar {list.isFolder ? 'Carpeta' : 'Lista'}
                         </button>
