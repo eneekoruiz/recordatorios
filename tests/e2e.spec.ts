@@ -438,10 +438,15 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
     await page.waitForTimeout(500);
 
     // Verify sections: Tarjetas y Documentos and Suscripciones
-    const cardSection = page.locator('text=Tarjetas y Documentos').first();
-    const subSection = page.locator('text=Suscripciones').first();
+    const cardSection = page.locator('.group-header:has-text("Tarjetas")').first();
+    const subSection = page.locator('.group-header:has-text("Suscripciones")').first();
     await expect(cardSection).toBeVisible();
     await expect(subSection).toBeVisible();
+
+    // Las secciones de las listas inician cerradas por defecto: click para desplegar
+    await cardSection.click();
+    await subSection.click();
+    await page.waitForTimeout(400);
 
     // Verify expiration pills on both cards
     const visaCard = page.locator('.task-item-wrapper:has-text("Tarjeta Visa Gold Banco")').first();
@@ -615,7 +620,12 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
     const costText = page.locator('text=/mes').first();
     await expect(costText).toBeVisible();
 
-    // Check Apple Wallet chip on Spotify task
+    // Check Apple Wallet chip on Spotify task (desplegar sección si está colapsada)
+    const subSection = page.locator('.group-header:has-text("Suscripciones")').first();
+    if (await subSection.isVisible()) {
+      await subSection.click();
+      await page.waitForTimeout(400);
+    }
     const walletChip = page.locator('.apple-card-chip:has-text("VISA •• 1234")').first();
     await expect(walletChip).toBeVisible();
 
@@ -769,6 +779,13 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
       window.dispatchEvent(new CustomEvent('select-view', { detail: 'list_caducidades' }));
     });
     await page.waitForTimeout(500);
+
+    // Desplegar sección Suscripciones si está colapsada
+    const subSection = page.locator('.group-header:has-text("Suscripciones")').first();
+    if (await subSection.isVisible()) {
+      await subSection.click();
+      await page.waitForTimeout(400);
+    }
 
     // Verify task card renders management URL button
     const manageBtn = page.locator('.apple-manage-url-btn:has-text("Gestionar")').first();

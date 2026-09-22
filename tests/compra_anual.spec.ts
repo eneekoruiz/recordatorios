@@ -61,7 +61,12 @@ test.describe('Compra Anual & Subtasks Visibility Suite', () => {
     await page.evaluate(() => {
       window.dispatchEvent(new CustomEvent('select-view', { detail: 'list_compra' }));
     });
-    await page.waitForTimeout(500);
+    // Expand Anuales section if collapsed by default
+    const anualHeader = page.locator('.group-header:has-text("Anuales")').first();
+    if (await anualHeader.isVisible()) {
+      await anualHeader.click();
+      await page.waitForTimeout(300);
+    }
 
     // Verify parent task is rendered
     const parentLocator = page.locator('text=Zapatillas Test Anual').first();

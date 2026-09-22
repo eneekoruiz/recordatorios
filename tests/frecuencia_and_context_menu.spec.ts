@@ -155,9 +155,11 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     }
     await page.waitForTimeout(400);
 
-    // Verify Semanales header has the segmented control: Solo vs Todas
+    // Verify Semanales header is visible and expand it (starts collapsed by default)
     const semanalHeader = page.locator('.group-header:has-text("Semanales")');
     await expect(semanalHeader).toBeVisible({ timeout: 5000 });
+    await semanalHeader.click();
+    await page.waitForTimeout(300);
 
     const soloBtn = semanalHeader.locator('button:has-text("Solo")');
     const todasBtn = semanalHeader.locator('button:has-text("Todas")');
