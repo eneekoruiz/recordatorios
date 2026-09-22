@@ -12,6 +12,7 @@ interface SectionData {
   depth: number;
   periodicity?: string | null;
   routineCounts?: { full: number; only: number } | null;
+  routineMode?: 'full_routine' | 'only_section';
   sectionTaskIds?: string[];
 }
 
@@ -94,7 +95,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   sectionMenu,
   isPrevHeader = false
 }) => {
-  const currentSectionRoutineMode = sectionRoutineModes[data.category] || 'only_section';
+  const currentSectionRoutineMode = sectionRoutineModes[data.category] || data.routineMode || 'only_section';
   const [isPressed, setIsPressed] = useState(false);
   const didSectionLongPressRef = useRef(false);
   const touchStartPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });

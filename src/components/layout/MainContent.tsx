@@ -63,6 +63,7 @@ type VirtualItemType =
       isLastInSection?: boolean,
       periodicity?: PeriodicityType | null,
       routineCounts?: { full: number; only: number } | null,
+      routineMode?: 'full_routine' | 'only_section',
       sectionTaskIds?: string[]
     }
   | { type: 'empty-section', title: string, category: string, color: string, sectionId?: string, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean }
@@ -156,10 +157,20 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   // Modo de rutina cuando una sección periódica está aislada ('full_routine' = acumulativa con anuales/semanales/diarias, 'only_section' = estricta)
   const [isolatedRoutineMode, setIsolatedRoutineMode] = useState<'full_routine' | 'only_section'>('only_section');
   // Modo de rutina por sección individual
-  const [sectionRoutineModes, setSectionRoutineModes] = useState<Record<string, 'full_routine' | 'only_section'>>({});
+  const [sectionRoutineModes, setSectionRoutineModes] = useState<Record<string, 'full_routine' | 'only_section'>>(() => {
+    try {
+      const saved = localStorage.getItem('section_routine_modes');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {};
+  });
 
   const toggleSectionRoutineMode = useCallback((secKey: string, mode: 'full_routine' | 'only_section') => {
-    setSectionRoutineModes(prev => ({ ...prev, [secKey]: mode }));
+    setSectionRoutineModes(prev => {
+      const next = { ...prev, [secKey]: mode };
+      try { localStorage.setItem('section_routine_modes', JSON.stringify(next)); } catch {}
+      return next;
+    });
   }, []);
 
   const handleUndoDelete = useCallback((taskId: string) => {
@@ -248,6 +259,35 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       setShowCompleted(!showCompleted);
     }
   };
+
+  // Conteo de tareas para el conmutador nativo [Solo (X) | Todas (Y)] por sección en vistas de ciclos/frecuencias
+  const cycleRoutineCounts = useMemo(() => {
+    if (!currentCycle || currentCycle.id === 'cycle_day') return {};
+    const counts: Record<string, { only: number; full: number }> = {};
+    const allTasks = Object.values(tasks);
+    const validCycles = cycles.filter(c => c.daysValue <= currentCycle.daysValue).map(c => c.id);
+
+    allTasks.forEach(t => {
+      if (t.deleted_at) return;
+      if (t.categoryId === 'primeros_pasos') return;
+      const isDone = isTaskCompleted(t) || isCompletedInCurrentPeriod(t, cycles, listSections, lists);
+      if (!resolvedShowCompleted && isDone && !recentlyCompletedIds.includes(t.id)) return;
+
+      const effCycle = getEffectiveCycleId(t, listSections, lists);
+      if (!effCycle || !validCycles.includes(effCycle)) return;
+
+      const catId = t.categoryId || (t as any).category_id || 'inbox';
+      if (!counts[catId]) {
+        counts[catId] = { only: 0, full: 0 };
+      }
+      counts[catId].full++;
+      if (effCycle === currentCycle.id) {
+        counts[catId].only++;
+      }
+    });
+
+    return counts;
+  }, [currentCycle, tasks, cycles, listSections, lists, resolvedShowCompleted, recentlyCompletedIds]);
 
   // Helper de ordenamiento: delega en la única función de orden de la app (ver sectionRoutine.ts)
   // para que el criterio sea siempre el mismo, se mezclen o no periodicidades distintas.
@@ -443,40 +483,27 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     }
 
     if (currentCycle) {
-      const allowedCycleIds = new Set<string>();
-      if (currentCycle.id === 'cycle_day') {
-        allowedCycleIds.add('cycle_day');
-      } else if (currentCycle.id === 'cycle_week') {
-        allowedCycleIds.add('cycle_week');
-        if (cycleInclusion.weekly === 'include_daily') {
-          allowedCycleIds.add('cycle_day');
-        }
-      } else if (currentCycle.id === 'cycle_month') {
-        allowedCycleIds.add('cycle_month');
-        if (cycleInclusion.monthly === 'include_weekly') {
-          allowedCycleIds.add('cycle_week');
-        } else if (cycleInclusion.monthly === 'include_all') {
-          allowedCycleIds.add('cycle_week');
-          allowedCycleIds.add('cycle_day');
-        }
-      } else if (currentCycle.id === 'cycle_year') {
-        allowedCycleIds.add('cycle_year');
-        if (cycleInclusion.annual === 'include_monthly') {
-          allowedCycleIds.add('cycle_month');
-        } else if (cycleInclusion.annual === 'include_all') {
-          allowedCycleIds.add('cycle_month');
-          allowedCycleIds.add('cycle_week');
-          allowedCycleIds.add('cycle_day');
-        }
-      } else {
-        allowedCycleIds.add(currentCycle.id);
-      }
-
       const filteredGrouped: Record<string, TaskItem[]> = {};
       Object.entries(rawGrouped).forEach(([key, taskList]) => {
+        const mode = sectionRoutineModes[key] || (
+          currentCycle.id === 'cycle_week' && cycleInclusion.weekly === 'include_daily' ? 'full_routine' :
+          currentCycle.id === 'cycle_month' && cycleInclusion.monthly !== 'only_monthly' ? 'full_routine' :
+          currentCycle.id === 'cycle_year' && cycleInclusion.annual !== 'only_annual' ? 'full_routine' :
+          'only_section'
+        );
+
+        const allowedCyclesForSection = new Set<string>();
+        if (currentCycle.id === 'cycle_day') {
+          allowedCyclesForSection.add('cycle_day');
+        } else if (mode === 'full_routine') {
+          cycles.filter(c => c.daysValue <= currentCycle.daysValue).forEach(c => allowedCyclesForSection.add(c.id));
+        } else {
+          allowedCyclesForSection.add(currentCycle.id);
+        }
+
         const matching = taskList.filter(t => {
           const eff = getEffectiveCycleId(t, listSections, lists);
-          if (!eff || !allowedCycleIds.has(eff)) return false;
+          if (!eff || !allowedCyclesForSection.has(eff)) return false;
           if (currentCycle.id === 'cycle_day' && dailyTimeFilter !== 'all') {
             return resolveTimeOfDay(t) === dailyTimeFilter;
           }
@@ -494,7 +521,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             const tCat = t.categoryId || (t as any).category_id;
             if (parentCat && tCat && parentCat !== tCat) break;
             const parentEff = getEffectiveCycleId(parent, listSections, lists);
-            if (!parentEff || !allowedCycleIds.has(parentEff)) {
+            if (!parentEff || !allowedCyclesForSection.has(parentEff)) {
               break;
             }
             if (!tasksToInclude.has(parent.id)) {
@@ -562,7 +589,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       sortedGrouped[key] = sortTaskList(taskList);
     });
     return sortedGrouped;
-  }, [currentView, isFolderView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, resolvedShowCompleted, recentlyCompletedIds, lists, currentCycle, cycleInclusion, listSectionFilter, dailyTimeFilter, resolveTimeOfDay, currentList, sortBy, sortTaskList, lifeLogViewMode, selectedPersonFilter]);
+  }, [currentView, isFolderView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, resolvedShowCompleted, recentlyCompletedIds, lists, currentCycle, cycleInclusion, listSectionFilter, dailyTimeFilter, resolveTimeOfDay, currentList, sortBy, sortTaskList, lifeLogViewMode, selectedPersonFilter, sectionRoutineModes]);
     
   const smartTasks = useMemo(() => currentView === 'cycle_day' ? getSmartSortTasks(recentlyCompletedIds) : [], [currentView, getSmartSortTasks, tasks, recentlyCompletedIds]);
 
@@ -952,19 +979,35 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           else { headerTitle = categoryOrCycle === 'Sin Lista' ? 'Sin lista' : categoryOrCycle; color = '#8e8e93'; }
         }
 
-        // Lógica de rutina acumulativa cuando se pulsa "Ocultar el resto"
-        const sectionPeriodicity = getSectionPeriodicity(categoryOrCycle, headerTitle, listSections, lists);
+        // Lógica de periodicidad y rutina para cabeceras
+        const sectionPeriodicity = currentCycle 
+          ? (currentCycle.id.replace('cycle_', '') as PeriodicityType)
+          : getSectionPeriodicity(categoryOrCycle, headerTitle, listSections, lists);
         let tasksToRender = categoryTasks;
         let routineCounts = null;
+        if (currentCycle && currentCycle.id !== 'cycle_day') {
+          const rCounts = cycleRoutineCounts[categoryOrCycle];
+          if (rCounts && rCounts.full > rCounts.only) {
+            routineCounts = rCounts;
+          }
+        }
+        const sectionRoutineMode = sectionRoutineModes[categoryOrCycle] || (
+          currentCycle?.id === 'cycle_week' && cycleInclusion.weekly === 'include_daily' ? 'full_routine' :
+          currentCycle?.id === 'cycle_month' && cycleInclusion.monthly !== 'only_monthly' ? 'full_routine' :
+          currentCycle?.id === 'cycle_year' && cycleInclusion.annual !== 'only_annual' ? 'full_routine' :
+          'only_section'
+        );
+
         flat.push({ 
           type: 'header', 
           title: headerTitle, 
-          titleIcon: sectionPeriodicity ? <Hourglass size={14} /> : undefined,
+          titleIcon: currentCycle ? undefined : (sectionPeriodicity ? <Hourglass size={14} /> : undefined),
           category: categoryOrCycle, 
           color, 
           depth: headerDepth,
           periodicity: sectionPeriodicity,
           routineCounts,
+          routineMode: sectionRoutineMode,
           sectionTaskIds: tasksToRender.filter(t => !isTaskCompleted(t)).map(t => t.id)
         });
         
@@ -972,28 +1015,19 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           const renderSectionTreeForTasks = (tasksInScope: TaskItem[], listId: string, baseDepth: number, parentColor: string) => {
             const sectionsForList = (listSections || []).filter(s => s.listId === listId && !s.deleted_at);
 
+            const listMode = sectionRoutineModes[listId] || (
+              currentCycle?.id === 'cycle_week' && cycleInclusion.weekly === 'include_daily' ? 'full_routine' :
+              currentCycle?.id === 'cycle_month' && cycleInclusion.monthly !== 'only_monthly' ? 'full_routine' :
+              currentCycle?.id === 'cycle_year' && cycleInclusion.annual !== 'only_annual' ? 'full_routine' :
+              'only_section'
+            );
+
             const allowedCycleIds = new Set<string>();
             if (currentCycle) {
               if (currentCycle.id === 'cycle_day') {
                 allowedCycleIds.add('cycle_day');
-              } else if (currentCycle.id === 'cycle_week') {
-                allowedCycleIds.add('cycle_week');
-                if (cycleInclusion.weekly === 'include_daily') allowedCycleIds.add('cycle_day');
-              } else if (currentCycle.id === 'cycle_month') {
-                allowedCycleIds.add('cycle_month');
-                if (cycleInclusion.monthly === 'include_weekly') allowedCycleIds.add('cycle_week');
-                else if (cycleInclusion.monthly === 'include_all') {
-                  allowedCycleIds.add('cycle_week');
-                  allowedCycleIds.add('cycle_day');
-                }
-              } else if (currentCycle.id === 'cycle_year') {
-                allowedCycleIds.add('cycle_year');
-                if (cycleInclusion.annual === 'include_monthly') allowedCycleIds.add('cycle_month');
-                else if (cycleInclusion.annual === 'include_all') {
-                  allowedCycleIds.add('cycle_month');
-                  allowedCycleIds.add('cycle_week');
-                  allowedCycleIds.add('cycle_day');
-                }
+              } else if (listMode === 'full_routine') {
+                cycles.filter(c => c.daysValue <= currentCycle.daysValue).forEach(c => allowedCycleIds.add(c.id));
               } else {
                 allowedCycleIds.add(currentCycle.id);
               }
@@ -1374,7 +1408,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     }
 
     return flat;
-  }, [groupedTasks, smartTasks, currentCycle, collapsed, isListView, lists, listSections, currentList, isCatCollapsed, isolatedSectionKey, isolatedRoutineMode, sectionRoutineModes]);
+  }, [groupedTasks, smartTasks, currentCycle, collapsed, isListView, lists, listSections, currentList, isCatCollapsed, isolatedSectionKey, isolatedRoutineMode, sectionRoutineModes, cycleRoutineCounts]);
 
   // Group flattenedData into sections to enable native CSS sticky push effect between sections
   const sectionGroups = useMemo(() => {
