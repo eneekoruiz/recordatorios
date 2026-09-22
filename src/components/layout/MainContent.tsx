@@ -945,10 +945,11 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         // Lógica de rutina acumulativa cuando se pulsa "Ocultar el resto"
         const sectionPeriodicity = getSectionPeriodicity(categoryOrCycle, headerTitle, listSections, lists);
         let tasksToRender = categoryTasks;
-let routineCounts = null;
-            flat.push({ 
+        let routineCounts = null;
+        flat.push({ 
           type: 'header', 
           title: headerTitle, 
+          titleIcon: sectionPeriodicity ? <Hourglass size={14} /> : undefined,
           category: categoryOrCycle, 
           color, 
           depth: headerDepth,
@@ -982,8 +983,18 @@ let routineCounts = null;
               if (!sec) return;
               const secTasks = tasksInScope.filter(t => t.sectionId === secId);
               const secKey = `sec_${sec.id}`;
+              const secPeriodicity = getSectionPeriodicity(secKey, sec.name, listSections, lists);
               
-              flat.push({ type: 'header', title: sec.name, category: secKey, color: parentColor, sectionId: sec.id, depth: depthLevel });
+              flat.push({ 
+                type: 'header', 
+                title: formatSectionTitle(sec.name), 
+                titleIcon: secPeriodicity ? <Hourglass size={14} /> : undefined,
+                category: secKey, 
+                color: parentColor, 
+                sectionId: sec.id, 
+                depth: depthLevel,
+                periodicity: secPeriodicity
+              });
               
               if (!isCatCollapsed(secKey)) {
                 if (secTasks.length === 0) {
@@ -1143,7 +1154,7 @@ let routineCounts = null;
                 return tCycle && tCycle.daysValue <= cDays;
               });
 
-            const routineCounts = sectionPeriodicity && fullTasks.length > categoryTasks.length ? {
+            const routineCounts = sectionPeriodicity && sectionPeriodicity !== 'day' && fullTasks.length > categoryTasks.length ? {
               only: categoryTasks.length,
               full: fullTasks.length
             } : null;
@@ -1155,7 +1166,7 @@ let routineCounts = null;
 
             flat.push({
               type: 'header',
-              title: cName,
+              title: formatSectionTitle(cName),
               titleIcon: <Hourglass size={14} />,
               category: catKey,
               color,
@@ -1209,7 +1220,7 @@ let routineCounts = null;
           let tasksToRender = categoryTasks;
           let routineCounts: { full: number; only: number } | null = null;
 
-          if (sectionPeriodicity) {
+          if (sectionPeriodicity && sectionPeriodicity !== 'day') {
             const allTasksInList = Object.values(groupedTasks).flat();
             const allowedPeriodicities = getRoutineAllowedPeriodicities(sectionPeriodicity);
             const fullRoutineTasks = allTasksInList.filter(t => {
@@ -1246,6 +1257,7 @@ let routineCounts = null;
           flat.push({ 
             type: 'header', 
             title: formatSectionTitle(sec.name), 
+            titleIcon: sectionPeriodicity ? <Hourglass size={14} /> : undefined,
             category: categoryKey, 
             color, 
             sectionId: sec.id, 

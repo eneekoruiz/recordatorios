@@ -345,8 +345,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, justifyContent: 'flex-end' }}>
-          {/* Si esta sección tiene periodicidad, ESTÁ DESPLEGADA y hay tareas acumulables (full > only), conmutador nativo Apple */}
-          {!isCatCollapsed(data.category) && data.periodicity && data.routineCounts && data.routineCounts.full > data.routineCounts.only && (
+          {/* Si esta sección tiene periodicidad (no diaria), ESTÁ DESPLEGADA y hay tareas acumulables (full > only), conmutador nativo Apple */}
+          {!isCatCollapsed(data.category) && data.periodicity && data.periodicity !== 'day' && data.routineCounts && data.routineCounts.full > data.routineCounts.only && (
             <div className="apple-segmented-control">
               <button
                 type="button"
@@ -378,7 +378,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           )}
 
           {/* Si esta sección está plegada, mostrar solo un sutil conteo numérico estilo Apple */}
-          {isCatCollapsed(data.category) && data.routineCounts && (
+          {isCatCollapsed(data.category) && data.periodicity && data.periodicity !== 'day' && data.routineCounts && (
             <span style={{ 
               fontSize: '0.82rem', 
               fontWeight: 600, 
