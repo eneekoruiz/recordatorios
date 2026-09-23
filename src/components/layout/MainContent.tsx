@@ -92,6 +92,11 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const addListSection = useAppStore((state) => state.addListSection);
   const updateListSection = useAppStore((state) => state.updateListSection);
   const deleteListSection = useAppStore((state) => state.deleteListSection);
+  const reorderListSections = useAppStore((state) => state.reorderListSections);
+  const duplicateSection = useAppStore((state) => state.duplicateSection);
+  const emptySection = useAppStore((state) => state.emptySection);
+  const moveSectionTasks = useAppStore((state) => state.moveSectionTasks);
+  const setSectionTasksCompleted = useAppStore((state) => state.setSectionTasksCompleted);
   const updateCycle = useAppStore((state) => state.updateCycle);
   const deleteCycle = useAppStore((state) => state.deleteCycle);
   const toggleTask = useAppStore((state) => state.toggleTask);
@@ -308,11 +313,11 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         filteredTasks = validTasks.filter(t => t.categoryId === 'primeros_pasos');
         break;
       case 'smart_today': {
-        const today = new Date().toISOString().split('T')[0];
+        const todayStr = new Date().toDateString();
         filteredTasks = validTasks.filter(t => {
           if (!t.dueDate) return false;
           const d = new Date(t.dueDate);
-          return !isNaN(d.getTime()) && d.toISOString().split('T')[0] === today;
+          return !isNaN(d.getTime()) && d.toDateString() === todayStr;
         });
         break;
       }
@@ -374,6 +379,11 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   // Cargar tareas agrupadas según la vista actual
   const groupedTasks = useMemo(() => {
     let rawGrouped: Record<string, TaskItem[]> = {};
+    if (currentView === 'TRASH') {
+      const allTrash = Object.values(tasks).filter((t: any) => !!t.deleted_at);
+      rawGrouped = { 'Papelera': allTrash };
+      return rawGrouped;
+    }
     if (isFolderView) {
       const folderId = currentView.replace('folder_', '').replace('list_', '');
       const descendantListIds = new Set<string>();
@@ -845,18 +855,21 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     if (category.startsWith('task_')) {
       return false;
     }
-    // En vistas de ciclos temporales (Diario, Semanal, Mensual, Anual), las subsecciones
-    // y subgrupos empiezan desplegados para mostrar las tareas organizadas por estancia/categoría
-    if (currentCycle) {
+    // En Qué he hecho (bitácora de vida), las personas y meses se muestran abiertos
+    if (isQueHeHechoList(currentView, currentList)) {
       return false;
     }
-    // Secciones de listas (manuales section_ o sec_, y secciones de ciclo cycle_) empiezan colapsadas por defecto en vistas de lista
-    if (category.startsWith('section_') || category.startsWith('sec_') || category.startsWith('cycle_')) {
-      return true;
+    // En vistas inteligentes (Hoy, Todos, Programados, etc.), las agrupaciones por lista empiezan abiertas
+    if (isSmartView) {
+      return false;
     }
-    // Grupos de listas principales en vista de ciclo o carpetas: desplegados por defecto
-    return false;
-  }, [collapsed, currentCycle]);
+    // En vistas de frecuencia (Diario, Semanal, etc.), las agrupaciones maestras de lista empiezan abiertas para ver sus secciones
+    if (currentCycle && (category === 'inbox' || category === 'undefined' || category === 'Sin Lista' || lists?.some(l => l.id === category))) {
+      return false;
+    }
+    // En toda la app (listas normales, frecuencia, caducidades), las secciones vienen cerradas por defecto para no agobiar
+    return true;
+  }, [collapsed, currentView, currentList, isSmartView, currentCycle, lists]);
 
   const toggleCategory = useCallback((category: string) => {
     HapticService.selection();
@@ -935,6 +948,26 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     });
     if (ok) deleteListSection(sectionId);
   }, [sectionMenu, deleteListSection]);
+
+  const handleEmptySectionMenu = useCallback(async () => {
+    const sectionTasks = sectionMenu.category ? (groupedTasks[sectionMenu.category] || []) : [];
+    if (sectionTasks.length === 0) return;
+    setSectionMenu({ open: false, x: 0, y: 0 });
+    const ok = await confirmDialog({
+      title: `¿Vaciar sección «${sectionMenu.sectionName || 'Sección'}»?`,
+      message: `Se moverán ${sectionTasks.length} recordatorios a la papelera. La sección se mantendrá intacta.`,
+      confirmText: 'Vaciar',
+    });
+    if (ok) {
+      emptySection(sectionMenu.sectionId || '', sectionTasks.map(t => t.id));
+      const timeoutId = window.setTimeout(() => setDeletedToast(null), 5000);
+      setDeletedToast({
+        id: sectionMenu.sectionId || 'section',
+        title: `Se vació «${sectionMenu.sectionName}» (${sectionTasks.length} recordatorios)`,
+        timeoutId: timeoutId as unknown as number
+      });
+    }
+  }, [sectionMenu, groupedTasks, emptySection]);
 
   // 1. Flatten Data para Virtualización (QA Performance Optimization)
   const flattenedData = useMemo(() => {
@@ -1250,35 +1283,58 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         const allCycles = useAppStore.getState().cycles || [];
 
         // Present cycle keys: include keys that have tasks, or that match a defined manual cyclic section
-        const presentCycleKeys = Object.keys(groupedTasks).filter(k => {
-          if (!k.startsWith('cycle_')) return false;
-          if (groupedTasks[k]?.length > 0) return true;
-          const cId = k.replace('cycle_', '');
-          const p = cId.startsWith('cycle_') ? cId.replace('cycle_', '') : cId;
-          const mSec = sectionsForList.find(s => !s.parentId && getPureCyclicPeriodicity(s.name) === p);
-          if (mSec) {
-            const hasChildTasks = sectionsForList.filter(s => s.parentId === mSec.id).some(cs => (groupedTasks[`section_${cs.id}`]?.length || 0) > 0);
-            if (hasChildTasks) return true;
+        const cycleKeys = new Set<string>();
+        Object.keys(groupedTasks).forEach(k => {
+          if (k.startsWith('cycle_') && (groupedTasks[k]?.length || 0) > 0) {
+            cycleKeys.add(k);
           }
-          return false;
         });
+        sectionsForList.forEach(s => {
+          if (!s.parentId) {
+            const p = getPureCyclicPeriodicity(s.name);
+            if (p) {
+              cycleKeys.add(`cycle_cycle_${p}`);
+            }
+          }
+        });
+        const presentCycleKeys = Array.from(cycleKeys);
 
         const processSection = (secId: string, depth: number) => {
           const sec = sectionsForList.find(s => s.id === secId);
           if (!sec) return;
 
           // Las secciones manuales que son literalmente "Diaria/Semanal/Mensual/Anual" son un
-          // duplicado de la sección dinámica de ciclo equivalente (ya renderizada con sus tareas e hijas).
+          // duplicado de la sección de ciclo equivalente (ya renderizada con sus tareas e hijas en presentCycleKeys).
           if (getPureCyclicPeriodicity(sec.name)) {
             return;
           }
 
           const categoryKey = `section_${sec.id}`;
 
-          const categoryTasks = groupedTasks[categoryKey] || [];
+          // Obtenemos tareas asignadas a esta sección (incluyendo soporte de alias de prefijo sec_limp_ / sec_limpieza_)
+          const categoryTasks = [
+            ...(groupedTasks[categoryKey] || []),
+            ...(sec.id.startsWith('sec_limpieza_') ? (groupedTasks[`section_${sec.id.replace('sec_limpieza_', 'sec_limp_')}`] || []) : []),
+            ...(sec.id.startsWith('sec_limp_') ? (groupedTasks[`section_${sec.id.replace('sec_limp_', 'sec_limpieza_')}`] || []) : []),
+          ];
+
+          // Subsecciones hijas
+          const childSections = sectionsForList
+            .filter(s => s.parentId === sec.id ||
+              (sec.id.startsWith('sec_limpieza_') && s.parentId === sec.id.replace('sec_limpieza_', 'sec_limp_')) ||
+              (sec.id.startsWith('sec_limp_') && s.parentId === sec.id.replace('sec_limp_', 'sec_limpieza_'))
+            )
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
           const sectionPeriodicity = getSectionPeriodicity(categoryKey, sec.name, listSections, lists);
           let tasksToRender = categoryTasks;
           let routineCounts: { full: number; only: number } | null = null;
+
+          const allChildTasks = childSections.flatMap(cs => [
+            ...(groupedTasks[`section_${cs.id}`] || []),
+            ...(cs.id.startsWith('sec_limpieza_') ? (groupedTasks[`section_${cs.id.replace('sec_limpieza_', 'sec_limp_')}`] || []) : []),
+            ...(cs.id.startsWith('sec_limp_') ? (groupedTasks[`section_${cs.id.replace('sec_limp_', 'sec_limpieza_')}`] || []) : []),
+          ]);
 
           if (sectionPeriodicity && sectionPeriodicity !== 'day') {
             const allTasksInList = Object.values(groupedTasks).flat();
@@ -1287,32 +1343,31 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               const p = getTaskPeriodicity(t, listSections, lists);
               return p && allowedPeriodicities.has(p);
             });
-            const strictlySectionTasks = categoryTasks.filter(t => {
-              const p = getTaskPeriodicity(t, listSections, lists);
-              return p ? p === sectionPeriodicity : true;
-            });
-            const onlyTasks = strictlySectionTasks.length > 0 ? strictlySectionTasks : categoryTasks;
+            const thisSectionTasksTotal = [...categoryTasks, ...allChildTasks];
 
-            if (fullRoutineTasks.length > onlyTasks.length) {
+            if (fullRoutineTasks.length > thisSectionTasksTotal.length) {
               routineCounts = {
                 full: fullRoutineTasks.length,
-                only: onlyTasks.length
+                only: thisSectionTasksTotal.length
               };
 
               const currentRoutineMode = sectionRoutineModes[categoryKey] || 'only_section';
               if (currentRoutineMode === 'full_routine') {
                 tasksToRender = sortTasksByUserPreference(fullRoutineTasks, sortBy);
-              } else {
-                tasksToRender = onlyTasks;
               }
             }
           }
 
-          // Si se está filtrando por temporalidad (ej. solo semanales o solo diarias)
-          // y esta sección no tiene tareas que cumplan el filtro, no mostrar la sección vacía
-          if (listSectionFilter !== 'all' && tasksToRender.length === 0) {
+          // Si se está filtrando por temporalidad y ni esta sección ni sus hijas tienen tareas
+          if (listSectionFilter !== 'all' && tasksToRender.length === 0 && allChildTasks.length === 0) {
             return;
           }
+
+          const childPendingTaskIds = allChildTasks.filter(t => !isTaskCompleted(t)).map(t => t.id);
+          const allSectionPendingTaskIds = [
+            ...tasksToRender.filter(t => !isTaskCompleted(t)).map(t => t.id),
+            ...childPendingTaskIds
+          ];
 
           flat.push({ 
             type: 'header', 
@@ -1324,30 +1379,30 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             depth,
             periodicity: sectionPeriodicity,
             routineCounts,
-            sectionTaskIds: tasksToRender.filter(t => !isTaskCompleted(t)).map(t => t.id)
+            sectionTaskIds: allSectionPendingTaskIds
           });
           
           if (!isCatCollapsed(categoryKey)) {
-            if (tasksToRender.length === 0) {
+            if (tasksToRender.length === 0 && childSections.length === 0) {
               flat.push({ type: 'empty-section', title: 'Aquí no hay tareas', category: categoryKey, color, sectionId: sec.id, depth });
             } else {
-              const inScope = new Set(tasksToRender.map(t => t.id));
-              const roots = tasksToRender.filter(t => !t.parentId || !inScope.has(t.parentId));
-              const processNode = (task: TaskItem, depthLevel: number) => {
-                flat.push({ type: 'task', task, depth: depthLevel });
-                if (!isCatCollapsed(`task_${task.id}`)) {
-                  const children = tasksToRender.filter(t => t.parentId === task.id);
-                  children.forEach(c => processNode(c, depthLevel + 1));
-                }
-              };
-              roots.forEach(r => processNode(r, depth + 1));
+              if (tasksToRender.length > 0) {
+                const inScope = new Set(tasksToRender.map(t => t.id));
+                const roots = tasksToRender.filter(t => !t.parentId || !inScope.has(t.parentId));
+                const processNode = (task: TaskItem, depthLevel: number) => {
+                  flat.push({ type: 'task', task, depth: depthLevel });
+                  if (!isCatCollapsed(`task_${task.id}`)) {
+                    const children = tasksToRender.filter(t => t.parentId === task.id);
+                    children.forEach(c => processNode(c, depthLevel + 1));
+                  }
+                };
+                roots.forEach(r => processNode(r, depth + 1));
+              }
+
+              if (childSections.length > 0) {
+                childSections.forEach(child => processSection(child.id, depth + 1));
+              }
             }
-            
-            // Children sections
-            const childSections = sectionsForList
-              .filter(s => s.parentId === sec.id)
-              .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-            childSections.forEach(child => processSection(child.id, depth + 1));
           }
         };
         
@@ -1355,19 +1410,24 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           const sortedCycles = presentCycleKeys.sort((a, b) => {
             const idA = a.replace('cycle_', '');
             const idB = b.replace('cycle_', '');
-            const cA = allCycles.find(c => c.id === idA)?.daysValue || 0;
-            const cB = allCycles.find(c => c.id === idB)?.daysValue || 0;
+            const pureA = idA.startsWith('cycle_') ? idA.replace('cycle_', '') : idA;
+            const pureB = idB.startsWith('cycle_') ? idB.replace('cycle_', '') : idB;
+            const cOrder: Record<string, number> = { day: 1, week: 2, month: 3, year: 4 };
+            const cA = allCycles.find(c => c.id === idA || c.id === pureA)?.daysValue || cOrder[pureA] || 0;
+            const cB = allCycles.find(c => c.id === idB || c.id === pureB)?.daysValue || cOrder[pureB] || 0;
             return cA - cB;
           });
 
           sortedCycles.forEach(catKey => {
             const cId = catKey.replace('cycle_', '');
-            const cObj = allCycles.find(c => c.id === cId);
-            const cName = cObj ? cObj.name : cId;
+            const purePeriod = cId.startsWith('cycle_') ? cId.replace('cycle_', '') : cId;
+            const cObj = allCycles.find(c => c.id === cId || c.id === purePeriod || c.id === `cycle_${purePeriod}`);
+            const manualSec = sectionsForList.find(s => !s.parentId && getPureCyclicPeriodicity(s.name) === purePeriod);
+            const cName = manualSec ? manualSec.name : (cObj ? cObj.name : purePeriod);
             const categoryTasks = groupedTasks[catKey] || [];
 
-            const sectionPeriodicity = getSectionPeriodicity(catKey, cName, listSections, lists);
-            const cDays = cObj?.daysValue || 365;
+            const sectionPeriodicity = (purePeriod as PeriodicityType) || getSectionPeriodicity(catKey, cName, listSections, lists);
+            const cDays = cObj?.daysValue || (purePeriod === 'day' ? 1 : purePeriod === 'week' ? 7 : purePeriod === 'month' ? 30 : 365);
             const fullTasks = Object.values(groupedTasks)
               .flat()
               .filter(t => {
@@ -1375,26 +1435,32 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 return tCycle && tCycle.daysValue <= cDays;
               });
 
-            const routineCounts = sectionPeriodicity && sectionPeriodicity !== 'day' && fullTasks.length > categoryTasks.length ? {
-              only: categoryTasks.length,
+            const childSections = manualSec 
+              ? sectionsForList.filter(s => s.parentId === manualSec.id ||
+                  (manualSec.id.startsWith('sec_limpieza_') && s.parentId === manualSec.id.replace('sec_limpieza_', 'sec_limp_')) ||
+                  (manualSec.id.startsWith('sec_limp_') && s.parentId === manualSec.id.replace('sec_limp_', 'sec_limpieza_'))
+                ).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+              : [];
+
+            const allChildTasks = childSections.flatMap(cs => [
+              ...(groupedTasks[`section_${cs.id}`] || []),
+              ...(cs.id.startsWith('sec_limpieza_') ? (groupedTasks[`section_${cs.id.replace('sec_limpieza_', 'sec_limp_')}`] || []) : []),
+              ...(cs.id.startsWith('sec_limp_') ? (groupedTasks[`section_${cs.id.replace('sec_limp_', 'sec_limpieza_')}`] || []) : []),
+            ]);
+
+            const thisSectionTasksTotal = [...categoryTasks, ...allChildTasks];
+
+            const routineCounts = sectionPeriodicity && sectionPeriodicity !== 'day' && fullTasks.length > thisSectionTasksTotal.length ? {
+              only: thisSectionTasksTotal.length,
               full: fullTasks.length
             } : null;
 
             const mode = sectionRoutineModes[catKey] || 'only_section';
-            let tasksToRender = mode === 'full_routine' && fullTasks.length > categoryTasks.length
+            let tasksToRender = mode === 'full_routine' && fullTasks.length > thisSectionTasksTotal.length
               ? sortTasksByUserPreference(fullTasks, sortBy)
               : categoryTasks;
 
-            const manualSec = sectionsForList.find(s => !s.parentId && getPureCyclicPeriodicity(s.name) === sectionPeriodicity);
-            const childSections = manualSec 
-              ? sectionsForList.filter(s => s.parentId === manualSec.id).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-              : [];
-
-            const childPendingTaskIds = childSections.flatMap(cs => {
-              const secTasks = groupedTasks[`section_${cs.id}`] || [];
-              return secTasks.filter(t => !isTaskCompleted(t)).map(t => t.id);
-            });
-
+            const childPendingTaskIds = allChildTasks.filter(t => !isTaskCompleted(t)).map(t => t.id);
             const allSectionPendingTaskIds = [
               ...tasksToRender.filter(t => !isTaskCompleted(t)).map(t => t.id),
               ...childPendingTaskIds
@@ -1438,10 +1504,17 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           });
         }
 
-        // Start with root sections that are not pure cyclic periodicity
+        // Start with root sections
+        const seenRootNames = new Set<string>();
         const rootSections = sectionsForList
           .filter(s => !s.parentId)
-          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+          .filter(s => {
+            const norm = s.name.trim().toLowerCase();
+            if (seenRootNames.has(norm)) return false;
+            seenRootNames.add(norm);
+            return true;
+          });
         rootSections.forEach(rs => processSection(rs.id, 0));
       }
     }
@@ -1584,9 +1657,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
   const smartListInfo = isSmartView ? SMART_LISTS.find(l => l.id === currentView) : null;
   const SmartIcon = smartListInfo ? smartListInfo.icon : null;
-  const viewColor = isSmartView ? (smartListInfo?.color || SMART_COLORS[currentView] || 'var(--accent-primary)') : (isListView && currentList) ? (currentList.color || 'var(--accent-primary)') : isFolderView ? (lists?.find(l => l.id === currentView.replace('folder_', ''))?.color || 'var(--accent-primary)') : currentCycle ? (currentCycle.id === 'cycle_day' ? '#ff9500' : currentCycle.id === 'cycle_week' ? '#007aff' : currentCycle.id === 'cycle_month' ? '#af52de' : currentCycle.id === 'cycle_year' ? '#34c759' : (currentCycle as any).color || 'var(--accent-primary)') : 'var(--accent-primary)';
+  const viewColor = currentView === 'TRASH' ? '#8e8e93' : isSmartView ? (smartListInfo?.color || SMART_COLORS[currentView] || 'var(--accent-primary)') : (isListView && currentList) ? (currentList.color || 'var(--accent-primary)') : isFolderView ? (lists?.find(l => l.id === currentView.replace('folder_', ''))?.color || 'var(--accent-primary)') : currentCycle ? (currentCycle.id === 'cycle_day' ? '#ff9500' : currentCycle.id === 'cycle_week' ? '#007aff' : currentCycle.id === 'cycle_month' ? '#af52de' : currentCycle.id === 'cycle_year' ? '#34c759' : (currentCycle as any).color || 'var(--accent-primary)') : 'var(--accent-primary)';
 
   const getTitle = () => {
+    if (currentView === 'TRASH') return 'Papelera';
     if (isSmartView) return smartListInfo?.name || 'Recordatorios';
     if (isFolderView) return currentList?.name || 'Carpeta';
     if (isListView) {
@@ -1925,35 +1999,120 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         onDismiss={() => setDeletedToast(null)}
       />
 
-      <SectionContextMenu
-        sectionMenu={sectionMenu}
-        onClose={() => setSectionMenu({ open: false, x: 0, y: 0 })}
-        onRename={handleRenameSectionMenu}
-        onAddTask={handleAddTaskMenu}
-        onAddNestedSection={currentList && !currentList.isFolder ? () => {
-          if (sectionMenu.sectionId) {
-            handleAddSection(sectionMenu.sectionId);
-            if (sectionMenu.category && isCatCollapsed(sectionMenu.category)) {
-              toggleCategory(sectionMenu.category);
-            }
-          }
-        } : undefined}
-        onStartSequence={onStartSequence ? () => {
-          if (sectionMenu.category) {
-            const sectionTasks = groupedTasks[sectionMenu.category] || [];
-            const pendingIds = sectionTasks.filter(t => !isTaskCompleted(t)).map(t => t.id);
-            if (pendingIds.length > 0) {
-              const rawTitle = (sectionMenu.sectionName || '').replace(/^[\p{Emoji}\s⏳]+/gu, '').trim() || sectionMenu.sectionName || 'Sección';
-              const cleanTitle = rawTitle.length > 0 
-                ? rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1).toLowerCase() 
-                : 'Sección';
-              const seqTitle = currentList ? `${currentList.name} · ${cleanTitle}` : cleanTitle;
-              onStartSequence(pendingIds, seqTitle, sectionMenu.color);
-            }
-          }
-        } : undefined}
-        onDelete={handleDeleteSectionMenu}
-      />
+      {(() => {
+        const sectionMenuTasks = sectionMenu.category ? (groupedTasks[sectionMenu.category] || []) : [];
+        const pendingSectionTasks = sectionMenuTasks.filter(t => !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists));
+        const allCompleted = sectionMenuTasks.length > 0 && pendingSectionTasks.length === 0;
+        const curSection = sectionMenu.sectionId ? (listSections || []).find(s => s.id === sectionMenu.sectionId) : null;
+        const siblings = curSection ? (listSections || [])
+          .filter(s => s.listId === curSection.listId && !s.deleted_at && (s.parentId || undefined) === (curSection.parentId || undefined))
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)) : [];
+        const curSectionIdx = curSection ? siblings.findIndex(s => s.id === curSection.id) : -1;
+        const canMoveUp = curSectionIdx > 0;
+        const canMoveDown = curSectionIdx >= 0 && curSectionIdx < siblings.length - 1;
+
+        return (
+          <SectionContextMenu
+            sectionMenu={sectionMenu}
+            onClose={() => setSectionMenu({ open: false, x: 0, y: 0 })}
+            onRename={handleRenameSectionMenu}
+            onAddTask={handleAddTaskMenu}
+            onAddNestedSection={currentList && !currentList.isFolder ? () => {
+              if (sectionMenu.sectionId) {
+                handleAddSection(sectionMenu.sectionId);
+                if (sectionMenu.category && isCatCollapsed(sectionMenu.category)) {
+                  toggleCategory(sectionMenu.category);
+                }
+              }
+            } : undefined}
+            onStartSequence={onStartSequence ? () => {
+              if (sectionMenu.category) {
+                const pendingIds = pendingSectionTasks.map(t => t.id);
+                if (pendingIds.length > 0) {
+                  const rawTitle = (sectionMenu.sectionName || '').replace(/^[\p{Emoji}\s⏳]+/gu, '').trim() || sectionMenu.sectionName || 'Sección';
+                  const cleanTitle = rawTitle.length > 0 
+                    ? rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1).toLowerCase() 
+                    : 'Sección';
+                  const seqTitle = currentList ? `${currentList.name} · ${cleanTitle}` : cleanTitle;
+                  onStartSequence(pendingIds, seqTitle, sectionMenu.color);
+                }
+              }
+            } : undefined}
+            onDelete={handleDeleteSectionMenu}
+            isCollapsed={sectionMenu.category ? isCatCollapsed(sectionMenu.category) : false}
+            onToggleCollapse={() => {
+              if (sectionMenu.category) {
+                toggleCategory(sectionMenu.category);
+              }
+            }}
+            canMoveUp={canMoveUp}
+            canMoveDown={canMoveDown}
+            onMoveUp={() => {
+              if (!canMoveUp || curSectionIdx <= 0) return;
+              const targetIdx = curSectionIdx - 1;
+              const reordered = siblings.map((s, idx) => {
+                let order = idx;
+                if (idx === curSectionIdx) order = targetIdx;
+                else if (idx === targetIdx) order = curSectionIdx;
+                return { id: s.id, order };
+              });
+              reorderListSections(reordered);
+            }}
+            onMoveDown={() => {
+              if (!canMoveDown || curSectionIdx < 0 || curSectionIdx >= siblings.length - 1) return;
+              const targetIdx = curSectionIdx + 1;
+              const reordered = siblings.map((s, idx) => {
+                let order = idx;
+                if (idx === curSectionIdx) order = targetIdx;
+                else if (idx === targetIdx) order = curSectionIdx;
+                return { id: s.id, order };
+              });
+              reorderListSections(reordered);
+            }}
+            taskCount={sectionMenuTasks.length}
+            allCompleted={allCompleted}
+            onToggleAllCompleted={() => {
+              const taskIds = sectionMenuTasks.map(t => t.id);
+              if (taskIds.length === 0) return;
+              if (allCompleted) {
+                setSectionTasksCompleted(taskIds, false);
+              } else {
+                setSectionTasksCompleted(pendingSectionTasks.map(t => t.id), true);
+              }
+            }}
+            onDuplicateSection={sectionMenu.sectionId ? () => {
+              duplicateSection(sectionMenu.sectionId!);
+            } : undefined}
+            onEmptySection={sectionMenuTasks.length > 0 ? handleEmptySectionMenu : undefined}
+            onSortTasks={(criteria) => {
+              if (sectionMenuTasks.length <= 1) return;
+              const sorted = [...sectionMenuTasks].sort((a, b) => {
+                if (criteria === 'priority') {
+                  const pMap: Record<string, number> = { high: 3, medium: 2, low: 1, none: 0 };
+                  const pA = pMap[a.priority || 'none'] || 0;
+                  const pB = pMap[b.priority || 'none'] || 0;
+                  return pB - pA;
+                }
+                if (criteria === 'dueDate') {
+                  if (!a.dueDate && !b.dueDate) return 0;
+                  if (!a.dueDate) return 1;
+                  if (!b.dueDate) return -1;
+                  return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+                }
+                return (a.title || '').localeCompare(b.title || '', 'es');
+              });
+              reorderTasks(sorted.map(t => t.id));
+            }}
+            onMoveAllTasks={(targetListId, targetSectionId) => {
+              const taskIds = sectionMenuTasks.map(t => t.id);
+              if (taskIds.length === 0) return;
+              moveSectionTasks(taskIds, targetListId, targetSectionId);
+            }}
+            lists={lists || []}
+            sections={(listSections || []).filter(s => s.listId === currentList?.id && !s.deleted_at)}
+          />
+        );
+      })()}
 
       {showCelebration && createPortal(
         <AnimatePresence>

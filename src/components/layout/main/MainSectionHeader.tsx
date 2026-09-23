@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { MoreHorizontal, ChevronDown } from 'lucide-react';
 import { HapticService } from '../../../services/HapticService';
 import type { SectionMenuState } from './SectionContextMenu';
@@ -100,6 +100,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   const didSectionLongPressRef = useRef(false);
   const touchStartPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const rowRef = useRef<HTMLDivElement>(null);
+  const moreBtnRef = useRef<HTMLButtonElement>(null);
   const getRowRect = () => {
     if (!rowRef.current) return undefined;
     const rect = rowRef.current.getBoundingClientRect();
@@ -113,6 +114,56 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
     )
   );
 
+  const openSectionMenu = useCallback(() => {
+    HapticService.selection();
+    const rowRect = getRowRect();
+    if (!rowRect) return;
+
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+    const menuWidth = 230;
+    const menuHeight = 220;
+    const padding = 12;
+
+    // Anchor: siempre en la posición más lógica (bajo el botón '...' o el título)
+    let anchorLeft: number;
+    let anchorTop: number;
+
+    if (moreBtnRef.current) {
+      const btnRect = moreBtnRef.current.getBoundingClientRect();
+      anchorLeft = btnRect.left;
+      anchorTop = btnRect.bottom + 6;
+    } else {
+      anchorLeft = rowRect.left + 28 + (data.depth * 24);
+      anchorTop = rowRect.top + rowRect.height + 6;
+    }
+
+    // Posición vertical segura: si no cabe abajo, abrir arriba
+    let y = anchorTop;
+    if (y + menuHeight > viewportH - padding) {
+      if (rowRect.top - menuHeight - 6 >= padding) {
+        y = rowRect.top - menuHeight - 6;
+      } else {
+        y = Math.max(padding, viewportH - menuHeight - padding);
+      }
+    }
+
+    // Posición horizontal segura: alineado con el ancla y dentro de la pantalla
+    const x = Math.max(padding, Math.min(anchorLeft, viewportW - menuWidth - padding));
+
+    setSectionMenu({
+      open: true,
+      x,
+      y,
+      sectionId: data.sectionId,
+      sectionName: data.title,
+      pendingTaskCount,
+      color: data.color,
+      category: data.category,
+      triggerRect: rowRect
+    });
+  }, [data.sectionId, data.title, data.color, data.category, data.depth, pendingTaskCount, setSectionMenu]);
+
   return (
     <div
       key={itemKey}
@@ -123,7 +174,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         ...itemStyle, 
         position: 'sticky',
         top: 0,
-        zIndex: isMenuOpenForThisSection ? 30 : 15,
+        zIndex: isMenuOpenForThisSection ? 999992 : 15,
         borderBottom: '1px solid var(--border-subtle)',
         borderTop: 'none',
         paddingLeft: `calc(28px + ${data.depth * 24}px)`,
@@ -140,27 +191,27 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         background: isDraggingOver 
           ? `${data.color}14` 
           : isMenuOpenForThisSection
-          ? 'var(--bg-hover, rgba(0,0,0,0.06))'
+          ? 'var(--bg-elevated, #ffffff)'
           : isPressed
           ? 'var(--bg-hover, rgba(0,0,0,0.04))'
           : 'var(--bg-base)',
         cursor: 'pointer',
         userSelect: 'none',
         WebkitUserSelect: 'none',
-        borderRadius: (isMenuOpenForThisSection || isPressed) ? 10 : 0,
-        transform: isPressed ? 'scale(0.985)' : 'none',
+        borderRadius: isMenuOpenForThisSection ? 10 : 0,
         borderLeft: isMenuOpenForThisSection 
           ? `4px solid ${data.color || 'var(--accent-primary)'}` 
           : isPressed 
           ? '4px solid var(--border-subtle)' 
           : '4px solid transparent',
-        transition: 'background 0.15s ease, transform 0.15s ease, border-color 0.15s ease, border-radius 0.15s ease'
+        transition: 'background 0.15s ease, border-color 0.15s ease, border-radius 0.15s ease'
       }}
       onClick={() => toggleCategory(data.category)}
       onClickCapture={(e) => {
         if (didSectionLongPressRef.current) {
           e.stopPropagation();
           e.preventDefault();
+          didSectionLongPressRef.current = false;
         }
       }}
       onDragOver={isCustomSection ? (e) => { e.preventDefault(); setDragOverSectionId(data.sectionId!); } : undefined}
@@ -173,48 +224,21 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       } : undefined}
       onContextMenu={(e) => {
         e.preventDefault();
-        HapticService.selection();
-        setSectionMenu({
-          open: true,
-          x: e.clientX,
-          y: e.clientY,
-          sectionId: data.sectionId,
-          sectionName: data.title,
-          pendingTaskCount,
-          color: data.color,
-          category: data.category,
-          triggerRect: getRowRect()
-        });
+        openSectionMenu();
       }}
       onPointerDown={(e) => {
         if ((e.target as HTMLElement).closest('button, input')) return;
         setIsPressed(true);
         didSectionLongPressRef.current = false;
+        if (e.pointerType !== 'touch') return;
         touchStartPos.current = { x: e.clientX, y: e.clientY };
         if (sectionTouchTimer.current) clearTimeout(sectionTouchTimer.current);
-        const clientX = e.clientX;
-        const clientY = e.clientY;
-        const secId = data.sectionId;
-        const secTitle = data.title;
-        const count = pendingTaskCount;
-        const clr = data.color;
-        const cat = data.category;
         sectionTouchTimer.current = setTimeout(() => {
           setIsPressed(false);
           didSectionLongPressRef.current = true;
           HapticService.impact('medium');
-          setSectionMenu({
-            open: true,
-            x: clientX,
-            y: clientY,
-            sectionId: secId,
-            sectionName: secTitle,
-            pendingTaskCount: count,
-            color: clr,
-            category: cat,
-            triggerRect: getRowRect()
-          });
-        }, 380);
+          openSectionMenu();
+        }, 500);
       }}
       onPointerUp={() => { 
         setIsPressed(false);
@@ -225,7 +249,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         if (sectionTouchTimer.current) clearTimeout(sectionTouchTimer.current); 
       }}
       onPointerMove={(e) => { 
-        if (isPressed) {
+        if (isPressed && e.pointerType === 'touch') {
           const dx = Math.abs(e.clientX - touchStartPos.current.x);
           const dy = Math.abs(e.clientY - touchStartPos.current.y);
           if (dx > 12 || dy > 12) {
@@ -324,23 +348,12 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           )}
           {isCustomSection && !isMobile && (
             <button 
+              ref={moreBtnRef}
               type="button"
               className="desktop-only-action"
               onClick={(e) => {
                 e.stopPropagation();
-                HapticService.selection();
-                const rect = e.currentTarget.getBoundingClientRect();
-                setSectionMenu({
-                  open: true,
-                  x: Math.max(12, rect.right - 235),
-                  y: rect.bottom + 6,
-                  sectionId: data.sectionId,
-                  sectionName: data.title,
-                  pendingTaskCount,
-                  color: data.color,
-                  category: data.category,
-                  triggerRect: getRowRect()
-                });
+                openSectionMenu();
               }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5, padding: 4 }}
               title="Opciones de sección"
@@ -405,15 +418,38 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
             })()
           )}
 
-          <ChevronDown 
-            size={18} 
-            color="var(--text-tertiary)" 
-            style={{ 
-              transform: isCatCollapsed(data.category) ? 'rotate(-90deg)' : 'rotate(0deg)', 
-              transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)', 
-              flexShrink: 0 
+          <button
+            type="button"
+            className="section-collapse-chevron-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleCategory(data.category);
             }}
-          />
+            aria-label={isCatCollapsed(data.category) ? "Desplegar sección" : "Plegar sección"}
+            aria-expanded={!isCatCollapsed(data.category)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              padding: 4,
+              margin: -4,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: 'var(--text-tertiary)',
+              flexShrink: 0
+            }}
+          >
+            <ChevronDown 
+              size={18} 
+              color="currentColor" 
+              style={{ 
+                transform: isCatCollapsed(data.category) ? 'rotate(-90deg)' : 'rotate(0deg)', 
+                transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)', 
+                flexShrink: 0 
+              }}
+            />
+          </button>
         </div>
       </div>
       {isCustomSection && dragOverSectionId === data.sectionId && (

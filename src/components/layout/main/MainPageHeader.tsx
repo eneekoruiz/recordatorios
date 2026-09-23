@@ -8,10 +8,13 @@ import {
   CreditCard,
   ShieldAlert,
   Wand2,
-  Star
+  Star,
+  Trash2
 } from 'lucide-react';
 import { HapticService } from '../../../services/HapticService';
 import { isCaducidadesList, isQueHeHechoList } from '../../../utils/specialLists';
+import { confirmDialog } from '../../ui/confirmDialog';
+import { useAppStore } from '../../../store/useAppStore';
 import type { TaskItem, CustomCycle, CustomList } from '../../../models/Task';
 
 interface MainPageHeaderProps {
@@ -146,6 +149,18 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                   <SmartIcon size={22} color="white" />
                 </div>
               )}
+              {currentView === 'TRASH' && (
+                <div style={{
+                  marginRight: 12,
+                  width: 38, height: 38, borderRadius: '50%',
+                  backgroundColor: '#8e8e93',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 4px 12px rgba(142, 142, 147, 0.4)',
+                  flexShrink: 0
+                }}>
+                  <Trash2 size={22} color="white" />
+                </div>
+              )}
               
               {isEditingCycle && currentCycle ? (
                 <input 
@@ -277,6 +292,47 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
             >
               Eliminar Ciclo
             </button>
+          </div>
+        )}
+
+        {currentView === 'TRASH' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
+              {allTasksArray.filter(t => t.deleted_at).length} recordatorio{allTasksArray.filter(t => t.deleted_at).length === 1 ? '' : 's'} · Se eliminan definitivamente tras 30 días
+            </span>
+            {allTasksArray.some(t => t.deleted_at) && (
+              <button
+                type="button"
+                onClick={async () => {
+                  const ok = await confirmDialog({
+                    title: 'Vaciar papelera',
+                    message: '¿Estás seguro de que deseas vaciar la papelera? Todos los recordatorios se eliminarán permanentemente. Esta acción no se puede deshacer.',
+                    confirmText: 'Vaciar papelera',
+                    tone: 'danger'
+                  });
+                  if (ok) {
+                    useAppStore.getState().emptyTrash();
+                    HapticService.notification('success');
+                  }
+                }}
+                style={{
+                  background: 'rgba(255, 59, 48, 0.1)',
+                  color: 'var(--accent-red, #ff3b30)',
+                  border: '1px solid rgba(255, 59, 48, 0.25)',
+                  padding: '4px 12px',
+                  borderRadius: 8,
+                  fontSize: '0.80rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+              >
+                <Trash2 size={13} />
+                <span>Vaciar papelera</span>
+              </button>
+            )}
           </div>
         )}
 

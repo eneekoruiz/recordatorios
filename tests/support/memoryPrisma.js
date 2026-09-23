@@ -70,6 +70,12 @@ function createDelegate(store, { hasUpdatedAt = true, defaults = {} } = {}) {
       if (row) return this.update({ where, data: update });
       return this.create({ data: create });
     },
+    async delete({ where }) {
+      const idx = rows.findIndex((r) => matches(r, where));
+      if (idx === -1) throw new Error('Record to delete not found');
+      const [removed] = rows.splice(idx, 1);
+      return clone(removed);
+    },
     async deleteMany({ where }) {
       const before = rows.length;
       for (let i = rows.length - 1; i >= 0; i--) if (matches(rows[i], where)) rows.splice(i, 1);

@@ -732,6 +732,24 @@ input:checked + .slider::before {
   background: rgba(255, 255, 255, 0.1);
 }
 
+.ios-quick-btn:hover:not(:disabled) {
+  background: var(--bg-material-thick, rgba(0, 0, 0, 0.08)) !important;
+  color: var(--accent-primary) !important;
+}
+
+.ios-quick-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+[data-theme="dark"] .ios-quick-btn {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme="dark"] .ios-quick-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
 /* ========================================================
    APPLE SEGMENTED CONTROL (Ultra-sleek native iOS)
 ======================================================== */

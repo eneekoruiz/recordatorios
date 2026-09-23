@@ -5,7 +5,7 @@ import {
   Lock, MoreHorizontal,
   ChevronDown, X, Info, RotateCcw, Flag,
   ShieldAlert, Clock, CheckCircle2, CreditCard,
-  Flame, User, MapPin, Link2
+  Flame, User, MapPin, Link2, Check
 } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -160,6 +160,55 @@ export const TaskCard = React.memo(function TaskCard({
   const cardRef = useRef<HTMLDivElement>(null);
   const updateTask = useAppStore(state => state.updateTask);
 
+  const [isPriorityPopoverOpen, setIsPriorityPopoverOpen] = useState(false);
+  const [priorityPopoverPos, setPriorityPopoverPos] = useState<{ x: number; y: number } | null>(null);
+
+  const handlePriorityBadgeClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    HapticService.selection();
+    if (isPriorityPopoverOpen) {
+      setIsPriorityPopoverOpen(false);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const menuWidth = 165;
+    const menuHeight = 175;
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+
+    let x = rect.left;
+    if (x + menuWidth > viewportW - 12) {
+      x = viewportW - menuWidth - 12;
+    }
+    x = Math.max(12, x);
+
+    let y = rect.bottom + 6;
+    if (y + menuHeight > viewportH - 12) {
+      y = Math.max(12, rect.top - menuHeight - 6);
+    }
+
+    setPriorityPopoverPos({ x, y });
+    setIsPriorityPopoverOpen(true);
+  }, [isPriorityPopoverOpen]);
+
+  useEffect(() => {
+    if (!isPriorityPopoverOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsPriorityPopoverOpen(false);
+    };
+    const handleScroll = (e: Event) => {
+      if ((e.target as HTMLElement)?.closest?.('.priority-picker-popover')) return;
+      setIsPriorityPopoverOpen(false);
+    };
+    window.addEventListener('keydown', handleKey);
+    window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [isPriorityPopoverOpen]);
+
 
   const openContextMenu = useCallback(() => {
     HapticService.impact('medium');
@@ -228,7 +277,17 @@ export const TaskCard = React.memo(function TaskCard({
     setTimeout(() => {
       setIsEditingTitle(false);
       const raw = editTitle.trim();
-      if (raw && raw !== task.title) {
+      if (!raw) {
+        // Si el recordatorio queda vacío, se elimina ("como si no se hubiera creado")
+        HapticService.selection();
+        if (onDelete) {
+          onDelete(task.id);
+        } else {
+          useAppStore.getState().deleteTask(task.id);
+        }
+        return;
+      }
+      if (raw !== task.title) {
         const extracted = extractPrice(raw, false);
         if (extracted && extracted.price > 0) {
           updateTask(task.id, {
@@ -395,7 +454,7 @@ export const TaskCard = React.memo(function TaskCard({
         position: 'relative',
         margin: 0,
         boxSizing: 'border-box',
-        zIndex: contextMenuOpen ? 99999 : 1,
+        zIndex: contextMenuOpen ? 999992 : 1,
         touchAction: 'pan-y',
         WebkitTouchCallout: 'none',
         userSelect: 'none',
@@ -507,7 +566,7 @@ export const TaskCard = React.memo(function TaskCard({
         style={{
           x,
           position: 'relative',
-          zIndex: contextMenuOpen ? 99999 : 1,
+          zIndex: contextMenuOpen ? 999992 : 1,
           minHeight: 52,
           display: 'flex',
           alignItems: 'center',
@@ -530,148 +589,198 @@ export const TaskCard = React.memo(function TaskCard({
           <div aria-hidden="true" className="task-row-separator" style={{ left: `${40 + indent}px` }} />
         )}
 
-        {/* Checkbox */}
-        <motion.button
-          whileTap={{ scale: 0.85 }}
-          aria-label={isEffectivelyDone ? 'Marcar como pendiente' : 'Completar tarea'}
-          disabled={!!isBlocked}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e: React.MouseEvent) => {
-            e.stopPropagation();
-            if (isBlocked) return;
-            if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate([8]);
-            
-            if (isEffectivelyDone) {
+        {/* Checkbox o Botón Restaurar en Papelera */}
+        {task.deleted_at ? (
+          <motion.button
+            whileTap={{ scale: 0.85 }}
+            whileHover={{ scale: 1.15 }}
+            aria-label="Restaurar recordatorio"
+            title="Restaurar recordatorio"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation();
+              HapticService.notification('success');
               SoundService.playUncomplete();
-              onToggle(task.id, true);
-            } else {
-              const isNextFinal = hasTargetCount
-                ? (effectiveCurrentCount + 1 >= targetCount)
-                : (!task.alerts || task.alerts.length <= 1 || completedAlertsCount + 1 >= totalAlerts);
-              
-              if (isNextFinal) {
-                SoundService.playComplete();
-                if (hasTargetCount || task.vibe?.includes('Celebración') || task.vibe?.includes('Especial')) {
-                  ConfettiService.fire({ count: 55 });
-                }
-              } else {
-                SoundService.playPop();
-              }
-              onToggle(task.id, false);
-            }
-          }}
-          style={{
-            width: 26, height: 26,
-            padding: 0,
-            background: 'transparent',
-            border: 'none',
-            marginRight: 8,
-            cursor: isBlocked ? 'default' : 'pointer',
-            flexShrink: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            position: 'relative',
-            WebkitTapHighlightColor: 'transparent',
-            outline: 'none'
-          }}
-        >
-          {/* Halo expansivo al completar */}
-          <AnimatePresence>
-            {isEffectivelyDone && (
-              <motion.div
-                key="complete-glow-burst"
-                initial={{ scale: 0.6, opacity: 0.75 }}
-                animate={{ scale: 1.65, opacity: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
-                style={{
-                  position: 'absolute',
-                  width: 22, height: 22,
-                  borderRadius: '50%',
-                  background: taskColor,
-                  pointerEvents: 'none'
-                }}
-              />
-            )}
-          </AnimatePresence>
-
-          {isPartial && !isEffectivelyDone && (
-            <div style={{
-              position: 'absolute',
-              width: 22, height: 22,
-              borderRadius: '50%',
-              background: `conic-gradient(${taskColor} ${percentage}%, var(--border-subtle) ${percentage}%)`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              zIndex: 1
-            }}>
-              <div style={{ 
-                width: 17, height: 17, 
-                background: 'var(--bg-elevated)', 
-                borderRadius: '50%',
-                display: 'flex', alignItems: 'center', justifyContent: 'center'
-              }}>
-                {hasTargetCount && (
-                  <span style={{ 
-                    fontSize: '0.62rem', 
-                    fontWeight: 700, 
-                    color: taskColor, 
-                    lineHeight: 1, 
-                    transform: 'translateY(-0.5px)' 
-                  }}>
-                    {effectiveCurrentCount}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          <motion.div
-            animate={{
-              scale: isEffectivelyDone ? [1, 1.25, 0.94, 1] : 1,
-              backgroundColor: isEffectivelyDone ? taskColor : 'rgba(0,0,0,0)'
-            }}
-            transition={{
-              scale: { type: 'spring', stiffness: 500, damping: 22 },
-              backgroundColor: { duration: 0.2, ease: 'easeOut' }
+              useAppStore.getState().restoreTask(task.id);
             }}
             style={{
-              width: 22, height: 22,
+              width: 24, height: 24,
+              padding: 0,
+              background: 'rgba(0, 122, 255, 0.12)',
+              border: '1px solid rgba(0, 122, 255, 0.28)',
               borderRadius: '50%',
-              border: (isEffectivelyDone || isPartial) ? 'none' : `1.5px solid ${isHovered ? taskColor : 'var(--border-color)'}`,
+              marginRight: 8,
+              cursor: 'pointer',
+              flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: isEffectivelyDone ? `0 2px 8px ${taskColor}40` : 'none',
-              transition: 'border-color 0.15s ease'
+              color: 'var(--accent-primary, #007aff)',
+              WebkitTapHighlightColor: 'transparent',
+              outline: 'none'
             }}
           >
-            <svg viewBox="0 0 24 24" width={14} height={14} style={{ overflow: 'visible' }}>
-              <motion.path
-                d="M5 12L10 17L19 7"
-                stroke="white"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ 
-                  pathLength: isEffectivelyDone ? 1 : 0,
-                  opacity: isEffectivelyDone ? 1 : 0
-                }}
-                transition={{
-                  pathLength: { type: 'spring', stiffness: 420, damping: 26, delay: 0.02 },
-                  opacity: { duration: 0.15 }
-                }}
-              />
-            </svg>
-          </motion.div>
-        </motion.button>
+            <RotateCcw size={12} strokeWidth={2.5} />
+          </motion.button>
+        ) : (
+          <motion.button
+            whileTap={{ scale: 0.85 }}
+            aria-label={isEffectivelyDone ? 'Marcar como pendiente' : 'Completar tarea'}
+            disabled={!!isBlocked}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation();
+              if (isBlocked) return;
+              if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate([8]);
+              
+              if (isEffectivelyDone) {
+                SoundService.playUncomplete();
+                onToggle(task.id, true);
+              } else {
+                const isNextFinal = hasTargetCount
+                  ? (effectiveCurrentCount + 1 >= targetCount)
+                  : (!task.alerts || task.alerts.length <= 1 || completedAlertsCount + 1 >= totalAlerts);
+                
+                if (isNextFinal) {
+                  SoundService.playComplete();
+                  if (hasTargetCount || task.vibe?.includes('Celebración') || task.vibe?.includes('Especial')) {
+                    ConfettiService.fire({ count: 55 });
+                  }
+                } else {
+                  SoundService.playPop();
+                }
+                onToggle(task.id, false);
+              }
+            }}
+            style={{
+              width: 26, height: 26,
+              padding: 0,
+              background: 'transparent',
+              border: 'none',
+              marginRight: 8,
+              cursor: isBlocked ? 'default' : 'pointer',
+              flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              position: 'relative',
+              WebkitTapHighlightColor: 'transparent',
+              outline: 'none'
+            }}
+          >
+            {/* Halo expansivo al completar */}
+            <AnimatePresence>
+              {isEffectivelyDone && (
+                <motion.div
+                  key="complete-glow-burst"
+                  initial={{ scale: 0.6, opacity: 0.75 }}
+                  animate={{ scale: 1.65, opacity: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
+                  style={{
+                    position: 'absolute',
+                    width: 22, height: 22,
+                    borderRadius: '50%',
+                    background: taskColor,
+                    pointerEvents: 'none'
+                  }}
+                />
+              )}
+            </AnimatePresence>
+
+            {isPartial && !isEffectivelyDone && (
+              <div style={{
+                position: 'absolute',
+                width: 22, height: 22,
+                borderRadius: '50%',
+                background: `conic-gradient(${taskColor} ${percentage}%, var(--border-subtle) ${percentage}%)`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                zIndex: 1
+              }}>
+                <div style={{ 
+                  width: 17, height: 17, 
+                  background: 'var(--bg-elevated)', 
+                  borderRadius: '50%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  {hasTargetCount && (
+                    <span style={{ 
+                      fontSize: '0.62rem', 
+                      fontWeight: 700, 
+                      color: taskColor, 
+                      lineHeight: 1, 
+                      transform: 'translateY(-0.5px)' 
+                    }}>
+                      {effectiveCurrentCount}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <motion.div
+              animate={{
+                scale: isEffectivelyDone ? [1, 1.25, 0.94, 1] : 1,
+                backgroundColor: isEffectivelyDone ? taskColor : 'rgba(0,0,0,0)'
+              }}
+              transition={{
+                scale: { type: 'spring', stiffness: 500, damping: 22 },
+                backgroundColor: { duration: 0.2, ease: 'easeOut' }
+              }}
+              style={{
+                width: 22, height: 22,
+                borderRadius: '50%',
+                border: (isEffectivelyDone || isPartial) ? 'none' : `1.5px solid ${isHovered ? taskColor : 'var(--border-color)'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: isEffectivelyDone ? `0 2px 8px ${taskColor}40` : 'none',
+                transition: 'border-color 0.15s ease'
+              }}
+            >
+              <svg viewBox="0 0 24 24" width={14} height={14} style={{ overflow: 'visible' }}>
+                <motion.path
+                  d="M5 12L10 17L19 7"
+                  stroke="white"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="none"
+                  initial={{ pathLength: 0, opacity: 0 }}
+                  animate={{ 
+                    pathLength: isEffectivelyDone ? 1 : 0,
+                    opacity: isEffectivelyDone ? 1 : 0
+                  }}
+                  transition={{
+                    pathLength: { type: 'spring', stiffness: 420, damping: 26, delay: 0.02 },
+                    opacity: { duration: 0.15 }
+                  }}
+                />
+              </svg>
+            </motion.div>
+          </motion.button>
+        )}
 
         {/* Content */}
         <div style={{ flex: 1, minWidth: 0, padding: '2px 0', boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             {isBlocked && <Lock size={15} color="var(--accent-red)" />}
             {Boolean(task.priority && task.priority !== 'none' && (task.priority as any) !== 0) && (
-              <span className={`priority-badge ${typeof task.priority === 'number' ? ((task.priority as any) === 1 ? 'high' : (task.priority as any) === 5 ? 'medium' : 'low') : task.priority}`}>
+              <button
+                type="button"
+                className={`priority-badge ${typeof task.priority === 'number' ? ((task.priority as any) === 1 ? 'high' : (task.priority as any) === 5 ? 'medium' : 'low') : task.priority}`}
+                onClick={handlePriorityBadgeClick}
+                onPointerDown={(e) => e.stopPropagation()}
+                title="Cambiar urgencia"
+                aria-label="Cambiar urgencia"
+                style={{
+                  cursor: 'pointer',
+                  border: 'none',
+                  padding: 0,
+                  outline: 'none',
+                  WebkitTapHighlightColor: 'transparent',
+                  transition: 'transform 0.15s ease, filter 0.15s ease',
+                  userSelect: 'none'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.15)'; e.currentTarget.style.filter = 'brightness(1.1)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.filter = 'none'; }}
+              >
                 {task.priority === 'low' || (task.priority as any) === 9 ? '!' : task.priority === 'medium' || (task.priority as any) === 5 ? '!!' : '!!!'}
-              </span>
+              </button>
             )}
             {isEditingTitle ? (
               <motion.input
@@ -680,7 +789,35 @@ export const TaskCard = React.memo(function TaskCard({
                 autoFocus
                 onChange={e => setEditTitle(e.target.value)}
                 onBlur={handleTitleSubmit}
-                onKeyDown={e => { e.stopPropagation(); if (e.key === 'Enter') e.currentTarget.blur(); }}
+                onKeyDown={e => {
+                  e.stopPropagation();
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (!editTitle.trim()) {
+                      setIsEditingTitle(false);
+                      HapticService.selection();
+                      if (onDelete) onDelete(task.id);
+                      else useAppStore.getState().deleteTask(task.id);
+                    } else {
+                      e.currentTarget.blur();
+                    }
+                  } else if (e.key === 'Backspace' && !editTitle) {
+                    e.preventDefault();
+                    setIsEditingTitle(false);
+                    HapticService.selection();
+                    if (onDelete) onDelete(task.id);
+                    else useAppStore.getState().deleteTask(task.id);
+                  } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setIsEditingTitle(false);
+                    if (!editTitle.trim()) {
+                      if (onDelete) onDelete(task.id);
+                      else useAppStore.getState().deleteTask(task.id);
+                    } else {
+                      setEditTitle(task.title || '');
+                    }
+                  }
+                }}
                 onClick={e => e.stopPropagation()}
                 onPointerDown={e => e.stopPropagation()}
                 onPointerDownCapture={e => e.stopPropagation()}
@@ -1174,16 +1311,110 @@ export const TaskCard = React.memo(function TaskCard({
         canMoveDown={canMoveDown}
       />
 
+      {/* ── Priority Quick Picker Popover ── */}
+      {isPriorityPopoverOpen && priorityPopoverPos && createPortal(
+        <>
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 999998, background: 'transparent' }}
+            onClick={(e) => { e.stopPropagation(); setIsPriorityPopoverOpen(false); }}
+            onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setIsPriorityPopoverOpen(false); }}
+          />
+          <motion.div
+            className="priority-picker-popover"
+            initial={{ opacity: 0, scale: 0.94, y: -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.94, y: -4 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 450 }}
+            style={{
+              position: 'fixed',
+              top: priorityPopoverPos.y,
+              left: priorityPopoverPos.x,
+              zIndex: 999999,
+              minWidth: 165,
+              background: 'var(--bg-material, rgba(255, 255, 255, 0.92))',
+              backdropFilter: 'blur(30px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(30px) saturate(180%)',
+              borderRadius: 14,
+              padding: 6,
+              boxShadow: '0 10px 32px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.06)',
+              border: '1px solid var(--border-subtle, rgba(0, 0, 0, 0.08))',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              userSelect: 'none',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: '4px 8px 2px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+              Urgencia
+            </div>
+            {[
+              { value: 'high' as const, label: 'Alta (!!!)', marks: '!!!', color: '#ff3b30' },
+              { value: 'medium' as const, label: 'Media (!!)', marks: '!!', color: '#ff9500' },
+              { value: 'low' as const, label: 'Baja (!)', marks: '!', color: '#ff9f0a' },
+              { value: 'none' as const, label: 'Sin urgencia', marks: '✕', color: 'var(--text-tertiary)' },
+            ].map((p) => {
+              const normalizedPrio = typeof task.priority === 'number'
+                ? ((task.priority as any) === 1 ? 'high' : (task.priority as any) === 5 ? 'medium' : 'low')
+                : (task.priority || 'none');
+              const isCurrent = normalizedPrio === p.value;
+              return (
+                <button
+                  key={p.value}
+                  type="button"
+                  className="ios-dropdown-item"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    HapticService.impact('medium');
+                    updateTask(task.id, { priority: p.value === 'none' ? undefined : p.value });
+                    setIsPriorityPopoverOpen(false);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    width: '100%',
+                    padding: '6px 8px',
+                    borderRadius: 8,
+                    border: 'none',
+                    background: isCurrent ? 'var(--bg-hover, rgba(0,0,0,0.05))' : 'transparent',
+                    color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem',
+                    fontWeight: isCurrent ? 600 : 500,
+                    textAlign: 'left',
+                    transition: 'background 0.12s ease'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontWeight: 800, color: p.color, width: 20, textAlign: 'center' }}>{p.marks}</span>
+                    <span>{p.label}</span>
+                  </div>
+                  {isCurrent && <Check size={14} color="var(--accent-primary)" />}
+                </button>
+              );
+            })}
+          </motion.div>
+        </>,
+        document.body
+      )}
+
       <ConfirmModal
         isOpen={isDeleteConfirmOpen}
-        title="Eliminar recordatorio"
-        message={`"${task.title}" se moverá a la papelera.`}
+        title={task.deleted_at ? "Eliminar definitivamente" : "Eliminar recordatorio"}
+        message={task.deleted_at ? `"${task.title}" se eliminará permanentemente. Esta acción no se puede deshacer.` : `"${task.title}" se moverá a la papelera.`}
         confirmText="Eliminar"
         onCancel={() => setIsDeleteConfirmOpen(false)}
         onConfirm={() => {
           setIsDeleteConfirmOpen(false);
           SoundService.playDelete();
-          onDelete(task.id);
+          if (task.deleted_at) {
+            useAppStore.getState().permanentDeleteTask(task.id);
+            HapticService.notification('warning');
+          } else {
+            onDelete(task.id);
+          }
         }}
       />
 

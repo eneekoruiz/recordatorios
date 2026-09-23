@@ -188,12 +188,13 @@ class SyncManager {
     const cycles = state.cycles.filter((c) => c._is_dirty);
     const lists = state.lists.filter((l) => l._is_dirty && !l.id.startsWith(SETTINGS_LIST_PREFIX));
     const listSections = (state.listSections || []).filter((s) => s._is_dirty);
-    const tombstones = state.tombstones || { lists: [], cycles: [] };
+    const tombstones = state.tombstones || { lists: [], cycles: [], tasks: [] };
     const hasDirtyPrefs = !!state._preferences_dirty;
 
+    const allTasks = [...tasks, ...(tombstones.tasks || [])];
     const allLists = [...lists, ...tombstones.lists];
     const allCycles = [...cycles, ...tombstones.cycles];
-    if (!tasks.length && !allCycles.length && !allLists.length && !listSections.length && !hasDirtyPrefs) return;
+    if (!allTasks.length && !allCycles.length && !allLists.length && !listSections.length && !hasDirtyPrefs) return;
 
     const preferences = hasDirtyPrefs
       ? {
@@ -206,7 +207,7 @@ class SyncManager {
       : undefined;
 
     // Listas, ciclos y secciones viajan en la primera petición; las tareas, en lotes.
-    const taskChunks = tasks.length ? chunk(tasks, PUSH_CHUNK_SIZE) : [[]];
+    const taskChunks = allTasks.length ? chunk(allTasks, PUSH_CHUNK_SIZE) : [[]];
     const staleTasks: any[] = [];
     let staleLists: any[] = [];
     let staleCycles: any[] = [];
@@ -261,6 +262,7 @@ class SyncManager {
 
       const sentTombLists = new Set(tombstones.lists.map((t) => t.id));
       const sentTombCycles = new Set(tombstones.cycles.map((t) => t.id));
+      const sentTombTasks = new Set((tombstones.tasks || []).map((t) => t.id));
 
       return {
         tasks: nextTasks,
@@ -270,6 +272,7 @@ class SyncManager {
         tombstones: {
           lists: current.tombstones.lists.filter((t) => !sentTombLists.has(t.id)),
           cycles: current.tombstones.cycles.filter((t) => !sentTombCycles.has(t.id)),
+          tasks: (current.tombstones.tasks || []).filter((t) => !sentTombTasks.has(t.id)),
         },
         ...(hasDirtyPrefs ? { _preferences_dirty: false } : {}),
       };

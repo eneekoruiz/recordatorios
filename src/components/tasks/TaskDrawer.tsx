@@ -30,6 +30,7 @@ interface TaskDrawerProps {
 export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionId, taskId }: TaskDrawerProps) {
   const addTask = useAppStore(state => state.addTask);
   const updateTask = useAppStore(state => state.updateTask);
+  const deleteTask = useAppStore(state => state.deleteTask);
   const cycles = useAppStore(state => state.cycles);
   const lists = useAppStore(state => state.lists);
   const listSections = useAppStore(state => state.listSections);
@@ -449,7 +450,13 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   };
 
   const handleSave = () => {
-    if (!title.trim()) return;
+    if (!title.trim()) {
+      if (taskId) {
+        deleteTask(taskId);
+        onClose();
+      }
+      return;
+    }
     
     const finalBlockedBy = blockedBy.length > 0 ? blockedBy : undefined;
 

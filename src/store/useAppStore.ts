@@ -68,8 +68,11 @@ interface AppState {
   cycleVisibility: Record<string, boolean>;
   preferences_updated_at?: string;
   _preferences_dirty?: boolean;
-  /** Borrados de listas/ciclos pendientes de comunicar al servidor. */
-  tombstones: { lists: CustomList[]; cycles: CustomCycle[] };
+  /** Borrados de listas/ciclos/tareas pendientes de comunicar al servidor. */
+  tombstones: { lists: CustomList[]; cycles: CustomCycle[]; tasks: TaskItem[] };
+  restoreTask: (id: string) => void;
+  permanentDeleteTask: (id: string) => void;
+  emptyTrash: () => void;
   
   toggleSmartList: (listId: string) => void;
   togglePinSmartList: (listId: string) => void;
@@ -98,6 +101,11 @@ interface AppState {
   addListSection: (section: ListSection) => void;
   updateListSection: (id: string, name: string) => void;
   deleteListSection: (id: string) => void;
+  reorderListSections: (updates: { id: string; order: number }[]) => void;
+  duplicateSection: (sectionId: string) => void;
+  emptySection: (sectionId: string, taskIds?: string[]) => void;
+  moveSectionTasks: (taskIds: string[], targetListId: string, targetSectionId?: string) => void;
+  setSectionTasksCompleted: (taskIds: string[], completed: boolean) => void;
   updateTaskSection: (taskId: string, sectionId: string | undefined) => void;
 
   purgeOldDeletedTasks: () => void;
@@ -140,7 +148,7 @@ export const useAppStore = create<AppState>()(
       cycles: INITIAL_CYCLES,
       lists: INITIAL_LISTS,
       listSections: [],
-      tombstones: { lists: [], cycles: [] },
+      tombstones: { lists: [], cycles: [], tasks: [] },
       sessionExpired: false,
       token: null,
       userId: null,
@@ -186,7 +194,7 @@ export const useAppStore = create<AppState>()(
             lists: INITIAL_LISTS,
             cycles: INITIAL_CYCLES,
             listSections: [],
-            tombstones: { lists: [], cycles: [] },
+            tombstones: { lists: [], cycles: [], tasks: [] },
             _preferences_dirty: false,
           });
           return;
@@ -208,7 +216,7 @@ export const useAppStore = create<AppState>()(
           lists: INITIAL_LISTS,
           cycles: INITIAL_CYCLES,
           listSections: [],
-          tombstones: { lists: [], cycles: [] },
+          tombstones: { lists: [], cycles: [], tasks: [] },
           sessionExpired: false,
           _preferences_dirty: false,
         });
@@ -484,6 +492,54 @@ export const useAppStore = create<AppState>()(
         };
       }),
 
+      restoreTask: (id) => optimisticUpdate(get, set, (state) => {
+        const existingTask = state.tasks[id];
+        if (!existingTask) return state;
+        const restoredTask = TaskRepository.update(existingTask, { deleted_at: undefined });
+        return {
+          tasks: {
+            ...state.tasks,
+            [id]: restoredTask
+          }
+        };
+      }),
+
+      permanentDeleteTask: (id) => optimisticUpdate(get, set, (state) => {
+        const existingTask = state.tasks[id];
+        const newTasks = { ...state.tasks };
+        delete newTasks[id];
+        const doomedTask = existingTask
+          ? { ...existingTask, _hard_delete: true, _is_dirty: true, updated_at: new Date().toISOString() }
+          : { id, _hard_delete: true, _is_dirty: true, updated_at: new Date().toISOString() };
+        return {
+          tasks: newTasks,
+          tombstones: {
+            ...state.tombstones,
+            tasks: [...(state.tombstones.tasks || []).filter((t: any) => t.id !== id), doomedTask as any]
+          }
+        };
+      }),
+
+      emptyTrash: () => optimisticUpdate(get, set, (state) => {
+        const newTasks = { ...state.tasks };
+        const purged: any[] = [];
+        const now = new Date().toISOString();
+        for (const id in newTasks) {
+          if (newTasks[id].deleted_at) {
+            purged.push({ ...newTasks[id], _hard_delete: true, _is_dirty: true, updated_at: now });
+            delete newTasks[id];
+          }
+        }
+        if (purged.length === 0) return state;
+        return {
+          tasks: newTasks,
+          tombstones: {
+            ...state.tombstones,
+            tasks: [...(state.tombstones.tasks || []), ...purged]
+          }
+        };
+      }),
+
       updateTask: (id, updates) => optimisticUpdate(get, set, (state) => {
         const task = state.tasks[id];
         if (!task) return state;
@@ -657,6 +713,127 @@ export const useAppStore = create<AppState>()(
         };
       }),
 
+      reorderListSections: (updates) => optimisticUpdate(get, set, (state) => {
+        const orderMap = new Map(updates.map(u => [u.id, u.order]));
+        const now = new Date().toISOString();
+        return {
+          listSections: (state.listSections || []).map(s => {
+            if (orderMap.has(s.id)) {
+              return { ...s, order: orderMap.get(s.id), _is_dirty: true, updated_at: now };
+            }
+            return s;
+          })
+        };
+      }),
+
+      duplicateSection: (sectionId) => optimisticUpdate(get, set, (state) => {
+        const sec = (state.listSections || []).find(s => s.id === sectionId);
+        if (!sec) return state;
+
+        const now = new Date().toISOString();
+        const newSectionId = crypto.randomUUID();
+        const newSection: ListSection = {
+          ...sec,
+          id: newSectionId,
+          name: `${sec.name} (copia)`,
+          order: (sec.order ?? 0) + 1,
+          created_at: now,
+          updated_at: now,
+          _is_dirty: true,
+        };
+
+        const originalTasks = Object.values(state.tasks).filter(
+          t => t.sectionId === sectionId && !t.deleted_at
+        );
+
+        const newTasksMap: Record<string, TaskItem> = {};
+        originalTasks.forEach(t => {
+          const newTaskId = crypto.randomUUID();
+          newTasksMap[newTaskId] = {
+            ...t,
+            id: newTaskId,
+            sectionId: newSectionId,
+            status: 'pending',
+            completionHistory: [],
+            completedAlerts: [],
+            created_at: now,
+            updated_at: now,
+            _is_dirty: true,
+          };
+        });
+
+        return {
+          listSections: [...(state.listSections || []), newSection],
+          tasks: { ...state.tasks, ...newTasksMap }
+        };
+      }),
+
+      emptySection: (sectionId, taskIds) => optimisticUpdate(get, set, (state) => {
+        const now = new Date().toISOString();
+        const newTasks = { ...state.tasks };
+        let changed = false;
+
+        const targetIds = taskIds || Object.values(state.tasks)
+          .filter(t => t.sectionId === sectionId && !t.deleted_at)
+          .map(t => t.id);
+
+        targetIds.forEach(id => {
+          const t = newTasks[id];
+          if (t && !t.deleted_at) {
+            newTasks[id] = TaskRepository.update(t, { deleted_at: now });
+            changed = true;
+          }
+        });
+
+        return changed ? { tasks: newTasks } : state;
+      }),
+
+      moveSectionTasks: (taskIds, targetListId, targetSectionId) => optimisticUpdate(get, set, (state) => {
+        const newTasks = { ...state.tasks };
+        let changed = false;
+
+        taskIds.forEach(id => {
+          const t = newTasks[id];
+          if (t) {
+            newTasks[id] = TaskRepository.update(t, {
+              categoryId: targetListId,
+              sectionId: targetSectionId || undefined,
+            });
+            changed = true;
+          }
+        });
+
+        return changed ? { tasks: newTasks } : state;
+      }),
+
+      setSectionTasksCompleted: (taskIds, completed) => optimisticUpdate(get, set, (state) => {
+        const newTasks = { ...state.tasks };
+        let changed = false;
+
+        taskIds.forEach(id => {
+          const t = newTasks[id];
+          if (t) {
+            if (completed) {
+              newTasks[id] = TaskRepository.update(t, {
+                status: 'completed',
+                completionHistory: [...(t.completionHistory || []), Date.now()]
+              });
+            } else {
+              const newHistory = [...(t.completionHistory || [])];
+              if (newHistory.length > 0) newHistory.pop();
+              newTasks[id] = TaskRepository.update(t, {
+                status: 'pending',
+                completionHistory: newHistory,
+                currentCount: 0
+              });
+            }
+            changed = true;
+          }
+        });
+
+        return changed ? { tasks: newTasks } : state;
+      }),
+
       updateTaskSection: (taskId, sectionId) => optimisticUpdate(get, set, (state) => {
         const task = state.tasks[taskId];
         if (!task) return state;
@@ -785,18 +962,31 @@ export const useAppStore = create<AppState>()(
         for (const task of filtered) {
           let groupKey = '';
           const taskSecId = task.sectionId || (task as any).section_id;
+          
           if (taskSecId && activeSectionIds.has(taskSecId)) {
-            // Si la sección manual asignada es literalmente "Diaria/Semanal/Mensual/Anual"
-            // (no una sección personalizada que solo menciona la periodicidad), es un
-            // duplicado de la sección dinámica de ciclo equivalente: se fusiona con ella
-            // en origen para que nunca se rendericen dos cabeceras ("Diarias" y "Diarias").
             const sec = sectionsForList.find((s: any) => s.id === taskSecId);
             const purePeriodicity = sec ? getPureCyclicPeriodicity(sec.name) : null;
             groupKey = purePeriodicity ? `cycle_cycle_${purePeriodicity}` : `section_${taskSecId}`;
-          } else if (task.cycle_id) {
-            groupKey = `cycle_${task.cycle_id}`;
-          } else {
-            groupKey = 'no_section';
+          } else if (taskSecId) {
+            const aliasedSec = sectionsForList.find((s: any) => 
+              s.id === taskSecId || 
+              s.id === taskSecId.replace('sec_limp_', 'sec_limpieza_') || 
+              (taskSecId.startsWith('sec_limp_') && s.id === taskSecId.replace('sec_limp_', 'sec_limpieza_')) ||
+              (s.id.startsWith('sec_limp_') && taskSecId === s.id.replace('sec_limp_', 'sec_limpieza_'))
+            );
+            if (aliasedSec) {
+              const purePeriodicity = getPureCyclicPeriodicity(aliasedSec.name);
+              groupKey = purePeriodicity ? `cycle_cycle_${purePeriodicity}` : `section_${aliasedSec.id}`;
+            }
+          }
+
+          if (!groupKey) {
+            if (task.cycle_id) {
+              const purePeriod = task.cycle_id.replace('cycle_', '');
+              groupKey = `cycle_cycle_${purePeriod}`;
+            } else {
+              groupKey = 'no_section';
+            }
           }
 
           if (!grouped[groupKey]) grouped[groupKey] = [];
@@ -1295,7 +1485,7 @@ export const useAppStore = create<AppState>()(
             lists: (state.lists || []).filter((l: any) => !isSettings(l)).map(markDirty),
             cycles: (state.cycles || []).map(markDirty),
             listSections: (state.listSections || []).map(markDirty),
-            tombstones: { lists: [], cycles: [] },
+            tombstones: { lists: [], cycles: [], tasks: [] },
           };
         }
 

@@ -157,13 +157,13 @@ export function ensureRoutineSections(
   required.forEach(req => {
     const exists = currentSections.some(s => 
       s.id === req.id || 
-      s.id === `sec_limpieza_${req.root}` ||
+      s.id === `sec_limpieza_${req.root === 'diari' ? 'diaria' : req.root === 'seman' ? 'semanal' : req.root === 'mensu' ? 'mensual' : 'anual'}` ||
       s.name.toLowerCase().includes(req.root) ||
       (req.root === 'diari' && s.name.toLowerCase().includes('recurrent'))
     );
     if (!exists) {
       addSection({
-        id: listId === 'limpieza' ? `sec_limpieza_${req.root}` : req.id,
+        id: req.id,
         listId,
         name: req.name,
         order: req.order
@@ -186,19 +186,22 @@ export function getRoomForCleaningTask(title?: string | null): 'Cocina' | 'Baño
     t.includes('bayeta') || t.includes('escurreplatos') || t.includes('horno') ||
     t.includes('campana') || t.includes('despensa') || t.includes('frigorífico') ||
     t.includes('frigo') || t.includes('congelador') || t.includes('electrodoméstico') ||
-    t.includes('encimera') || t.includes('fuegos')
+    t.includes('encimera') || t.includes('fuegos') || t.includes('fregona') ||
+    t.includes('cubo de basura') || t.includes('basura')
   ) {
     return 'Cocina';
   }
 
   // Baño
   if (
-    t.includes('lavabo') || t.includes('baño') || t.includes('ducha') ||
+    t.includes('lavabo') || t.includes('baño') || t.includes('bano') || t.includes('ducha') ||
     t.includes('inodoro') || t.includes('toalla') || t.includes('toallero') ||
     t.includes('cepillo de diente') || t.includes('portacepillos') ||
     t.includes('jabonera') || t.includes('bandejita') || t.includes('rebosadero') ||
     t.includes('desagüe') || t.includes('mampara') || t.includes('alcachofa') ||
-    t.includes('anti-humedad') || t.includes('antihumedad') || t.includes('azulejos hasta el techo')
+    t.includes('anti-humedad') || t.includes('antihumedad') || t.includes('azulejo') ||
+    t.includes('váter') || t.includes('vater') || t.includes('bidet') || t.includes('bidé') ||
+    (t.includes('espejo') && !t.includes('entrada') && !t.includes('recibidor'))
   ) {
     return 'Baño';
   }
@@ -211,7 +214,8 @@ export function getRoomForCleaningTask(title?: string | null): 'Cocina' | 'Baño
     t.includes('sabana') || t.includes('mesilla') || t.includes('escritorio') ||
     t.includes('armario de ropa') || t.includes('ropa de temporada') ||
     t.includes('armario a fondo') || t.includes('habitación') || t.includes('habitacion') ||
-    t.includes('cortinas o estores') || t.includes('ropa sucia') || t.includes('cesto')
+    t.includes('cortina') || t.includes('estor') || t.includes('ropa sucia') ||
+    t.includes('cesto') || t.includes('manta') || t.includes('funda')
   ) {
     return 'Habitación';
   }
@@ -220,7 +224,8 @@ export function getRoomForCleaningTask(title?: string | null): 'Cocina' | 'Baño
   if (
     t.includes('entrada') || t.includes('pasillo') || t.includes('zapatero') ||
     t.includes('zapatilla') || t.includes('puerta de entrada') || t.includes('puerta principal') ||
-    t.includes('perchero') || t.includes('espejos de entrada')
+    t.includes('perchero') || t.includes('espejo de entrada') || t.includes('recibidor') ||
+    t.includes('felpudo')
   ) {
     return 'Pasillo / Entrada';
   }
@@ -228,7 +233,8 @@ export function getRoomForCleaningTask(title?: string | null): 'Cocina' | 'Baño
   // Balcón
   if (
     t.includes('balcón') || t.includes('balcon') || t.includes('barandilla') ||
-    t.includes('maceta') || t.includes('exterior') || t.includes('terraza')
+    t.includes('maceta') || t.includes('exterior') || t.includes('terraza') ||
+    t.includes('toldo')
   ) {
     return 'Balcón';
   }
@@ -244,15 +250,16 @@ export function getRoomForCleaningTask(title?: string | null): 'Cocina' | 'Baño
 export function ensureLimpiezaSections(
   listId: string,
   sections: ListSection[],
-  addSection: (sec: ListSection) => void
+  addSection: (sec: ListSection) => void,
+  updateSection?: (id: string, updates: Partial<ListSection>) => void
 ): void {
   ensureRoutineSections(listId, sections, addSection);
 
   const currentSections = sections.filter(s => s.listId === listId && !s.deleted_at);
-  const rootDiaria = currentSections.find(s => s.id === 'sec_limpieza_diaria' || s.id === 'sec_limp_diaria' || s.name.toLowerCase().includes('diari'));
-  const rootSemanal = currentSections.find(s => s.id === 'sec_limpieza_semanal' || s.id === 'sec_limp_semanal' || s.name.toLowerCase().includes('seman'));
-  const rootMensual = currentSections.find(s => s.id === 'sec_limpieza_mensual' || s.id === 'sec_limp_mensual' || s.name.toLowerCase().includes('mensu'));
-  const rootAnual = currentSections.find(s => s.id === 'sec_limpieza_anual' || s.id === 'sec_limp_anual' || s.name.toLowerCase().includes('anual'));
+  const rootDiaria = currentSections.find(s => s.id === 'sec_limpieza_diaria' || s.id === 'sec_limp_diaria' || (!s.parentId && s.name.toLowerCase().includes('diari')));
+  const rootSemanal = currentSections.find(s => s.id === 'sec_limpieza_semanal' || s.id === 'sec_limp_semanal' || (!s.parentId && s.name.toLowerCase().includes('seman')));
+  const rootMensual = currentSections.find(s => s.id === 'sec_limpieza_mensual' || s.id === 'sec_limp_mensual' || (!s.parentId && s.name.toLowerCase().includes('mensu')));
+  const rootAnual = currentSections.find(s => s.id === 'sec_limpieza_anual' || s.id === 'sec_limp_anual' || (!s.parentId && s.name.toLowerCase().includes('anual')));
 
   const roomDefs = [
     { freq: 'diaria', parentId: rootDiaria?.id || 'sec_limpieza_diaria', rooms: ['Cocina', 'Baño', 'Habitación', 'Pasillo / Entrada', 'General'] },
@@ -269,8 +276,8 @@ export function ensureLimpiezaSections(
                        roomName === 'Balcón' ? 'balcon' :
                        roomName === 'Cocina' ? 'cocina' : 'general';
       const secId = `sec_limp_${def.freq}_${roomSlug}`;
-      const exists = currentSections.some(s => s.id === secId || (s.parentId === def.parentId && s.name.toLowerCase() === roomName.toLowerCase()));
-      if (!exists) {
+      const existing = currentSections.find(s => s.id === secId || s.name.toLowerCase() === roomName.toLowerCase() && (s.parentId === def.parentId || s.parentId === def.parentId.replace('sec_limpieza_', 'sec_limp_')));
+      if (!existing) {
         addSection({
           id: secId,
           listId,
@@ -278,6 +285,8 @@ export function ensureLimpiezaSections(
           name: roomName,
           order: idx
         });
+      } else if (existing.parentId !== def.parentId && updateSection) {
+        updateSection(existing.id, { parentId: def.parentId });
       }
     });
   });

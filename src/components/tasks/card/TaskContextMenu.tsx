@@ -5,12 +5,13 @@ import {
   CheckCircle, Info, IndentIncrease, IndentDecrease, Calendar, 
   AlertCircle, Flag, FolderInput, LayoutList, Copy, Play, Trash2, 
   ChevronRight, ArrowLeft, Sun, CalendarDays, Clock, CalendarX, Edit3,
-  ArrowUp, ArrowDown, ChevronDown, SlidersHorizontal, Coins
+  ArrowUp, ArrowDown, ChevronDown, SlidersHorizontal, Coins, RotateCcw
 } from 'lucide-react';
 import type { TaskItem } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
-import type { SpotlightRect } from '../../ui/SpotlightBackdrop';
+import { SoundService } from '../../../services/SoundService';
+import { SpotlightBackdrop, type SpotlightRect } from '../../ui/SpotlightBackdrop';
 
 export interface TaskContextMenuProps {
   task: TaskItem;
@@ -37,7 +38,7 @@ export function TaskContextMenu({
   isOpen,
   onClose,
   position,
-  triggerRect: _triggerRect,
+  triggerRect,
   onEdit,
   nestTask,
   previousTaskId,
@@ -67,11 +68,12 @@ export function TaskContextMenu({
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Telón transparente para cerrar el menú con un clic fuera, idéntico a las listas */}
-          <div 
-            style={{ position: 'fixed', inset: 0, zIndex: 999990, background: 'transparent' }} 
-            onClick={onClose} 
-            onContextMenu={(e) => { e.preventDefault(); onClose(); }}
+          <SpotlightBackdrop
+            rect={isMobile ? null : (triggerRect ?? null)}
+            onClose={onClose}
+            onWheel={onClose}
+            radius={12}
+            padding={3}
           />
 
           {/* Floating Popover Container / Mobile Bottom Action Sheet */}
@@ -198,6 +200,7 @@ function MenuActions({
   canMoveDown
 }: MenuActionsProps) {
   const addTask = useAppStore(state => state.addTask);
+  const restoreTask = useAppStore(state => state.restoreTask);
   const lists = useAppStore(state => state.lists);
   const listSections = useAppStore(state => state.listSections);
   const [currentSubmenu, setCurrentSubmenu] = useState<'main' | 'move_list' | 'move_section' | 'due_date' | 'priority' | 'price'>('main');
@@ -541,6 +544,34 @@ function MenuActions({
   }
 
   // Vista Principal
+  // Si la tarea está en la papelera, menú limpio con Restaurar y Eliminar definitivamente
+  if (task.deleted_at) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <ActionRow 
+          icon={<RotateCcw size={16} color="var(--accent-primary, #007aff)" />} 
+          label="Restaurar recordatorio" 
+          onClick={() => {
+            setContextMenuOpen(false);
+            HapticService.notification('success');
+            SoundService.playUncomplete();
+            restoreTask(task.id);
+          }} 
+        />
+        <div className="ios-dropdown-divider" />
+        <ActionRow 
+          icon={<Trash2 size={16} color="#ff3b30" />} 
+          label="Eliminar definitivamente" 
+          labelColor="#ff3b30" 
+          onClick={() => {
+            setContextMenuOpen(false);
+            setIsDeleteConfirmOpen(true);
+          }} 
+        />
+      </div>
+    );
+  }
+
   const isUrgent = task.priority === 'high';
 
   return (

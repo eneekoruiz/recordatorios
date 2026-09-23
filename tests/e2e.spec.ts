@@ -781,9 +781,9 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
     await page.waitForTimeout(500);
 
     // Desplegar sección Suscripciones si está colapsada
-    const subSection = page.locator('.group-header:has-text("Suscripciones")').first();
-    if (await subSection.isVisible()) {
-      await subSection.click();
+    const expandBtn = page.locator('.group-header:has-text("Suscripciones")').locator('button[aria-label="Desplegar sección"]').first();
+    if (await expandBtn.isVisible().catch(() => false)) {
+      await expandBtn.click();
       await page.waitForTimeout(400);
     }
 

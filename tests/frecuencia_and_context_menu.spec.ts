@@ -272,13 +272,16 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     await expect(cocinaHeader).toBeVisible({ timeout: 5000 });
     await expect(banoHeader).toBeVisible({ timeout: 5000 });
 
-    // Verify task cards are visible under their sub-sections
-    const cocinaTask = page.locator('[data-task-id="task_limp_cocina_1"]');
-    const banoTask = page.locator('[data-task-id="task_limp_bano_1"]');
-    await expect(cocinaTask).toBeVisible({ timeout: 5000 });
-    await expect(banoTask).toBeVisible({ timeout: 5000 });
+    // Las secciones en vistas de frecuencia inician cerradas por defecto para no agobiar
+    // Un click en Cocina la despliega
+    await cocinaHeader.click();
+    await page.waitForTimeout(300);
 
-    // Test collapse toggle: single click collapses sub-section Cocina
+    // Verify task card is visible under expanded sub-section
+    const cocinaTask = page.locator('[data-task-id="task_limp_cocina_1"]');
+    await expect(cocinaTask).toBeVisible({ timeout: 5000 });
+
+    // Test collapse toggle: otro click repliega la sub-sección Cocina
     await cocinaHeader.click();
     await page.waitForTimeout(300);
     await expect(cocinaTask).not.toBeVisible();

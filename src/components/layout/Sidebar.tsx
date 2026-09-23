@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
+import { isCompletedInCurrentPeriod } from '../../services/TaskService';
 import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
 import { ListConfigModal } from './ListConfigModal';
@@ -34,6 +35,7 @@ interface SidebarProps {
 export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   const lists = useAppStore((state) => state.lists);
   const cycles = useAppStore((state) => state.cycles);
+  const listSections = useAppStore((state) => state.listSections);
   const smartListVisibility = useAppStore((state) => state.smartListVisibility);
   const pinnedSmartLists = useAppStore((state) => state.pinnedSmartLists) || [];
   const toggleSmartList = useAppStore((state) => state.toggleSmartList);
@@ -70,7 +72,8 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   
   const getTaskCount = (listId: string) => {
     const all = Object.values(tasks || {}).filter(t => !t.deleted_at);
-    const active = all.filter(t => !isTaskCompleted(t));
+    const isDone = (t: any) => isTaskCompleted(t) || isCompletedInCurrentPeriod(t, cycles, listSections, lists);
+    const active = all.filter(t => !isDone(t));
     const todayStr = new Date().toDateString();
     
     switch (listId) {
@@ -81,15 +84,20 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
       case 'smart_scheduled': 
         return active.filter(t => t.dueDate && new Date(t.dueDate) > new Date()).length;
       case 'smart_all': 
-        return active.length;
+        return active.filter(t => t.categoryId !== 'primeros_pasos').length;
       case 'smart_flagged': 
         return active.filter(t => Boolean(t.flagged || (t.priority && t.priority !== 'none'))).length;
       case 'smart_completed': 
-        return all.filter(t => isTaskCompleted(t)).length;
+        return all.filter(t => isDone(t)).length;
       case 'smart_overdue': {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        return active.filter(t => t.dueDate && new Date(t.dueDate) < today).length;
+        return active.filter(t => {
+          if (!t.dueDate) return false;
+          const d = new Date(t.dueDate);
+          d.setHours(0, 0, 0, 0);
+          return !isNaN(d.getTime()) && d < today;
+        }).length;
       }
       default: {
         const cleanListId = listId.replace('list_', '').replace('folder_', '');

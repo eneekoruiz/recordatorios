@@ -408,12 +408,17 @@ export function createApp({ prisma }) {
       const deletedAt = parseDeletedAt(payload.deleted_at);
       const existing = byClientId.get(item.id);
       if (existing) {
+        if (payload._hard_delete) {
+          ops.push(delegate.delete({ where: { id: existing.id } }));
+          continue;
+        }
         if (!shouldApplyIncoming(payload, existing.payload)) {
           stale.push(toClientPayload(userId, existing));
           continue;
         }
         ops.push(delegate.update({ where: { id: existing.id }, data: { payload, deletedAt } }));
       } else {
+        if (payload._hard_delete) continue;
         const id = scopedId(userId, item.id);
         ops.push(
           delegate.upsert({

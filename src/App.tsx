@@ -102,6 +102,18 @@ function App() {
     return () => window.clearTimeout(hydrationGuard);
   }, [hasHydrated]);
 
+  // Limpieza higiénica al arrancar: purgar recordatorios vacíos residuales
+  useEffect(() => {
+    if (!hasHydrated) return;
+    const state = useAppStore.getState();
+    const allTasks = Object.values(state.tasks || {});
+    allTasks.forEach((t: any) => {
+      if (!t.deleted_at && (!t.title || !t.title.trim())) {
+        state.deleteTask(t.id);
+      }
+    });
+  }, [hasHydrated]);
+
   // Si los primeros pasos ya están completados o sin tareas pendientes, redirigir automáticamente fuera de ella
   useEffect(() => {
     if (currentView === 'smart_primeros_pasos' || currentView === 'list_primeros_pasos') {
@@ -427,6 +439,28 @@ function App() {
       // Secciones de Limpieza (Diarias, Semanales, Mensuales, Anuales y subgrupos de estancia)
       ensureLimpiezaSections('limpieza', state.listSections || [], (sec) => {
         state.addListSection({ ...sec, updated_at: EPOCH });
+      }, (id, updates) => {
+        const sec = (state.listSections || []).find(s => s.id === id);
+        if (sec) {
+          state.addListSection({ ...sec, ...updates, updated_at: EPOCH });
+        }
+      });
+
+      // Normalizar parentId en subsecciones de limpieza existentes
+      const allAppSecs = state.listSections || [];
+      const legacyRootMap: Record<string, string> = {
+        'sec_limp_diaria': 'sec_limpieza_diaria',
+        'sec_limp_semanal': 'sec_limpieza_semanal',
+        'sec_limp_mensual': 'sec_limpieza_mensual',
+        'sec_limp_anual': 'sec_limpieza_anual',
+      };
+      allAppSecs.forEach(sec => {
+        if (sec.parentId && legacyRootMap[sec.parentId]) {
+          const rootTarget = legacyRootMap[sec.parentId];
+          if (allAppSecs.some(s => s.id === rootTarget)) {
+            state.addListSection({ ...sec, parentId: rootTarget, updated_at: EPOCH });
+          }
+        }
       });
 
       // Secciones unificadas para Quehaceres si existe la lista
