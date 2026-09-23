@@ -173,7 +173,73 @@ export function ensureRoutineSections(
 }
 
 /**
- * Inicializa y asegura las 4 secciones estándar de Limpieza: Diarias, Semanales, Mensuales, Anuales.
+ * Clasifica una tarea de limpieza en su estancia correspondiente (Cocina, Baño, Habitación, Pasillo / Entrada, Balcón, General).
+ */
+export function getRoomForCleaningTask(title?: string | null): 'Cocina' | 'Baño' | 'Habitación' | 'Pasillo / Entrada' | 'Balcón' | 'General' {
+  if (!title) return 'General';
+  const t = title.toLowerCase();
+
+  // Cocina
+  if (
+    t.includes('plato') || t.includes('lavavajillas') || t.includes('vitro') ||
+    t.includes('fregadero') || t.includes('cocina') || t.includes('microondas') ||
+    t.includes('bayeta') || t.includes('escurreplatos') || t.includes('horno') ||
+    t.includes('campana') || t.includes('despensa') || t.includes('frigorífico') ||
+    t.includes('frigo') || t.includes('congelador') || t.includes('electrodoméstico') ||
+    t.includes('encimera') || t.includes('fuegos')
+  ) {
+    return 'Cocina';
+  }
+
+  // Baño
+  if (
+    t.includes('lavabo') || t.includes('baño') || t.includes('ducha') ||
+    t.includes('inodoro') || t.includes('toalla') || t.includes('toallero') ||
+    t.includes('cepillo de diente') || t.includes('portacepillos') ||
+    t.includes('jabonera') || t.includes('bandejita') || t.includes('rebosadero') ||
+    t.includes('desagüe') || t.includes('mampara') || t.includes('alcachofa') ||
+    t.includes('anti-humedad') || t.includes('antihumedad') || t.includes('azulejos hasta el techo')
+  ) {
+    return 'Baño';
+  }
+
+  // Habitación
+  if (
+    t.includes('cama') || t.includes('colchón') || t.includes('colchon') ||
+    t.includes('canapé') || t.includes('canape') || t.includes('almohada') ||
+    t.includes('edredón') || t.includes('edredon') || t.includes('sábana') ||
+    t.includes('sabana') || t.includes('mesilla') || t.includes('escritorio') ||
+    t.includes('armario de ropa') || t.includes('ropa de temporada') ||
+    t.includes('armario a fondo') || t.includes('habitación') || t.includes('habitacion') ||
+    t.includes('cortinas o estores') || t.includes('ropa sucia') || t.includes('cesto')
+  ) {
+    return 'Habitación';
+  }
+
+  // Pasillo / Entrada
+  if (
+    t.includes('entrada') || t.includes('pasillo') || t.includes('zapatero') ||
+    t.includes('zapatilla') || t.includes('puerta de entrada') || t.includes('puerta principal') ||
+    t.includes('perchero') || t.includes('espejos de entrada')
+  ) {
+    return 'Pasillo / Entrada';
+  }
+
+  // Balcón
+  if (
+    t.includes('balcón') || t.includes('balcon') || t.includes('barandilla') ||
+    t.includes('maceta') || t.includes('exterior') || t.includes('terraza')
+  ) {
+    return 'Balcón';
+  }
+
+  // General
+  return 'General';
+}
+
+/**
+ * Inicializa y asegura las 4 secciones estándar de Limpieza: Diarias, Semanales, Mensuales, Anuales,
+ * así como sus subgrupos/subsecciones de estancia (Cocina, Baño, Habitación, etc.) para mantener la organización.
  */
 export function ensureLimpiezaSections(
   listId: string,
@@ -181,5 +247,39 @@ export function ensureLimpiezaSections(
   addSection: (sec: ListSection) => void
 ): void {
   ensureRoutineSections(listId, sections, addSection);
+
+  const currentSections = sections.filter(s => s.listId === listId && !s.deleted_at);
+  const rootDiaria = currentSections.find(s => s.id === 'sec_limpieza_diaria' || s.id === 'sec_limp_diaria' || s.name.toLowerCase().includes('diari'));
+  const rootSemanal = currentSections.find(s => s.id === 'sec_limpieza_semanal' || s.id === 'sec_limp_semanal' || s.name.toLowerCase().includes('seman'));
+  const rootMensual = currentSections.find(s => s.id === 'sec_limpieza_mensual' || s.id === 'sec_limp_mensual' || s.name.toLowerCase().includes('mensu'));
+  const rootAnual = currentSections.find(s => s.id === 'sec_limpieza_anual' || s.id === 'sec_limp_anual' || s.name.toLowerCase().includes('anual'));
+
+  const roomDefs = [
+    { freq: 'diaria', parentId: rootDiaria?.id || 'sec_limpieza_diaria', rooms: ['Cocina', 'Baño', 'Habitación', 'Pasillo / Entrada', 'General'] },
+    { freq: 'semanal', parentId: rootSemanal?.id || 'sec_limpieza_semanal', rooms: ['Cocina', 'Baño', 'Habitación', 'Pasillo / Entrada', 'Balcón', 'General'] },
+    { freq: 'mensual', parentId: rootMensual?.id || 'sec_limpieza_mensual', rooms: ['Cocina', 'Baño', 'Habitación', 'Pasillo / Entrada', 'Balcón', 'General'] },
+    { freq: 'anual', parentId: rootAnual?.id || 'sec_limpieza_anual', rooms: ['Cocina', 'Baño', 'Habitación', 'Pasillo / Entrada', 'Balcón', 'General'] },
+  ];
+
+  roomDefs.forEach(def => {
+    def.rooms.forEach((roomName, idx) => {
+      const roomSlug = roomName === 'Pasillo / Entrada' ? 'pasillo' :
+                       roomName === 'Habitación' ? 'hab' :
+                       roomName === 'Baño' ? 'bano' :
+                       roomName === 'Balcón' ? 'balcon' :
+                       roomName === 'Cocina' ? 'cocina' : 'general';
+      const secId = `sec_limp_${def.freq}_${roomSlug}`;
+      const exists = currentSections.some(s => s.id === secId || (s.parentId === def.parentId && s.name.toLowerCase() === roomName.toLowerCase()));
+      if (!exists) {
+        addSection({
+          id: secId,
+          listId,
+          parentId: def.parentId,
+          name: roomName,
+          order: idx
+        });
+      }
+    });
+  });
 }
 

@@ -9,7 +9,7 @@ test.describe('Recordatorios Élite - Complete Suite & Quality Audit', () => {
       }
     });
 
-    await page.goto('http://localhost:5173');
+    await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
 
     await expect(page).toHaveTitle(/Recordatorios/i);
@@ -21,7 +21,7 @@ test.describe('Recordatorios Élite - Complete Suite & Quality Audit', () => {
   });
 
   test('Command Palette opens and supports search and navigation', async ({ page }) => {
-    await page.goto('http://localhost:5173');
+    await page.goto('/');
     await page.waitForLoadState('networkidle');
 
     await page.keyboard.press('Control+k');
@@ -35,7 +35,7 @@ test.describe('Recordatorios Élite - Complete Suite & Quality Audit', () => {
   });
 
   test('Sidebar contains all smart lists and quick navigation items', async ({ page }) => {
-    await page.goto('http://localhost:5173');
+    await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
 
     const sidebar = page.locator('.sidebar-container');
@@ -45,7 +45,7 @@ test.describe('Recordatorios Élite - Complete Suite & Quality Audit', () => {
   });
 
   test('Task creation shortcut "n" or new task drawer triggers properly', async ({ page }) => {
-    await page.goto('http://localhost:5173');
+    await page.goto('/');
     await page.waitForLoadState('networkidle');
 
     // Trigger keyboard 'n' when not focused on an input

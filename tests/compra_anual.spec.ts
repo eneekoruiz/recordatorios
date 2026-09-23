@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 async function ensureAppUnlocked(page: any) {
-  await page.goto('http://localhost:5173');
+  await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
 
   await page.evaluate(() => {

@@ -845,26 +845,31 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     if (category.startsWith('task_')) {
       return false;
     }
-    // Secciones de listas (manuales section_ o sec_, y secciones de ciclo cycle_) empiezan colapsadas por defecto
+    // En vistas de ciclos temporales (Diario, Semanal, Mensual, Anual), las subsecciones
+    // y subgrupos empiezan desplegados para mostrar las tareas organizadas por estancia/categoría
+    if (currentCycle) {
+      return false;
+    }
+    // Secciones de listas (manuales section_ o sec_, y secciones de ciclo cycle_) empiezan colapsadas por defecto en vistas de lista
     if (category.startsWith('section_') || category.startsWith('sec_') || category.startsWith('cycle_')) {
       return true;
     }
     // Grupos de listas principales en vista de ciclo o carpetas: desplegados por defecto
     return false;
-  }, [collapsed]);
+  }, [collapsed, currentCycle]);
 
   const toggleCategory = useCallback((category: string) => {
     HapticService.selection();
     setCollapsed(prev => {
       const isCurrentlyCollapsed = prev[category] !== undefined
         ? Boolean(prev[category])
-        : (category.startsWith('section_') || category.startsWith('sec_') || category.startsWith('cycle_'));
+        : isCatCollapsed(category);
       return {
         ...prev,
         [category]: !isCurrentlyCollapsed
       };
     });
-  }, []);
+  }, [isCatCollapsed]);
 
   const handleAddSection = useCallback((parentId?: string) => {
     if (!currentList) return;
@@ -1088,13 +1093,15 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                   };
                   roots.forEach(r => processNode(r, depthLevel));
                 }
-                const children = sectionsForList.filter(s => s.parentId === sec.id);
+                const children = sectionsForList
+                  .filter(s => s.parentId === sec.id)
+                  .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
                 children.forEach(c => renderSectionBranch(c.id, depthLevel));
                 return;
               }
 
               const secTasks = tasksInScope.filter(t => t.sectionId === secId);
-              const secKey = `sec_${sec.id}`;
+              const secKey = sec.id.startsWith('sec_') || sec.id.startsWith('section_') ? sec.id : `sec_${sec.id}`;
               const secPeriodicity = getSectionPeriodicity(secKey, sec.name, listSections, lists);
               
               // En ciclos temporales, no mostrar secciones cuya periodicidad sea mayor al ciclo activo
@@ -1110,12 +1117,13 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               flat.push({ 
                 type: 'header', 
                 title: formatSectionTitle(sec.name), 
-                titleIcon: secPeriodicity ? <Hourglass size={14} /> : undefined,
+                titleIcon: currentCycle ? undefined : (secPeriodicity ? <Hourglass size={14} /> : undefined),
                 category: secKey, 
                 color: parentColor, 
                 sectionId: sec.id, 
                 depth: depthLevel,
-                periodicity: secPeriodicity
+                periodicity: secPeriodicity,
+                sectionTaskIds: secTasks.filter(t => !isTaskCompleted(t)).map(t => t.id)
               });
               
               if (!isCatCollapsed(secKey)) {
@@ -1133,16 +1141,20 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                       children.forEach(c => processNode(c, d + 1));
                     }
                   };
-                  roots.forEach(r => processNode(r, depthLevel));
+                  roots.forEach(r => processNode(r, depthLevel + 1));
                 }
 
                 // Child sections
-                const children = sectionsForList.filter(s => s.parentId === sec.id);
+                const children = sectionsForList
+                  .filter(s => s.parentId === sec.id)
+                  .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
                 children.forEach(c => renderSectionBranch(c.id, depthLevel + 1));
               }
             };
 
-            const rootSections = sectionsForList.filter(s => !s.parentId);
+            const rootSections = sectionsForList
+              .filter(s => !s.parentId)
+              .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
             rootSections.forEach(r => renderSectionBranch(r.id, baseDepth));
           };
 
@@ -1230,90 +1242,34 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           }
         }
 
-        // 2. Dynamic Cycle Sections (Recurrencia Diaria, Semanal, Mensual, Anual)
-        const allCycles = useAppStore.getState().cycles || [];
-        const presentCycleKeys = Object.keys(groupedTasks).filter(k => k.startsWith('cycle_') && groupedTasks[k].length > 0);
-        
-        if (presentCycleKeys.length > 0) {
-          const sortedCycles = presentCycleKeys.sort((a, b) => {
-            const idA = a.replace('cycle_', '');
-            const idB = b.replace('cycle_', '');
-            const cA = allCycles.find(c => c.id === idA)?.daysValue || 0;
-            const cB = allCycles.find(c => c.id === idB)?.daysValue || 0;
-            return cA - cB;
-          });
-
-          sortedCycles.forEach(catKey => {
-            const cId = catKey.replace('cycle_', '');
-            const cObj = allCycles.find(c => c.id === cId);
-            const cName = cObj ? cObj.name : cId;
-            const categoryTasks = groupedTasks[catKey] || [];
-
-            const sectionPeriodicity = getSectionPeriodicity(catKey, cName, listSections, lists);
-            const cDays = cObj?.daysValue || 365;
-            const fullTasks = Object.values(groupedTasks)
-              .flat()
-              .filter(t => {
-                const tCycle = allCycles.find(c => c.id === t.cycle_id);
-                return tCycle && tCycle.daysValue <= cDays;
-              });
-
-            const routineCounts = sectionPeriodicity && sectionPeriodicity !== 'day' && fullTasks.length > categoryTasks.length ? {
-              only: categoryTasks.length,
-              full: fullTasks.length
-            } : null;
-
-            const mode = sectionRoutineModes[catKey] || 'only_section';
-            let tasksToRender = mode === 'full_routine' && fullTasks.length > categoryTasks.length
-              ? sortTasksByUserPreference(fullTasks, sortBy)
-              : categoryTasks;
-
-            flat.push({
-              type: 'header',
-              title: formatSectionTitle(cName),
-              titleIcon: <Hourglass size={14} />,
-              category: catKey,
-              color,
-              depth: 0,
-              periodicity: sectionPeriodicity,
-              routineCounts,
-              sectionTaskIds: tasksToRender.filter(t => !isTaskCompleted(t)).map(t => t.id)
-            });
-            if (!isCatCollapsed(catKey)) {
-              if (tasksToRender.length === 0) {
-                flat.push({ type: 'empty-section', title: 'Aquí no hay tareas', category: catKey, color, depth: 0 });
-              } else {
-                const inScope = new Set(tasksToRender.map(t => t.id));
-                const roots = tasksToRender.filter(t => !t.parentId || !inScope.has(t.parentId));
-                const processNode = (task: TaskItem, depthLevel: number) => {
-                  flat.push({ type: 'task', task, depth: depthLevel });
-                  if (!isCatCollapsed(`task_${task.id}`)) {
-                    const children = tasksToRender.filter(t => t.parentId === task.id);
-                    children.forEach(c => processNode(c, depthLevel + 1));
-                  }
-                };
-                roots.forEach(r => processNode(r, 0));
-              }
-            }
-          });
-        }
-
-        // 3. Sections Hierarchy (Secciones Manuales)
+        // 2. Sections Hierarchy & Dynamic Cycle Sections
         const sectionsForList = (listSections || [])
           .filter(s => s.listId === currentList?.id && !s.deleted_at)
           .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-        
+
+        const allCycles = useAppStore.getState().cycles || [];
+
+        // Present cycle keys: include keys that have tasks, or that match a defined manual cyclic section
+        const presentCycleKeys = Object.keys(groupedTasks).filter(k => {
+          if (!k.startsWith('cycle_')) return false;
+          if (groupedTasks[k]?.length > 0) return true;
+          const cId = k.replace('cycle_', '');
+          const p = cId.startsWith('cycle_') ? cId.replace('cycle_', '') : cId;
+          const mSec = sectionsForList.find(s => !s.parentId && getPureCyclicPeriodicity(s.name) === p);
+          if (mSec) {
+            const hasChildTasks = sectionsForList.filter(s => s.parentId === mSec.id).some(cs => (groupedTasks[`section_${cs.id}`]?.length || 0) > 0);
+            if (hasChildTasks) return true;
+          }
+          return false;
+        });
+
         const processSection = (secId: string, depth: number) => {
           const sec = sectionsForList.find(s => s.id === secId);
           if (!sec) return;
 
           // Las secciones manuales que son literalmente "Diaria/Semanal/Mensual/Anual" son un
-          // duplicado de la sección dinámica de ciclo equivalente (ver getTasksByList, que ya
-          // fusiona sus tareas ahí). No se renderiza cabecera propia para ellas -evita la
-          // cabecera repetida ("Diarias" x2)-, pero sí se procesan sus posibles subsecciones hijas.
+          // duplicado de la sección dinámica de ciclo equivalente (ya renderizada con sus tareas e hijas).
           if (getPureCyclicPeriodicity(sec.name)) {
-            const childSections = sectionsForList.filter(s => s.parentId === sec.id);
-            childSections.forEach(child => processSection(child.id, depth));
             return;
           }
 
@@ -1376,7 +1332,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               flat.push({ type: 'empty-section', title: 'Aquí no hay tareas', category: categoryKey, color, sectionId: sec.id, depth });
             } else {
               const inScope = new Set(tasksToRender.map(t => t.id));
-                const roots = tasksToRender.filter(t => !t.parentId || !inScope.has(t.parentId));
+              const roots = tasksToRender.filter(t => !t.parentId || !inScope.has(t.parentId));
               const processNode = (task: TaskItem, depthLevel: number) => {
                 flat.push({ type: 'task', task, depth: depthLevel });
                 if (!isCatCollapsed(`task_${task.id}`)) {
@@ -1384,17 +1340,108 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                   children.forEach(c => processNode(c, depthLevel + 1));
                 }
               };
-              roots.forEach(r => processNode(r, depth));
+              roots.forEach(r => processNode(r, depth + 1));
             }
             
             // Children sections
-            const childSections = sectionsForList.filter(s => s.parentId === sec.id);
+            const childSections = sectionsForList
+              .filter(s => s.parentId === sec.id)
+              .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
             childSections.forEach(child => processSection(child.id, depth + 1));
           }
         };
+        
+        if (presentCycleKeys.length > 0) {
+          const sortedCycles = presentCycleKeys.sort((a, b) => {
+            const idA = a.replace('cycle_', '');
+            const idB = b.replace('cycle_', '');
+            const cA = allCycles.find(c => c.id === idA)?.daysValue || 0;
+            const cB = allCycles.find(c => c.id === idB)?.daysValue || 0;
+            return cA - cB;
+          });
 
-        // Start with root sections
-        const rootSections = sectionsForList.filter(s => !s.parentId);
+          sortedCycles.forEach(catKey => {
+            const cId = catKey.replace('cycle_', '');
+            const cObj = allCycles.find(c => c.id === cId);
+            const cName = cObj ? cObj.name : cId;
+            const categoryTasks = groupedTasks[catKey] || [];
+
+            const sectionPeriodicity = getSectionPeriodicity(catKey, cName, listSections, lists);
+            const cDays = cObj?.daysValue || 365;
+            const fullTasks = Object.values(groupedTasks)
+              .flat()
+              .filter(t => {
+                const tCycle = allCycles.find(c => c.id === t.cycle_id);
+                return tCycle && tCycle.daysValue <= cDays;
+              });
+
+            const routineCounts = sectionPeriodicity && sectionPeriodicity !== 'day' && fullTasks.length > categoryTasks.length ? {
+              only: categoryTasks.length,
+              full: fullTasks.length
+            } : null;
+
+            const mode = sectionRoutineModes[catKey] || 'only_section';
+            let tasksToRender = mode === 'full_routine' && fullTasks.length > categoryTasks.length
+              ? sortTasksByUserPreference(fullTasks, sortBy)
+              : categoryTasks;
+
+            const manualSec = sectionsForList.find(s => !s.parentId && getPureCyclicPeriodicity(s.name) === sectionPeriodicity);
+            const childSections = manualSec 
+              ? sectionsForList.filter(s => s.parentId === manualSec.id).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+              : [];
+
+            const childPendingTaskIds = childSections.flatMap(cs => {
+              const secTasks = groupedTasks[`section_${cs.id}`] || [];
+              return secTasks.filter(t => !isTaskCompleted(t)).map(t => t.id);
+            });
+
+            const allSectionPendingTaskIds = [
+              ...tasksToRender.filter(t => !isTaskCompleted(t)).map(t => t.id),
+              ...childPendingTaskIds
+            ];
+
+            flat.push({
+              type: 'header',
+              title: formatSectionTitle(cName),
+              titleIcon: <Hourglass size={14} />,
+              category: catKey,
+              color,
+              sectionId: manualSec?.id,
+              depth: 0,
+              periodicity: sectionPeriodicity,
+              routineCounts,
+              sectionTaskIds: allSectionPendingTaskIds
+            });
+
+            if (!isCatCollapsed(catKey)) {
+              if (tasksToRender.length === 0 && childSections.length === 0) {
+                flat.push({ type: 'empty-section', title: 'Aquí no hay tareas', category: catKey, color, sectionId: manualSec?.id, depth: 0 });
+              } else {
+                if (tasksToRender.length > 0) {
+                  const inScope = new Set(tasksToRender.map(t => t.id));
+                  const roots = tasksToRender.filter(t => !t.parentId || !inScope.has(t.parentId));
+                  const processNode = (task: TaskItem, depthLevel: number) => {
+                    flat.push({ type: 'task', task, depth: depthLevel });
+                    if (!isCatCollapsed(`task_${task.id}`)) {
+                      const children = tasksToRender.filter(t => t.parentId === task.id);
+                      children.forEach(c => processNode(c, depthLevel + 1));
+                    }
+                  };
+                  roots.forEach(r => processNode(r, 0));
+                }
+
+                if (childSections.length > 0) {
+                  childSections.forEach(child => processSection(child.id, 1));
+                }
+              }
+            }
+          });
+        }
+
+        // Start with root sections that are not pure cyclic periodicity
+        const rootSections = sectionsForList
+          .filter(s => !s.parentId)
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
         rootSections.forEach(rs => processSection(rs.id, 0));
       }
     }

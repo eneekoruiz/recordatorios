@@ -34,6 +34,7 @@ import {
   getPeriodicityFromPrefix
 } from './utils/sectionRoutine';
 import { normalizeTaskPrices } from './utils/priceExtractor';
+import { ensureLimpiezaSections, getRoomForCleaningTask } from './utils/specialLists';
 import type { TaskItem } from './models/Task';
 
 function App() {
@@ -423,23 +424,9 @@ function App() {
         state.addList({ id: 'limpieza', name: 'Limpieza', color: '#32ade6', icon: 'sparkles', isFolder: false, updated_at: EPOCH });
       }
 
-      // Secciones de Limpieza (Diarias, Semanales, Mensuales, Anuales)
-      const limpiezaSections = [
-        { id: 'sec_limpieza_diaria', name: 'Diarias', order: 0 },
-        { id: 'sec_limpieza_semanal', name: 'Semanales', order: 1 },
-        { id: 'sec_limpieza_mensual', name: 'Mensuales', order: 2 },
-        { id: 'sec_limpieza_anual', name: 'Anuales', order: 3 },
-      ];
-      limpiezaSections.forEach(sec => {
-        if (!sections.some(s => s.id === sec.id || (s.listId === 'limpieza' && s.name.toLowerCase() === sec.name.toLowerCase()))) {
-          state.addListSection({
-            id: sec.id,
-            listId: 'limpieza',
-            name: sec.name,
-            order: sec.order,
-            updated_at: EPOCH
-          });
-        }
+      // Secciones de Limpieza (Diarias, Semanales, Mensuales, Anuales y subgrupos de estancia)
+      ensureLimpiezaSections('limpieza', state.listSections || [], (sec) => {
+        state.addListSection({ ...sec, updated_at: EPOCH });
       });
 
       // Secciones unificadas para Quehaceres si existe la lista
@@ -540,28 +527,53 @@ function App() {
       };
 
       allTasksList.forEach(t => {
-        const mapping = t.categoryId ? sublistMapping[t.categoryId] : undefined;
+        const cat = t.categoryId || (t as any).category_id;
+        const mapping = cat ? sublistMapping[cat] : undefined;
         if (mapping) {
+          const room = getRoomForCleaningTask(t.title);
+          const freq = mapping.cycleId === 'cycle_day' ? 'diaria' : mapping.cycleId === 'cycle_week' ? 'semanal' : mapping.cycleId === 'cycle_month' ? 'mensual' : 'anual';
+          const roomSlug = room === 'Pasillo / Entrada' ? 'pasillo' :
+                           room === 'Habitación' ? 'hab' :
+                           room === 'Baño' ? 'bano' :
+                           room === 'Balcón' ? 'balcon' :
+                           room === 'Cocina' ? 'cocina' : 'general';
           state.updateTaskRaw({
             ...t,
             categoryId: 'limpieza',
-            sectionId: mapping.secId,
+            sectionId: `sec_limp_${freq}_${roomSlug}`,
             cycle_id: t.cycle_id || mapping.cycleId,
             updated_at: new Date().toISOString(),
             _is_dirty: true
           });
-        } else if (t.categoryId === 'limpieza' && !t.sectionId) {
-          const sec = t.cycle_id === 'cycle_week' ? 'sec_limpieza_semanal' :
-                      t.cycle_id === 'cycle_month' ? 'sec_limpieza_mensual' :
-                      t.cycle_id === 'cycle_year' ? 'sec_limpieza_anual' :
-                      'sec_limpieza_diaria';
-          state.updateTaskRaw({
-            ...t,
-            sectionId: sec,
-            cycle_id: t.cycle_id || (sec === 'sec_limpieza_diaria' ? 'cycle_day' : sec === 'sec_limpieza_semanal' ? 'cycle_week' : sec === 'sec_limpieza_mensual' ? 'cycle_month' : 'cycle_year'),
-            updated_at: new Date().toISOString(),
-            _is_dirty: true
-          });
+        } else if (cat === 'limpieza') {
+          const secNorm = `${t.sectionId || ''} ${t.cycle_id || ''}`.toLowerCase();
+          let freq = 'diaria';
+          if (secNorm.includes('anual') || t.cycle_id === 'cycle_year') freq = 'anual';
+          else if (secNorm.includes('mensu') || t.cycle_id === 'cycle_month') freq = 'mensual';
+          else if (secNorm.includes('seman') || t.cycle_id === 'cycle_week') freq = 'semanal';
+
+          const isGenericSection = !t.sectionId ||
+            t.sectionId === 'sec_limpieza_diaria' || t.sectionId === 'sec_limp_diaria' ||
+            t.sectionId === 'sec_limpieza_semanal' || t.sectionId === 'sec_limp_semanal' ||
+            t.sectionId === 'sec_limpieza_mensual' || t.sectionId === 'sec_limp_mensual' ||
+            t.sectionId === 'sec_limpieza_anual' || t.sectionId === 'sec_limp_anual';
+
+          if (isGenericSection) {
+            const room = getRoomForCleaningTask(t.title);
+            const roomSlug = room === 'Pasillo / Entrada' ? 'pasillo' :
+                             room === 'Habitación' ? 'hab' :
+                             room === 'Baño' ? 'bano' :
+                             room === 'Balcón' ? 'balcon' :
+                             room === 'Cocina' ? 'cocina' : 'general';
+            const cycleId = freq === 'diaria' ? 'cycle_day' : freq === 'semanal' ? 'cycle_week' : freq === 'mensual' ? 'cycle_month' : 'cycle_year';
+            state.updateTaskRaw({
+              ...t,
+              sectionId: `sec_limp_${freq}_${roomSlug}`,
+              cycle_id: t.cycle_id || cycleId,
+              updated_at: new Date().toISOString(),
+              _is_dirty: true
+            });
+          }
         } else if (t.categoryId === 'compra' || t.categoryId === 'compras') {
           if (t.sectionId === 'sec_compra_mensual') {
             state.updateTaskRaw({

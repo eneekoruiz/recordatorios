@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const TEST_PORT = process.env.PW_PORT || '5178';
+
 export default defineConfig({
   testDir: './tests',
   testMatch: '**/*.spec.ts',
@@ -9,7 +11,7 @@ export default defineConfig({
   workers: 1,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: `http://localhost:${TEST_PORT}`,
     trace: 'on-first-retry',
     viewport: { width: 1280, height: 720 },
     launchOptions: process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {},
@@ -25,9 +27,9 @@ export default defineConfig({
       stderr: 'pipe',
     },
     {
-      command: 'npx vite --host 0.0.0.0 --port 5173',
-      url: 'http://127.0.0.1:5173',
-      reuseExistingServer: !process.env.CI,
+      command: `npx vite --host 0.0.0.0 --port ${TEST_PORT}`,
+      url: `http://127.0.0.1:${TEST_PORT}`,
+      reuseExistingServer: false,
       timeout: 60000,
       stdout: 'pipe',
       stderr: 'pipe',

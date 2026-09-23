@@ -66,7 +66,7 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
 
   // Helper to ensure tests have access to the main dashboard (bypassing guest auth screen if present)
   async function ensureAppUnlocked(page: any) {
-    await page.goto('http://localhost:5173');
+    await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
 
     // Unlock store directly via state and silence greeting overlay

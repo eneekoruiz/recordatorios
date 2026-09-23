@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 async function ensureAppUnlocked(page: any) {
-  await page.goto('http://localhost:5173');
+  await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
 
   await page.evaluate(() => {
@@ -184,4 +184,109 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     const redundantDividers = page.locator('.group-header .ios-section-divider');
     expect(await redundantDividers.count()).toBe(0);
   });
+
+  test('3. Frequency view preserves room/subgroup headers within cyclic sections and toggles on first click', async ({ page }) => {
+    await ensureAppUnlocked(page);
+
+    await page.evaluate(() => {
+      const store = (window as any).useAppStore?.getState();
+      if (!store) return;
+
+      const testListId = 'list_limpieza_test';
+      store.addList({
+        id: testListId,
+        name: 'Limpieza Test',
+        color: '#34C759',
+        icon: 'Sparkles',
+        order: 99
+      });
+
+      const rootSecId = 'sec_test_diaria_root';
+      store.addListSection({
+        id: rootSecId,
+        listId: testListId,
+        name: 'Diarias',
+        periodicity: 'daily',
+        order: 1
+      });
+
+      const roomSecCocina = 'sec_test_diaria_cocina';
+      store.addListSection({
+        id: roomSecCocina,
+        listId: testListId,
+        name: 'Cocina',
+        parentId: rootSecId,
+        order: 1
+      });
+
+      const roomSecBano = 'sec_test_diaria_bano';
+      store.addListSection({
+        id: roomSecBano,
+        listId: testListId,
+        name: 'Baño',
+        parentId: rootSecId,
+        order: 2
+      });
+
+      store.addTask({
+        id: 'task_limp_cocina_1',
+        title: 'Barrer cocina',
+        categoryId: testListId,
+        sectionId: roomSecCocina,
+        cycle_id: 'cycle_day',
+        status: 'pending',
+        created_at: new Date().toISOString()
+      });
+
+      store.addTask({
+        id: 'task_limp_bano_1',
+        title: 'Limpiar lavabo',
+        categoryId: testListId,
+        sectionId: roomSecBano,
+        cycle_id: 'cycle_day',
+        status: 'pending',
+        created_at: new Date().toISOString()
+      });
+    });
+
+    await page.waitForTimeout(300);
+
+    // Click on Diario in sidebar
+    const diarioItem = page.locator('.ios-list-item:has-text("Diario")');
+    await expect(diarioItem.first()).toBeVisible({ timeout: 5000 });
+    await diarioItem.first().click();
+
+    await page.waitForTimeout(500);
+
+    // Verify we are in Diario view
+    const pageTitle = page.locator('h1:has-text("Diario")');
+    await expect(pageTitle).toBeVisible({ timeout: 5000 });
+
+    // Verify the list header for Limpieza Test is visible
+    const listGroupHeader = page.locator('.group-header:has-text("Limpieza Test")');
+    await expect(listGroupHeader).toBeVisible({ timeout: 5000 });
+
+    // Verify sub-group headers Cocina and Baño are visible
+    const cocinaHeader = page.locator('.group-header:has-text("Cocina")');
+    const banoHeader = page.locator('.group-header:has-text("Baño")');
+    await expect(cocinaHeader).toBeVisible({ timeout: 5000 });
+    await expect(banoHeader).toBeVisible({ timeout: 5000 });
+
+    // Verify task cards are visible under their sub-sections
+    const cocinaTask = page.locator('[data-task-id="task_limp_cocina_1"]');
+    const banoTask = page.locator('[data-task-id="task_limp_bano_1"]');
+    await expect(cocinaTask).toBeVisible({ timeout: 5000 });
+    await expect(banoTask).toBeVisible({ timeout: 5000 });
+
+    // Test collapse toggle: single click collapses sub-section Cocina
+    await cocinaHeader.click();
+    await page.waitForTimeout(300);
+    await expect(cocinaTask).not.toBeVisible();
+
+    // Single click expands Cocina back
+    await cocinaHeader.click();
+    await page.waitForTimeout(300);
+    await expect(cocinaTask).toBeVisible();
+  });
 });
+
