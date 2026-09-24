@@ -1,3 +1,4 @@
+import { Fragment, type ReactNode } from 'react';
 import { Calendar, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen, Zap } from 'lucide-react';
 import type { TaskItem, CustomList } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
@@ -54,187 +55,212 @@ export function TaskMetaBadges({
   return (
     <>
       {/* Meta row - Native Apple Reminders HIG Style (clean typography + colored micro-icons, zero bulky boxes) */}
-      {hasMeta && (
-        <div style={{ display: 'inline-flex', gap: '9px', marginTop: 3, alignItems: 'center', flexWrap: 'wrap', fontSize: '0.75rem', lineHeight: '1.2' }}>
-          {showListName && taskList && (
-            <span style={{ 
-              display: 'inline-flex', alignItems: 'center', gap: 3.5,
-              fontWeight: 650, fontSize: '0.74rem', color: taskList.color || 'var(--text-secondary)'
-            }}>
-              {taskList.name}
-            </span>
-          )}
+      {hasMeta && (() => {
+        const items: ReactNode[] = [];
 
-          {showDueDate && (() => {
-            const isRed = (dueDateColor || '').toLowerCase() === '#ff3b30';
-            const isBlue = (dueDateColor || '').toLowerCase() === '#007aff';
-            const dueColor = isRed ? '#ff3b30' : isBlue ? '#007aff' : 'var(--text-secondary)';
+            if (showListName && taskList) {
+              items.push(
+                <span 
+                  key="list-name"
+                  style={{ 
+                    display: 'inline-flex', alignItems: 'center', gap: 3.5,
+                    fontWeight: 650, fontSize: '0.74rem', color: taskList.color || 'var(--text-secondary)'
+                  }}
+                >
+                  {taskList.name}
+                </span>
+              );
+            }
+
+            if (showDueDate) {
+              const isRed = (dueDateColor || '').toLowerCase() === '#ff3b30';
+              const isBlue = (dueDateColor || '').toLowerCase() === '#007aff';
+              const dueColor = isRed ? '#ff3b30' : isBlue ? '#007aff' : 'var(--text-secondary)';
+
+              const due = new Date(task.dueDate!);
+              const today = new Date(); today.setHours(0, 0, 0, 0);
+              const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+              const dueZero = new Date(due); dueZero.setHours(0, 0, 0, 0);
+              let dueText = due.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+              if (dueZero.getTime() === today.getTime()) dueText = 'Hoy';
+              else if (dueZero.getTime() === tomorrow.getTime()) dueText = 'Mañana';
+
+              items.push(
+                <span 
+                  key="due-date"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(task.id);
+                  }}
+                  style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    gap: 3.5, 
+                    color: dueColor, 
+                    fontWeight: isRed || isBlue ? 650 : 600,
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    transition: 'opacity 0.15s ease'
+                  }}
+                  title="Fecha de vencimiento (Toca para editar)"
+                >
+                  <Calendar size={11} strokeWidth={2.4} style={{ flexShrink: 0, color: dueColor }} />
+                  <span>{dueText}</span>
+                </span>
+              );
+            }
+
+            if (cycleBadge) {
+              const freqColors: Record<string, string> = {
+                day: '#ff9500',
+                week: '#007aff',
+                month: '#af52de',
+                year: '#34c759',
+                custom: 'var(--text-tertiary)'
+              };
+              const freqColor = freqColors[cycleBadge.type || 'custom'] || 'var(--accent-primary)';
+
+              items.push(
+                <span 
+                  key="frequency"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(task.id);
+                  }}
+                  style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    gap: 3.5, 
+                    color: 'var(--text-secondary)', 
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    transition: 'opacity 0.15s ease'
+                  }}
+                  title={`Frecuencia: ${cycleBadge.label} (Toca para editar)`}
+                >
+                  <Repeat size={11} strokeWidth={2.5} style={{ color: freqColor, flexShrink: 0 }} />
+                  <span>{cycleBadge.label}</span>
+                </span>
+              );
+            }
+
+            if (hasDuration && durationInfo) {
+              items.push(
+                <span
+                  key="duration"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(task.id);
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 3.5,
+                    color: 'var(--text-secondary)',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontVariantNumeric: 'tabular-nums',
+                    userSelect: 'none',
+                    transition: 'opacity 0.15s ease'
+                  }}
+                  title={`Duración estimada: ${formatDuration(durationInfo.activeMinutes)}${durationInfo.isParallel ? ` (+${formatDuration(durationInfo.parallelMinutes)} en paralelo)` : ''}. Pulsa para editar.`}
+                >
+                  {durationInfo.isParallel ? (
+                    <Zap size={11} strokeWidth={2.4} style={{ flexShrink: 0, color: '#ff9500' }} />
+                  ) : (
+                    <Clock size={11} strokeWidth={2.2} style={{ flexShrink: 0, color: 'var(--accent-primary)', opacity: 0.85 }} />
+                  )}
+                  <span>{formatDuration(durationInfo.activeMinutes)}</span>
+                  {durationInfo.isParallel && (
+                    <span style={{ fontSize: '0.67rem', color: 'var(--text-tertiary)', fontWeight: 500 }}>(+{formatDuration(durationInfo.parallelMinutes)})</span>
+                  )}
+                </span>
+              );
+            }
+
+            if (timeOfDayInfo) {
+              const timeIcon = timeOfDayInfo.tag === 'morning'
+                ? <Sun size={11} strokeWidth={2.4} style={{ color: '#ff9500', flexShrink: 0 }} />
+                : timeOfDayInfo.tag === 'afternoon'
+                ? <Clock size={11} strokeWidth={2.4} style={{ color: '#007aff', flexShrink: 0 }} />
+                : <Moon size={11} strokeWidth={2.4} style={{ color: '#5856d6', flexShrink: 0 }} />;
+
+              items.push(
+                <button
+                  key="time-of-day"
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    updateTask(task.id, { timeOfDay: timeOfDayInfo.next });
+                    HapticService.selection();
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 3.5,
+                    color: 'var(--text-secondary)',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontSize: '0.75rem',
+                    lineHeight: '1.2',
+                    userSelect: 'none',
+                    transition: 'opacity 0.15s ease'
+                  }}
+                  title={`Momento del día: ${timeOfDayInfo.label}. Pulsa para alternar (Mañana ➔ Tarde ➔ Noche).`}
+                >
+                  {timeIcon}
+                  <span>{timeOfDayInfo.label}</span>
+                </button>
+              );
+            }
+
+            if (inAppListTarget) {
+              items.push(
+                <span 
+                  key="in-app-list"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onNavigateView?.(`list_${inAppListTarget.id}`);
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 3.5,
+                    color: 'var(--accent-primary)',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    transition: 'opacity 0.15s ease'
+                  }}
+                  title={`Ir a ${inAppListTarget.name}`}
+                >
+                  <LayoutList size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+                  <span>Ir a {inAppListTarget.name}</span>
+                  <ChevronRight size={10} style={{ opacity: 0.7, flexShrink: 0 }} />
+                </span>
+              );
+            }
 
             return (
-              <span 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(task.id);
-                }}
-                style={{ 
-                  display: 'inline-flex', 
-                  alignItems: 'center', 
-                  gap: 3.5, 
-                  color: dueColor, 
-                  fontWeight: isRed || isBlue ? 650 : 600,
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                  transition: 'opacity 0.15s ease'
-                }}
-                title="Fecha de vencimiento (Toca para editar)"
-              >
-                <Calendar size={11} strokeWidth={2.4} style={{ flexShrink: 0, color: dueColor }} />
-                <span>{(() => {
-                  const due = new Date(task.dueDate!);
-                  const today = new Date(); today.setHours(0, 0, 0, 0);
-                  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
-                  const dueZero = new Date(due); dueZero.setHours(0, 0, 0, 0);
-                  if (dueZero.getTime() === today.getTime()) return 'Hoy';
-                  if (dueZero.getTime() === tomorrow.getTime()) return 'Mañana';
-                  return due.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-                })()}</span>
-              </span>
+              <div style={{ display: 'inline-flex', gap: '6px', marginTop: 3, alignItems: 'center', flexWrap: 'wrap', fontSize: '0.75rem', lineHeight: '1.2' }}>
+                {items.map((item, idx) => (
+                  <Fragment key={idx}>
+                    {idx > 0 && (
+                      <span aria-hidden="true" style={{ color: 'var(--text-tertiary)', opacity: 0.5, fontSize: '0.62rem', userSelect: 'none', margin: '0 1px' }}>
+                        ·
+                      </span>
+                    )}
+                    {item}
+                  </Fragment>
+                ))}
+              </div>
             );
           })()}
-
-          {/* Frecuencia estilo nativo Apple: símbolo de repetición con toque de color + etiqueta en gris en negrita */}
-          {cycleBadge && (() => {
-            const freqColors: Record<string, string> = {
-              day: '#FF6F00',
-              week: '#0052FF',
-              month: '#7928CA',
-              year: '#00875A',
-              custom: 'var(--text-tertiary)'
-            };
-            const freqColor = freqColors[cycleBadge.type || 'custom'] || 'var(--accent-primary)';
-
-            return (
-              <span 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(task.id);
-                }}
-                style={{ 
-                  display: 'inline-flex', 
-                  alignItems: 'center', 
-                  gap: 3.5, 
-                  color: 'var(--text-secondary)', 
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                  transition: 'opacity 0.15s ease'
-                }}
-                title={`Frecuencia: ${cycleBadge.label} (Toca para editar)`}
-              >
-                <Repeat size={11} strokeWidth={2.5} style={{ color: freqColor, flexShrink: 0 }} />
-                <span>{cycleBadge.label}</span>
-              </span>
-            );
-          })()}
-
-          {/* Duración estilo nativo Apple: icono sutil + tiempo en negrita */}
-          {hasDuration && (
-            <span
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(task.id);
-              }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 3.5,
-                color: 'var(--text-secondary)',
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontVariantNumeric: 'tabular-nums',
-                userSelect: 'none',
-                transition: 'opacity 0.15s ease'
-              }}
-              title={`Duración estimada: ${formatDuration(durationInfo.activeMinutes)}${durationInfo.isParallel ? ` (+${formatDuration(durationInfo.parallelMinutes)} en paralelo)` : ''}. Pulsa para editar.`}
-            >
-              {durationInfo.isParallel ? (
-                <Zap size={11} strokeWidth={2.4} style={{ flexShrink: 0, color: '#ff9500' }} />
-              ) : (
-                <Clock size={11} strokeWidth={2.2} style={{ flexShrink: 0, color: 'var(--accent-primary)', opacity: 0.85 }} />
-              )}
-              <span>{formatDuration(durationInfo.activeMinutes)}</span>
-              {durationInfo.isParallel && (
-                <span style={{ fontSize: '0.67rem', color: 'var(--text-tertiary)', fontWeight: 500 }}>(+{formatDuration(durationInfo.parallelMinutes)})</span>
-              )}
-            </span>
-          )}
-
-          {/* Momento del día estilo nativo Apple: icono cálido + texto en negrita */}
-          {timeOfDayInfo && (() => {
-            const timeIcon = timeOfDayInfo.tag === 'morning'
-              ? <Sun size={11} strokeWidth={2.4} style={{ color: '#ff9500', flexShrink: 0 }} />
-              : timeOfDayInfo.tag === 'afternoon'
-              ? <Clock size={11} strokeWidth={2.4} style={{ color: '#007aff', flexShrink: 0 }} />
-              : <Moon size={11} strokeWidth={2.4} style={{ color: '#5856d6', flexShrink: 0 }} />;
-
-            return (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  updateTask(task.id, { timeOfDay: timeOfDayInfo.next });
-                  HapticService.selection();
-                }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: 0,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 3.5,
-                  color: 'var(--text-secondary)',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  fontSize: '0.75rem',
-                  lineHeight: '1.2',
-                  userSelect: 'none',
-                  transition: 'opacity 0.15s ease'
-                }}
-                title={`Momento del día: ${timeOfDayInfo.label}. Pulsa para alternar (Mañana ➔ Tarde ➔ Noche).`}
-              >
-                {timeIcon}
-                <span>{timeOfDayInfo.label}</span>
-              </button>
-            );
-          })()}
-
-          {/* Destino de lista interna */}
-          {inAppListTarget && (
-            <span 
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onNavigateView?.(`list_${inAppListTarget.id}`);
-              }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 3.5,
-                color: 'var(--accent-primary)',
-                fontWeight: 600,
-                cursor: 'pointer',
-                userSelect: 'none',
-                transition: 'opacity 0.15s ease'
-              }}
-              title={`Ir a ${inAppListTarget.name}`}
-            >
-              <LayoutList size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
-              <span>Ir a {inAppListTarget.name}</span>
-              <ChevronRight size={10} style={{ opacity: 0.7, flexShrink: 0 }} />
-            </span>
-          )}
-        </div>
-      )}
 
       {/* Rich Links (External URLs) */}
       {(() => {

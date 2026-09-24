@@ -765,8 +765,16 @@ export const TaskCard = React.memo(function TaskCard({
                 style={{
                   cursor: 'pointer',
                   border: 'none',
+                  background: 'none',
                   padding: 0,
                   outline: 'none',
+                  color: '#ff3b30',
+                  fontWeight: 700,
+                  fontSize: '1rem',
+                  lineHeight: '1.4',
+                  letterSpacing: '-0.5px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
                   WebkitTapHighlightColor: 'transparent',
                   transition: 'transform 0.15s ease, filter 0.15s ease',
                   userSelect: 'none'
@@ -944,18 +952,18 @@ export const TaskCard = React.memo(function TaskCard({
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 3,
-                  padding: '1.5px 7px',
-                  borderRadius: 6,
-                  fontSize: '0.78rem',
-                  fontWeight: 500,
+                  gap: 2.5,
+                  padding: 0,
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '0.76rem',
+                  fontWeight: 600,
                   fontVariantNumeric: 'tabular-nums',
-                  background: 'var(--bg-hover, rgba(0,0,0,0.04))',
-                  border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
                   color: 'var(--text-secondary)',
                   verticalAlign: 'middle',
                   lineHeight: '1.2',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  userSelect: 'none'
                 }}
                 title={`Precio: ${task.price} €${task.quantity && task.quantity > 1 ? ` (${task.quantity} uds)` : ''} (Toca para editar)`}
               >
@@ -981,19 +989,19 @@ export const TaskCard = React.memo(function TaskCard({
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 3,
-                  padding: '2px 7px',
-                  borderRadius: 12,
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  background: 'linear-gradient(135deg, rgba(255, 149, 0, 0.16), rgba(255, 59, 48, 0.16))',
+                  gap: 2.5,
+                  padding: 0,
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '0.75rem',
+                  fontWeight: 650,
                   color: '#ff6200',
-                  border: '1px solid rgba(255, 149, 0, 0.28)',
                   verticalAlign: 'middle',
-                  lineHeight: '1.2'
+                  lineHeight: '1.2',
+                  userSelect: 'none'
                 }}
               >
-                <Flame size={12} strokeWidth={2.2} />
+                <Flame size={11} strokeWidth={2.4} style={{ color: '#ff6200', flexShrink: 0 }} />
                 <span>{habitStreak.count} {habitStreak.unit}</span>
               </span>
             )}
@@ -1008,24 +1016,24 @@ export const TaskCard = React.memo(function TaskCard({
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 3.5,
-                  padding: '1.5px 7px',
-                  borderRadius: 6,
-                  fontSize: '0.74rem',
+                  gap: 3,
+                  padding: 0,
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '0.75rem',
                   fontWeight: 600,
-                  background: expirationStatus.badgeBg,
                   color: expirationStatus.badgeColor,
-                  border: `1px solid ${expirationStatus.badgeColor}40`,
                   verticalAlign: 'middle',
                   lineHeight: '1.2',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  userSelect: 'none'
                 }}
               >
-                <span>
-                  {expirationStatus.status === 'expired' ? <ShieldAlert size={12} strokeWidth={2.2} /> :
-                   expirationStatus.status === 'imminent' ? <ShieldAlert size={12} strokeWidth={2.2} /> :
-                   expirationStatus.status === 'warning' ? <Clock size={12} strokeWidth={2.2} /> : 
-                   <CheckCircle2 size={12} strokeWidth={2.2} />}
+                <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                  {expirationStatus.status === 'expired' ? <ShieldAlert size={11} strokeWidth={2.4} /> :
+                   expirationStatus.status === 'imminent' ? <ShieldAlert size={11} strokeWidth={2.4} /> :
+                   expirationStatus.status === 'warning' ? <Clock size={11} strokeWidth={2.2} /> : 
+                   <CheckCircle2 size={11} strokeWidth={2.2} />}
                 </span>
                 <span>{expirationStatus.label}</span>
               </span>
@@ -1036,20 +1044,20 @@ export const TaskCard = React.memo(function TaskCard({
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 4,
-                  padding: '1.5px 7px',
-                  borderRadius: 6,
-                  fontSize: '0.72rem',
-                  fontWeight: 650,
-                  background: 'var(--bg-card)',
-                  color: 'var(--text-primary)',
-                  border: '1px solid var(--border-subtle)',
+                  gap: 3.5,
+                  padding: 0,
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '0.74rem',
+                  fontWeight: 600,
+                  color: 'var(--text-secondary)',
                   verticalAlign: 'middle',
-                  lineHeight: '1.2'
+                  lineHeight: '1.2',
+                  userSelect: 'none'
                 }}
                 title={`Identificador de tarjeta/documento: ${task.issuerMask}`}
               >
-                <CreditCard size={12} color="var(--accent-primary)" />
+                <CreditCard size={11} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
                 <span>{task.issuerMask}</span>
               </span>
             )}
@@ -1060,15 +1068,15 @@ export const TaskCard = React.memo(function TaskCard({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 3,
-                  padding: '1.5px 7px',
-                  borderRadius: 999,
-                  fontSize: '0.72rem',
+                  padding: 0,
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '0.74rem',
                   fontWeight: 600,
-                  background: 'rgba(255, 149, 0, 0.12)',
                   color: '#ff9500',
-                  border: '1px solid rgba(255, 149, 0, 0.22)',
                   verticalAlign: 'middle',
-                  lineHeight: '1.2'
+                  lineHeight: '1.2',
+                  userSelect: 'none'
                 }}
                 title={`Estado de ánimo / Vibe: ${task.vibe}`}
               >
@@ -1090,18 +1098,18 @@ export const TaskCard = React.memo(function TaskCard({
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 3,
-                      padding: '1.5px 7px',
-                      borderRadius: 12,
-                      fontSize: '0.72rem',
-                      fontWeight: 550,
-                      background: 'rgba(88, 86, 214, 0.12)',
-                      color: '#5856D6',
-                      border: '1px solid rgba(88, 86, 214, 0.22)',
+                      padding: 0,
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      color: 'var(--text-secondary)',
                       lineHeight: '1.2',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      userSelect: 'none'
                     }}
                   >
-                    <User size={11} strokeWidth={2.4} />
+                    <User size={11} strokeWidth={2.4} style={{ color: '#5856D6', flexShrink: 0 }} />
                     <span>{person}</span>
                   </span>
                 ))}
@@ -1114,18 +1122,18 @@ export const TaskCard = React.memo(function TaskCard({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 3,
-                  padding: '1.5px 7px',
-                  borderRadius: 12,
-                  fontSize: '0.72rem',
-                  fontWeight: 550,
-                  background: 'rgba(52, 199, 89, 0.12)',
-                  color: '#34C759',
-                  border: '1px solid rgba(52, 199, 89, 0.22)',
-                  lineHeight: '1.2'
+                  padding: 0,
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  color: 'var(--text-secondary)',
+                  lineHeight: '1.2',
+                  userSelect: 'none'
                 }}
                 title={`Ubicación: ${task.locationName}`}
               >
-                <MapPin size={11} strokeWidth={2.4} />
+                <MapPin size={11} strokeWidth={2.4} style={{ color: '#34c759', flexShrink: 0 }} />
                 <span>{task.locationName}</span>
               </span>
             )}
@@ -1139,20 +1147,19 @@ export const TaskCard = React.memo(function TaskCard({
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 3.5,
-                  padding: '1.5px 7px',
-                  borderRadius: 6,
-                  fontSize: '0.72rem',
+                  gap: 3,
+                  padding: 0,
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '0.74rem',
                   fontWeight: 600,
-                  background: 'rgba(0, 122, 255, 0.1)',
                   color: 'var(--accent-primary)',
-                  border: '1px solid rgba(0, 122, 255, 0.2)',
                   textDecoration: 'none',
                   lineHeight: '1.2'
                 }}
                 title="Gestionar o cancelar suscripción en la web oficial"
               >
-                <Link2 size={11} strokeWidth={2.4} />
+                <Link2 size={11} strokeWidth={2.4} style={{ flexShrink: 0 }} />
                 <span>Gestionar</span>
               </a>
             )}
