@@ -74,7 +74,8 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                 <div className="detail-row" style={{ padding: '4px 0', marginTop: -8 }}>
                   <input 
                     type="date" 
-                    className="detail-select" 
+                    id="drawer-date-input"
+                    className="detail-select drawer-date-input" 
                     value={dueDate.toISOString().split('T')[0]}
                     onChange={e => setDueDate(new Date(e.target.value))}
                     style={{ width: '100%', textAlign: 'right' }}
@@ -248,7 +249,7 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
               <div className="divider" style={{ margin: '10px 0' }}></div>
 
               {/* Duración estimada */}
-              <div className="detail-row" style={{ padding: '4px 0', alignItems: 'center' }}>
+              <div id="drawer-duration-row" className="detail-row" style={{ padding: '4px 0', alignItems: 'center' }}>
                 <span className="detail-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Clock size={15} color="var(--accent-primary)" />
                   Duración estimada
@@ -256,6 +257,8 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <input
                     type="number"
+                    id="drawer-duration-input"
+                    className="drawer-duration-input"
                     min="1"
                     max="480"
                     placeholder="Auto"

@@ -30,7 +30,7 @@ interface TaskCardProps {
   onToggle: (id: string, forceReverse?: boolean) => void;
   onDelete: (id: string) => void;
   onOpenZenMode?: (id: string) => void;
-  onEdit: (id: string) => void;
+  onEdit: (id: string, initialFocus?: string) => void;
   index?: number;
   showListName?: boolean;
   /** Oculta la fecha en vistas donde ya es obvia (p. ej. «Hoy»). */
@@ -947,7 +947,7 @@ export const TaskCard = React.memo(function TaskCard({
                 className="apple-price-pill"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onEdit(task.id);
+                  onEdit(task.id, 'price');
                 }}
                 style={{
                   display: 'inline-flex',
@@ -1010,7 +1010,7 @@ export const TaskCard = React.memo(function TaskCard({
                 className="apple-expiration-pill"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onEdit(task.id);
+                  onEdit(task.id, 'expiration');
                 }}
                 title={`Estado de caducidad: ${expirationStatus.label} (${expirationStatus.daysRemaining} días restantes) (Toca para editar)`}
                 style={{

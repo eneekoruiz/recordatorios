@@ -49,6 +49,8 @@ export const DrawerFinanceSection: React.FC<DrawerFinanceSectionProps> = ({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <input 
                     type="number" 
+                    id="drawer-price-input"
+                    className="drawer-price-input"
                     step="0.01" 
                     min="0" 
                     placeholder="0.00" 

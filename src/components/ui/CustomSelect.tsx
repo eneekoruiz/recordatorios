@@ -9,6 +9,7 @@ interface Option {
 }
 
 interface CustomSelectProps {
+  id?: string;
   value: string;
   onChange: (val: string) => void;
   options: Option[];
@@ -16,7 +17,7 @@ interface CustomSelectProps {
   className?: string;
 }
 
-export function CustomSelect({ value, onChange, options, placeholder = 'Seleccionar…', className = '' }: CustomSelectProps) {
+export function CustomSelect({ id, value, onChange, options, placeholder = 'Seleccionar…', className = '' }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [coords, setCoords] = useState({ x: 0, y: 0, width: 0, openUp: false });
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -80,6 +81,7 @@ export function CustomSelect({ value, onChange, options, placeholder = 'Seleccio
     <>
       <button
         ref={buttonRef}
+        id={id}
         type="button"
         onClick={handleToggle}
         className={`custom-select-trigger ${className}`}

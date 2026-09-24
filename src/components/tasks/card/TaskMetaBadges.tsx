@@ -14,7 +14,7 @@ export interface TaskMetaBadgesProps {
   dueDateColor: string;
   cycleBadge?: { type?: 'day' | 'week' | 'month' | 'year' | 'custom'; label: string } | null;
   timeOfDayInfo?: { tag: 'morning' | 'afternoon' | 'night'; label: string; next: 'morning' | 'afternoon' | 'night' } | null;
-  onEdit: (id: string) => void;
+  onEdit: (id: string, initialFocus?: string) => void;
   onNavigateView?: (viewId: string) => void;
   lists?: CustomList[];
 }
@@ -90,7 +90,7 @@ export function TaskMetaBadges({
                   key="due-date"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onEdit(task.id);
+                    onEdit(task.id, 'date');
                   }}
                   style={{ 
                     display: 'inline-flex', 
@@ -125,7 +125,7 @@ export function TaskMetaBadges({
                   key="frequency"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onEdit(task.id);
+                    onEdit(task.id, 'frequency');
                   }}
                   style={{ 
                     display: 'inline-flex', 
@@ -151,7 +151,7 @@ export function TaskMetaBadges({
                   key="duration"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onEdit(task.id);
+                    onEdit(task.id, 'duration');
                   }}
                   style={{
                     display: 'inline-flex',

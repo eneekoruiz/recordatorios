@@ -41,7 +41,7 @@ export const DrawerRecurrenceSection: React.FC<DrawerRecurrenceSectionProps> = (
   children
 }) => {
   return (
-    <div className="section-card">
+    <div id="drawer-recurrence-card" className="section-card">
       <button 
         type="button"
         className="section-card-header"
@@ -57,9 +57,10 @@ export const DrawerRecurrenceSection: React.FC<DrawerRecurrenceSectionProps> = (
         {cardRepeatOpen && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ height: { duration: 0.3, ease: [0.22, 1, 0.36, 1] }, opacity: { duration: 0.2 } }} style={{ overflow: 'hidden' }}>
             <div className="section-card-content">
-              <div className="detail-row" style={{ padding: '8px 0' }}>
+              <div id="drawer-recurrence-row" className="detail-row" style={{ padding: '8px 0' }}>
                 <span className="detail-label">Repetir (Ciclo)</span>
                 <CustomSelect
+                  id="drawer-recurrence-select"
                   className="detail-select"
                   value={cycleId || ''}
                   onChange={val => setCycleId(val || undefined)}

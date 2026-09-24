@@ -98,18 +98,18 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   caducidadesStats,
   onStartSequence: _onStartSequence
 }) => {
-  const scrollOffset = Math.min(45, Math.max(0, scrollTop || 0));
-  const titleProgress = Math.min(1, scrollOffset / 28);
-  const titleOpacity = Math.max(0, 1 - titleProgress * 1.15);
-  const titleTranslateY = -titleProgress * 8;
-  const titleScale = 1 - titleProgress * 0.04;
-  const titleBlur = titleProgress * 2.5;
+  const scrollOffset = Math.min(60, Math.max(0, scrollTop || 0));
+  const titleProgress = Math.min(1, Math.max(0, (scrollOffset - 24) / 32));
+  const titleOpacity = Math.max(0, 1 - titleProgress);
+  const titleTranslateY = -titleProgress * 6;
+  const titleScale = 1 - titleProgress * 0.03;
+  const titleBlur = titleProgress * 1.5;
 
   return (
     <>
       <header 
         className="content-header" 
-        style={{ padding: '8px 16px 16px 16px', display: 'flex', flexDirection: 'column', gap: '12px', flexShrink: 0, margin: '0', borderBottom: 'none', boxSizing: 'border-box', background: 'transparent', backdropFilter: 'none', WebkitBackdropFilter: 'none' }}
+        style={{ padding: '4px 16px 6px 16px', display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0, margin: '0', borderBottom: 'none', boxSizing: 'border-box', background: 'transparent', backdropFilter: 'none', WebkitBackdropFilter: 'none' }}
       >
         {/* Línea del Título - Estilo Apple Reminders con transición fluida */}
         <div style={{ 
@@ -305,7 +305,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
         </div>
 
         {currentList && (activeVisibleCount + completedVisibleCount) > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4, opacity: titleOpacity }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2, opacity: titleOpacity }}>
             <div style={{ flex: 1, height: 4, background: 'var(--border-subtle)', borderRadius: 2, overflow: 'hidden' }}>
               <motion.div
                 initial={{ scaleX: 0, originX: 0 }}

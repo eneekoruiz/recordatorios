@@ -47,7 +47,7 @@ interface MainContentProps {
   currentView: string;
   onOpenNewTask: (sectionId?: string) => void;
   onOpenZenMode: (taskId: string) => void;
-  onEditTask?: (taskId: string) => void;
+  onEditTask?: (taskId: string, initialFocus?: string) => void;
   onBackToSidebar?: () => void;
   onSelectView?: (view: string) => void;
   isMobile?: boolean;
@@ -1965,11 +1965,39 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
   // 2. Scroll Container & Item Keys (Refactored to native fluid block layout for zero-overlap & perfect touch scroll)
   const parentRef = useRef<HTMLDivElement>(null);
+  const scrollContentRef = useRef<HTMLDivElement>(null);
+  const [needsBottomPadding, setNeedsBottomPadding] = useState(false);
+
+  // Dynamic clearance for floating dock: only add bottom padding when content naturally exceeds or approaches the viewport
+  useEffect(() => {
+    const checkOverflow = () => {
+      if (!parentRef.current || !scrollContentRef.current) return;
+      const parentH = parentRef.current.clientHeight;
+      const contentH = scrollContentRef.current.scrollHeight;
+      setNeedsBottomPadding(contentH > parentH - 90);
+    };
+
+    checkOverflow();
+
+    const parentEl = parentRef.current;
+    const contentEl = scrollContentRef.current;
+    if (!parentEl || !contentEl) return;
+
+    const ro = new ResizeObserver(() => {
+      checkOverflow();
+    });
+    ro.observe(parentEl);
+    ro.observe(contentEl);
+
+    return () => ro.disconnect();
+  }, [flattenedData.length, currentView]);
 
   // Reset scroll position to top instantly whenever navigating to a different view or list
   useEffect(() => {
     if (parentRef.current) {
       parentRef.current.scrollTo({ top: 0, behavior: 'instant' as any });
+      setScrollTop(0);
+      setIsScrolled(false);
     }
   }, [currentView]);
 
@@ -2099,9 +2127,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             data-testid="content-scroll-container"
             onScroll={(e) => {
               const top = e.currentTarget.scrollTop;
-              const clamped = Math.min(60, Math.max(0, top));
+              const clamped = Math.min(80, Math.max(0, top));
               setScrollTop(clamped);
-              setIsScrolled(top > 16);
+              setIsScrolled(top > 32);
             }}
             style={{
               flex: 1,
@@ -2119,15 +2147,17 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               transition: 'mask-image 0.2s ease, -webkit-mask-image 0.2s ease'
             }}
           >
-            <div style={{
-              width: '100%',
-              position: 'relative',
-              paddingBottom: isActuallyEmpty ? 0 : 'calc(110px + env(safe-area-inset-bottom, 0px))',
-              boxSizing: 'border-box',
-              flex: isActuallyEmpty ? 1 : undefined,
-              display: isActuallyEmpty ? 'flex' : undefined,
-              flexDirection: isActuallyEmpty ? 'column' : undefined
-            }}>
+            <div 
+              ref={scrollContentRef}
+              style={{
+                width: '100%',
+                position: 'relative',
+                boxSizing: 'border-box',
+                flex: isActuallyEmpty ? 1 : undefined,
+                display: isActuallyEmpty ? 'flex' : undefined,
+                flexDirection: isActuallyEmpty ? 'column' : undefined
+              }}
+            >
               {sectionGroups.map((group) => {
                 const renderItem = (item: any, index: number) => {
                   const data = item as any;
@@ -2253,6 +2283,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                         pendingTaskCount={sectionPendingTaskIds.length}
                         isMobile={isMobile}
                         isPrevHeader={index > 0 && flattenedData[index - 1]?.type === 'header'}
+                        isFirstAfterPageHeader={index > 0 && flattenedData[index - 1]?.type === 'page-header'}
                       />
                     );
                   } else if (data.type === 'empty-section') {
@@ -2380,6 +2411,19 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             </div>
           )}
         </div>
+
+        {/* Dynamic bottom dock spacer: ONLY when content naturally exceeds or approaches the viewport */}
+        {needsBottomPadding && !isActuallyEmpty && (
+          <div 
+            aria-hidden="true"
+            style={{ 
+              height: 'calc(90px + env(safe-area-inset-bottom, 0px))', 
+              width: '100%', 
+              flexShrink: 0,
+              pointerEvents: 'none' 
+            }} 
+          />
+        )}
       </div>
     );
   })()}

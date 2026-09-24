@@ -56,6 +56,7 @@ interface MainSectionHeaderProps {
   isMobile?: boolean;
   sectionMenu?: SectionMenuState;
   isPrevHeader?: boolean;
+  isFirstAfterPageHeader?: boolean;
 }
 
 export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
@@ -96,7 +97,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   pendingTaskCount,
   isMobile,
   sectionMenu,
-  isPrevHeader = false
+  isPrevHeader = false,
+  isFirstAfterPageHeader = false
 }) => {
   const currentSectionRoutineMode = sectionRoutineModes[data.category] || data.routineMode || 'only_section';
   const [isPressed, setIsPressed] = useState(false);
@@ -182,9 +184,9 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         borderTop: 'none',
         paddingLeft: `calc(28px + ${data.depth * 24}px)`,
         paddingRight: '16px',
-        minHeight: data.depth === 0 ? 48 : 40,
-        paddingTop: data.depth === 0 ? (isPrevHeader ? 8 : (index > 0 ? 12 : 8)) : 6,
-        paddingBottom: data.depth === 0 ? 8 : 6,
+        minHeight: data.depth === 0 ? 44 : 38,
+        paddingTop: data.depth === 0 ? (isFirstAfterPageHeader ? 4 : isPrevHeader ? 6 : 8) : 5,
+        paddingBottom: data.depth === 0 ? 6 : 5,
         margin: 0,
         boxSizing: 'border-box',
         display: 'flex',

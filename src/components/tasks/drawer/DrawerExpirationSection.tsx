@@ -32,7 +32,7 @@ export const DrawerExpirationSection: React.FC<DrawerExpirationSectionProps> = (
   setManagementUrl
 }) => {
   return (
-    <div className="section-card">
+    <div id="drawer-expiration-section" className="section-card">
       <button 
         type="button"
         className="section-card-header"

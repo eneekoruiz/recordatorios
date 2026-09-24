@@ -64,9 +64,9 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
     ? (SMART_COLORS[currentView] || 'var(--accent-blue, #007AFF)') 
     : (currentList?.color || 'var(--accent-blue, #007AFF)');
 
-  const isGlassActive = scrollTop !== undefined ? scrollTop > 0 : isScrolled;
+  const isGlassActive = scrollTop !== undefined ? scrollTop > 24 : isScrolled;
   const glassProgress = scrollTop !== undefined 
-    ? Math.min(1, Math.max(0, (scrollTop - 10) / 20))
+    ? Math.min(1, Math.max(0, (scrollTop - 28) / 28))
     : (isScrolled ? 1 : 0);
 
   return (

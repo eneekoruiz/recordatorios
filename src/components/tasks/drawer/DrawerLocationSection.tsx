@@ -71,7 +71,8 @@ export const DrawerLocationSection: React.FC<DrawerLocationSectionProps> = ({
         <div className="detail-row" style={{ padding: '4px 0', marginTop: -8 }}>
           <input 
             type="text" 
-            className="detail-select" 
+            id="drawer-location-input"
+            className="detail-select drawer-location-input" 
             placeholder="Escribe la dirección, URL de Google Maps, etc..."
             value={locationName === 'Dirección actual' ? '' : locationName}
             onChange={e => setLocationName(e.target.value)}

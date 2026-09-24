@@ -539,3 +539,25 @@ input:focus, input:focus-visible, textarea:focus, textarea:focus-visible {
   text-transform: uppercase;
   opacity: 0.55;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   APPLE FOCUS PULSE — Resaltado suave al editar campo directo
+   ═══════════════════════════════════════════════════════════ */
+@keyframes appleFieldPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.5);
+    border-color: var(--accent-primary, #007aff) !important;
+  }
+  40% {
+    box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.3);
+    border-color: var(--accent-primary, #007aff) !important;
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 122, 255, 0);
+  }
+}
+
+.apple-focus-pulse {
+  animation: appleFieldPulse 1.4s cubic-bezier(0.16, 1, 0.3, 1) 1 !important;
+  border-color: var(--accent-primary, #007aff) !important;
+}

@@ -25,9 +25,10 @@ interface TaskDrawerProps {
   defaultCategoryId?: string;
   defaultSectionId?: string;
   taskId?: string;
+  initialFocus?: string;
 }
 
-export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionId, taskId }: TaskDrawerProps) {
+export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionId, taskId, initialFocus }: TaskDrawerProps) {
   const addTask = useAppStore(state => state.addTask);
   const updateTask = useAppStore(state => state.updateTask);
   const deleteTask = useAppStore(state => state.deleteTask);
@@ -182,14 +183,29 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setSubscriptionPeriod(task.subscriptionPeriod || 'monthly');
         setManagementUrl(task.managementUrl || '');
         
-        // Abrir inteligentemente solo las tarjetas que contienen datos relevantes
-        setCardTimeOpen(Boolean(task.dueDate || task.alerts?.length));
-        setCardRepeatOpen(Boolean(task.cycle_id));
+        // Abrir inteligentemente solo las tarjetas que contienen datos relevantes o el foco solicitado
+        setCardTimeOpen(
+          initialFocus === 'duration' || initialFocus === 'date' || initialFocus === 'timeOfDay' ||
+          Boolean(task.dueDate || task.alerts?.length || task.duration || task.timeOfDay)
+        );
+        setCardRepeatOpen(
+          initialFocus === 'frequency' || initialFocus === 'location' ||
+          Boolean(task.cycle_id || task.location)
+        );
         setCardReqOpen(Boolean(task.blockedBy?.length));
-        setCardDetailsOpen(Boolean(task.url || task.image || task.location || task.flagged || (task.priority && task.priority !== 'none')));
-        setCardFinanceOpen(task.price !== undefined || Boolean(task.brand) || (task.quantity || 1) > 1);
-        setCardCaducidadOpen(Boolean(task.expirationType) || isCaducidadesList(task.categoryId));
-        setCardPeopleOpen(Boolean(task.people?.length) || task.categoryId === 'que_he_hecho');
+        setCardDetailsOpen(Boolean(task.url || task.image || task.flagged || (task.priority && task.priority !== 'none')));
+        setCardFinanceOpen(
+          initialFocus === 'price' ||
+          task.price !== undefined || Boolean(task.brand) || (task.quantity || 1) > 1
+        );
+        setCardCaducidadOpen(
+          initialFocus === 'expiration' ||
+          Boolean(task.expirationType) || isCaducidadesList(task.categoryId)
+        );
+        setCardPeopleOpen(
+          initialFocus === 'people' ||
+          Boolean(task.people?.length) || task.categoryId === 'que_he_hecho'
+        );
       } else {
         // Reset defaults
         setTitle('');
@@ -219,7 +235,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         const isCad = isCaducidadesList(defaultCategoryId);
         const isShopping = defaultCategoryId === 'compras' || defaultCategoryId?.toLowerCase().includes('compra');
         const isSub = defaultSectionId?.includes('suscrip');
-        setHasDate(isCad);
+        setHasDate(isCad || initialFocus === 'date');
         setHasTime(false);
         setPeople([]);
         setExpirationType(isCad ? (isSub ? 'subscription' : 'card') : undefined);
@@ -228,20 +244,68 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setAutoRollover(true);
         setSubscriptionPeriod('monthly');
         
-        // Al crear, mantener interfaz limpia y mínima para evitar sobrecarga cognitiva
-        setCardTimeOpen(false);
-        setCardRepeatOpen(false);
+        // Al crear, mantener interfaz limpia salvo si se solicitó un foco específico
+        setCardTimeOpen(initialFocus === 'duration' || initialFocus === 'date' || initialFocus === 'timeOfDay');
+        setCardRepeatOpen(initialFocus === 'frequency' || initialFocus === 'location');
         setCardReqOpen(false);
         setCardDetailsOpen(false);
-        setCardFinanceOpen(Boolean(isShopping));
-        setCardCaducidadOpen(isCad);
-        setCardPeopleOpen(defaultCategoryId === 'que_he_hecho');
+        setCardFinanceOpen(Boolean(isShopping) || initialFocus === 'price');
+        setCardCaducidadOpen(isCad || initialFocus === 'expiration');
+        setCardPeopleOpen(defaultCategoryId === 'que_he_hecho' || initialFocus === 'people');
         setCycleId(undefined);
         setTimeOfDay(undefined);
         setManagementUrl('');
       }
     }
-  }, [isOpen, taskId, task, defaultCategoryId, defaultSectionId]);
+  }, [isOpen, taskId, task, defaultCategoryId, defaultSectionId, initialFocus]);
+
+  // Enfoque directo y desplazamiento al campo solicitado cuando el usuario pulsa para editarlo
+  useEffect(() => {
+    if (!isOpen || !initialFocus) return;
+
+    const performFocus = () => {
+      let targetEl: HTMLElement | null = null;
+      if (initialFocus === 'duration') {
+        targetEl = document.getElementById('drawer-duration-input') || document.querySelector('.drawer-duration-input');
+      } else if (initialFocus === 'frequency') {
+        targetEl = document.getElementById('drawer-recurrence-select') || document.getElementById('drawer-recurrence-row');
+      } else if (initialFocus === 'date') {
+        targetEl = document.getElementById('drawer-date-input') || document.querySelector('.drawer-date-input');
+      } else if (initialFocus === 'price') {
+        targetEl = document.getElementById('drawer-price-input') || document.querySelector('.drawer-price-input');
+      } else if (initialFocus === 'people') {
+        targetEl = document.getElementById('drawer-person-input') || document.querySelector('.drawer-person-input');
+      } else if (initialFocus === 'location') {
+        targetEl = document.getElementById('drawer-location-input') || document.querySelector('.drawer-location-input');
+      } else if (initialFocus === 'expiration') {
+        targetEl = document.getElementById('drawer-expiration-section');
+      }
+
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (targetEl instanceof HTMLInputElement || targetEl instanceof HTMLTextAreaElement || targetEl instanceof HTMLButtonElement) {
+          targetEl.focus();
+          if (targetEl instanceof HTMLInputElement && targetEl.type !== 'date') {
+            targetEl.select();
+          }
+        }
+        targetEl.classList.remove('apple-focus-pulse');
+        void targetEl.offsetWidth;
+        targetEl.classList.add('apple-focus-pulse');
+        setTimeout(() => targetEl?.classList.remove('apple-focus-pulse'), 1600);
+      }
+    };
+
+    const t1 = setTimeout(performFocus, 80);
+    const t2 = setTimeout(performFocus, 220);
+    const t3 = setTimeout(performFocus, 380);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [isOpen, initialFocus, taskId]);
 
   const drawerRef = useRef<HTMLDivElement>(null);
 

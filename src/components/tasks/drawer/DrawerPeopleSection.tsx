@@ -32,7 +32,7 @@ export const DrawerPeopleSection: React.FC<DrawerPeopleSectionProps> = ({
   };
 
   return (
-    <div className="section-card">
+    <div id="drawer-people-card" className="section-card">
       <button 
         type="button"
         className="section-card-header"
@@ -72,6 +72,8 @@ export const DrawerPeopleSection: React.FC<DrawerPeopleSectionProps> = ({
               <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                 <input
                   type="text"
+                  id="drawer-person-input"
+                  className="drawer-person-input"
                   placeholder="Nombre de la persona (ej. Laura, Carlos)..."
                   value={personInput}
                   onChange={e => setPersonInput(e.target.value)}
