@@ -495,6 +495,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
 
     if (taskId) {
       updateTask(taskId, payload);
+      if (duration !== '' && duration !== task?.duration) {
+        useAppStore.getState().setLearnedDuration(taskId, Number(duration));
+      }
     } else {
       addTask(payload);
     }

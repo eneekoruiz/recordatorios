@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useCallback, useEffect, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import { Plus, Hourglass, User, Users, PartyPopper } from 'lucide-react';
+import { Plus, Hourglass, User, Users, PartyPopper, UtensilsCrossed, ShowerHead, BedDouble, DoorOpen, Flower2, House } from 'lucide-react';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import type { TaskItem } from '../../models/Task';
 import { TaskCard } from '../tasks/TaskCard';
@@ -32,10 +32,12 @@ import { MainGlassHeader } from './main/MainGlassHeader';
 import { MainSectionHeader } from './main/MainSectionHeader';
 import { MainInlineAdd } from './main/MainInlineAdd';
 import { DeletedTaskToast } from './main/DeletedTaskToast';
+import { CompletedTaskToast } from './main/CompletedTaskToast';
 import { SectionContextMenu, type SectionMenuState } from './main/SectionContextMenu';
 import { MonthlySummaryModal } from './main/MonthlySummaryModal';
 import { MainPageHeader } from './main/MainPageHeader';
 import { DailyBriefingBanner } from './DailyBriefingBanner';
+import { WeeklyStreakWidget } from './main/WeeklyStreakWidget';
 import { confirmDialog } from '../ui/confirmDialog';
 import { deduplicateTaskList } from '../../utils/taskDeduplication';
 import { calculateTasksDuration } from '../../utils/taskDuration';
@@ -71,6 +73,19 @@ type VirtualItemType =
     }
   | { type: 'empty-section', title: string, category: string, color: string, sectionId?: string, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean }
   | { type: 'task', task: TaskItem, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean };
+
+
+const getRoomIcon = (key: string): ReactNode => {
+  switch (key) {
+    case 'cocina': return <UtensilsCrossed size={14} />;
+    case 'bano': return <ShowerHead size={14} />;
+    case 'habitacion': return <BedDouble size={14} />;
+    case 'pasillo': return <DoorOpen size={14} />;
+    case 'balcon': return <Flower2 size={14} />;
+    case 'general': return <House size={14} />;
+    default: return undefined;
+  }
+};
 
 const NOOP = () => {};
 
@@ -116,6 +131,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const [confirmProps, setConfirmProps] = useState<{ title: string; message: string; onConfirm: () => void }>({ title: '', message: '', onConfirm: () => {} });
   const [sortBy, setSortBy] = useState<'manual' | 'dueDate' | 'priority' | 'title' | 'createdAt'>('manual');
   const [deletedToast, setDeletedToast] = useState<{ id: string; title: string; timeoutId: number } | null>(null);
+  const [completedToast, setCompletedToast] = useState<{ id: string; title: string; timeoutId: number } | null>(null);
   const [isEditingCycle, setIsEditingCycle] = useState(false);
   const [cycleEditName, setCycleEditName] = useState('');
   const [showCelebration, setShowCelebration] = useState(false);
@@ -824,6 +840,14 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           setRecentlyCompletedIds(prev => prev.filter(x => x !== taskId));
         }, 3000);
 
+        if (completedToast && completedToast.timeoutId) {
+          window.clearTimeout(completedToast.timeoutId);
+        }
+        const tid = window.setTimeout(() => {
+          setCompletedToast(null);
+        }, 5000);
+        setCompletedToast({ id: taskId, title: task.title, timeoutId: tid as unknown as number });
+
         if (activeVisibleCount === 1) {
           setShowCelebration(true);
           SoundService.playComplete();
@@ -837,10 +861,15 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         SoundService.playUncomplete();
         HapticService.selection();
         setRecentlyCompletedIds(prev => prev.filter(x => x !== taskId));
+        
+        if (completedToast?.id === taskId) {
+          if (completedToast.timeoutId) window.clearTimeout(completedToast.timeoutId);
+          setCompletedToast(null);
+        }
       }
     }
     toggleTask(taskId, forceReverse);
-  }, [tasks, cycles, toggleTask, activeVisibleCount]);
+  }, [tasks, cycles, toggleTask, activeVisibleCount, completedToast]);
 
   const handleDeleteTask = useCallback((taskId: string) => {
     const task = tasks[taskId];
@@ -1205,6 +1234,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 flat.push({
                   type: 'header',
                   title: formatSectionTitle(room.name),
+                  titleIcon: getRoomIcon(room.key),
                   category: roomCategoryKey,
                   color: parentColor,
                   sectionId: room.primarySectionId,
@@ -1577,9 +1607,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         };
         
         if (isLimpiezaList(currentList?.id, currentList)) {
-          // UNIFICACIÓN CANÓNICA DE ESTANCIAS PARA LA LISTA DE LIMPIEZA
-          // Unifica todas las tareas de cada estancia (Cocina, Baño, Habitación, Pasillo / Entrada, Balcón, General)
-          // en una sola sección coherente ordenada por frecuencia, sin duplicar habitaciones bajo distintos ciclos.
+          // LIMPIEZA: jerarquía correcta = Frecuencia (depth 0) → Habitaciones (depth 1)
+          // Cada sección de frecuencia (Diaria, Semanal, Mensual, Anual) agrupa sus habitaciones.
           const canonicalRoomInfo = (name: string) => {
             const norm = (name || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
             if (norm.includes('cocin')) return { key: 'cocina', name: 'Cocina', order: 0 };
@@ -1587,136 +1616,128 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             if (norm.includes('habitaci') || norm.includes('dormitori') || norm.includes('cam')) return { key: 'habitacion', name: 'Habitación', order: 2 };
             if (norm.includes('pasill') || norm.includes('entrad') || norm.includes('recibid')) return { key: 'pasillo', name: 'Pasillo / Entrada', order: 3 };
             if (norm.includes('balcon') || norm.includes('terraz')) return { key: 'balcon', name: 'Balcón', order: 4 };
-            if (norm.includes('general')) return { key: 'general', name: 'General', order: 5 };
-            return { key: norm.replace(/\s+/g, '_') || 'custom', name: name.trim(), order: 10 };
+            return { key: norm.replace(/\s+/g, '_') || 'general', name: name.trim() || 'General', order: 5 };
           };
 
-          const roomsMap = new Map<string, { key: string; name: string; order: number; sectionIds: Set<string>; primarySectionId: string }>();
-
-          const defaultRooms = [
-            { key: 'cocina', name: 'Cocina', order: 0 },
-            { key: 'bano', name: 'Baño', order: 1 },
-            { key: 'habitacion', name: 'Habitación', order: 2 },
-            { key: 'pasillo', name: 'Pasillo / Entrada', order: 3 },
-            { key: 'balcon', name: 'Balcón', order: 4 },
-            { key: 'general', name: 'General', order: 5 },
+          // Las frecuencias en orden
+          const FREQ_ORDER = [
+            { periodicity: 'day',   label: 'Diaria',   cycleId: 'cycle_day' },
+            { periodicity: 'week',  label: 'Semanal',  cycleId: 'cycle_week' },
+            { periodicity: 'month', label: 'Mensual',  cycleId: 'cycle_month' },
+            { periodicity: 'year',  label: 'Anual',    cycleId: 'cycle_year' },
           ];
-          defaultRooms.forEach(dr => {
-            roomsMap.set(dr.key, {
-              key: dr.key,
-              name: dr.name,
-              order: dr.order,
-              sectionIds: new Set<string>(),
-              primarySectionId: `sec_limp_semanal_${dr.key}`
-            });
-          });
-
-          sectionsForList.forEach(s => {
-            if (!s.parentId && getPureCyclicPeriodicity(s.name)) return;
-            const info = canonicalRoomInfo(s.name);
-            if (!roomsMap.has(info.key)) {
-              roomsMap.set(info.key, {
-                key: info.key,
-                name: info.name,
-                order: info.order,
-                sectionIds: new Set<string>(),
-                primarySectionId: s.id
-              });
-            }
-            const entry = roomsMap.get(info.key)!;
-            entry.sectionIds.add(s.id);
-            entry.primarySectionId = s.id;
-            if (s.id.startsWith('sec_limpieza_')) entry.sectionIds.add(s.id.replace('sec_limpieza_', 'sec_limp_'));
-            if (s.id.startsWith('sec_limp_')) entry.sectionIds.add(s.id.replace('sec_limp_', 'sec_limpieza_'));
-          });
 
           const allListTasks = Object.values(groupedTasks).flat();
-          const assignedTasksByRoom = new Map<string, TaskItem[]>();
-          roomsMap.forEach((_, key) => assignedTasksByRoom.set(key, []));
 
-          for (const task of allListTasks) {
-            const tSec = task.sectionId || (task as any).section_id;
-            let matchedKey: string | null = null;
+          FREQ_ORDER.forEach(({ periodicity, label, cycleId }) => {
+            // Tareas que pertenecen a esta frecuencia (por cycle_id o por sectionId cuya sección tiene esta periodicidad)
+            const freqTasks = deduplicateTaskList(
+              allListTasks.filter(t => {
+                if (t.deleted_at) return false;
+                const tPeriodicity = getTaskPeriodicity(t, listSections, lists);
+                return tPeriodicity === periodicity;
+              })
+            );
 
-            if (tSec) {
-              for (const [rKey, room] of roomsMap.entries()) {
-                if (room.sectionIds.has(tSec)) {
-                  matchedKey = rKey;
-                  break;
+            if (freqTasks.length === 0) return; // Omitir frecuencias vacías
+
+            const freqCatKey = `limpieza_freq_${periodicity}`;
+            // Sección manual del store (por si existe "Semanal", "Diaria"...)
+            const manualFreqSec = sectionsForList.find(s =>
+              !s.parentId && getPureCyclicPeriodicity(s.name) === periodicity
+            );
+
+            // Agrupar las tareas de esta frecuencia por habitación
+            const roomBuckets = new Map<string, { key: string; name: string; order: number; tasks: TaskItem[] }>();
+            const defaultRooms = [
+              { key: 'cocina', name: 'Cocina', order: 0 },
+              { key: 'bano', name: 'Baño', order: 1 },
+              { key: 'habitacion', name: 'Habitación', order: 2 },
+              { key: 'pasillo', name: 'Pasillo / Entrada', order: 3 },
+              { key: 'balcon', name: 'Balcón', order: 4 },
+              { key: 'general', name: 'General', order: 5 },
+            ];
+            defaultRooms.forEach(dr => roomBuckets.set(dr.key, { ...dr, tasks: [] }));
+
+            freqTasks.forEach(t => {
+              // Intentar detectar habitación por sección
+              const tSecId = t.sectionId;
+              let roomKey: string | null = null;
+              if (tSecId) {
+                const tSec = sectionsForList.find(s => s.id === tSecId);
+                if (tSec && !getPureCyclicPeriodicity(tSec.name)) {
+                  const info = canonicalRoomInfo(tSec.name);
+                  roomKey = info.key;
                 }
               }
-            }
-
-            if (!matchedKey) {
-              const roomNameFromTitle = getRoomForCleaningTask(task.title);
-              const info = canonicalRoomInfo(roomNameFromTitle);
-              if (assignedTasksByRoom.has(info.key)) {
-                matchedKey = info.key;
+              // Fallback: detectar por título
+              if (!roomKey) {
+                const roomName = getRoomForCleaningTask(t.title);
+                const info = canonicalRoomInfo(roomName);
+                roomKey = info.key;
               }
-            }
-
-            if (matchedKey) {
-              assignedTasksByRoom.get(matchedKey)!.push(task);
-            } else {
-              if (assignedTasksByRoom.has('general')) {
-                assignedTasksByRoom.get('general')!.push(task);
-              } else {
-                const firstKey = roomsMap.keys().next().value;
-                if (firstKey) assignedTasksByRoom.get(firstKey)!.push(task);
+              if (!roomBuckets.has(roomKey!)) {
+                const info = canonicalRoomInfo(roomKey!);
+                roomBuckets.set(roomKey!, { ...info, tasks: [] });
               }
-            }
-          }
-
-          const sortedRooms = Array.from(roomsMap.values()).sort((a, b) => a.order - b.order);
-          const periodicityRank: Record<string, number> = { day: 1, week: 2, month: 3, year: 4 };
-
-          sortedRooms.forEach(room => {
-            const rawRoomTasks = assignedTasksByRoom.get(room.key) || [];
-            const roomTasks = deduplicateTaskList(rawRoomTasks);
-            roomTasks.sort((a, b) => {
-              const pA = getTaskPeriodicity(a, listSections, lists) || 'day';
-              const pB = getTaskPeriodicity(b, listSections, lists) || 'day';
-              const rankA = periodicityRank[pA] || 99;
-              const rankB = periodicityRank[pB] || 99;
-              if (rankA !== rankB) return rankA - rankB;
-              return (a.order ?? 0) - (b.order ?? 0);
+              roomBuckets.get(roomKey!)!.tasks.push(t);
             });
 
-            const roomCategoryKey = `unified_room_${currentList?.id || 'limpieza'}_${room.key}`;
-            renderedSectionTasksRef.current[roomCategoryKey] = roomTasks;
-            const pendingIds = roomTasks.filter(t => !isTaskCompleted(t)).map(t => t.id);
+            // Calcular IDs pendientes de toda la frecuencia (todas habitaciones juntas)
+            const freqPendingIds = freqTasks.filter(t => !isTaskCompleted(t)).map(t => t.id);
 
+            // Cabecera de frecuencia (depth 0)
+            const freqColor = getReservedFrequencyColor(cycleId) || color;
+            renderedSectionTasksRef.current[freqCatKey] = freqTasks;
             flat.push({
               type: 'header',
-              title: formatSectionTitle(room.name),
-              category: roomCategoryKey,
-              color,
-              sectionId: room.primarySectionId,
+              title: formatSectionTitle(label),
+              titleIcon: <Hourglass size={14} />,
+              category: freqCatKey,
+              color: freqColor,
+              sectionId: manualFreqSec?.id,
               depth: 0,
-              sectionTaskIds: pendingIds
+              periodicity: periodicity as PeriodicityType,
+              sectionTaskIds: freqPendingIds
             });
 
-            if (!isCatCollapsed(roomCategoryKey)) {
-              if (roomTasks.length === 0) {
-                flat.push({
-                  type: 'empty-section',
-                  title: 'Aquí no hay tareas',
-                  category: roomCategoryKey,
-                  color,
-                  sectionId: room.primarySectionId,
-                  depth: 0
-                });
+            if (!isCatCollapsed(freqCatKey)) {
+              const sortedRooms = Array.from(roomBuckets.values())
+                .filter(rb => rb.tasks.length > 0)
+                .sort((a, b) => a.order - b.order);
+
+              if (sortedRooms.length === 0) {
+                flat.push({ type: 'empty-section', title: 'Sin tareas', category: freqCatKey, color: freqColor, depth: 0 });
               } else {
-                const inScope = new Set(roomTasks.map(t => t.id));
-                const roots = roomTasks.filter(t => !t.parentId || !inScope.has(t.parentId));
-                const processNode = (task: TaskItem, depthLevel: number) => {
-                  flat.push({ type: 'task', task, depth: depthLevel });
-                  if (!isCatCollapsed(`task_${task.id}`)) {
-                    const children = roomTasks.filter(t => t.parentId === task.id);
-                    children.forEach(c => processNode(c, depthLevel + 1));
+                sortedRooms.forEach(room => {
+                  const roomCatKey = `limpieza_${periodicity}_${room.key}`;
+                  const roomTasks = deduplicateTaskList(room.tasks);
+                  roomTasks.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+                  renderedSectionTasksRef.current[roomCatKey] = roomTasks;
+                  const roomPendingIds = roomTasks.filter(t => !isTaskCompleted(t)).map(t => t.id);
+
+                  // Cabecera de habitación (depth 1)
+                  flat.push({
+                    type: 'header',
+                    title: formatSectionTitle(room.name),
+                    titleIcon: getRoomIcon(room.key),
+                    category: roomCatKey,
+                    color: freqColor,
+                    sectionId: manualFreqSec?.id,
+                    depth: 1,
+                    sectionTaskIds: roomPendingIds
+                  });
+
+                  if (!isCatCollapsed(roomCatKey)) {
+                    if (roomTasks.length === 0) {
+                      flat.push({ type: 'empty-section', title: 'Sin tareas', category: roomCatKey, color: freqColor, sectionId: manualFreqSec?.id, depth: 1 });
+                    } else {
+                      roomTasks.forEach(task => {
+                        flat.push({ type: 'task', task, depth: 2 });
+                      });
+                    }
                   }
-                };
-                roots.forEach(r => processNode(r, 0));
+                });
               }
             }
           });
@@ -2164,7 +2185,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                           } : undefined}
                         />
                         {currentView === 'smart_today' && (
-                          <DailyBriefingBanner />
+                          <>
+                            <DailyBriefingBanner />
+                            <WeeklyStreakWidget />
+                          </>
                         )}
                       </div>
                     );
@@ -2381,6 +2405,15 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           setDeletedToast(null);
         }}
         onDismiss={() => setDeletedToast(null)}
+      />
+
+      <CompletedTaskToast
+        toast={completedToast}
+        onUndo={(id) => handleToggleTask(id, true)}
+        onDismiss={() => {
+          if (completedToast?.timeoutId) window.clearTimeout(completedToast.timeoutId);
+          setCompletedToast(null);
+        }}
       />
 
       {(() => {
@@ -2617,6 +2650,15 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         onDismiss={() => {
           if (deletedToast?.timeoutId) window.clearTimeout(deletedToast.timeoutId);
           setDeletedToast(null);
+        }}
+      />
+
+      <CompletedTaskToast
+        toast={completedToast}
+        onUndo={(id) => handleToggleTask(id, true)}
+        onDismiss={() => {
+          if (completedToast?.timeoutId) window.clearTimeout(completedToast.timeoutId);
+          setCompletedToast(null);
         }}
       />
     </main>

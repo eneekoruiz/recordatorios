@@ -134,6 +134,10 @@ interface AppState {
   theme: 'light' | 'dark';
   setTheme: (theme: 'light' | 'dark') => void;
   toggleTheme: () => void;
+  useSystemTheme: boolean;
+  setUseSystemTheme: (val: boolean) => void;
+  learnedDurations: Record<string, number>;
+  setLearnedDuration: (taskId: string, minutes: number) => void;
   logout: () => void;
   /** La sesión caducó: se pide login de nuevo pero se conservan los datos locales. */
   expireSession: () => void;
@@ -164,8 +168,16 @@ export const useAppStore = create<AppState>()(
       toggleTheme: () => set((state: AppState) => {
         const newTheme = state.theme === 'dark' ? 'light' : 'dark';
         try { localStorage.setItem('user_explicit_theme', newTheme); } catch {}
-        return { theme: newTheme };
+        return { theme: newTheme, useSystemTheme: false };
       }),
+      useSystemTheme: (() => {
+        try { return localStorage.getItem('user_explicit_theme') === null; } catch { return true; }
+      })(),
+      setUseSystemTheme: (useSystemTheme) => set({ useSystemTheme }),
+      learnedDurations: {},
+      setLearnedDuration: (taskId, minutes) => set((state: AppState) => ({
+        learnedDurations: { ...state.learnedDurations, [taskId]: minutes }
+      })),
       smartListVisibility: {
         smart_primeros_pasos: false,
         smart_today: true,

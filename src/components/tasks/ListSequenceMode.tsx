@@ -3,12 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Play, Pause, CheckCircle, SkipForward, Clock, ArrowRight,
   Sparkles, CloudRain, Waves, Volume2, VolumeX, ListChecks,
-  Zap
+  Zap, Share
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
 import { getTaskDuration, formatDuration } from '../../utils/taskDuration';
+import { ConfettiService } from '../../services/ConfettiService';
 
 interface ListSequenceModeProps {
   /** IDs de las tareas a recorrer en orden */
@@ -187,7 +188,7 @@ function DurationPicker({
 // Main component
 // ────────────────────────────────────────────────────────────────────────────
 export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onClose }: ListSequenceModeProps) {
-  const { tasks, toggleTask, updateTask, theme, listSections, lists } = useAppStore();
+  const { tasks, toggleTask, updateTask, theme, listSections, lists, setLearnedDuration } = useAppStore();
   const isDark = theme === 'dark';
 
   const screenBackground = isDark
@@ -206,6 +207,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
   const [initialDuration, setInitialDuration] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const [showDurationPicker, setShowDurationPicker] = useState(false);
+  const [startedAt] = useState(() => Date.now());
 
   // Background / Parallel running tasks
   const [runningParallelTasks, setRunningParallelTasks] = useState<RunningParallelTask[]>([]);
@@ -227,9 +229,14 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     setIsActive(false);
 
     const dInfo = getTaskDuration(currentTask, listSections, lists);
+    // If we have a learned duration from the store, use it? The prompt says "getTaskDuration uses keyword heuristics. We want the store to remember user-adjusted durations."
+    // Wait, the store provides learnedDurations. I need to get learnedDurations from useAppStore.
+    const learnedDurations = useAppStore.getState().learnedDurations;
+    const learned = learnedDurations[currentTask.id];
+
     const activeMins = (typeof currentTask.duration === 'number' && currentTask.duration > 0)
       ? currentTask.duration
-      : dInfo.activeMinutes;
+      : (learned || dInfo.activeMinutes);
 
     const secs = Math.max(60, activeMins * 60);
     setShowDurationPicker(false);
@@ -297,6 +304,9 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
   const handleDurationConfirm = useCallback((mins: number) => {
     if (!currentTask) return;
     const valid = Math.max(1, Math.min(480, mins));
+    if (!currentTask.duration || currentTask.duration === 0) {
+      setLearnedDuration(currentTask.id, valid);
+    }
     updateTask(currentTask.id, { duration: valid });
     const secs = valid * 60;
     setInitialDuration(secs);
@@ -304,7 +314,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     setShowDurationPicker(false);
     setIsActive(true);
     SoundService.playPop();
-  }, [currentTask, updateTask]);
+  }, [currentTask, updateTask, setLearnedDuration]);
 
   const handleCompleteTask = useCallback(() => {
     if (!currentTask) return;
@@ -364,7 +374,41 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
   const strokeOffset = strokeDash * (1 - progress);
 
   // ── FINISHED SCREEN ─────────────────────────────────────────────────────
+  useEffect(() => {
+    if (isFinished) {
+      ConfettiService.celebrate();
+    }
+  }, [isFinished]);
+
   if (isFinished) {
+    const elapsedMins = Math.max(1, Math.ceil((Date.now() - startedAt) / 60000));
+    
+    // Calcular tiempo estimado total
+    const totalEstimatedMins = activeTaskIds.reduce((acc, id) => {
+      const t = tasks[id];
+      if (!t) return acc;
+      const dInfo = getTaskDuration(t, listSections, lists);
+      const learned = useAppStore.getState().learnedDurations[t.id];
+      const activeMins = (typeof t.duration === 'number' && t.duration > 0)
+        ? t.duration
+        : (learned || dInfo.activeMinutes);
+      return acc + activeMins;
+    }, 0);
+
+    const handleShare = async () => {
+      const text = `✅ ¡He completado ${listName}! ${completedIds.length} tareas en ${elapsedMins} min.`;
+      if (navigator.share) {
+        try {
+          await navigator.share({ text });
+        } catch (e) {
+          // Ignorar aborto
+        }
+      } else {
+        navigator.clipboard.writeText(text);
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Copiado al portapapeles' }));
+      }
+    };
+
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -394,10 +438,43 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
           ¡Lista completada!
         </h2>
         <p style={{ fontSize: '1rem', color: secondaryText, marginBottom: 24, maxWidth: 360, lineHeight: 1.5 }}>
-          Has recorrido <strong style={{ color: primaryText }}>{listName}</strong> de principio a fin.{' '}
-          {completedIds.length} tarea{completedIds.length !== 1 ? 's' : ''} completada{completedIds.length !== 1 ? 's' : ''}.
-          {skippedIds.length > 0 && ` ${skippedIds.length} omitida${skippedIds.length !== 1 ? 's' : ''}.`}
+          Has recorrido <strong style={{ color: primaryText }}>{listName}</strong> de principio a fin.
         </p>
+
+        {/* Stats Card */}
+        <div style={{
+          display: 'flex', flexWrap: 'wrap', gap: 16, justifyContent: 'center',
+          marginBottom: 32, maxWidth: 500, width: '100%'
+        }}>
+          <div style={{
+            flex: '1 1 45%', background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+            borderRadius: 16, padding: '16px', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.05)'
+          }}>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#34c759' }}>{completedIds.length}</div>
+            <div style={{ fontSize: '0.8rem', color: secondaryText, fontWeight: 600 }}>COMPLETADAS</div>
+          </div>
+          <div style={{
+            flex: '1 1 45%', background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+            borderRadius: 16, padding: '16px', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.05)'
+          }}>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: isDark ? 'white' : 'black' }}>{skippedIds.length}</div>
+            <div style={{ fontSize: '0.8rem', color: secondaryText, fontWeight: 600 }}>OMITIDAS</div>
+          </div>
+          <div style={{
+            flex: '1 1 45%', background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+            borderRadius: 16, padding: '16px', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.05)'
+          }}>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#0a84ff' }}>{elapsedMins} <span style={{ fontSize: '1rem' }}>min</span></div>
+            <div style={{ fontSize: '0.8rem', color: secondaryText, fontWeight: 600 }}>TIEMPO EMPLEADO</div>
+          </div>
+          <div style={{
+            flex: '1 1 45%', background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+            borderRadius: 16, padding: '16px', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.05)'
+          }}>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)' }}>{totalEstimatedMins} <span style={{ fontSize: '1rem' }}>min</span></div>
+            <div style={{ fontSize: '0.8rem', color: secondaryText, fontWeight: 600 }}>ESTIMADO</div>
+          </div>
+        </div>
 
         {runningParallelTasks.length > 0 && (
           <div style={{
@@ -416,18 +493,32 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', width: '100%', maxWidth: 400 }}>
           <motion.button
             onClick={onClose}
             whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
             style={{
-              padding: '14px 32px', borderRadius: 20,
+              flex: 1, padding: '14px 20px', borderRadius: 20,
               background: listColor, color: 'white', border: 'none',
               fontWeight: 700, fontSize: '1rem', cursor: 'pointer',
               boxShadow: `0 8px 28px ${listColor}55`
             }}
           >
-            Volver a la lista
+            Volver
+          </motion.button>
+          
+          <motion.button
+            onClick={handleShare}
+            whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+            style={{
+              flex: 1, padding: '14px 20px', borderRadius: 20,
+              background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', 
+              color: primaryText, border: 'none',
+              fontWeight: 700, fontSize: '1rem', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+            }}
+          >
+            <Share size={18} /> Compartir
           </motion.button>
         </div>
       </motion.div>

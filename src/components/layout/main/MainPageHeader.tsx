@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import {
   ArrowUpDown,
   X,
@@ -302,6 +303,25 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
             </div>
           )}
         </div>
+
+        {currentList && (activeVisibleCount + completedVisibleCount) > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4, opacity: titleOpacity }}>
+            <div style={{ flex: 1, height: 4, background: 'var(--border-subtle)', borderRadius: 2, overflow: 'hidden' }}>
+              <motion.div
+                initial={{ scaleX: 0, originX: 0 }}
+                animate={{ scaleX: completedVisibleCount / (activeVisibleCount + completedVisibleCount) }}
+                transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+                style={{ height: '100%', background: viewColor, borderRadius: 2 }}
+              />
+            </div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 500, flexShrink: 0 }}>
+              {completedVisibleCount} / {activeVisibleCount + completedVisibleCount} tareas
+              {totalDuration && totalDuration.activeMinutes > 0 && (
+                <span> &middot; ~{totalDuration.formattedActive} restantes</span>
+              )}
+            </div>
+          </div>
+        )}
 
         {currentCycle && (
           <div className="content-stats" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginLeft: '4px' }}>

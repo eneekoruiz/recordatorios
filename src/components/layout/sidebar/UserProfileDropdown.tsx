@@ -51,6 +51,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
   setIsListConfigOpen,
   onSelectView
 }) => {
+  const isSystemTheme = useAppStore((state) => state.useSystemTheme);
   if (!isOpen || typeof document === 'undefined') return null;
 
   const rect = anchorEl ? anchorEl.getBoundingClientRect() : null;
@@ -180,7 +181,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Moon size={16} /> Modo Oscuro
+            <Moon size={16} /> Modo Oscuro {isSystemTheme && <span className="theme-auto-badge" style={{ marginLeft: 4 }}>(auto)</span>}
           </span>
           <div style={{
             width: '36px', height: '22px', borderRadius: '11px',

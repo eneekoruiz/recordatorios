@@ -275,3 +275,245 @@ input:focus, input:focus-visible, textarea:focus, textarea:focus-visible {
 }
 .drawer-header .save-btn:disabled { opacity: 0.45; }
 .section-title { text-transform: none !important; letter-spacing: 0 !important; font-size: 0.82rem !important; }
+
+/* ═══════════════════════════════════════════════════════════
+   PROGRESS BAR — Lista con completadas
+   ═══════════════════════════════════════════════════════════ */
+.list-progress-bar-track {
+  position: relative;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--separator, rgba(60,60,67,0.14));
+  overflow: hidden;
+  flex: 1;
+  min-width: 60px;
+}
+.list-progress-bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  height: 100%;
+  transition: width 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transform-origin: left;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SECTION DURATION PILL — polished chip
+   ═══════════════════════════════════════════════════════════ */
+.section-duration-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: default;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.section-duration-pill:hover {
+  transform: scale(1.04);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SECTION START BUTTON — "▶ Empezar" enhanced
+   ═══════════════════════════════════════════════════════════ */
+.section-start-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
+  flex-shrink: 0;
+}
+.section-start-btn:hover {
+  opacity: 0.88;
+  transform: scale(1.04);
+}
+.section-start-btn:active {
+  transform: scale(0.96);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TOAST — premium improvements
+   ═══════════════════════════════════════════════════════════ */
+.premium-toast {
+  /* Ensure iOS safe-area bottom is always respected */
+  bottom: max(28px, calc(env(safe-area-inset-bottom, 0px) + 16px)) !important;
+}
+
+/* Progress bar countdown inside toast */
+.toast-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  border-radius: 0 0 16px 16px;
+  animation: toast-countdown linear forwards;
+}
+@keyframes toast-countdown {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   GLASS HEADER — deeper blur on scroll
+   ═══════════════════════════════════════════════════════════ */
+.glass-header-bar {
+  /* Enhanced backdrop-filter with saturate for premium feel */
+  backdrop-filter: blur(32px) saturate(200%) brightness(1.02) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(200%) brightness(1.02) !important;
+  transition: box-shadow 0.2s ease !important;
+}
+.glass-header-bar.scrolled {
+  box-shadow: 0 1px 0 var(--separator, rgba(60,60,67,0.18)),
+              0 4px 24px rgba(0,0,0,0.10) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MOBILE — responsive tap target improvements
+   ═══════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Touch targets: nunca menos de 44px (directriz de HIG de Apple) */
+  .ios-list-item {
+    min-height: 52px !important;
+    padding: 11px 14px !important;
+  }
+  .task-info-btn {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.85 !important;
+  }
+  .section-start-btn {
+    min-height: 36px;
+    font-size: 0.8rem;
+  }
+  /* En móvil los chips de duración van al final de la fila, no en la misma línea que el título */
+  .section-duration-pill {
+    font-size: 0.72rem;
+    padding: 2px 7px;
+  }
+  /* QuickAdd: más alto para facilitar escritura con teclado en pantalla */
+  .quick-add-shell {
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 0px)) !important;
+  }
+  /* Drawer: altura máxima en móvil */
+  .task-drawer-sheet {
+    max-height: calc(92dvh - env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ANIMATIONS — micro-interacciones pulidas
+   ═══════════════════════════════════════════════════════════ */
+
+/* Skeleton loader shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface, #f2f2f7) 25%,
+    color-mix(in srgb, var(--bg-surface, #f2f2f7) 60%, white) 50%,
+    var(--bg-surface, #f2f2f7) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+/* Section header hover highlight */
+.group-header:hover .section-start-btn {
+  opacity: 1;
+}
+
+/* Smooth focus ring system-wide with color from accent */
+:focus-visible:not(input):not(textarea):not(.task-title-input) {
+  outline: 2px solid var(--accent-primary, #007aff) !important;
+  outline-offset: 2px !important;
+  border-radius: 8px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   WEEKLY STREAK WIDGET — mobile tweaks
+   ═══════════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  /* Heatmap columns get smaller labels on very small screens */
+  .weekly-heatmap-label {
+    font-size: 0.62rem !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PARALLEL TASK BADGE — in sequence mode
+   ═══════════════════════════════════════════════════════════ */
+.parallel-task-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: rgba(255, 149, 0, 0.12);
+  color: #ff9500;
+  border: 1px solid rgba(255, 149, 0, 0.24);
+  white-space: nowrap;
+  animation: pulse-badge 2s ease-in-out infinite;
+}
+@keyframes pulse-badge {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.72; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   AUTO DARK MODE TOGGLE — visual feedback
+   ═══════════════════════════════════════════════════════════ */
+.theme-auto-badge {
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--accent-glow, rgba(10,132,255,0.15));
+  color: var(--accent-primary, #007aff);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   COMPLETION SUMMARY — sequence mode finished screen
+   ═══════════════════════════════════════════════════════════ */
+.sequence-summary-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  flex: 1;
+  padding: 12px 8px;
+  border-radius: 14px;
+}
+.sequence-summary-stat-value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.sequence-summary-stat-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}

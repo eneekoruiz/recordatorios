@@ -36,8 +36,10 @@ import {
 import { normalizeTaskPrices } from './utils/priceExtractor';
 import { ensureLimpiezaSections, getRoomForCleaningTask } from './utils/specialLists';
 import type { TaskItem } from './models/Task';
+import { useSystemTheme } from './hooks/useSystemTheme';
 
 function App() {
+  useSystemTheme();
   // ── All hooks FIRST (before any conditional returns) ──────────────
   const token = useAppStore((state) => state.token);
   const tasks = useAppStore((state) => state.tasks); // Subscribing to tasks
@@ -151,24 +153,6 @@ function App() {
       metaTheme.setAttribute('content', theme === 'dark' ? '#000000' : '#ffffff');
     }
   }, [theme]);
-
-  // Sigue los cambios de tema del sistema operativo en tiempo real (como cualquier
-  // app de Apple) mientras la app está abierta, pero solo si el usuario no ha
-  // fijado un tema a mano: se actualiza el estado directamente, sin pasar por
-  // setTheme/toggleTheme, para no escribir `user_explicit_theme` y así no
-  // convertir un cambio del sistema en una elección manual permanente.
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleSystemThemeChange = (e: MediaQueryListEvent) => {
-      let userExplicitTheme: string | null = null;
-      try { userExplicitTheme = localStorage.getItem('user_explicit_theme'); } catch {}
-      if (userExplicitTheme === 'dark' || userExplicitTheme === 'light') return;
-      useAppStore.setState({ theme: e.matches ? 'dark' : 'light' });
-    };
-    mq.addEventListener('change', handleSystemThemeChange);
-    return () => mq.removeEventListener('change', handleSystemThemeChange);
-  }, []);
 
   useEffect(() => {
     const handleToast = (e: any) => {
