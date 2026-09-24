@@ -68,7 +68,7 @@ export function detectFormatAndParse(input: string, currentStoreData: { cycles: 
     // Parse category @
     const catMatch = title.match(/@(\w+)/);
     if (catMatch) {
-      categoryId = catMatch[1].toLowerCase();
+      categoryId = (catMatch[1] || '').toLowerCase();
       title = title.replace(`@${catMatch[1]}`, '').trim();
     }
 
@@ -78,7 +78,7 @@ export function detectFormatAndParse(input: string, currentStoreData: { cycles: 
       const rawCycle = cycleMatch[1];
       title = title.replace(`#${rawCycle}`, '').trim();
       
-      const existing = currentStoreData.cycles.find(c => c.name.toLowerCase() === rawCycle.toLowerCase());
+      const existing = currentStoreData.cycles.find(c => (c.name || '').toLowerCase() === (rawCycle || '').toLowerCase());
       if (existing) {
         cycle_id = existing.id;
       } else {

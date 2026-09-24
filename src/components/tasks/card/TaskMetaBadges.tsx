@@ -33,7 +33,8 @@ export function TaskMetaBadges({
 
   const inAppListTarget = (() => {
     const url = task.url || '';
-    const isCareUrl = url.startsWith('app://list/care') || (url.includes('icloud.com/reminders') && url.includes('Care')) || task.title.toLowerCase().includes('skin-care') || task.title.toLowerCase().includes('skincare');
+    const taskTitleLower = (task?.title || '').toLowerCase();
+    const isCareUrl = url.startsWith('app://list/care') || (url.includes('icloud.com/reminders') && url.includes('Care')) || taskTitleLower.includes('skin-care') || taskTitleLower.includes('skincare');
     const isAppListUrl = url.startsWith('app://list/');
     if (isCareUrl || isAppListUrl) {
       const targetListId = isCareUrl ? 'care' : url.replace('app://list/', '');
@@ -68,7 +69,7 @@ export function TaskMetaBadges({
               }}
               style={{ 
                 display: 'inline-flex', alignItems: 'center', gap: 4, 
-                color: dueDateColor, fontWeight: dueDateColor.toLowerCase() === '#ff3b30' ? 600 : 400,
+                color: dueDateColor, fontWeight: (dueDateColor || '').toLowerCase() === '#ff3b30' ? 600 : 400,
                 cursor: 'pointer'
               }}
               title="Fecha de vencimiento (Toca para editar)"

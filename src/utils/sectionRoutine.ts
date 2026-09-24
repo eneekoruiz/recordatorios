@@ -11,15 +11,16 @@ export const getSectionPeriodicity = (
   sections?: ListSection[],
   lists?: CustomList[]
 ): PeriodicityType | null => {
-  const raw = `${sectionKeyOrId} ${title || ''}`.toLowerCase();
+  const raw = `${sectionKeyOrId || ''} ${title || ''}`.toLowerCase();
 
   // 1. Si es un section_id manual de la lista (con prefijo 'section_', 'sec_' o id directo)
-  const secIdClean = sectionKeyOrId.startsWith('section_') ? sectionKeyOrId.replace('section_', '') :
-                     sectionKeyOrId.startsWith('sec_') ? sectionKeyOrId : sectionKeyOrId;
+  const safeKey = sectionKeyOrId || '';
+  const secIdClean = safeKey.startsWith('section_') ? safeKey.replace('section_', '') :
+                     safeKey.startsWith('sec_') ? safeKey : safeKey;
   if (sections) {
     let sec = sections.find(s => s.id === secIdClean || s.id === `sec_${secIdClean}` || s.id === `section_${secIdClean}`);
     while (sec) {
-      const secNorm = `${sec.id} ${sec.name}`.toLowerCase();
+      const secNorm = `${sec.id || ''} ${sec.name || ''}`.toLowerCase();
       if (secNorm.includes('diari') || secNorm.includes('recurrent') || /\b(d[ií]as?)\b/i.test(secNorm)) return 'day';
       if (secNorm.includes('seman') || /\b(sem)\b/i.test(secNorm)) return 'week';
       if (secNorm.includes('mensu') || /\b(mes(es)?)\b/i.test(secNorm)) return 'month';
@@ -30,9 +31,9 @@ export const getSectionPeriodicity = (
 
   // 2. Si es una lista (o sublista en carpetas, ej. limpieza_mensual)
   if (lists) {
-    const listObj = lists.find(l => l.id === sectionKeyOrId || l.name.toLowerCase() === sectionKeyOrId.toLowerCase());
+    const listObj = lists.find(l => l.id === safeKey || (l.name || '').toLowerCase() === safeKey.toLowerCase());
     if (listObj) {
-      const lNorm = `${listObj.id} ${listObj.name}`.toLowerCase();
+      const lNorm = `${listObj.id || ''} ${listObj.name || ''}`.toLowerCase();
       if (lNorm.includes('diari') || lNorm.includes('recurrent') || /\b(d[ií]as?)\b/i.test(lNorm)) return 'day';
       if (lNorm.includes('seman') || /\b(sem)\b/i.test(lNorm)) return 'week';
       if (lNorm.includes('mensu') || /\b(mes(es)?)\b/i.test(lNorm)) return 'month';
@@ -99,7 +100,7 @@ export const getTaskPeriodicity = (
 
   // 1. cycle_id explícito
   if (task.cycle_id) {
-    const c = task.cycle_id.toLowerCase();
+    const c = (task.cycle_id || '').toLowerCase();
     if (c === 'cycle_day' || c.includes('day') || c.includes('diari')) return 'day';
     if (c === 'cycle_week' || c.includes('week') || c.includes('seman')) return 'week';
     if (c === 'cycle_month' || c.includes('month') || c.includes('mensu')) return 'month';
@@ -119,7 +120,7 @@ export const getTaskPeriodicity = (
   // 4. Sublista o lista (ej. limpieza_diaria, limpieza_semanal, etc.)
   const catId = task.categoryId || (task as any).category_id;
   if (catId) {
-    const catLower = catId.toLowerCase();
+    const catLower = (catId || '').toLowerCase();
     if (catLower === 'limpieza_diaria' || catLower.includes('diari')) return 'day';
     if (catLower === 'limpieza_semanal' || catLower.includes('seman')) return 'week';
     if (catLower === 'limpieza_mensual' || catLower.includes('mensu')) return 'month';
@@ -127,7 +128,7 @@ export const getTaskPeriodicity = (
 
     const listObj = lists?.find(l => l.id === catId);
     if (listObj) {
-      const listName = (listObj.name || catId).toLowerCase();
+      const listName = (listObj.name || catId || '').toLowerCase();
       if (listName.includes('diari') || listName.includes('recurrent') || /\b(d[ií]as?)\b/i.test(listName)) return 'day';
       if (listName.includes('seman') || /\b(sem)\b/i.test(listName)) return 'week';
       if (listName.includes('mensu') || /\b(mes(es)?)\b/i.test(listName)) return 'month';
@@ -138,7 +139,7 @@ export const getTaskPeriodicity = (
   // 5. Sección manual asignada (con soporte para sub-secciones jerárquicas que heredan de su sección padre)
   const secId = task.sectionId || (task as any).section_id;
   if (secId) {
-    const secLower = secId.toLowerCase();
+    const secLower = (secId || '').toLowerCase();
     if (secLower.includes('diari')) return 'day';
     if (secLower.includes('seman')) return 'week';
     if (secLower.includes('mensu')) return 'month';
@@ -146,7 +147,7 @@ export const getTaskPeriodicity = (
 
     let secObj = sections?.find(s => s.id === secId);
     while (secObj) {
-      const secText = `${secObj.name || ''} ${secObj.id}`.toLowerCase();
+      const secText = `${secObj.name || ''} ${secObj.id || ''}`.toLowerCase();
       if (secText.includes('diari') || secText.includes('recurrent') || /\b(d[ií]as?)\b/i.test(secText)) return 'day';
       if (secText.includes('seman') || /\b(sem)\b/i.test(secText)) return 'week';
       if (secText.includes('mensu') || /\b(mes(es)?)\b/i.test(secText)) return 'month';
@@ -246,7 +247,7 @@ export const sortTasksByRoutinePriority = (
  * secciones personalizadas que solo contienen esa palabra en el nombre.
  */
 export function getPureCyclicPeriodicity(name?: string | null): PeriodicityType | null {
-  if (!name) return null;
+  if (!name || typeof name !== 'string') return null;
   const clean = name.replace(/^⏳\s*/, '').trim().toLowerCase();
   if (['diaria', 'diarias', 'diario', 'diarios', 'recurrentes', 'recurrente'].includes(clean)) return 'day';
   if (['semanal', 'semanales'].includes(clean)) return 'week';
@@ -261,7 +262,7 @@ export function getPureCyclicPeriodicity(name?: string | null): PeriodicityType 
  * eliminando discrepancias de mayúsculas agresivas o singular/plural.
  */
 export function formatSectionTitle(title?: string | null): string {
-  if (!title) return '';
+  if (!title || typeof title !== 'string') return '';
   const clean = title.replace(/^⏳\s*/, '').trim();
 
   // Periodicidades estándar unificadas en formato plural Apple (Diarias, Semanales, Mensuales, Anuales)

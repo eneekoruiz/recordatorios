@@ -1510,7 +1510,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           .filter(s => !s.parentId)
           .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
           .filter(s => {
-            const norm = s.name.trim().toLowerCase();
+            const norm = (s?.name || '').trim().toLowerCase();
+            if (!norm) return true;
             if (seenRootNames.has(norm)) return false;
             seenRootNames.add(norm);
             return true;
@@ -1849,7 +1850,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                         toggleSectionRoutineMode={toggleSectionRoutineMode}
                         dragOverSectionId={dragOverSectionId}
                         onStartSectionSequence={onStartSequence && sectionPendingTaskIds.length > 0 ? () => {
-                          const rawTitle = data.title.replace(/^[\p{Emoji}\s⏳]+/gu, '').trim() || data.title;
+                          const rawTitle = (data?.title || '').replace(/^[\p{Emoji}\s⏳]+/gu, '').trim() || (data?.title || '');
                           const cleanTitle = rawTitle.length > 0 
                             ? rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1).toLowerCase() 
                             : 'Sección';

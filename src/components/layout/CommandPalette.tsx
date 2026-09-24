@@ -77,7 +77,7 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
 
     // 5. Tareas
     allTasks.forEach(t => {
-      if (t.title.toLowerCase().includes(q) && q !== '') {
+      if ((t.title || '').toLowerCase().includes(q) && q !== '') {
         const catId = t.categoryId || (t as any).category_id;
         const sub = catId === 'inbox' || !catId ? 'Bandeja de entrada' : (catId || '');
         const isHigh = t.priority === 'high' || (t.priority as any) === 1;

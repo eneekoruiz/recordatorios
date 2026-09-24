@@ -103,7 +103,7 @@ export class AIService {
     const listMatch = trimmed.match(/(?:crea(?:r)?\s+(?:la\s+)?lista\s+["']?([^"'\n,]+)["']?|para\s+(?:el\s+|la\s+)?(viaje\s+a\s+\w+|mudanza|reforma|boda|cumpleaños))/i);
     if (listMatch) {
       const name = (listMatch[1] || listMatch[2] || '').trim();
-      if (name && !existingLists.some(l => l.name.toLowerCase() === name.toLowerCase())) {
+      if (name && !existingLists.some(l => (l.name || '').toLowerCase() === name.toLowerCase())) {
         suggestedList = {
           name: name.charAt(0).toUpperCase() + name.slice(1),
           color: '#007aff',
@@ -267,7 +267,7 @@ export class AIService {
       let listName = suggestedList ? suggestedList.name : 'Bandeja de entrada';
 
       if (isNarrative || finalPeople.length > 0) {
-        const queHeHechoList = existingLists.find(l => l.id === 'que_he_hecho' || l.id === 'list_que_he_hecho' || l.name.toLowerCase().includes('qué he hecho'));
+        const queHeHechoList = existingLists.find(l => l.id === 'que_he_hecho' || l.id === 'list_que_he_hecho' || (l.name || '').toLowerCase().includes('qué he hecho'));
         if (queHeHechoList) {
           listId = queHeHechoList.id;
           listName = queHeHechoList.name;
@@ -332,7 +332,7 @@ export class AIService {
     if (isNarrative && tasks.length > 0) {
       const allUniquePeople = Array.from(new Set(tasks.flatMap(t => t.people || [])));
       const activitiesOverview = tasks.map(t => {
-        let act = t.title.toLowerCase();
+        let act = (t.title || '').toLowerCase();
         act = act.replace(/^(?:he\s+hecho|hice|estuve|fui\s+a)\s+/i, '');
         return act;
       }).filter(Boolean).slice(0, 3).join(', ');

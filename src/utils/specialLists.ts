@@ -158,8 +158,8 @@ export function ensureRoutineSections(
     const exists = currentSections.some(s => 
       s.id === req.id || 
       s.id === `sec_limpieza_${req.root === 'diari' ? 'diaria' : req.root === 'seman' ? 'semanal' : req.root === 'mensu' ? 'mensual' : 'anual'}` ||
-      s.name.toLowerCase().includes(req.root) ||
-      (req.root === 'diari' && s.name.toLowerCase().includes('recurrent'))
+      (s.name || '').toLowerCase().includes(req.root) ||
+      (req.root === 'diari' && (s.name || '').toLowerCase().includes('recurrent'))
     );
     if (!exists) {
       addSection({
@@ -256,10 +256,10 @@ export function ensureLimpiezaSections(
   ensureRoutineSections(listId, sections, addSection);
 
   const currentSections = sections.filter(s => s.listId === listId && !s.deleted_at);
-  const rootDiaria = currentSections.find(s => s.id === 'sec_limpieza_diaria' || s.id === 'sec_limp_diaria' || (!s.parentId && s.name.toLowerCase().includes('diari')));
-  const rootSemanal = currentSections.find(s => s.id === 'sec_limpieza_semanal' || s.id === 'sec_limp_semanal' || (!s.parentId && s.name.toLowerCase().includes('seman')));
-  const rootMensual = currentSections.find(s => s.id === 'sec_limpieza_mensual' || s.id === 'sec_limp_mensual' || (!s.parentId && s.name.toLowerCase().includes('mensu')));
-  const rootAnual = currentSections.find(s => s.id === 'sec_limpieza_anual' || s.id === 'sec_limp_anual' || (!s.parentId && s.name.toLowerCase().includes('anual')));
+  const rootDiaria = currentSections.find(s => s.id === 'sec_limpieza_diaria' || s.id === 'sec_limp_diaria' || (!s.parentId && (s.name || '').toLowerCase().includes('diari')));
+  const rootSemanal = currentSections.find(s => s.id === 'sec_limpieza_semanal' || s.id === 'sec_limp_semanal' || (!s.parentId && (s.name || '').toLowerCase().includes('seman')));
+  const rootMensual = currentSections.find(s => s.id === 'sec_limpieza_mensual' || s.id === 'sec_limp_mensual' || (!s.parentId && (s.name || '').toLowerCase().includes('mensu')));
+  const rootAnual = currentSections.find(s => s.id === 'sec_limpieza_anual' || s.id === 'sec_limp_anual' || (!s.parentId && (s.name || '').toLowerCase().includes('anual')));
 
   const roomDefs = [
     { freq: 'diaria', parentId: rootDiaria?.id || 'sec_limpieza_diaria', rooms: ['Cocina', 'Baño', 'Habitación', 'Pasillo / Entrada', 'General'] },
@@ -276,7 +276,7 @@ export function ensureLimpiezaSections(
                        roomName === 'Balcón' ? 'balcon' :
                        roomName === 'Cocina' ? 'cocina' : 'general';
       const secId = `sec_limp_${def.freq}_${roomSlug}`;
-      const existing = currentSections.find(s => s.id === secId || s.name.toLowerCase() === roomName.toLowerCase() && (s.parentId === def.parentId || s.parentId === def.parentId.replace('sec_limpieza_', 'sec_limp_')));
+      const existing = currentSections.find(s => s.id === secId || ((s.name || '').toLowerCase() === (roomName || '').toLowerCase() && (s.parentId === def.parentId || s.parentId === def.parentId.replace('sec_limpieza_', 'sec_limp_'))));
       if (!existing) {
         addSection({
           id: secId,

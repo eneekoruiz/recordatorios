@@ -25,10 +25,10 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
   const nlp = parseNaturalLanguage(text);
   // «@Compras» es una lista, no una persona: evitamos mostrarlo dos veces.
   const matchedList = nlp.suggestedCategory
-    ? lists.find((l) => l.name.toLowerCase() === nlp.suggestedCategory!.toLowerCase())
+    ? lists.find((l) => (l.name || '').toLowerCase() === (nlp.suggestedCategory || '').toLowerCase())
     : undefined;
   const extractedPeople = extractPeopleFromText(text).filter(
-    (person) => person.toLowerCase() !== (nlp.suggestedCategory || '').toLowerCase()
+    (person) => (person || '').toLowerCase() !== (nlp.suggestedCategory || '').toLowerCase()
   );
 
   const handleSubmit = (e?: React.FormEvent) => {
@@ -45,7 +45,7 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
       targetCategory = currentView.replace('list_', '');
     } else if (nlp.suggestedCategory) {
       // Buscar si coincide con alguna lista existente
-      const matchingList = lists.find(l => l.name.toLowerCase() === nlp.suggestedCategory?.toLowerCase());
+      const matchingList = lists.find(l => (l.name || '').toLowerCase() === (nlp.suggestedCategory || '').toLowerCase());
       if (matchingList) {
         targetCategory = matchingList.id;
       }

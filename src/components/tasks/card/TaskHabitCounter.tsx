@@ -30,8 +30,8 @@ export const TaskHabitCounter: React.FC<TaskHabitCounterProps> = ({
     };
   }, []);
 
-  const getHabitIcon = (title: string) => {
-    const t = title.toLowerCase();
+  const getHabitIcon = (title?: string | null) => {
+    const t = (title || '').toLowerCase();
     if (t.includes('agua')) return <Droplet size={11} />;
     if (t.includes('diente')) return <Sparkles size={11} />;
     if (t.includes('mano')) return <Hand size={11} />;

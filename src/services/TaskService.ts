@@ -361,11 +361,11 @@ export interface PersonRelationshipStats {
  * Calcula estadísticas de relación y última vez juntos con una persona
  */
 export function getPersonRelationshipStats(personName: string, allTasks: TaskItem[]): PersonRelationshipStats {
-  const normName = personName.trim().toLowerCase();
+  const normName = (personName || '').trim().toLowerCase();
   const personTasks = allTasks.filter(t => 
     !t.deleted_at && 
     t.people && 
-    t.people.some(p => p.trim().toLowerCase() === normName)
+    t.people.some(p => (p || '').trim().toLowerCase() === normName)
   );
 
   // Ordenar por fecha de más reciente a más antigua

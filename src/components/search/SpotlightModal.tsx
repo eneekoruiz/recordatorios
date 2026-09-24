@@ -167,7 +167,7 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
 
     // Filtrar acciones rápidas
     quickActions.forEach(action => {
-      if (!q || action.title.toLowerCase().includes(q) || (action.subtitle && action.subtitle.toLowerCase().includes(q))) {
+      if (!q || (action.title || '').toLowerCase().includes(q) || (action.subtitle && action.subtitle.toLowerCase().includes(q))) {
         result.push(action);
       }
     });
@@ -175,7 +175,7 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
     // 2. Coincidencias en Listas
     (lists || []).forEach(list => {
       if (list.id === 'user_preferences_smart_lists' || list.id === 'user_preferences_cycle_visibility') return;
-      if (!q || list.name.toLowerCase().includes(q)) {
+      if (!q || (list.name || '').toLowerCase().includes(q)) {
         result.push({
           id: `list_${list.id}`,
           type: 'list',
@@ -192,7 +192,7 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
 
     // 3. Coincidencias en Ciclos
     (cycles || []).forEach(cycle => {
-      if (!q || cycle.name.toLowerCase().includes(q)) {
+      if (!q || (cycle.name || '').toLowerCase().includes(q)) {
         result.push({
           id: `cycle_${cycle.id}`,
           type: 'cycle',

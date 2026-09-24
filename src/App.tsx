@@ -409,7 +409,7 @@ function App() {
 
       // Secciones de Caducidades
       const sections = state.listSections || [];
-      if (!sections.some(s => s.id === 'sec_tarjetas' || (s.listId === 'caducidades' && s.name.toLowerCase().includes('tarjeta')))) {
+      if (!sections.some(s => s.id === 'sec_tarjetas' || (s.listId === 'caducidades' && (s.name || '').toLowerCase().includes('tarjeta')))) {
         state.addListSection({
           id: 'sec_tarjetas',
           listId: 'caducidades',
@@ -417,7 +417,7 @@ function App() {
           order: 0, updated_at: EPOCH
         });
       }
-      if (!sections.some(s => s.id === 'sec_suscripciones' || (s.listId === 'caducidades' && s.name.toLowerCase().includes('suscrip')))) {
+      if (!sections.some(s => s.id === 'sec_suscripciones' || (s.listId === 'caducidades' && (s.name || '').toLowerCase().includes('suscrip')))) {
         state.addListSection({
           id: 'sec_suscripciones',
           listId: 'caducidades',
@@ -464,7 +464,7 @@ function App() {
       });
 
       // Secciones unificadas para Quehaceres si existe la lista
-      const quehaceresList = lists.find(l => l.id === 'quehaceres' || l.name.toLowerCase() === 'quehaceres');
+      const quehaceresList = lists.find(l => l.id === 'quehaceres' || (l.name || '').toLowerCase() === 'quehaceres');
       if (quehaceresList) {
         const qSections = [
           { id: `sec_${quehaceresList.id}_diarias`, name: 'Diarias', order: 0, root: 'diari' },
@@ -473,7 +473,7 @@ function App() {
           { id: `sec_${quehaceresList.id}_anuales`, name: 'Anuales', order: 3, root: 'anual' },
         ];
         qSections.forEach(qSec => {
-          if (!sections.some(s => s.listId === quehaceresList.id && (s.name.toLowerCase().includes(qSec.root) || (qSec.root === 'diari' && s.name.toLowerCase().includes('recurrent'))))) {
+          if (!sections.some(s => s.listId === quehaceresList.id && ((s.name || '').toLowerCase().includes(qSec.root) || (qSec.root === 'diari' && (s.name || '').toLowerCase().includes('recurrent'))))) {
             state.addListSection({
               id: qSec.id,
               listId: quehaceresList.id,
@@ -486,7 +486,7 @@ function App() {
       }
 
       // Asegurar que Care esté presente como lista de rutinas de cuidado personal (facial, corporal, higiene)
-      const careList = lists.find(l => l.id === 'care' || l.name.toLowerCase() === 'care' || l.name.toLowerCase() === 'skincare' || l.name.toLowerCase() === 'cuidado personal');
+      const careList = lists.find(l => l.id === 'care' || (l.name || '').toLowerCase() === 'care' || (l.name || '').toLowerCase() === 'skincare' || (l.name || '').toLowerCase() === 'cuidado personal');
       const careListId = careList ? careList.id : 'care';
       if (!careList) {
         state.addList({
@@ -507,7 +507,7 @@ function App() {
         { id: `sec_${careListId}_anuales`, name: 'Anuales', order: 3, root: 'anual' },
       ];
       careSections.forEach(cSec => {
-        if (!sections.some(s => s.listId === careListId && (s.name.toLowerCase().includes(cSec.root) || (cSec.root === 'diari' && s.name.toLowerCase().includes('recurrent'))))) {
+        if (!sections.some(s => s.listId === careListId && ((s.name || '').toLowerCase().includes(cSec.root) || (cSec.root === 'diari' && (s.name || '').toLowerCase().includes('recurrent'))))) {
           state.addListSection({
             id: cSec.id,
             listId: careListId,
@@ -519,7 +519,7 @@ function App() {
       });
 
       // Secciones unificadas para Compra si existe la lista
-      const compraList = lists.find(l => l.id === 'compra' || l.id === 'compras' || l.name.toLowerCase().includes('compra'));
+      const compraList = lists.find(l => l.id === 'compra' || l.id === 'compras' || (l.name || '').toLowerCase().includes('compra'));
       const compraListId = compraList ? compraList.id : 'compra';
       if (compraList) {
         const compraSections = [
@@ -529,7 +529,7 @@ function App() {
           { id: `sec_${compraListId}_anuales`, name: 'Anuales', order: 3, root: 'anual' },
         ];
         compraSections.forEach(cSec => {
-          if (!sections.some(s => s.listId === compraListId && (s.name.toLowerCase().includes(cSec.root) || (cSec.root === 'diari' && s.name.toLowerCase().includes('recurrent'))))) {
+          if (!sections.some(s => s.listId === compraListId && ((s.name || '').toLowerCase().includes(cSec.root) || (cSec.root === 'diari' && (s.name || '').toLowerCase().includes('recurrent'))))) {
             state.addListSection({
               id: cSec.id,
               listId: compraListId,

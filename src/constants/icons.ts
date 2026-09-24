@@ -46,7 +46,7 @@ const ICON_ALIASES: Record<string, string> = {
   utensils: 'food', droplets: 'water', flame: 'fire', gamepad2: 'gamepad', inbox: 'inbox', listchecks: 'list',
 };
 
-const normalize = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
+const normalize = (name?: string | null) => (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
 export function getListIcon(iconName?: string | null): ComponentType<any> {
   if (!iconName) return List;

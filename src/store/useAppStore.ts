@@ -1081,7 +1081,7 @@ export const useAppStore = create<AppState>()(
           // Extract category: @Categoria
           const catMatch = title.match(/@(\w+)/);
           if (catMatch) {
-            categoryId = catMatch[1].toLowerCase();
+            categoryId = (catMatch[1] || '').toLowerCase();
             title = title.replace(`@${catMatch[1]}`, '').trim();
           }
 
@@ -1092,7 +1092,7 @@ export const useAppStore = create<AppState>()(
             title = title.replace(`#${rawCycle}`, '').trim();
             
             // Buscar si ya existe el ciclo por nombre (case insensitive)
-            const existing = cycles.find((c: any) => c.name.toLowerCase() === rawCycle.toLowerCase());
+            const existing = cycles.find((c: any) => (c.name || '').toLowerCase() === (rawCycle || '').toLowerCase());
             if (existing) {
               cycle_id = existing.id;
             } else {

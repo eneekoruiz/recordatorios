@@ -228,7 +228,8 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
 
     let targetListToCreate: any = undefined;
     if (msg.batch.suggestedList) {
-      const existing = lists.find(l => l.name.toLowerCase() === msg.batch!.suggestedList!.name.toLowerCase());
+      const suggestedName = msg.batch.suggestedList.name || '';
+      const existing = lists.find(l => (l.name || '').toLowerCase() === suggestedName.toLowerCase());
       if (!existing) {
         targetListToCreate = {
           id: `list_${Date.now()}`,
