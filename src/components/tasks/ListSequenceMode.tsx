@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Play, Pause, CheckCircle, SkipForward, Clock, ArrowRight,
   Sparkles, CloudRain, Waves, Volume2, VolumeX, ListChecks,
-  Zap, Share
+  Zap, Share, Headphones
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { SoundService } from '../../services/SoundService';
@@ -27,7 +27,7 @@ export interface RunningParallelTask {
   startedAt: number;
 }
 
-type AmbientType = 'off' | 'rain' | 'waves' | 'binaural';
+type AmbientType = 'off' | 'rain' | 'waves' | 'binaural' | 'focus';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Sub-component: duration picker shown when customizing task duration
@@ -216,8 +216,12 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
   // Ambient sound
   const [ambient, setAmbient] = useState<AmbientType>('off');
 
-  // Derived current task
-  const activeTaskIds = taskIds.filter(id => tasks[id] && !tasks[id].deleted_at);
+  // Dynamic task queue: allows postponing tasks to the end of the sequence
+  const [sequenceTaskIds, setSequenceTaskIds] = useState<string[]>(() =>
+    taskIds.filter(id => tasks[id] && !tasks[id].deleted_at)
+  );
+
+  const activeTaskIds = sequenceTaskIds.filter(id => tasks[id] && !tasks[id].deleted_at);
   const currentTask = activeTaskIds[index] ? tasks[activeTaskIds[index]] : null;
   const isFinished = index >= activeTaskIds.length;
 
@@ -337,6 +341,31 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     setIndex(i => i + 1);
   }, [currentTask]);
 
+  // Posponer tarea ("Dejar para luego"): la coloca al final de la secuencia
+  const handlePostponeTask = useCallback(() => {
+    if (!currentTask) return;
+    HapticService.selection();
+    SoundService.playPop();
+
+    const currentId = currentTask.id;
+    const taskTitle = currentTask.title;
+
+    setSequenceTaskIds(prev => {
+      const activeRemaining = prev.slice(index);
+      if (activeRemaining.length <= 1) {
+        setParallelToast('ℹ️ Esta tarea ya es la última de la lista');
+        setTimeout(() => setParallelToast(null), 2500);
+        return prev;
+      }
+
+      const before = prev.slice(0, index);
+      const after = prev.slice(index + 1);
+      setParallelToast(`⏳ «${taskTitle}» pospuesta al final`);
+      setTimeout(() => setParallelToast(null), 3000);
+      return [...before, ...after, currentId];
+    });
+  }, [currentTask, index]);
+
   // Parallel task launcher: completes active setup and advances sequence immediately!
   const handleStartParallelAndNext = useCallback(() => {
     if (!currentTask || !currentDurationInfo) return;
@@ -369,7 +398,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
   };
 
   const progress = initialDuration > 0 ? (initialDuration - timeLeft) / initialDuration : 0;
-  const strokeR = 110;
+  const strokeR = 86;
   const strokeDash = 2 * Math.PI * strokeR;
   const strokeOffset = strokeDash * (1 - progress);
 
@@ -534,13 +563,15 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
         exit={{ opacity: 0 }}
         style={{
           position: 'fixed', inset: 0, zIndex: 99999,
+          height: '100dvh', maxHeight: '100dvh',
           background: screenBackground,
           backdropFilter: 'blur(32px)',
           WebkitBackdropFilter: 'blur(32px)',
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'space-between',
-          padding: 'clamp(20px, 4vw, 40px)',
-          boxSizing: 'border-box', overflowY: 'auto'
+          padding: 'clamp(12px, 2.2vh, 24px) clamp(16px, 3.5vw, 32px)',
+          boxSizing: 'border-box', overflow: 'hidden',
+          touchAction: 'none'
         }}
       >
         {/* Toast for completed background parallel tasks */}
@@ -677,22 +708,26 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
 
               {/* Task title */}
               <h2 style={{
-                fontSize: 'clamp(1.6rem, 4vw, 2.6rem)',
-                fontWeight: 700, lineHeight: 1.18,
+                fontSize: 'clamp(1.4rem, 3.4vh, 2.3rem)',
+                fontWeight: 700, lineHeight: 1.16,
                 color: primaryText,
                 fontFamily: 'var(--font-display)',
-                letterSpacing: '-0.025em', margin: '0 0 8px', wordBreak: 'break-word'
+                letterSpacing: '-0.025em', margin: '0 0 4px', wordBreak: 'break-word'
               }}>
                 {currentTask?.title}
               </h2>
 
               {currentTask?.description && (
                 <p style={{
-                  fontSize: '0.95rem',
+                  fontSize: '0.88rem',
                   color: isDark ? 'rgba(255,255,255,0.55)' : 'var(--text-secondary, #636366)',
-                  margin: '0 0 20px',
-                  lineHeight: 1.5,
-                  maxWidth: 480
+                  margin: '0 0 10px',
+                  lineHeight: 1.4,
+                  maxWidth: 440,
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden'
                 }}>
                   {currentTask.description}
                 </p>
@@ -702,15 +737,15 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
               {initialDuration > 0 && (
                 <div
                   onClick={() => setIsActive(v => !v)}
-                  style={{ position: 'relative', width: 240, height: 240, margin: '6px 0 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ position: 'relative', width: 196, height: 196, margin: '2px 0 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   title={isActive ? 'Pausar' : 'Reanudar'}
                 >
-                  <svg width="240" height="240" style={{ transform: 'rotate(-90deg)', position: 'absolute', inset: 0 }}>
-                    <circle cx="120" cy="120" r={strokeR} stroke={isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)"} strokeWidth="8" fill="none" />
+                  <svg width="196" height="196" style={{ transform: 'rotate(-90deg)', position: 'absolute', inset: 0 }}>
+                    <circle cx="98" cy="98" r={strokeR} stroke={isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)"} strokeWidth="7" fill="none" />
                     <circle
-                      cx="120" cy="120" r={strokeR}
+                      cx="98" cy="98" r={strokeR}
                       stroke={`url(#seqGrad-${listColor.replace('#', '')})`}
-                      strokeWidth="8" strokeDasharray={strokeDash}
+                      strokeWidth="7" strokeDasharray={strokeDash}
                       strokeDashoffset={strokeOffset} strokeLinecap="round" fill="none"
                       style={{ transition: 'stroke-dashoffset 0.5s ease' }}
                     />
@@ -721,20 +756,20 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                       </linearGradient>
                     </defs>
                   </svg>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1, gap: 6 }}>
-                    <span style={{ fontSize: '3.4rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: primaryText, letterSpacing: '-0.03em', lineHeight: 1 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1, gap: 4 }}>
+                    <span style={{ fontSize: 'clamp(2.3rem, 4.2vh, 3rem)', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: primaryText, letterSpacing: '-0.03em', lineHeight: 1 }}>
                       {formatTime(timeLeft)}
                     </span>
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: 5,
-                      padding: '4px 12px', borderRadius: 999,
+                      padding: '3px 10px', borderRadius: 999,
                       background: isActive ? (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)') : listColor,
                       color: isActive ? (isDark ? 'white' : 'var(--text-secondary, #636366)') : 'white',
-                      fontSize: '0.78rem', fontWeight: 700,
+                      fontSize: '0.74rem', fontWeight: 700,
                       boxShadow: isActive ? 'none' : `0 4px 14px ${listColor}60`,
                       transition: 'all 0.2s ease'
                     }}>
-                      {isActive ? <><Pause size={12} fill={isDark ? "white" : "currentColor"} /> EN PROGRESO</> : <><Play size={12} fill="white" style={{ marginLeft: 2 }} /> REANUDAR</>}
+                      {isActive ? <><Pause size={11} fill={isDark ? "white" : "currentColor"} /> EN PROGRESO</> : <><Play size={11} fill="white" style={{ marginLeft: 2 }} /> REANUDAR</>}
                     </div>
                   </div>
                 </div>
@@ -747,62 +782,73 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                   display: 'inline-flex', alignItems: 'center', gap: 5,
                   background: 'transparent', border: 'none',
                   color: isDark ? 'rgba(255,255,255,0.45)' : 'var(--text-tertiary, #8e8e93)',
-                  fontSize: '0.78rem', fontWeight: 500, cursor: 'pointer',
-                  marginBottom: 20
+                  fontSize: '0.76rem', fontWeight: 500, cursor: 'pointer',
+                  marginBottom: 10
                 }}
               >
-                <Clock size={13} /> Ajustar tiempo ({Math.ceil(timeLeft / 60)} min)
+                <Clock size={12} /> Ajustar tiempo ({Math.ceil(timeLeft / 60)} min)
               </button>
 
-              {/* Ambient sound mini bar */}
+              {/* Ambient sound dock */}
               <div style={{
-                width: '100%', maxWidth: 460, padding: '10px 14px',
+                width: '100%', maxWidth: 480, padding: '6px 10px',
                 background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
                 borderRadius: 16,
                 border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)',
-                display: 'flex', gap: 8, alignItems: 'center', marginBottom: 20
+                display: 'flex', gap: 6, alignItems: 'center', marginBottom: 12
               }}>
-                <Sparkles size={14} color={listColor} />
-                <span style={{ fontSize: '0.76rem', color: isDark ? 'rgba(255,255,255,0.4)' : 'var(--text-tertiary, #8e8e93)', fontWeight: 600, marginRight: 'auto' }}>SONIDO</span>
-                {(['off', 'rain', 'waves', 'binaural'] as AmbientType[]).map(type => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginRight: 'auto', paddingLeft: 4 }}>
+                  <Sparkles size={13} color={listColor} />
+                  <span style={{ fontSize: '0.72rem', color: isDark ? 'rgba(255,255,255,0.4)' : 'var(--text-tertiary, #8e8e93)', fontWeight: 700, letterSpacing: '0.04em' }}>SONIDO</span>
+                  {ambient !== 'off' && isActive && (
+                    <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 11, marginLeft: 2 }}>
+                      <span className="equalizer-bar" style={{ width: 2, background: listColor, borderRadius: 1, height: 5, animation: 'equalizerPulse 0.9s ease-in-out infinite alternate' }} />
+                      <span className="equalizer-bar" style={{ width: 2, background: '#30d158', borderRadius: 1, height: 11, animation: 'equalizerPulse 0.6s ease-in-out infinite alternate 0.2s' }} />
+                      <span className="equalizer-bar" style={{ width: 2, background: listColor, borderRadius: 1, height: 7, animation: 'equalizerPulse 0.8s ease-in-out infinite alternate 0.4s' }} />
+                    </div>
+                  )}
+                </div>
+                {(['off', 'rain', 'waves', 'binaural', 'focus'] as AmbientType[]).map(type => (
                   <button
                     key={type}
                     onClick={() => setAmbient(type)}
                     style={{
-                      padding: '4px 10px', borderRadius: 999,
+                      padding: '5px 9px', borderRadius: 12,
                       background: ambient === type ? listColor : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'),
                       border: 'none',
                       color: ambient === type ? 'white' : (isDark ? 'white' : 'var(--text-secondary, #636366)'),
-                      fontSize: '0.76rem', fontWeight: 600, cursor: 'pointer',
+                      fontSize: '0.74rem', fontWeight: 600, cursor: 'pointer',
                       display: 'flex', alignItems: 'center', gap: 4,
+                      boxShadow: ambient === type ? `0 2px 8px ${listColor}40` : 'none',
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    {type === 'off' && <VolumeX size={12} />}
-                    {type === 'rain' && <CloudRain size={12} />}
-                    {type === 'waves' && <Waves size={12} />}
-                    {type === 'binaural' && <Volume2 size={12} />}
-                    {type === 'off' ? 'Sin' : type === 'rain' ? 'Lluvia' : type === 'waves' ? 'Olas' : 'Binaural'}
+                    {type === 'off' && <VolumeX size={11} />}
+                    {type === 'rain' && <CloudRain size={11} />}
+                    {type === 'waves' && <Waves size={11} />}
+                    {type === 'binaural' && <Volume2 size={11} />}
+                    {type === 'focus' && <Headphones size={11} />}
+                    {type === 'off' ? 'Sin' : type === 'rain' ? 'Lluvia' : type === 'waves' ? 'Olas' : type === 'binaural' ? 'Binaural' : 'Foco'}
                   </button>
                 ))}
               </div>
 
               {/* Action buttons */}
-              <div style={{ display: 'flex', gap: 10, width: '100%', maxWidth: 460 }}>
+              <div style={{ display: 'flex', gap: 8, width: '100%', maxWidth: 480 }}>
                 {/* Dedicated Parallel Task Action Button */}
                 {currentDurationInfo?.isParallel && (
                   <motion.button
                     onClick={handleStartParallelAndNext}
                     whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
                     style={{
-                      flex: 2, padding: '15px 12px', borderRadius: 18,
+                      flex: 2, height: 48, borderRadius: 16,
                       background: '#007aff', color: 'white',
-                      border: 'none', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                      boxShadow: '0 8px 24px rgba(0,122,255,0.45)'
+                      border: 'none', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      boxShadow: '0 6px 20px rgba(0,122,255,0.4)'
                     }}
                   >
-                    <Zap size={18} fill="white" /> Poner en marcha y seguir
+                    <Zap size={16} fill="white" /> Poner en marcha y seguir
                   </motion.button>
                 )}
 
@@ -810,17 +856,17 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                   <button
                     onClick={() => setIsActive(v => !v)}
                     style={{
-                      flex: 1, padding: '15px 0', borderRadius: 18,
+                      flex: 1.1, height: 48, borderRadius: 16,
                       background: isActive ? (isDark ? 'rgba(255,149,0,0.18)' : 'rgba(255,149,0,0.12)') : listColor,
                       color: isActive ? '#ff9500' : 'white',
                       border: isActive ? '1px solid rgba(255,149,0,0.4)' : 'none',
-                      fontWeight: 700, fontSize: '1rem', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                      boxShadow: isActive ? 'none' : `0 8px 24px ${listColor}50`,
+                      fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      boxShadow: isActive ? 'none' : `0 6px 20px ${listColor}45`,
                       transition: 'all 0.18s ease'
                     }}
                   >
-                    {isActive ? <><Pause size={20} fill="#ff9500" /> Pausar</> : <><Play size={20} fill="white" style={{ marginLeft: 2 }} /> Reanudar</>}
+                    {isActive ? <><Pause size={17} fill="#ff9500" /> Pausar</> : <><Play size={17} fill="white" style={{ marginLeft: 2 }} /> Reanudar</>}
                   </button>
                 )}
 
@@ -828,20 +874,42 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                   onClick={handleCompleteTask}
                   whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
                   style={{
-                    flex: currentDurationInfo?.isParallel ? 1 : 1, padding: '15px 0', borderRadius: 18,
+                    flex: currentDurationInfo?.isParallel ? 1 : 1.3, height: 48, borderRadius: 16,
                     background: '#30d158', color: '#000',
-                    border: 'none', fontWeight: 700, fontSize: '1rem', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    boxShadow: '0 8px 24px rgba(48,209,88,0.45)'
+                    border: 'none', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    boxShadow: '0 6px 20px rgba(48,209,88,0.4)'
                   }}
                 >
-                  <CheckCircle size={20} /> Completar
+                  <CheckCircle size={18} /> Completar
+                </motion.button>
+
+                {/* Botón Dejar para luego (posponer al final de la lista) */}
+                <motion.button
+                  onClick={handlePostponeTask}
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                  style={{
+                    padding: '0 12px', height: 48, borderRadius: 16,
+                    background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                    border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
+                    color: isDark ? 'rgba(255,255,255,0.85)' : 'var(--text-primary, #1c1c1e)',
+                    cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                    fontWeight: 600, fontSize: '0.82rem',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title="Mover esta tarea al final de la lista"
+                  aria-label="Dejar para luego"
+                >
+                  <Clock size={15} />
+                  <span>Para luego</span>
                 </motion.button>
 
                 <button
                   onClick={handleSkipTask}
                   style={{
-                    width: 52, height: 52, borderRadius: 16,
+                    width: 48, height: 48, borderRadius: 16,
                     background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
                     border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
                     color: isDark ? 'rgba(255,255,255,0.5)' : 'var(--text-secondary, #636366)',
@@ -852,7 +920,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                   title="Omitir tarea"
                   aria-label="Omitir tarea"
                 >
-                  <SkipForward size={20} />
+                  <SkipForward size={18} />
                 </button>
               </div>
             </motion.div>

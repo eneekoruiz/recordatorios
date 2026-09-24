@@ -27,7 +27,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
   const [initialDuration, setInitialDuration] = useState<number>(25 * 60);
   const [timeLeft, setTimeLeft] = useState<number>(25 * 60);
   const [isActive, setIsActive] = useState<boolean>(false);
-  const [ambientType, setAmbientType] = useState<'off' | 'rain' | 'waves' | 'binaural'>('off');
+  const [ambientType, setAmbientType] = useState<'off' | 'rain' | 'waves' | 'binaural' | 'focus'>('off');
   
   // Prompt Modal if task has no duration set
   const [showDurationPrompt, setShowDurationPrompt] = useState<boolean>(false);
@@ -123,7 +123,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
   };
 
   const progress = initialDuration > 0 ? (initialDuration - timeLeft) / initialDuration : 0;
-  const strokeDashoffset = 2 * Math.PI * 130 * (1 - progress);
+  const strokeDashoffset = 2 * Math.PI * 100 * (1 - progress);
 
   return (
     <AnimatePresence>
@@ -137,6 +137,8 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
           left: 0,
           right: 0,
           bottom: 0,
+          height: '100dvh',
+          maxHeight: '100dvh',
           background: isDark
             ? 'radial-gradient(ellipse at center, rgba(20, 24, 38, 0.98) 0%, rgba(10, 12, 18, 1) 100%)'
             : 'radial-gradient(ellipse at center, rgba(246, 248, 252, 0.98) 0%, rgba(235, 238, 245, 1) 100%)',
@@ -147,9 +149,9 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: 'clamp(24px, 5vw, 48px)',
+          padding: 'clamp(16px, 3vh, 32px) clamp(20px, 4vw, 40px)',
           boxSizing: 'border-box',
-          overflowY: 'auto'
+          overflow: 'hidden'
         }}
       >
         {/* Top Header Bar */}
@@ -329,9 +331,9 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
               onClick={handleToggleTimer}
               style={{ 
                 position: 'relative', 
-                width: 280, 
-                height: 280, 
-                margin: '12px 0 24px', 
+                width: 220, 
+                height: 220, 
+                margin: '6px 0 16px', 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
@@ -339,17 +341,17 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
               }}
               title={isActive ? "Pausar temporizador" : "Iniciar/Reanudar temporizador"}
             >
-              <svg width="280" height="280" style={{ transform: 'rotate(-90deg)', position: 'absolute', inset: 0 }}>
+              <svg width="220" height="220" style={{ transform: 'rotate(-90deg)', position: 'absolute', inset: 0 }}>
                 {/* Background circle */}
-                <circle cx="140" cy="140" r="130" stroke={isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.07)"} strokeWidth="8" fill="none" />
+                <circle cx="110" cy="110" r="100" stroke={isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.07)"} strokeWidth="7" fill="none" />
                 {/* Progress circle */}
                 <circle
-                  cx="140"
-                  cy="140"
-                  r="130"
+                  cx="110"
+                  cy="110"
+                  r="100"
                   stroke="url(#zenGradient)"
-                  strokeWidth="8"
-                  strokeDasharray={2 * Math.PI * 130}
+                  strokeWidth="7"
+                  strokeDasharray={2 * Math.PI * 100}
                   strokeDashoffset={strokeDashoffset}
                   strokeLinecap="round"
                   fill="none"
@@ -364,9 +366,9 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
               </svg>
 
               {/* Display central con Botón de Play/Pause interactivo */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1, gap: 8 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1, gap: 6 }}>
                 <span style={{
-                  fontSize: '4.2rem',
+                  fontSize: 'clamp(2.8rem, 5vh, 3.6rem)',
                   fontWeight: 800,
                   fontVariantNumeric: 'tabular-nums',
                   color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)',
@@ -380,19 +382,19 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 6,
-                  padding: '6px 14px',
+                  gap: 5,
+                  padding: '5px 12px',
                   borderRadius: 999,
                   background: isActive 
                     ? (isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)') 
                     : 'var(--accent-primary, #0a84ff)',
                   color: isActive ? (isDark ? 'white' : 'var(--text-secondary, #636366)') : 'white',
-                  fontSize: '0.85rem',
+                  fontSize: '0.78rem',
                   fontWeight: 700,
                   boxShadow: isActive ? 'none' : '0 4px 14px rgba(10, 132, 255, 0.4)',
                   transition: 'all 0.2s ease'
                 }}>
-                  {isActive ? <><Pause size={14} fill={isDark ? "white" : "currentColor"} /> EN PROGRESO</> : <><Play size={14} fill="white" style={{ marginLeft: 2 }} /> REANUDAR</>}
+                  {isActive ? <><Pause size={12} fill={isDark ? "white" : "currentColor"} /> EN PROGRESO</> : <><Play size={12} fill="white" style={{ marginLeft: 2 }} /> REANUDAR</>}
                 </div>
               </div>
             </div>
@@ -401,19 +403,19 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
             <div style={{
               width: '100%',
               maxWidth: 500,
-              margin: '0 0 28px 0',
-              padding: '14px 20px',
+              margin: '0 0 20px 0',
+              padding: '12px 16px',
               background: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
               borderRadius: 20,
               border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.06)',
               boxShadow: isDark ? '0 8px 24px rgba(0,0,0,0.2)' : '0 8px 24px rgba(0,0,0,0.04)',
               display: 'flex',
               flexDirection: 'column',
-              gap: 12
+              gap: 10
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Headphones size={16} color="var(--accent-primary, #0a84ff)" /> SONIDO AMBIENTAL ZEN
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Headphones size={15} color="var(--accent-primary, #0a84ff)" /> SONIDO AMBIENTAL ZEN
                 </span>
                 {ambientType !== 'off' && isActive && (
                   <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
@@ -424,89 +426,110 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                 )}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
                 <button
                   onClick={() => setAmbientType('off')}
                   style={{
-                    padding: '8px 6px',
+                    padding: '7px 4px',
                     borderRadius: 12,
                     background: ambientType === 'off' ? (isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.12)') : ambientChipBgInactive,
                     border: ambientType === 'off' ? (isDark ? '1px solid rgba(255,255,255,0.3)' : '1px solid rgba(0,0,0,0.15)') : '1px solid transparent',
                     color: ambientType === 'off' ? (isDark ? 'white' : 'var(--text-primary, #1c1c1e)') : mutedText,
-                    fontSize: '0.8rem',
+                    fontSize: '0.78rem',
                     fontWeight: 600,
                     cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: 4,
+                    gap: 3,
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  <VolumeX size={16} /> Silencio
+                  <VolumeX size={15} /> Silencio
                 </button>
 
                 <button
                   onClick={() => setAmbientType('rain')}
                   style={{
-                    padding: '8px 6px',
+                    padding: '7px 4px',
                     borderRadius: 12,
                     background: ambientType === 'rain' ? 'var(--accent-primary, #0a84ff)' : ambientChipBgInactive,
                     border: ambientType === 'rain' ? '1px solid rgba(10,132,255,0.5)' : '1px solid transparent',
                     color: ambientType === 'rain' ? 'white' : mutedText,
-                    fontSize: '0.8rem',
+                    fontSize: '0.78rem',
                     fontWeight: 600,
                     cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: 4,
+                    gap: 3,
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  <CloudRain size={16} /> Lluvia
+                  <CloudRain size={15} /> Lluvia
                 </button>
 
                 <button
                   onClick={() => setAmbientType('waves')}
                   style={{
-                    padding: '8px 6px',
+                    padding: '7px 4px',
                     borderRadius: 12,
                     background: ambientType === 'waves' ? 'var(--accent-primary, #0a84ff)' : ambientChipBgInactive,
                     border: ambientType === 'waves' ? '1px solid rgba(10,132,255,0.5)' : '1px solid transparent',
                     color: ambientType === 'waves' ? 'white' : mutedText,
-                    fontSize: '0.8rem',
+                    fontSize: '0.78rem',
                     fontWeight: 600,
                     cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: 4,
+                    gap: 3,
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  <Waves size={16} /> Olas
+                  <Waves size={15} /> Olas
                 </button>
 
                 <button
                   onClick={() => setAmbientType('binaural')}
                   style={{
-                    padding: '8px 6px',
+                    padding: '7px 4px',
                     borderRadius: 12,
                     background: ambientType === 'binaural' ? 'var(--accent-primary, #0a84ff)' : ambientChipBgInactive,
                     border: ambientType === 'binaural' ? '1px solid rgba(10,132,255,0.5)' : '1px solid transparent',
                     color: ambientType === 'binaural' ? 'white' : mutedText,
-                    fontSize: '0.8rem',
+                    fontSize: '0.78rem',
                     fontWeight: 600,
                     cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: 4,
+                    gap: 3,
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  <Volume2 size={16} /> Binaural
+                  <Volume2 size={15} /> Binaural
+                </button>
+
+                <button
+                  onClick={() => setAmbientType('focus')}
+                  style={{
+                    padding: '7px 4px',
+                    borderRadius: 12,
+                    background: ambientType === 'focus' ? 'var(--accent-primary, #0a84ff)' : ambientChipBgInactive,
+                    border: ambientType === 'focus' ? '1px solid rgba(10,132,255,0.5)' : '1px solid transparent',
+                    color: ambientType === 'focus' ? 'white' : mutedText,
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 3,
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <Headphones size={15} /> Foco
                 </button>
               </div>
             </div>
