@@ -691,11 +691,24 @@ export const useAppStore = create<AppState>()(
       deleteList: (id) => get().removeList(id),
 
       addListSection: (section) => set((state: any) => ({
-        listSections: [...(state.listSections || []).filter((s: any) => s.id !== section.id), { ...section, _is_dirty: true, updated_at: section.updated_at || new Date().toISOString() }]
+        listSections: [
+          ...(state.listSections || []).filter((s: any) => s.id !== section.id),
+          {
+            ...section,
+            name: (typeof section?.name === 'string' && section.name.trim()) ? section.name.trim() : 'Nueva Sección',
+            _is_dirty: true,
+            updated_at: section.updated_at || new Date().toISOString()
+          }
+        ]
       })),
 
       updateListSection: (id, name) => set((state: any) => ({
-        listSections: (state.listSections || []).map((s: any) => s.id === id ? { ...s, name, _is_dirty: true, updated_at: new Date().toISOString() } : s)
+        listSections: (state.listSections || []).map((s: any) => s.id === id ? {
+          ...s,
+          name: (typeof name === 'string' && name.trim()) ? name.trim() : (s.name || 'Nueva Sección'),
+          _is_dirty: true,
+          updated_at: new Date().toISOString()
+        } : s)
       })),
 
       deleteListSection: (id) => optimisticUpdate(get, set, (state) => {
@@ -732,10 +745,11 @@ export const useAppStore = create<AppState>()(
 
         const now = new Date().toISOString();
         const newSectionId = crypto.randomUUID();
+        const baseName = (typeof sec.name === 'string' && sec.name.trim()) ? sec.name.trim() : 'Sección';
         const newSection: ListSection = {
           ...sec,
           id: newSectionId,
-          name: `${sec.name} (copia)`,
+          name: `${baseName} (copia)`,
           order: (sec.order ?? 0) + 1,
           created_at: now,
           updated_at: now,
@@ -1261,7 +1275,19 @@ export const useAppStore = create<AppState>()(
         });
         const uniqueCycles: any[] = Array.from(cycleMap.values());
         const rawSections = persistedState?.listSections || currentState.listSections || [];
-        const uniqueSections: any[] = Array.from(new Map(rawSections.map((s: any) => [s.id, s])).values());
+        const uniqueSections: any[] = Array.from(
+          new Map(
+            rawSections
+              .filter((s: any) => s && s.id)
+              .map((s: any) => [
+                s.id,
+                {
+                  ...s,
+                  name: (typeof s.name === 'string' && s.name.trim()) ? s.name.trim() : 'Nueva Sección'
+                }
+              ])
+          ).values()
+        );
 
         const mergedCycleVisibility = {
           cycle_day: true,

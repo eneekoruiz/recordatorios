@@ -8,6 +8,7 @@
     "build": "prisma generate && tsc -b && vite build",
     "typecheck": "tsc -b",
     "lint": "oxlint",
+    "validate": "tsc -b && oxlint && vitest run",
     "preview": "vite preview",
     "test": "vitest run",
     "test:e2e": "playwright test",
