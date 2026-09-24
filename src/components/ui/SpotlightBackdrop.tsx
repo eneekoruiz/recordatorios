@@ -1,4 +1,4 @@
-import React, { useId } from 'react';
+import React, { useEffect } from 'react';
 
 export interface SpotlightRect {
   top: number;
@@ -23,10 +23,9 @@ interface SpotlightBackdropProps {
 }
 
 /**
- * Telón de fondo con desenfoque para menús contextuales (tarea, sección, lista…)
- * que recorta un "hueco" nítido exactamente sobre el elemento que ha abierto el
- * menú, para que siempre quede claro cuál es el seleccionado mientras el resto
- * de la interfaz se atenúa con un blur cinematográfico estilo iOS/macOS.
+ * Telón de fondo con desenfoque cinematográfico para menús contextuales.
+ * Bloquea la interacción y el scroll de fondo mientras el menú está activo,
+ * y enmarca nítidamente el elemento seleccionado con cero parpadeos (0 flicker).
  */
 export function SpotlightBackdrop({
   rect,
@@ -37,28 +36,45 @@ export function SpotlightBackdrop({
   padding = 4,
   radius = 12,
   background,
-  blur = 'blur(12px)'
+  blur = 'blur(16px)'
 }: SpotlightBackdropProps) {
-  const clipId = useId().replace(/:/g, '_');
   const isDark = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark';
-  const effectiveBg = background ?? (isDark ? 'rgba(0, 0, 0, 0.45)' : 'rgba(0, 0, 0, 0.18)');
+  const effectiveBg = background ?? (isDark ? 'rgba(0, 0, 0, 0.45)' : 'rgba(0, 0, 0, 0.20)');
+
+  // Bloqueo total de la pantalla detrás mientras el menú está abierto
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    const prevOverscroll = document.body.style.overscrollBehavior;
+    document.body.style.overflow = 'hidden';
+    document.body.style.overscrollBehavior = 'none';
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.overscrollBehavior = prevOverscroll;
+    };
+  }, []);
 
   const sharedProps = {
     onClick: onClose,
-    onWheel,
+    onWheel: onWheel ?? ((e: React.WheelEvent) => { e.preventDefault(); onClose(); }),
     onContextMenu: onContextMenu ?? ((e: React.MouseEvent) => { e.preventDefault(); onClose(); })
+  };
+
+  const panelStyle: React.CSSProperties = {
+    position: 'fixed',
+    zIndex,
+    background: effectiveBg,
+    backdropFilter: blur,
+    WebkitBackdropFilter: blur,
+    pointerEvents: 'auto'
   };
 
   if (!rect) {
     return (
       <div
         style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex,
-          background: effectiveBg,
-          backdropFilter: blur,
-          WebkitBackdropFilter: blur
+          ...panelStyle,
+          inset: 0
         }}
         {...sharedProps}
       />
@@ -69,43 +85,59 @@ export function SpotlightBackdrop({
   const y = Math.max(0, rect.top - padding);
   const w = rect.width + padding * 2;
   const h = rect.height + padding * 2;
-  // Use a large safe value (9999) instead of snapshotting window dimensions —
-  // this guarantees the backdrop always covers the full viewport regardless of
-  // orientation changes that happen after the component renders.
-  const vw = 9999;
-  const vh = 9999;
   const r = Math.min(radius, w / 2, h / 2);
-
-  // Rectángulo del telón completo menos un rectángulo redondeado "hueco"
-  // (regla evenodd: la intersección de ambos trazados queda sin pintar).
-  const holePath = `M${x + r},${y} H${x + w - r} A${r},${r} 0 0 1 ${x + w},${y + r} V${y + h - r} A${r},${r} 0 0 1 ${x + w - r},${y + h} H${x + r} A${r},${r} 0 0 1 ${x},${y + h - r} V${y + r} A${r},${r} 0 0 1 ${x + r},${y} Z`;
-  const clipPathD = `M0,0 H${vw} V${vh} H0 Z ${holePath}`;
 
   return (
     <>
-      {/* SVG Defs para garantizar soporte total de clip-rule: evenodd en todos los navegadores */}
-      <svg width="0" height="0" style={{ position: 'fixed', top: 0, left: 0, pointerEvents: 'none', opacity: 0, zIndex: -1 }}>
-        <defs>
-          <clipPath id={clipId} clipPathUnits="userSpaceOnUse">
-            <path clipRule="evenodd" fillRule="evenodd" d={clipPathD} />
-          </clipPath>
-        </defs>
-      </svg>
-
+      {/* Panel Superior */}
       <div
         style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex,
-          background: effectiveBg,
-          backdropFilter: blur,
-          WebkitBackdropFilter: blur,
-          clipPath: `url(#${clipId})`,
-          WebkitClipPath: `url(#${clipId})`
+          ...panelStyle,
+          top: 0,
+          left: 0,
+          right: 0,
+          height: y
         }}
         {...sharedProps}
       />
-      {/* Anillo decorativo sutil alrededor del elemento nítido, para remarcar la selección */}
+
+      {/* Panel Inferior */}
+      <div
+        style={{
+          ...panelStyle,
+          top: y + h,
+          left: 0,
+          right: 0,
+          bottom: 0
+        }}
+        {...sharedProps}
+      />
+
+      {/* Panel Izquierdo */}
+      <div
+        style={{
+          ...panelStyle,
+          top: y,
+          left: 0,
+          width: x,
+          height: h
+        }}
+        {...sharedProps}
+      />
+
+      {/* Panel Derecho */}
+      <div
+        style={{
+          ...panelStyle,
+          top: y,
+          left: x + w,
+          right: 0,
+          height: h
+        }}
+        {...sharedProps}
+      />
+
+      {/* Anillo de resalte Apple alrededor del elemento enfocado */}
       <div
         style={{
           position: 'fixed',
@@ -115,11 +147,12 @@ export function SpotlightBackdrop({
           height: h,
           borderRadius: r,
           zIndex: zIndex + 1,
-          boxShadow: '0 0 0 1.5px rgba(255,255,255,0.25), 0 8px 32px rgba(0,0,0,0.2)',
+          boxShadow: '0 0 0 1.5px var(--accent-primary, #007aff), 0 8px 32px rgba(0,0,0,0.18)',
           pointerEvents: 'none'
         }}
       />
-      {/* Captador de clics transparente sobre el hueco: mismo comportamiento que clicar el telón */}
+
+      {/* Captador de clics sobre el elemento enfocado: pulsar fuera del menú cierra */}
       <div
         style={{
           position: 'fixed',

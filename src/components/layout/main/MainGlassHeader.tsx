@@ -155,7 +155,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
         {onStartSequence && (
           <button
             type="button"
-            className="icon-btn apple-nav-action-btn"
+            className="apple-nav-start-btn"
             onClick={() => {
               HapticService.selection();
               onStartSequence();
@@ -164,21 +164,23 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
             aria-label="Empezar lista"
             style={{
               height: 32,
-              padding: '0 10px',
-              borderRadius: 16,
+              padding: '0 12px',
+              borderRadius: 999,
               display: 'inline-flex',
               alignItems: 'center',
               gap: 5,
-              background: 'rgba(0, 122, 255, 0.12)',
-              border: '1px solid rgba(0, 122, 255, 0.25)',
+              background: listAccentColor ? `color-mix(in srgb, ${listAccentColor} 14%, transparent)` : 'rgba(0, 122, 255, 0.12)',
+              border: `1px solid ${listAccentColor ? `color-mix(in srgb, ${listAccentColor} 30%, transparent)` : 'rgba(0, 122, 255, 0.25)'}`,
               cursor: 'pointer',
               color: listAccentColor,
-              fontWeight: 600,
+              fontWeight: 650,
               fontSize: '0.80rem',
-              transition: 'all 0.15s ease'
+              whiteSpace: 'nowrap',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+              transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
           >
-            <Play size={12} fill="currentColor" />
+            <Play size={11} fill="currentColor" style={{ flexShrink: 0 }} />
             <span>Empezar</span>
           </button>
         )}

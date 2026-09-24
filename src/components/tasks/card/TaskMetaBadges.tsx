@@ -1,7 +1,8 @@
-import { Calendar, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen, CalendarDays, Globe } from 'lucide-react';
+import { Calendar, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen, CalendarDays, Globe, Zap } from 'lucide-react';
 import type { TaskItem, CustomList } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
+import { getTaskDuration, formatDuration } from '../../../utils/taskDuration';
 
 export interface TaskMetaBadgesProps {
   task: TaskItem;
@@ -30,6 +31,8 @@ export function TaskMetaBadges({
   lists
 }: TaskMetaBadgesProps) {
   const updateTask = useAppStore(state => state.updateTask);
+  const listSections = useAppStore(state => state.listSections);
+  const durationInfo = getTaskDuration(task, listSections, lists);
 
   const inAppListTarget = (() => {
     const url = task.url || '';
@@ -45,7 +48,8 @@ export function TaskMetaBadges({
   })();
 
   const showDueDate = !!task.dueDate && !hideDueDate;
-  const hasMeta = showListName || showDueDate || Boolean(cycleBadge) || timeOfDayInfo || Boolean(inAppListTarget);
+  const hasDuration = Boolean(durationInfo && durationInfo.activeMinutes > 0);
+  const hasMeta = showListName || showDueDate || Boolean(cycleBadge) || timeOfDayInfo || Boolean(inAppListTarget) || hasDuration;
 
   return (
     <>
@@ -83,6 +87,40 @@ export function TaskMetaBadges({
                 if (dueZero.getTime() === tomorrow.getTime()) return 'Mañana';
                 return due.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
               })()}
+            </span>
+          )}
+
+          {hasDuration && (
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(task.id);
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 3.5,
+                padding: '1px 6px',
+                borderRadius: '5px',
+                fontSize: '0.72rem',
+                fontWeight: 550,
+                background: durationInfo.isParallel ? 'rgba(255, 149, 0, 0.10)' : 'var(--bg-hover, rgba(0,0,0,0.04))',
+                color: durationInfo.isParallel ? '#ff9500' : 'var(--text-tertiary)',
+                border: durationInfo.isParallel ? '1px solid rgba(255, 149, 0, 0.22)' : '1px solid var(--border-subtle)',
+                cursor: 'pointer',
+                lineHeight: '1.2'
+              }}
+              title={`Duración estimada: ${formatDuration(durationInfo.activeMinutes)}${durationInfo.isParallel ? ` (+${formatDuration(durationInfo.parallelMinutes)} en paralelo)` : ''}. Pulsa para editar.`}
+            >
+              {durationInfo.isParallel ? (
+                <Zap size={10} style={{ flexShrink: 0, color: '#ff9500' }} />
+              ) : (
+                <Clock size={10} style={{ flexShrink: 0, opacity: 0.7 }} />
+              )}
+              <span>{formatDuration(durationInfo.activeMinutes)}</span>
+              {durationInfo.isParallel && (
+                <span style={{ fontSize: '0.64rem', opacity: 0.8 }}>(+{formatDuration(durationInfo.parallelMinutes)})</span>
+              )}
             </span>
           )}
           

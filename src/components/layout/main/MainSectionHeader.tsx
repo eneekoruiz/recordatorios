@@ -368,29 +368,39 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, justifyContent: 'flex-end' }}>
           {/* Duración estimada total de la sección */}
-          {durationSummary && durationSummary.activeMinutes > 0 && (
-            <span 
-              className="section-duration-pill"
-              style={{
-                fontSize: '0.74rem',
-                fontWeight: 500,
-                fontVariantNumeric: 'tabular-nums',
-                color: 'var(--text-secondary)',
-                background: 'var(--bg-hover, rgba(0,0,0,0.04))',
-                border: '1px solid var(--border-subtle)',
-                padding: '2px 7px',
-                borderRadius: '6px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 3.5,
-                whiteSpace: 'nowrap'
-              }}
-              title={durationSummary.parallelTasksCount > 0 ? durationSummary.formattedTotal : `Duración estimada: ${durationSummary.formattedActive}`}
-            >
-              <Clock size={11} style={{ opacity: 0.7 }} />
-              <span>{durationSummary.formattedActive}</span>
-            </span>
-          )}
+          {durationSummary && durationSummary.activeMinutes > 0 && (() => {
+            const isFullRoutine = currentSectionRoutineMode === 'full_routine' && Boolean(data.routineCounts && data.routineCounts.full > data.routineCounts.only);
+            const titleText = isFullRoutine
+              ? `Duración de rutina acumulada: ${durationSummary.formattedActive} (incluye frecuencias anteriores)${durationSummary.parallelTasksCount > 0 ? ` + ${durationSummary.formattedParallel} en paralelo` : ''}`
+              : `Duración únicamente de esta sección (${data.title}): ${durationSummary.formattedActive}${durationSummary.parallelTasksCount > 0 ? ` + ${durationSummary.formattedParallel} en paralelo` : ''}`;
+
+            return (
+              <span 
+                className="section-duration-pill"
+                style={{
+                  fontSize: '0.74rem',
+                  fontWeight: 550,
+                  fontVariantNumeric: 'tabular-nums',
+                  color: isFullRoutine ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                  background: isFullRoutine ? 'rgba(0, 122, 255, 0.08)' : 'var(--bg-hover, rgba(0,0,0,0.04))',
+                  border: isFullRoutine ? '1px solid rgba(0, 122, 255, 0.22)' : '1px solid var(--border-subtle)',
+                  padding: '2px 7px',
+                  borderRadius: '6px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3.5,
+                  whiteSpace: 'nowrap'
+                }}
+                title={titleText}
+              >
+                <Clock size={11} style={{ opacity: 0.8 }} />
+                <span>{durationSummary.formattedActive}</span>
+                {isFullRoutine && (
+                  <span style={{ fontSize: '0.66rem', opacity: 0.8, fontWeight: 600 }}>rutina</span>
+                )}
+              </span>
+            );
+          })()}
 
           {/* Si esta sección tiene periodicidad (no diaria), ESTÁ DESPLEGADA y hay tareas acumulables (full > only), conmutador nativo Apple */}
           {!isCatCollapsed(data.category) && data.periodicity && data.periodicity !== 'day' && data.routineCounts && data.routineCounts.full > data.routineCounts.only ? (

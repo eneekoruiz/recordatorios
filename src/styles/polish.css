@@ -343,6 +343,28 @@ input:focus, input:focus-visible, textarea:focus, textarea:focus-visible {
   transform: scale(0.96);
 }
 
+.apple-nav-start-btn {
+  width: auto !important;
+  min-width: unset !important;
+  min-height: unset !important;
+  border-radius: 999px !important;
+  padding: 0 12px !important;
+  height: 30px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  white-space: nowrap !important;
+  outline: none;
+}
+.apple-nav-start-btn:hover {
+  transform: translateY(-0.5px) scale(1.02);
+  filter: brightness(1.05);
+}
+.apple-nav-start-btn:active {
+  transform: translateY(0) scale(0.97);
+  filter: brightness(0.95);
+}
+
 /* ═══════════════════════════════════════════════════════════
    TOAST — premium improvements
    ═══════════════════════════════════════════════════════════ */

@@ -210,15 +210,19 @@ export const TaskCard = React.memo(function TaskCard({
   }, [isPriorityPopoverOpen]);
 
 
+  // --- SWIPE (iOS-style: card physically moves) ---
+  const x = useMotionValue(0);
+
   const openContextMenu = useCallback(() => {
     HapticService.impact('medium');
+    x.set(0); // Reset any active horizontal swipe offset immediately
     if (cardRef.current) {
       const rect = cardRef.current.getBoundingClientRect();
       setContextMenuTriggerRect({ top: rect.top, left: rect.left, width: rect.width, height: rect.height });
       const viewportH = window.innerHeight;
       const viewportW = window.innerWidth;
-      const menuWidth = Math.min(270, viewportW - 24);
-      const estimatedMenuHeight = 480;
+      const menuWidth = Math.min(260, viewportW - 24);
+      const estimatedMenuHeight = 440;
       const padding = 12;
       
       const spaceBelow = viewportH - rect.bottom - padding;
@@ -227,33 +231,25 @@ export const TaskCard = React.memo(function TaskCard({
       let top: number;
       let maxH: number;
       
-      if (spaceBelow >= estimatedMenuHeight) {
-        // Cabe entero debajo
-        top = rect.bottom + 6;
-        maxH = spaceBelow;
-      } else if (spaceAbove >= estimatedMenuHeight) {
-        // Cabe entero arriba
-        top = Math.max(padding, rect.top - estimatedMenuHeight - 6);
-        maxH = rect.top - top - 6;
-      } else if (spaceBelow >= spaceAbove && spaceBelow >= 240) {
-        // Más espacio abajo que arriba y espacio suficiente para scroll
-        top = rect.bottom + 6;
-        maxH = spaceBelow;
-      } else if (spaceAbove > spaceBelow && spaceAbove >= 240) {
-        // Más espacio arriba
-        const targetH = Math.min(estimatedMenuHeight, spaceAbove);
-        top = Math.max(padding, rect.top - targetH - 6);
-        maxH = rect.top - top - 6;
+      if (spaceBelow >= 220) {
+        // Place strictly below the card — never covers the task!
+        top = rect.bottom + 8;
+        maxH = Math.min(estimatedMenuHeight, spaceBelow - 8);
+      } else if (spaceAbove >= 220) {
+        // Place strictly above the card — never covers the task!
+        maxH = Math.min(estimatedMenuHeight, spaceAbove - 8);
+        top = Math.max(padding, rect.top - maxH - 8);
       } else {
-        // Pantalla muy pequeña o con poco espacio vertical
-        top = padding;
-        maxH = viewportH - (padding * 2);
+        // Very tight vertical space: position beside if wide screen, otherwise place below clamped
+        if (viewportW - rect.right >= menuWidth + 16) {
+          top = Math.max(padding, Math.min(viewportH - estimatedMenuHeight - padding, rect.top));
+          maxH = viewportH - top - padding;
+        } else {
+          top = Math.max(padding, rect.bottom + 4);
+          maxH = Math.max(140, viewportH - top - padding);
+        }
       }
 
-      // Garantizar límites seguros: nunca sobresalir de la pantalla
-      top = Math.max(padding, Math.min(viewportH - 180, top));
-      maxH = Math.max(180, Math.min(maxH, viewportH - top - padding));
-        
       let left = rect.right - menuWidth;
       if (viewportW <= 640) {
         left = Math.max(padding, (viewportW - menuWidth) / 2);
@@ -264,7 +260,7 @@ export const TaskCard = React.memo(function TaskCard({
       setContextMenuPosition({ x: left, y: top, maxHeight: maxH });
     }
     setContextMenuOpen(true);
-  }, []);
+  }, [x]);
 
   // Sync state if task changes externally but not while editing
   useEffect(() => {
@@ -337,9 +333,6 @@ export const TaskCard = React.memo(function TaskCard({
   const isBlocked = task.blockedBy && task.blockedBy.some(id => tasks[id] && tasks[id].status === 'pending');
   const isCompletedPeriod = isCompletedInCurrentPeriod(task, cycles, listSections, lists);
   const isEffectivelyDone = isCompletedPeriod || !!isGracePeriod || isTaskCompleted(task);
-
-  // --- SWIPE (iOS-style: card physically moves) ---
-  const x = useMotionValue(0);
 
   // Background reveal: opacity tied to card x position
   const leftBgOpacity = useTransform(x, [0, 40, 80], [0, 0.7, 1]);
@@ -535,30 +528,32 @@ export const TaskCard = React.memo(function TaskCard({
         </div>
       )}
 
-      {/* Fixed swipe action backgrounds */}
-      <TaskSwipeBackground
-        isEffectivelyDone={isEffectivelyDone}
-        leftBgOpacity={leftBgOpacity}
-        leftIconScale={leftIconScale}
-        leftIconX={leftIconX}
-        rightBgOpacity={rightBgOpacity}
-        rightIconScale={rightIconScale}
-        rightIconX={rightIconX}
-      />
+      {/* Fixed swipe action backgrounds - hidden during context menu to prevent bleed-through */}
+      {!contextMenuOpen && (
+        <TaskSwipeBackground
+          isEffectivelyDone={isEffectivelyDone}
+          leftBgOpacity={leftBgOpacity}
+          leftIconScale={leftIconScale}
+          leftIconX={leftIconX}
+          rightBgOpacity={rightBgOpacity}
+          rightIconScale={rightIconScale}
+          rightIconX={rightIconX}
+        />
+      )}
 
       {/* Main card — physically slides */}
       <motion.div
         ref={cardRef}
-        drag="x"
+        drag={contextMenuOpen ? false : "x"}
         dragSnapToOrigin
         dragConstraints={{ left: -140, right: 140 }}
         dragElastic={0.25}
         dragTransition={{ bounceStiffness: 500, bounceDamping: 35 }}
         onDragEnd={(_, info) => handleSwipeEnd(info.offset.x)}
         animate={{
-          scale: contextMenuOpen ? 1.015 : 1,
+          scale: 1,
           boxShadow: contextMenuOpen 
-            ? '0 8px 24px rgba(0,0,0,0.12)' 
+            ? '0 12px 32px rgba(0,0,0,0.18), 0 0 0 1px var(--border-subtle)' 
             : 'none',
           borderRadius: contextMenuOpen ? 12 : (isFirstInSection ? 10 : isLastInSection ? 10 : 0),
         }}
@@ -574,7 +569,7 @@ export const TaskCard = React.memo(function TaskCard({
           margin: 0,
           width: '100%',
           boxSizing: 'border-box',
-          background: contextMenuOpen ? 'var(--bg-hover, var(--bg-elevated))' : 'var(--bg-elevated)',
+          background: 'var(--bg-elevated)',
           borderRadius: `${isFirstInSection ? 10 : 0}px ${isFirstInSection ? 10 : 0}px ${isLastInSection ? 10 : 0}px ${isLastInSection ? 10 : 0}px`,
           borderBottom: 'none',
           opacity: isBlocked ? 0.5 : 1,

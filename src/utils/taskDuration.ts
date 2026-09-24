@@ -8,6 +8,7 @@
 
 import type { TaskItem, ListSection, CustomList } from '../models/Task';
 import { getTaskPeriodicity } from './sectionRoutine';
+import { useAppStore } from '../store/useAppStore';
 
 export interface TaskDurationInfo {
   activeMinutes: number;
@@ -28,7 +29,7 @@ export interface TasksDurationSummary {
  * Regex identifying tasks that naturally execute in background/parallel
  * while the user can proceed with other active activities.
  */
-export const PARALLEL_TASK_REGEX = /\b(lavadora|poner la lavadora|lavar la ropa|secadora|poner la secadora|lavavajillas|poner lavavajillas|fregaplatos|remojo|poner en remojo|descongelar|horno|hornear|pir[oó]lisis|robot aspirador|roomba|tintorer[ií]a)\b/i;
+export const PARALLEL_TASK_REGEX = /\b(lavadora|poner la lavadora|lavar la ropa|secadora|poner la secadora|lavavajillas|poner lavavajillas|fregaplatos|remojo|poner en remojo|descongelar|horno|hornear|pir[oó]lisis|robot aspirador|roomba|tintorer[ií]a|cortinas?|edred[oó]n|fundas? de sof[aá]|ropa de cama|almohadas?|mantas?|colada)\b/i;
 
 /**
  * Checks whether a task is a parallel / background task.
@@ -61,9 +62,25 @@ export function getTaskDuration(
     return { activeMinutes: task.duration, parallelMinutes: 0, isParallel: false };
   }
 
+  // 1b. Duración aprendida previamente del usuario para esta tarea en el store
+  if (task.id) {
+    try {
+      const learned = useAppStore.getState()?.learnedDurations?.[task.id];
+      if (typeof learned === 'number' && learned > 0) {
+        if (parallel) {
+          const pDur = (task as any).parallelDuration || 120;
+          return { activeMinutes: learned, parallelMinutes: pDur, isParallel: true };
+        }
+        return { activeMinutes: learned, parallelMinutes: 0, isParallel: false };
+      }
+    } catch {
+      // Ignorar fuera de entorno React/Zustand
+    }
+  }
+
   // 2. Parallel tasks: small active setup time + large passive background time
   if (parallel) {
-    if (title.includes('lavadora') || title.includes('lavar la ropa')) {
+    if (title.includes('lavadora') || title.includes('lavar la ropa') || title.includes('colada')) {
       return { activeMinutes: 5, parallelMinutes: 150, isParallel: true }; // 2h 30m
     }
     if (title.includes('secadora')) {
@@ -71,6 +88,9 @@ export function getTaskDuration(
     }
     if (title.includes('lavavajillas') || title.includes('fregaplatos')) {
       return { activeMinutes: 5, parallelMinutes: 120, isParallel: true }; // 2h
+    }
+    if (title.includes('cortina') || title.includes('edred') || title.includes('manta') || title.includes('ropa de cama') || title.includes('funda') || title.includes('almohada')) {
+      return { activeMinutes: 5, parallelMinutes: 120, isParallel: true }; // 2h en lavadora
     }
     if (title.includes('horno') || title.includes('hornear') || title.includes('remojo')) {
       return { activeMinutes: 5, parallelMinutes: 60, isParallel: true };  // 1h
@@ -85,18 +105,16 @@ export function getTaskDuration(
   }
 
   // 3. Keyword-based heuristics for routine cleaning and common household tasks
-  // Heavy / Deep tasks (35 - 50 min)
+  // Heavy / Deep tasks (30 - 40 min)
   if (
     title.includes('armario a fondo') || title.includes('persiana') ||
     title.includes('colchón') || title.includes('colchon') ||
-    title.includes('edredón') || title.includes('edredon') ||
-    title.includes('manta grande') || title.includes('reorganizar') ||
-    title.includes('despensa a fondo')
+    title.includes('reorganizar') || title.includes('despensa a fondo')
   ) {
-    return { activeMinutes: 40, parallelMinutes: 0, isParallel: false };
+    return { activeMinutes: 35, parallelMinutes: 0, isParallel: false };
   }
 
-  // Thorough cleaning tasks (20 - 30 min)
+  // Thorough cleaning tasks (20 - 25 min)
   if (
     title.includes('a fondo') || title.includes('aspirar toda') ||
     title.includes('ducha') || title.includes('inodoro') ||
@@ -131,7 +149,7 @@ export function getTaskDuration(
     return { activeMinutes: 5, parallelMinutes: 0, isParallel: false };
   }
 
-  // 4. Periodicity-based default
+  // 4. Periodicity-based realistic default
   const periodicity = getTaskPeriodicity(task, sections, lists);
   switch (periodicity) {
     case 'day':
@@ -139,9 +157,9 @@ export function getTaskDuration(
     case 'week':
       return { activeMinutes: 15, parallelMinutes: 0, isParallel: false };
     case 'month':
-      return { activeMinutes: 30, parallelMinutes: 0, isParallel: false };
+      return { activeMinutes: 20, parallelMinutes: 0, isParallel: false };
     case 'year':
-      return { activeMinutes: 45, parallelMinutes: 0, isParallel: false };
+      return { activeMinutes: 25, parallelMinutes: 0, isParallel: false };
     default:
       return { activeMinutes: 10, parallelMinutes: 0, isParallel: false };
   }
