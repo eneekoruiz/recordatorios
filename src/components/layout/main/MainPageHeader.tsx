@@ -16,6 +16,7 @@ import { isCaducidadesList, isQueHeHechoList } from '../../../utils/specialLists
 import { confirmDialog } from '../../ui/confirmDialog';
 import { useAppStore } from '../../../store/useAppStore';
 import type { TaskItem, CustomCycle, CustomList } from '../../../models/Task';
+import type { TasksDurationSummary } from '../../../utils/taskDuration';
 
 interface MainPageHeaderProps {
   scrollTop?: number;
@@ -36,6 +37,7 @@ interface MainPageHeaderProps {
   getTitle: () => string;
   currentView: string;
   totalCost: number;
+  totalDuration?: TasksDurationSummary;
   activeVisibleCount: number;
   completedVisibleCount: number;
   setConfirmProps: (props: any) => void;
@@ -75,6 +77,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   getTitle,
   currentView,
   totalCost,
+  totalDuration,
   activeVisibleCount,
   completedVisibleCount,
   setConfirmProps,
@@ -245,6 +248,33 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
           {/* Gran Contador Apple Reminders en el color de la lista */}
           {!currentCycle && currentView !== 'TRASH' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+              {totalDuration && totalDuration.activeMinutes > 0 && (
+                <span 
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    padding: '3px 10px',
+                    borderRadius: 8,
+                    background: 'var(--bg-card, rgba(255,255,255,0.7))',
+                    border: '1px solid var(--border-subtle)',
+                    color: 'var(--text-secondary)',
+                    fontWeight: 600,
+                    fontSize: '0.85rem',
+                    fontVariantNumeric: 'tabular-nums',
+                    letterSpacing: '-0.2px'
+                  }}
+                  title={totalDuration.parallelTasksCount > 0 ? totalDuration.formattedTotal : `Duración estimada total: ${totalDuration.formattedActive}`}
+                >
+                  <Clock size={13} style={{ opacity: 0.8 }} />
+                  <span>{totalDuration.formattedActive}</span>
+                  {totalDuration.parallelTasksCount > 0 && (
+                    <span style={{ fontSize: '0.72rem', opacity: 0.75, fontWeight: 500 }}>
+                      (+{totalDuration.formattedParallel} par.)
+                    </span>
+                  )}
+                </span>
+              )}
               {totalCost > 0 && (
                 <span 
                   style={{
@@ -277,6 +307,21 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
           <div className="content-stats" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginLeft: '4px' }}>
             <span className="stat-chip" style={{ minHeight: '32px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', lineHeight: '1.3', wordBreak: 'break-word', boxSizing: 'border-box', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 999 }}><strong>{activeVisibleCount}</strong> &nbsp;pendientes</span>
             <span className="stat-chip" style={{ minHeight: '32px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', lineHeight: '1.3', wordBreak: 'break-word', boxSizing: 'border-box', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 999 }}><strong>{completedVisibleCount}</strong> &nbsp;completadas</span>
+            {totalDuration && totalDuration.activeMinutes > 0 && (
+              <span 
+                className="stat-chip" 
+                style={{ minHeight: '32px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', gap: 6, lineHeight: '1.3', wordBreak: 'break-word', boxSizing: 'border-box', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 999 }}
+                title={totalDuration.parallelTasksCount > 0 ? totalDuration.formattedTotal : undefined}
+              >
+                <Clock size={13} style={{ opacity: 0.8 }} />
+                <span><strong>{totalDuration.formattedActive}</strong> estimados</span>
+                {totalDuration.parallelTasksCount > 0 && (
+                  <span style={{ fontSize: '0.74rem', opacity: 0.75 }}>
+                    (+{totalDuration.formattedParallel} par.)
+                  </span>
+                )}
+              </span>
+            )}
           </div>
         )}
 

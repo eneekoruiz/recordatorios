@@ -9,6 +9,8 @@ interface MainEmptyStateProps {
   onOpenNewTask?: (sectionId?: string) => void;
 }
 
+import { FREQUENCY_RESERVED_COLORS } from '../../../constants/colors';
+
 const SMART_ACCENTS: Record<string, string> = {
   'smart_today': '#007AFF',
   'smart_scheduled': '#FF3B30',
@@ -18,10 +20,10 @@ const SMART_ACCENTS: Record<string, string> = {
   'smart_overdue': '#FF3B30',
   'smart_primeros_pasos': '#AF52DE',
   'list_inbox': '#007AFF',
-  'cycle_day': '#007AFF',
-  'cycle_week': '#34C759',
-  'cycle_month': '#AF52DE',
-  'cycle_year': '#FF9500'
+  'cycle_day': FREQUENCY_RESERVED_COLORS.day,
+  'cycle_week': FREQUENCY_RESERVED_COLORS.week,
+  'cycle_month': FREQUENCY_RESERVED_COLORS.month,
+  'cycle_year': FREQUENCY_RESERVED_COLORS.year
 };
 
 export const MainEmptyState: React.FC<MainEmptyStateProps> = ({

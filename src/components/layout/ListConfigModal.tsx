@@ -11,17 +11,11 @@ interface ListConfigModalProps {
   defaultIsFolder?: boolean;
 }
 
-const COLORS = [
-  // IOS Default & Primaries
-  '#0a84ff', '#30d158', '#ff9f0a', '#ff375f', '#bf5af2', '#ffd60a', '#5e5ce6', '#8e8e93',
-  // Pastels & Soft Tones
-  '#A2D2FF', '#BDE0FE', '#FFAFCC', '#FFC8DD', '#CDB4DB', '#F4A261', '#E9C46A', '#2A9D8F',
-  // Darks & Muted
-  '#264653', '#1D3557', '#457B9D', '#E63946', '#6D6875', '#B5838D', '#E5989B', '#4A4E69'
-];
-
+import { LIST_AVAILABLE_COLORS, isReservedFrequencyColor } from '../../constants/colors';
 import { LIST_ICON_MAP as ICONS } from '../../constants/icons';
 import { CheckSquare, Folder, Check, X, NotebookPen, CreditCard, BookOpen } from 'lucide-react';
+
+const COLORS = LIST_AVAILABLE_COLORS;
 
 import { isCaducidadesList, isQueHeHechoList, isLimpiezaList, ensureCaducidadesSections, isRoutineList } from '../../utils/specialLists';
 
@@ -35,7 +29,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
   const existingList = listId ? lists.find(l => l.id === listId) : null;
   
   const [name, setName] = useState('');
-  const [color, setColor] = useState(COLORS[0]);
+  const [color, setColor] = useState<string>(COLORS[0]);
   const [icon, setIcon] = useState('list');
   const [isFocused, setIsFocused] = useState(false);
   const [isFolder, setIsFolder] = useState(defaultIsFolder || false);
@@ -46,8 +40,10 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
   useEffect(() => {
     if (isOpen) {
       if (existingList) {
-        setName(existingList.name);
-        setColor(existingList.color);
+        const cleanColor = isReservedFrequencyColor(existingList.color)
+          ? COLORS[0]
+          : (existingList.color || COLORS[0]);
+        setColor(cleanColor);
         const initialIcon = existingList.icon || (existingList.isFolder ? 'folder' : 'list');
         setIcon(initialIcon);
         setIsFolder(!!existingList.isFolder);
@@ -56,7 +52,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
           (isCaducidadesList(existingList.id, existingList) ? 'caducidades' : 
           (isQueHeHechoList(existingList.id, existingList) ? 'que_he_hecho' : 'standard'))
         );
-        setShowAllColors(!COLORS.slice(0, 8).includes(existingList.color));
+        setShowAllColors(!(COLORS.slice(0, 8) as readonly string[]).includes(cleanColor));
         setShowAllIcons(!Object.keys(ICONS).slice(0, 12).includes(initialIcon));
       } else {
         setName('');

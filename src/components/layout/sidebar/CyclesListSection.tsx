@@ -20,19 +20,21 @@ interface CyclesListSectionProps {
   tasks: Record<string, TaskItem>;
 }
 
+import { FREQUENCY_RESERVED_COLORS } from '../../../constants/colors';
+
 const CORE_CYCLES: { id: string; name: string; daysValue: number; isPinned: boolean; icon: string; color: string }[] = [
-  { id: 'cycle_day', name: 'Diario', daysValue: 1, isPinned: true, icon: 'sun', color: '#ff9500' },
-  { id: 'cycle_week', name: 'Semanal', daysValue: 7, isPinned: true, icon: 'calendar', color: '#007aff' },
-  { id: 'cycle_month', name: 'Mensual', daysValue: 30, isPinned: true, icon: 'moon', color: '#af52de' },
-  { id: 'cycle_year', name: 'Anual', daysValue: 365, isPinned: true, icon: 'globe', color: '#34c759' },
+  { id: 'cycle_day', name: 'Diario', daysValue: 1, isPinned: true, icon: 'sun', color: FREQUENCY_RESERVED_COLORS.day },
+  { id: 'cycle_week', name: 'Semanal', daysValue: 7, isPinned: true, icon: 'calendar', color: FREQUENCY_RESERVED_COLORS.week },
+  { id: 'cycle_month', name: 'Mensual', daysValue: 30, isPinned: true, icon: 'moon', color: FREQUENCY_RESERVED_COLORS.month },
+  { id: 'cycle_year', name: 'Anual', daysValue: 365, isPinned: true, icon: 'globe', color: FREQUENCY_RESERVED_COLORS.year },
 ];
 
 const getCycleColor = (cycle: CustomCycle): string => {
-  if (cycle.id === 'cycle_day') return '#ff9500';
-  if (cycle.id === 'cycle_week') return '#007aff';
-  if (cycle.id === 'cycle_month') return '#af52de';
-  if (cycle.id === 'cycle_year') return '#34c759';
-  return (cycle as any).color || '#5856d6';
+  if (cycle.id === 'cycle_day') return FREQUENCY_RESERVED_COLORS.day;
+  if (cycle.id === 'cycle_week') return FREQUENCY_RESERVED_COLORS.week;
+  if (cycle.id === 'cycle_month') return FREQUENCY_RESERVED_COLORS.month;
+  if (cycle.id === 'cycle_year') return FREQUENCY_RESERVED_COLORS.year;
+  return (cycle as any).color || FREQUENCY_RESERVED_COLORS.day;
 };
 
 export const CyclesListSection: React.FC<CyclesListSectionProps> = ({

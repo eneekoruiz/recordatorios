@@ -16,7 +16,7 @@ import { SoundService } from '../../services/SoundService';
 import { extractPeopleFromText, calculateExpirationStatus, calculateSubscriptionCosts, findFlashbackMemories, isCompletedInCurrentPeriod } from '../../services/TaskService';
 import { PersonProfileModal } from '../people/PersonProfileModal';
 import { AIService } from '../../services/AIService';
-import { isCaducidadesList, isQueHeHechoList, ensureCaducidadesSections } from '../../utils/specialLists';
+import { isCaducidadesList, isQueHeHechoList, ensureCaducidadesSections, isLimpiezaList, getRoomForCleaningTask } from '../../utils/specialLists';
 import { 
   getSectionPeriodicity, 
   getTaskPeriodicity, 
@@ -37,6 +37,9 @@ import { MonthlySummaryModal } from './main/MonthlySummaryModal';
 import { MainPageHeader } from './main/MainPageHeader';
 import { DailyBriefingBanner } from './DailyBriefingBanner';
 import { confirmDialog } from '../ui/confirmDialog';
+import { deduplicateTaskList } from '../../utils/taskDeduplication';
+import { calculateTasksDuration } from '../../utils/taskDuration';
+import { getReservedFrequencyColor } from '../../constants/colors';
 
 interface MainContentProps {
   currentView: string;
@@ -135,6 +138,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
   // Menu state
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const renderedSectionTasksRef = useRef<Record<string, TaskItem[]>>({});
   
   // Opciones de inclusión jerárquica para ciclos (Semanales con/sin Diarias, Mensuales con/sin Semanales o Diarias)
   const [cycleInclusion] = useState<{
@@ -621,6 +625,11 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     return Object.values(groupedTasks).flat();
   }, [groupedTasks, isolatedSectionKey, isolatedRoutineMode, listSections, lists, sortBy]);
 
+  // Duración estimada agregada de todas las tareas visibles
+  const viewTasksDuration = useMemo(() => {
+    return calculateTasksDuration(visibleTasks, listSections, lists);
+  }, [visibleTasks, listSections, lists]);
+
   // Índices precalculados: evitan recorrer todas las tareas por cada fila renderizada (O(n²)).
   const parentIdsWithChildren = useMemo(() => {
     const ids = new Set<string>();
@@ -1071,8 +1080,168 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               }
             }
 
+            // Comprobar si la lista tiene raíces de ciclo periódicas con subsecciones de estancia (ej. Limpieza con Diarias, Semanales -> Cocina, Baño, etc.)
+            const periodicRoots = sectionsForList.filter(s => !s.parentId && getPureCyclicPeriodicity(s.name));
+            const hasPeriodicChildSections = isLimpiezaList(listId) || periodicRoots.some(pr =>
+              sectionsForList.some(s => s.parentId === pr.id ||
+                (pr.id.startsWith('sec_limpieza_') && s.parentId === pr.id.replace('sec_limpieza_', 'sec_limp_')) ||
+                (pr.id.startsWith('sec_limp_') && s.parentId === pr.id.replace('sec_limp_', 'sec_limpieza_'))
+              )
+            );
+
+            if (hasPeriodicChildSections) {
+              // UNIFICACIÓN DE ESTANCIAS:
+              // En lugar de duplicar secciones de habitación para cada ciclo ("Cocina" en Diarias y "Cocina" en Semanales),
+              // unificamos todas las tareas de la estancia en una sola sección coherente ordenada por frecuencia.
+              const canonicalRoomInfo = (name: string) => {
+                const norm = (name || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                if (norm.includes('cocin')) return { key: 'cocina', name: 'Cocina', order: 0 };
+                if (norm.includes('ban') || norm.includes('duch') || norm.includes('aseo')) return { key: 'bano', name: 'Baño', order: 1 };
+                if (norm.includes('habitaci') || norm.includes('dormitori') || norm.includes('cam')) return { key: 'habitacion', name: 'Habitación', order: 2 };
+                if (norm.includes('pasill') || norm.includes('entrad') || norm.includes('recibid')) return { key: 'pasillo', name: 'Pasillo / Entrada', order: 3 };
+                if (norm.includes('balcon') || norm.includes('terraz')) return { key: 'balcon', name: 'Balcón', order: 4 };
+                if (norm.includes('general')) return { key: 'general', name: 'General', order: 5 };
+                return { key: norm.replace(/\s+/g, '_') || 'custom', name: name.trim(), order: 10 };
+              };
+
+              const roomsMap = new Map<string, { key: string; name: string; order: number; sectionIds: Set<string>; primarySectionId: string }>();
+
+              const defaultRooms = [
+                { key: 'cocina', name: 'Cocina', order: 0 },
+                { key: 'bano', name: 'Baño', order: 1 },
+                { key: 'habitacion', name: 'Habitación', order: 2 },
+                { key: 'pasillo', name: 'Pasillo / Entrada', order: 3 },
+                { key: 'balcon', name: 'Balcón', order: 4 },
+                { key: 'general', name: 'General', order: 5 },
+              ];
+              defaultRooms.forEach(dr => {
+                roomsMap.set(dr.key, {
+                  key: dr.key,
+                  name: dr.name,
+                  order: dr.order,
+                  sectionIds: new Set<string>(),
+                  primarySectionId: `sec_limp_semanal_${dr.key}`
+                });
+              });
+
+              sectionsForList.forEach(s => {
+                if (!s.parentId && getPureCyclicPeriodicity(s.name)) return;
+                const info = canonicalRoomInfo(s.name);
+                if (!roomsMap.has(info.key)) {
+                  roomsMap.set(info.key, {
+                    key: info.key,
+                    name: info.name,
+                    order: info.order,
+                    sectionIds: new Set<string>(),
+                    primarySectionId: s.id
+                  });
+                }
+                const entry = roomsMap.get(info.key)!;
+                entry.sectionIds.add(s.id);
+                entry.primarySectionId = s.id;
+                if (s.id.startsWith('sec_limpieza_')) entry.sectionIds.add(s.id.replace('sec_limpieza_', 'sec_limp_'));
+                if (s.id.startsWith('sec_limp_')) entry.sectionIds.add(s.id.replace('sec_limp_', 'sec_limpieza_'));
+              });
+
+              const assignedTasksByRoom = new Map<string, TaskItem[]>();
+              roomsMap.forEach((_, key) => assignedTasksByRoom.set(key, []));
+
+              for (const task of tasksInScope) {
+                const tSec = task.sectionId || (task as any).section_id;
+                let matchedKey: string | null = null;
+
+                if (tSec) {
+                  for (const [rKey, room] of roomsMap.entries()) {
+                    if (room.sectionIds.has(tSec)) {
+                      matchedKey = rKey;
+                      break;
+                    }
+                  }
+                }
+
+                if (!matchedKey && isLimpiezaList(listId)) {
+                  const roomNameFromTitle = getRoomForCleaningTask(task.title);
+                  const info = canonicalRoomInfo(roomNameFromTitle);
+                  if (assignedTasksByRoom.has(info.key)) {
+                    matchedKey = info.key;
+                  }
+                }
+
+                if (matchedKey) {
+                  assignedTasksByRoom.get(matchedKey)!.push(task);
+                } else {
+                  if (assignedTasksByRoom.has('general')) {
+                    assignedTasksByRoom.get('general')!.push(task);
+                  } else {
+                    const firstKey = roomsMap.keys().next().value;
+                    if (firstKey) assignedTasksByRoom.get(firstKey)!.push(task);
+                  }
+                }
+              }
+
+              const sortedRooms = Array.from(roomsMap.values()).sort((a, b) => a.order - b.order);
+              const periodicityRank: Record<string, number> = { day: 1, week: 2, month: 3, year: 4 };
+
+              sortedRooms.forEach(room => {
+                const rawRoomTasks = assignedTasksByRoom.get(room.key) || [];
+                if (currentCycle && rawRoomTasks.length === 0) {
+                  return;
+                }
+
+                const roomTasks = deduplicateTaskList(rawRoomTasks);
+                roomTasks.sort((a, b) => {
+                  const pA = getTaskPeriodicity(a, listSections, lists) || 'day';
+                  const pB = getTaskPeriodicity(b, listSections, lists) || 'day';
+                  const rankA = periodicityRank[pA] || 99;
+                  const rankB = periodicityRank[pB] || 99;
+                  if (rankA !== rankB) return rankA - rankB;
+                  return (a.order ?? 0) - (b.order ?? 0);
+                });
+
+                const roomCategoryKey = `unified_room_${listId}_${room.key}`;
+                renderedSectionTasksRef.current[roomCategoryKey] = roomTasks;
+                const pendingIds = roomTasks.filter(t => !isTaskCompleted(t)).map(t => t.id);
+
+                flat.push({
+                  type: 'header',
+                  title: formatSectionTitle(room.name),
+                  category: roomCategoryKey,
+                  color: parentColor,
+                  sectionId: room.primarySectionId,
+                  depth: baseDepth,
+                  sectionTaskIds: pendingIds
+                });
+
+                if (!isCatCollapsed(roomCategoryKey)) {
+                  if (roomTasks.length === 0) {
+                    flat.push({
+                      type: 'empty-section',
+                      title: 'Aquí no hay tareas',
+                      category: roomCategoryKey,
+                      color: parentColor,
+                      sectionId: room.primarySectionId,
+                      depth: baseDepth
+                    });
+                  } else {
+                    const inScope = new Set(roomTasks.map(t => t.id));
+                    const roots = roomTasks.filter(t => !t.parentId || !inScope.has(t.parentId));
+                    const processNode = (task: TaskItem, d: number) => {
+                      flat.push({ type: 'task', task, depth: d });
+                      if (!isCatCollapsed(`task_${task.id}`)) {
+                        const children = roomTasks.filter(t => t.parentId === task.id);
+                        children.forEach(c => processNode(c, d + 1));
+                      }
+                    };
+                    roots.forEach(r => processNode(r, baseDepth));
+                  }
+                }
+              });
+
+              return;
+            }
+
             // 1. Uncategorized tasks in scope
-            const uncategorized = tasksInScope.filter(t => !t.sectionId || !sectionsForList.some(s => s.id === t.sectionId));
+            const uncategorized = deduplicateTaskList(tasksInScope.filter(t => !t.sectionId || !sectionsForList.some(s => s.id === t.sectionId)));
             if (uncategorized.length > 0) {
               const inUncat = new Set(uncategorized.map(t => t.id));
               const roots = uncategorized.filter(t => !t.parentId || !inUncat.has(t.parentId));
@@ -1113,7 +1282,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                   return;
                 }
 
-                const secTasks = tasksInScope.filter(t => t.sectionId === secId);
+                const secTasks = deduplicateTaskList(tasksInScope.filter(t => t.sectionId === secId));
                 if (secTasks.length > 0) {
                   const inSec = new Set(secTasks.map(t => t.id));
                   const roots = secTasks.filter(t => !t.parentId || !inSec.has(t.parentId));
@@ -1133,7 +1302,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 return;
               }
 
-              const secTasks = tasksInScope.filter(t => t.sectionId === secId);
+              const secTasks = deduplicateTaskList(tasksInScope.filter(t => t.sectionId === secId));
               const secKey = sec.id.startsWith('sec_') || sec.id.startsWith('section_') ? sec.id : `sec_${sec.id}`;
               const secPeriodicity = getSectionPeriodicity(secKey, sec.name, listSections, lists);
               
@@ -1261,12 +1430,13 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         if (groupedTasks['no_section'] && groupedTasks['no_section'].length > 0) {
           if (!isolatedSectionKey || isolatedSectionKey === 'no_section') {
             if (!collapsed['no_section']) {
-              const inScope = new Set(groupedTasks['no_section'].map(t => t.id));
-              const roots = groupedTasks['no_section'].filter(t => !t.parentId || !inScope.has(t.parentId));
+              const uncatTasks = deduplicateTaskList(groupedTasks['no_section']);
+              const inScope = new Set(uncatTasks.map(t => t.id));
+              const roots = uncatTasks.filter(t => !t.parentId || !inScope.has(t.parentId));
               const processNode = (task: TaskItem, depth: number) => {
                 flat.push({ type: 'task', task, depth });
                 if (!isCatCollapsed(`task_${task.id}`)) {
-                  const children = groupedTasks['no_section'].filter(t => t.parentId === task.id);
+                  const children = uncatTasks.filter(t => t.parentId === task.id);
                   children.forEach(c => processNode(c, depth + 1));
                 }
               };
@@ -1327,7 +1497,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
           const sectionPeriodicity = getSectionPeriodicity(categoryKey, sec.name, listSections, lists);
-          let tasksToRender = categoryTasks;
+          let tasksToRender = deduplicateTaskList(categoryTasks);
           let routineCounts: { full: number; only: number } | null = null;
 
           const allChildTasks = childSections.flatMap(cs => [
@@ -1353,7 +1523,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
               const currentRoutineMode = sectionRoutineModes[categoryKey] || 'only_section';
               if (currentRoutineMode === 'full_routine') {
-                tasksToRender = sortTasksByUserPreference(fullRoutineTasks, sortBy);
+                tasksToRender = deduplicateTaskList(sortTasksByUserPreference(fullRoutineTasks, sortBy));
               }
             }
           }
@@ -1406,117 +1576,265 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           }
         };
         
-        if (presentCycleKeys.length > 0) {
-          const sortedCycles = presentCycleKeys.sort((a, b) => {
-            const idA = a.replace('cycle_', '');
-            const idB = b.replace('cycle_', '');
-            const pureA = idA.startsWith('cycle_') ? idA.replace('cycle_', '') : idA;
-            const pureB = idB.startsWith('cycle_') ? idB.replace('cycle_', '') : idB;
-            const cOrder: Record<string, number> = { day: 1, week: 2, month: 3, year: 4 };
-            const cA = allCycles.find(c => c.id === idA || c.id === pureA)?.daysValue || cOrder[pureA] || 0;
-            const cB = allCycles.find(c => c.id === idB || c.id === pureB)?.daysValue || cOrder[pureB] || 0;
-            return cA - cB;
+        if (isLimpiezaList(currentList?.id, currentList)) {
+          // UNIFICACIÓN CANÓNICA DE ESTANCIAS PARA LA LISTA DE LIMPIEZA
+          // Unifica todas las tareas de cada estancia (Cocina, Baño, Habitación, Pasillo / Entrada, Balcón, General)
+          // en una sola sección coherente ordenada por frecuencia, sin duplicar habitaciones bajo distintos ciclos.
+          const canonicalRoomInfo = (name: string) => {
+            const norm = (name || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            if (norm.includes('cocin')) return { key: 'cocina', name: 'Cocina', order: 0 };
+            if (norm.includes('ban') || norm.includes('duch') || norm.includes('aseo')) return { key: 'bano', name: 'Baño', order: 1 };
+            if (norm.includes('habitaci') || norm.includes('dormitori') || norm.includes('cam')) return { key: 'habitacion', name: 'Habitación', order: 2 };
+            if (norm.includes('pasill') || norm.includes('entrad') || norm.includes('recibid')) return { key: 'pasillo', name: 'Pasillo / Entrada', order: 3 };
+            if (norm.includes('balcon') || norm.includes('terraz')) return { key: 'balcon', name: 'Balcón', order: 4 };
+            if (norm.includes('general')) return { key: 'general', name: 'General', order: 5 };
+            return { key: norm.replace(/\s+/g, '_') || 'custom', name: name.trim(), order: 10 };
+          };
+
+          const roomsMap = new Map<string, { key: string; name: string; order: number; sectionIds: Set<string>; primarySectionId: string }>();
+
+          const defaultRooms = [
+            { key: 'cocina', name: 'Cocina', order: 0 },
+            { key: 'bano', name: 'Baño', order: 1 },
+            { key: 'habitacion', name: 'Habitación', order: 2 },
+            { key: 'pasillo', name: 'Pasillo / Entrada', order: 3 },
+            { key: 'balcon', name: 'Balcón', order: 4 },
+            { key: 'general', name: 'General', order: 5 },
+          ];
+          defaultRooms.forEach(dr => {
+            roomsMap.set(dr.key, {
+              key: dr.key,
+              name: dr.name,
+              order: dr.order,
+              sectionIds: new Set<string>(),
+              primarySectionId: `sec_limp_semanal_${dr.key}`
+            });
           });
 
-          sortedCycles.forEach(catKey => {
-            const cId = catKey.replace('cycle_', '');
-            const purePeriod = cId.startsWith('cycle_') ? cId.replace('cycle_', '') : cId;
-            const cObj = allCycles.find(c => c.id === cId || c.id === purePeriod || c.id === `cycle_${purePeriod}`);
-            const manualSec = sectionsForList.find(s => !s.parentId && getPureCyclicPeriodicity(s.name) === purePeriod);
-            const cName = manualSec ? manualSec.name : (cObj ? cObj.name : purePeriod);
-            const categoryTasks = groupedTasks[catKey] || [];
-
-            const sectionPeriodicity = (purePeriod as PeriodicityType) || getSectionPeriodicity(catKey, cName, listSections, lists);
-            const cDays = cObj?.daysValue || (purePeriod === 'day' ? 1 : purePeriod === 'week' ? 7 : purePeriod === 'month' ? 30 : 365);
-            const fullTasks = Object.values(groupedTasks)
-              .flat()
-              .filter(t => {
-                const tCycle = allCycles.find(c => c.id === t.cycle_id);
-                return tCycle && tCycle.daysValue <= cDays;
+          sectionsForList.forEach(s => {
+            if (!s.parentId && getPureCyclicPeriodicity(s.name)) return;
+            const info = canonicalRoomInfo(s.name);
+            if (!roomsMap.has(info.key)) {
+              roomsMap.set(info.key, {
+                key: info.key,
+                name: info.name,
+                order: info.order,
+                sectionIds: new Set<string>(),
+                primarySectionId: s.id
               });
+            }
+            const entry = roomsMap.get(info.key)!;
+            entry.sectionIds.add(s.id);
+            entry.primarySectionId = s.id;
+            if (s.id.startsWith('sec_limpieza_')) entry.sectionIds.add(s.id.replace('sec_limpieza_', 'sec_limp_'));
+            if (s.id.startsWith('sec_limp_')) entry.sectionIds.add(s.id.replace('sec_limp_', 'sec_limpieza_'));
+          });
 
-            const childSections = manualSec 
-              ? sectionsForList.filter(s => s.parentId === manualSec.id ||
-                  (manualSec.id.startsWith('sec_limpieza_') && s.parentId === manualSec.id.replace('sec_limpieza_', 'sec_limp_')) ||
-                  (manualSec.id.startsWith('sec_limp_') && s.parentId === manualSec.id.replace('sec_limp_', 'sec_limpieza_'))
-                ).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-              : [];
+          const allListTasks = Object.values(groupedTasks).flat();
+          const assignedTasksByRoom = new Map<string, TaskItem[]>();
+          roomsMap.forEach((_, key) => assignedTasksByRoom.set(key, []));
 
-            const allChildTasks = childSections.flatMap(cs => [
-              ...(groupedTasks[`section_${cs.id}`] || []),
-              ...(cs.id.startsWith('sec_limpieza_') ? (groupedTasks[`section_${cs.id.replace('sec_limpieza_', 'sec_limp_')}`] || []) : []),
-              ...(cs.id.startsWith('sec_limp_') ? (groupedTasks[`section_${cs.id.replace('sec_limp_', 'sec_limpieza_')}`] || []) : []),
-            ]);
+          for (const task of allListTasks) {
+            const tSec = task.sectionId || (task as any).section_id;
+            let matchedKey: string | null = null;
 
-            const thisSectionTasksTotal = [...categoryTasks, ...allChildTasks];
-
-            const routineCounts = sectionPeriodicity && sectionPeriodicity !== 'day' && fullTasks.length > thisSectionTasksTotal.length ? {
-              only: thisSectionTasksTotal.length,
-              full: fullTasks.length
-            } : null;
-
-            const mode = sectionRoutineModes[catKey] || 'only_section';
-            let tasksToRender = mode === 'full_routine' && fullTasks.length > thisSectionTasksTotal.length
-              ? sortTasksByUserPreference(fullTasks, sortBy)
-              : categoryTasks;
-
-            const childPendingTaskIds = allChildTasks.filter(t => !isTaskCompleted(t)).map(t => t.id);
-            const allSectionPendingTaskIds = [
-              ...tasksToRender.filter(t => !isTaskCompleted(t)).map(t => t.id),
-              ...childPendingTaskIds
-            ];
-
-            flat.push({
-              type: 'header',
-              title: formatSectionTitle(cName),
-              titleIcon: <Hourglass size={14} />,
-              category: catKey,
-              color,
-              sectionId: manualSec?.id,
-              depth: 0,
-              periodicity: sectionPeriodicity,
-              routineCounts,
-              sectionTaskIds: allSectionPendingTaskIds
-            });
-
-            if (!isCatCollapsed(catKey)) {
-              if (tasksToRender.length === 0 && childSections.length === 0) {
-                flat.push({ type: 'empty-section', title: 'Aquí no hay tareas', category: catKey, color, sectionId: manualSec?.id, depth: 0 });
-              } else {
-                if (tasksToRender.length > 0) {
-                  const inScope = new Set(tasksToRender.map(t => t.id));
-                  const roots = tasksToRender.filter(t => !t.parentId || !inScope.has(t.parentId));
-                  const processNode = (task: TaskItem, depthLevel: number) => {
-                    flat.push({ type: 'task', task, depth: depthLevel });
-                    if (!isCatCollapsed(`task_${task.id}`)) {
-                      const children = tasksToRender.filter(t => t.parentId === task.id);
-                      children.forEach(c => processNode(c, depthLevel + 1));
-                    }
-                  };
-                  roots.forEach(r => processNode(r, 0));
-                }
-
-                if (childSections.length > 0) {
-                  childSections.forEach(child => processSection(child.id, 1));
+            if (tSec) {
+              for (const [rKey, room] of roomsMap.entries()) {
+                if (room.sectionIds.has(tSec)) {
+                  matchedKey = rKey;
+                  break;
                 }
               }
             }
-          });
-        }
 
-        // Start with root sections
-        const seenRootNames = new Set<string>();
-        const rootSections = sectionsForList
-          .filter(s => !s.parentId)
-          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-          .filter(s => {
-            const norm = (s?.name || '').trim().toLowerCase();
-            if (!norm) return true;
-            if (seenRootNames.has(norm)) return false;
-            seenRootNames.add(norm);
-            return true;
+            if (!matchedKey) {
+              const roomNameFromTitle = getRoomForCleaningTask(task.title);
+              const info = canonicalRoomInfo(roomNameFromTitle);
+              if (assignedTasksByRoom.has(info.key)) {
+                matchedKey = info.key;
+              }
+            }
+
+            if (matchedKey) {
+              assignedTasksByRoom.get(matchedKey)!.push(task);
+            } else {
+              if (assignedTasksByRoom.has('general')) {
+                assignedTasksByRoom.get('general')!.push(task);
+              } else {
+                const firstKey = roomsMap.keys().next().value;
+                if (firstKey) assignedTasksByRoom.get(firstKey)!.push(task);
+              }
+            }
+          }
+
+          const sortedRooms = Array.from(roomsMap.values()).sort((a, b) => a.order - b.order);
+          const periodicityRank: Record<string, number> = { day: 1, week: 2, month: 3, year: 4 };
+
+          sortedRooms.forEach(room => {
+            const rawRoomTasks = assignedTasksByRoom.get(room.key) || [];
+            const roomTasks = deduplicateTaskList(rawRoomTasks);
+            roomTasks.sort((a, b) => {
+              const pA = getTaskPeriodicity(a, listSections, lists) || 'day';
+              const pB = getTaskPeriodicity(b, listSections, lists) || 'day';
+              const rankA = periodicityRank[pA] || 99;
+              const rankB = periodicityRank[pB] || 99;
+              if (rankA !== rankB) return rankA - rankB;
+              return (a.order ?? 0) - (b.order ?? 0);
+            });
+
+            const roomCategoryKey = `unified_room_${currentList?.id || 'limpieza'}_${room.key}`;
+            renderedSectionTasksRef.current[roomCategoryKey] = roomTasks;
+            const pendingIds = roomTasks.filter(t => !isTaskCompleted(t)).map(t => t.id);
+
+            flat.push({
+              type: 'header',
+              title: formatSectionTitle(room.name),
+              category: roomCategoryKey,
+              color,
+              sectionId: room.primarySectionId,
+              depth: 0,
+              sectionTaskIds: pendingIds
+            });
+
+            if (!isCatCollapsed(roomCategoryKey)) {
+              if (roomTasks.length === 0) {
+                flat.push({
+                  type: 'empty-section',
+                  title: 'Aquí no hay tareas',
+                  category: roomCategoryKey,
+                  color,
+                  sectionId: room.primarySectionId,
+                  depth: 0
+                });
+              } else {
+                const inScope = new Set(roomTasks.map(t => t.id));
+                const roots = roomTasks.filter(t => !t.parentId || !inScope.has(t.parentId));
+                const processNode = (task: TaskItem, depthLevel: number) => {
+                  flat.push({ type: 'task', task, depth: depthLevel });
+                  if (!isCatCollapsed(`task_${task.id}`)) {
+                    const children = roomTasks.filter(t => t.parentId === task.id);
+                    children.forEach(c => processNode(c, depthLevel + 1));
+                  }
+                };
+                roots.forEach(r => processNode(r, 0));
+              }
+            }
           });
-        rootSections.forEach(rs => processSection(rs.id, 0));
+        } else {
+          if (presentCycleKeys.length > 0) {
+            const sortedCycles = presentCycleKeys.sort((a, b) => {
+              const idA = a.replace('cycle_', '');
+              const idB = b.replace('cycle_', '');
+              const pureA = idA.startsWith('cycle_') ? idA.replace('cycle_', '') : idA;
+              const pureB = idB.startsWith('cycle_') ? idB.replace('cycle_', '') : idB;
+              const cOrder: Record<string, number> = { day: 1, week: 2, month: 3, year: 4 };
+              const cA = allCycles.find(c => c.id === idA || c.id === pureA)?.daysValue || cOrder[pureA] || 0;
+              const cB = allCycles.find(c => c.id === idB || c.id === pureB)?.daysValue || cOrder[pureB] || 0;
+              return cA - cB;
+            });
+
+            sortedCycles.forEach(catKey => {
+              const cId = catKey.replace('cycle_', '');
+              const purePeriod = cId.startsWith('cycle_') ? cId.replace('cycle_', '') : cId;
+              const cObj = allCycles.find(c => c.id === cId || c.id === purePeriod || c.id === `cycle_${purePeriod}`);
+              const manualSec = sectionsForList.find(s => !s.parentId && getPureCyclicPeriodicity(s.name) === purePeriod);
+              const cName = manualSec ? manualSec.name : (cObj ? cObj.name : purePeriod);
+              const categoryTasks = groupedTasks[catKey] || [];
+
+              const sectionPeriodicity = (purePeriod as PeriodicityType) || getSectionPeriodicity(catKey, cName, listSections, lists);
+              const cDays = cObj?.daysValue || (purePeriod === 'day' ? 1 : purePeriod === 'week' ? 7 : purePeriod === 'month' ? 30 : 365);
+              const fullTasks = Object.values(groupedTasks)
+                .flat()
+                .filter(t => {
+                  const tCycle = allCycles.find(c => c.id === t.cycle_id);
+                  return tCycle && tCycle.daysValue <= cDays;
+                });
+
+              const childSections = manualSec 
+                ? sectionsForList.filter(s => s.parentId === manualSec.id ||
+                    (manualSec.id.startsWith('sec_limpieza_') && s.parentId === manualSec.id.replace('sec_limpieza_', 'sec_limp_')) ||
+                    (manualSec.id.startsWith('sec_limp_') && s.parentId === manualSec.id.replace('sec_limp_', 'sec_limpieza_'))
+                  ).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                : [];
+
+              const allChildTasks = childSections.flatMap(cs => [
+                ...(groupedTasks[`section_${cs.id}`] || []),
+                ...(cs.id.startsWith('sec_limpieza_') ? (groupedTasks[`section_${cs.id.replace('sec_limpieza_', 'sec_limp_')}`] || []) : []),
+                ...(cs.id.startsWith('sec_limp_') ? (groupedTasks[`section_${cs.id.replace('sec_limp_', 'sec_limpieza_')}`] || []) : []),
+              ]);
+
+              const thisSectionTasksTotal = [...categoryTasks, ...allChildTasks];
+
+              const routineCounts = sectionPeriodicity && sectionPeriodicity !== 'day' && fullTasks.length > thisSectionTasksTotal.length ? {
+                only: thisSectionTasksTotal.length,
+                full: fullTasks.length
+              } : null;
+
+              const mode = sectionRoutineModes[catKey] || 'only_section';
+              let tasksToRender = deduplicateTaskList(
+                mode === 'full_routine' && fullTasks.length > thisSectionTasksTotal.length
+                  ? sortTasksByUserPreference(fullTasks, sortBy)
+                  : categoryTasks
+              );
+
+              const childPendingTaskIds = allChildTasks.filter(t => !isTaskCompleted(t)).map(t => t.id);
+              const allSectionPendingTaskIds = [
+                ...tasksToRender.filter(t => !isTaskCompleted(t)).map(t => t.id),
+                ...childPendingTaskIds
+              ];
+
+              flat.push({
+                type: 'header',
+                title: formatSectionTitle(cName),
+                titleIcon: <Hourglass size={14} />,
+                category: catKey,
+                color,
+                sectionId: manualSec?.id,
+                depth: 0,
+                periodicity: sectionPeriodicity,
+                routineCounts,
+                sectionTaskIds: allSectionPendingTaskIds
+              });
+
+              if (!isCatCollapsed(catKey)) {
+                if (tasksToRender.length === 0 && childSections.length === 0) {
+                  flat.push({ type: 'empty-section', title: 'Aquí no hay tareas', category: catKey, color, sectionId: manualSec?.id, depth: 0 });
+                } else {
+                  if (tasksToRender.length > 0) {
+                    const inScope = new Set(tasksToRender.map(t => t.id));
+                    const roots = tasksToRender.filter(t => !t.parentId || !inScope.has(t.parentId));
+                    const processNode = (task: TaskItem, depthLevel: number) => {
+                      flat.push({ type: 'task', task, depth: depthLevel });
+                      if (!isCatCollapsed(`task_${task.id}`)) {
+                        const children = tasksToRender.filter(t => t.parentId === task.id);
+                        children.forEach(c => processNode(c, depthLevel + 1));
+                      }
+                    };
+                    roots.forEach(r => processNode(r, 0));
+                  }
+
+                  if (childSections.length > 0) {
+                    childSections.forEach(child => processSection(child.id, 1));
+                  }
+                }
+              }
+            });
+          }
+
+          // Start with root sections
+          const seenRootNames = new Set<string>();
+          const rootSections = sectionsForList
+            .filter(s => !s.parentId)
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+            .filter(s => {
+              const norm = (s?.name || '').trim().toLowerCase();
+              if (!norm) return true;
+              if (seenRootNames.has(norm)) return false;
+              seenRootNames.add(norm);
+              return true;
+            });
+          rootSections.forEach(rs => processSection(rs.id, 0));
+        }
       }
     }
 
@@ -1529,51 +1847,96 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     }
 
     return flat;
-  }, [groupedTasks, smartTasks, currentCycle, collapsed, isListView, lists, listSections, currentList, isCatCollapsed, isolatedSectionKey, isolatedRoutineMode, sectionRoutineModes, cycleRoutineCounts]);
+  }, [groupedTasks, smartTasks, currentCycle, collapsed, isListView, lists, listSections, currentList, isCatCollapsed, isolatedSectionKey, sectionRoutineModes, cycleRoutineCounts]);
 
-  // Group flattenedData into sections to enable native CSS sticky push effect between sections
+  // Group flattenedData into sections to enable native multi-tier CSS sticky push effect between sections
   const sectionGroups = useMemo(() => {
-    const groups: {
+    interface SubSectionGroup {
       key: string;
-      headerItem?: { item: VirtualItemType; index: number };
+      subHeaderItem?: { item: VirtualItemType; index: number };
       items: { item: VirtualItemType; index: number }[];
-    }[] = [];
+    }
 
-    let currentGroup: {
+    interface MasterSectionGroup {
       key: string;
+      depth: number;
       headerItem?: { item: VirtualItemType; index: number };
       items: { item: VirtualItemType; index: number }[];
-    } | null = null;
+      subGroups: SubSectionGroup[];
+    }
+
+    const groups: MasterSectionGroup[] = [];
+
+    let currentMasterGroup: MasterSectionGroup | null = null;
+    let currentSubGroup: SubSectionGroup | null = null;
 
     for (let i = 0; i < flattenedData.length; i++) {
       const item = flattenedData[i];
       if (item.type === 'page-header') {
+        if (currentMasterGroup) {
+          groups.push(currentMasterGroup);
+          currentMasterGroup = null;
+          currentSubGroup = null;
+        }
         groups.push({
           key: 'page-header-group',
-          items: [{ item, index: i }]
+          depth: 0,
+          items: [{ item, index: i }],
+          subGroups: []
         });
       } else if (item.type === 'header') {
-        if (currentGroup) {
-          groups.push(currentGroup);
-        }
-        currentGroup = {
-          key: `section-group-${item.category || ''}-${item.sectionId || ''}`,
-          headerItem: { item, index: i },
-          items: []
-        };
-      } else {
-        if (!currentGroup) {
-          currentGroup = {
-            key: 'group-no-header',
-            items: []
+        const itemDepth = item.depth ?? 0;
+        if (itemDepth === 0) {
+          if (currentMasterGroup) {
+            groups.push(currentMasterGroup);
+          }
+          currentMasterGroup = {
+            key: `master-group-${item.category || ''}-${item.sectionId || ''}-${i}`,
+            depth: 0,
+            headerItem: { item, index: i },
+            items: [],
+            subGroups: []
           };
+          currentSubGroup = null;
+        } else {
+          // Sub-header (depth > 0, e.g. room like "Cocina", "Baño")
+          if (currentMasterGroup) {
+            currentSubGroup = {
+              key: `sub-group-${item.category || ''}-${item.sectionId || ''}-${i}`,
+              subHeaderItem: { item, index: i },
+              items: []
+            };
+            currentMasterGroup.subGroups.push(currentSubGroup);
+          } else {
+            currentMasterGroup = {
+              key: `master-group-${item.category || ''}-${item.sectionId || ''}-${i}`,
+              depth: itemDepth,
+              headerItem: { item, index: i },
+              items: [],
+              subGroups: []
+            };
+            currentSubGroup = null;
+          }
         }
-        currentGroup.items.push({ item, index: i });
+      } else {
+        if (currentSubGroup) {
+          currentSubGroup.items.push({ item, index: i });
+        } else if (currentMasterGroup) {
+          currentMasterGroup.items.push({ item, index: i });
+        } else {
+          currentMasterGroup = {
+            key: `group-no-header-${i}`,
+            depth: 0,
+            items: [{ item, index: i }],
+            subGroups: []
+          };
+          currentSubGroup = null;
+        }
       }
     }
 
-    if (currentGroup) {
-      groups.push(currentGroup);
+    if (currentMasterGroup) {
+      groups.push(currentMasterGroup);
     }
 
     return groups;
@@ -1653,12 +2016,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         </div>
       </div>
     );
-  }, [parentIdsWithChildren, visibleIndexById, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, onSelectView, isSmartView, currentView, setSelectedPersonForProfile, recentlyCompletedIds, visibleTasks, handleMoveTaskUp, handleMoveTaskDown, handleReorderTasks]);
+  }, [parentIdsWithChildren, visibleIndexById, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, onSelectView, currentView, setSelectedPersonForProfile, recentlyCompletedIds, visibleTasks, handleMoveTaskUp, handleMoveTaskDown, handleReorderTasks]);
 
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
   const smartListInfo = isSmartView ? SMART_LISTS.find(l => l.id === currentView) : null;
   const SmartIcon = smartListInfo ? smartListInfo.icon : null;
-  const viewColor = currentView === 'TRASH' ? '#8e8e93' : isSmartView ? (smartListInfo?.color || SMART_COLORS[currentView] || 'var(--accent-primary)') : (isListView && currentList) ? (currentList.color || 'var(--accent-primary)') : isFolderView ? (lists?.find(l => l.id === currentView.replace('folder_', ''))?.color || 'var(--accent-primary)') : currentCycle ? (currentCycle.id === 'cycle_day' ? '#ff9500' : currentCycle.id === 'cycle_week' ? '#007aff' : currentCycle.id === 'cycle_month' ? '#af52de' : currentCycle.id === 'cycle_year' ? '#34c759' : (currentCycle as any).color || 'var(--accent-primary)') : 'var(--accent-primary)';
+  const viewColor = currentView === 'TRASH' ? '#8e8e93' : isSmartView ? (smartListInfo?.color || SMART_COLORS[currentView] || 'var(--accent-primary)') : (isListView && currentList) ? (currentList.color || 'var(--accent-primary)') : isFolderView ? (lists?.find(l => l.id === currentView.replace('folder_', ''))?.color || 'var(--accent-primary)') : currentCycle ? getReservedFrequencyColor(currentCycle.id) : 'var(--accent-primary)';
 
   const getTitle = () => {
     if (currentView === 'TRASH') return 'Papelera';
@@ -1775,6 +2138,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                           getTitle={getTitle}
                           currentView={currentView}
                           totalCost={totalCost}
+                          totalDuration={viewTasksDuration}
                           activeVisibleCount={activeVisibleCount}
                           completedVisibleCount={completedVisibleCount}
                           setConfirmProps={setConfirmProps}
@@ -1810,9 +2174,13 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                     const isDraggingOver = dragOverSectionId === sectionId && isCustomSection;
 
                     const showDivider = index > 0 && flattenedData[index - 1]?.type !== 'page-header';
-                    const sectionTasks = groupedTasks[data.category] || [];
+                    const sectionTasks = (data.category ? renderedSectionTasksRef.current[data.category] : null) || groupedTasks[data.category] || [];
                     const sectionTotal = sectionTasks.reduce((sum, t) => sum + (t.price && !isTaskCompleted(t) ? (Number(t.price) || 0) * (t.quantity || 1) : 0), 0);
                     const sectionPendingTaskIds = data.sectionTaskIds || sectionTasks.filter(t => !isTaskCompleted(t)).map(t => t.id);
+                    const tasksForSection = data.sectionTaskIds && data.sectionTaskIds.length > 0
+                      ? data.sectionTaskIds.map((id: string) => tasks[id]).filter(Boolean)
+                      : sectionTasks;
+                    const sectionDurationSummary = calculateTasksDuration(tasksForSection, listSections, lists);
                     return (
                       <MainSectionHeader
                         key={itemKey}
@@ -1839,6 +2207,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                         startEditingSection={startEditingSection}
                         setSelectedPersonForProfile={setSelectedPersonForProfile}
                         sectionTotal={sectionTotal}
+                        durationSummary={sectionDurationSummary}
                         onOpenNewTask={onOpenNewTask}
                         onAddSection={handleAddSection}
                         deleteListSection={deleteListSection}
@@ -1928,14 +2297,28 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                   return null;
                 };
 
+                const hasSubGroups = group.subGroups && group.subGroups.length > 0;
+
                 return (
                   <div 
                     key={group.key} 
                     className="section-container" 
+                    data-testid="master-section-container"
                     style={{ position: 'relative', width: '100%', boxSizing: 'border-box' }}
                   >
                     {group.headerItem && renderItem(group.headerItem.item, group.headerItem.index)}
                     {group.items.map(({ item, index }) => renderItem(item, index))}
+                    {hasSubGroups && group.subGroups.map((subGroup) => (
+                      <div
+                        key={subGroup.key}
+                        className="sub-section-container"
+                        data-testid="sub-section-container"
+                        style={{ position: 'relative', width: '100%', boxSizing: 'border-box' }}
+                      >
+                        {subGroup.subHeaderItem && renderItem(subGroup.subHeaderItem.item, subGroup.subHeaderItem.index)}
+                        {subGroup.items.map(({ item, index }) => renderItem(item, index))}
+                      </div>
+                    ))}
                   </div>
                 );
               })}
@@ -2001,7 +2384,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       />
 
       {(() => {
-        const sectionMenuTasks = sectionMenu.category ? (groupedTasks[sectionMenu.category] || []) : [];
+        const sectionMenuTasks = (sectionMenu.category ? renderedSectionTasksRef.current[sectionMenu.category] : null)
+          || (sectionMenu.category ? (groupedTasks[sectionMenu.category] || []) : []);
         const pendingSectionTasks = sectionMenuTasks.filter(t => !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists));
         const allCompleted = sectionMenuTasks.length > 0 && pendingSectionTasks.length === 0;
         const curSection = sectionMenu.sectionId ? (listSections || []).find(s => s.id === sectionMenu.sectionId) : null;

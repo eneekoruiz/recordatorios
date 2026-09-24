@@ -151,6 +151,38 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
 
       {/* Right: Actions unified in the top line */}
       <div className="header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginLeft: 'auto', flexWrap: 'nowrap', flexShrink: 0, justifyContent: 'flex-end', position: 'relative' }}>
+        {/* Empezar secuencia inmediata */}
+        {onStartSequence && (
+          <button
+            type="button"
+            className="icon-btn apple-nav-action-btn"
+            onClick={() => {
+              HapticService.selection();
+              onStartSequence();
+            }}
+            title="Empezar lista en modo enfoque"
+            aria-label="Empezar lista"
+            style={{
+              height: 32,
+              padding: '0 10px',
+              borderRadius: 16,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              background: 'rgba(0, 122, 255, 0.12)',
+              border: '1px solid rgba(0, 122, 255, 0.25)',
+              cursor: 'pointer',
+              color: listAccentColor,
+              fontWeight: 600,
+              fontSize: '0.80rem',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <Play size={12} fill="currentColor" />
+            <span>Empezar</span>
+          </button>
+        )}
+
         {/* Añadir sección de raíz */}
         {isListView && (
           <button 

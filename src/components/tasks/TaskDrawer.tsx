@@ -676,6 +676,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                 setTimeOfDay={setTimeOfDay}
                 category={category}
                 expirationType={expirationType}
+                duration={duration}
+                setDuration={setDuration}
                 removeAlert={removeAlert}
                 addAnticipationAlert={addAnticipationAlert}
               />

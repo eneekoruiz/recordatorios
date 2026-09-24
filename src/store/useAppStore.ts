@@ -5,7 +5,7 @@ import type { TaskItem, CustomCycle, CustomList, ListSection } from '../models/T
 import { TaskRepository } from '../repositories/TaskRepository';
 import { isCompletedInCurrentPeriod, wouldCreateDependencyCycle } from '../services/TaskService';
 import { getEffectiveCycleId, getPureCyclicPeriodicity } from '../utils/sectionRoutine';
-import { findDuplicateTask } from '../utils/taskDeduplication';
+import { findDuplicateTask, normalizeTitle } from '../utils/taskDeduplication';
 
 const optimisticUpdate = (
   get: () => AppState,
@@ -1317,9 +1317,63 @@ export const useAppStore = create<AppState>()(
           : false;
         const resolvedTheme = userExplicitTheme === 'dark' ? 'dark' : userExplicitTheme === 'light' ? 'light' : (systemPrefersDark ? 'dark' : 'light');
 
+        // Saneamiento y deduplicación de tareas locales/persistidas
+        const rawTasks = (persistedState?.tasks || currentState.tasks || {}) as Record<string, TaskItem>;
+        const tasksByGroup = new Map<string, TaskItem[]>();
+
+        for (const t of Object.values(rawTasks)) {
+          if (!t || !t.id || t.deleted_at) continue;
+          const norm = normalizeTitle(t.title);
+          const cat = t.categoryId || (t as any).category_id || 'no_cat';
+          const sec = t.sectionId || (t as any).section_id || 'no_sec';
+          const normSec = sec
+            .replace(/^sec_limpieza_/, 'sec_limp_')
+            .replace(/_diarias$/, '_diaria')
+            .replace(/_semanales$/, '_semanal')
+            .replace(/_mensuales$/, '_mensual')
+            .replace(/_anuales$/, '_anual');
+          const groupKey = `${cat}:::${normSec}:::${norm}`;
+          if (!tasksByGroup.has(groupKey)) {
+            tasksByGroup.set(groupKey, []);
+          }
+          tasksByGroup.get(groupKey)!.push(t);
+        }
+
+        const cleanTasks: Record<string, TaskItem> = { ...rawTasks };
+        for (const [, group] of tasksByGroup.entries()) {
+          if (group.length > 1) {
+            group.sort((a, b) => {
+              const aDone = isTaskCompleted(a) || (a as any).completed;
+              const bDone = isTaskCompleted(b) || (b as any).completed;
+              if (!aDone && bDone) return -1;
+              if (aDone && !bDone) return 1;
+
+              const vA = a.version || 1;
+              const vB = b.version || 1;
+              if (vA !== vB) return vB - vA;
+
+              const tA = new Date(a.updated_at || a.created_at || 0).getTime();
+              const tB = new Date(b.updated_at || b.created_at || 0).getTime();
+              return tB - tA;
+            });
+
+            const nowStr = new Date().toISOString();
+            for (let i = 1; i < group.length; i++) {
+              const dupe = group[i];
+              cleanTasks[dupe.id] = {
+                ...dupe,
+                deleted_at: nowStr,
+                _is_dirty: true,
+                version: (dupe.version || 1) + 1
+              };
+            }
+          }
+        }
+
         return {
           ...currentState,
           ...persistedState,
+          tasks: cleanTasks,
           globalCyclesEnabled: true,
           _preferences_dirty: false,
           theme: resolvedTheme,

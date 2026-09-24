@@ -1,7 +1,8 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { MoreHorizontal, ChevronDown } from 'lucide-react';
+import { MoreHorizontal, ChevronDown, Clock, Play } from 'lucide-react';
 import { HapticService } from '../../../services/HapticService';
 import type { SectionMenuState } from './SectionContextMenu';
+import type { TasksDurationSummary } from '../../../utils/taskDuration';
 
 interface SectionData {
   title: string;
@@ -39,6 +40,7 @@ interface MainSectionHeaderProps {
   startEditingSection: (e: any, id: string, name: string) => void;
   setSelectedPersonForProfile: (person: string) => void;
   sectionTotal: number;
+  durationSummary?: TasksDurationSummary;
   onOpenNewTask?: (sectionId?: string) => void;
   onAddSection?: (parentId?: string) => void;
   deleteListSection?: (id: string) => void;
@@ -79,6 +81,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   startEditingSection,
   setSelectedPersonForProfile,
   sectionTotal,
+  durationSummary,
   onOpenNewTask: _onOpenNewTask,
   onAddSection: _onAddSection,
   deleteListSection: _deleteListSection,
@@ -89,7 +92,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   sectionRoutineModes = {},
   toggleSectionRoutineMode,
   dragOverSectionId,
-  onStartSectionSequence: _onStartSectionSequence,
+  onStartSectionSequence,
   pendingTaskCount,
   isMobile,
   sectionMenu,
@@ -173,15 +176,15 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       style={{ 
         ...itemStyle, 
         position: 'sticky',
-        top: 0,
-        zIndex: isMenuOpenForThisSection ? 999992 : 15,
+        top: data.depth === 0 ? 0 : 48,
+        zIndex: isMenuOpenForThisSection ? 999992 : (data.depth === 0 ? 30 : 25),
         borderBottom: '1px solid var(--border-subtle)',
         borderTop: 'none',
         paddingLeft: `calc(28px + ${data.depth * 24}px)`,
         paddingRight: '16px',
-        minHeight: 44,
-        paddingTop: isPrevHeader ? 8 : (index > 0 ? 14 : 8),
-        paddingBottom: 8,
+        minHeight: data.depth === 0 ? 48 : 40,
+        paddingTop: data.depth === 0 ? (isPrevHeader ? 8 : (index > 0 ? 12 : 8)) : 6,
+        paddingBottom: data.depth === 0 ? 8 : 6,
         margin: 0,
         boxSizing: 'border-box',
         display: 'flex',
@@ -364,6 +367,31 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, justifyContent: 'flex-end' }}>
+          {/* Duración estimada total de la sección */}
+          {durationSummary && durationSummary.activeMinutes > 0 && (
+            <span 
+              className="section-duration-pill"
+              style={{
+                fontSize: '0.74rem',
+                fontWeight: 500,
+                fontVariantNumeric: 'tabular-nums',
+                color: 'var(--text-secondary)',
+                background: 'var(--bg-hover, rgba(0,0,0,0.04))',
+                border: '1px solid var(--border-subtle)',
+                padding: '2px 7px',
+                borderRadius: '6px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 3.5,
+                whiteSpace: 'nowrap'
+              }}
+              title={durationSummary.parallelTasksCount > 0 ? durationSummary.formattedTotal : `Duración estimada: ${durationSummary.formattedActive}`}
+            >
+              <Clock size={11} style={{ opacity: 0.7 }} />
+              <span>{durationSummary.formattedActive}</span>
+            </span>
+          )}
+
           {/* Si esta sección tiene periodicidad (no diaria), ESTÁ DESPLEGADA y hay tareas acumulables (full > only), conmutador nativo Apple */}
           {!isCatCollapsed(data.category) && data.periodicity && data.periodicity !== 'day' && data.routineCounts && data.routineCounts.full > data.routineCounts.only ? (
             <div className="apple-segmented-control">
@@ -416,6 +444,40 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                 </span>
               ) : null;
             })()
+          )}
+
+          {/* Botón directo Empezar ya esta sección */}
+          {onStartSectionSequence && (pendingTaskCount ?? data.sectionTaskIds?.length ?? 0) > 0 && (
+            <button
+              type="button"
+              className="section-start-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                HapticService.impact('medium');
+                onStartSectionSequence();
+              }}
+              title="Empezar ya esta sección en modo enfoque"
+              aria-label="Empezar sección"
+              style={{
+                background: data.color ? `${data.color}15` : 'rgba(0, 122, 255, 0.12)',
+                border: `1px solid ${data.color ? `${data.color}35` : 'rgba(0, 122, 255, 0.25)'}`,
+                color: data.color || 'var(--accent-primary)',
+                borderRadius: '7px',
+                padding: '2px 8px',
+                fontSize: '0.74rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                transition: 'all 0.15s ease',
+                height: 24,
+                flexShrink: 0
+              }}
+            >
+              <Play size={10} fill="currentColor" />
+              <span>Empezar</span>
+            </button>
           )}
 
           <button

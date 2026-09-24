@@ -291,5 +291,101 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     await page.waitForTimeout(300);
     await expect(cocinaTask).toBeVisible();
   });
+
+  test('4. Section sequence mode [▶ Empezar], duration pills, and parallel tasks work seamlessly', async ({ page }) => {
+    await ensureAppUnlocked(page);
+
+    // Setup custom list with a section and tasks, including a parallel task (lavadora)
+    await page.evaluate(() => {
+      const store = (window as any).useAppStore?.getState();
+      if (!store) return;
+
+      store.addList({
+        id: 'list_hogar_seq',
+        name: 'Hogar Secuencia',
+        color: '#FF6584',
+        icon: 'home'
+      });
+
+      store.addListSection({
+        id: 'sec_colada',
+        name: 'Colada',
+        listId: 'list_hogar_seq',
+        order: 0
+      });
+
+      store.addTask({
+        id: 'task_lavadora_parallel',
+        title: 'Poner la lavadora',
+        categoryId: 'list_hogar_seq',
+        sectionId: 'sec_colada',
+        status: 'pending'
+      });
+
+      store.addTask({
+        id: 'task_tender_ropa',
+        title: 'Barrer la cocina',
+        categoryId: 'list_hogar_seq',
+        sectionId: 'sec_colada',
+        status: 'pending'
+      });
+    });
+
+    await page.waitForTimeout(400);
+
+    // Navigate to Hogar Secuencia list
+    const listBtn = page.locator('.ios-list-item:has-text("Hogar Secuencia")');
+    await expect(listBtn.first()).toBeVisible({ timeout: 5000 });
+    await listBtn.first().click();
+
+    await page.waitForTimeout(500);
+
+    // Verify section header "Colada" displays duration pill
+    const coladaHeader = page.locator('.group-header:has-text("Colada")');
+    await expect(coladaHeader).toBeVisible({ timeout: 5000 });
+
+    // Duration pill should be present in section header
+    const durationPill = coladaHeader.locator('.section-duration-pill');
+    await expect(durationPill).toBeVisible({ timeout: 5000 });
+
+    // "Empezar" button should be present on section header
+    const startSectionBtn = coladaHeader.locator('.section-start-btn');
+    await expect(startSectionBtn).toBeVisible({ timeout: 5000 });
+    await startSectionBtn.click();
+
+    await page.waitForTimeout(500);
+
+    // ListSequenceMode overlay should be open
+    const sequenceOverlay = page.locator('text=Poner la lavadora');
+    await expect(sequenceOverlay.first()).toBeVisible({ timeout: 5000 });
+
+    // Parallel task badge should be visible
+    const parallelBadge = page.locator('text=Tarea en paralelo');
+    await expect(parallelBadge.first()).toBeVisible({ timeout: 5000 });
+
+    // "Poner en marcha y seguir" action button should be visible
+    const parallelActionBtn = page.locator('button:has-text("Poner en marcha y seguir")');
+    await expect(parallelActionBtn).toBeVisible({ timeout: 5000 });
+
+    // Click "Poner en marcha y seguir" -> should advance to next task "Barrer la cocina" and show running parallel pill in top bar
+    await parallelActionBtn.click();
+    await page.waitForTimeout(500);
+
+    // Next task should now be displayed
+    const nextTask = page.locator('text=Barrer la cocina');
+    await expect(nextTask.first()).toBeVisible({ timeout: 5000 });
+
+    // Top bar should show background parallel task chip
+    const parallelChip = page.locator('text=Poner la lavadora');
+    await expect(parallelChip.first()).toBeVisible({ timeout: 5000 });
+
+    // Press Escape to exit sequence mode
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(400);
+
+    // Sequence overlay should be closed
+    await expect(page.locator('button:has-text("Poner en marcha y seguir")')).not.toBeVisible();
+  });
 });
+
 
