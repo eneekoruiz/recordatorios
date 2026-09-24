@@ -1,4 +1,4 @@
-import { Calendar, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen, CalendarDays, Globe, Zap } from 'lucide-react';
+import { Calendar, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen, Zap } from 'lucide-react';
 import type { TaskItem, CustomList } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
@@ -53,32 +53,22 @@ export function TaskMetaBadges({
 
   return (
     <>
-      {/* Meta row - Native iOS HIG Style */}
+      {/* Meta row - Native Apple Reminders HIG Style (clean typography + colored micro-icons, zero bulky boxes) */}
       {hasMeta && (
-        <div style={{ display: 'flex', gap: '6px', marginTop: 3, alignItems: 'center', flexWrap: 'wrap', fontSize: '0.8rem', color: 'var(--text-tertiary)', lineHeight: '1.3' }}>
+        <div style={{ display: 'inline-flex', gap: '9px', marginTop: 3, alignItems: 'center', flexWrap: 'wrap', fontSize: '0.75rem', lineHeight: '1.2' }}>
           {showListName && taskList && (
             <span style={{ 
-              display: 'inline-flex', alignItems: 'center', gap: 4,
-              background: 'var(--bg-hover, rgba(0,0,0,0.04))', padding: '1px 7px', borderRadius: '6px',
-              fontWeight: 500, fontSize: '0.75rem', color: taskList.color || 'var(--text-secondary)'
+              display: 'inline-flex', alignItems: 'center', gap: 3.5,
+              fontWeight: 650, fontSize: '0.74rem', color: taskList.color || 'var(--text-secondary)'
             }}>
               {taskList.name}
             </span>
           )}
+
           {showDueDate && (() => {
             const isRed = (dueDateColor || '').toLowerCase() === '#ff3b30';
             const isBlue = (dueDateColor || '').toLowerCase() === '#007aff';
-            const dueBg = isRed
-              ? 'rgba(255, 59, 48, 0.10)'
-              : isBlue
-              ? 'rgba(0, 122, 255, 0.09)'
-              : 'var(--fill-quaternary, rgba(142, 142, 147, 0.09))';
-            const dueBorder = isRed
-              ? '1px solid rgba(255, 59, 48, 0.25)'
-              : isBlue
-              ? '1px solid rgba(0, 122, 255, 0.22)'
-              : '1px solid var(--separator-subtle, rgba(142, 142, 147, 0.20))';
-            const dueText = isRed ? '#ff3b30' : isBlue ? '#007aff' : 'var(--text-secondary)';
+            const dueColor = isRed ? '#ff3b30' : isBlue ? '#007aff' : 'var(--text-secondary)';
 
             return (
               <span 
@@ -89,22 +79,16 @@ export function TaskMetaBadges({
                 style={{ 
                   display: 'inline-flex', 
                   alignItems: 'center', 
-                  gap: 4, 
-                  color: dueText, 
-                  fontWeight: 600,
-                  fontSize: '0.73rem',
+                  gap: 3.5, 
+                  color: dueColor, 
+                  fontWeight: isRed || isBlue ? 650 : 600,
                   cursor: 'pointer',
-                  lineHeight: 1.2,
-                  padding: '2px 7px',
-                  borderRadius: 7,
-                  background: dueBg,
-                  border: dueBorder,
-                  transition: 'all 0.15s ease',
-                  userSelect: 'none'
+                  userSelect: 'none',
+                  transition: 'opacity 0.15s ease'
                 }}
                 title="Fecha de vencimiento (Toca para editar)"
               >
-                <Calendar size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+                <Calendar size={11} strokeWidth={2.4} style={{ flexShrink: 0, color: dueColor }} />
                 <span>{(() => {
                   const due = new Date(task.dueDate!);
                   const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -118,106 +102,16 @@ export function TaskMetaBadges({
             );
           })()}
 
-          {hasDuration && (
-            <span
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(task.id);
-              }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                padding: '2px 7px',
-                borderRadius: 7,
-                fontSize: '0.73rem',
-                fontWeight: 600,
-                background: durationInfo.isParallel ? 'rgba(255, 149, 0, 0.11)' : 'rgba(0, 122, 255, 0.09)',
-                color: durationInfo.isParallel ? '#ff9500' : '#007aff',
-                border: durationInfo.isParallel ? '1px solid rgba(255, 149, 0, 0.25)' : '1px solid rgba(0, 122, 255, 0.22)',
-                cursor: 'pointer',
-                lineHeight: 1.2,
-                transition: 'all 0.15s ease',
-                userSelect: 'none'
-              }}
-              title={`Duración estimada: ${formatDuration(durationInfo.activeMinutes)}${durationInfo.isParallel ? ` (+${formatDuration(durationInfo.parallelMinutes)} en paralelo)` : ''}. Pulsa para editar.`}
-            >
-              {durationInfo.isParallel ? (
-                <Zap size={11} strokeWidth={2.4} style={{ flexShrink: 0 }} />
-              ) : (
-                <Clock size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
-              )}
-              <span>{formatDuration(durationInfo.activeMinutes)}</span>
-              {durationInfo.isParallel && (
-                <span style={{ fontSize: '0.64rem', opacity: 0.85 }}>(+{formatDuration(durationInfo.parallelMinutes)})</span>
-              )}
-            </span>
-          )}
-          
-          {inAppListTarget && (
-            <span 
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onNavigateView?.(`list_${inAppListTarget.id}`);
-              }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                padding: '2px 7px',
-                borderRadius: 7,
-                fontSize: '0.73rem',
-                fontWeight: 600,
-                background: 'rgba(0, 122, 255, 0.09)',
-                border: '1px solid rgba(0, 122, 255, 0.22)',
-                color: 'var(--accent-primary)',
-                cursor: 'pointer',
-                lineHeight: 1.2
-              }}
-              title={`Ir a ${inAppListTarget.name}`}
-            >
-              <LayoutList size={11} style={{ flexShrink: 0 }} />
-              <span>Ir a {inAppListTarget.name}</span>
-              <ChevronRight size={10} style={{ opacity: 0.7, flexShrink: 0 }} />
-            </span>
-          )}
-          
+          {/* Frecuencia estilo nativo Apple: símbolo de repetición con toque de color + etiqueta en gris en negrita */}
           {cycleBadge && (() => {
-            const badgeStyles = {
-              day: {
-                color: 'var(--accent-orange, #ff9500)',
-                background: 'rgba(255, 149, 0, 0.09)',
-                border: '1px solid rgba(255, 149, 0, 0.22)',
-                icon: <Sun size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
-              },
-              week: {
-                color: 'var(--accent-blue, #007aff)',
-                background: 'rgba(0, 122, 255, 0.09)',
-                border: '1px solid rgba(0, 122, 255, 0.22)',
-                icon: <CalendarDays size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
-              },
-              month: {
-                color: 'var(--accent-purple, #af52de)',
-                background: 'rgba(175, 82, 222, 0.09)',
-                border: '1px solid rgba(175, 82, 222, 0.22)',
-                icon: <Moon size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
-              },
-              year: {
-                color: 'var(--accent-green, #34c759)',
-                background: 'rgba(52, 199, 89, 0.09)',
-                border: '1px solid rgba(52, 199, 89, 0.22)',
-                icon: <Globe size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
-              },
-              custom: {
-                color: 'var(--text-secondary)',
-                background: 'var(--fill-quaternary, rgba(142, 142, 147, 0.09))',
-                border: '1px solid var(--separator-subtle, rgba(142, 142, 147, 0.20))',
-                icon: <Repeat size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
-              }
+            const freqColors: Record<string, string> = {
+              day: '#FF6F00',
+              week: '#0052FF',
+              month: '#7928CA',
+              year: '#00875A',
+              custom: 'var(--text-tertiary)'
             };
-
-            const currentStyle = badgeStyles[cycleBadge.type as keyof typeof badgeStyles] || badgeStyles.custom;
+            const freqColor = freqColors[cycleBadge.type || 'custom'] || 'var(--accent-primary)';
 
             return (
               <span 
@@ -228,50 +122,60 @@ export function TaskMetaBadges({
                 style={{ 
                   display: 'inline-flex', 
                   alignItems: 'center', 
-                  gap: 4, 
-                  color: currentStyle.color, 
+                  gap: 3.5, 
+                  color: 'var(--text-secondary)', 
                   fontWeight: 600,
-                  fontSize: '0.73rem',
                   cursor: 'pointer',
-                  lineHeight: 1.2,
-                  padding: '2px 7px',
-                  borderRadius: 7,
-                  background: currentStyle.background,
-                  border: currentStyle.border,
-                  transition: 'all 0.15s ease',
-                  userSelect: 'none'
+                  userSelect: 'none',
+                  transition: 'opacity 0.15s ease'
                 }}
                 title={`Frecuencia: ${cycleBadge.label} (Toca para editar)`}
               >
-                {currentStyle.icon}
+                <Repeat size={11} strokeWidth={2.5} style={{ color: freqColor, flexShrink: 0 }} />
                 <span>{cycleBadge.label}</span>
               </span>
             );
           })()}
 
-          {/* Time of Day Pills (Morning, Afternoon, Night) */}
+          {/* Duración estilo nativo Apple: icono sutil + tiempo en negrita */}
+          {hasDuration && (
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(task.id);
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 3.5,
+                color: 'var(--text-secondary)',
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontVariantNumeric: 'tabular-nums',
+                userSelect: 'none',
+                transition: 'opacity 0.15s ease'
+              }}
+              title={`Duración estimada: ${formatDuration(durationInfo.activeMinutes)}${durationInfo.isParallel ? ` (+${formatDuration(durationInfo.parallelMinutes)} en paralelo)` : ''}. Pulsa para editar.`}
+            >
+              {durationInfo.isParallel ? (
+                <Zap size={11} strokeWidth={2.4} style={{ flexShrink: 0, color: '#ff9500' }} />
+              ) : (
+                <Clock size={11} strokeWidth={2.2} style={{ flexShrink: 0, color: 'var(--accent-primary)', opacity: 0.85 }} />
+              )}
+              <span>{formatDuration(durationInfo.activeMinutes)}</span>
+              {durationInfo.isParallel && (
+                <span style={{ fontSize: '0.67rem', color: 'var(--text-tertiary)', fontWeight: 500 }}>(+{formatDuration(durationInfo.parallelMinutes)})</span>
+              )}
+            </span>
+          )}
+
+          {/* Momento del día estilo nativo Apple: icono cálido + texto en negrita */}
           {timeOfDayInfo && (() => {
-            const timeStyles = {
-              morning: {
-                color: '#ff9500',
-                background: 'rgba(255, 149, 0, 0.09)',
-                border: '1px solid rgba(255, 149, 0, 0.22)',
-                icon: <Sun size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
-              },
-              afternoon: {
-                color: '#007aff',
-                background: 'rgba(0, 122, 255, 0.09)',
-                border: '1px solid rgba(0, 122, 255, 0.22)',
-                icon: <Clock size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
-              },
-              night: {
-                color: '#5856d6',
-                background: 'rgba(88, 86, 214, 0.09)',
-                border: '1px solid rgba(88, 86, 214, 0.22)',
-                icon: <Moon size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
-              }
-            };
-            const currentStyle = timeStyles[timeOfDayInfo.tag] || timeStyles.morning;
+            const timeIcon = timeOfDayInfo.tag === 'morning'
+              ? <Sun size={11} strokeWidth={2.4} style={{ color: '#ff9500', flexShrink: 0 }} />
+              : timeOfDayInfo.tag === 'afternoon'
+              ? <Clock size={11} strokeWidth={2.4} style={{ color: '#007aff', flexShrink: 0 }} />
+              : <Moon size={11} strokeWidth={2.4} style={{ color: '#5856d6', flexShrink: 0 }} />;
 
             return (
               <button
@@ -282,28 +186,53 @@ export function TaskMetaBadges({
                   HapticService.selection();
                 }}
                 style={{
-                  background: currentStyle.background,
-                  border: currentStyle.border,
-                  padding: '2px 7px',
-                  borderRadius: 7,
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 4,
-                  color: currentStyle.color,
+                  gap: 3.5,
+                  color: 'var(--text-secondary)',
                   fontWeight: 600,
                   cursor: 'pointer',
-                  fontSize: '0.73rem',
-                  lineHeight: 1.2,
-                  transition: 'all 0.15s ease',
-                  userSelect: 'none'
+                  fontSize: '0.75rem',
+                  lineHeight: '1.2',
+                  userSelect: 'none',
+                  transition: 'opacity 0.15s ease'
                 }}
-                title={`Momento del día: ${timeOfDayInfo.label}. Pulsa para cambiar (Mañana ➔ Tarde ➔ Noche).`}
+                title={`Momento del día: ${timeOfDayInfo.label}. Pulsa para alternar (Mañana ➔ Tarde ➔ Noche).`}
               >
-                {currentStyle.icon}
+                {timeIcon}
                 <span>{timeOfDayInfo.label}</span>
               </button>
             );
           })()}
+
+          {/* Destino de lista interna */}
+          {inAppListTarget && (
+            <span 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onNavigateView?.(`list_${inAppListTarget.id}`);
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 3.5,
+                color: 'var(--accent-primary)',
+                fontWeight: 600,
+                cursor: 'pointer',
+                userSelect: 'none',
+                transition: 'opacity 0.15s ease'
+              }}
+              title={`Ir a ${inAppListTarget.name}`}
+            >
+              <LayoutList size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+              <span>Ir a {inAppListTarget.name}</span>
+              <ChevronRight size={10} style={{ opacity: 0.7, flexShrink: 0 }} />
+            </span>
+          )}
         </div>
       )}
 
