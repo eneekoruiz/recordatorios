@@ -65,30 +65,58 @@ export function TaskMetaBadges({
               {taskList.name}
             </span>
           )}
-          {showDueDate && (
-            <span 
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(task.id);
-              }}
-              style={{ 
-                display: 'inline-flex', alignItems: 'center', gap: 4, 
-                color: dueDateColor, fontWeight: (dueDateColor || '').toLowerCase() === '#ff3b30' ? 600 : 400,
-                cursor: 'pointer'
-              }}
-              title="Fecha de vencimiento (Toca para editar)"
-            >
-              <Calendar size={11} style={{ flexShrink: 0 }} /> {(() => {
-                const due = new Date(task.dueDate!);
-                const today = new Date(); today.setHours(0, 0, 0, 0);
-                const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
-                const dueZero = new Date(due); dueZero.setHours(0, 0, 0, 0);
-                if (dueZero.getTime() === today.getTime()) return 'Hoy';
-                if (dueZero.getTime() === tomorrow.getTime()) return 'Mañana';
-                return due.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-              })()}
-            </span>
-          )}
+          {showDueDate && (() => {
+            const isRed = (dueDateColor || '').toLowerCase() === '#ff3b30';
+            const isBlue = (dueDateColor || '').toLowerCase() === '#007aff';
+            const dueBg = isRed
+              ? 'rgba(255, 59, 48, 0.10)'
+              : isBlue
+              ? 'rgba(0, 122, 255, 0.09)'
+              : 'var(--fill-quaternary, rgba(142, 142, 147, 0.09))';
+            const dueBorder = isRed
+              ? '1px solid rgba(255, 59, 48, 0.25)'
+              : isBlue
+              ? '1px solid rgba(0, 122, 255, 0.22)'
+              : '1px solid var(--separator-subtle, rgba(142, 142, 147, 0.20))';
+            const dueText = isRed ? '#ff3b30' : isBlue ? '#007aff' : 'var(--text-secondary)';
+
+            return (
+              <span 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(task.id);
+                }}
+                style={{ 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: 4, 
+                  color: dueText, 
+                  fontWeight: 600,
+                  fontSize: '0.73rem',
+                  cursor: 'pointer',
+                  lineHeight: 1.2,
+                  padding: '2px 7px',
+                  borderRadius: 7,
+                  background: dueBg,
+                  border: dueBorder,
+                  transition: 'all 0.15s ease',
+                  userSelect: 'none'
+                }}
+                title="Fecha de vencimiento (Toca para editar)"
+              >
+                <Calendar size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+                <span>{(() => {
+                  const due = new Date(task.dueDate!);
+                  const today = new Date(); today.setHours(0, 0, 0, 0);
+                  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+                  const dueZero = new Date(due); dueZero.setHours(0, 0, 0, 0);
+                  if (dueZero.getTime() === today.getTime()) return 'Hoy';
+                  if (dueZero.getTime() === tomorrow.getTime()) return 'Mañana';
+                  return due.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+                })()}</span>
+              </span>
+            );
+          })()}
 
           {hasDuration && (
             <span
@@ -99,27 +127,29 @@ export function TaskMetaBadges({
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 3.5,
-                padding: '1px 6px',
-                borderRadius: '5px',
-                fontSize: '0.72rem',
-                fontWeight: 550,
-                background: durationInfo.isParallel ? 'rgba(255, 149, 0, 0.10)' : 'var(--bg-hover, rgba(0,0,0,0.04))',
-                color: durationInfo.isParallel ? '#ff9500' : 'var(--text-tertiary)',
-                border: durationInfo.isParallel ? '1px solid rgba(255, 149, 0, 0.22)' : '1px solid var(--border-subtle)',
+                gap: 4,
+                padding: '2px 7px',
+                borderRadius: 7,
+                fontSize: '0.73rem',
+                fontWeight: 600,
+                background: durationInfo.isParallel ? 'rgba(255, 149, 0, 0.11)' : 'rgba(0, 122, 255, 0.09)',
+                color: durationInfo.isParallel ? '#ff9500' : '#007aff',
+                border: durationInfo.isParallel ? '1px solid rgba(255, 149, 0, 0.25)' : '1px solid rgba(0, 122, 255, 0.22)',
                 cursor: 'pointer',
-                lineHeight: '1.2'
+                lineHeight: 1.2,
+                transition: 'all 0.15s ease',
+                userSelect: 'none'
               }}
               title={`Duración estimada: ${formatDuration(durationInfo.activeMinutes)}${durationInfo.isParallel ? ` (+${formatDuration(durationInfo.parallelMinutes)} en paralelo)` : ''}. Pulsa para editar.`}
             >
               {durationInfo.isParallel ? (
-                <Zap size={10} style={{ flexShrink: 0, color: '#ff9500' }} />
+                <Zap size={11} strokeWidth={2.4} style={{ flexShrink: 0 }} />
               ) : (
-                <Clock size={10} style={{ flexShrink: 0, opacity: 0.7 }} />
+                <Clock size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
               )}
               <span>{formatDuration(durationInfo.activeMinutes)}</span>
               {durationInfo.isParallel && (
-                <span style={{ fontSize: '0.64rem', opacity: 0.8 }}>(+{formatDuration(durationInfo.parallelMinutes)})</span>
+                <span style={{ fontSize: '0.64rem', opacity: 0.85 }}>(+{formatDuration(durationInfo.parallelMinutes)})</span>
               )}
             </span>
           )}
@@ -135,14 +165,15 @@ export function TaskMetaBadges({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 4,
-                padding: '1.5px 7px',
-                borderRadius: 6,
-                fontSize: '0.74rem',
+                padding: '2px 7px',
+                borderRadius: 7,
+                fontSize: '0.73rem',
                 fontWeight: 600,
-                background: 'rgba(0, 122, 255, 0.1)',
-                border: '1px solid rgba(0, 122, 255, 0.2)',
+                background: 'rgba(0, 122, 255, 0.09)',
+                border: '1px solid rgba(0, 122, 255, 0.22)',
                 color: 'var(--accent-primary)',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                lineHeight: 1.2
               }}
               title={`Ir a ${inAppListTarget.name}`}
             >
@@ -219,36 +250,60 @@ export function TaskMetaBadges({
           })()}
 
           {/* Time of Day Pills (Morning, Afternoon, Night) */}
-          {timeOfDayInfo && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                updateTask(task.id, { timeOfDay: timeOfDayInfo.next });
-                HapticService.selection();
-              }}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                padding: 0,
-                margin: 0,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 3.5,
-                color: 'var(--text-tertiary)',
-                fontWeight: 400,
-                cursor: 'pointer',
-                fontSize: '0.8rem',
-                lineHeight: 1.2
-              }}
-              title={`Momento del día: ${timeOfDayInfo.label}. Pulsa para cambiar (Mañana ➔ Tarde ➔ Noche).`}
-            >
-              {timeOfDayInfo.tag === 'morning' ? <Sun size={11} style={{ color: 'var(--text-tertiary)' }} /> :
-               timeOfDayInfo.tag === 'afternoon' ? <Clock size={11} style={{ color: 'var(--text-tertiary)' }} /> :
-               <Moon size={11} style={{ color: 'var(--text-tertiary)' }} />}
-              <span>{timeOfDayInfo.label}</span>
-            </button>
-          )}
+          {timeOfDayInfo && (() => {
+            const timeStyles = {
+              morning: {
+                color: '#ff9500',
+                background: 'rgba(255, 149, 0, 0.09)',
+                border: '1px solid rgba(255, 149, 0, 0.22)',
+                icon: <Sun size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+              },
+              afternoon: {
+                color: '#007aff',
+                background: 'rgba(0, 122, 255, 0.09)',
+                border: '1px solid rgba(0, 122, 255, 0.22)',
+                icon: <Clock size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+              },
+              night: {
+                color: '#5856d6',
+                background: 'rgba(88, 86, 214, 0.09)',
+                border: '1px solid rgba(88, 86, 214, 0.22)',
+                icon: <Moon size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+              }
+            };
+            const currentStyle = timeStyles[timeOfDayInfo.tag] || timeStyles.morning;
+
+            return (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  updateTask(task.id, { timeOfDay: timeOfDayInfo.next });
+                  HapticService.selection();
+                }}
+                style={{
+                  background: currentStyle.background,
+                  border: currentStyle.border,
+                  padding: '2px 7px',
+                  borderRadius: 7,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  color: currentStyle.color,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontSize: '0.73rem',
+                  lineHeight: 1.2,
+                  transition: 'all 0.15s ease',
+                  userSelect: 'none'
+                }}
+                title={`Momento del día: ${timeOfDayInfo.label}. Pulsa para cambiar (Mañana ➔ Tarde ➔ Noche).`}
+              >
+                {currentStyle.icon}
+                <span>{timeOfDayInfo.label}</span>
+              </button>
+            );
+          })()}
         </div>
       )}
 
