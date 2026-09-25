@@ -146,6 +146,13 @@ export const TaskCard = React.memo(function TaskCard({
   const hasCrossedRightThreshold = useRef(false);
   const didLongPressRef = useRef(false);
 
+  // ── Touch drag-to-reorder (long press → drag, no handle needed) ──────────
+  const [isDraggingTouch, setIsDraggingTouch] = useState(false);
+  const touchDragGhostRef = useRef<HTMLDivElement | null>(null);
+  const touchDragActiveRef = useRef(false); // true once finger moves after long-press lift
+  const touchDragLiftedRef = useRef(false); // true after 380ms (card "lifted", waiting to see if drag or menu)
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener('resize', handleResize);
@@ -440,30 +447,150 @@ export const TaskCard = React.memo(function TaskCard({
   };
 
   const handleDragStart = (e: React.DragEvent) => {
+    // Desktop only — touch drag is handled separately via touch events
+    if (e.nativeEvent instanceof DragEvent && !e.nativeEvent.clientX) return;
     e.stopPropagation();
     e.dataTransfer.setData('text/task-id', task.id);
     e.dataTransfer.setData('text/plain', task.id);
     e.dataTransfer.effectAllowed = 'move';
   };
 
+  // ── Touch drag helpers ─────────────────────────────────────────────────────
+  const startTouchDrag = useCallback((startY: number, startX: number) => {
+    if (!onReorderTasks || !wrapperRef.current) return;
+    touchDragLiftedRef.current = true;
+    touchDragActiveRef.current = false;
+
+    // Build ghost
+    const rect = wrapperRef.current.getBoundingClientRect();
+    const ghost = document.createElement('div');
+    ghost.setAttribute('data-touch-drag-ghost', 'true');
+    ghost.style.cssText = `
+      position:fixed;
+      left:${rect.left}px;
+      top:${startY - rect.height / 2}px;
+      width:${rect.width}px;
+      height:${rect.height}px;
+      background:var(--bg-elevated,#fff);
+      border-radius:12px;
+      box-shadow:0 10px 36px rgba(0,0,0,0.24),0 0 0 1.5px var(--accent-primary,#007aff);
+      opacity:0.93;
+      pointer-events:none;
+      z-index:999999;
+      display:flex;
+      align-items:center;
+      padding:0 14px;
+      font-size:15px;
+      font-weight:500;
+      color:var(--text-primary,#000);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      transform:scale(1.04);
+    `;
+    ghost.textContent = task.title || '';
+    document.body.appendChild(ghost);
+    touchDragGhostRef.current = ghost;
+    setIsDraggingTouch(true);
+    HapticService.impact('medium');
+
+    const onMove = (ev: TouchEvent) => {
+      const t = ev.touches[0];
+      ev.preventDefault();
+      touchDragActiveRef.current = true;
+      if (touchDragGhostRef.current) {
+        touchDragGhostRef.current.style.top = `${t.clientY - rect.height / 2}px`;
+      }
+      // Highlight drop target
+      document.querySelectorAll<HTMLElement>('.task-item-wrapper[data-task-id]').forEach((el) => {
+        const elRect = el.getBoundingClientRect();
+        if (t.clientY >= elRect.top && t.clientY <= elRect.bottom) {
+          el.setAttribute('data-touch-drag-over', t.clientY < elRect.top + elRect.height / 2 ? 'top' : 'bottom');
+        } else {
+          el.removeAttribute('data-touch-drag-over');
+        }
+      });
+    };
+
+    const onEnd = (ev: TouchEvent) => {
+      document.removeEventListener('touchmove', onMove);
+      if (touchDragGhostRef.current) {
+        document.body.removeChild(touchDragGhostRef.current);
+        touchDragGhostRef.current = null;
+      }
+      setIsDraggingTouch(false);
+      touchDragLiftedRef.current = false;
+
+      if (touchDragActiveRef.current) {
+        // Drag happened → find target and reorder
+        const t = ev.changedTouches[0];
+        let targetId: string | null = null;
+        let position: 'before' | 'after' = 'before';
+        document.querySelectorAll<HTMLElement>('.task-item-wrapper[data-task-id]').forEach((el) => {
+          const attr = el.getAttribute('data-touch-drag-over');
+          if (attr) {
+            targetId = el.getAttribute('data-task-id');
+            position = attr === 'bottom' ? 'after' : 'before';
+            el.removeAttribute('data-touch-drag-over');
+          } else {
+            el.removeAttribute('data-touch-drag-over');
+          }
+        });
+        if (targetId && targetId !== task.id && onReorderTasks) {
+          onReorderTasks(task.id, targetId, position);
+          HapticService.impact('medium');
+        }
+        void t;
+      } else {
+        // No drag → open context menu
+        didLongPressRef.current = true;
+        openContextMenu();
+      }
+      document.body.style.overflow = '';
+      touchDragActiveRef.current = false;
+    };
+
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onEnd, { once: true });
+    document.addEventListener('touchcancel', () => {
+      document.removeEventListener('touchmove', onMove);
+      if (touchDragGhostRef.current) {
+        document.body.removeChild(touchDragGhostRef.current);
+        touchDragGhostRef.current = null;
+      }
+      document.querySelectorAll<HTMLElement>('[data-touch-drag-over]').forEach(el => el.removeAttribute('data-touch-drag-over'));
+      setIsDraggingTouch(false);
+      touchDragLiftedRef.current = false;
+      touchDragActiveRef.current = false;
+      document.body.style.overflow = '';
+    }, { once: true });
+
+    void startY; void startX;
+  }, [onReorderTasks, task.id, task.title, openContextMenu]);
+
   return (
     <div
       className="task-item-wrapper"
-      draggable={!isBlocked && !isEditingTitle && !isEditingNote && !contextMenuOpen && Boolean(onReorderTasks)}
+      data-task-id={task.id}
+      draggable={!isMobile && !isBlocked && !isEditingTitle && !isEditingNote && !contextMenuOpen && Boolean(onReorderTasks)}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      ref={wrapperRef}
       style={{
         ...virtualStyle,
         position: 'relative',
         margin: 0,
         boxSizing: 'border-box',
-        zIndex: contextMenuOpen ? 999992 : 1,
-        touchAction: 'pan-y',
+        zIndex: isDraggingTouch ? 999990 : (contextMenuOpen ? 999992 : 1),
+        touchAction: isDraggingTouch ? 'none' : 'pan-y',
         WebkitTouchCallout: 'none',
         userSelect: 'none',
         WebkitUserSelect: 'none',
+        opacity: isDraggingTouch ? 0.35 : 1,
+        transition: isDraggingTouch ? 'opacity 0.15s' : undefined,
       }}
       onPointerDown={(e) => {
         if (isEditingTitle || isEditingNote) return;
@@ -472,10 +599,22 @@ export const TaskCard = React.memo(function TaskCard({
         touchStartX.current = e.clientX;
         touchStartY.current = e.clientY;
         if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
-        longPressTimer.current = window.setTimeout(() => {
-          didLongPressRef.current = true;
-          openContextMenu();
-        }, 380);
+
+        if (e.pointerType === 'touch' && onReorderTasks) {
+          // Mobile: long press → drag mode (context menu shows only if no drag occurs)
+          const sx = e.clientX, sy = e.clientY;
+          longPressTimer.current = window.setTimeout(() => {
+            longPressTimer.current = null;
+            didLongPressRef.current = true;
+            startTouchDrag(sy, sx);
+          }, 380);
+        } else {
+          // Desktop / mouse: long press → context menu as before
+          longPressTimer.current = window.setTimeout(() => {
+            didLongPressRef.current = true;
+            openContextMenu();
+          }, 380);
+        }
       }}
       onClickCapture={(e) => {
         if (didLongPressRef.current) {

@@ -592,3 +592,21 @@ input:focus, input:focus-visible, textarea:focus, textarea:focus-visible {
   transform-origin: bottom;
   animation: equalizerPulse 0.9s ease-in-out infinite alternate;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   TOUCH DRAG-TO-REORDER — Drop target indicator (mobile)
+   ═══════════════════════════════════════════════════════════ */
+.task-item-wrapper[data-touch-drag-over='top']::before,
+.task-item-wrapper[data-touch-drag-over='bottom']::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  background: var(--accent-primary, #007aff);
+  z-index: 9999;
+  pointer-events: none;
+  border-radius: 2px;
+}
+.task-item-wrapper[data-touch-drag-over='top']::before  { top: -1px; }
+.task-item-wrapper[data-touch-drag-over='bottom']::after { bottom: -1px; }
