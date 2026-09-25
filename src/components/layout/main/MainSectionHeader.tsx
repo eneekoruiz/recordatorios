@@ -381,6 +381,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               </div>
               {sectionDurationLabel && (
                 <div 
+                  className="section-duration"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -485,6 +486,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                   HapticService.selection();
                   toggleSectionRoutineMode?.(data.category, 'only_section');
                 }}
+                aria-pressed={currentSectionRoutineMode === 'only_section'}
                 style={{
                   border: 'none',
                   background: currentSectionRoutineMode === 'only_section' ? 'var(--bg-card, #ffffff)' : 'transparent',
@@ -509,6 +511,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                   HapticService.selection();
                   toggleSectionRoutineMode?.(data.category, 'full_routine');
                 }}
+                aria-pressed={currentSectionRoutineMode === 'full_routine'}
                 style={{
                   border: 'none',
                   background: currentSectionRoutineMode === 'full_routine' ? 'var(--bg-card, #ffffff)' : 'transparent',

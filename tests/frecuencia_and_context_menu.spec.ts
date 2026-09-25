@@ -87,7 +87,7 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     await page.keyboard.press('Escape');
   });
 
-  test('2. Routine toggle [Solo | Todas] works on Semanales and spacing is clean', async ({ page }) => {
+  test('2. Routine toggle [Solo | + Diarias] works on Semanales and spacing is clean', async ({ page }) => {
     await ensureAppUnlocked(page);
 
     // Set up a list with a Diarias section and a Semanales section
@@ -162,23 +162,25 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     await page.waitForTimeout(300);
 
     const soloBtn = semanalHeader.locator('button:has-text("Solo")');
-    const todasBtn = semanalHeader.locator('button:has-text("Todas")');
+    const withDailyBtn = semanalHeader.locator('button:has-text("+ Diarias")');
 
     await expect(soloBtn).toBeVisible({ timeout: 5000 });
-    await expect(todasBtn).toBeVisible({ timeout: 5000 });
+    await expect(withDailyBtn).toBeVisible({ timeout: 5000 });
 
     // By default, Solo is active and only weekly task is in Semanales
-    await expect(soloBtn).toHaveClass(/active/);
+    await expect(soloBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(withDailyBtn).toHaveAttribute('aria-pressed', 'false');
 
-    // Click "Todas"
-    await todasBtn.click();
+    // Click "+ Diarias"
+    await withDailyBtn.click();
     await page.waitForTimeout(300);
-    await expect(todasBtn).toHaveClass(/active/);
+    await expect(withDailyBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(soloBtn).toHaveAttribute('aria-pressed', 'false');
 
     // Click "Solo" back
     await soloBtn.click();
     await page.waitForTimeout(300);
-    await expect(soloBtn).toHaveClass(/active/);
+    await expect(soloBtn).toHaveAttribute('aria-pressed', 'true');
 
     // Verify there is no redundant .ios-section-divider inside the group headers
     const redundantDividers = page.locator('.group-header .ios-section-divider');
@@ -278,7 +280,7 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     await page.waitForTimeout(300);
 
     // Verify task card is visible under expanded sub-section
-    const cocinaTask = page.locator('[data-task-id="task_limp_cocina_1"]');
+    const cocinaTask = page.locator('.task-item-wrapper[data-task-id="task_limp_cocina_1"]');
     await expect(cocinaTask).toBeVisible({ timeout: 5000 });
 
     // Test collapse toggle: otro click repliega la sub-sección Cocina
@@ -292,7 +294,7 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     await expect(cocinaTask).toBeVisible();
   });
 
-  test('4. Section sequence mode [▶ Empezar], duration pills, and parallel tasks work seamlessly', async ({ page }) => {
+  test('4. Sequence mode [▶ Empezar], section duration and parallel tasks work seamlessly', async ({ page }) => {
     await ensureAppUnlocked(page);
 
     // Setup custom list with a section and tasks, including a parallel task (lavadora)
@@ -304,7 +306,8 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
         id: 'list_hogar_seq',
         name: 'Hogar Secuencia',
         color: '#FF6584',
-        icon: 'home'
+        icon: 'home',
+        listType: 'routines'
       });
 
       store.addListSection({
@@ -340,18 +343,17 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
 
     await page.waitForTimeout(500);
 
-    // Verify section header "Colada" displays duration pill
+    // Verify section header "Colada" displays its estimated duration
     const coladaHeader = page.locator('.group-header:has-text("Colada")');
     await expect(coladaHeader).toBeVisible({ timeout: 5000 });
 
-    // Duration pill should be present in section header
-    const durationPill = coladaHeader.locator('.section-duration-pill');
-    await expect(durationPill).toBeVisible({ timeout: 5000 });
+    const sectionDuration = coladaHeader.locator('.section-duration');
+    await expect(sectionDuration).toBeVisible({ timeout: 5000 });
 
-    // "Empezar" button should be present on section header
-    const startSectionBtn = coladaHeader.locator('.section-start-btn');
-    await expect(startSectionBtn).toBeVisible({ timeout: 5000 });
-    await startSectionBtn.click();
+    // The sequence is started from the list header ("▶ Empezar")
+    const startBtn = page.getByRole('button', { name: 'Empezar lista' });
+    await expect(startBtn).toBeEnabled({ timeout: 5000 });
+    await startBtn.click();
 
     await page.waitForTimeout(500);
 
