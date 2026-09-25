@@ -73,8 +73,8 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Run E2E Playwright Tests
-        run: npx playwright test tests/e2e.spec.ts
+      - name: Run E2E Playwright Tests (suite completa)
+        run: npx playwright test
 
       - name: Upload Test Report Artifact
         if: failure()
