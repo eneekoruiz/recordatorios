@@ -610,3 +610,9 @@ input:focus, input:focus-visible, textarea:focus, textarea:focus-visible {
 }
 .task-item-wrapper[data-touch-drag-over='top']::before  { top: -1px; }
 .task-item-wrapper[data-touch-drag-over='bottom']::after { bottom: -1px; }
+.task-item-wrapper[data-touch-drag-over='inside'] {
+  outline: 2px dashed var(--accent-primary, #007aff) !important;
+  outline-offset: -2px;
+  background: rgba(0, 122, 255, 0.08) !important;
+  border-radius: 10px;
+}

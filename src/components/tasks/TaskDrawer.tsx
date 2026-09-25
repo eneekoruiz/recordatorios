@@ -266,7 +266,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
     const performFocus = () => {
       let targetEl: HTMLElement | null = null;
       if (initialFocus === 'duration') {
-        targetEl = document.getElementById('drawer-duration-input') || document.querySelector('.drawer-duration-input');
+        targetEl = document.getElementById('drawer-duration-row') || document.querySelector('.apple-timer-picker') || document.getElementById('drawer-duration-input');
       } else if (initialFocus === 'frequency') {
         targetEl = document.getElementById('drawer-recurrence-select') || document.getElementById('drawer-recurrence-row');
       } else if (initialFocus === 'date') {
@@ -286,17 +286,18 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         if (container) {
           const containerRect = container.getBoundingClientRect();
           const targetRect = targetEl.getBoundingClientRect();
-          const offset = (targetRect.top - containerRect.top) + container.scrollTop - 40;
-          container.scrollTo({ top: Math.max(0, offset), behavior: 'smooth' });
+          // Solo hacer scroll si el elemento no está completamente a la vista
+          const isVisible = targetRect.top >= containerRect.top + 20 && targetRect.bottom <= containerRect.bottom - 20;
+          if (!isVisible) {
+            const offset = (targetRect.top - containerRect.top) + container.scrollTop - 40;
+            container.scrollTo({ top: Math.max(0, offset), behavior: 'smooth' });
+          }
         }
         if (targetEl instanceof HTMLInputElement || targetEl instanceof HTMLTextAreaElement || targetEl instanceof HTMLButtonElement) {
           targetEl.focus({ preventScroll: true });
           if (targetEl instanceof HTMLInputElement && targetEl.type !== 'date') {
             targetEl.select();
           }
-        }
-        if (typeof window !== 'undefined' && (window.scrollX !== 0 || window.scrollY !== 0)) {
-          window.scrollTo(0, 0);
         }
         targetEl.classList.remove('apple-focus-pulse');
         void targetEl.offsetWidth;
@@ -305,12 +306,11 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
       }
     };
 
-    const t1 = setTimeout(performFocus, 80);
-    const t2 = setTimeout(performFocus, 220);
+    // Esperar a que concluya la animación de apertura del drawer (240ms) antes de medir coordenadas
+    const t = setTimeout(performFocus, 260);
 
     return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
+      clearTimeout(t);
     };
   }, [isOpen, initialFocus, taskId]);
 

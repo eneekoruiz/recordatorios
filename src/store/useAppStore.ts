@@ -105,7 +105,7 @@ interface AppState {
   removeList: (id: string) => { lists: number; tasks: number; undo: () => void };
 
   addListSection: (section: ListSection) => void;
-  updateListSection: (id: string, name: string) => void;
+  updateListSection: (id: string, updatesOrName: string | Partial<ListSection>) => void;
   deleteListSection: (id: string) => void;
   reorderListSections: (updates: { id: string; order: number }[]) => void;
   duplicateSection: (sectionId: string) => void;
@@ -744,10 +744,12 @@ export const useAppStore = create<AppState>()(
         ]
       })),
 
-      updateListSection: (id, name) => set((state: any) => ({
+      updateListSection: (id, updatesOrName) => set((state: any) => ({
         listSections: (state.listSections || []).map((s: any) => s.id === id ? {
           ...s,
-          name: (typeof name === 'string' && name.trim()) ? name.trim() : (s.name || 'Nueva Sección'),
+          ...(typeof updatesOrName === 'string'
+            ? { name: updatesOrName.trim() || s.name || 'Nueva Sección' }
+            : updatesOrName),
           _is_dirty: true,
           updated_at: new Date().toISOString()
         } : s)

@@ -155,8 +155,16 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
   // Dimensiones seguras
   const menuWidth = 260;
   const menuHeight = 360;
+  const trigger = sectionMenu.triggerRect;
   const targetX = Math.min(Math.max(12, sectionMenu.x), window.innerWidth - menuWidth - 12);
-  const targetY = Math.min(Math.max(12, sectionMenu.y), window.innerHeight - menuHeight - 12);
+  let targetY = sectionMenu.y;
+
+  // Si colocarlo abajo sobrepasa la pantalla pero hay espacio arriba, lo colocamos arriba para no tapar la cabecera
+  if (trigger && !isMobile) {
+    if (targetY + menuHeight > window.innerHeight - 12 && trigger.top - menuHeight - 6 >= 12) {
+      targetY = Math.max(12, trigger.top - menuHeight - 6);
+    }
+  }
 
   return createPortal(
     <>
@@ -217,7 +225,9 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
           display: 'flex',
           flexDirection: 'column',
           gap: 2,
-          maxHeight: `calc(100dvh - ${targetY}px - 16px)`,
+          maxHeight: trigger && targetY < trigger.top
+            ? `${Math.max(160, trigger.top - targetY - 6)}px`
+            : `calc(100dvh - ${targetY}px - 16px)`,
           overflowY: 'auto',
           overflowX: 'hidden'
         }}

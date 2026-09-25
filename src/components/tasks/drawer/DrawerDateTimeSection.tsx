@@ -4,6 +4,7 @@ import { Calendar as CalendarIcon, ChevronDown, Clock, PlusCircle, X, Zap, Credi
 import type { AlertDef } from '../../../models/Task';
 import { isCaducidadesList, getListType, doesListSupportDuration } from '../../../utils/specialLists';
 import { Sunrise, Sun, Moon } from 'lucide-react';
+import { AppleTimerPicker } from '../../ui/AppleTimerPicker';
 
 interface DrawerDateTimeSectionProps {
   cardTimeOpen: boolean;
@@ -248,85 +249,13 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
 
               <div className="divider" style={{ margin: '10px 0' }}></div>
 
-              {/* Duración estimada */}
-              <div id="drawer-duration-row" className="detail-row" style={{ padding: '4px 0', alignItems: 'center' }}>
-                <span className="detail-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Clock size={15} color="var(--accent-primary)" />
-                  Duración estimada
-                </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {(() => {
-                    const isRoutineCategory = doesListSupportDuration(getListType(undefined, category));
-                    return (
-                      <input
-                        type="number"
-                        id="drawer-duration-input"
-                        className="drawer-duration-input"
-                        min="1"
-                        max="480"
-                        placeholder={isRoutineCategory ? "Auto" : "Opcional"}
-                        value={duration !== undefined && duration !== null ? duration : ''}
-                        onChange={e => {
-                          const v = e.target.value;
-                          setDuration?.(v === '' ? '' : Math.max(1, Math.min(480, Number(v))));
-                        }}
-                        style={{
-                      width: 64,
-                      textAlign: 'right',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: 8,
-                      padding: '4px 8px',
-                      background: 'var(--bg-elevated)',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.85rem',
-                      fontWeight: 600,
-                      outline: 'none'
-                    }}
-                  />
-                    );
-                  })()}
-                  <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>min</span>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '4px 0 6px' }}>
-                {[5, 15, 25, 45, 60].map(mins => (
-                  <button
-                    key={mins}
-                    type="button"
-                    onClick={() => setDuration?.(mins)}
-                    style={{
-                      padding: '3px 9px',
-                      borderRadius: 999,
-                      fontSize: '0.74rem',
-                      fontWeight: 600,
-                      border: duration === mins ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                      background: duration === mins ? 'var(--accent-primary)' : 'var(--bg-hover, rgba(0,0,0,0.04))',
-                      color: duration === mins ? 'white' : 'var(--text-secondary)',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {mins}m
-                  </button>
-                ))}
-                {duration !== '' && duration !== undefined && (
-                  <button
-                    type="button"
-                    onClick={() => setDuration?.('')}
-                    style={{
-                      padding: '3px 8px',
-                      borderRadius: 999,
-                      fontSize: '0.72rem',
-                      border: 'none',
-                      background: 'transparent',
-                      color: 'var(--text-tertiary)',
-                      cursor: 'pointer'
-                    }}
-                    title="Restablecer a estimación automática"
-                  >
-                    Auto
-                  </button>
-                )}
+              {/* Selector de Duración Nativo estilo Temporizador Apple */}
+              <div id="drawer-duration-row" style={{ padding: '4px 0 2px' }}>
+                <AppleTimerPicker
+                  duration={duration}
+                  onChange={(mins) => setDuration?.(mins)}
+                  isRoutineCategory={doesListSupportDuration(getListType(undefined, category))}
+                />
               </div>
             </div>
           </motion.div>

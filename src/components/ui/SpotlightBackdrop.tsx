@@ -28,31 +28,28 @@ interface SpotlightBackdropProps {
  * bloquea la interacción de fondo y enmarca con elegancia el elemento seleccionado.
  */
 export function SpotlightBackdrop({
-  rect,
+  rect: _rect,
   onClose,
   onWheel,
   onContextMenu,
   zIndex = 999990,
-  padding = 4,
-  radius = 12,
+  padding: _padding = 4,
+  radius: _radius = 12,
   background,
-  blur = 'blur(20px)'
+  blur
 }: SpotlightBackdropProps) {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
   const isDark = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark';
-  const effectiveBg = background ?? (isDark ? 'rgba(0, 0, 0, 0.45)' : 'rgba(0, 0, 0, 0.18)');
 
-  // Bloqueo total de la pantalla detrás mientras el menú está abierto
+  // En móvil bloqueamos el overscroll de fondo; en escritorio mantenemos libertad
   useEffect(() => {
+    if (!isMobile) return;
     const prevOverflow = document.body.style.overflow;
-    const prevOverscroll = document.body.style.overscrollBehavior;
     document.body.style.overflow = 'hidden';
-    document.body.style.overscrollBehavior = 'none';
-
     return () => {
       document.body.style.overflow = prevOverflow;
-      document.body.style.overscrollBehavior = prevOverscroll;
     };
-  }, []);
+  }, [isMobile]);
 
   const sharedProps = {
     onClick: onClose,
@@ -60,73 +57,38 @@ export function SpotlightBackdrop({
     onContextMenu: onContextMenu ?? ((e: React.MouseEvent) => { e.preventDefault(); onClose(); })
   };
 
-  const panelStyle: React.CSSProperties = {
-    position: 'fixed',
-    zIndex,
-    background: effectiveBg,
-    backdropFilter: blur,
-    WebkitBackdropFilter: blur,
-    pointerEvents: 'auto'
-  };
-
-  if (!rect) {
+  if (!isMobile) {
+    // Escritorio: backdrop invisible para capturar clics fuera sin desenfocar ni alterar la nitidez del elemento
     return (
       <div
         style={{
-          ...panelStyle,
-          inset: 0
+          position: 'fixed',
+          inset: 0,
+          zIndex,
+          background: 'transparent',
+          pointerEvents: 'auto'
         }}
         {...sharedProps}
       />
     );
   }
 
-  const x = Math.max(0, rect.left - padding);
-  const y = Math.max(0, rect.top - padding);
-  const w = rect.width + padding * 2;
-  const h = rect.height + padding * 2;
-  const r = Math.min(radius, w / 2, h / 2);
+  // Móvil: telón sutil de atenuación estilo iOS Action Sheet sin caja azul falsa
+  const effectiveBg = background ?? (isDark ? 'rgba(0, 0, 0, 0.40)' : 'rgba(0, 0, 0, 0.25)');
+  const effectiveBlur = blur ?? 'blur(6px)';
 
   return (
-    <>
-      {/* Telón cinematográfico continuo: 1 único plano para garantizar cero cortes ni líneas en el blur */}
-      <div
-        style={{
-          ...panelStyle,
-          inset: 0
-        }}
-        {...sharedProps}
-      />
-
-      {/* Sutil halo Apple suave sobre el elemento seleccionado */}
-      <div
-        style={{
-          position: 'fixed',
-          top: y,
-          left: x,
-          width: w,
-          height: h,
-          borderRadius: r,
-          zIndex: zIndex + 1,
-          boxShadow: '0 0 0 1.5px var(--accent-primary, #007aff), 0 14px 44px rgba(0,0,0,0.22)',
-          pointerEvents: 'none',
-          transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
-        }}
-      />
-
-      {/* Captador de clics sobre el elemento enfocado: pulsar fuera del menú cierra */}
-      <div
-        style={{
-          position: 'fixed',
-          top: y,
-          left: x,
-          width: w,
-          height: h,
-          zIndex: zIndex + 1,
-          background: 'transparent'
-        }}
-        {...sharedProps}
-      />
-    </>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex,
+        background: effectiveBg,
+        backdropFilter: effectiveBlur,
+        WebkitBackdropFilter: effectiveBlur,
+        pointerEvents: 'auto'
+      }}
+      {...sharedProps}
+    />
   );
 }

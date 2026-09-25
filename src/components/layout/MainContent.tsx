@@ -733,6 +733,30 @@ const CORE_CYCLES = [
     HapticService.selection();
   }, [visibleTasks, reorderTasks, sortBy]);
 
+  const handleReorderSections = useCallback((sourceSectionId: string, targetSectionId: string, position: 'before' | 'after' = 'before') => {
+    if (sourceSectionId === targetSectionId) return;
+    const currentListSections = (listSections || []).filter(s => s.listId === currentList?.id && !s.deleted_at);
+    const sourceIdx = currentListSections.findIndex(s => s.id === sourceSectionId);
+    const targetIdx = currentListSections.findIndex(s => s.id === targetSectionId);
+    if (sourceIdx === -1 || targetIdx === -1) return;
+
+    const sourceSec = currentListSections[sourceIdx];
+    const targetSec = currentListSections[targetIdx];
+
+    const reordered = [...currentListSections];
+    const [removed] = reordered.splice(sourceIdx, 1);
+    const newTargetIdx = reordered.findIndex(s => s.id === targetSectionId);
+    const insertIdx = position === 'after' ? newTargetIdx + 1 : newTargetIdx;
+    reordered.splice(insertIdx, 0, { ...removed, parentId: targetSec.parentId });
+
+    const updates = reordered.map((s, idx) => ({ id: s.id, order: idx }));
+    reorderListSections(updates);
+    if (sourceSec.parentId !== targetSec.parentId) {
+      updateListSection(sourceSec.id, { parentId: targetSec.parentId });
+    }
+    HapticService.selection();
+  }, [listSections, currentList?.id, reorderListSections, updateListSection]);
+
   // Calcular Resumen Financiero Total
   const totalCost = useMemo(() => {
     let sum = 0;
@@ -2351,6 +2375,7 @@ const CORE_CYCLES = [
                         isPrevHeader={index > 0 && flattenedData[index - 1]?.type === 'header'}
                         isFirstAfterPageHeader={index > 0 && flattenedData[index - 1]?.type === 'page-header'}
                         isRoutine={isRoutine}
+                        onReorderSections={handleReorderSections}
                       />
                     );
                   } else if (data.type === 'empty-section') {

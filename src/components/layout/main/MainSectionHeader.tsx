@@ -1,9 +1,10 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { MoreHorizontal, ChevronDown } from 'lucide-react';
+import { MoreHorizontal, ChevronDown, Hourglass } from 'lucide-react';
 import { HapticService } from '../../../services/HapticService';
 import type { SectionMenuState } from './SectionContextMenu';
 import type { TasksDurationSummary } from '../../../utils/taskDuration';
 import { isShoppingList } from '../../../utils/specialLists';
+import { useAppStore } from '../../../store/useAppStore';
 
 interface SectionData {
   title: string;
@@ -60,6 +61,7 @@ interface MainSectionHeaderProps {
   isPrevHeader?: boolean;
   isFirstAfterPageHeader?: boolean;
   isRoutine?: boolean;
+  onReorderSections?: (sourceId: string, targetId: string, position: 'before' | 'after') => void;
 }
 
 export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
@@ -102,7 +104,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   sectionMenu,
   isPrevHeader = false,
   isFirstAfterPageHeader = false,
-  isRoutine: _isRoutine = false
+  isRoutine: _isRoutine = false,
+  onReorderSections
 }) => {
   const currentSectionRoutineMode = sectionRoutineModes[data.category] || data.routineMode || 'only_section';
   const isShopping = isShoppingList(data.category);
@@ -111,6 +114,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
     : durationSummary) : null;
   const sectionDurationLabel = durSummary && durSummary.activeMinutes > 0 ? durSummary.formattedActive : null;
   const [isPressed, setIsPressed] = useState(false);
+  const [sectionDragOverPos, setSectionDragOverPos] = useState<'top' | 'bottom' | 'inside' | null>(null);
   const didSectionLongPressRef = useRef(false);
   const touchStartPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const rowRef = useRef<HTMLDivElement>(null);
@@ -131,28 +135,16 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   const openSectionMenu = useCallback(() => {
     HapticService.selection();
 
-    // Desplazar suavemente hacia arriba para que quede en la parte superior y haya espacio abajo para el menú
-    const scrollContainer = rowRef.current?.closest('.content-scroll') as HTMLElement | null;
-    if (scrollContainer && rowRef.current) {
-      const currentScrollTop = scrollContainer.scrollTop;
-      const currentRect = rowRef.current.getBoundingClientRect();
-      const targetTop = 75; // justo debajo del sticky glass header
-      if (currentRect.top > targetTop + 10) {
-        const delta = currentRect.top - targetTop;
-        scrollContainer.scrollTop = Math.max(0, currentScrollTop + delta);
-      }
-    }
-
     const rowRect = getRowRect();
     if (!rowRect) return;
 
     const viewportW = window.innerWidth;
     const viewportH = window.innerHeight;
     const menuWidth = 260;
-    const menuHeight = 440;
+    const menuHeight = 360;
     const padding = 12;
 
-    // Anchor: siempre bajo el botón '...' o el título
+    // Anchor: bajo el botón '...' o el título
     let anchorLeft: number;
     let anchorTop: number;
 
@@ -165,10 +157,10 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       anchorTop = rowRect.top + rowRect.height + 6;
     }
 
-    // Posición vertical: siempre abajo del elemento, garantizando que el menú nunca quede cortado
+    // Posición vertical: abajo si cabe; si no, arriba para no tapar la cabecera
     let y = anchorTop;
-    if (y + menuHeight > viewportH - padding) {
-      y = Math.max(padding, viewportH - menuHeight - padding);
+    if (y + menuHeight > viewportH - padding && rowRect.top - menuHeight - 6 >= padding) {
+      y = Math.max(padding, rowRect.top - menuHeight - 6);
     }
 
     // Posición horizontal segura: alineado con el ancla y dentro de la pantalla
@@ -193,6 +185,14 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       data-index={index}
       ref={rowRef}
       className="group-header"
+      draggable={isCustomSection && !editingSectionId}
+      onDragStart={(e) => {
+        if (!isCustomSection || !data.sectionId) return;
+        e.stopPropagation();
+        e.dataTransfer.setData('text/section-id', data.sectionId);
+        e.dataTransfer.setData('text/plain', data.sectionId);
+        e.dataTransfer.effectAllowed = 'move';
+      }}
       style={{ 
         ...itemStyle, 
         position: 'sticky',
@@ -238,14 +238,49 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           didSectionLongPressRef.current = false;
         }
       }}
-      onDragOver={isCustomSection ? (e) => { e.preventDefault(); setDragOverSectionId(data.sectionId!); } : undefined}
-      onDragLeave={isCustomSection ? () => setDragOverSectionId(null) : undefined}
-      onDrop={isCustomSection ? (e) => {
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes('text/section-id')) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.dataTransfer.dropEffect = 'move';
+          const rect = e.currentTarget.getBoundingClientRect();
+          const relY = (e.clientY - rect.top) / rect.height;
+          if (relY < 0.25) setSectionDragOverPos('top');
+          else if (relY > 0.75) setSectionDragOverPos('bottom');
+          else setSectionDragOverPos('inside');
+        } else if (isCustomSection) {
+          e.preventDefault();
+          setDragOverSectionId(data.sectionId!);
+        }
+      }}
+      onDragLeave={() => {
+        setSectionDragOverPos(null);
+        if (isCustomSection) setDragOverSectionId(null);
+      }}
+      onDrop={(e) => {
         e.preventDefault();
+        e.stopPropagation();
+        const curDragPos = sectionDragOverPos;
+        setSectionDragOverPos(null);
         setDragOverSectionId(null);
-        const taskId = e.dataTransfer.getData('text/plain');
-        if (taskId) updateTaskSection(taskId, data.sectionId!);
-      } : undefined}
+
+        const droppedSectionId = e.dataTransfer.getData('text/section-id');
+        if (droppedSectionId && droppedSectionId !== data.sectionId && data.sectionId) {
+          if (curDragPos === 'inside') {
+            useAppStore.getState().updateListSection(droppedSectionId, { parentId: data.sectionId });
+            HapticService.notification('success');
+          } else {
+            onReorderSections?.(droppedSectionId, data.sectionId, curDragPos === 'bottom' ? 'after' : 'before');
+            HapticService.impact('medium');
+          }
+          return;
+        }
+
+        if (isCustomSection && data.sectionId) {
+          const taskId = e.dataTransfer.getData('text/task-id') || e.dataTransfer.getData('text/plain');
+          if (taskId) updateTaskSection(taskId, data.sectionId);
+        }
+      }}
       onContextMenu={(e) => {
         e.preventDefault();
         openSectionMenu();
@@ -283,6 +318,21 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         }
       }}
     >
+      {/* Drop Target Indicators for sections */}
+      {sectionDragOverPos === 'top' && (
+        <div style={{ position: 'absolute', top: -1, left: 16, right: 16, height: 2, background: 'var(--accent-primary, #007aff)', zIndex: 9999, pointerEvents: 'none' }} />
+      )}
+      {sectionDragOverPos === 'bottom' && (
+        <div style={{ position: 'absolute', bottom: -1, left: 16, right: 16, height: 2, background: 'var(--accent-primary, #007aff)', zIndex: 9999, pointerEvents: 'none' }} />
+      )}
+      {sectionDragOverPos === 'inside' && (
+        <div style={{ position: 'absolute', inset: 3, borderRadius: 8, border: '2px dashed var(--accent-primary, #007aff)', background: 'rgba(0, 122, 255, 0.08)', zIndex: 9999, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 16 }}>
+          <span style={{ fontSize: '0.74rem', fontWeight: 600, color: 'var(--accent-primary)', background: 'var(--bg-elevated)', padding: '2px 8px', borderRadius: 6, boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }}>
+            Anidar como subsección
+          </span>
+        </div>
+      )}
+
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: '100%' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
           {isCustomSection && editingSectionId === data.sectionId ? (
@@ -299,47 +349,55 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               style={{ background: 'transparent', border: 'none', borderBottom: `2px solid ${data.color}`, color: 'inherit', fontSize: 'inherit', fontFamily: 'inherit', outline: 'none' }}
             />
           ) : (
-            <h3 
-              onDoubleClick={(e) => isCustomSection && startEditingSection(e, data.sectionId!, data.title)}
-              style={{ 
-                cursor: isCustomSection ? 'text' : 'pointer',
-                fontWeight: data.depth === 0 ? 700 : 600,
-                color: data.depth === 0 ? 'var(--text-primary)' : data.depth === 1 ? 'var(--text-secondary)' : 'var(--text-tertiary)',
-                fontSize: data.depth === 0 ? '1.18rem' : data.depth === 1 ? '0.94rem' : '0.85rem',
-                textTransform: 'none',
-                letterSpacing: '-0.01em',
-                lineHeight: '1.25',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                margin: 0,
-                padding: '2px 0',
-                boxSizing: 'border-box'
-              }}
-              title={isCustomSection ? "Doble click para editar" : data.title}
-            >
-              {data.titleIcon && (
-                <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6, opacity: 0.85 }}>
-                  {data.titleIcon}
-                </span>
-              )}
-              {data.title}
+            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, justifyContent: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                {data.titleIcon && !sectionDurationLabel && (
+                  <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 2, opacity: 0.85, flexShrink: 0 }}>
+                    {data.titleIcon}
+                  </span>
+                )}
+                <h3 
+                  onDoubleClick={(e) => isCustomSection && startEditingSection(e, data.sectionId!, data.title)}
+                  style={{ 
+                    cursor: isCustomSection ? 'text' : 'pointer',
+                    fontWeight: data.depth === 0 ? 700 : 600,
+                    color: data.depth === 0 ? 'var(--text-primary)' : data.depth === 1 ? 'var(--text-secondary)' : 'var(--text-tertiary)',
+                    fontSize: data.depth === 0 ? '1.18rem' : data.depth === 1 ? '0.94rem' : '0.85rem',
+                    textTransform: 'none',
+                    letterSpacing: '-0.01em',
+                    lineHeight: '1.25',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    margin: 0,
+                    padding: '1px 0',
+                    boxSizing: 'border-box'
+                  }}
+                  title={isCustomSection ? "Doble click para editar" : data.title}
+                >
+                  {data.title}
+                </h3>
+              </div>
               {sectionDurationLabel && (
-                <span 
+                <div 
                   style={{
-                    fontSize: data.depth === 0 ? '0.80rem' : '0.74rem',
-                    fontWeight: 500,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
                     color: 'var(--text-tertiary)',
-                    marginLeft: 8,
+                    fontSize: data.depth === 0 ? '0.78rem' : '0.72rem',
+                    fontWeight: 500,
                     fontVariantNumeric: 'tabular-nums',
-                    opacity: 0.85
+                    marginTop: 1,
+                    opacity: 0.9
                   }}
                   title={`Duración estimada de ${data.title}: ${sectionDurationLabel}`}
                 >
-                  · ~{sectionDurationLabel}
-                </span>
+                  {data.titleIcon || <Hourglass size={12} />}
+                  <span>~{sectionDurationLabel}</span>
+                </div>
               )}
-            </h3>
+            </div>
           )}
           {data.category.startsWith('persona_') && data.category !== 'persona_solo' && (
             <button
@@ -404,8 +462,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, justifyContent: 'flex-end' }}>
-          {/* Conmutador sutil: Solo vs + Diarias (estilo Apple Segmented) */}
-          {data.routineCounts && data.routineCounts.full > data.routineCounts.only && (
+          {/* Conmutador sutil: Solo vs + Diarias (estilo Apple Segmented - solo si la sección está desplegada) */}
+          {!isCatCollapsed(data.category) && data.routineCounts && data.routineCounts.full > data.routineCounts.only && (
             <div 
               style={{
                 display: 'inline-flex',
@@ -414,7 +472,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                 background: 'var(--bg-elevated, rgba(120, 120, 128, 0.12))',
                 border: '1px solid var(--border-subtle, rgba(0,0,0,0.06))',
                 alignItems: 'center',
-                marginRight: 4
+                marginRight: 4,
+                flexShrink: 0
               }}
               onClick={(e) => e.stopPropagation()}
             >

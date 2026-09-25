@@ -124,16 +124,16 @@ export const TaskCard = React.memo(function TaskCard({
 
   useEffect(() => {
     if (!contextMenuOpen) return;
-    const handleScroll = (e: Event) => {
+    const handleDismissScroll = (e: Event) => {
       const target = e.target as HTMLElement | null;
       if (target && target.closest && target.closest('.ios-dropdown-menu')) {
         return; // Permite hacer scroll interno dentro del menú desplegable
       }
       setContextMenuOpen(false);
     };
-    window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
+    window.addEventListener('wheel', handleDismissScroll, { passive: true });
     return () => {
-      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('wheel', handleDismissScroll);
     };
   }, [contextMenuOpen]);
 
@@ -246,28 +246,22 @@ export const TaskCard = React.memo(function TaskCard({
     HapticService.impact('medium');
     x.set(0); // Reset any active horizontal swipe offset immediately
     if (cardRef.current) {
-      // Desplazar suavemente hacia arriba para que el recordatorio quede arriba y el menú quepa entero abajo
-      const scrollContainer = cardRef.current.closest('.content-scroll') as HTMLElement | null;
-      if (scrollContainer) {
-        const currentScrollTop = scrollContainer.scrollTop;
-        const currentRect = cardRef.current.getBoundingClientRect();
-        const targetTop = 120; // garantiza que el menú tenga espacio debajo sin cortarse
-        if (currentRect.top > targetTop + 10) {
-          const delta = currentRect.top - targetTop;
-          scrollContainer.scrollTop = Math.max(0, currentScrollTop + delta);
-        }
-      }
-
       const rect = cardRef.current.getBoundingClientRect();
       setContextMenuTriggerRect({ top: rect.top, left: rect.left, width: rect.width, height: rect.height });
       const viewportH = window.innerHeight;
       const viewportW = window.innerWidth;
       const menuWidth = Math.min(260, viewportW - 24);
+      const estimatedMenuHeight = 360;
       const padding = 12;
-      
-      // Siempre abajo del recordatorio ahora que está arriba
-      const top = rect.bottom + 8;
-      const maxH = Math.max(160, viewportH - top - padding);
+
+      // Colocación inteligente: si hay espacio abajo, abajo; si no, arriba para NO tapar nunca la tarjeta
+      let top: number;
+      if (viewportH - rect.bottom >= 220 || rect.bottom < viewportH / 2) {
+        top = rect.bottom + 6;
+      } else {
+        top = Math.max(padding, rect.top - estimatedMenuHeight - 6);
+      }
+      const maxH = top > rect.top ? Math.max(160, viewportH - top - padding) : Math.max(160, rect.top - padding - 6);
 
       let left = rect.right - menuWidth;
       if (viewportW <= 640) {
@@ -414,7 +408,7 @@ export const TaskCard = React.memo(function TaskCard({
   const isCaducidad = isCaducidadesList(task.categoryId) || !!task.expirationType;
   const expirationStatus = isCaducidad ? calculateExpirationStatus(task.dueDate) : null;
 
-  const [dragOverPosition, setDragOverPosition] = useState<'top' | 'bottom' | null>(null);
+  const [dragOverPosition, setDragOverPosition] = useState<'top' | 'bottom' | 'inside' | null>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
     if (!onReorderTasks) return;
@@ -423,8 +417,14 @@ export const TaskCard = React.memo(function TaskCard({
       e.stopPropagation();
       e.dataTransfer.dropEffect = 'move';
       const rect = e.currentTarget.getBoundingClientRect();
-      const isBottom = e.clientY > rect.top + rect.height / 2;
-      setDragOverPosition(isBottom ? 'bottom' : 'top');
+      const relY = (e.clientY - rect.top) / rect.height;
+      if (relY < 0.25) {
+        setDragOverPosition('top');
+      } else if (relY > 0.75) {
+        setDragOverPosition('bottom');
+      } else {
+        setDragOverPosition('inside');
+      }
     }
   };
 
@@ -439,10 +439,16 @@ export const TaskCard = React.memo(function TaskCard({
     e.preventDefault();
     e.stopPropagation();
     const sourceId = e.dataTransfer.getData('text/task-id') || e.dataTransfer.getData('text/plain');
-    const pos = dragOverPosition || (e.clientY > e.currentTarget.getBoundingClientRect().top + e.currentTarget.getBoundingClientRect().height / 2 ? 'bottom' : 'top');
+    const pos = dragOverPosition;
     setDragOverPosition(null);
     if (sourceId && sourceId !== task.id) {
-      onReorderTasks(sourceId, task.id, pos === 'bottom' ? 'after' : 'before');
+      if (pos === 'inside') {
+        nestTask(sourceId, task.id);
+        HapticService.notification('success');
+      } else {
+        onReorderTasks(sourceId, task.id, pos === 'bottom' ? 'after' : 'before');
+        HapticService.impact('medium');
+      }
     }
   };
 
@@ -501,7 +507,8 @@ export const TaskCard = React.memo(function TaskCard({
       document.querySelectorAll<HTMLElement>('.task-item-wrapper[data-task-id]').forEach((el) => {
         const elRect = el.getBoundingClientRect();
         if (t.clientY >= elRect.top && t.clientY <= elRect.bottom) {
-          el.setAttribute('data-touch-drag-over', t.clientY < elRect.top + elRect.height / 2 ? 'top' : 'bottom');
+          const relY = (t.clientY - elRect.top) / elRect.height;
+          el.setAttribute('data-touch-drag-over', relY < 0.25 ? 'top' : relY > 0.75 ? 'bottom' : 'inside');
         } else {
           el.removeAttribute('data-touch-drag-over');
         }
@@ -518,23 +525,29 @@ export const TaskCard = React.memo(function TaskCard({
       touchDragLiftedRef.current = false;
 
       if (touchDragActiveRef.current) {
-        // Drag happened → find target and reorder
+        // Drag happened → find target and reorder or nest
         const t = ev.changedTouches[0];
         let targetId: string | null = null;
-        let position: 'before' | 'after' = 'before';
-        document.querySelectorAll<HTMLElement>('.task-item-wrapper[data-task-id]').forEach((el) => {
+        let dropAction: 'before' | 'after' | 'inside' = 'before';
+        const wrappers = Array.from(document.querySelectorAll<HTMLElement>('.task-item-wrapper[data-task-id]'));
+        for (const el of wrappers) {
           const attr = el.getAttribute('data-touch-drag-over');
           if (attr) {
             targetId = el.getAttribute('data-task-id');
-            position = attr === 'bottom' ? 'after' : 'before';
-            el.removeAttribute('data-touch-drag-over');
-          } else {
-            el.removeAttribute('data-touch-drag-over');
+            if (attr === 'inside') dropAction = 'inside';
+            else if (attr === 'bottom') dropAction = 'after';
+            else dropAction = 'before';
           }
-        });
-        if (targetId && targetId !== task.id && onReorderTasks) {
-          onReorderTasks(task.id, targetId, position);
-          HapticService.impact('medium');
+          el.removeAttribute('data-touch-drag-over');
+        }
+        if (targetId && targetId !== task.id) {
+          if (dropAction === 'inside') {
+            nestTask(task.id, targetId);
+            HapticService.notification('success');
+          } else if (onReorderTasks) {
+            onReorderTasks(task.id, targetId, dropAction);
+            HapticService.impact('medium');
+          }
         }
         void t;
       } else {
@@ -672,6 +685,27 @@ export const TaskCard = React.memo(function TaskCard({
           }} 
         >
           <div style={{ position: 'absolute', left: -4, top: -3, width: 8, height: 8, borderRadius: '50%', border: '2px solid var(--accent-primary, #007aff)', background: 'var(--bg-elevated)', boxSizing: 'border-box' }} />
+        </div>
+      )}
+      {dragOverPosition === 'inside' && (
+        <div 
+          style={{
+            position: 'absolute',
+            inset: 2,
+            borderRadius: 10,
+            border: '2px dashed var(--accent-primary, #007aff)',
+            background: 'rgba(0, 122, 255, 0.08)',
+            zIndex: 9999,
+            pointerEvents: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            paddingRight: 16
+          }}
+        >
+          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--accent-primary)', background: 'var(--bg-elevated)', padding: '2px 8px', borderRadius: 6, boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }}>
+            Anidar como subtarea
+          </span>
         </div>
       )}
 
