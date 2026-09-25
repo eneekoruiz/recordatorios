@@ -737,7 +737,15 @@ export const TaskCard = React.memo(function TaskCard({
           boxShadow: contextMenuOpen 
             ? '0 12px 32px rgba(0,0,0,0.18), 0 0 0 1px var(--border-subtle)' 
             : 'none',
-          borderRadius: contextMenuOpen ? 12 : (isFirstInSection ? 10 : isLastInSection ? 10 : 0),
+          borderRadius: contextMenuOpen 
+            ? '12px' 
+            : (isFirstInSection && isLastInSection 
+                ? '10px' 
+                : isFirstInSection 
+                  ? '10px 10px 0 0' 
+                  : isLastInSection 
+                    ? '0 0 10px 10px' 
+                    : '0px'),
         }}
         transition={{ type: 'spring', damping: 25, stiffness: 400 }}
         style={{
@@ -936,186 +944,187 @@ export const TaskCard = React.memo(function TaskCard({
         <div style={{ flex: 1, minWidth: 0, padding: '2px 0', boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             {isBlocked && <Lock size={15} color="var(--accent-red)" />}
-            {Boolean(task.priority && task.priority !== 'none' && (task.priority as any) !== 0) && (
-              <button
-                type="button"
-                className={`priority-badge ${typeof task.priority === 'number' ? ((task.priority as any) === 1 ? 'high' : (task.priority as any) === 5 ? 'medium' : 'low') : task.priority}`}
-                onClick={handlePriorityBadgeClick}
-                onPointerDown={(e) => e.stopPropagation()}
-                title="Cambiar urgencia"
-                aria-label="Cambiar urgencia"
-                style={{
-                  cursor: 'pointer',
-                  border: 'none',
-                  background: 'none',
-                  padding: 0,
-                  outline: 'none',
-                  color: '#ff3b30',
-                  fontWeight: 700,
-                  fontSize: '1rem',
-                  lineHeight: '1.4',
-                  letterSpacing: '-0.5px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  WebkitTapHighlightColor: 'transparent',
-                  transition: 'transform 0.15s ease, filter 0.15s ease',
-                  userSelect: 'none'
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.15)'; e.currentTarget.style.filter = 'brightness(1.1)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.filter = 'none'; }}
-              >
-                {task.priority === 'low' || (task.priority as any) === 9 ? '!' : task.priority === 'medium' || (task.priority as any) === 5 ? '!!' : '!!!'}
-              </button>
-            )}
             {isEditingTitle ? (
-              <textarea
-                ref={(el) => {
-                  titleTextareaRef.current = el;
-                  if (el) {
-                    adjustTitleTextarea(el);
-                    if (inlineEditingTaskId === task.id) {
-                      el.focus();
-                      setInlineEditingTaskId(null);
+              <div style={{ display: 'flex', width: '100%', gap: 4 }}>
+                {Boolean(task.priority && task.priority !== 'none' && (task.priority as any) !== 0) && (
+                  <button
+                    type="button"
+                    className={`priority-badge ${typeof task.priority === 'number' ? ((task.priority as any) === 1 ? 'high' : (task.priority as any) === 5 ? 'medium' : 'low') : task.priority}`}
+                    onClick={handlePriorityBadgeClick}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    title="Cambiar urgencia"
+                    aria-label="Cambiar urgencia"
+                    style={{
+                      cursor: 'pointer',
+                      border: 'none',
+                      background: 'none',
+                      padding: 0,
+                      outline: 'none',
+                      color: '#ff3b30',
+                      fontWeight: 700,
+                      fontSize: '1.05rem',
+                      lineHeight: '1.4',
+                      letterSpacing: '-0.5px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      WebkitTapHighlightColor: 'transparent',
+                      transition: 'transform 0.15s ease, filter 0.15s ease',
+                      userSelect: 'none',
+                      marginTop: 2
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.15)'; e.currentTarget.style.filter = 'brightness(1.1)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.filter = 'none'; }}
+                  >
+                    {task.priority === 'low' || (task.priority as any) === 9 ? '!' : task.priority === 'medium' || (task.priority as any) === 5 ? '!!' : '!!!'}
+                  </button>
+                )}
+                <textarea
+                  ref={(el) => {
+                    titleTextareaRef.current = el;
+                    if (el) {
+                      adjustTitleTextarea(el);
+                      if (inlineEditingTaskId === task.id) {
+                        el.focus();
+                        setInlineEditingTaskId(null);
+                      }
                     }
-                  }
-                }}
-                className="task-title-input"
-                value={editTitle}
-                autoFocus
-                rows={1}
-                placeholder="Nuevo recordatorio..."
-                onChange={e => {
-                  setEditTitle(e.target.value);
-                  adjustTitleTextarea(e.target);
-                }}
-                onBlur={handleTitleSubmit}
-                onKeyDown={e => {
-                  e.stopPropagation();
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    const raw = editTitle.trim();
-                    if (!raw) {
-                      setIsEditingTitle(false);
-                      setInlineEditingTaskId(null);
-                      HapticService.selection();
-                      if (onDelete) onDelete(task.id);
-                      else useAppStore.getState().deleteTask(task.id);
-                    } else {
-                      // 1. Guardar el recordatorio actual
-                      setIsEditingTitle(false);
-                      if (raw !== task.title) {
-                        const extracted = extractPrice(raw, false);
-                        if (extracted && extracted.price > 0) {
-                          updateTask(task.id, {
-                            title: extracted.cleanText || raw,
-                            price: extracted.price
-                          });
-                        } else {
-                          updateTask(task.id, { title: raw });
+                  }}
+                  className="task-title-input"
+                  value={editTitle}
+                  autoFocus
+                  rows={1}
+                  placeholder="Nuevo recordatorio..."
+                  onChange={e => {
+                    setEditTitle(e.target.value);
+                    adjustTitleTextarea(e.target);
+                  }}
+                  onBlur={handleTitleSubmit}
+                  onKeyDown={e => {
+                    e.stopPropagation();
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const raw = editTitle.trim();
+                      if (!raw) {
+                        setIsEditingTitle(false);
+                        setInlineEditingTaskId(null);
+                        HapticService.selection();
+                        if (onDelete) onDelete(task.id);
+                        else useAppStore.getState().deleteTask(task.id);
+                      } else {
+                        // 1. Guardar el recordatorio actual
+                        setIsEditingTitle(false);
+                        if (raw !== task.title) {
+                          const extracted = extractPrice(raw, false);
+                          if (extracted && extracted.price > 0) {
+                            updateTask(task.id, {
+                              title: extracted.cleanText || raw,
+                              price: extracted.price
+                            });
+                          } else {
+                            updateTask(task.id, { title: raw });
+                          }
                         }
-                      }
-                      // 2. Crear inmediatamente el siguiente recordatorio (comportamiento Apple Reminders)
-                      const newTaskId = crypto.randomUUID();
-                      const currentOrder = typeof task.order === 'number' ? task.order : 0;
-                      useAppStore.getState().addTask({
-                        id: newTaskId,
-                        title: '',
-                        categoryId: task.categoryId,
-                        sectionId: task.sectionId,
-                        cycle_id: task.cycle_id,
-                        order: currentOrder + 1,
-                        status: 'pending',
-                        type: 'task',
-                        created_at: new Date().toISOString()
-                      });
-                      // 3. Enfocar el nuevo recordatorio creado
-                      useAppStore.getState().setInlineEditingTaskId(newTaskId);
-                      HapticService.selection();
-                    }
-                  } else if (e.key === 'Backspace' && !editTitle) {
-                    e.preventDefault();
-                    setIsEditingTitle(false);
-                    setInlineEditingTaskId(null);
-                    HapticService.selection();
-                    if (onDelete) onDelete(task.id);
-                    else useAppStore.getState().deleteTask(task.id);
-                  } else if (e.key === 'Tab') {
-                    e.preventDefault();
-                    if (e.shiftKey) {
-                      // Shift + Tab: Quitar sangría (Subir a nivel principal)
-                      if (task.parentId) {
-                        nestTask(task.id, undefined);
-                        HapticService.selection();
-                      }
-                    } else {
-                      // Tab: Añadir sangría (Hacer subtarea del recordatorio anterior)
-                      if (previousTaskId && previousTaskId !== task.id) {
-                        nestTask(task.id, previousTaskId);
-                        HapticService.selection();
-                      }
-                    }
-                  } else if (e.key === 'Escape') {
-                    e.preventDefault();
-                    setIsEditingTitle(false);
-                    setInlineEditingTaskId(null);
-                    if (!editTitle.trim()) {
-                      if (onDelete) onDelete(task.id);
-                      else useAppStore.getState().deleteTask(task.id);
-                    } else {
-                      setEditTitle(task.title || '');
-                    }
-                  }
-                }}
-                onClick={e => e.stopPropagation()}
-                onPointerDown={e => e.stopPropagation()}
-                onPointerDownCapture={e => e.stopPropagation()}
-                onTouchStart={e => e.stopPropagation()}
-                onPaste={e => {
-                  const pasted = e.clipboardData.getData('text');
-                  if (pasted.includes('\n')) {
-                    e.preventDefault();
-                    const lines = pasted.split('\n').map(l => l.trim()).filter(Boolean);
-                    if (lines.length > 0) {
-                      setEditTitle(lines[0]);
-                      const { addTask } = useAppStore.getState();
-                      lines.slice(1).forEach((line, idx) => {
-                        addTask({
-                          id: crypto.randomUUID(),
-                          title: line,
+                        // 2. Crear inmediatamente el siguiente recordatorio
+                        const newTaskId = crypto.randomUUID();
+                        const currentOrder = typeof task.order === 'number' ? task.order : 0;
+                        useAppStore.getState().addTask({
+                          id: newTaskId,
+                          title: '',
                           categoryId: task.categoryId,
                           sectionId: task.sectionId,
-                          order: (task.order ?? 0) + idx + 1,
+                          cycle_id: task.cycle_id,
+                          order: currentOrder + 1,
+                          status: 'pending',
                           type: 'task',
-                          completed: false,
                           created_at: new Date().toISOString()
-                        } as any);
-                      });
+                        });
+                        // 3. Enfocar el nuevo recordatorio creado
+                        useAppStore.getState().setInlineEditingTaskId(newTaskId);
+                        HapticService.selection();
+                      }
+                    } else if (e.key === 'Backspace' && !editTitle) {
+                      e.preventDefault();
+                      setIsEditingTitle(false);
+                      setInlineEditingTaskId(null);
+                      HapticService.selection();
+                      if (onDelete) onDelete(task.id);
+                      else useAppStore.getState().deleteTask(task.id);
+                    } else if (e.key === 'Tab') {
+                      e.preventDefault();
+                      if (e.shiftKey) {
+                        if (task.parentId) {
+                          nestTask(task.id, undefined);
+                          HapticService.selection();
+                        }
+                      } else {
+                        if (previousTaskId && previousTaskId !== task.id) {
+                          nestTask(task.id, previousTaskId);
+                          HapticService.selection();
+                        }
+                      }
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      setIsEditingTitle(false);
+                      setInlineEditingTaskId(null);
+                      if (!editTitle.trim()) {
+                        if (onDelete) onDelete(task.id);
+                        else useAppStore.getState().deleteTask(task.id);
+                      } else {
+                        setEditTitle(task.title || '');
+                      }
                     }
-                  }
-                }}
-                style={{
-                  fontSize: '1.05rem',
-                  fontWeight: 400,
-                  width: '100%',
-                  border: 'none',
-                  background: 'transparent',
-                  outline: 'none',
-                  boxShadow: 'none',
-                  WebkitBoxShadow: 'none',
-                  color: 'var(--text-primary)',
-                  padding: '2px 0',
-                  margin: 0,
-                  lineHeight: '1.4',
-                  resize: 'none',
-                  overflow: 'hidden',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'normal',
-                  overflowWrap: 'anywhere',
-                  boxSizing: 'border-box',
-                  fontFamily: 'inherit',
-                  display: 'block'
-                }}
-              />
+                  }}
+                  onClick={e => e.stopPropagation()}
+                  onPointerDown={e => e.stopPropagation()}
+                  onPointerDownCapture={e => e.stopPropagation()}
+                  onTouchStart={e => e.stopPropagation()}
+                  onPaste={e => {
+                    const pasted = e.clipboardData.getData('text');
+                    if (pasted.includes('\n')) {
+                      e.preventDefault();
+                      const lines = pasted.split('\n').map(l => l.trim()).filter(Boolean);
+                      if (lines.length > 0) {
+                        setEditTitle(lines[0]);
+                        const { addTask } = useAppStore.getState();
+                        lines.slice(1).forEach((line, idx) => {
+                          addTask({
+                            id: crypto.randomUUID(),
+                            title: line,
+                            categoryId: task.categoryId,
+                            sectionId: task.sectionId,
+                            order: (task.order ?? 0) + idx + 1,
+                            type: 'task',
+                            completed: false,
+                            created_at: new Date().toISOString()
+                          } as any);
+                        });
+                      }
+                    }
+                  }}
+                  style={{
+                    fontSize: '1.05rem',
+                    fontWeight: 400,
+                    width: '100%',
+                    border: 'none',
+                    background: 'transparent',
+                    outline: 'none',
+                    boxShadow: 'none',
+                    WebkitBoxShadow: 'none',
+                    color: 'var(--text-primary)',
+                    padding: '2px 0',
+                    margin: 0,
+                    lineHeight: '1.4',
+                    resize: 'none',
+                    overflow: 'hidden',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'normal',
+                    overflowWrap: 'anywhere',
+                    boxSizing: 'border-box',
+                    fontFamily: 'inherit',
+                    display: 'block'
+                  }}
+                />
+              </div>
             ) : (
               <motion.span
                 role="button"
@@ -1143,6 +1152,38 @@ export const TaskCard = React.memo(function TaskCard({
                   minWidth: 0
                 }}
               >
+                {Boolean(task.priority && task.priority !== 'none' && (task.priority as any) !== 0) && (
+                  <button
+                    type="button"
+                    className={`priority-badge ${typeof task.priority === 'number' ? ((task.priority as any) === 1 ? 'high' : (task.priority as any) === 5 ? 'medium' : 'low') : task.priority}`}
+                    onClick={handlePriorityBadgeClick}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    title="Cambiar urgencia"
+                    aria-label="Cambiar urgencia"
+                    style={{
+                      cursor: 'pointer',
+                      border: 'none',
+                      background: 'none',
+                      padding: 0,
+                      outline: 'none',
+                      color: '#ff3b30',
+                      fontWeight: 700,
+                      fontSize: '1.05rem',
+                      lineHeight: '1.4',
+                      letterSpacing: '-0.5px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      WebkitTapHighlightColor: 'transparent',
+                      transition: 'transform 0.15s ease, filter 0.15s ease',
+                      userSelect: 'none',
+                      marginRight: 4
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.15)'; e.currentTarget.style.filter = 'brightness(1.1)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.filter = 'none'; }}
+                  >
+                    {task.priority === 'low' || (task.priority as any) === 9 ? '!' : task.priority === 'medium' || (task.priority as any) === 5 ? '!!' : '!!!'}
+                  </button>
+                )}
                 {task.title ? (
                   stripPeriodicityPrefix(task.title).split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
                     part.match(/^https?:\/\//) ? (

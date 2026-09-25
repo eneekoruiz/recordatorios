@@ -41,7 +41,7 @@ export const DrawerMetaSection: React.FC<DrawerMetaSectionProps> = ({
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Settings2 size={16} color="var(--text-secondary)" />
-          Detalles Adicionales
+          Detalles adicionales
         </span>
         <ChevronDown size={18} style={{ transform: cardDetailsOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
       </button>

@@ -371,7 +371,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
 
         {/* MIS LISTAS */}
         <div className="categories-section" style={{ flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 16px 8px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 0 8px 0' }}>
             <span style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Mis listas</span>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               <button 

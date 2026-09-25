@@ -163,7 +163,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
-              {existingList ? (existingList.isFolder ? 'Editar Carpeta' : 'Editar Lista') : (isFolder ? 'Nueva Carpeta' : (parentId ? 'Nueva Lista Anidada' : 'Nueva Lista'))}
+              {existingList ? (existingList.isFolder ? 'Editar carpeta' : 'Editar lista') : (isFolder ? 'Nueva carpeta' : (parentId ? 'Nueva lista anidada' : 'Nueva lista'))}
             </h3>
             <button 
               onClick={onClose}
@@ -247,7 +247,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                     alignItems: 'center',
                     gap: 4
                   }}>
-                    {LIST_TYPE_CONFIG[listType].supportsDuration ? '⏱ Con duraciones estimadas' : '📝 Sin duraciones'}
+                    {LIST_TYPE_CONFIG[listType].supportsDuration ? '⏱ Con duraciones estimadas' : 'Sin duraciones'}
                   </span>
                 </div>
 
@@ -378,17 +378,14 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Agrupa listas y subcarpetas sin contener tareas directamente</span>
                 </div>
               </div>
-              <div style={{
-                width: 44, height: 26, borderRadius: 13,
-                background: isFolder ? color : 'rgba(255,255,255,0.15)',
-                position: 'relative', transition: 'background-color 0.2s ease', flexShrink: 0
-              }}>
-                <div style={{
-                  width: 22, height: 22, borderRadius: '50%', background: '#ffffff',
-                  position: 'absolute', top: 2, left: isFolder ? 20 : 2,
-                  transition: 'left 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                }} />
-              </div>
+              <label className="switch" style={{ flexShrink: 0, margin: 0, pointerEvents: 'none' }}>
+                <input 
+                  type="checkbox" 
+                  checked={isFolder} 
+                  readOnly 
+                />
+                <span className="slider round"></span>
+              </label>
             </div>
 
             {/* Auto estimate duration toggle */}

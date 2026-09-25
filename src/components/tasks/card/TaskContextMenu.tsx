@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -622,7 +622,7 @@ function MenuActions({
         <ActionRow 
           icon={<Coins size={16} />} 
           label="Precio / Coste"
-          sublabel={task.price !== undefined && task.price > 0 ? `${task.price.toLocaleString('es-ES')} €` : undefined}
+          sublabel={task.price !== undefined && task.price > 0 ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(task.price) : undefined}
           trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
           onClick={() => setCurrentSubmenu('price')} 
         />

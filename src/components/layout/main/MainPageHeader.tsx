@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import {
   ArrowUpDown,
   X,
@@ -305,7 +305,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                   }}
                   title="Presupuesto total pendiente"
                 >
-                  {totalCost.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €
+                  {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(totalCost)} €
                 </span>
               )}
               <span className="apple-large-counter" style={{ color: viewColor }}>

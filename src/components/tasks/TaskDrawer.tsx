@@ -568,6 +568,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
       isDetailed,
       price: price !== undefined && price !== null && !isNaN(Number(price)) && Number(price) > 0 ? Number(price) : undefined,
       quantity: quantity !== undefined ? Number(quantity) : 1,
+      brand: brand.trim() || undefined,
       duration: duration !== '' ? Number(duration) : undefined,
       isParallel: isParallel ? true : undefined,
       parallelDuration: isParallel && parallelDuration ? Number(parallelDuration) : undefined,
@@ -739,7 +740,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                     }}
                   />
                 )}
-                <h3 id="drawer-title">{taskId ? 'Detalles' : 'Nuevo recordatorio'}</h3>
+                <h3 id="drawer-title">{taskId ? 'Detalles adicionales' : 'Nuevo recordatorio'}</h3>
               </div>
               <button className="save-btn" onClick={handleSave} disabled={!title.trim()} aria-label={taskId ? 'Guardar cambios' : 'Guardar nueva tarea'}>
                 {taskId ? 'Listo' : 'Añadir'}
@@ -843,7 +844,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                 availableTasks={availableTasks}
               />
 
-              {/* Card 4: Detalles Adicionales */}
+              {/* Card 4: Detalles adicionales */}
               <DrawerMetaSection
                 cardDetailsOpen={cardDetailsOpen}
                 setCardDetailsOpen={setCardDetailsOpen}

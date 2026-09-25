@@ -13,12 +13,7 @@ import { Share2, Link2Off,
   IndentIncrease, 
   IndentDecrease, 
   MoreHorizontal,
-  Sparkles,
-  CheckSquare,
-  Calendar,
-  Target,
-  CreditCard,
-  BookOpen
+
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../../../store/useAppStore';
@@ -26,7 +21,6 @@ import type { CustomList } from '../../../models/Task';
 import { confirmDialog } from '../../ui/confirmDialog';
 import { shareList, unshareList } from '../../../services/ShareService';
 import { getListIcon, getSuggestedListIconAndColor } from '../../../constants/icons';
-import { getListType, LIST_TYPE_CONFIG } from '../../../utils/specialLists';
 
 interface ListHierarchyProps {
   lists: CustomList[];
@@ -145,13 +139,7 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
         };
 
         const index = currentLevelLists.indexOf(list);
-        const listType = getListType(list, list.id);
-        const listTypeConfig = LIST_TYPE_CONFIG[listType];
-        const TypeBadgeIcon = listType === 'routines' ? Sparkles :
-                              listType === 'simple' ? CheckSquare :
-                              listType === 'events' ? Calendar :
-                              listType === 'goals' ? Target :
-                              listType === 'caducidades' ? CreditCard : BookOpen;
+        
 
         const triggerListMenu = (anchorTarget?: HTMLElement | null) => {
           if (isMobile) {
@@ -324,20 +312,6 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
               )}
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                  {!list.isFolder && (
-                    <span 
-                      style={{ 
-                        display: 'inline-flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        color: listTypeConfig.color, 
-                        flexShrink: 0 
-                      }} 
-                      title={`Tipo: ${listTypeConfig.label} (${listTypeConfig.description})`}
-                    >
-                      <TypeBadgeIcon size={12} strokeWidth={2.4} />
-                    </span>
-                  )}
                   <span 
                     className="title" 
                     style={{ 
@@ -451,7 +425,7 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                       overflowY: 'auto'
                     } : { 
                       position: 'fixed',
-                      top: Math.min(menuCoords.top + 2, window.innerHeight - 400),
+                      top: Math.min(menuCoords.top, window.innerHeight - 300),
                       left: Math.max(12, Math.min(menuCoords.left, window.innerWidth - 235)),
                       zIndex: 99999,
                       width: 230,
@@ -470,7 +444,12 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                     onClick={(e) => e.stopPropagation()}
                   >
                     {isMobile && (
-                      <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border-subtle, rgba(255,255,255,0.2))', margin: '0 auto 12px', flexShrink: 0 }} />
+                      <>
+                        <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border-subtle, rgba(255,255,255,0.2))', margin: '0 auto 12px', flexShrink: 0 }} />
+                        <div style={{ textAlign: 'center', marginBottom: 12 }}>
+                          <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>{list.name}</span>
+                        </div>
+                      </>
                     )}
                     {list.id === 'primeros_pasos' ? (
                       <button 
@@ -632,6 +611,19 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                           <Trash2 size={16} /> Eliminar {list.isFolder ? 'Carpeta' : 'Lista'}
                         </button>
                       </>
+                    )}
+                    {isMobile && (
+                      <button 
+                        type="button"
+                        className="ios-dropdown-item"
+                        onClick={() => {
+                          setActiveMenuId(null);
+                          setMenuCoords(null);
+                        }}
+                        style={{ ...mobileItemStyle, justifyContent: 'center', marginTop: 8, fontWeight: 600 }}
+                      >
+                        Cancelar
+                      </button>
                     )}
                   </motion.div>
                 </>,

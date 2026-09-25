@@ -293,7 +293,7 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                           </div>
                         </div>
                       </div>
-                      <label className="apple-switch" style={{ flexShrink: 0 }}>
+                      <label className="switch" style={{ flexShrink: 0 }}>
                         <input
                           type="checkbox"
                           checked={Boolean(isParallel)}

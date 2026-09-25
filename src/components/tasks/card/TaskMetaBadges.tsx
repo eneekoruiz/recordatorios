@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from 'react';
+﻿import { Fragment, type ReactNode } from 'react';
 import { Calendar, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen, Zap, Tag } from 'lucide-react';
 import type { TaskItem, CustomList } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
@@ -53,7 +53,7 @@ export function TaskMetaBadges({
   const showDueDate = !!task.dueDate && !hideDueDate;
   const isShopping = isShoppingList(task.categoryId, taskList);
   const hasDuration = !isShopping && showDuration && Boolean(durationInfo && durationInfo.activeMinutes > 0);
-  const hasMeta = showListName || showDueDate || Boolean(cycleBadge) || timeOfDayInfo || Boolean(inAppListTarget) || hasDuration;
+  const hasMeta = showListName || showDueDate || Boolean(cycleBadge) || timeOfDayInfo || Boolean(inAppListTarget) || hasDuration || (task.price !== undefined && task.price > 0);
 
 
   return (
@@ -208,7 +208,7 @@ export function TaskMetaBadges({
                   {task.quantity && task.quantity > 1 && (
                     <span style={{ color: 'var(--text-tertiary)', fontSize: '0.72rem', fontWeight: 500 }}>{task.quantity}×</span>
                   )}
-                  <span>{task.price.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €</span>
+                  <span>{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(task.price)}</span>
                 </span>
               );
             }

@@ -116,6 +116,13 @@ h1, h2, h3,
   display: block !important;
   pointer-events: none !important;
 }
+
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .list-separator-line {
+    height: 0.5px !important;
+    min-height: 0.5px !important;
+  }
+}
 .ios-list-item .title,
 .ios-list-item span.title {
   white-space: nowrap !important;
@@ -161,10 +168,16 @@ h1, h2, h3,
   position: absolute;
   top: 0;
   right: 0;
-  height: 0.5px;
+  height: 1px;
   background: var(--separator);
   pointer-events: none;
   z-index: 1;
+}
+
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .task-row-separator {
+    height: 0.5px;
+  }
 }
 
 /* Botón de info: discreto hasta que se pasa por encima */

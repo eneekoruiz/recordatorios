@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useCallback, useEffect, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import { Plus, Hourglass, User, Users, PartyPopper, UtensilsCrossed, ShowerHead, BedDouble, DoorOpen, Flower2, House } from 'lucide-react';
+import { Plus, Repeat, User, Users, PartyPopper, UtensilsCrossed, ShowerHead, BedDouble, DoorOpen, Flower2, House } from 'lucide-react';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import type { TaskItem } from '../../models/Task';
 import { TaskCard } from '../tasks/TaskCard';
@@ -1101,7 +1101,7 @@ const CORE_CYCLES = [
         flat.push({ 
           type: 'header', 
           title: headerTitle, 
-          titleIcon: currentCycle ? undefined : (sectionPeriodicity ? <Hourglass size={14} /> : undefined),
+          titleIcon: currentCycle ? undefined : (sectionPeriodicity ? <Repeat size={14} /> : undefined),
           category: categoryOrCycle, 
           color, 
           depth: headerDepth,
@@ -1373,7 +1373,7 @@ const CORE_CYCLES = [
               flat.push({ 
                 type: 'header', 
                 title: formatSectionTitle(sec.name), 
-                titleIcon: currentCycle ? undefined : (secPeriodicity ? <Hourglass size={14} /> : undefined),
+                titleIcon: currentCycle ? undefined : (secPeriodicity ? <Repeat size={14} /> : undefined),
                 category: secKey, 
                 color: parentColor, 
                 sectionId: sec.id, 
@@ -1443,7 +1443,7 @@ const CORE_CYCLES = [
             const y = parts[0];
             const m = parseInt(parts[1], 10) - 1;
             headerTitle = `${monthNames[m] || ''} ${y}`;
-            headerIcon = <Hourglass size={14} />;
+            headerIcon = <Repeat size={14} />;
           }
 
           flat.push({
@@ -1601,7 +1601,7 @@ const CORE_CYCLES = [
           flat.push({ 
             type: 'header', 
             title: formatSectionTitle(sec.name), 
-            titleIcon: sectionPeriodicity ? <Hourglass size={14} /> : undefined,
+            titleIcon: sectionPeriodicity ? <Repeat size={14} /> : undefined,
             category: categoryKey, 
             color, 
             sectionId: sec.id, 
@@ -1746,7 +1746,7 @@ const CORE_CYCLES = [
             flat.push({
               type: 'header',
               title: formatSectionTitle(label),
-              titleIcon: <Hourglass size={14} />,
+              titleIcon: <Repeat size={14} />,
               category: freqCatKey,
               color: freqColor,
               sectionId: manualFreqSec?.id,
@@ -1881,10 +1881,14 @@ const CORE_CYCLES = [
                 ? fullTasksTotal.filter(t => !isTaskCompleted(t)).map(t => t.id)
                 : thisSectionTasksTotal.filter(t => !isTaskCompleted(t)).map(t => t.id);
 
+              if (tasksToRender.length === 0 && childSections.length === 0) {
+                return;
+              }
+
               flat.push({
                 type: 'header',
                 title: formatSectionTitle(cName),
-                titleIcon: <Hourglass size={14} />,
+                titleIcon: <Repeat size={14} />,
                 category: catKey,
                 color,
                 sectionId: manualSec?.id,
@@ -1896,11 +1900,8 @@ const CORE_CYCLES = [
               });
 
               if (!isCatCollapsed(catKey)) {
-                if (tasksToRender.length === 0 && childSections.length === 0) {
-                  flat.push({ type: 'empty-section', title: 'Aquí no hay tareas', category: catKey, color, sectionId: manualSec?.id, depth: 0 });
-                } else {
-                  if (tasksToRender.length > 0) {
-                    const inScope = new Set(tasksToRender.map(t => t.id));
+                if (tasksToRender.length > 0) {
+                  const inScope = new Set(tasksToRender.map(t => t.id));
                     const roots = tasksToRender.filter(t => !t.parentId || !inScope.has(t.parentId));
                     const processNode = (task: TaskItem, depthLevel: number) => {
                       flat.push({ type: 'task', task, depth: depthLevel });
@@ -1915,7 +1916,6 @@ const CORE_CYCLES = [
                   if (childSections.length > 0) {
                     childSections.forEach(child => processSection(child.id, 1));
                   }
-                }
               }
             });
           }
@@ -2753,33 +2753,6 @@ const CORE_CYCLES = [
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, pointerEvents: 'auto', flexShrink: 0 }}>
               <BottomShortcutBar />
-              <motion.button
-                type="button"
-                data-testid="desktop-fab"
-                className="desktop-fab"
-                onClick={() => onOpenNewTask()}
-                whileHover={{ scale: 1.08 }}
-                whileTap={{ scale: 0.92 }}
-                title="Añadir nuevo recordatorio (N)"
-                aria-label="Añadir nuevo recordatorio"
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: '50%',
-                  background: 'var(--accent-primary, #007AFF)',
-                  color: '#ffffff',
-                  border: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  boxShadow: '0 6px 20px rgba(0, 122, 255, 0.4)',
-                  padding: 0,
-                  flexShrink: 0
-                }}
-              >
-                <Plus size={22} strokeWidth={2.4} />
-              </motion.button>
             </div>
           </div>
         </>

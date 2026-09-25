@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+﻿import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, SlidersHorizontal, ArrowUp, Calendar, Clock, AlertCircle, List as ListIcon, Repeat, Users, Coins } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
@@ -200,7 +200,7 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
               )}
               {nlp.suggestedPrice && (
                 <span className="qa-chip qa-chip--price" style={{ fontWeight: 600, color: 'var(--accent-primary)' }}>
-                  <Coins size={12} /> {nlp.suggestedPrice.toLocaleString('es-ES')} €
+                  <Coins size={12} /> {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(nlp.suggestedPrice)}€
                 </span>
               )}
             </motion.div>

@@ -16,7 +16,7 @@ export interface ListTypeInfo {
 export const LIST_TYPE_CONFIG: Record<ListType, ListTypeInfo> = {
   routines: {
     type: 'routines',
-    label: 'Rutinas / Acción',
+    label: 'Rutinas',
     description: 'Limpieza, compra o quehaceres con duraciones y frecuencias',
     badgeLabel: 'Rutinas',
     iconName: 'sparkles',
@@ -26,7 +26,7 @@ export const LIST_TYPE_CONFIG: Record<ListType, ListTypeInfo> = {
   },
   simple: {
     type: 'simple',
-    label: 'Lista Simple',
+    label: 'Checklist',
     description: 'Apuntar cosas, notas y checklist sin duraciones artificiales',
     badgeLabel: 'Checklist',
     iconName: 'check-square',
@@ -66,8 +66,8 @@ export const LIST_TYPE_CONFIG: Record<ListType, ListTypeInfo> = {
   },
   que_he_hecho: {
     type: 'que_he_hecho',
-    label: 'Qué he hecho',
-    description: 'Bitácora de vivencias, personas y recuerdos especiales',
+    label: 'Bitácora',
+    description: 'Diario de vivencias, personas y recuerdos especiales',
     badgeLabel: 'Bitácora',
     iconName: 'book-open',
     color: '#5856d6',

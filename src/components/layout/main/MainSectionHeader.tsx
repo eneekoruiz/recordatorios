@@ -1,5 +1,5 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { MoreHorizontal, ChevronDown, Hourglass } from 'lucide-react';
+﻿import React, { useState, useRef, useCallback } from 'react';
+import { MoreHorizontal, ChevronDown, Repeat } from 'lucide-react';
 import { HapticService } from '../../../services/HapticService';
 import type { SectionMenuState } from './SectionContextMenu';
 import type { TasksDurationSummary } from '../../../utils/taskDuration';
@@ -393,7 +393,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                   }}
                   title={`Duración estimada de ${data.title}: ${sectionDurationLabel}`}
                 >
-                  {data.titleIcon || <Hourglass size={12} />}
+                  {data.titleIcon || <Repeat size={12} />}
                   <span>~{sectionDurationLabel}</span>
                 </div>
               )}
@@ -441,7 +441,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               }}
               title="Subtotal de la sección"
             >
-              {sectionTotal.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €
+              {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(sectionTotal)} €
             </span>
           )}
           {isCustomSection && !isMobile && (

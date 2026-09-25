@@ -1088,7 +1088,7 @@ function App() {
               onOpenNewTask={(sectionId) => { setEditingTaskId(null); setDrawerInitialFocus(undefined); setDefaultSectionId(sectionId); setIsDrawerOpen(true); }}
               onOpenZenMode={(taskId) => setZenModeTaskId(taskId)}
               onEditTask={(taskId, initialFocus) => { setEditingTaskId(taskId); setDrawerInitialFocus(initialFocus); setIsDrawerOpen(true); }}
-              onBackToSidebar={() => setMobileView('sidebar')}
+              onBackToSidebar={isMobile ? () => setMobileView('sidebar') : undefined}
               onSelectView={handleSelectView}
               isMobile={isMobile}
               onStartSequence={(taskIds, listName, listColor) => {

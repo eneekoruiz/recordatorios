@@ -35,7 +35,7 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
   return (
     <div>
       {/* SMART LISTS GRID HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 16px', marginBottom: 6 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 0', marginBottom: 6 }}>
         <span className="section-header" style={{ margin: 0, padding: 0, fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '-0.01em' }}>Listas inteligentes</span>
         <button 
           type="button"
@@ -51,7 +51,7 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
         display: 'grid', 
         gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', 
         gap: 12, 
-        padding: '0 16px',
+        padding: '0 0',
         marginBottom: 4
       }}>
         {availableGridLists.length === 0 ? (
