@@ -109,11 +109,11 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   const touchStartPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const rowRef = useRef<HTMLDivElement>(null);
   const moreBtnRef = useRef<HTMLButtonElement>(null);
-  const getRowRect = () => {
+  const getRowRect = useCallback(() => {
     if (!rowRef.current) return undefined;
     const rect = rowRef.current.getBoundingClientRect();
     return { top: rect.top, left: rect.left, width: rect.width, height: rect.height };
-  };
+  }, []);
 
   const isMenuOpenForThisSection = Boolean(
     sectionMenu?.open && (

@@ -6,7 +6,7 @@ import type { CustomList } from '../../../models/Task';
 import { HapticService } from '../../../services/HapticService';
 import { getListType, LIST_TYPE_CONFIG } from '../../../utils/specialLists';
 
-export const SMART_COLORS: Record<string, string> = {
+const SMART_COLORS: Record<string, string> = {
   'smart_today': 'var(--accent-blue)',
   'smart_scheduled': 'var(--accent-red)',
   'smart_all': 'var(--text-secondary)',
