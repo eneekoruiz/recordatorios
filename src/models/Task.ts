@@ -103,6 +103,8 @@ export interface TaskItem {
   timeOfDay?: 'morning' | 'afternoon' | 'night';
 
   duration?: number;
+  isParallel?: boolean; // Tarea que corre en segundo plano/paralelo (ej: lavadora, mascarilla)
+  parallelDuration?: number; // Minutos pasivos de espera en segundo plano
 
   // --- HABIT & REPETITION FIELDS ---
   targetCount?: number;

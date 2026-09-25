@@ -12,7 +12,13 @@ import { Share2, Link2Off,
   FolderPlus, 
   IndentIncrease, 
   IndentDecrease, 
-  MoreHorizontal 
+  MoreHorizontal,
+  Sparkles,
+  CheckSquare,
+  Calendar,
+  Target,
+  CreditCard,
+  BookOpen
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../../../store/useAppStore';
@@ -20,6 +26,7 @@ import type { CustomList } from '../../../models/Task';
 import { confirmDialog } from '../../ui/confirmDialog';
 import { shareList, unshareList } from '../../../services/ShareService';
 import { getListIcon, getSuggestedListIconAndColor } from '../../../constants/icons';
+import { getListType, LIST_TYPE_CONFIG } from '../../../utils/specialLists';
 
 interface ListHierarchyProps {
   lists: CustomList[];
@@ -138,6 +145,32 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
         };
 
         const index = currentLevelLists.indexOf(list);
+        const listType = getListType(list, list.id);
+        const listTypeConfig = LIST_TYPE_CONFIG[listType];
+        const TypeBadgeIcon = listType === 'routines' ? Sparkles :
+                              listType === 'simple' ? CheckSquare :
+                              listType === 'events' ? Calendar :
+                              listType === 'goals' ? Target :
+                              listType === 'caducidades' ? CreditCard : BookOpen;
+
+        const triggerListMenu = (anchorTarget?: HTMLElement | null) => {
+          if (isMobile) {
+            setMenuCoords({ top: 0, left: 0 });
+            setActiveMenuId(list.id);
+            return;
+          }
+          const el = anchorTarget?.closest(`[data-list-id="${list.id}"]`) as HTMLElement || document.querySelector(`[data-list-id="${list.id}"]`) as HTMLElement;
+          if (el) {
+            const rect = el.getBoundingClientRect();
+            setMenuCoords({
+              top: rect.bottom + 2,
+              left: Math.max(12, Math.min(rect.right - 230, window.innerWidth - 245))
+            });
+          } else {
+            setMenuCoords({ top: 120, left: 120 });
+          }
+          setActiveMenuId(list.id);
+        };
 
         return (
           <div key={list.id} style={{ position: 'relative' }}>
@@ -233,13 +266,8 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                     setActiveMenuId(null);
                     setMenuCoords(null);
                   } else {
-                    const el = document.querySelector(`[data-list-id="${list.id}"]`);
-                    const rect = el ? el.getBoundingClientRect() : { bottom: pointerStartRef.current!.y, left: pointerStartRef.current!.x };
-                    setMenuCoords({
-                      top: rect.bottom,
-                      left: rect.left
-                    });
-                    setActiveMenuId(list.id);
+                    const el = document.querySelector(`[data-list-id="${list.id}"]`) as HTMLElement;
+                    triggerListMenu(el);
                   }
                 }, 300);
               }}
@@ -274,11 +302,7 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                   longPressTimerRef.current = null;
                 }
                 wasLongPressedRef.current = true;
-                setMenuCoords({
-                  top: e.clientY,
-                  left: e.clientX
-                });
-                setActiveMenuId(list.id);
+                triggerListMenu(e.currentTarget as HTMLElement);
               }}
               style={{ position: 'relative', transition: 'background-color 150ms ease', cursor: 'grab' }}
             >
@@ -299,19 +323,35 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                 })()
               )}
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-                <span 
-                  className="title" 
-                  style={{ 
-                    color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)', 
-                    fontSize: depth > 0 ? '0.9rem' : undefined,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
-                  }}
-                  title={list.name}
-                >
-                  {list.name}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                  {!list.isFolder && (
+                    <span 
+                      style={{ 
+                        display: 'inline-flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        color: listTypeConfig.color, 
+                        flexShrink: 0 
+                      }} 
+                      title={`Tipo: ${listTypeConfig.label} (${listTypeConfig.description})`}
+                    >
+                      <TypeBadgeIcon size={12} strokeWidth={2.4} />
+                    </span>
+                  )}
+                  <span 
+                    className="title" 
+                    style={{ 
+                      color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)', 
+                      fontSize: depth > 0 ? '0.9rem' : undefined,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}
+                    title={list.name}
+                  >
+                    {list.name}
+                  </span>
+                </div>
                 {list.isShared && <span className="subtitle">Esta lista es compartida.</span>}
               </div>
               
@@ -360,12 +400,7 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                       setActiveMenuId(null);
                       setMenuCoords(null);
                     } else {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      setMenuCoords({
-                        top: rect.bottom,
-                        left: rect.left - 120
-                      });
-                      setActiveMenuId(list.id);
+                      triggerListMenu(e.currentTarget as HTMLElement);
                     }
                   }}
                   onPointerDown={(e) => e.stopPropagation()}
@@ -379,14 +414,22 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
               {activeMenuId === list.id && menuCoords && createPortal(
                 <>
                   <div 
-                    style={{ position: 'fixed', inset: 0, zIndex: 99998, background: 'transparent' }} 
+                    style={{ 
+                      position: 'fixed', 
+                      inset: 0, 
+                      zIndex: 99998, 
+                      background: isMobile ? 'rgba(0, 0, 0, 0.45)' : 'transparent',
+                      backdropFilter: isMobile ? 'blur(16px)' : 'none',
+                      WebkitBackdropFilter: isMobile ? 'blur(16px)' : 'none',
+                      transition: 'all 0.2s ease'
+                    }} 
                     onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); setMenuCoords(null); }} 
                   />
                   <motion.div 
-                    initial={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.85, y: -10 }}
+                    initial={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.95, y: -6 }}
                     animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }}
-                    exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.95, y: -5 }}
-                    transition={{ type: 'spring', damping: 25, stiffness: 450 }}
+                    exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.95, y: -6 }}
+                    transition={{ type: 'spring', damping: 28, stiffness: 450 }}
                     className={isMobile ? undefined : "ios-dropdown-menu"}
                     style={isMobile ? { 
                       position: 'fixed',
@@ -395,8 +438,10 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                       bottom: 0,
                       zIndex: 99999,
                       background: 'var(--bg-elevated, #1c1c1e)',
-                      borderTop: '1px solid var(--border-subtle, rgba(255,255,255,0.1))',
-                      borderRadius: '20px 20px 0 0',
+                      backdropFilter: 'blur(30px) saturate(180%)',
+                      WebkitBackdropFilter: 'blur(30px) saturate(180%)',
+                      borderTop: '1px solid var(--border-subtle, rgba(255,255,255,0.12))',
+                      borderRadius: '24px 24px 0 0',
                       padding: '16px 16px max(24px, env(safe-area-inset-bottom))',
                       boxShadow: '0 -10px 40px rgba(0,0,0,0.5)',
                       display: 'flex',
@@ -406,7 +451,7 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                       overflowY: 'auto'
                     } : { 
                       position: 'fixed',
-                      top: Math.min(menuCoords.top + 4, window.innerHeight - 400),
+                      top: Math.min(menuCoords.top + 2, window.innerHeight - 400),
                       left: Math.max(12, Math.min(menuCoords.left, window.innerWidth - 235)),
                       zIndex: 99999,
                       width: 230,
@@ -663,12 +708,16 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
             )}
             {!(depth === 0 && index === currentLevelLists.length - 1) && (
               <div 
+                className="list-separator-line"
                 aria-hidden="true" 
                 style={{
-                  height: '0.5px',
-                  background: 'var(--border-subtle, rgba(60,60,67,0.12))',
+                  height: 1,
+                  minHeight: 1,
+                  background: 'var(--border-subtle, rgba(120, 120, 128, 0.28))',
                   marginLeft: depth > 0 ? 44 : 52,
-                  marginRight: 8
+                  marginRight: 8,
+                  opacity: 0.95,
+                  flexShrink: 0
                 }} 
               />
             )}

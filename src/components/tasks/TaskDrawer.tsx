@@ -102,6 +102,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   const [quantity, setQuantity] = useState<number>(1);
   const [brand, setBrand] = useState('');
   const [duration, setDuration] = useState<number | ''>('');
+  const [isParallel, setIsParallel] = useState<boolean>(false);
+  const [parallelDuration, setParallelDuration] = useState<number | undefined>(undefined);
   const [targetCount, setTargetCount] = useState<number | undefined>(undefined);
   const [currentCount, setCurrentCount] = useState<number | undefined>(undefined);
   const [timeOfDay, setTimeOfDay] = useState<'morning' | 'afternoon' | 'night' | undefined>(undefined);
@@ -167,6 +169,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setQuantity(task.quantity !== undefined ? task.quantity : 1);
         setBrand(task.brand || '');
         setDuration(task.duration || '');
+        setIsParallel(Boolean(task.isParallel));
+        setParallelDuration(task.parallelDuration);
         setTargetCount(task.targetCount);
         setCurrentCount(task.currentCount);
         setTimeOfDay(task.timeOfDay);
@@ -232,6 +236,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setQuantity(1);
         setBrand('');
         setDuration('');
+        setIsParallel(false);
+        setParallelDuration(undefined);
         const isCad = isCaducidadesList(defaultCategoryId);
         const isShopping = defaultCategoryId === 'compras' || defaultCategoryId?.toLowerCase().includes('compra');
         const isSub = defaultSectionId?.includes('suscrip');
@@ -562,8 +568,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
       isDetailed,
       price: price !== undefined && price !== null && !isNaN(Number(price)) && Number(price) > 0 ? Number(price) : undefined,
       quantity: quantity !== undefined ? Number(quantity) : 1,
-      brand: brand || undefined,
       duration: duration !== '' ? Number(duration) : undefined,
+      isParallel: isParallel ? true : undefined,
+      parallelDuration: isParallel && parallelDuration ? Number(parallelDuration) : undefined,
       targetCount: targetCount && targetCount > 1 ? Number(targetCount) : undefined,
       currentCount: targetCount && targetCount > 1 ? (currentCount || 0) : undefined,
       people: people.length > 0 ? people : undefined,
@@ -777,6 +784,10 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                 expirationType={expirationType}
                 duration={duration}
                 setDuration={setDuration}
+                isParallel={isParallel}
+                setIsParallel={setIsParallel}
+                parallelDuration={parallelDuration}
+                setParallelDuration={setParallelDuration}
                 removeAlert={removeAlert}
                 addAnticipationAlert={addAnticipationAlert}
               />

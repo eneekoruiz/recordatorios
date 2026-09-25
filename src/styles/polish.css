@@ -109,6 +109,13 @@ h1, h2, h3,
 .ios-list-block .ios-list-item.active {
   background: color-mix(in srgb, var(--accent-primary) 12%, transparent) !important;
 }
+.list-separator-line {
+  height: 1px !important;
+  min-height: 1px !important;
+  background-color: var(--border-subtle, rgba(120, 120, 128, 0.28)) !important;
+  display: block !important;
+  pointer-events: none !important;
+}
 .ios-list-item .title,
 .ios-list-item span.title {
   white-space: nowrap !important;

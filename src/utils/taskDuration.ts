@@ -30,14 +30,14 @@ export interface TasksDurationSummary {
  * Regex identifying tasks that naturally execute in background/parallel
  * while the user can proceed with other active activities.
  */
-export const PARALLEL_TASK_REGEX = /\b(lavadora|poner la lavadora|lavar la ropa|secadora|poner la secadora|lavavajillas|poner lavavajillas|fregaplatos|remojo|poner en remojo|descongelar|horno|hornear|pir[oó]lisis|robot aspirador|roomba|tintorer[ií]a|cortinas?|edred[oó]n|fundas? de sof[aá]|ropa de cama|almohadas?|mantas?|colada)\b/i;
+export const PARALLEL_TASK_REGEX = /\b(lavadora|poner la lavadora|lavar la ropa|secadora|poner la secadora|lavavajillas|poner lavavajillas|fregaplatos|remojo|poner en remojo|descongelar|horno|hornear|pir[oó]lisis|robot aspirador|roomba|tintorer[ií]a|cortinas?|edred[oó]n|fundas? de sof[aá]|ropa de cama|almohadas?|mantas?|colada|mascarilla|mascarilla de cara|mascarilla facial|tinte|tinte de pelo|marinar|macerar|esmalte|pintar u[ñn]as|dejar secar|ventilar|ventilaci[oó]n)\b/i;
 
 /**
  * Checks whether a task is a parallel / background task.
  */
 export function isParallelTask(task?: TaskItem | null): boolean {
   if (!task) return false;
-  if ((task as any).isParallel === true) return true;
+  if (task.isParallel === true) return true;
   return PARALLEL_TASK_REGEX.test(task.title || '');
 }
 
@@ -57,10 +57,19 @@ export function getTaskDuration(
   // 1. Explicit duration set on the task
   if (typeof task.duration === 'number' && task.duration > 0) {
     if (parallel) {
-      const pDur = (task as any).parallelDuration || 150;
+      const pDur = task.parallelDuration || (title.includes('mascarilla') ? 15 : 120);
       return { activeMinutes: task.duration, parallelMinutes: pDur, isParallel: true };
     }
     return { activeMinutes: task.duration, parallelMinutes: 0, isParallel: false };
+  }
+
+  // 1a. Explicit parallel flag without explicit duration
+  if (task.isParallel) {
+    const active = typeof task.duration === 'number' && task.duration > 0 ? task.duration : 3;
+    const pDur = typeof task.parallelDuration === 'number' && task.parallelDuration > 0
+      ? task.parallelDuration
+      : (title.includes('mascarilla') ? 15 : 60);
+    return { activeMinutes: active, parallelMinutes: pDur, isParallel: true };
   }
 
   // 1b. Duración aprendida previamente del usuario para esta tarea en el store
@@ -104,6 +113,18 @@ export function getTaskDuration(
 
   // 2. Parallel tasks: small active setup time + large passive background time
   if (parallel) {
+    if (title.includes('mascarilla') || title.includes('tinte')) {
+      return { activeMinutes: 2, parallelMinutes: 15, isParallel: true }; // 2 min colocación + 15 min espera
+    }
+    if (title.includes('esmalte') || title.includes('uñas') || title.includes('dejar secar')) {
+      return { activeMinutes: 2, parallelMinutes: 20, isParallel: true };
+    }
+    if (title.includes('marinar') || title.includes('macerar')) {
+      return { activeMinutes: 3, parallelMinutes: 60, isParallel: true };
+    }
+    if (title.includes('ventilar') || title.includes('ventilacion') || title.includes('ventilación')) {
+      return { activeMinutes: 1, parallelMinutes: 20, isParallel: true };
+    }
     if (title.includes('lavadora') || title.includes('lavar la ropa') || title.includes('colada')) {
       return { activeMinutes: 5, parallelMinutes: 150, isParallel: true }; // 2h 30m
     }

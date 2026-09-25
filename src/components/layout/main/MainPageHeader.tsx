@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import {
   ArrowUpDown,
   X,
@@ -82,7 +81,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   totalCost,
   totalDuration: _totalDuration,
   activeVisibleCount,
-  completedVisibleCount,
+  completedVisibleCount: _completedVisibleCount,
   setConfirmProps,
   setIsConfirmOpen,
   deleteCycle,
@@ -288,7 +287,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
           {/* Gran Contador Apple Reminders en el color de la lista */}
           {currentView !== 'TRASH' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-              {totalCost > 0 && (
+              {totalCost > 0 && !currentCycle && (
                 <span 
                   style={{
                     display: 'inline-flex',
@@ -315,22 +314,6 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
             </div>
           )}
         </div>
-
-        {currentList && (activeVisibleCount + completedVisibleCount) > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2, opacity: titleOpacity }}>
-            <div style={{ flex: 1, height: 4, background: 'var(--border-subtle)', borderRadius: 2, overflow: 'hidden' }}>
-              <motion.div
-                initial={{ scaleX: 0, originX: 0 }}
-                animate={{ scaleX: completedVisibleCount / (activeVisibleCount + completedVisibleCount) }}
-                transition={{ type: 'spring', stiffness: 100, damping: 20 }}
-                style={{ height: '100%', background: viewColor, borderRadius: 2 }}
-              />
-            </div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 500, flexShrink: 0 }}>
-              {completedVisibleCount} / {activeVisibleCount + completedVisibleCount} tareas
-            </div>
-          </div>
-        )}
 
         {/* Conmutador general de frecuencia (Apple Segmented Control) */}
         {currentCycle && currentCycle.id !== 'cycle_day' && onToggleCycleRoutineMode && (

@@ -306,6 +306,51 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                     );
                   })}
                 </div>
+
+                {/* Explicación clara y detallada del tipo de lista seleccionado */}
+                <div style={{
+                  padding: '12px 14px',
+                  borderRadius: 14,
+                  background: `${LIST_TYPE_CONFIG[listType].color}10`,
+                  border: `1px solid ${LIST_TYPE_CONFIG[listType].color}30`,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 6
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 22,
+                      height: 22,
+                      borderRadius: 6,
+                      background: `${LIST_TYPE_CONFIG[listType].color}25`,
+                      color: LIST_TYPE_CONFIG[listType].color
+                    }}>
+                      {(() => {
+                        const item = LIST_TYPE_CONFIG[listType];
+                        const TypeIcon = item.iconName === 'sparkles' ? Sparkles :
+                                         item.iconName === 'check-square' ? CheckSquare :
+                                         item.iconName === 'calendar' ? Calendar :
+                                         item.iconName === 'target' ? Target :
+                                         item.iconName === 'credit-card' ? CreditCard : BookOpen;
+                        return <TypeIcon size={13} strokeWidth={2.4} />;
+                      })()}
+                    </span>
+                    <span style={{ fontSize: '0.84rem', fontWeight: 650, color: 'var(--text-primary)' }}>
+                      {LIST_TYPE_CONFIG[listType].label}
+                    </span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.35 }}>
+                    {listType === 'routines' && 'Diseñada para limpieza, hogar y quehaceres recurrentes. Admite estimación de tiempo activo y en segundo plano (lavadora, mascarilla), secciones cíclicas y modo secuencia con temporizador.'}
+                    {listType === 'simple' && 'Para apuntar cosas, compras y notas de checklist. Sin duraciones forzadas ni frecuencias obligatorias; directo y al grano.'}
+                    {listType === 'events' && 'Pensada para fechas señaladas, cumpleaños, citas y eventos con cuenta atrás.'}
+                    {listType === 'goals' && 'Para objetivos anuales, retos y proyectos personales a medio y largo plazo.'}
+                    {listType === 'caducidades' && 'Ideal para carnets, DNI, seguros, tarjetas y suscripciones periódicas con avisos preventivos de renovación.'}
+                    {listType === 'que_he_hecho' && 'Bitácora personal para recordar vivencias, personas con las que estuviste y momentos especiales.'}
+                  </p>
+                </div>
               </div>
             )}
 

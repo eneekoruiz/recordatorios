@@ -1209,38 +1209,6 @@ export const TaskCard = React.memo(function TaskCard({
               </motion.button>
             )}
             {task.flagged && <Flag size={13} color="var(--accent-orange)" fill="var(--accent-orange)" />}
-            
-            {task.price !== undefined && task.price > 0 && (
-              <span 
-                className="apple-price-pill"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(task.id, 'price');
-                }}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 2.5,
-                  padding: 0,
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '0.76rem',
-                  fontWeight: 600,
-                  fontVariantNumeric: 'tabular-nums',
-                  color: 'var(--text-secondary)',
-                  verticalAlign: 'middle',
-                  lineHeight: '1.2',
-                  cursor: 'pointer',
-                  userSelect: 'none'
-                }}
-                title={`Precio: ${task.price} €${task.quantity && task.quantity > 1 ? ` (${task.quantity} uds)` : ''} (Toca para editar)`}
-              >
-                {task.quantity && task.quantity > 1 && (
-                  <span style={{ color: 'var(--text-tertiary)', fontSize: '0.72rem' }}>{task.quantity}×</span>
-                )}
-                <span>{task.price.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €</span>
-              </span>
-            )}
             {task.targetCount && task.targetCount > 1 && (
               <TaskHabitCounter
                 task={task}

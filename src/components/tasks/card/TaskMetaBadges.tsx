@@ -1,5 +1,5 @@
 import { Fragment, type ReactNode } from 'react';
-import { Calendar, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen, Zap } from 'lucide-react';
+import { Calendar, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen, Zap, Tag } from 'lucide-react';
 import type { TaskItem, CustomList } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
@@ -179,6 +179,36 @@ export function TaskMetaBadges({
                   {durationInfo.isParallel && (
                     <span style={{ fontSize: '0.67rem', color: 'var(--text-tertiary)', fontWeight: 500 }}>(+{formatDuration(durationInfo.parallelMinutes)})</span>
                   )}
+                </span>
+              );
+            }
+
+            if (task.price !== undefined && task.price > 0) {
+              items.push(
+                <span
+                  key="price"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(task.id, 'price');
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 3.5,
+                    color: 'var(--text-secondary)',
+                    fontWeight: 650,
+                    fontVariantNumeric: 'tabular-nums',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    transition: 'opacity 0.15s ease'
+                  }}
+                  title={`Precio: ${task.price} €${task.quantity && task.quantity > 1 ? ` (${task.quantity} uds)` : ''} (Toca para editar)`}
+                >
+                  <Tag size={11} strokeWidth={2.4} style={{ color: '#30d158', flexShrink: 0 }} />
+                  {task.quantity && task.quantity > 1 && (
+                    <span style={{ color: 'var(--text-tertiary)', fontSize: '0.72rem', fontWeight: 500 }}>{task.quantity}×</span>
+                  )}
+                  <span>{task.price.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €</span>
                 </span>
               );
             }

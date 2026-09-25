@@ -23,6 +23,10 @@ interface DrawerDateTimeSectionProps {
   expirationType?: 'card' | 'subscription' | 'other';
   duration?: number | '';
   setDuration?: (duration: number | '') => void;
+  isParallel?: boolean;
+  setIsParallel?: (parallel: boolean) => void;
+  parallelDuration?: number;
+  setParallelDuration?: (mins: number) => void;
   removeAlert: (id: string) => void;
   addAnticipationAlert: (offsetMinutes: number, label: string) => void;
 }
@@ -44,6 +48,10 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
   expirationType,
   duration,
   setDuration,
+  isParallel,
+  setIsParallel,
+  parallelDuration,
+  setParallelDuration,
   removeAlert,
   addAnticipationAlert
 }) => {
@@ -256,6 +264,84 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                   onChange={(mins) => setDuration?.(mins)}
                   isRoutineCategory={doesListSupportDuration(getListType(undefined, category))}
                 />
+
+                {/* Opción Tarea en Paralelo / Segundo plano (ej: lavadora, mascarilla, secadora) */}
+                {setIsParallel && (
+                  <div style={{
+                    marginTop: 12,
+                    padding: '12px 14px',
+                    borderRadius: 14,
+                    background: isParallel ? 'rgba(255, 149, 0, 0.08)' : 'var(--bg-elevated)',
+                    border: isParallel ? '1px solid rgba(255, 149, 0, 0.28)' : '1px solid var(--border-subtle)',
+                    transition: 'all 0.2s ease'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                        <div style={{
+                          width: 30, height: 30, borderRadius: 8,
+                          background: isParallel ? 'rgba(255, 149, 0, 0.18)' : 'var(--bg-material, rgba(0,0,0,0.04))',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                        }}>
+                          <Zap size={16} strokeWidth={2.4} color={isParallel ? '#ff9500' : 'var(--text-tertiary)'} />
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: '0.84rem', fontWeight: 650, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                            Tarea en segundo plano (Paralela)
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.2, marginTop: 2 }}>
+                            Lavadora, mascarilla, secadora... se ejecuta sola mientras haces otras tareas
+                          </div>
+                        </div>
+                      </div>
+                      <label className="apple-switch" style={{ flexShrink: 0 }}>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(isParallel)}
+                          onChange={(e) => {
+                            setIsParallel(e.target.checked);
+                            if (e.target.checked && (!parallelDuration || parallelDuration <= 0)) {
+                              setParallelDuration?.(30);
+                            }
+                          }}
+                        />
+                        <span className="slider round"></span>
+                      </label>
+                    </div>
+
+                    {isParallel && (
+                      <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255, 149, 0, 0.15)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                          Tiempo de espera pasivo:
+                        </span>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {[15, 20, 30, 45, 60, 90, 120, 150].map((mins) => {
+                            const isSelected = (parallelDuration || 30) === mins;
+                            return (
+                              <button
+                                key={mins}
+                                type="button"
+                                onClick={() => setParallelDuration?.(mins)}
+                                style={{
+                                  padding: '4px 10px',
+                                  borderRadius: 8,
+                                  fontSize: '0.75rem',
+                                  fontWeight: isSelected ? 700 : 500,
+                                  background: isSelected ? '#ff9500' : 'var(--bg-material, rgba(0,0,0,0.04))',
+                                  color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                                  border: isSelected ? '1px solid #ff9500' : '1px solid var(--border-subtle)',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s ease'
+                                }}
+                              >
+                                {mins >= 60 ? (mins % 60 === 0 ? `${mins / 60}h` : `${Math.floor(mins / 60)}h ${mins % 60}m`) : `${mins}m`}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>

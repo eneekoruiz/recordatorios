@@ -456,7 +456,15 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
             {activeMenuId === 'primeros_pasos' && menuCoords && createPortal(
               <>
                 <div 
-                  style={{ position: 'fixed', inset: 0, zIndex: 99998, background: 'transparent' }} 
+                  style={{ 
+                    position: 'fixed', 
+                    inset: 0, 
+                    zIndex: 99998, 
+                    background: isMobile ? 'rgba(0, 0, 0, 0.45)' : 'transparent',
+                    backdropFilter: isMobile ? 'blur(16px)' : 'none',
+                    WebkitBackdropFilter: isMobile ? 'blur(16px)' : 'none',
+                    transition: 'all 0.2s ease'
+                  }} 
                   onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); setMenuCoords(null); }} 
                 />
                 <motion.div 
@@ -527,12 +535,16 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               </span>
             </motion.div>
             <div 
+              className="list-separator-line"
               aria-hidden="true" 
               style={{
-                height: '0.5px',
-                background: 'var(--border-subtle, rgba(60,60,67,0.12))',
+                height: 1,
+                minHeight: 1,
+                background: 'var(--border-subtle, rgba(120, 120, 128, 0.28))',
                 marginLeft: 52,
-                marginRight: 8
+                marginRight: 8,
+                opacity: 0.95,
+                flexShrink: 0
               }} 
             />
 
