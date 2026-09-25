@@ -38,6 +38,7 @@ interface MainGlassHeaderProps {
   showProminentStartButton?: boolean;
   startDuration?: string;
   completedCount?: number;
+  isStartDisabled?: boolean;
 }
 
 export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
@@ -63,7 +64,8 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
   onStartSequence,
   showProminentStartButton = true,
   startDuration,
-  completedCount
+  completedCount,
+  isStartDisabled = false
 }) => {
   const listAccentColor = isSmartView 
     ? (SMART_COLORS[currentView] || 'var(--accent-blue, #007AFF)') 
@@ -157,15 +159,17 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
       {/* Right: Actions unified in the top line */}
       <div className="header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginLeft: 'auto', flexWrap: 'nowrap', flexShrink: 0, justifyContent: 'flex-end', position: 'relative' }}>
         {/* Empezar secuencia inmediata (prominente solo en listas de rutinas/acción) */}
-        {onStartSequence && showProminentStartButton && (
+        {showProminentStartButton && (
           <button
             type="button"
             className="apple-nav-start-btn"
+            disabled={isStartDisabled}
             onClick={() => {
+              if (isStartDisabled || !onStartSequence) return;
               HapticService.selection();
               onStartSequence();
             }}
-            title="Empezar lista en modo enfoque"
+            title={isStartDisabled ? "No hay recordatorios pendientes para empezar" : "Empezar lista en modo enfoque"}
             aria-label="Empezar lista"
             style={{
               height: 32,
@@ -176,18 +180,19 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
               gap: 5,
               background: listAccentColor ? `color-mix(in srgb, ${listAccentColor} 14%, transparent)` : 'rgba(0, 122, 255, 0.12)',
               border: `1px solid ${listAccentColor ? `color-mix(in srgb, ${listAccentColor} 30%, transparent)` : 'rgba(0, 122, 255, 0.25)'}`,
-              cursor: 'pointer',
+              cursor: isStartDisabled ? 'default' : 'pointer',
+              opacity: isStartDisabled ? 0.45 : 1,
               color: listAccentColor,
               fontWeight: 650,
               fontSize: '0.80rem',
               whiteSpace: 'nowrap',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+              boxShadow: isStartDisabled ? 'none' : '0 1px 3px rgba(0,0,0,0.04)',
               transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
           >
             <Play size={11} fill="currentColor" style={{ flexShrink: 0 }} />
             <span>Empezar</span>
-            {startDuration && startDuration !== '0 min' && (
+            {startDuration && startDuration !== '0 min' && !isStartDisabled && (
               <span style={{ opacity: 0.85, fontSize: '0.72rem', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
                 ({startDuration})
               </span>

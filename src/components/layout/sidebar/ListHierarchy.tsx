@@ -19,7 +19,7 @@ import { useAppStore } from '../../../store/useAppStore';
 import type { CustomList } from '../../../models/Task';
 import { confirmDialog } from '../../ui/confirmDialog';
 import { shareList, unshareList } from '../../../services/ShareService';
-import { getListIcon } from '../../../constants/icons';
+import { getListIcon, getSuggestedListIconAndColor } from '../../../constants/icons';
 
 interface ListHierarchyProps {
   lists: CustomList[];
@@ -286,10 +286,13 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                 isExpanded ? <FolderOpen size={depth > 0 ? 14 : 18} color={list.color} style={{ marginRight: depth > 0 ? 8 : 10, flexShrink: 0 }} /> : <Folder size={depth > 0 ? 14 : 18} color={list.color} style={{ marginRight: depth > 0 ? 8 : 10, flexShrink: 0 }} />
               ) : (
                 (() => {
-                  const ListIcon = getListIcon(list.icon);
+                  const suggested = getSuggestedListIconAndColor(list.name);
+                  const effectiveIcon = (list.icon && list.icon !== 'list') ? list.icon : (suggested?.icon || list.icon);
+                  const effectiveColor = list.color || suggested?.color || '#0a84ff';
+                  const ListIcon = getListIcon(effectiveIcon);
                   const small = depth > 0;
                   return (
-                    <div className={`list-icon${small ? ' list-icon--small' : ''}`} style={{ backgroundColor: list.color }}>
+                    <div className={`list-icon${small ? ' list-icon--small' : ''}`} style={{ backgroundColor: effectiveColor }}>
                       <ListIcon size={small ? 11 : 15} color="#fff" strokeWidth={2.4} />
                     </div>
                   );

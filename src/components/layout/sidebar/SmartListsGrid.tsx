@@ -78,13 +78,13 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
                 }}
                 style={{
                   background: isActive 
-                    ? 'color-mix(in srgb, var(--accent-primary) 8%, var(--bg-elevated))' 
-                    : 'var(--bg-elevated)',
+                    ? `color-mix(in srgb, ${list.color} 16%, var(--bg-elevated))` 
+                    : `color-mix(in srgb, ${list.color} 7%, var(--bg-elevated))`,
                   border: isActive 
-                    ? '1.5px solid var(--accent-primary)' 
-                    : '1px solid var(--border-subtle)',
+                    ? `1.5px solid ${list.color}` 
+                    : `1px solid color-mix(in srgb, ${list.color} 16%, var(--border-subtle))`,
                   boxShadow: isActive 
-                    ? '0 4px 16px rgba(0, 122, 255, 0.16)' 
+                    ? `0 4px 16px color-mix(in srgb, ${list.color} 22%, transparent)` 
                     : '0 1px 3px rgba(0, 0, 0, 0.04)',
                   opacity: isEditMode && !smartListVisibility[list.id] ? 0.5 : 1,
                   transition: 'all 180ms cubic-bezier(0.16, 1, 0.3, 1)'

@@ -12,7 +12,7 @@ interface ListConfigModalProps {
 }
 
 import { LIST_AVAILABLE_COLORS, isReservedFrequencyColor } from '../../constants/colors';
-import { LIST_ICON_MAP as ICONS } from '../../constants/icons';
+import { LIST_ICON_MAP as ICONS, getSuggestedListIconAndColor } from '../../constants/icons';
 import { CheckSquare, Folder, Check, X, CreditCard, BookOpen, Sparkles, Calendar, Target, Clock } from 'lucide-react';
 
 const COLORS = LIST_AVAILABLE_COLORS;
@@ -81,26 +81,21 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
   const handleNameChange = (val: string) => {
     setName(val);
     if (!existingList && !isFolder) {
+      const suggested = getSuggestedListIconAndColor(val);
+      if (suggested) {
+        setIcon(suggested.icon);
+        setColor(suggested.color);
+      }
       if (/caduca|suscrip|vencimiento/i.test(val)) {
         setListType('caducidades');
-        setColor('#ff9500');
-        setIcon('credit-card');
       } else if (/qu[eé]\s*he\s*hecho|bitacora|vivencia/i.test(val)) {
         setListType('que_he_hecho');
-        setColor('#5856d6');
-        setIcon('book-open');
       } else if (/evento|cita|cumple|aniversario|boda|fiesta|reunion/i.test(val)) {
         setListType('events');
-        setColor('#ff2d55');
-        setIcon('calendar');
       } else if (/prop[oó]sito|meta|objetivo|resoluci[oó]n|sue[nñ]o|deseo/i.test(val)) {
         setListType('goals');
-        setColor('#af52de');
-        setIcon('target');
-      } else if (/limpieza|compra|supermercado|quehacer|rutina|care|cuidado|mantenimiento/i.test(val)) {
+      } else if (/limpieza|quehacer|rutina|care|cuidado|mantenimiento/i.test(val)) {
         setListType('routines');
-        setColor('#0a84ff');
-        setIcon('sparkles');
       }
     }
   };

@@ -62,11 +62,13 @@ interface MainPageHeaderProps {
   onEditTask?: (id: string) => void;
   caducidadesStats: any;
   onStartSequence?: () => void;
+  cycleRoutineMode?: 'only_section' | 'full_routine';
+  onToggleCycleRoutineMode?: (mode: 'only_section' | 'full_routine') => void;
 }
 
 export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   scrollTop,
-  isMobile: _isMobile,
+  isMobile,
   onBackToSidebar: _onBackToSidebar,
   currentList,
   setIsListConfigOpen: _setIsListConfigOpen,
@@ -83,7 +85,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   getTitle,
   currentView,
   totalCost,
-  totalDuration,
+  totalDuration: _totalDuration,
   activeVisibleCount,
   completedVisibleCount,
   setConfirmProps,
@@ -101,7 +103,9 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   flashbackMemories,
   onEditTask,
   caducidadesStats,
-  onStartSequence: _onStartSequence
+  onStartSequence: _onStartSequence,
+  cycleRoutineMode = 'only_section',
+  onToggleCycleRoutineMode
 }) => {
   const scrollOffset = Math.min(60, Math.max(0, scrollTop || 0));
   const titleProgress = Math.min(1, Math.max(0, (scrollOffset - 24) / 32));
@@ -296,35 +300,8 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
           </div>
 
           {/* Gran Contador Apple Reminders en el color de la lista */}
-          {!currentCycle && currentView !== 'TRASH' && (
+          {currentView !== 'TRASH' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-              {totalDuration && totalDuration.activeMinutes > 0 && (
-                <span 
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    padding: '3px 10px',
-                    borderRadius: 8,
-                    background: 'var(--bg-card, rgba(255,255,255,0.7))',
-                    border: '1px solid var(--border-subtle)',
-                    color: 'var(--text-secondary)',
-                    fontWeight: 600,
-                    fontSize: '0.85rem',
-                    fontVariantNumeric: 'tabular-nums',
-                    letterSpacing: '-0.2px'
-                  }}
-                  title={totalDuration.parallelTasksCount > 0 ? totalDuration.formattedTotal : `Duración estimada total: ${totalDuration.formattedActive}`}
-                >
-                  <Clock size={13} style={{ opacity: 0.8 }} />
-                  <span>{totalDuration.formattedActive}</span>
-                  {totalDuration.parallelTasksCount > 0 && (
-                    <span style={{ fontSize: '0.72rem', opacity: 0.75, fontWeight: 500 }}>
-                      (+{totalDuration.formattedParallel} par.)
-                    </span>
-                  )}
-                </span>
-              )}
               {totalCost > 0 && (
                 <span 
                   style={{
@@ -365,32 +342,75 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
             </div>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 500, flexShrink: 0 }}>
               {completedVisibleCount} / {activeVisibleCount + completedVisibleCount} tareas
-              {totalDuration && totalDuration.activeMinutes > 0 && (
-                <span> &middot; ~{totalDuration.formattedActive} restantes</span>
-              )}
             </div>
           </div>
         )}
 
-        {currentCycle && (
-          <div className="content-stats" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginLeft: '4px' }}>
-            <span className="stat-chip" style={{ minHeight: '32px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', lineHeight: '1.3', wordBreak: 'break-word', boxSizing: 'border-box', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 999 }}><strong>{activeVisibleCount}</strong> &nbsp;pendientes</span>
-            <span className="stat-chip" style={{ minHeight: '32px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', lineHeight: '1.3', wordBreak: 'break-word', boxSizing: 'border-box', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 999 }}><strong>{completedVisibleCount}</strong> &nbsp;completadas</span>
-            {totalDuration && totalDuration.activeMinutes > 0 && (
-              <span 
-                className="stat-chip" 
-                style={{ minHeight: '32px', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', gap: 6, lineHeight: '1.3', wordBreak: 'break-word', boxSizing: 'border-box', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 999 }}
-                title={totalDuration.parallelTasksCount > 0 ? totalDuration.formattedTotal : undefined}
-              >
-                <Clock size={13} style={{ opacity: 0.8 }} />
-                <span><strong>{totalDuration.formattedActive}</strong> estimados</span>
-                {totalDuration.parallelTasksCount > 0 && (
-                  <span style={{ fontSize: '0.74rem', opacity: 0.75 }}>
-                    (+{totalDuration.formattedParallel} par.)
-                  </span>
-                )}
-              </span>
-            )}
+        {/* Conmutador general de frecuencia (Apple Segmented Control) */}
+        {currentCycle && currentCycle.id !== 'cycle_day' && onToggleCycleRoutineMode && (
+          <div style={{
+            display: 'inline-flex',
+            padding: '2px',
+            borderRadius: '10px',
+            background: 'var(--bg-elevated, rgba(120, 120, 128, 0.12))',
+            border: '1px solid var(--border-subtle, rgba(0,0,0,0.06))',
+            maxWidth: '100%',
+            width: isMobile ? '100%' : 'fit-content',
+            boxSizing: 'border-box',
+            marginTop: 4
+          }}>
+            <button
+              type="button"
+              onClick={() => {
+                HapticService.selection();
+                onToggleCycleRoutineMode('only_section');
+              }}
+              style={{
+                flex: isMobile ? 1 : 'none',
+                padding: '6px 14px',
+                borderRadius: '8px',
+                border: 'none',
+                background: cycleRoutineMode === 'only_section' ? 'var(--bg-card, #ffffff)' : 'transparent',
+                color: cycleRoutineMode === 'only_section' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                fontWeight: cycleRoutineMode === 'only_section' ? 650 : 500,
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                boxShadow: cycleRoutineMode === 'only_section' ? '0 1px 4px rgba(0,0,0,0.12)' : 'none',
+                transition: 'all 0.15s ease',
+                whiteSpace: 'nowrap',
+                textAlign: 'center'
+              }}
+            >
+              {currentCycle.id === 'cycle_week' ? 'Solo semanales' :
+               currentCycle.id === 'cycle_month' ? 'Solo mensuales' :
+               currentCycle.id === 'cycle_year' ? 'Solo anuales' : `Solo ${currentCycle.name.toLowerCase()}`}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                HapticService.selection();
+                onToggleCycleRoutineMode('full_routine');
+              }}
+              style={{
+                flex: isMobile ? 1 : 'none',
+                padding: '6px 14px',
+                borderRadius: '8px',
+                border: 'none',
+                background: cycleRoutineMode === 'full_routine' ? 'var(--bg-card, #ffffff)' : 'transparent',
+                color: cycleRoutineMode === 'full_routine' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                fontWeight: cycleRoutineMode === 'full_routine' ? 650 : 500,
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                boxShadow: cycleRoutineMode === 'full_routine' ? '0 1px 4px rgba(0,0,0,0.12)' : 'none',
+                transition: 'all 0.15s ease',
+                whiteSpace: 'nowrap',
+                textAlign: 'center'
+              }}
+            >
+              {currentCycle.id === 'cycle_week' ? 'Semanales + Diarias' :
+               currentCycle.id === 'cycle_month' ? 'Mensuales + Acumuladas' :
+               currentCycle.id === 'cycle_year' ? 'Todas acumuladas' : 'Acumuladas'}
+            </button>
           </div>
         )}
 

@@ -72,13 +72,13 @@ export const PinnedListsSection: React.FC<PinnedListsSectionProps> = ({
                 padding: '10px 14px',
                 borderRadius: 14,
                 background: isActive 
-                  ? 'color-mix(in srgb, var(--accent-primary) 8%, var(--bg-elevated))' 
-                  : 'var(--bg-elevated)',
+                  ? `color-mix(in srgb, ${smartItem.color} 16%, var(--bg-elevated))` 
+                  : `color-mix(in srgb, ${smartItem.color} 7%, var(--bg-elevated))`,
                 border: isActive 
-                  ? '1.5px solid var(--accent-primary)' 
-                  : '1px solid var(--border-subtle)',
+                  ? `1.5px solid ${smartItem.color}` 
+                  : `1px solid color-mix(in srgb, ${smartItem.color} 16%, var(--border-subtle))`,
                 cursor: 'pointer',
-                boxShadow: isActive ? '0 4px 14px rgba(0, 122, 255, 0.16)' : '0 1px 3px rgba(0, 0, 0, 0.04)',
+                boxShadow: isActive ? `0 4px 14px color-mix(in srgb, ${smartItem.color} 22%, transparent)` : '0 1px 3px rgba(0, 0, 0, 0.04)',
                 transition: 'all 150ms ease'
               }}
             >

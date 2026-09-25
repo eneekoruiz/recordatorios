@@ -197,6 +197,15 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     });
   }, []);
 
+  // Modo general por ciclo/frecuencia ('only_section' o 'full_routine')
+  const [cycleGeneralModes, setCycleGeneralModes] = useState<Record<string, 'only_section' | 'full_routine'>>(() => {
+    try {
+      const saved = localStorage.getItem('cycle_general_modes');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {};
+  });
+
   const handleUndoDelete = useCallback((taskId: string) => {
     if (deletedToast && deletedToast.timeoutId) {
       window.clearTimeout(deletedToast.timeoutId);
@@ -270,6 +279,15 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const isFolderView = currentView.startsWith('folder_') || !!lists?.find(l => l.id === currentView.replace('list_', ''))?.isFolder;
   const currentList = lists?.find((l) => l.id === currentView.replace('list_', '').replace('folder_', ''));
   const currentCycle = cycles.find((c) => c.id === currentView);
+
+  const toggleCycleGeneralMode = useCallback((mode: 'only_section' | 'full_routine') => {
+    if (!currentCycle) return;
+    setCycleGeneralModes(prev => {
+      const next = { ...prev, [currentCycle.id]: mode };
+      try { localStorage.setItem('cycle_general_modes', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, [currentCycle]);
 
   // Manejo de mostrar completados por lista
   const [showCompleted, setShowCompleted] = useState<boolean>(false);
@@ -514,7 +532,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     if (currentCycle) {
       const filteredGrouped: Record<string, TaskItem[]> = {};
       Object.entries(rawGrouped).forEach(([key, taskList]) => {
-        const mode = sectionRoutineModes[key] || (
+        const mode = sectionRoutineModes[key] || (currentCycle ? cycleGeneralModes[currentCycle.id] : undefined) || (
           currentCycle.id === 'cycle_week' && cycleInclusion.weekly === 'include_daily' ? 'full_routine' :
           currentCycle.id === 'cycle_month' && cycleInclusion.monthly !== 'only_monthly' ? 'full_routine' :
           currentCycle.id === 'cycle_year' && cycleInclusion.annual !== 'only_annual' ? 'full_routine' :
@@ -618,7 +636,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
       sortedGrouped[key] = sortTaskList(taskList);
     });
     return sortedGrouped;
-  }, [currentView, isFolderView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, resolvedShowCompleted, recentlyCompletedIds, lists, currentCycle, cycleInclusion, listSectionFilter, dailyTimeFilter, resolveTimeOfDay, currentList, sortBy, sortTaskList, lifeLogViewMode, selectedPersonFilter, sectionRoutineModes]);
+  }, [currentView, isFolderView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, resolvedShowCompleted, recentlyCompletedIds, lists, currentCycle, cycleInclusion, listSectionFilter, dailyTimeFilter, resolveTimeOfDay, currentList, sortBy, sortTaskList, lifeLogViewMode, selectedPersonFilter, sectionRoutineModes, cycleGeneralModes]);
     
   const smartTasks = useMemo(() => currentView === 'cycle_day' ? getSmartSortTasks(recentlyCompletedIds) : [], [currentView, getSmartSortTasks, tasks, recentlyCompletedIds]);
 
@@ -2135,7 +2153,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         completedCount={totalCompletedInCurrentView || completedVisibleCount}
         showProminentStartButton={isRoutine}
         startDuration={viewTasksDuration?.formattedActive}
-        onStartSequence={onStartSequence && canStartSequence && viewTasksDuration.activeMinutes > 0 ? () => {
+        isStartDisabled={!visibleTasks.some(t => !isTaskCompleted(t))}
+        onStartSequence={onStartSequence && isRoutine ? () => {
           const pendingTasks = visibleTasks.filter(t => !isTaskCompleted(t));
           if (pendingTasks.length > 0) {
             onStartSequence(pendingTasks.map(t => t.id), getTitle(), viewColor);
@@ -2234,7 +2253,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                           flashbackMemories={flashbackMemories}
                           onEditTask={onEditTask}
                           caducidadesStats={caducidadesStats}
-                          onStartSequence={onStartSequence && canStartSequence && viewTasksDuration.activeMinutes > 0 ? () => {
+                          cycleRoutineMode={currentCycle ? (cycleGeneralModes[currentCycle.id] || 'only_section') : undefined}
+                          onToggleCycleRoutineMode={currentCycle ? toggleCycleGeneralMode : undefined}
+                          onStartSequence={onStartSequence && isRoutine ? () => {
                             const pendingTasks = visibleTasks.filter(t => !isTaskCompleted(t));
                             if (pendingTasks.length > 0) {
                               onStartSequence(pendingTasks.map(t => t.id), getTitle(), viewColor);

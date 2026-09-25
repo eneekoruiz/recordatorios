@@ -85,21 +85,29 @@ h1, h2, h3,
   box-sizing: border-box !important;
 }
 
-/* Filas de lista: sin separadores sueltos (estilo barra lateral de macOS), nombre en una línea */
-.ios-list-item::after,
-.ios-list-item:not(:last-child)::after {
-  display: none !important;
-}
-.ios-list-item {
+/* Filas de lista: estilo auténtico iOS Inset-Grouped con divisor sutil entre filas */
+.ios-list-block .ios-list-item {
+  margin: 0 !important;
+  border-radius: 0 !important;
+  padding: 10px 16px !important;
   min-height: 48px !important;
-  margin: 3px 8px !important;
-  padding: 9px 12px !important;
-  border: 1px solid transparent !important;
-  border-radius: 10px !important;
+  position: relative !important;
+  border: none !important;
 }
-.ios-list-item.active {
+.ios-list-block .ios-list-item:not(:last-child)::after {
+  content: "" !important;
+  display: block !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 54px !important; /* Desplazamiento exacto tras el icono como en Apple Reminders */
+  right: 0 !important;
+  height: 0.5px !important;
+  background-color: var(--border-subtle, rgba(120, 120, 128, 0.2)) !important;
+  pointer-events: none !important;
+  z-index: 2 !important;
+}
+.ios-list-block .ios-list-item.active {
   background: color-mix(in srgb, var(--accent-primary) 12%, transparent) !important;
-  border-color: transparent !important;
 }
 .ios-list-item .title,
 .ios-list-item span.title {

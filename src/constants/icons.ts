@@ -59,3 +59,106 @@ export function getListIcon(iconName?: string | null): ComponentType<any> {
   const direct = Object.keys(LIST_ICON_MAP).find((k) => normalize(k) === key);
   return direct ? LIST_ICON_MAP[direct] : List;
 }
+
+/**
+ * Sugerencia inteligente de icono y color al estilo Apple Reminders basado en el nombre de la lista.
+ */
+export function getSuggestedListIconAndColor(name?: string): { icon: string; color: string } | null {
+  if (!name) return null;
+  const n = name.trim().toLowerCase();
+
+  if (/compr|super|mercad|tienda|grocer|alcampo|lidl|carrefour/i.test(n)) {
+    return { icon: 'cart', color: '#ff9500' };
+  }
+  if (/trabaj|oficin|labor|emple|curro|reuni|meet|proyect|work/i.test(n)) {
+    return { icon: 'briefcase', color: '#0a84ff' };
+  }
+  if (/casa|hogar|piso|habitaci|apartament|dormitor|sal[oó]n/i.test(n)) {
+    return { icon: 'home', color: '#30b0c7' };
+  }
+  if (/limpiez|orden|colad|lavador|aspir|freg|quehacer/i.test(n)) {
+    return { icon: 'sparkles', color: '#5856d6' };
+  }
+  if (/estudi|universi|carrer|master|clase|examen|oposici|coleg|escuel|estudio/i.test(n)) {
+    return { icon: 'cap', color: '#af52de' };
+  }
+  if (/viaj|vacacion|escapad|vuel|hotel|turism|malet|trip/i.test(n)) {
+    return { icon: 'plane', color: '#00c7be' };
+  }
+  if (/gym|gimnasi|entren|fit|deport|pesa|crossfit|corr|run|ejercici/i.test(n)) {
+    return { icon: 'dumbbell', color: '#ff2d55' };
+  }
+  if (/finanz|diner|gast|pag|banc|factur|ahorr|inversi|econom|bille/i.test(n)) {
+    return { icon: 'wallet', color: '#34c759' };
+  }
+  if (/salud|m[eé]dic|doctor|farmac|hospital|medicament|saludable|bienestar/i.test(n)) {
+    return { icon: 'health', color: '#ff3b30' };
+  }
+  if (/comid|recet|cocin|cen|men[uú]|diet|almuerz|desayun/i.test(n)) {
+    return { icon: 'food', color: '#ff9500' };
+  }
+  if (/m[uú]sic|canci|guitar|piano|concert|band/i.test(n)) {
+    return { icon: 'music', color: '#ff2d55' };
+  }
+  if (/libr|lectur|leer|novela|bibliotec|book/i.test(n)) {
+    return { icon: 'book', color: '#a2845e' };
+  }
+  if (/pel[ií]cul|serie|cine|netflix|film|ver/i.test(n)) {
+    return { icon: 'video', color: '#af52de' };
+  }
+  if (/coch|auto|coche|moto|taller|gasolin|itv|veh[ií]cul/i.test(n)) {
+    return { icon: 'car', color: '#0a84ff' };
+  }
+  if (/bici|biciclet|ciclism/i.test(n)) {
+    return { icon: 'bike', color: '#34c759' };
+  }
+  if (/mascot|perr|gat|veterinari|animal|dog|cat/i.test(n)) {
+    return { icon: 'pet', color: '#a2845e' };
+  }
+  if (/regal|cumple|navidad|fiest|aniversari|gift/i.test(n)) {
+    return { icon: 'gift', color: '#ff2d55' };
+  }
+  if (/jueg|game|gaming|videojueg|play|xbox|steam/i.test(n)) {
+    return { icon: 'gamepad', color: '#5856d6' };
+  }
+  if (/idea|creativ|dibuj|arte|dise[nñ]/i.test(n)) {
+    return { icon: 'palette', color: '#ff9500' };
+  }
+  if (/c[oó]dig|dev|program|softwar|app|web|git/i.test(n)) {
+    return { icon: 'code', color: '#30b0c7' };
+  }
+  if (/ropa|moda|zapat|armari|outfit/i.test(n)) {
+    return { icon: 'scissors', color: '#af52de' };
+  }
+  if (/foto|fotograf|c[aá]mar/i.test(n)) {
+    return { icon: 'camera', color: '#0a84ff' };
+  }
+  if (/cuidado|skincare|bellez|peluquer|barber/i.test(n)) {
+    return { icon: 'sparkles', color: '#ff2d55' };
+  }
+  if (/herramient|bricolaj|repar|obra|taller/i.test(n)) {
+    return { icon: 'tools', color: '#ff9500' };
+  }
+  if (/meta|objetiv|prop[oó]sit|resoluci/i.test(n)) {
+    return { icon: 'target', color: '#ff3b30' };
+  }
+  if (/agend|calendari|event|cita/i.test(n)) {
+    return { icon: 'calendar', color: '#ff2d55' };
+  }
+  if (/caduc|vencimient|suscrip/i.test(n)) {
+    return { icon: 'card', color: '#ff9500' };
+  }
+  return null;
+}
+
+export function getAutoListIcon(iconName?: string | null, listName?: string): ComponentType<any> {
+  if (iconName && iconName !== 'list') {
+    return getListIcon(iconName);
+  }
+  const suggested = getSuggestedListIconAndColor(listName);
+  if (suggested) {
+    return getListIcon(suggested.icon);
+  }
+  return getListIcon(iconName);
+}
+
