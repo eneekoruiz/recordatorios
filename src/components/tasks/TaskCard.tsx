@@ -870,6 +870,21 @@ export const TaskCard = React.memo(function TaskCard({
                     HapticService.selection();
                     if (onDelete) onDelete(task.id);
                     else useAppStore.getState().deleteTask(task.id);
+                  } else if (e.key === 'Tab') {
+                    e.preventDefault();
+                    if (e.shiftKey) {
+                      // Shift + Tab: Quitar sangría (Subir a nivel principal)
+                      if (task.parentId) {
+                        nestTask(task.id, undefined);
+                        HapticService.selection();
+                      }
+                    } else {
+                      // Tab: Añadir sangría (Hacer subtarea del recordatorio anterior)
+                      if (previousTaskId && previousTaskId !== task.id) {
+                        nestTask(task.id, previousTaskId);
+                        HapticService.selection();
+                      }
+                    }
                   } else if (e.key === 'Escape') {
                     e.preventDefault();
                     setIsEditingTitle(false);

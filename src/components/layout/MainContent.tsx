@@ -32,7 +32,6 @@ import { MainGlassHeader } from './main/MainGlassHeader';
 import { MainSectionHeader } from './main/MainSectionHeader';
 import { MainInlineAdd } from './main/MainInlineAdd';
 import { DeletedTaskToast } from './main/DeletedTaskToast';
-import { CompletedTaskToast } from './main/CompletedTaskToast';
 import { SectionContextMenu, type SectionMenuState } from './main/SectionContextMenu';
 import { MonthlySummaryModal } from './main/MonthlySummaryModal';
 import { MainPageHeader } from './main/MainPageHeader';
@@ -132,7 +131,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const [confirmProps, setConfirmProps] = useState<{ title: string; message: string; onConfirm: () => void }>({ title: '', message: '', onConfirm: () => {} });
   const [sortBy, setSortBy] = useState<'manual' | 'dueDate' | 'priority' | 'title' | 'createdAt'>('manual');
   const [deletedToast, setDeletedToast] = useState<{ id: string; title: string; timeoutId: number } | null>(null);
-  const [completedToast, setCompletedToast] = useState<{ id: string; title: string; timeoutId: number } | null>(null);
   const [isEditingCycle, setIsEditingCycle] = useState(false);
   const [cycleEditName, setCycleEditName] = useState('');
   const [showCelebration, setShowCelebration] = useState(false);
@@ -841,14 +839,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           setRecentlyCompletedIds(prev => prev.filter(x => x !== taskId));
         }, 3000);
 
-        if (completedToast && completedToast.timeoutId) {
-          window.clearTimeout(completedToast.timeoutId);
-        }
-        const tid = window.setTimeout(() => {
-          setCompletedToast(null);
-        }, 5000);
-        setCompletedToast({ id: taskId, title: task.title, timeoutId: tid as unknown as number });
-
         if (activeVisibleCount === 1) {
           setShowCelebration(true);
           SoundService.playComplete();
@@ -862,15 +852,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         SoundService.playUncomplete();
         HapticService.selection();
         setRecentlyCompletedIds(prev => prev.filter(x => x !== taskId));
-        
-        if (completedToast?.id === taskId) {
-          if (completedToast.timeoutId) window.clearTimeout(completedToast.timeoutId);
-          setCompletedToast(null);
-        }
       }
     }
     toggleTask(taskId, forceReverse);
-  }, [tasks, cycles, toggleTask, activeVisibleCount, completedToast]);
+  }, [tasks, cycles, toggleTask, activeVisibleCount]);
 
   const handleDeleteTask = useCallback((taskId: string) => {
     const task = tasks[taskId];
@@ -1011,17 +996,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   // 1. Flatten Data para Virtualización (QA Performance Optimization)
   const flattenedData = useMemo(() => {
     const flat: VirtualItemType[] = [{ type: 'page-header' }];
-    
-    // Up Next (Solo en el ciclo más corto, e.g. cycle_day)
-    if (currentCycle && currentCycle.daysValue === 1 && smartTasks.length > 0) {
-      const prioritizedTasks = smartTasks.filter(t => t.flagged || t.priority === 'high' || t.priority === 'medium');
-      if (prioritizedTasks.length > 0) {
-        flat.push({ type: 'header', title: 'Up Next (Priorizado)', category: 'smart', color: '#0a84ff', depth: 0 });
-        if (!isCatCollapsed('smart')) {
-          prioritizedTasks.slice(0, 2).forEach(task => flat.push({ type: 'task', task, depth: 0, isUpNext: true } as any));
-        }
-      }
-    }
 
     // Categorías (Si estamos en ciclo o carpeta) o Ciclos/Secciones (Si estamos en Lista)
     if (currentView === 'TRASH') {
@@ -2512,15 +2486,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         onDismiss={() => setDeletedToast(null)}
       />
 
-      <CompletedTaskToast
-        toast={completedToast}
-        onUndo={(id) => handleToggleTask(id, true)}
-        onDismiss={() => {
-          if (completedToast?.timeoutId) window.clearTimeout(completedToast.timeoutId);
-          setCompletedToast(null);
-        }}
-      />
-
       {(() => {
         const sectionMenuTasks = (sectionMenu.category ? renderedSectionTasksRef.current[sectionMenu.category] : null)
           || (sectionMenu.category ? (groupedTasks[sectionMenu.category] || []) : []);
@@ -2633,6 +2598,13 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             }}
             lists={lists || []}
             sections={(listSections || []).filter(s => s.listId === currentList?.id && !s.deleted_at)}
+            routineMode={sectionMenu.category ? (sectionRoutineModes[sectionMenu.category] || 'only_section') : undefined}
+            onToggleRoutineMode={sectionMenu.category ? () => {
+              const cur = sectionRoutineModes[sectionMenu.category!] || 'only_section';
+              const next = cur === 'full_routine' ? 'only_section' : 'full_routine';
+              toggleSectionRoutineMode(sectionMenu.category!, next);
+            } : undefined}
+            routineCounts={sectionMenu.category ? (cycleRoutineCounts[sectionMenu.category] || null) : null}
           />
         );
       })()}
@@ -2755,15 +2727,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         onDismiss={() => {
           if (deletedToast?.timeoutId) window.clearTimeout(deletedToast.timeoutId);
           setDeletedToast(null);
-        }}
-      />
-
-      <CompletedTaskToast
-        toast={completedToast}
-        onUndo={(id) => handleToggleTask(id, true)}
-        onDismiss={() => {
-          if (completedToast?.timeoutId) window.clearTimeout(completedToast.timeoutId);
-          setCompletedToast(null);
         }}
       />
     </main>

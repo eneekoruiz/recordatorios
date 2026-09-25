@@ -19,69 +19,61 @@ export const DeletedTaskToast: React.FC<DeletedTaskToastProps> = ({
   return createPortal(
     <AnimatePresence>
       <motion.div
-        className="premium-toast"
+        className="premium-toast apple-island-pill"
         style={{
           position: 'fixed',
-          bottom: 'max(28px, env(safe-area-inset-bottom))',
+          bottom: 'max(20px, env(safe-area-inset-bottom))',
           left: '50%',
-          background: 'var(--bg-elevated, #1c1c1e)',
-          backdropFilter: 'blur(35px) saturate(200%)',
-          WebkitBackdropFilter: 'blur(35px) saturate(200%)',
-          border: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.15))',
-          borderRadius: '16px',
-          padding: '12px 16px',
-          boxShadow: '0 12px 36px rgba(0,0,0,0.3)',
+          background: 'var(--bg-elevated, rgba(28, 28, 30, 0.92))',
+          backdropFilter: 'blur(30px) saturate(190%)',
+          WebkitBackdropFilter: 'blur(30px) saturate(190%)',
+          border: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.12))',
+          borderRadius: '999px',
+          padding: '6px 14px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.22)',
           display: 'flex',
           alignItems: 'center',
-          gap: '12px',
+          gap: '10px',
           zIndex: 999999,
           pointerEvents: 'auto',
-          minWidth: '280px',
-          maxWidth: '90vw',
-          justifyContent: 'space-between',
+          maxWidth: '85vw',
+          height: 38,
           boxSizing: 'border-box'
         }}
-        initial={{ opacity: 0, y: 24, x: "-50%", scale: 0.9 }}
+        initial={{ opacity: 0, y: 16, x: "-50%", scale: 0.94 }}
         animate={{ opacity: 1, y: 0, x: "-50%", scale: 1 }}
-        exit={{ opacity: 0, y: 20, x: "-50%", scale: 0.9 }}
-        transition={{ type: 'spring', stiffness: 450, damping: 28 }}
+        exit={{ opacity: 0, y: 14, x: "-50%", scale: 0.94 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 32 }}
         drag="x"
-        dragConstraints={{ left: -100, right: 100 }}
+        dragConstraints={{ left: -80, right: 80 }}
         onDragEnd={(_, info) => {
-          if (Math.abs(info.offset.x) > 60) {
+          if (Math.abs(info.offset.x) > 50) {
             onDismiss();
           }
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden', flex: 1 }}>
-          <Trash2 size={18} color="var(--accent-red)" style={{ flexShrink: 0 }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden', whiteSpace: 'nowrap' }}>
+          <Trash2 size={14} color="var(--accent-red, #ff453a)" style={{ flexShrink: 0 }} />
           <span style={{ 
-            fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-primary)', 
-            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', 
-            overflow: 'hidden', wordBreak: 'break-word', whiteSpace: 'normal'
+            fontSize: '0.84rem', fontWeight: 500, color: 'var(--text-primary)', 
+            overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px'
           }}>
-            Eliminado "{toast.title}"
+            {toast.title ? `«${toast.title}»` : 'Recordatorio eliminado'}
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           <button
-            onClick={() => {
-              onUndo(toast.id);
-            }}
+            onClick={() => onUndo(toast.id)}
             style={{
-              background: 'var(--accent-primary)',
-              color: '#ffffff',
+              background: 'transparent',
+              color: 'var(--accent-primary, #0a84ff)',
               border: 'none',
-              borderRadius: '999px',
-              padding: '6px 14px',
-              fontSize: '0.9rem',
-              fontWeight: 700,
+              padding: '2px 4px',
+              fontSize: '0.84rem',
+              fontWeight: 600,
               cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(10, 132, 255, 0.3)',
-              transition: 'transform 0.15s ease'
+              lineHeight: 1
             }}
-            onPointerDown={e => { e.currentTarget.style.transform = 'scale(0.93)'; }}
-            onPointerUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
           >
             Deshacer
           </button>
@@ -91,9 +83,7 @@ export const DeletedTaskToast: React.FC<DeletedTaskToastProps> = ({
               background: 'transparent',
               color: 'var(--text-tertiary)',
               border: 'none',
-              borderRadius: '50%',
-              width: 28,
-              height: 28,
+              padding: 2,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -101,7 +91,7 @@ export const DeletedTaskToast: React.FC<DeletedTaskToastProps> = ({
             }}
             title="Cerrar"
           >
-            <X size={16} />
+            <X size={13} />
           </button>
         </div>
       </motion.div>

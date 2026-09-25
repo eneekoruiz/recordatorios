@@ -458,3 +458,38 @@ export function ensureLimpiezaSections(
   });
 }
 
+/**
+ * Clasificación automática para listas de la compra / supermercado (función nativa Apple iOS 17).
+ * Identifica la categoría correspondiente según el nombre del producto introducido.
+ */
+export function getGroceryCategory(title?: string | null): string | null {
+  if (!title) return null;
+  const norm = title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  if (/(leche|queso|yogur|huevo|mantequilla|nata|kefir|mozzarella|parmesano|requeson|cuajada)/i.test(norm)) {
+    return 'Lácteos y Huevos';
+  }
+  if (/(manzana|platano|banana|tomate|lechuga|cebolla|patata|papas|zanahoria|aguacate|fruta|verdura|limon|naranja|fresa|espinaca|champin|setas|pimiento|pepino|calabac|brocoli|ajo)/i.test(norm)) {
+    return 'Frutas y Verduras';
+  }
+  if (/(pollo|carne|pescado|ternera|cerdo|salmon|atun|jamon|pavo|merluza|gambas|lomo|hamburguesa|pechuga|bacon|salchicha|chorizo)/i.test(norm)) {
+    return 'Carnes y Pescados';
+  }
+  if (/(pan|pasta|arroz|harina|cereal|galleta|lenteja|garbanzo|alubia|macarron|espagueti|avena|aceite|vinagre|sal|azucar|miel|conserva|tomate frito)/i.test(norm)) {
+    return 'Panadería y Despensa';
+  }
+  if (/(agua|zumo|cafe|te|infusion|cerveza|vino|refresco|coca\s*cola|fanta|bebida|sidra)/i.test(norm)) {
+    return 'Bebidas';
+  }
+  if (/(detergente|lejia|estropajo|bayeta|papel\s*higienico|suavizante|fregasuelos|lavavajillas|bolsa\s*basura|servilleta|albal|film)/i.test(norm)) {
+    return 'Limpieza y Hogar';
+  }
+  if (/(champu|gel|dentifrico|pasta\s*dientes|desodorante|colonia|toallita|cepillo|jabon|crema|afeitad|cuchilla)/i.test(norm)) {
+    return 'Cuidado Personal';
+  }
+  if (/(congelad|helado|hielo|pizza)/i.test(norm)) {
+    return 'Congelados';
+  }
+  return null;
+}
+

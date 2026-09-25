@@ -65,6 +65,10 @@ export interface SectionContextMenuProps {
   onMoveAllTasks?: (targetListId: string, targetSectionId?: string) => void;
   lists?: CustomList[];
   sections?: ListSection[];
+  routineMode?: 'full_routine' | 'only_section';
+  onToggleRoutineMode?: () => void;
+  routineCounts?: { only: number; full: number } | null;
+  routineDurations?: { only?: { formattedActive: string }; full?: { formattedActive: string } } | null;
 }
 
 function SubmenuHeader({ title, onBack }: { title: string; onBack: () => void }) {
@@ -119,7 +123,11 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
   onSortTasks,
   onMoveAllTasks,
   lists = [],
-  sections = []
+  sections = [],
+  routineMode = 'only_section',
+  onToggleRoutineMode,
+  routineCounts,
+  routineDurations
 }) => {
   const [currentSubmenu, setCurrentSubmenu] = useState<'main' | 'sort' | 'move_tasks'>('main');
 
@@ -492,6 +500,31 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
             )}
 
             {/* GESTIÓN DE LA SECCIÓN */}
+            {onToggleRoutineMode && routineCounts && routineCounts.full > routineCounts.only && (
+              <button
+                type="button"
+                className="ios-dropdown-item"
+                onClick={() => {
+                  HapticService.selection();
+                  onToggleRoutineMode();
+                  onClose();
+                }}
+              >
+                <Layers size={16} color="var(--accent-primary)" />
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1, minWidth: 0, textAlign: 'left' }}>
+                  <span style={{ fontWeight: 600 }}>
+                    {routineMode === 'full_routine'
+                      ? `Ver sólo esta sección (${routineCounts.only})`
+                      : `Ver rutina acumulada (${routineCounts.full})`}
+                  </span>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>
+                    {routineMode === 'full_routine'
+                      ? `Cambiar a sólo esta sección (~${routineDurations?.only?.formattedActive || ''})`
+                      : `Incluir tareas diarias y semanales (~${routineDurations?.full?.formattedActive || ''})`}
+                  </span>
+                </div>
+              </button>
+            )}
             {onStartSequence && (sectionMenu.pendingTaskCount ?? 0) > 0 && (
               <button 
                 type="button"
