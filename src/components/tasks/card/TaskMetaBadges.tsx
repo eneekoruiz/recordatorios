@@ -4,6 +4,7 @@ import type { TaskItem, CustomList } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
 import { getTaskDuration, formatDuration } from '../../../utils/taskDuration';
+import { isShoppingList } from '../../../utils/specialLists';
 
 export interface TaskMetaBadgesProps {
   task: TaskItem;
@@ -50,7 +51,8 @@ export function TaskMetaBadges({
   })();
 
   const showDueDate = !!task.dueDate && !hideDueDate;
-  const hasDuration = showDuration && Boolean(durationInfo && durationInfo.activeMinutes > 0);
+  const isShopping = isShoppingList(task.categoryId, taskList);
+  const hasDuration = !isShopping && showDuration && Boolean(durationInfo && durationInfo.activeMinutes > 0);
   const hasMeta = showListName || showDueDate || Boolean(cycleBadge) || timeOfDayInfo || Boolean(inAppListTarget) || hasDuration;
 
 

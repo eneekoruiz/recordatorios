@@ -661,6 +661,17 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                 </motion.div>
               )
             )}
+            {!(depth === 0 && index === currentLevelLists.length - 1) && (
+              <div 
+                aria-hidden="true" 
+                style={{
+                  height: '0.5px',
+                  background: 'var(--border-subtle, rgba(60,60,67,0.12))',
+                  marginLeft: depth > 0 ? 44 : 52,
+                  marginRight: 8
+                }} 
+              />
+            )}
           </div>
         );
       })}

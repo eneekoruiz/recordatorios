@@ -526,6 +526,15 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 }).length}
               </span>
             </motion.div>
+            <div 
+              aria-hidden="true" 
+              style={{
+                height: '0.5px',
+                background: 'var(--border-subtle, rgba(60,60,67,0.12))',
+                marginLeft: 52,
+                marginRight: 8
+              }} 
+            />
 
             <ListHierarchy 
               lists={lists} 

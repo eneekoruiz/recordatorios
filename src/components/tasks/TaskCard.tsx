@@ -461,8 +461,13 @@ export const TaskCard = React.memo(function TaskCard({
     touchDragLiftedRef.current = true;
     touchDragActiveRef.current = false;
 
-    // Build ghost
+    // Build ghost — clone the real card DOM so it looks identical
     const rect = wrapperRef.current.getBoundingClientRect();
+    const cloned = wrapperRef.current.cloneNode(true) as HTMLDivElement;
+    // Remove any data-touch-drag-over attributes that might be set
+    cloned.removeAttribute('data-touch-drag-over');
+    // Remove interactive elements from clone to avoid ghost showing menus
+    cloned.querySelectorAll('[data-touch-drag-ghost]').forEach(el => el.remove());
     const ghost = document.createElement('div');
     ghost.setAttribute('data-touch-drag-ghost', 'true');
     ghost.style.cssText = `
@@ -471,24 +476,15 @@ export const TaskCard = React.memo(function TaskCard({
       top:${startY - rect.height / 2}px;
       width:${rect.width}px;
       height:${rect.height}px;
-      background:var(--bg-elevated,#fff);
-      border-radius:12px;
-      box-shadow:0 10px 36px rgba(0,0,0,0.24),0 0 0 1.5px var(--accent-primary,#007aff);
-      opacity:0.93;
       pointer-events:none;
       z-index:999999;
-      display:flex;
-      align-items:center;
-      padding:0 14px;
-      font-size:15px;
-      font-weight:500;
-      color:var(--text-primary,#000);
-      white-space:nowrap;
+      border-radius:12px;
+      box-shadow:0 10px 36px rgba(0,0,0,0.28),0 0 0 2px var(--accent-primary,#007aff);
+      opacity:0.95;
+      transform:scale(1.03);
       overflow:hidden;
-      text-overflow:ellipsis;
-      transform:scale(1.04);
     `;
-    ghost.textContent = task.title || '';
+    ghost.appendChild(cloned);
     document.body.appendChild(ghost);
     touchDragGhostRef.current = ghost;
     setIsDraggingTouch(true);
@@ -567,7 +563,7 @@ export const TaskCard = React.memo(function TaskCard({
     }, { once: true });
 
     void startY; void startX;
-  }, [onReorderTasks, task.id, task.title, openContextMenu]);
+  }, [onReorderTasks, task.id, openContextMenu]);
 
   return (
     <div

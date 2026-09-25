@@ -10,15 +10,10 @@ import {
   ShieldAlert,
   Wand2,
   Star,
-  Trash2,
-  Sparkles,
-  CheckSquare,
-  Calendar,
-  Target,
-  BookOpen
+  Trash2
 } from 'lucide-react';
 import { HapticService } from '../../../services/HapticService';
-import { isCaducidadesList, isQueHeHechoList, getListType, LIST_TYPE_CONFIG } from '../../../utils/specialLists';
+import { isCaducidadesList, isQueHeHechoList } from '../../../utils/specialLists';
 import { confirmDialog } from '../../ui/confirmDialog';
 import { useAppStore } from '../../../store/useAppStore';
 import type { TaskItem, CustomCycle, CustomList } from '../../../models/Task';
@@ -107,6 +102,10 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   cycleRoutineMode = 'only_section',
   onToggleCycleRoutineMode
 }) => {
+  const updateList = useAppStore((state) => state.updateList);
+  const [isEditingListName, setIsEditingListName] = React.useState(false);
+  const [listEditName, setListEditName] = React.useState('');
+
   const scrollOffset = Math.min(60, Math.max(0, scrollTop || 0));
   const titleProgress = Math.min(1, Math.max(0, (scrollOffset - 24) / 32));
   const titleOpacity = Math.max(0, 1 - titleProgress);
@@ -192,16 +191,45 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                   autoFocus
                   style={{ background: 'transparent', border: 'none', borderBottom: '2px solid var(--accent-primary)', color: 'inherit', fontSize: 'inherit', fontFamily: 'inherit', outline: 'none', width: 'auto' }}
                 />
+              ) : isEditingListName && currentList && !currentList.isFolder ? (
+                <input 
+                  type="text" 
+                  value={listEditName}
+                  onChange={e => setListEditName(e.target.value)}
+                  onBlur={() => {
+                    if (listEditName.trim() && listEditName.trim() !== currentList.name) {
+                      updateList(currentList.id, { name: listEditName.trim() });
+                    }
+                    setIsEditingListName(false);
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') e.currentTarget.blur();
+                    if (e.key === 'Escape') setIsEditingListName(false);
+                  }}
+                  autoFocus
+                  style={{ background: 'transparent', border: 'none', borderBottom: `2px solid ${viewColor}`, color: 'inherit', fontSize: 'inherit', fontFamily: 'inherit', fontWeight: 'inherit', outline: 'none', width: 'auto', minWidth: 120 }}
+                />
               ) : (
                 <span 
+                  onClick={() => {
+                    if (currentList && !currentList.isFolder) {
+                      HapticService.selection();
+                      setListEditName(currentList.name);
+                      setIsEditingListName(true);
+                    }
+                  }}
                   onDoubleClick={() => {
                     if (currentCycle) {
                       setCycleEditName(currentCycle.name);
                       setIsEditingCycle(true);
+                    } else if (currentList && !currentList.isFolder) {
+                      HapticService.selection();
+                      setListEditName(currentList.name);
+                      setIsEditingListName(true);
                     }
                   }}
-                  style={{ cursor: currentCycle ? 'text' : 'default', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                  title={currentCycle ? "Doble click para editar nombre" : undefined}
+                  style={{ cursor: (currentCycle || (currentList && !currentList.isFolder)) ? 'text' : 'default', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                  title={currentCycle ? "Doble click para editar nombre" : (currentList && !currentList.isFolder) ? "Toca para cambiar nombre" : undefined}
                 >
                   {getTitle()}
                 </span>
@@ -254,49 +282,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
               </div>
             )}
 
-            {/* Pill indicador de tipo de lista con acceso a configuración */}
-            {currentList && !currentList.isFolder && (
-              <button
-                type="button"
-                data-testid="list-type-pill"
-                onClick={() => {
-                  HapticService.selection();
-                  _setIsListConfigOpen(true);
-                }}
-                title={`Tipo de lista: ${LIST_TYPE_CONFIG[getListType(currentList, currentView)].label}. Toca para cambiar.`}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 5,
-                  padding: '3px 9px',
-                  borderRadius: 999,
-                  background: 'var(--bg-card, rgba(0,0,0,0.03))',
-                  border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-                  fontSize: '0.74rem',
-                  fontWeight: 600,
-                  color: 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                {(() => {
-                  const type = getListType(currentList, currentView);
-                  const conf = LIST_TYPE_CONFIG[type];
-                  const TypeIcon = conf.iconName === 'sparkles' ? Sparkles :
-                                   conf.iconName === 'check-square' ? CheckSquare :
-                                   conf.iconName === 'calendar' ? Calendar :
-                                   conf.iconName === 'target' ? Target :
-                                   conf.iconName === 'credit-card' ? CreditCard : BookOpen;
-                  return (
-                    <>
-                      <TypeIcon size={12} color={conf.color} strokeWidth={2.4} />
-                      <span>{conf.badgeLabel}</span>
-                    </>
-                  );
-                })()}
-              </button>
-            )}
+
           </div>
 
           {/* Gran Contador Apple Reminders en el color de la lista */}

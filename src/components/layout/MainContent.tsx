@@ -16,7 +16,7 @@ import { SoundService } from '../../services/SoundService';
 import { extractPeopleFromText, calculateExpirationStatus, calculateSubscriptionCosts, findFlashbackMemories, isCompletedInCurrentPeriod } from '../../services/TaskService';
 import { PersonProfileModal } from '../people/PersonProfileModal';
 import { AIService } from '../../services/AIService';
-import { isCaducidadesList, isQueHeHechoList, ensureCaducidadesSections, isLimpiezaList, isRoutineList, getRoomForCleaningTask, getListType, doesListSupportSequenceMode } from '../../utils/specialLists';
+import { isCaducidadesList, isQueHeHechoList, ensureCaducidadesSections, isLimpiezaList, isRoutineList, isShoppingList, getRoomForCleaningTask, getListType, doesListSupportSequenceMode } from '../../utils/specialLists';
 import { 
   getSectionPeriodicity, 
   getTaskPeriodicity, 
@@ -273,12 +273,19 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     return 'night';
   }, []);
 
+const CORE_CYCLES = [
+  { id: 'cycle_day', name: 'Diario', daysValue: 1, isPinned: true, icon: 'sun' },
+  { id: 'cycle_week', name: 'Semanal', daysValue: 7, isPinned: true, icon: 'calendar' },
+  { id: 'cycle_month', name: 'Mensual', daysValue: 30, isPinned: true, icon: 'moon' },
+  { id: 'cycle_year', name: 'Anual', daysValue: 365, isPinned: true, icon: 'globe' },
+];
+
   // Determinar el contexto actual
   const isSmartView = currentView.startsWith('smart_');
   const isListView = currentView.startsWith('list_') && !lists?.find(l => l.id === currentView.replace('list_', ''))?.isFolder;
   const isFolderView = currentView.startsWith('folder_') || !!lists?.find(l => l.id === currentView.replace('list_', ''))?.isFolder;
   const currentList = lists?.find((l) => l.id === currentView.replace('list_', '').replace('folder_', ''));
-  const currentCycle = cycles.find((c) => c.id === currentView);
+  const currentCycle = (cycles || []).find((c) => c.id === currentView) || (CORE_CYCLES.find((c) => c.id === currentView) as any);
 
   const toggleCycleGeneralMode = useCallback((mode: 'only_section' | 'full_routine') => {
     if (!currentCycle) return;
@@ -2151,15 +2158,19 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         setIsListConfigOpen={setIsListConfigOpen}
         onAddSection={handleAddSection}
         completedCount={totalCompletedInCurrentView || completedVisibleCount}
-        showProminentStartButton={isRoutine}
-        startDuration={viewTasksDuration?.formattedActive}
+        showProminentStartButton={isRoutine && !isShoppingList(currentView, currentList)}
+        startDuration={!isShoppingList(currentView, currentList) ? viewTasksDuration?.formattedActive : undefined}
         isStartDisabled={!visibleTasks.some(t => !isTaskCompleted(t))}
-        onStartSequence={onStartSequence && isRoutine ? () => {
+        onStartSequence={onStartSequence && isRoutine && !isShoppingList(currentView, currentList) ? () => {
           const pendingTasks = visibleTasks.filter(t => !isTaskCompleted(t));
           if (pendingTasks.length > 0) {
             onStartSequence(pendingTasks.map(t => t.id), getTitle(), viewColor);
           }
         } : undefined}
+        cycleRoutineMode={currentCycle ? (cycleGeneralModes[currentCycle.id] || 'only_section') : undefined}
+        onToggleCycleRoutineMode={currentCycle ? toggleCycleGeneralMode : undefined}
+        currentCycleId={currentCycle?.id}
+        currentCycleName={currentCycle?.name}
       />
 
       {/* Main Scrollable View */}
@@ -2235,7 +2246,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                           getTitle={getTitle}
                           currentView={currentView}
                           totalCost={totalCost}
-                          totalDuration={viewTasksDuration}
+                          totalDuration={!isShoppingList(currentView, currentList) ? viewTasksDuration : undefined}
                           activeVisibleCount={activeVisibleCount}
                           completedVisibleCount={completedVisibleCount}
                           setConfirmProps={setConfirmProps}
@@ -2255,7 +2266,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                           caducidadesStats={caducidadesStats}
                           cycleRoutineMode={currentCycle ? (cycleGeneralModes[currentCycle.id] || 'only_section') : undefined}
                           onToggleCycleRoutineMode={currentCycle ? toggleCycleGeneralMode : undefined}
-                          onStartSequence={onStartSequence && isRoutine ? () => {
+                          onStartSequence={onStartSequence && isRoutine && !isShoppingList(currentView, currentList) ? () => {
                             const pendingTasks = visibleTasks.filter(t => !isTaskCompleted(t));
                             if (pendingTasks.length > 0) {
                               onStartSequence(pendingTasks.map(t => t.id), getTitle(), viewColor);
@@ -2283,9 +2294,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                       ? data.sectionTaskIds.map((id: string) => tasks[id]).filter(Boolean)
                       : sectionTasks;
                     const activeMode = sectionRoutineModes[data.category] || data.routineMode || 'only_section';
-                    const sectionDurationSummary = data.routineDurations
+                    const sectionDurationSummary = !isShoppingList(currentView, currentList) ? (data.routineDurations
                       ? (activeMode === 'full_routine' ? data.routineDurations.full : data.routineDurations.only)
-                      : calculateTasksDuration(tasksForSection, listSections, lists);
+                      : calculateTasksDuration(tasksForSection, listSections, lists)) : undefined;
                     return (
                       <MainSectionHeader
                         key={itemKey}
@@ -2625,7 +2636,14 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               const next = cur === 'full_routine' ? 'only_section' : 'full_routine';
               toggleSectionRoutineMode(sectionMenu.category!, next);
             } : undefined}
-            routineCounts={sectionMenu.category ? (cycleRoutineCounts[sectionMenu.category] || null) : null}
+            routineCounts={sectionMenu.category ? (() => {
+              const secItem = flattenedData.find(item => item.type === 'header' && (item.category === sectionMenu.category || (item.sectionId && item.sectionId === sectionMenu.sectionId))) as (Extract<VirtualItemType, { type: 'header' }> | undefined);
+              return secItem?.routineCounts || cycleRoutineCounts[sectionMenu.category] || null;
+            })() : null}
+            routineDurations={sectionMenu.category ? (() => {
+              const secItem = flattenedData.find(item => item.type === 'header' && (item.category === sectionMenu.category || (item.sectionId && item.sectionId === sectionMenu.sectionId))) as (Extract<VirtualItemType, { type: 'header' }> | undefined);
+              return secItem?.routineDurations || null;
+            })() : null}
           />
         );
       })()}

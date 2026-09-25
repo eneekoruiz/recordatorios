@@ -40,6 +40,10 @@ interface MainGlassHeaderProps {
   startDuration?: string;
   completedCount?: number;
   isStartDisabled?: boolean;
+  cycleRoutineMode?: 'only_section' | 'full_routine';
+  onToggleCycleRoutineMode?: (mode: 'only_section' | 'full_routine') => void;
+  currentCycleId?: string;
+  currentCycleName?: string;
 }
 
 export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
@@ -66,7 +70,11 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
   showProminentStartButton = true,
   startDuration,
   completedCount,
-  isStartDisabled = false
+  isStartDisabled = false,
+  cycleRoutineMode,
+  onToggleCycleRoutineMode,
+  currentCycleId,
+  currentCycleName,
 }) => {
   const listAccentColor = isSmartView 
     ? (SMART_COLORS[currentView] || 'var(--accent-blue, #007AFF)') 
@@ -84,14 +92,15 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
         position: 'relative', 
         flexShrink: 0,
         paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)',
-        paddingBottom: '12px',
+        paddingBottom: onToggleCycleRoutineMode && currentCycleId && currentCycleId !== 'cycle_day' && isGlassActive ? '6px' : '12px',
         paddingLeft: '16px',
         paddingRight: '16px',
         minHeight: 'calc(env(safe-area-inset-top, 0px) + 56px)',
-        display: 'flex', 
+        display: 'flex',
+        flexDirection: 'column',
         width: '100%', 
-        alignItems: 'center', 
-        justifyContent: 'space-between', 
+        alignItems: 'stretch', 
+        justifyContent: 'center', 
         zIndex: 1000,
         boxSizing: 'border-box',
         background: isGlassActive ? 'var(--bg-surface-glass)' : 'transparent',
@@ -101,6 +110,8 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
         transition: 'background 0.2s ease, border-color 0.2s ease, backdrop-filter 0.2s ease, -webkit-backdrop-filter 0.2s ease'
       }}
     >
+      {/* Top row: back button + title + actions */}
+      <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between' }}>
       {/* Left: Back button ("Atrás para más listas") */}
       {onBackToSidebar ? (
         <button 
@@ -685,6 +696,69 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
           </div>
         )}
       </div>
+      </div>
+      {/* Second row: frequency segmented control — only when scrolled and in a non-daily cycle */}
+      {onToggleCycleRoutineMode && currentCycleId && currentCycleId !== 'cycle_day' && isGlassActive && (
+        <div style={{
+          display: 'inline-flex',
+          padding: '2px',
+          borderRadius: '10px',
+          background: 'var(--bg-elevated, rgba(120,120,128,0.12))',
+          border: '1px solid var(--border-subtle, rgba(0,0,0,0.06))',
+          width: '100%',
+          boxSizing: 'border-box',
+          marginTop: 6,
+          opacity: glassProgress,
+          transition: 'opacity 0.12s ease'
+        }}>
+          <button
+            type="button"
+            onClick={() => { HapticService.selection(); onToggleCycleRoutineMode('only_section'); }}
+            style={{
+              flex: 1,
+              padding: '5px 10px',
+              borderRadius: '8px',
+              border: 'none',
+              background: cycleRoutineMode === 'only_section' || !cycleRoutineMode ? 'var(--bg-card, #ffffff)' : 'transparent',
+              color: cycleRoutineMode === 'only_section' || !cycleRoutineMode ? 'var(--text-primary)' : 'var(--text-secondary)',
+              fontWeight: cycleRoutineMode === 'only_section' || !cycleRoutineMode ? 650 : 500,
+              fontSize: '0.78rem',
+              cursor: 'pointer',
+              boxShadow: cycleRoutineMode === 'only_section' || !cycleRoutineMode ? '0 1px 4px rgba(0,0,0,0.12)' : 'none',
+              transition: 'all 0.15s ease',
+              whiteSpace: 'nowrap',
+              textAlign: 'center'
+            }}
+          >
+            {currentCycleId === 'cycle_week' ? 'Solo semanales' :
+             currentCycleId === 'cycle_month' ? 'Solo mensuales' :
+             currentCycleId === 'cycle_year' ? 'Solo anuales' : `Solo ${currentCycleName?.toLowerCase() || ''}`}
+          </button>
+          <button
+            type="button"
+            onClick={() => { HapticService.selection(); onToggleCycleRoutineMode('full_routine'); }}
+            style={{
+              flex: 1,
+              padding: '5px 10px',
+              borderRadius: '8px',
+              border: 'none',
+              background: cycleRoutineMode === 'full_routine' ? 'var(--bg-card, #ffffff)' : 'transparent',
+              color: cycleRoutineMode === 'full_routine' ? 'var(--text-primary)' : 'var(--text-secondary)',
+              fontWeight: cycleRoutineMode === 'full_routine' ? 650 : 500,
+              fontSize: '0.78rem',
+              cursor: 'pointer',
+              boxShadow: cycleRoutineMode === 'full_routine' ? '0 1px 4px rgba(0,0,0,0.12)' : 'none',
+              transition: 'all 0.15s ease',
+              whiteSpace: 'nowrap',
+              textAlign: 'center'
+            }}
+          >
+            {currentCycleId === 'cycle_week' ? 'Semanales + Diarias' :
+             currentCycleId === 'cycle_month' ? 'Mensuales + Acumuladas' :
+             currentCycleId === 'cycle_year' ? 'Todas acumuladas' : 'Acumuladas'}
+          </button>
+        </div>
+      )}
     </header>
   );
 };

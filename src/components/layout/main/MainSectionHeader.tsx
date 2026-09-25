@@ -3,6 +3,7 @@ import { MoreHorizontal, ChevronDown } from 'lucide-react';
 import { HapticService } from '../../../services/HapticService';
 import type { SectionMenuState } from './SectionContextMenu';
 import type { TasksDurationSummary } from '../../../utils/taskDuration';
+import { isShoppingList } from '../../../utils/specialLists';
 
 interface SectionData {
   title: string;
@@ -84,7 +85,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   startEditingSection,
   setSelectedPersonForProfile,
   sectionTotal,
-  durationSummary: _durationSummary,
+  durationSummary,
   onOpenNewTask: _onOpenNewTask,
   onAddSection: _onAddSection,
   deleteListSection: _deleteListSection,
@@ -93,7 +94,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   isolatedRoutineMode: _isolatedRoutineMode = 'only_section',
   setIsolatedRoutineMode: _setIsolatedRoutineMode,
   sectionRoutineModes = {},
-  toggleSectionRoutineMode: _toggleSectionRoutineMode,
+  toggleSectionRoutineMode,
   dragOverSectionId,
   onStartSectionSequence: _onStartSectionSequence,
   pendingTaskCount,
@@ -104,6 +105,11 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   isRoutine: _isRoutine = false
 }) => {
   const currentSectionRoutineMode = sectionRoutineModes[data.category] || data.routineMode || 'only_section';
+  const isShopping = isShoppingList(data.category);
+  const durSummary = !isShopping ? (data.routineDurations
+    ? (currentSectionRoutineMode === 'full_routine' ? data.routineDurations.full : data.routineDurations.only)
+    : durationSummary) : null;
+  const sectionDurationLabel = durSummary && durSummary.activeMinutes > 0 ? durSummary.formattedActive : null;
   const [isPressed, setIsPressed] = useState(false);
   const didSectionLongPressRef = useRef(false);
   const touchStartPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -318,6 +324,21 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                 </span>
               )}
               {data.title}
+              {sectionDurationLabel && (
+                <span 
+                  style={{
+                    fontSize: data.depth === 0 ? '0.80rem' : '0.74rem',
+                    fontWeight: 500,
+                    color: 'var(--text-tertiary)',
+                    marginLeft: 8,
+                    fontVariantNumeric: 'tabular-nums',
+                    opacity: 0.85
+                  }}
+                  title={`Duración estimada de ${data.title}: ${sectionDurationLabel}`}
+                >
+                  · ~{sectionDurationLabel}
+                </span>
+              )}
             </h3>
           )}
           {data.category.startsWith('persona_') && data.category !== 'persona_solo' && (
@@ -383,6 +404,70 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, justifyContent: 'flex-end' }}>
+          {/* Conmutador sutil: Solo vs + Diarias (estilo Apple Segmented) */}
+          {data.routineCounts && data.routineCounts.full > data.routineCounts.only && (
+            <div 
+              style={{
+                display: 'inline-flex',
+                padding: '2px',
+                borderRadius: '8px',
+                background: 'var(--bg-elevated, rgba(120, 120, 128, 0.12))',
+                border: '1px solid var(--border-subtle, rgba(0,0,0,0.06))',
+                alignItems: 'center',
+                marginRight: 4
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  HapticService.selection();
+                  toggleSectionRoutineMode?.(data.category, 'only_section');
+                }}
+                style={{
+                  border: 'none',
+                  background: currentSectionRoutineMode === 'only_section' ? 'var(--bg-card, #ffffff)' : 'transparent',
+                  color: currentSectionRoutineMode === 'only_section' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  fontWeight: currentSectionRoutineMode === 'only_section' ? 650 : 500,
+                  fontSize: '0.72rem',
+                  padding: '2px 7px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  boxShadow: currentSectionRoutineMode === 'only_section' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 0.12s ease',
+                  whiteSpace: 'nowrap'
+                }}
+                title={`Ver solo tareas de ${data.title} (${data.routineCounts.only})`}
+              >
+                Solo ({data.routineCounts.only})
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  HapticService.selection();
+                  toggleSectionRoutineMode?.(data.category, 'full_routine');
+                }}
+                style={{
+                  border: 'none',
+                  background: currentSectionRoutineMode === 'full_routine' ? 'var(--bg-card, #ffffff)' : 'transparent',
+                  color: currentSectionRoutineMode === 'full_routine' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  fontWeight: currentSectionRoutineMode === 'full_routine' ? 650 : 500,
+                  fontSize: '0.72rem',
+                  padding: '2px 7px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  boxShadow: currentSectionRoutineMode === 'full_routine' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 0.12s ease',
+                  whiteSpace: 'nowrap'
+                }}
+                title={`Incluir tareas de frecuencias anteriores (${data.routineCounts.full})`}
+              >
+                + Diarias ({data.routineCounts.full})
+              </button>
+            </div>
+          )}
           {/* Conteo numérico sutil estilo Apple */}
           {(() => {
             const count = data.routineCounts 

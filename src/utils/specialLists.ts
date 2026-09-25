@@ -248,15 +248,16 @@ export function isGoalsList(listIdOrView?: string | null, list?: CustomList | nu
 }
 
 /**
- * Determina si una lista o vista corresponde a una lista de rutinas periódicas (Limpieza, Compra, Quehaceres, Care).
+ * Determina si una lista o vista corresponde a una lista de rutinas periódicas (Limpieza, Quehaceres, Care).
  */
 export function isRoutineList(listIdOrView?: string | null, list?: CustomList | null): boolean {
+  if (isShoppingList(listIdOrView, list)) return false;
   if (list?.listType) return list.listType === 'routines';
   if (!listIdOrView && !list) return false;
   const cleanId = (listIdOrView || '').replace(/^list_/, '').toLowerCase();
-  if (cleanId === 'limpieza' || cleanId === 'quehaceres' || cleanId === 'care' || cleanId === 'compra' || cleanId === 'compras') return true;
+  if (cleanId === 'limpieza' || cleanId === 'quehaceres' || cleanId === 'care') return true;
   if (list) {
-    if (list.id === 'limpieza' || list.id === 'quehaceres' || list.id === 'care' || list.id === 'compra' || list.id === 'compras') return true;
+    if (list.id === 'limpieza' || list.id === 'quehaceres' || list.id === 'care') return true;
     const cleanName = (list.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     if (
       cleanName.includes('limpieza') ||
@@ -264,11 +265,31 @@ export function isRoutineList(listIdOrView?: string | null, list?: CustomList | 
       cleanName.includes('care') ||
       cleanName.includes('cuidado') ||
       cleanName.includes('skincare') ||
-      cleanName.includes('compra') ||
-      cleanName.includes('supermercado') ||
       cleanName.includes('rutina') ||
       cleanName.includes('mantenimiento') ||
       cleanName.includes('domest')
+    ) return true;
+  }
+  return false;
+}
+
+/**
+ * Detecta si la lista es de compra/supermercado (no muestra duraciones, solo precios).
+ */
+export function isShoppingList(listIdOrView?: string | null, list?: CustomList | null): boolean {
+  if (!listIdOrView && !list) return false;
+  const cleanId = (listIdOrView || '').replace(/^list_/, '').toLowerCase();
+  if (cleanId === 'compra' || cleanId === 'compras' || cleanId === 'supermercado') return true;
+  if (list) {
+    if (list.id === 'compra' || list.id === 'compras' || list.id === 'supermercado') return true;
+    const cleanName = (list.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (
+      cleanName === 'compra' ||
+      cleanName === 'compras' ||
+      cleanName.startsWith('lista de la compra') ||
+      cleanName.startsWith('lista compra') ||
+      cleanName.includes('supermercado') ||
+      (cleanName.includes('compra') && !cleanName.includes('limpieza') && !cleanName.includes('quehacer'))
     ) return true;
   }
   return false;
@@ -283,6 +304,7 @@ export function getListType(list?: CustomList | null, listIdOrView?: string | nu
   if (isQueHeHechoList(listIdOrView, list)) return 'que_he_hecho';
   if (isEventsList(listIdOrView, list)) return 'events';
   if (isGoalsList(listIdOrView, list)) return 'goals';
+  if (isShoppingList(listIdOrView, list)) return 'simple'; // La compra no usa duraciones, solo precios
   if (isRoutineList(listIdOrView, list)) return 'routines';
   return 'simple';
 }

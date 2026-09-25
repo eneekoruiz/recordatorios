@@ -6,6 +6,7 @@ import {
   isEventsList, 
   isGoalsList, 
   isRoutineList, 
+  isShoppingList,
   LIST_TYPE_CONFIG 
 } from '../../src/utils/specialLists';
 import { getTaskDuration, calculateTasksDuration } from '../../src/utils/taskDuration';
@@ -55,14 +56,23 @@ describe('List Types & Duration Engine', () => {
       expect(isGoalsList(goalsList.id, goalsList)).toBe(true);
     });
 
-    it('identifies routine lists (cleaning, shopping, chores)', () => {
+    it('identifies routine lists (cleaning, chores)', () => {
       expect(isRoutineList('limpieza')).toBe(true);
-      expect(isRoutineList('compra')).toBe(true);
       expect(isRoutineList('quehaceres')).toBe(true);
 
       const routineList: CustomList = { id: 'list_789', name: 'Limpieza del hogar', color: '#0a84ff', isFolder: false, showCompleted: false };
       expect(getListType(routineList)).toBe('routines');
       expect(isRoutineList(routineList.id, routineList)).toBe(true);
+    });
+
+    it('identifies shopping lists as simple lists without duration', () => {
+      expect(isShoppingList('compra')).toBe(true);
+      expect(isShoppingList('compras')).toBe(true);
+      expect(isRoutineList('compra')).toBe(false);
+
+      const compraList: CustomList = { id: 'compra', name: 'Lista de la compra', color: '#30d158', isFolder: false, showCompleted: false };
+      expect(getListType(compraList)).toBe('simple');
+      expect(isShoppingList(compraList.id, compraList)).toBe(true);
     });
 
     it('falls back to simple for notes, ideas, or generic lists', () => {
