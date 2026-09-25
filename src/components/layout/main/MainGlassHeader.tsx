@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, MoreHorizontal, Check, Settings, FolderPlus, Play } from 'lucide-react';
 import type { CustomList } from '../../../models/Task';
@@ -44,7 +45,7 @@ interface MainGlassHeaderProps {
 export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
   isScrolled,
   scrollTop,
-  isMobile: _isMobile,
+  isMobile = false,
   onBackToSidebar,
   isSmartView,
   isListView,
@@ -256,189 +257,429 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
             </button>
             <AnimatePresence>
               {isMenuOpen && (
-                <>
-                  <motion.div 
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    style={{ position: 'fixed', inset: 0, zIndex: 180, background: 'transparent' }} 
-                    onClick={() => setIsMenuOpen(false)} 
-                  />
-                  <motion.div 
-                    className="ios-dropdown-menu"
-                    initial={{ opacity: 0, scale: 0.95, y: -4, transformOrigin: 'top right' }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                    style={{ 
-                      position: 'absolute', 
-                      right: 0, 
-                      top: '100%', 
-                      marginTop: 8, 
-                      zIndex: 200, 
-                      minWidth: 245,
-                      background: 'var(--bg-material, rgba(255,255,255,0.85))',
-                      backdropFilter: 'blur(30px) saturate(180%)',
-                      WebkitBackdropFilter: 'blur(30px) saturate(180%)',
-                      border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
-                      boxShadow: '0 10px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.04)',
-                      borderRadius: 14,
-                      padding: 6,
-                      maxHeight: 'calc(100dvh - 120px)',
-                      overflowY: 'auto',
-                      overscrollBehavior: 'contain',
-                      WebkitOverflowScrolling: 'touch',
-                      scrollbarWidth: 'none'
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    onWheel={(e) => e.stopPropagation()}
-                  >
-                    {onStartSequence && (
-                      <>
+                isMobile ? (
+                  createPortal(
+                    <>
+                      <motion.div 
+                        initial={{ opacity: 0 }} 
+                        animate={{ opacity: 1 }} 
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        style={{ 
+                          position: 'fixed', 
+                          inset: 0, 
+                          zIndex: 9998, 
+                          background: 'rgba(0, 0, 0, 0.45)', 
+                          backdropFilter: 'blur(10px)',
+                          WebkitBackdropFilter: 'blur(10px)'
+                        }} 
+                        onClick={() => setIsMenuOpen(false)} 
+                      />
+                      <motion.div 
+                        role="dialog"
+                        aria-label="Opciones de lista"
+                        className="ios-bottom-sheet"
+                        initial={{ y: '100%' }}
+                        animate={{ y: 0 }}
+                        exit={{ y: '100%' }}
+                        transition={{ type: 'spring', damping: 28, stiffness: 350 }}
+                        style={{ 
+                          position: 'fixed', 
+                          bottom: 0, 
+                          left: 0, 
+                          right: 0, 
+                          zIndex: 9999, 
+                          background: 'var(--bg-material, rgba(255, 255, 255, 0.94))',
+                          backdropFilter: 'blur(40px) saturate(180%)',
+                          WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+                          borderTop: '1px solid var(--border-subtle)',
+                          borderRadius: '24px 24px 0 0',
+                          boxShadow: '0 -10px 40px rgba(0,0,0,0.18)',
+                          padding: '12px 16px calc(24px + env(safe-area-inset-bottom, 0px)) 16px',
+                          maxHeight: '82dvh',
+                          overflowY: 'auto',
+                          overscrollBehavior: 'contain',
+                          WebkitOverflowScrolling: 'touch'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div style={{
+                          width: 36,
+                          height: 5,
+                          borderRadius: 3,
+                          background: 'var(--border-strong, rgba(0,0,0,0.22))',
+                          margin: '0 auto 16px auto'
+                        }} />
+                        {onStartSequence && (
+                          <>
+                            <button 
+                              type="button"
+                              className="ios-dropdown-item"
+                              onClick={() => {
+                                HapticService.selection();
+                                setIsMenuOpen(false);
+                                onStartSequence();
+                              }}
+                              style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 44 }}
+                            >
+                              <Play size={16} color={listAccentColor} fill={listAccentColor} />
+                              <span style={{ whiteSpace: 'nowrap', color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: 500 }}>Empezar lista</span>
+                            </button>
+                            <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '6px 0' }} />
+                          </>
+                        )}
+
                         <button 
+                          type="button"
                           className="ios-dropdown-item"
+                          onClick={() => { toggleShowCompleted(); setIsMenuOpen(false); }}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', minHeight: 44 }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <Check 
+                              size={17} 
+                              color="var(--accent-primary)" 
+                              style={{ opacity: resolvedShowCompleted ? 1 : 0, transition: 'opacity 0.15s ease' }} 
+                            />
+                            <span style={{ fontSize: '0.95rem', fontWeight: 500 }}>{resolvedShowCompleted ? 'Ocultar completados' : 'Mostrar completados'}</span>
+                          </div>
+                          {completedCount !== undefined && completedCount > 0 && (
+                            <span style={{ 
+                              fontSize: '0.82rem', 
+                              fontWeight: 600, 
+                              color: 'var(--text-tertiary)',
+                              background: 'var(--bg-hover, rgba(0,0,0,0.05))',
+                              padding: '2px 8px',
+                              borderRadius: 999,
+                              fontVariantNumeric: 'tabular-nums' 
+                            }}>
+                              {completedCount}
+                            </span>
+                          )}
+                        </button>
+
+                        <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '6px 0' }} />
+                        
+                        <div style={{ padding: '8px 12px 4px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Ordenar por
+                        </div>
+
+                        <button 
+                          type="button"
+                          className="ios-dropdown-item"
+                          onClick={() => { HapticService.selection(); setSortBy('manual'); setIsMenuOpen(false); }}
+                          style={{ justifyContent: 'space-between', minHeight: 44, fontSize: '0.95rem' }}
+                        >
+                          <span>Manual</span>
+                          {sortBy === 'manual' && <Check size={16} color="var(--accent-primary)" />}
+                        </button>
+
+                        <button 
+                          type="button"
+                          className="ios-dropdown-item"
+                          onClick={() => { HapticService.selection(); setSortBy('dueDate'); setIsMenuOpen(false); }}
+                          style={{ justifyContent: 'space-between', minHeight: 44, fontSize: '0.95rem' }}
+                        >
+                          <span>Fecha de vencimiento</span>
+                          {sortBy === 'dueDate' && <Check size={16} color="var(--accent-primary)" />}
+                        </button>
+
+                        <button 
+                          type="button"
+                          className="ios-dropdown-item"
+                          onClick={() => { HapticService.selection(); setSortBy('priority'); setIsMenuOpen(false); }}
+                          style={{ justifyContent: 'space-between', minHeight: 44, fontSize: '0.95rem' }}
+                        >
+                          <span>Prioridad</span>
+                          {sortBy === 'priority' && <Check size={16} color="var(--accent-primary)" />}
+                        </button>
+
+                        <button 
+                          type="button"
+                          className="ios-dropdown-item"
+                          onClick={() => { HapticService.selection(); setSortBy('title'); setIsMenuOpen(false); }}
+                          style={{ justifyContent: 'space-between', minHeight: 44, fontSize: '0.95rem' }}
+                        >
+                          <span>Título (A-Z)</span>
+                          {sortBy === 'title' && <Check size={16} color="var(--accent-primary)" />}
+                        </button>
+
+                        <button 
+                          type="button"
+                          className="ios-dropdown-item"
+                          onClick={() => { HapticService.selection(); setSortBy('createdAt'); setIsMenuOpen(false); }}
+                          style={{ justifyContent: 'space-between', minHeight: 44, fontSize: '0.95rem' }}
+                        >
+                          <span>Fecha de creación</span>
+                          {sortBy === 'createdAt' && <Check size={16} color="var(--accent-primary)" />}
+                        </button>
+
+                        {isListView && currentList && (
+                          <>
+                            <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '6px 0' }} />
+                            <button 
+                              type="button"
+                              className="ios-dropdown-item"
+                              onClick={() => { updateList(currentList.id, { isFinancial: !currentList.isFinancial }); setIsMenuOpen(false); }}
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', minHeight: 44, fontSize: '0.95rem' }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <Check size={16} color="var(--accent-primary)" style={{ opacity: currentList.isFinancial ? 1 : 0 }} />
+                                <span style={{ whiteSpace: 'nowrap' }}>Modo financiero</span>
+                              </div>
+                            </button>
+                            <button 
+                              type="button"
+                              className="ios-dropdown-item"
+                              onClick={() => { 
+                                const nextVal = currentList.autoEstimateDuration === false ? true : false;
+                                updateList(currentList.id, { autoEstimateDuration: nextVal }); 
+                                setIsMenuOpen(false); 
+                              }}
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', minHeight: 44, fontSize: '0.95rem' }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <Check size={16} color="var(--accent-primary)" style={{ opacity: currentList.autoEstimateDuration !== false ? 1 : 0 }} />
+                                <span style={{ whiteSpace: 'nowrap' }}>Estimar duración automática</span>
+                              </div>
+                            </button>
+                            <button 
+                              type="button"
+                              className="ios-dropdown-item"
+                              onClick={() => { setIsListConfigOpen(true); setIsMenuOpen(false); }}
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', minHeight: 44, fontSize: '0.95rem' }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <Settings size={16} color="var(--text-secondary)" />
+                                <span style={{ whiteSpace: 'nowrap' }}>Personalizar lista</span>
+                              </div>
+                              <span style={{ 
+                                fontSize: '0.74rem', 
+                                fontWeight: 600, 
+                                color: LIST_TYPE_CONFIG[getListType(currentList, currentView)].color,
+                                background: 'var(--bg-hover, rgba(0,0,0,0.04))',
+                                padding: '2px 8px',
+                                borderRadius: 6
+                              }}>
+                                {LIST_TYPE_CONFIG[getListType(currentList, currentView)].badgeLabel}
+                              </span>
+                            </button>
+                          </>
+                        )}
+
+                        <button
+                          type="button"
                           onClick={() => {
                             HapticService.selection();
                             setIsMenuOpen(false);
-                            onStartSequence();
                           }}
-                          style={{ display: 'flex', alignItems: 'center', gap: 10 }}
+                          style={{
+                            marginTop: 14,
+                            width: '100%',
+                            minHeight: 46,
+                            borderRadius: 14,
+                            background: 'var(--bg-elevated, rgba(0,0,0,0.06))',
+                            border: '1px solid var(--border-subtle)',
+                            color: 'var(--accent-primary)',
+                            fontSize: '0.98rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
                         >
-                          <Play size={14} color={listAccentColor} fill={listAccentColor} />
-                          <span style={{ whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>Empezar lista</span>
+                          Cerrar
                         </button>
-                        <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
-                      </>
-                    )}
-
-                    <button 
-                      className="ios-dropdown-item"
-                      onClick={() => { toggleShowCompleted(); setIsMenuOpen(false); }}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
+                      </motion.div>
+                    </>,
+                    document.body
+                  )
+                ) : (
+                  <>
+                    <motion.div 
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                      style={{ position: 'fixed', inset: 0, zIndex: 180, background: 'transparent' }} 
+                      onClick={() => setIsMenuOpen(false)} 
+                    />
+                    <motion.div 
+                      className="ios-dropdown-menu"
+                      initial={{ opacity: 0, scale: 0.95, y: -4, transformOrigin: 'top right' }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                      style={{ 
+                        position: 'absolute', 
+                        right: 0, 
+                        top: '100%', 
+                        marginTop: 8, 
+                        zIndex: 200, 
+                        minWidth: 245,
+                        background: 'var(--bg-material, rgba(255,255,255,0.85))',
+                        backdropFilter: 'blur(30px) saturate(180%)',
+                        WebkitBackdropFilter: 'blur(30px) saturate(180%)',
+                        border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
+                        boxShadow: '0 10px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.04)',
+                        borderRadius: 14,
+                        padding: 6,
+                        maxHeight: 'calc(100dvh - 120px)',
+                        overflowY: 'auto',
+                        overscrollBehavior: 'contain',
+                        WebkitOverflowScrolling: 'touch',
+                        scrollbarWidth: 'none'
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      onWheel={(e) => e.stopPropagation()}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <Check 
-                          size={15} 
-                          color="var(--accent-primary)" 
-                          style={{ opacity: resolvedShowCompleted ? 1 : 0, transition: 'opacity 0.15s ease' }} 
-                        />
-                        <span>{resolvedShowCompleted ? 'Ocultar completados' : 'Mostrar completados'}</span>
-                      </div>
-                      {completedCount !== undefined && completedCount > 0 && (
-                        <span style={{ 
-                          fontSize: '0.78rem', 
-                          fontWeight: 600, 
-                          color: 'var(--text-tertiary)',
-                          background: 'var(--bg-hover, rgba(0,0,0,0.05))',
-                          padding: '1.5px 7px',
-                          borderRadius: 999,
-                          fontVariantNumeric: 'tabular-nums' 
-                        }}>
-                          {completedCount}
-                        </span>
+                      {onStartSequence && (
+                        <>
+                          <button 
+                            className="ios-dropdown-item"
+                            onClick={() => {
+                              HapticService.selection();
+                              setIsMenuOpen(false);
+                              onStartSequence();
+                            }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 10 }}
+                          >
+                            <Play size={14} color={listAccentColor} fill={listAccentColor} />
+                            <span style={{ whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>Empezar lista</span>
+                          </button>
+                          <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
+                        </>
                       )}
-                    </button>
 
-                    <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
-                    
-                    <div style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      Ordenar por
-                    </div>
-
-                    <button 
-                      className="ios-dropdown-item"
-                      onClick={() => { HapticService.selection(); setSortBy('manual'); setIsMenuOpen(false); }}
-                      style={{ justifyContent: 'space-between' }}
-                    >
-                      <span>Manual</span>
-                      {sortBy === 'manual' && <Check size={14} color="var(--accent-primary)" />}
-                    </button>
-
-                    <button 
-                      className="ios-dropdown-item"
-                      onClick={() => { HapticService.selection(); setSortBy('dueDate'); setIsMenuOpen(false); }}
-                      style={{ justifyContent: 'space-between' }}
-                    >
-                      <span>Fecha de vencimiento</span>
-                      {sortBy === 'dueDate' && <Check size={14} color="var(--accent-primary)" />}
-                    </button>
-
-                    <button 
-                      className="ios-dropdown-item"
-                      onClick={() => { HapticService.selection(); setSortBy('priority'); setIsMenuOpen(false); }}
-                      style={{ justifyContent: 'space-between' }}
-                    >
-                      <span>Prioridad</span>
-                      {sortBy === 'priority' && <Check size={14} color="var(--accent-primary)" />}
-                    </button>
-
-                    <button 
-                      className="ios-dropdown-item"
-                      onClick={() => { HapticService.selection(); setSortBy('title'); setIsMenuOpen(false); }}
-                      style={{ justifyContent: 'space-between' }}
-                    >
-                      <span>Título (A-Z)</span>
-                      {sortBy === 'title' && <Check size={14} color="var(--accent-primary)" />}
-                    </button>
-
-                    <button 
-                      className="ios-dropdown-item"
-                      onClick={() => { HapticService.selection(); setSortBy('createdAt'); setIsMenuOpen(false); }}
-                      style={{ justifyContent: 'space-between' }}
-                    >
-                      <span>Fecha de creación</span>
-                      {sortBy === 'createdAt' && <Check size={14} color="var(--accent-primary)" />}
-                    </button>
-
-                    {isListView && currentList && (
-                      <>
-                        <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
-                        <button 
-                          className="ios-dropdown-item"
-                          onClick={() => { updateList(currentList.id, { isFinancial: !currentList.isFinancial }); setIsMenuOpen(false); }}
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <Check size={14} color="var(--accent-primary)" style={{ opacity: currentList.isFinancial ? 1 : 0 }} />
-                            <span style={{ whiteSpace: 'nowrap' }}>Modo financiero</span>
-                          </div>
-                        </button>
-                        <button 
-                          className="ios-dropdown-item"
-                          onClick={() => { 
-                            const nextVal = currentList.autoEstimateDuration === false ? true : false;
-                            updateList(currentList.id, { autoEstimateDuration: nextVal }); 
-                            setIsMenuOpen(false); 
-                          }}
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <Check size={14} color="var(--accent-primary)" style={{ opacity: currentList.autoEstimateDuration !== false ? 1 : 0 }} />
-                            <span style={{ whiteSpace: 'nowrap' }}>Estimar duración automática</span>
-                          </div>
-                        </button>
-                        <button 
-                          className="ios-dropdown-item"
-                          onClick={() => { setIsListConfigOpen(true); setIsMenuOpen(false); }}
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <Settings size={15} color="var(--text-secondary)" />
-                            <span style={{ whiteSpace: 'nowrap' }}>Personalizar lista</span>
-                          </div>
+                      <button 
+                        className="ios-dropdown-item"
+                        onClick={() => { toggleShowCompleted(); setIsMenuOpen(false); }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <Check 
+                            size={15} 
+                            color="var(--accent-primary)" 
+                            style={{ opacity: resolvedShowCompleted ? 1 : 0, transition: 'opacity 0.15s ease' }} 
+                          />
+                          <span>{resolvedShowCompleted ? 'Ocultar completados' : 'Mostrar completados'}</span>
+                        </div>
+                        {completedCount !== undefined && completedCount > 0 && (
                           <span style={{ 
-                            fontSize: '0.72rem', 
+                            fontSize: '0.78rem', 
                             fontWeight: 600, 
-                            color: LIST_TYPE_CONFIG[getListType(currentList, currentView)].color,
-                            background: 'var(--bg-hover, rgba(0,0,0,0.04))',
-                            padding: '1px 6px',
-                            borderRadius: 6
+                            color: 'var(--text-tertiary)',
+                            background: 'var(--bg-hover, rgba(0,0,0,0.05))',
+                            padding: '1.5px 7px',
+                            borderRadius: 999,
+                            fontVariantNumeric: 'tabular-nums' 
                           }}>
-                            {LIST_TYPE_CONFIG[getListType(currentList, currentView)].badgeLabel}
+                            {completedCount}
                           </span>
-                        </button>
-                      </>
-                    )}
-                  </motion.div>
-                </>
+                        )}
+                      </button>
+
+                      <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
+                      
+                      <div style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Ordenar por
+                      </div>
+
+                      <button 
+                        className="ios-dropdown-item"
+                        onClick={() => { HapticService.selection(); setSortBy('manual'); setIsMenuOpen(false); }}
+                        style={{ justifyContent: 'space-between' }}
+                      >
+                        <span>Manual</span>
+                        {sortBy === 'manual' && <Check size={14} color="var(--accent-primary)" />}
+                      </button>
+
+                      <button 
+                        className="ios-dropdown-item"
+                        onClick={() => { HapticService.selection(); setSortBy('dueDate'); setIsMenuOpen(false); }}
+                        style={{ justifyContent: 'space-between' }}
+                      >
+                        <span>Fecha de vencimiento</span>
+                        {sortBy === 'dueDate' && <Check size={14} color="var(--accent-primary)" />}
+                      </button>
+
+                      <button 
+                        className="ios-dropdown-item"
+                        onClick={() => { HapticService.selection(); setSortBy('priority'); setIsMenuOpen(false); }}
+                        style={{ justifyContent: 'space-between' }}
+                      >
+                        <span>Prioridad</span>
+                        {sortBy === 'priority' && <Check size={14} color="var(--accent-primary)" />}
+                      </button>
+
+                      <button 
+                        className="ios-dropdown-item"
+                        onClick={() => { HapticService.selection(); setSortBy('title'); setIsMenuOpen(false); }}
+                        style={{ justifyContent: 'space-between' }}
+                      >
+                        <span>Título (A-Z)</span>
+                        {sortBy === 'title' && <Check size={14} color="var(--accent-primary)" />}
+                      </button>
+
+                      <button 
+                        className="ios-dropdown-item"
+                        onClick={() => { HapticService.selection(); setSortBy('createdAt'); setIsMenuOpen(false); }}
+                        style={{ justifyContent: 'space-between' }}
+                      >
+                        <span>Fecha de creación</span>
+                        {sortBy === 'createdAt' && <Check size={14} color="var(--accent-primary)" />}
+                      </button>
+
+                      {isListView && currentList && (
+                        <>
+                          <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
+                          <button 
+                            className="ios-dropdown-item"
+                            onClick={() => { updateList(currentList.id, { isFinancial: !currentList.isFinancial }); setIsMenuOpen(false); }}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <Check size={14} color="var(--accent-primary)" style={{ opacity: currentList.isFinancial ? 1 : 0 }} />
+                              <span style={{ whiteSpace: 'nowrap' }}>Modo financiero</span>
+                            </div>
+                          </button>
+                          <button 
+                            className="ios-dropdown-item"
+                            onClick={() => { 
+                              const nextVal = currentList.autoEstimateDuration === false ? true : false;
+                              updateList(currentList.id, { autoEstimateDuration: nextVal }); 
+                              setIsMenuOpen(false); 
+                            }}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <Check size={14} color="var(--accent-primary)" style={{ opacity: currentList.autoEstimateDuration !== false ? 1 : 0 }} />
+                              <span style={{ whiteSpace: 'nowrap' }}>Estimar duración automática</span>
+                            </div>
+                          </button>
+                          <button 
+                            className="ios-dropdown-item"
+                            onClick={() => { setIsListConfigOpen(true); setIsMenuOpen(false); }}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <Settings size={15} color="var(--text-secondary)" />
+                              <span style={{ whiteSpace: 'nowrap' }}>Personalizar lista</span>
+                            </div>
+                            <span style={{ 
+                              fontSize: '0.72rem', 
+                              fontWeight: 600, 
+                              color: LIST_TYPE_CONFIG[getListType(currentList, currentView)].color,
+                              background: 'var(--bg-hover, rgba(0,0,0,0.04))',
+                              padding: '1px 6px',
+                              borderRadius: 6
+                            }}>
+                              {LIST_TYPE_CONFIG[getListType(currentList, currentView)].badgeLabel}
+                            </span>
+                          </button>
+                        </>
+                      )}
+                    </motion.div>
+                  </>
+                )
               )}
             </AnimatePresence>
           </div>

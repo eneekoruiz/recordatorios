@@ -705,6 +705,20 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
               }
             }}
           >
+            {/* iOS Pull Grabber Handle (Mobile Sheet) */}
+            <div 
+              className="drawer-mobile-grabber"
+              aria-hidden="true"
+              style={{
+                width: 36,
+                height: 5,
+                borderRadius: 3,
+                background: 'var(--border-strong, rgba(0, 0, 0, 0.22))',
+                margin: '10px auto 2px auto',
+                flexShrink: 0
+              }}
+            />
+
             <div className="drawer-header" role="banner">
               <button className="cancel-btn" onClick={onClose} aria-label={taskId ? 'Cancelar edición' : 'Cancelar creación de tarea'}>Cancelar</button>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

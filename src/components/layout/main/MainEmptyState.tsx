@@ -30,7 +30,7 @@ export const MainEmptyState: React.FC<MainEmptyStateProps> = ({
   currentView,
   currentList,
   currentCycle,
-  onOpenNewTask: _onOpenNewTask
+  onOpenNewTask
 }) => {
   const accentColor = SMART_ACCENTS[currentView] || currentList?.color || '#007AFF';
 
@@ -139,7 +139,11 @@ export const MainEmptyState: React.FC<MainEmptyStateProps> = ({
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', width: '100%', padding: '16px', boxSizing: 'border-box' }}>
-      <EmptyState {...emptyStateProps} />
+      <EmptyState 
+        {...emptyStateProps}
+        onAction={currentView !== 'TRASH' && onOpenNewTask ? () => onOpenNewTask() : undefined}
+        actionLabel={currentView !== 'TRASH' && onOpenNewTask ? "Nuevo recordatorio" : undefined}
+      />
     </div>
   );
 };

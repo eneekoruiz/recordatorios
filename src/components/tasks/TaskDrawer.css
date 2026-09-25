@@ -475,6 +475,16 @@ select[multiple].detail-select {
   box-shadow: none;
 }
 
+.drawer-mobile-grabber {
+  display: block;
+}
+
+@media (min-width: 769px) {
+  .drawer-mobile-grabber {
+    display: none !important;
+  }
+}
+
 @media (max-width: 768px) {
   .drawer {
     width: 100%;
@@ -482,7 +492,7 @@ select[multiple].detail-select {
     max-height: 92vh;
     border-radius: 26px 26px 0 0;
   }
-  .drawer-header { padding-top: 22px; }
+  .drawer-header { padding-top: 10px; }
   .drawer-content { padding: 16px 14px calc(128px + env(safe-area-inset-bottom)); }
 }
 

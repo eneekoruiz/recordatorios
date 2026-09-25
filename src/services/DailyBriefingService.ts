@@ -61,7 +61,7 @@ export function buildDailyBriefing(
   const today = all.filter((t) => t.dueDate && new Date(t.dueDate).toDateString() === todayStr);
   const pendingToday = today.filter((t) => !isTaskCompleted(t));
   const completedToday = today.filter((t) => isTaskCompleted(t)).length;
-  const highPriority = pendingToday.filter((t) => t.priority === 'high');
+  const highPriority = all.filter((t) => !isTaskCompleted(t) && t.priority === 'high');
 
   // ── Detección de Tareas Diarias y Semanales ────────────────────────────────
   const dailyTasks = all.filter((t) => {
@@ -111,13 +111,24 @@ export function buildDailyBriefing(
     return hours >= -12 && hours <= 48;
   });
 
-  const focus = [...pendingToday]
+  // Tareas prioritarias para empezar el día: urgentes primero, luego vencimiento de hoy o diarias pendientes
+  const focusMap = new Map<string, TaskItem>();
+  all.forEach(t => {
+    if (isTaskCompleted(t)) return;
+    if (t.priority === 'high' || t.priority === 'medium') {
+      focusMap.set(t.id, t);
+    }
+  });
+  pendingToday.forEach(t => focusMap.set(t.id, t));
+  pendingDaily.forEach(t => focusMap.set(t.id, t));
+
+  const focus = Array.from(focusMap.values())
     .sort((a, b) => {
       const weight = (PRIORITY_WEIGHT[b.priority || 'none'] || 0) - (PRIORITY_WEIGHT[a.priority || 'none'] || 0);
       if (weight !== 0) return weight;
       return new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime();
     })
-    .slice(0, 3);
+    .slice(0, 8);
 
   // ── Redacción del Titular ──────────────────────────────────────────────────
   const who = name ? `, ${name}` : '';
