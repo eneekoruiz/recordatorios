@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   normalizeTitle,
+  semanticKey,
+  isSemanticDuplicate,
+  isKnownRedundantTask,
   areSectionsEquivalent,
   findDuplicateTask,
   deduplicateTaskList
@@ -176,6 +179,46 @@ describe('taskDeduplication', () => {
       const result = deduplicateTaskList(tasks);
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('pending');
+    });
+  });
+
+  describe('semanticKey and isSemanticDuplicate', () => {
+    it('genera la misma clave semántica independientemente del orden de palabras o partículas en español', () => {
+      expect(semanticKey('Banda facial reafirmante')).toBe(semanticKey('Banda reafirmante facial'));
+      expect(semanticKey('Lavar el rostro')).toBe(semanticKey('Lavar rostro'));
+      expect(semanticKey('Gimnasia facial: movimiento de labios (pómulos)')).toContain('pomulos');
+    });
+
+    it('identifica duplicados semánticos de forma precisa', () => {
+      expect(isSemanticDuplicate('Banda facial reafirmante', 'Banda reafirmante facial.')).toBe(true);
+      expect(isSemanticDuplicate('Lavar el rostro', 'Lavar rostro.')).toBe(true);
+      expect(isSemanticDuplicate('! Acuario', 'Acuario')).toBe(true);
+      expect(isSemanticDuplicate('Ventilar la habitación', 'Barrer cocina')).toBe(false);
+    });
+  });
+
+  describe('isKnownRedundantTask', () => {
+    it('detecta tareas redundantes conocidas que no deben repetirse en frecuencias inferiores', () => {
+      expect(isKnownRedundantTask('Pasar aspiradora detrás de muebles accesibles.')).toBe(true);
+      expect(isKnownRedundantTask('Aspirar detrás de muebles grandes.')).toBe(true);
+      expect(isKnownRedundantTask('Limpiar zócalos y esquinas escondidas.')).toBe(true);
+      expect(isKnownRedundantTask('Vaciar los anti-humedades si corresponde.')).toBe(true);
+      expect(isKnownRedundantTask('Vaciar papeleras pequeñas.')).toBe(true);
+      expect(isKnownRedundantTask('Banda reafirmante facial.')).toBe(true);
+      expect(isKnownRedundantTask('Hacer cama')).toBe(true);
+      expect(isKnownRedundantTask('Limpiar dientes')).toBe(true);
+      expect(isKnownRedundantTask('Duchar')).toBe(true);
+      expect(isKnownRedundantTask('AirPods')).toBe(true);
+      expect(isKnownRedundantTask('Nike Tkno')).toBe(true);
+    });
+
+    it('conserva intactas las tareas ancla principales que SÍ deben permanecer', () => {
+      expect(isKnownRedundantTask('Aspirar la casa')).toBe(false);
+      expect(isKnownRedundantTask('Fregar zonas comunes')).toBe(false);
+      expect(isKnownRedundantTask('Hacer la cama / acomodar la cama')).toBe(false);
+      expect(isKnownRedundantTask('Lavarse los dientes 3 veces al dia')).toBe(false);
+      expect(isKnownRedundantTask('Ducha fría y aseo')).toBe(false);
+      expect(isKnownRedundantTask('Banda facial reafirmante')).toBe(false);
     });
   });
 });

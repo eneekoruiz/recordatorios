@@ -16,7 +16,7 @@ import { SoundService } from '../../services/SoundService';
 import { extractPeopleFromText, calculateExpirationStatus, calculateSubscriptionCosts, findFlashbackMemories, isCompletedInCurrentPeriod } from '../../services/TaskService';
 import { PersonProfileModal } from '../people/PersonProfileModal';
 import { AIService } from '../../services/AIService';
-import { isCaducidadesList, isQueHeHechoList, ensureCaducidadesSections, isLimpiezaList, getRoomForCleaningTask } from '../../utils/specialLists';
+import { isCaducidadesList, isQueHeHechoList, ensureCaducidadesSections, isLimpiezaList, isRoutineList, getRoomForCleaningTask, getListType, doesListSupportSequenceMode } from '../../utils/specialLists';
 import { 
   getSectionPeriodicity, 
   getTaskPeriodicity, 
@@ -40,7 +40,7 @@ import { DailyBriefingBanner } from './DailyBriefingBanner';
 import { WeeklyStreakWidget } from './main/WeeklyStreakWidget';
 import { confirmDialog } from '../ui/confirmDialog';
 import { deduplicateTaskList } from '../../utils/taskDeduplication';
-import { calculateTasksDuration } from '../../utils/taskDuration';
+import { calculateTasksDuration, type TasksDurationSummary } from '../../utils/taskDuration';
 import { getReservedFrequencyColor } from '../../constants/colors';
 
 interface MainContentProps {
@@ -68,6 +68,7 @@ type VirtualItemType =
       isLastInSection?: boolean,
       periodicity?: PeriodicityType | null,
       routineCounts?: { full: number; only: number } | null,
+      routineDurations?: { only: TasksDurationSummary; full: TasksDurationSummary } | null,
       routineMode?: 'full_routine' | 'only_section',
       sectionTaskIds?: string[]
     }
@@ -1529,6 +1530,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
           const sectionPeriodicity = getSectionPeriodicity(categoryKey, sec.name, listSections, lists);
           let tasksToRender = deduplicateTaskList(categoryTasks);
           let routineCounts: { full: number; only: number } | null = null;
+          let routineDurations: { only: TasksDurationSummary; full: TasksDurationSummary } | null = null;
 
           const allChildTasks = childSections.flatMap(cs => [
             ...(groupedTasks[`section_${cs.id}`] || []),
@@ -1536,20 +1538,25 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             ...(cs.id.startsWith('sec_limp_') ? (groupedTasks[`section_${cs.id.replace('sec_limp_', 'sec_limpieza_')}`] || []) : []),
           ]);
 
+          const thisSectionTasksTotal = deduplicateTaskList([...categoryTasks, ...allChildTasks]);
+
           if (sectionPeriodicity && sectionPeriodicity !== 'day') {
             const allTasksInList = Object.values(groupedTasks).flat();
             const allowedPeriodicities = getRoutineAllowedPeriodicities(sectionPeriodicity);
-            const fullRoutineTasks = allTasksInList.filter(t => {
+            const fullRoutineTasks = deduplicateTaskList(allTasksInList.filter(t => {
               const p = getTaskPeriodicity(t, listSections, lists);
               return p && allowedPeriodicities.has(p);
-            });
-            const thisSectionTasksTotal = [...categoryTasks, ...allChildTasks];
+            }));
 
             if (fullRoutineTasks.length > thisSectionTasksTotal.length) {
               routineCounts = {
                 full: fullRoutineTasks.length,
                 only: thisSectionTasksTotal.length
               };
+
+              const onlyDuration = calculateTasksDuration(thisSectionTasksTotal, listSections, lists);
+              const fullDuration = calculateTasksDuration(fullRoutineTasks, listSections, lists);
+              routineDurations = { only: onlyDuration, full: fullDuration };
 
               const currentRoutineMode = sectionRoutineModes[categoryKey] || 'only_section';
               if (currentRoutineMode === 'full_routine') {
@@ -1563,11 +1570,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             return;
           }
 
-          const childPendingTaskIds = allChildTasks.filter(t => !isTaskCompleted(t)).map(t => t.id);
-          const allSectionPendingTaskIds = [
-            ...tasksToRender.filter(t => !isTaskCompleted(t)).map(t => t.id),
-            ...childPendingTaskIds
-          ];
+          const currentRoutineMode = sectionRoutineModes[categoryKey] || 'only_section';
+          const allSectionPendingTaskIds = currentRoutineMode === 'full_routine' && routineCounts
+            ? tasksToRender.filter(t => !isTaskCompleted(t)).map(t => t.id)
+            : thisSectionTasksTotal.filter(t => !isTaskCompleted(t)).map(t => t.id);
 
           flat.push({ 
             type: 'header', 
@@ -1579,6 +1585,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             depth,
             periodicity: sectionPeriodicity,
             routineCounts,
+            routineDurations,
             sectionTaskIds: allSectionPendingTaskIds
           });
           
@@ -1641,6 +1648,30 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
             if (freqTasks.length === 0) return; // Omitir frecuencias vacías
 
+            const PERIOD_ORDER_MAP: Record<string, number> = { day: 1, week: 2, month: 3, year: 4 };
+            const currentRank = PERIOD_ORDER_MAP[periodicity] || 1;
+            const cumulativeTasks = deduplicateTaskList(
+              allListTasks.filter(t => {
+                if (t.deleted_at) return false;
+                const tPeriodicity = getTaskPeriodicity(t, listSections, lists) || 'day';
+                return (PERIOD_ORDER_MAP[tPeriodicity] || 1) <= currentRank;
+              })
+            );
+
+            const routineCounts = periodicity !== 'day' && cumulativeTasks.length > freqTasks.length ? {
+              only: freqTasks.length,
+              full: cumulativeTasks.length
+            } : null;
+
+            const onlyDuration = calculateTasksDuration(freqTasks, listSections, lists);
+            const fullDuration = calculateTasksDuration(cumulativeTasks, listSections, lists);
+            const routineDurations = routineCounts ? { only: onlyDuration, full: fullDuration } : null;
+
+            const mode = sectionRoutineModes[`limpieza_freq_${periodicity}`] || 'only_section';
+            const tasksToGroup = (mode === 'full_routine' && cumulativeTasks.length > freqTasks.length)
+              ? cumulativeTasks
+              : freqTasks;
+
             const freqCatKey = `limpieza_freq_${periodicity}`;
             // Sección manual del store (por si existe "Semanal", "Diaria"...)
             const manualFreqSec = sectionsForList.find(s =>
@@ -1659,7 +1690,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             ];
             defaultRooms.forEach(dr => roomBuckets.set(dr.key, { ...dr, tasks: [] }));
 
-            freqTasks.forEach(t => {
+            tasksToGroup.forEach(t => {
               // Intentar detectar habitación por sección
               const tSecId = t.sectionId;
               let roomKey: string | null = null;
@@ -1684,11 +1715,11 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
             });
 
             // Calcular IDs pendientes de toda la frecuencia (todas habitaciones juntas)
-            const freqPendingIds = freqTasks.filter(t => !isTaskCompleted(t)).map(t => t.id);
+            const freqPendingIds = tasksToGroup.filter(t => !isTaskCompleted(t)).map(t => t.id);
 
             // Cabecera de frecuencia (depth 0)
             const freqColor = getReservedFrequencyColor(cycleId) || color;
-            renderedSectionTasksRef.current[freqCatKey] = freqTasks;
+            renderedSectionTasksRef.current[freqCatKey] = tasksToGroup;
             flat.push({
               type: 'header',
               title: formatSectionTitle(label),
@@ -1698,6 +1729,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
               sectionId: manualFreqSec?.id,
               depth: 0,
               periodicity: periodicity as PeriodicityType,
+              routineCounts,
+              routineDurations,
               sectionTaskIds: freqPendingIds
             });
 
@@ -1733,7 +1766,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                       flat.push({ type: 'empty-section', title: 'Sin tareas', category: roomCatKey, color: freqColor, sectionId: manualFreqSec?.id, depth: 1 });
                     } else {
                       roomTasks.forEach(task => {
-                        flat.push({ type: 'task', task, depth: 2 });
+                        flat.push({ type: 'task', task, depth: task.parentId ? 1 : 0 });
                       });
                     }
                   }
@@ -1764,11 +1797,29 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
               const sectionPeriodicity = (purePeriod as PeriodicityType) || getSectionPeriodicity(catKey, cName, listSections, lists);
               const cDays = cObj?.daysValue || (purePeriod === 'day' ? 1 : purePeriod === 'week' ? 7 : purePeriod === 'month' ? 30 : 365);
+              const getDaysForTask = (t: TaskItem): number => {
+                const tCycle = allCycles.find(c => c.id === t.cycle_id);
+                if (tCycle?.daysValue) return tCycle.daysValue;
+                const p = getTaskPeriodicity(t, listSections, lists);
+                if (p === 'day') return 1;
+                if (p === 'week') return 7;
+                if (p === 'month') return 30;
+                if (p === 'year') return 365;
+                if (t.cycle_id) {
+                  const c = t.cycle_id.toLowerCase();
+                  if (c.includes('day') || c.includes('diari')) return 1;
+                  if (c.includes('week') || c.includes('seman')) return 7;
+                  if (c.includes('month') || c.includes('mensu')) return 30;
+                  if (c.includes('year') || c.includes('anual')) return 365;
+                }
+                return 9999;
+              };
+
               const fullTasks = Object.values(groupedTasks)
                 .flat()
                 .filter(t => {
-                  const tCycle = allCycles.find(c => c.id === t.cycle_id);
-                  return tCycle && tCycle.daysValue <= cDays;
+                  if (t.deleted_at) return false;
+                  return getDaysForTask(t) <= cDays;
                 });
 
               const childSections = manualSec 
@@ -1784,25 +1835,28 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 ...(cs.id.startsWith('sec_limp_') ? (groupedTasks[`section_${cs.id.replace('sec_limp_', 'sec_limpieza_')}`] || []) : []),
               ]);
 
-              const thisSectionTasksTotal = [...categoryTasks, ...allChildTasks];
+              const thisSectionTasksTotal = deduplicateTaskList([...categoryTasks, ...allChildTasks]);
+              const fullTasksTotal = deduplicateTaskList(fullTasks);
 
-              const routineCounts = sectionPeriodicity && sectionPeriodicity !== 'day' && fullTasks.length > thisSectionTasksTotal.length ? {
+              const routineCounts = sectionPeriodicity && sectionPeriodicity !== 'day' && fullTasksTotal.length > thisSectionTasksTotal.length ? {
                 only: thisSectionTasksTotal.length,
-                full: fullTasks.length
+                full: fullTasksTotal.length
               } : null;
+
+              const onlyDuration = calculateTasksDuration(thisSectionTasksTotal, listSections, lists);
+              const fullDuration = calculateTasksDuration(fullTasksTotal, listSections, lists);
+              const routineDurations = routineCounts ? { only: onlyDuration, full: fullDuration } : null;
 
               const mode = sectionRoutineModes[catKey] || 'only_section';
               let tasksToRender = deduplicateTaskList(
-                mode === 'full_routine' && fullTasks.length > thisSectionTasksTotal.length
-                  ? sortTasksByUserPreference(fullTasks, sortBy)
+                mode === 'full_routine' && fullTasksTotal.length > thisSectionTasksTotal.length
+                  ? sortTasksByUserPreference(fullTasksTotal, sortBy)
                   : categoryTasks
               );
 
-              const childPendingTaskIds = allChildTasks.filter(t => !isTaskCompleted(t)).map(t => t.id);
-              const allSectionPendingTaskIds = [
-                ...tasksToRender.filter(t => !isTaskCompleted(t)).map(t => t.id),
-                ...childPendingTaskIds
-              ];
+              const allSectionPendingTaskIds = mode === 'full_routine' && routineCounts
+                ? fullTasksTotal.filter(t => !isTaskCompleted(t)).map(t => t.id)
+                : thisSectionTasksTotal.filter(t => !isTaskCompleted(t)).map(t => t.id);
 
               flat.push({
                 type: 'header',
@@ -1814,6 +1868,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                 depth: 0,
                 periodicity: sectionPeriodicity,
                 routineCounts,
+                routineDurations,
                 sectionTaskIds: allSectionPendingTaskIds
               });
 
@@ -2025,14 +2080,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         style={{ ...itemStyle, margin: 0, padding: '0 16px', boxSizing: 'border-box' }}
       >
         <div style={{ position: 'relative', width: '100%', boxSizing: 'border-box' }}>
-          {depth > 0 && (
-            <div style={{
-              position: 'absolute', left: 8 + (depth-1)*16, top: 0, bottom: 0, width: 2,
-              background: 'var(--accent-primary)', opacity: Math.max(0.15, 1 - depth*0.2), zIndex: 1,
-              borderRadius: 2
-            }} />
-          )}
-
           <TaskCard 
             task={task}
             virtualStyle={{ margin: 0, padding: 0, boxSizing: 'border-box' }}
@@ -2084,6 +2131,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     return currentCycle?.name || 'Ciclos';
   };
 
+  const currentListType = getListType(currentList, currentView);
+  const isRoutine = doesListSupportSequenceMode(currentListType) || isRoutineList(currentView, currentList);
+  const canStartSequence = isRoutine || (!currentList && viewTasksDuration.activeMinutes > 0);
+
   return (
     <main className="main-content" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden', overflowX: 'hidden', overscrollBehaviorX: 'none', position: 'relative' }}>
       {/* Sticky Glass Top Bar */}
@@ -2108,7 +2159,9 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
         setIsListConfigOpen={setIsListConfigOpen}
         onAddSection={handleAddSection}
         completedCount={totalCompletedInCurrentView || completedVisibleCount}
-        onStartSequence={onStartSequence ? () => {
+        showProminentStartButton={isRoutine}
+        startDuration={viewTasksDuration?.formattedActive}
+        onStartSequence={onStartSequence && canStartSequence && viewTasksDuration.activeMinutes > 0 ? () => {
           const pendingTasks = visibleTasks.filter(t => !isTaskCompleted(t));
           if (pendingTasks.length > 0) {
             onStartSequence(pendingTasks.map(t => t.id), getTitle(), viewColor);
@@ -2207,7 +2260,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                           flashbackMemories={flashbackMemories}
                           onEditTask={onEditTask}
                           caducidadesStats={caducidadesStats}
-                          onStartSequence={onStartSequence ? () => {
+                          onStartSequence={onStartSequence && canStartSequence && viewTasksDuration.activeMinutes > 0 ? () => {
                             const pendingTasks = visibleTasks.filter(t => !isTaskCompleted(t));
                             if (pendingTasks.length > 0) {
                               onStartSequence(pendingTasks.map(t => t.id), getTitle(), viewColor);
@@ -2234,7 +2287,10 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                     const tasksForSection = data.sectionTaskIds && data.sectionTaskIds.length > 0
                       ? data.sectionTaskIds.map((id: string) => tasks[id]).filter(Boolean)
                       : sectionTasks;
-                    const sectionDurationSummary = calculateTasksDuration(tasksForSection, listSections, lists);
+                    const activeMode = sectionRoutineModes[data.category] || data.routineMode || 'only_section';
+                    const sectionDurationSummary = data.routineDurations
+                      ? (activeMode === 'full_routine' ? data.routineDurations.full : data.routineDurations.only)
+                      : calculateTasksDuration(tasksForSection, listSections, lists);
                     return (
                       <MainSectionHeader
                         key={itemKey}
@@ -2272,18 +2328,23 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                         sectionRoutineModes={sectionRoutineModes}
                         toggleSectionRoutineMode={toggleSectionRoutineMode}
                         dragOverSectionId={dragOverSectionId}
-                        onStartSectionSequence={onStartSequence && sectionPendingTaskIds.length > 0 ? () => {
+                        onStartSectionSequence={onStartSequence && canStartSequence && sectionDurationSummary.activeMinutes > 0 && sectionPendingTaskIds.length > 0 ? () => {
                           const rawTitle = (data?.title || '').replace(/^[\p{Emoji}\s⏳]+/gu, '').trim() || (data?.title || '');
                           const cleanTitle = rawTitle.length > 0 
                             ? rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1).toLowerCase() 
                             : 'Sección';
-                          const seqTitle = currentList ? `${currentList.name} · ${cleanTitle}` : cleanTitle;
+                          const isFullRoutine = activeMode === 'full_routine' && Boolean(data.routineCounts && data.routineCounts.full > data.routineCounts.only);
+                          const modeSuffix = isFullRoutine
+                            ? ' · Rutina completa'
+                            : (data.routineCounts ? ` · Solo ${cleanTitle.toLowerCase()}` : '');
+                          const seqTitle = currentList ? `${currentList.name} · ${cleanTitle}${modeSuffix}` : `${cleanTitle}${modeSuffix}`;
                           onStartSequence(sectionPendingTaskIds, seqTitle, data.color);
                         } : undefined}
                         pendingTaskCount={sectionPendingTaskIds.length}
                         isMobile={isMobile}
                         isPrevHeader={index > 0 && flattenedData[index - 1]?.type === 'header'}
                         isFirstAfterPageHeader={index > 0 && flattenedData[index - 1]?.type === 'page-header'}
+                        isRoutine={isRoutine}
                       />
                     );
                   } else if (data.type === 'empty-section') {
@@ -2293,7 +2354,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
                         data-index={index}
                         style={{ 
                           ...itemStyle, 
-                          paddingLeft: `calc(16px + ${data.depth * 24}px)`,
+                          paddingLeft: `${16 + data.depth * 14}px`,
                           paddingRight: '16px',
                           margin: '6px 0 14px 0',
                           boxSizing: 'border-box',

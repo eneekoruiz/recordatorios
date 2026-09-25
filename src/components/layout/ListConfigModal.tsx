@@ -13,11 +13,19 @@ interface ListConfigModalProps {
 
 import { LIST_AVAILABLE_COLORS, isReservedFrequencyColor } from '../../constants/colors';
 import { LIST_ICON_MAP as ICONS } from '../../constants/icons';
-import { CheckSquare, Folder, Check, X, NotebookPen, CreditCard, BookOpen } from 'lucide-react';
+import { CheckSquare, Folder, Check, X, CreditCard, BookOpen, Sparkles, Calendar, Target, Clock } from 'lucide-react';
 
 const COLORS = LIST_AVAILABLE_COLORS;
 
-import { isCaducidadesList, isQueHeHechoList, isLimpiezaList, ensureCaducidadesSections, isRoutineList } from '../../utils/specialLists';
+import { 
+  isCaducidadesList, 
+  isLimpiezaList, 
+  ensureCaducidadesSections, 
+  isRoutineList,
+  getListType,
+  LIST_TYPE_CONFIG
+} from '../../utils/specialLists';
+import type { ListType } from '../../models/Task';
 
 export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFolder }: ListConfigModalProps) {
   const lists = useAppStore(state => state.lists);
@@ -33,13 +41,15 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
   const [icon, setIcon] = useState('list');
   const [isFocused, setIsFocused] = useState(false);
   const [isFolder, setIsFolder] = useState(defaultIsFolder || false);
-  const [specialType, setSpecialType] = useState<'standard' | 'caducidades' | 'que_he_hecho'>('standard');
+  const [listType, setListType] = useState<ListType>('simple');
+  const [autoEstimateDuration, setAutoEstimateDuration] = useState<boolean>(true);
   const [showAllColors, setShowAllColors] = useState(false);
   const [showAllIcons, setShowAllIcons] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       if (existingList) {
+        setName(existingList.name);
         const cleanColor = isReservedFrequencyColor(existingList.color)
           ? COLORS[0]
           : (existingList.color || COLORS[0]);
@@ -47,11 +57,8 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
         const initialIcon = existingList.icon || (existingList.isFolder ? 'folder' : 'list');
         setIcon(initialIcon);
         setIsFolder(!!existingList.isFolder);
-        setSpecialType(
-          existingList.specialType || 
-          (isCaducidadesList(existingList.id, existingList) ? 'caducidades' : 
-          (isQueHeHechoList(existingList.id, existingList) ? 'que_he_hecho' : 'standard'))
-        );
+        setListType(getListType(existingList, existingList.id));
+        setAutoEstimateDuration(existingList.autoEstimateDuration !== false);
         setShowAllColors(!(COLORS.slice(0, 8) as readonly string[]).includes(cleanColor));
         setShowAllIcons(!Object.keys(ICONS).slice(0, 12).includes(initialIcon));
       } else {
@@ -61,7 +68,8 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
         const initialIcon = defaultIsFolder ? 'folder' : 'list';
         setIcon(initialIcon);
         setIsFolder(!!defaultIsFolder);
-        setSpecialType('standard');
+        setListType('simple');
+        setAutoEstimateDuration(true);
         setShowAllColors(false);
         setShowAllIcons(false);
       }
@@ -74,13 +82,25 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
     setName(val);
     if (!existingList && !isFolder) {
       if (/caduca|suscrip|vencimiento/i.test(val)) {
-        setSpecialType('caducidades');
+        setListType('caducidades');
         setColor('#ff9500');
         setIcon('credit-card');
       } else if (/qu[eé]\s*he\s*hecho|bitacora|vivencia/i.test(val)) {
-        setSpecialType('que_he_hecho');
+        setListType('que_he_hecho');
         setColor('#5856d6');
         setIcon('book-open');
+      } else if (/evento|cita|cumple|aniversario|boda|fiesta|reunion/i.test(val)) {
+        setListType('events');
+        setColor('#ff2d55');
+        setIcon('calendar');
+      } else if (/prop[oó]sito|meta|objetivo|resoluci[oó]n|sue[nñ]o|deseo/i.test(val)) {
+        setListType('goals');
+        setColor('#af52de');
+        setIcon('target');
+      } else if (/limpieza|compra|supermercado|quehacer|rutina|care|cuidado|mantenimiento/i.test(val)) {
+        setListType('routines');
+        setColor('#0a84ff');
+        setIcon('sparkles');
       }
     }
   };
@@ -88,18 +108,23 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
   const handleSave = () => {
     if (!name.trim()) return;
     
+    const resolvedSpecialType: 'caducidades' | 'que_he_hecho' | undefined = 
+      listType === 'caducidades' ? 'caducidades' : (listType === 'que_he_hecho' ? 'que_he_hecho' : undefined);
+
     if (existingList) {
       updateList(existingList.id, {
         name: name.trim(),
         color,
         icon,
         isFolder,
-        specialType: specialType === 'standard' ? undefined : specialType
+        listType,
+        specialType: resolvedSpecialType,
+        autoEstimateDuration: !isFolder ? autoEstimateDuration : undefined
       });
-      if (specialType === 'caducidades' || isCaducidadesList(existingList.id, { ...existingList, name: name.trim(), specialType: specialType === 'standard' ? undefined : specialType })) {
+      if (listType === 'caducidades' || isCaducidadesList(existingList.id, { ...existingList, name: name.trim(), listType, specialType: resolvedSpecialType })) {
         ensureCaducidadesSections(existingList.id, listSections, addListSection);
       }
-      if (isRoutineList(existingList.id, { ...existingList, name: name.trim() }) || isLimpiezaList(existingList.id, { ...existingList, name: name.trim() })) {
+      if (isRoutineList(existingList.id, { ...existingList, name: name.trim(), listType }) || isLimpiezaList(existingList.id, { ...existingList, name: name.trim() })) {
         
       }
       window.dispatchEvent(new CustomEvent('show-toast', { detail: `${isFolder ? 'Carpeta' : 'Lista'} "${name.trim()}" actualizada` }));
@@ -111,13 +136,15 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
         name: name.trim(),
         color,
         icon: isFolder && icon === 'list' ? 'folder' : icon,
-        isFinancial: specialType === 'caducidades',
+        isFinancial: listType === 'caducidades',
         showCompleted: false,
         isFolder,
-        specialType: specialType === 'standard' ? undefined : specialType
+        listType,
+        specialType: resolvedSpecialType,
+        autoEstimateDuration: !isFolder ? autoEstimateDuration : undefined
       };
       addList(listData);
-      if (specialType === 'caducidades' || isCaducidadesList(newId, listData)) {
+      if (listType === 'caducidades' || isCaducidadesList(newId, listData)) {
         ensureCaducidadesSections(newId, listSections, addListSection);
       }
       if (isRoutineList(newId, listData) || isLimpiezaList(newId, listData)) {
@@ -210,93 +237,79 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
               />
             </div>
 
-            {/* Selector de Tipo de Lista (Estándar, Caducidades, Qué he hecho) */}
+            {/* Selector de Tipo de Lista (6 tipos: simple, rutinas, eventos, propósitos, caducidades, qué he hecho) */}
             {!isFolder && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Tipo de Lista
-                </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Tipo de Lista
+                  </span>
+                  <span style={{ 
+                    fontSize: '0.72rem', 
+                    fontWeight: 600, 
+                    color: LIST_TYPE_CONFIG[listType].supportsDuration ? '#0a84ff' : 'var(--text-tertiary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4
+                  }}>
+                    {LIST_TYPE_CONFIG[listType].supportsDuration ? '⏱ Con duraciones estimadas' : '📝 Sin duraciones'}
+                  </span>
+                </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSpecialType('standard');
-                    }}
-                    style={{
-                      padding: '10px 6px',
-                      borderRadius: 12,
-                      border: specialType === 'standard' ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                      background: specialType === 'standard' ? 'rgba(10, 132, 255, 0.12)' : 'var(--bg-elevated)',
-                      color: specialType === 'standard' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                      fontSize: '0.80rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: 4,
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <NotebookPen size={18} strokeWidth={2.1} />
-                    <span>Estándar</span>
-                  </button>
+                  {(['simple', 'routines', 'events', 'goals', 'caducidades', 'que_he_hecho'] as const).map(typeKey => {
+                    const item = LIST_TYPE_CONFIG[typeKey];
+                    const isSelected = listType === typeKey;
+                    const TypeIcon = item.iconName === 'sparkles' ? Sparkles :
+                                     item.iconName === 'check-square' ? CheckSquare :
+                                     item.iconName === 'calendar' ? Calendar :
+                                     item.iconName === 'target' ? Target :
+                                     item.iconName === 'credit-card' ? CreditCard : BookOpen;
+                    const testId = typeKey === 'caducidades' 
+                      ? 'template-caducidades-btn' 
+                      : (typeKey === 'que_he_hecho' ? 'template-quehehecho-btn' : `template-${typeKey}-btn`);
 
-                  <button
-                    type="button"
-                    data-testid="template-caducidades-btn"
-                    onClick={() => {
-                      setSpecialType('caducidades');
-                      setColor('#ff9500');
-                      setIcon('credit-card');
-                    }}
-                    style={{
-                      padding: '10px 6px',
-                      borderRadius: 12,
-                      border: specialType === 'caducidades' ? '1.5px solid #ff9500' : '1px solid var(--border-subtle)',
-                      background: specialType === 'caducidades' ? 'rgba(255, 149, 0, 0.15)' : 'var(--bg-elevated)',
-                      color: specialType === 'caducidades' ? '#ff9500' : 'var(--text-secondary)',
-                      fontSize: '0.80rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: 4,
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <CreditCard size={18} strokeWidth={2.1} />
-                    <span>Caducidades</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    data-testid="template-quehehecho-btn"
-                    onClick={() => {
-                      setSpecialType('que_he_hecho');
-                      setColor('#5856d6');
-                      setIcon('book-open');
-                    }}
-                    style={{
-                      padding: '10px 6px',
-                      borderRadius: 12,
-                      border: specialType === 'que_he_hecho' ? '1.5px solid #5856d6' : '1px solid var(--border-subtle)',
-                      background: specialType === 'que_he_hecho' ? 'rgba(88, 86, 214, 0.15)' : 'var(--bg-elevated)',
-                      color: specialType === 'que_he_hecho' ? '#5856d6' : 'var(--text-secondary)',
-                      fontSize: '0.80rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: 4,
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <BookOpen size={18} strokeWidth={2.1} />
-                    <span>Qué he hecho</span>
-                  </button>
+                    return (
+                      <button
+                        key={typeKey}
+                        type="button"
+                        data-testid={testId}
+                        onClick={() => {
+                          setListType(typeKey);
+                          if (!existingList) {
+                            setColor(item.color);
+                            setIcon(item.iconName);
+                          }
+                        }}
+                        style={{
+                          padding: '10px 6px',
+                          borderRadius: 12,
+                          border: isSelected ? `1.5px solid ${item.color}` : '1px solid var(--border-subtle)',
+                          background: isSelected ? `${item.color}15` : 'var(--bg-elevated)',
+                          color: isSelected ? item.color : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: 4,
+                          textAlign: 'center',
+                          transition: 'all 0.16s ease'
+                        }}
+                      >
+                        <TypeIcon size={18} strokeWidth={2.2} color={isSelected ? item.color : 'var(--text-secondary)'} />
+                        <span style={{ fontSize: '0.78rem', fontWeight: 650, color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)', lineHeight: 1.15 }}>
+                          {item.badgeLabel}
+                        </span>
+                        <span style={{ fontSize: '0.67rem', color: 'var(--text-tertiary)', lineHeight: 1.1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                          {typeKey === 'routines' ? 'Limpieza / Compra' :
+                           typeKey === 'simple' ? 'Checklist / Notas' :
+                           typeKey === 'events' ? 'Citas y Fechas' :
+                           typeKey === 'goals' ? 'Metas del año' :
+                           typeKey === 'caducidades' ? 'Suscripciones' : 'Bitácora'}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -337,6 +350,42 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                 }} />
               </div>
             </div>
+
+            {/* Auto estimate duration toggle */}
+            {!isFolder && (
+              <div 
+                style={{
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  background: 'var(--bg-secondary)', 
+                  border: '1px solid var(--border-color)',
+                  borderRadius: 14, 
+                  padding: '12px 16px',
+                  cursor: 'pointer'
+                }}
+                onClick={() => setAutoEstimateDuration(!autoEstimateDuration)}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <Clock size={20} color={autoEstimateDuration ? color : 'var(--text-secondary)'} />
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)' }}>Estimar duración automáticamente</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Calcula la duración estimada de cada tarea según su texto</span>
+                  </div>
+                </div>
+                <div style={{
+                  width: 44, height: 26, borderRadius: 13,
+                  background: autoEstimateDuration ? color : 'rgba(255,255,255,0.15)',
+                  position: 'relative', transition: 'background-color 0.2s ease', flexShrink: 0
+                }}>
+                  <div style={{
+                    width: 22, height: 22, borderRadius: '50%', background: '#ffffff',
+                    position: 'absolute', top: 2, left: autoEstimateDuration ? 20 : 2,
+                    transition: 'left 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                  }} />
+                </div>
+              </div>
+            )}
 
             {/* Colors */}
             <div>

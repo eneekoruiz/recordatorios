@@ -40,9 +40,9 @@ export const PinnedListsSection: React.FC<PinnedListsSectionProps> = ({
   if (!hasAnyPinned && !isEditMode) return null;
 
   return (
-    <div style={{ padding: '0 14px', marginBottom: 18 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, paddingLeft: 4 }}>
-        <span className="section-header" style={{ margin: 0, padding: 0 }}>Ancladas</span>
+    <div style={{ padding: '0 16px', marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, paddingLeft: 2 }}>
+        <span className="section-header" style={{ margin: 0, padding: 0, fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '-0.01em' }}>Ancladas</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {/* Pinned Smart Lists */}
@@ -69,31 +69,31 @@ export const PinnedListsSection: React.FC<PinnedListsSectionProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: 12,
-                padding: '11px 14px',
+                padding: '10px 14px',
                 borderRadius: 14,
                 background: isActive 
-                  ? smartItem.color 
-                  : `linear-gradient(135deg, color-mix(in srgb, ${smartItem.color} 22%, var(--bg-elevated)) 0%, color-mix(in srgb, ${smartItem.color} 12%, var(--bg-elevated)) 100%)`,
+                  ? 'color-mix(in srgb, var(--accent-primary) 8%, var(--bg-elevated))' 
+                  : 'var(--bg-elevated)',
                 border: isActive 
-                  ? `1.5px solid ${smartItem.color}` 
-                  : `1px solid color-mix(in srgb, ${smartItem.color} 30%, transparent)`,
+                  ? '1.5px solid var(--accent-primary)' 
+                  : '1px solid var(--border-subtle)',
                 cursor: 'pointer',
-                boxShadow: isActive ? `0 4px 16px ${smartItem.color}45` : `0 2px 8px ${smartItem.color}18`,
+                boxShadow: isActive ? '0 4px 14px rgba(0, 122, 255, 0.16)' : '0 1px 3px rgba(0, 0, 0, 0.04)',
                 transition: 'all 150ms ease'
               }}
             >
               <div style={{
-                width: 30, height: 30, borderRadius: '50%',
-                background: isActive ? 'rgba(255, 255, 255, 0.25)' : smartItem.color,
+                width: 32, height: 32, borderRadius: '50%',
+                background: smartItem.color,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0,
-                boxShadow: isActive ? 'none' : `0 2px 6px ${smartItem.color}40`
+                boxShadow: `0 2px 6px color-mix(in srgb, ${smartItem.color} 36%, transparent)`
               }}>
-                <Icon size={15} color="white" />
+                <Icon size={16} color="white" />
               </div>
               <span style={{
-                flex: 1, fontWeight: 650, fontSize: '0.95rem',
-                color: isActive ? '#ffffff' : 'var(--text-primary)',
+                flex: 1, fontWeight: 600, fontSize: '0.98rem',
+                color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
               }}>
                 {smartItem.name}
@@ -101,9 +101,9 @@ export const PinnedListsSection: React.FC<PinnedListsSectionProps> = ({
               
               {!isEditMode && (
                 <span style={{
-                  fontSize: '0.85rem', fontWeight: 700,
-                  color: isActive ? '#ffffff' : 'var(--text-primary)',
-                  background: isActive ? 'rgba(255, 255, 255, 0.22)' : 'var(--bg-hover)',
+                  fontSize: '0.9rem', fontWeight: 600,
+                  color: 'var(--text-tertiary)',
+                  background: 'var(--bg-hover)',
                   padding: '2px 8px', borderRadius: 999,
                   fontVariantNumeric: 'tabular-nums'
                 }}>
@@ -142,39 +142,39 @@ export const PinnedListsSection: React.FC<PinnedListsSectionProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: 12,
-                padding: '11px 14px',
+                padding: '10px 14px',
                 borderRadius: 14,
                 background: isActive 
-                  ? listColor 
-                  : `linear-gradient(135deg, color-mix(in srgb, ${listColor} 20%, var(--bg-elevated)) 0%, color-mix(in srgb, ${listColor} 10%, var(--bg-elevated)) 100%)`,
+                  ? 'color-mix(in srgb, var(--accent-primary) 8%, var(--bg-elevated))' 
+                  : 'var(--bg-elevated)',
                 border: isActive 
-                  ? `1.5px solid ${listColor}` 
-                  : `1px solid color-mix(in srgb, ${listColor} 28%, transparent)`,
+                  ? '1.5px solid var(--accent-primary)' 
+                  : '1px solid var(--border-subtle)',
                 cursor: 'pointer',
-                boxShadow: isActive ? `0 4px 16px ${listColor}45` : `0 2px 8px ${listColor}18`,
+                boxShadow: isActive ? '0 4px 14px rgba(0, 122, 255, 0.16)' : '0 1px 3px rgba(0, 0, 0, 0.04)',
                 transition: 'all 150ms ease'
               }}
             >
               <div style={{
-                width: 30, height: 30, borderRadius: '50%',
-                background: isActive ? 'rgba(255, 255, 255, 0.25)' : listColor,
+                width: 32, height: 32, borderRadius: '50%',
+                background: listColor,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0,
-                boxShadow: isActive ? 'none' : `0 2px 6px ${listColor}40`
+                boxShadow: `0 2px 6px color-mix(in srgb, ${listColor} 36%, transparent)`
               }}>
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'white' }} />
               </div>
               <span style={{
-                flex: 1, fontWeight: 650, fontSize: '0.95rem',
-                color: isActive ? '#ffffff' : 'var(--text-primary)',
+                flex: 1, fontWeight: 600, fontSize: '0.98rem',
+                color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
               }}>
                 {list.name}
               </span>
               <span style={{
-                fontSize: '0.85rem', fontWeight: 700,
-                color: isActive ? '#ffffff' : 'var(--text-secondary)',
-                background: isActive ? 'rgba(255, 255, 255, 0.22)' : 'var(--bg-hover)',
+                fontSize: '0.9rem', fontWeight: 600,
+                color: 'var(--text-tertiary)',
+                background: 'var(--bg-hover)',
                 padding: '2px 8px', borderRadius: 999
               }}>
                 {count}

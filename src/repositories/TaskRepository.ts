@@ -12,7 +12,7 @@ export class TaskRepository {
 
   public static create(payload: Partial<TaskItem>): TaskItem {
     const now = new Date().toISOString();
-    let title = payload.title || 'Nueva Tarea';
+    let title = payload.title !== undefined ? payload.title : 'Nueva Tarea';
     let cycle_id = payload.cycle_id;
 
     if (hasPeriodicityPrefix(title)) {

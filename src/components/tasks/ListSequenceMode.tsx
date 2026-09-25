@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Play, Pause, CheckCircle, SkipForward, Clock, ArrowRight,
@@ -227,6 +227,33 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
 
   const currentDurationInfo = currentTask ? getTaskDuration(currentTask, listSections, lists) : null;
 
+  // Duración total estimada y restante de la secuencia
+  const totalEstimatedMins = useMemo(() => {
+    return activeTaskIds.reduce((acc, id) => {
+      const t = tasks[id];
+      if (!t) return acc;
+      const dInfo = getTaskDuration(t, listSections, lists);
+      const learned = useAppStore.getState().learnedDurations[t.id];
+      const activeMins = (typeof t.duration === 'number' && t.duration > 0)
+        ? t.duration
+        : (learned || dInfo.activeMinutes);
+      return acc + activeMins;
+    }, 0);
+  }, [activeTaskIds, tasks, listSections, lists]);
+
+  const remainingEstimatedMins = useMemo(() => {
+    return activeTaskIds.slice(index).reduce((acc, id) => {
+      const t = tasks[id];
+      if (!t) return acc;
+      const dInfo = getTaskDuration(t, listSections, lists);
+      const learned = useAppStore.getState().learnedDurations[t.id];
+      const activeMins = (typeof t.duration === 'number' && t.duration > 0)
+        ? t.duration
+        : (learned || dInfo.activeMinutes);
+      return acc + activeMins;
+    }, 0);
+  }, [activeTaskIds, index, tasks, listSections, lists]);
+
   // Load task on index change: start immediately with heuristic or user-set duration
   useEffect(() => {
     if (!currentTask) return;
@@ -411,18 +438,6 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
 
   if (isFinished) {
     const elapsedMins = Math.max(1, Math.ceil((Date.now() - startedAt) / 60000));
-    
-    // Calcular tiempo estimado total
-    const totalEstimatedMins = activeTaskIds.reduce((acc, id) => {
-      const t = tasks[id];
-      if (!t) return acc;
-      const dInfo = getTaskDuration(t, listSections, lists);
-      const learned = useAppStore.getState().learnedDurations[t.id];
-      const activeMins = (typeof t.duration === 'number' && t.duration > 0)
-        ? t.duration
-        : (learned || dInfo.activeMinutes);
-      return acc + activeMins;
-    }, 0);
 
     const handleShare = async () => {
       const text = `✅ ¡He completado ${listName}! ${completedIds.length} tareas en ${elapsedMins} min.`;
@@ -603,24 +618,44 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
 
         {/* ── TOP BAR ─────────────────────────────────────────────────────── */}
         <div style={{ width: '100%', maxWidth: 720, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-          {/* List name + progress */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: listColor, fontSize: '0.82rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-              <ListChecks size={16} />
-              {listName}
+          {/* List name + progress + total time */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: listColor, fontSize: '0.82rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <ListChecks size={16} style={{ flexShrink: 0 }} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listName}</span>
             </div>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {activeTaskIds.map((_, i) => (
-                <div
-                  key={i}
-                  style={{
-                    width: i < index ? 20 : (i === index ? 28 : 12),
-                    height: 4, borderRadius: 2,
-                    background: i < index ? '#30d158' : i === index ? listColor : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'),
-                    transition: 'all 0.3s ease'
-                  }}
-                />
-              ))}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                {activeTaskIds.map((_, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      width: i < index ? 20 : (i === index ? 28 : 12),
+                      height: 4, borderRadius: 2,
+                      background: i < index ? '#30d158' : i === index ? listColor : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'),
+                      transition: 'all 0.3s ease'
+                    }}
+                  />
+                ))}
+              </div>
+              {totalEstimatedMins > 0 && (
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontSize: '0.74rem',
+                  fontVariantNumeric: 'tabular-nums',
+                  color: isDark ? 'rgba(255,255,255,0.65)' : 'var(--text-secondary, #636366)',
+                  fontWeight: 550,
+                  whiteSpace: 'nowrap'
+                }}>
+                  <Clock size={11} strokeWidth={2.2} style={{ opacity: 0.75 }} />
+                  <span>~{formatDuration(totalEstimatedMins)} total</span>
+                  {index > 0 && remainingEstimatedMins > 0 && (
+                    <span style={{ opacity: 0.8 }}>· restan {formatDuration(remainingEstimatedMins)}</span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -685,8 +720,8 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
               style={{ textAlign: 'center', maxWidth: 660, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', margin: 'auto 0', gap: 0 }}
             >
               {/* Step indicator */}
-              <div style={{ fontSize: '0.8rem', color: isDark ? 'rgba(255,255,255,0.4)' : 'var(--text-tertiary, #8e8e93)', fontWeight: 600, marginBottom: 8, letterSpacing: '0.05em' }}>
-                {index + 1} / {activeTaskIds.length}
+              <div style={{ fontSize: '0.8rem', color: isDark ? 'rgba(255,255,255,0.5)' : 'var(--text-tertiary, #8e8e93)', fontWeight: 600, marginBottom: 8, letterSpacing: '0.04em', fontVariantNumeric: 'tabular-nums' }}>
+                {index + 1} de {activeTaskIds.length} tareas{totalEstimatedMins > 0 ? ` · ~${formatDuration(totalEstimatedMins)} total` : ''}
               </div>
 
               {/* Parallel Task Badge */}

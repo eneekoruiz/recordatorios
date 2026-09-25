@@ -8,6 +8,7 @@
 
 import type { TaskItem, ListSection, CustomList } from '../models/Task';
 import { getTaskPeriodicity } from './sectionRoutine';
+import { getListType, doesListSupportDuration } from './specialLists';
 import { useAppStore } from '../store/useAppStore';
 
 export interface TaskDurationInfo {
@@ -45,7 +46,7 @@ export function isParallelTask(task?: TaskItem | null): boolean {
  */
 export function getTaskDuration(
   task: TaskItem,
-  sections?: ListSection[],
+  sectionsOrList?: ListSection[] | CustomList,
   lists?: CustomList[]
 ): TaskDurationInfo {
   if (!task) return { activeMinutes: 5, parallelMinutes: 0, isParallel: false };
@@ -76,6 +77,29 @@ export function getTaskDuration(
     } catch {
       // Ignorar fuera de entorno React/Zustand
     }
+  }
+
+  // 1c. Comprobar si la lista a la que pertenece la tarea admite estimación de duración
+  const currentPassedList = sectionsOrList && !Array.isArray(sectionsOrList) ? (sectionsOrList as CustomList) : undefined;
+  const sections = Array.isArray(sectionsOrList) ? sectionsOrList : undefined;
+  const taskCat = task.categoryId || (task as any).category_id;
+  let allLists = lists || (currentPassedList ? [currentPassedList] : undefined);
+  if (!allLists) {
+    try {
+      allLists = useAppStore.getState()?.lists;
+    } catch {}
+  }
+  const currentList = currentPassedList || allLists?.find(l => l.id === taskCat);
+  const listType = getListType(currentList, taskCat);
+
+  // Si la lista tiene desactivada la estimación automática de duración, NO calculamos duraciones heurísticas
+  if (currentList?.autoEstimateDuration === false) {
+    return { activeMinutes: 0, parallelMinutes: 0, isParallel: false };
+  }
+
+  // Si la lista es de eventos, propósitos o lista simple (para apuntar cosas y ya está), NO inventamos duraciones
+  if ((currentList || taskCat) && !doesListSupportDuration(listType)) {
+    return { activeMinutes: 0, parallelMinutes: 0, isParallel: false };
   }
 
   // 2. Parallel tasks: small active setup time + large passive background time
@@ -149,20 +173,28 @@ export function getTaskDuration(
     return { activeMinutes: 5, parallelMinutes: 0, isParallel: false };
   }
 
-  // 4. Periodicity-based realistic default
+  // 4. Periodicity-based realistic default (únicamente para listas de rutinas o tareas con periodicidad explícita)
   const periodicity = getTaskPeriodicity(task, sections, lists);
-  switch (periodicity) {
-    case 'day':
-      return { activeMinutes: 5, parallelMinutes: 0, isParallel: false };
-    case 'week':
-      return { activeMinutes: 15, parallelMinutes: 0, isParallel: false };
-    case 'month':
-      return { activeMinutes: 20, parallelMinutes: 0, isParallel: false };
-    case 'year':
-      return { activeMinutes: 25, parallelMinutes: 0, isParallel: false };
-    default:
-      return { activeMinutes: 10, parallelMinutes: 0, isParallel: false };
+  if (periodicity && doesListSupportDuration(listType)) {
+    switch (periodicity) {
+      case 'day':
+        return { activeMinutes: 5, parallelMinutes: 0, isParallel: false };
+      case 'week':
+        return { activeMinutes: 15, parallelMinutes: 0, isParallel: false };
+      case 'month':
+        return { activeMinutes: 20, parallelMinutes: 0, isParallel: false };
+      case 'year':
+        return { activeMinutes: 25, parallelMinutes: 0, isParallel: false };
+    }
   }
+
+  // Si está en una lista de rutinas/quehaceres/compra y no coincidió con ninguna palabra clave, asignar 10 min
+  if (doesListSupportDuration(listType)) {
+    return { activeMinutes: 10, parallelMinutes: 0, isParallel: false };
+  }
+
+  // Tareas estándar en listas de eventos, propósitos o checklist sin duración: 0 min
+  return { activeMinutes: 0, parallelMinutes: 0, isParallel: false };
 }
 
 /**

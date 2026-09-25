@@ -13,6 +13,8 @@ export interface CustomCycle {
   _is_dirty?: boolean;
 }
 
+export type ListType = 'routines' | 'simple' | 'events' | 'goals' | 'caducidades' | 'que_he_hecho';
+
 export interface CustomList {
   id: string;
   parentId?: string; // Para jerarquía infinita (Lista -> Sublistas)
@@ -23,7 +25,9 @@ export interface CustomList {
   showCompleted?: boolean; // Persist preference to show completed tasks for this list
   isPinned?: boolean; // Pinned lists appear as large cards at the top of sidebar
   isFolder?: boolean; // Habilita comportamiento de carpeta organizativa (contiene listas/subcarpetas)
-  specialType?: 'caducidades' | 'que_he_hecho'; // Tipo especial para comportamiento enriquecido
+  listType?: ListType; // Tipo de lista: 'routines' (limpieza/compra), 'simple' (apuntar cosas), 'events' (citas/eventos), 'goals' (propósitos/metas), 'caducidades', 'que_he_hecho'
+  autoEstimateDuration?: boolean; // Permite activar o desactivar la estimación automática de duración de tareas para esta lista
+  specialType?: 'caducidades' | 'que_he_hecho'; // Tipo especial para comportamiento enriquecido (retrocompatibilidad)
   isShared?: boolean; // True si la lista tiene un enlace público de solo lectura activo
   updated_at?: string;
   deleted_at?: string;

@@ -1,4 +1,80 @@
-import type { CustomList, ListSection } from '../models/Task';
+import type { CustomList, ListSection, ListType } from '../models/Task';
+
+export type { ListType };
+
+export interface ListTypeInfo {
+  type: ListType;
+  label: string;
+  description: string;
+  badgeLabel: string;
+  iconName: string;
+  color: string;
+  supportsDuration: boolean;
+  supportsSequence: boolean;
+}
+
+export const LIST_TYPE_CONFIG: Record<ListType, ListTypeInfo> = {
+  routines: {
+    type: 'routines',
+    label: 'Rutinas / Acción',
+    description: 'Limpieza, compra o quehaceres con duraciones y frecuencias',
+    badgeLabel: 'Rutinas',
+    iconName: 'sparkles',
+    color: '#0a84ff',
+    supportsDuration: true,
+    supportsSequence: true
+  },
+  simple: {
+    type: 'simple',
+    label: 'Lista Simple',
+    description: 'Apuntar cosas, notas y checklist sin duraciones artificiales',
+    badgeLabel: 'Checklist',
+    iconName: 'check-square',
+    color: '#30d158',
+    supportsDuration: false,
+    supportsSequence: false
+  },
+  events: {
+    type: 'events',
+    label: 'Eventos y Citas',
+    description: 'Cumpleaños, aniversarios y eventos fechados',
+    badgeLabel: 'Eventos',
+    iconName: 'calendar',
+    color: '#ff2d55',
+    supportsDuration: false,
+    supportsSequence: false
+  },
+  goals: {
+    type: 'goals',
+    label: 'Propósitos y Metas',
+    description: 'Objetivos del año, resoluciones y metas a largo plazo',
+    badgeLabel: 'Propósitos',
+    iconName: 'target',
+    color: '#af52de',
+    supportsDuration: false,
+    supportsSequence: false
+  },
+  caducidades: {
+    type: 'caducidades',
+    label: 'Caducidades',
+    description: 'Tarjetas, documentos y suscripciones con recordatorios',
+    badgeLabel: 'Caducidades',
+    iconName: 'credit-card',
+    color: '#ff9500',
+    supportsDuration: false,
+    supportsSequence: false
+  },
+  que_he_hecho: {
+    type: 'que_he_hecho',
+    label: 'Qué he hecho',
+    description: 'Bitácora de vivencias, personas y recuerdos especiales',
+    badgeLabel: 'Bitácora',
+    iconName: 'book-open',
+    color: '#5856d6',
+    supportsDuration: false,
+    supportsSequence: false
+  }
+};
 
 /**
  * Determina si una lista o vista corresponde a la lista especial de Caducidades y Suscripciones.
@@ -123,18 +199,108 @@ export function isLimpiezaList(listIdOrView?: string | null, list?: CustomList |
 }
 
 /**
- * Determina si una lista o vista corresponde a una lista de rutinas periódicas (Limpieza, Quehaceres, Care).
+ * Determina si una lista corresponde a eventos o citas fechadas.
  */
-export function isRoutineList(listIdOrView?: string | null, list?: CustomList | null): boolean {
+export function isEventsList(listIdOrView?: string | null, list?: CustomList | null): boolean {
+  if (list?.listType) return list.listType === 'events';
   if (!listIdOrView && !list) return false;
-  const cleanId = (listIdOrView || '').replace(/^list_/, '').toLowerCase();
-  if (cleanId === 'limpieza' || cleanId === 'quehaceres' || cleanId === 'care') return true;
+  const cleanId = (listIdOrView || list?.id || '').replace(/^list_/, '').toLowerCase();
+  if (cleanId === 'eventos' || cleanId === 'citas' || cleanId === 'cumpleanos') return true;
   if (list) {
-    if (list.id === 'limpieza' || list.id === 'quehaceres' || list.id === 'care') return true;
-    const cleanName = (list.name || '').toLowerCase();
-    if (cleanName === 'limpieza' || cleanName === 'quehaceres' || cleanName.includes('quehacer') || cleanName === 'care' || cleanName.includes('cuidado') || cleanName.includes('skincare')) return true;
+    const cleanName = (list.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (
+      cleanName.includes('evento') ||
+      cleanName.includes('cita') ||
+      cleanName.includes('cumplean') ||
+      cleanName.includes('aniversario') ||
+      cleanName.includes('calendario') ||
+      cleanName.includes('concierto') ||
+      cleanName.includes('fecha')
+    ) {
+      return true;
+    }
   }
   return false;
+}
+
+/**
+ * Determina si una lista corresponde a propósitos, metas u objetivos.
+ */
+export function isGoalsList(listIdOrView?: string | null, list?: CustomList | null): boolean {
+  if (list?.listType) return list.listType === 'goals';
+  if (!listIdOrView && !list) return false;
+  const cleanId = (listIdOrView || list?.id || '').replace(/^list_/, '').toLowerCase();
+  if (cleanId === 'propositos' || cleanId === 'metas' || cleanId === 'objetivos') return true;
+  if (list) {
+    const cleanName = (list.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (
+      cleanName.includes('proposito') ||
+      cleanName.includes('meta') ||
+      cleanName.includes('objetivo') ||
+      cleanName.includes('resolucion') ||
+      cleanName.includes('sueno') ||
+      cleanName.includes('deseo')
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Determina si una lista o vista corresponde a una lista de rutinas periódicas (Limpieza, Compra, Quehaceres, Care).
+ */
+export function isRoutineList(listIdOrView?: string | null, list?: CustomList | null): boolean {
+  if (list?.listType) return list.listType === 'routines';
+  if (!listIdOrView && !list) return false;
+  const cleanId = (listIdOrView || '').replace(/^list_/, '').toLowerCase();
+  if (cleanId === 'limpieza' || cleanId === 'quehaceres' || cleanId === 'care' || cleanId === 'compra' || cleanId === 'compras') return true;
+  if (list) {
+    if (list.id === 'limpieza' || list.id === 'quehaceres' || list.id === 'care' || list.id === 'compra' || list.id === 'compras') return true;
+    const cleanName = (list.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (
+      cleanName.includes('limpieza') ||
+      cleanName.includes('quehacer') ||
+      cleanName.includes('care') ||
+      cleanName.includes('cuidado') ||
+      cleanName.includes('skincare') ||
+      cleanName.includes('compra') ||
+      cleanName.includes('supermercado') ||
+      cleanName.includes('rutina') ||
+      cleanName.includes('mantenimiento') ||
+      cleanName.includes('domest')
+    ) return true;
+  }
+  return false;
+}
+
+/**
+ * Obtiene el tipo canónico de una lista, combinando configuración explícita y detección automática inteligente.
+ */
+export function getListType(list?: CustomList | null, listIdOrView?: string | null): ListType {
+  if (list?.listType) return list.listType;
+  if (isCaducidadesList(listIdOrView, list)) return 'caducidades';
+  if (isQueHeHechoList(listIdOrView, list)) return 'que_he_hecho';
+  if (isEventsList(listIdOrView, list)) return 'events';
+  if (isGoalsList(listIdOrView, list)) return 'goals';
+  if (isRoutineList(listIdOrView, list)) return 'routines';
+  return 'simple';
+}
+
+/**
+ * Determina si este tipo de lista admite duraciones estimadas de tareas y de secciones.
+ * Solo las listas de tipo 'routines' (Limpieza, Compra, Quehaceres) calculan duraciones automáticas.
+ * En eventos, propósitos o listas simples de apuntar cosas, las duraciones automáticas no aplican.
+ */
+export function doesListSupportDuration(listType: ListType): boolean {
+  return listType === 'routines';
+}
+
+/**
+ * Determina si este tipo de lista admite el modo secuencia (temporizador en serie "▶ Empezar").
+ */
+export function doesListSupportSequenceMode(listType: ListType): boolean {
+  return listType === 'routines';
 }
 
 /**

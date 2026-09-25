@@ -13,6 +13,7 @@ interface SectionData {
   depth: number;
   periodicity?: string | null;
   routineCounts?: { full: number; only: number } | null;
+  routineDurations?: { only: TasksDurationSummary; full: TasksDurationSummary } | null;
   routineMode?: 'full_routine' | 'only_section';
   sectionTaskIds?: string[];
 }
@@ -57,6 +58,7 @@ interface MainSectionHeaderProps {
   sectionMenu?: SectionMenuState;
   isPrevHeader?: boolean;
   isFirstAfterPageHeader?: boolean;
+  isRoutine?: boolean;
 }
 
 export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
@@ -98,7 +100,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   isMobile,
   sectionMenu,
   isPrevHeader = false,
-  isFirstAfterPageHeader = false
+  isFirstAfterPageHeader = false,
+  isRoutine = false
 }) => {
   const currentSectionRoutineMode = sectionRoutineModes[data.category] || data.routineMode || 'only_section';
   const [isPressed, setIsPressed] = useState(false);
@@ -121,16 +124,29 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
 
   const openSectionMenu = useCallback(() => {
     HapticService.selection();
+
+    // Desplazar suavemente hacia arriba para que quede en la parte superior y haya espacio abajo para el menú
+    const scrollContainer = rowRef.current?.closest('.content-scroll') as HTMLElement | null;
+    if (scrollContainer && rowRef.current) {
+      const currentScrollTop = scrollContainer.scrollTop;
+      const currentRect = rowRef.current.getBoundingClientRect();
+      const targetTop = 75; // justo debajo del sticky glass header
+      if (currentRect.top > targetTop + 10) {
+        const delta = currentRect.top - targetTop;
+        scrollContainer.scrollTop = Math.max(0, currentScrollTop + delta);
+      }
+    }
+
     const rowRect = getRowRect();
     if (!rowRect) return;
 
     const viewportW = window.innerWidth;
     const viewportH = window.innerHeight;
-    const menuWidth = 230;
-    const menuHeight = 220;
+    const menuWidth = 260;
+    const menuHeight = 440;
     const padding = 12;
 
-    // Anchor: siempre en la posición más lógica (bajo el botón '...' o el título)
+    // Anchor: siempre bajo el botón '...' o el título
     let anchorLeft: number;
     let anchorTop: number;
 
@@ -143,14 +159,10 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       anchorTop = rowRect.top + rowRect.height + 6;
     }
 
-    // Posición vertical segura: si no cabe abajo, abrir arriba
+    // Posición vertical: siempre abajo del elemento, garantizando que el menú nunca quede cortado
     let y = anchorTop;
     if (y + menuHeight > viewportH - padding) {
-      if (rowRect.top - menuHeight - 6 >= padding) {
-        y = rowRect.top - menuHeight - 6;
-      } else {
-        y = Math.max(padding, viewportH - menuHeight - padding);
-      }
+      y = Math.max(padding, viewportH - menuHeight - padding);
     }
 
     // Posición horizontal segura: alineado con el ancla y dentro de la pantalla
@@ -167,7 +179,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       category: data.category,
       triggerRect: rowRect
     });
-  }, [data.sectionId, data.title, data.color, data.category, data.depth, pendingTaskCount, setSectionMenu]);
+  }, [data.sectionId, data.title, data.color, data.category, data.depth, pendingTaskCount, setSectionMenu, getRowRect]);
 
   return (
     <div
@@ -182,11 +194,11 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         zIndex: isMenuOpenForThisSection ? 999992 : (data.depth === 0 ? 30 : 25),
         borderBottom: '1px solid var(--border-subtle)',
         borderTop: 'none',
-        paddingLeft: `calc(28px + ${data.depth * 24}px)`,
+        paddingLeft: `${16 + data.depth * 14}px`,
         paddingRight: '16px',
-        minHeight: data.depth === 0 ? 44 : 38,
-        paddingTop: data.depth === 0 ? (isFirstAfterPageHeader ? 4 : isPrevHeader ? 6 : 8) : 5,
-        paddingBottom: data.depth === 0 ? 6 : 5,
+        minHeight: data.depth === 0 ? 44 : 36,
+        paddingTop: data.depth === 0 ? (isFirstAfterPageHeader ? 4 : isPrevHeader ? 6 : 8) : 4,
+        paddingBottom: data.depth === 0 ? 6 : 4,
         margin: 0,
         boxSizing: 'border-box',
         display: 'flex',
@@ -286,17 +298,18 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                 cursor: isCustomSection ? 'text' : 'pointer',
                 fontWeight: data.depth === 0 ? 700 : 600,
                 color: data.depth === 0 ? 'var(--text-primary)' : data.depth === 1 ? 'var(--text-secondary)' : 'var(--text-tertiary)',
-                fontSize: data.depth === 0 ? '1.2rem' : data.depth === 1 ? '1rem' : '0.85rem',
+                fontSize: data.depth === 0 ? '1.18rem' : data.depth === 1 ? '0.94rem' : '0.85rem',
                 textTransform: 'none',
-                letterSpacing: '0',
-                lineHeight: '1.3',
-                minHeight: '28px',
-                wordBreak: 'break-word',
+                letterSpacing: '-0.01em',
+                lineHeight: '1.25',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
                 margin: 0,
-                padding: '4px 0',
+                padding: '2px 0',
                 boxSizing: 'border-box'
               }}
-              title={isCustomSection ? "Doble click para editar" : ""}
+              title={isCustomSection ? "Doble click para editar" : data.title}
             >
               {data.titleIcon && (
                 <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 6, opacity: 0.85 }}>
@@ -368,129 +381,151 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
             </button>
           )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, justifyContent: 'flex-end' }}>
-          {/* Duración estimada total de la sección */}
-          {durationSummary && durationSummary.activeMinutes > 0 && (() => {
-            const isFullRoutine = currentSectionRoutineMode === 'full_routine' && Boolean(data.routineCounts && data.routineCounts.full > data.routineCounts.only);
-            const titleText = isFullRoutine
-              ? `Duración de rutina acumulada: ${durationSummary.formattedActive} (incluye frecuencias anteriores)${durationSummary.parallelTasksCount > 0 ? ` + ${durationSummary.formattedParallel} en paralelo` : ''}`
-              : `Duración únicamente de esta sección (${data.title}): ${durationSummary.formattedActive}${durationSummary.parallelTasksCount > 0 ? ` + ${durationSummary.formattedParallel} en paralelo` : ''}`;
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, justifyContent: 'flex-end' }}>
+          {/* Si esta sección tiene periodicidad (no diaria), ESTÁ DESPLEGADA y hay tareas acumulables (full > only), conmutador nativo Apple con duraciones */}
+          {!isCatCollapsed(data.category) && data.periodicity && data.periodicity !== 'day' && data.routineCounts && data.routineCounts.full > data.routineCounts.only ? (() => {
+            const onlyDurStr = data.routineDurations?.only?.activeMinutes ? data.routineDurations.only.formattedActive : undefined;
+            const fullDurStr = data.routineDurations?.full?.activeMinutes ? data.routineDurations.full.formattedActive : undefined;
 
             return (
-              <span 
-                className="section-duration-pill"
+              <div className="apple-segmented-control">
+                <button
+                  type="button"
+                  className={`apple-segmented-btn ${currentSectionRoutineMode === 'only_section' ? 'active' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    HapticService.selection();
+                    toggleSectionRoutineMode?.(data.category, 'only_section');
+                    _setIsolatedSectionKey?.(null);
+                  }}
+                  title={`Ver y hacer solo las tareas de esta sección (${data.routineCounts.only} tareas${onlyDurStr ? ` · ~${onlyDurStr}` : ''})`}
+                >
+                  Solo ({data.routineCounts.only}){onlyDurStr ? ` · ${onlyDurStr}` : ''}
+                </button>
+                <button
+                  type="button"
+                  className={`apple-segmented-btn ${currentSectionRoutineMode === 'full_routine' ? 'active' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    HapticService.selection();
+                    toggleSectionRoutineMode?.(data.category, 'full_routine');
+                    _setIsolatedSectionKey?.(null);
+                  }}
+                  title={`Ver y hacer toda la rutina acumulada (${data.routineCounts.full} tareas${fullDurStr ? ` · ~${fullDurStr}` : ''})`}
+                >
+                  Todas ({data.routineCounts.full}){fullDurStr ? ` · ${fullDurStr}` : ''}
+                </button>
+              </div>
+            );
+          })() : (
+            <>
+              {/* Duración estimada total de la sección con tipografía Apple minimalista (visible en diarias, plegadas o sin segmented) */}
+              {durationSummary && durationSummary.activeMinutes > 0 && (() => {
+                const isFullRoutine = currentSectionRoutineMode === 'full_routine' && Boolean(data.routineCounts && data.routineCounts.full > data.routineCounts.only);
+                const titleText = isFullRoutine
+                  ? `Duración de rutina acumulada: ${durationSummary.formattedActive} (incluye frecuencias anteriores)${durationSummary.parallelTasksCount > 0 ? ` + ${durationSummary.formattedParallel} en paralelo` : ''}`
+                  : `Duración de esta sección: ${durationSummary.formattedActive}${durationSummary.parallelTasksCount > 0 ? ` + ${durationSummary.formattedParallel} en paralelo` : ''}`;
+
+                return (
+                  <span 
+                    className="section-duration-text"
+                    style={{
+                      fontSize: '0.78rem',
+                      fontWeight: 500,
+                      fontVariantNumeric: 'tabular-nums',
+                      color: isFullRoutine ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 3.5,
+                      whiteSpace: 'nowrap',
+                      opacity: 0.85
+                    }}
+                    title={titleText}
+                  >
+                    <Clock size={11} strokeWidth={2.2} style={{ opacity: 0.7 }} />
+                    <span>{durationSummary.formattedActive}</span>
+                    {isFullRoutine && (
+                      <span style={{ fontSize: '0.66rem', opacity: 0.85, fontWeight: 600 }}>rutina</span>
+                    )}
+                  </span>
+                );
+              })()}
+
+              {/* Conteo numérico total estilo Apple: visible en Diario, en secciones plegadas, o en secciones sin conmutador de rutinas */}
+              {(() => {
+                const count = data.routineCounts 
+                  ? (currentSectionRoutineMode === 'full_routine' ? data.routineCounts.full : data.routineCounts.only) 
+                  : (pendingTaskCount ?? data.sectionTaskIds?.length ?? 0);
+                return count > 0 ? (
+                  <span 
+                    className="section-total-count"
+                    style={{ 
+                      fontSize: '0.82rem', 
+                      fontWeight: 500, 
+                      color: 'var(--text-tertiary)', 
+                      fontVariantNumeric: 'tabular-nums',
+                      display: 'inline-flex',
+                      alignItems: 'center'
+                    }}
+                    title={`${count} tareas`}
+                  >
+                    {durationSummary && durationSummary.activeMinutes > 0 ? (
+                      <span>· {count}</span>
+                    ) : (
+                      <span>{count}</span>
+                    )}
+                  </span>
+                ) : null;
+              })()}
+            </>
+          )}
+
+          {/* Botón directo Empezar ya esta sección (solo en secciones principales depth 0 de listas de rutinas) */}
+          {onStartSectionSequence && isRoutine && (!data.depth || data.depth === 0) && (pendingTaskCount ?? data.sectionTaskIds?.length ?? 0) > 0 && (() => {
+            const isFullRoutine = currentSectionRoutineMode === 'full_routine' && Boolean(data.routineCounts && data.routineCounts.full > data.routineCounts.only);
+            const activeDurText = durationSummary?.formattedActive;
+            const startBtnTitle = isFullRoutine
+              ? `Empezar rutina acumulada${activeDurText ? ` (~${activeDurText})` : ''} en modo enfoque`
+              : `Empezar solo tareas de esta sección${activeDurText ? ` (~${activeDurText})` : ''} en modo enfoque`;
+
+            return (
+              <button
+                type="button"
+                className="section-start-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  HapticService.impact('medium');
+                  onStartSectionSequence();
+                }}
+                title={startBtnTitle}
+                aria-label={startBtnTitle}
                 style={{
+                  background: data.color ? `${data.color}15` : 'rgba(0, 122, 255, 0.12)',
+                  border: `1px solid ${data.color ? `${data.color}35` : 'rgba(0, 122, 255, 0.25)'}`,
+                  color: data.color || 'var(--accent-primary)',
+                  borderRadius: '7px',
+                  padding: '2px 8px',
                   fontSize: '0.74rem',
-                  fontWeight: 550,
-                  fontVariantNumeric: 'tabular-nums',
-                  color: isFullRoutine ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                  background: isFullRoutine ? 'rgba(0, 122, 255, 0.08)' : 'var(--bg-hover, rgba(0,0,0,0.04))',
-                  border: isFullRoutine ? '1px solid rgba(0, 122, 255, 0.22)' : '1px solid var(--border-subtle)',
-                  padding: '2px 7px',
-                  borderRadius: '6px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 3.5,
-                  whiteSpace: 'nowrap'
+                  gap: 4,
+                  transition: 'all 0.15s ease',
+                  height: 24,
+                  flexShrink: 0
                 }}
-                title={titleText}
               >
-                <Clock size={11} style={{ opacity: 0.8 }} />
-                <span>{durationSummary.formattedActive}</span>
-                {isFullRoutine && (
-                  <span style={{ fontSize: '0.66rem', opacity: 0.8, fontWeight: 600 }}>rutina</span>
+                <Play size={10} fill="currentColor" />
+                <span>Empezar</span>
+                {activeDurText && activeDurText !== '0 min' && (
+                  <span style={{ opacity: 0.85, fontWeight: 500, fontSize: '0.68rem', fontVariantNumeric: 'tabular-nums' }}>
+                    ({activeDurText})
+                  </span>
                 )}
-              </span>
+              </button>
             );
           })()}
-
-          {/* Si esta sección tiene periodicidad (no diaria), ESTÁ DESPLEGADA y hay tareas acumulables (full > only), conmutador nativo Apple */}
-          {!isCatCollapsed(data.category) && data.periodicity && data.periodicity !== 'day' && data.routineCounts && data.routineCounts.full > data.routineCounts.only ? (
-            <div className="apple-segmented-control">
-              <button
-                type="button"
-                className={`apple-segmented-btn ${currentSectionRoutineMode === 'only_section' ? 'active' : ''}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  HapticService.selection();
-                  toggleSectionRoutineMode?.(data.category, 'only_section');
-                  _setIsolatedSectionKey?.(null);
-                }}
-                title="Ver únicamente las tareas directas de esta sección"
-              >
-                Solo ({data.routineCounts.only})
-              </button>
-              <button
-                type="button"
-                className={`apple-segmented-btn ${currentSectionRoutineMode === 'full_routine' ? 'active' : ''}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  HapticService.selection();
-                  toggleSectionRoutineMode?.(data.category, 'full_routine');
-                  _setIsolatedSectionKey?.(null);
-                }}
-                title="Ver todas las tareas de la rutina periódica"
-              >
-                Todas ({data.routineCounts.full})
-              </button>
-            </div>
-          ) : (
-            /* Conteo numérico total estilo Apple: visible en Diario, en secciones plegadas, o en secciones sin conmutador de rutinas */
-            (() => {
-              const count = data.routineCounts 
-                ? (currentSectionRoutineMode === 'full_routine' ? data.routineCounts.full : data.routineCounts.only) 
-                : (pendingTaskCount ?? data.sectionTaskIds?.length ?? 0);
-              return count > 0 ? (
-                <span 
-                  className="section-total-count"
-                  style={{ 
-                    fontSize: '0.84rem', 
-                    fontWeight: 600, 
-                    color: 'var(--text-tertiary)', 
-                    fontVariantNumeric: 'tabular-nums',
-                    marginRight: 2
-                  }}
-                  title={`${count} tareas`}
-                >
-                  {count}
-                </span>
-              ) : null;
-            })()
-          )}
-
-          {/* Botón directo Empezar ya esta sección */}
-          {onStartSectionSequence && (pendingTaskCount ?? data.sectionTaskIds?.length ?? 0) > 0 && (
-            <button
-              type="button"
-              className="section-start-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                HapticService.impact('medium');
-                onStartSectionSequence();
-              }}
-              title="Empezar ya esta sección en modo enfoque"
-              aria-label="Empezar sección"
-              style={{
-                background: data.color ? `${data.color}15` : 'rgba(0, 122, 255, 0.12)',
-                border: `1px solid ${data.color ? `${data.color}35` : 'rgba(0, 122, 255, 0.25)'}`,
-                color: data.color || 'var(--accent-primary)',
-                borderRadius: '7px',
-                padding: '2px 8px',
-                fontSize: '0.74rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                transition: 'all 0.15s ease',
-                height: 24,
-                flexShrink: 0
-              }}
-            >
-              <Play size={10} fill="currentColor" />
-              <span>Empezar</span>
-            </button>
-          )}
 
           <button
             type="button"

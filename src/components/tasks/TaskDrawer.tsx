@@ -282,12 +282,21 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
       }
 
       if (targetEl) {
-        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const container = drawerRef.current?.querySelector('.drawer-content') as HTMLElement | null;
+        if (container) {
+          const containerRect = container.getBoundingClientRect();
+          const targetRect = targetEl.getBoundingClientRect();
+          const offset = (targetRect.top - containerRect.top) + container.scrollTop - 40;
+          container.scrollTo({ top: Math.max(0, offset), behavior: 'smooth' });
+        }
         if (targetEl instanceof HTMLInputElement || targetEl instanceof HTMLTextAreaElement || targetEl instanceof HTMLButtonElement) {
-          targetEl.focus();
+          targetEl.focus({ preventScroll: true });
           if (targetEl instanceof HTMLInputElement && targetEl.type !== 'date') {
             targetEl.select();
           }
+        }
+        if (typeof window !== 'undefined' && (window.scrollX !== 0 || window.scrollY !== 0)) {
+          window.scrollTo(0, 0);
         }
         targetEl.classList.remove('apple-focus-pulse');
         void targetEl.offsetWidth;
@@ -298,14 +307,23 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
 
     const t1 = setTimeout(performFocus, 80);
     const t2 = setTimeout(performFocus, 220);
-    const t3 = setTimeout(performFocus, 380);
 
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
-      clearTimeout(t3);
     };
   }, [isOpen, initialFocus, taskId]);
+
+  // Bloquear scroll del fondo en móviles para que no se desplace el modal
+  useEffect(() => {
+    if (!isOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.scrollTo(0, 0);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isOpen]);
 
   const drawerRef = useRef<HTMLDivElement>(null);
 

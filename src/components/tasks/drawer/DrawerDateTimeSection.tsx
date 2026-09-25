@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar as CalendarIcon, ChevronDown, Clock, PlusCircle, X, Zap, CreditCard, Bell } from 'lucide-react';
 import type { AlertDef } from '../../../models/Task';
-import { isCaducidadesList } from '../../../utils/specialLists';
+import { isCaducidadesList, getListType, doesListSupportDuration } from '../../../utils/specialLists';
 import { Sunrise, Sun, Moon } from 'lucide-react';
 
 interface DrawerDateTimeSectionProps {
@@ -255,19 +255,22 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                   Duración estimada
                 </span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <input
-                    type="number"
-                    id="drawer-duration-input"
-                    className="drawer-duration-input"
-                    min="1"
-                    max="480"
-                    placeholder="Auto"
-                    value={duration !== undefined && duration !== null ? duration : ''}
-                    onChange={e => {
-                      const v = e.target.value;
-                      setDuration?.(v === '' ? '' : Math.max(1, Math.min(480, Number(v))));
-                    }}
-                    style={{
+                  {(() => {
+                    const isRoutineCategory = doesListSupportDuration(getListType(undefined, category));
+                    return (
+                      <input
+                        type="number"
+                        id="drawer-duration-input"
+                        className="drawer-duration-input"
+                        min="1"
+                        max="480"
+                        placeholder={isRoutineCategory ? "Auto" : "Opcional"}
+                        value={duration !== undefined && duration !== null ? duration : ''}
+                        onChange={e => {
+                          const v = e.target.value;
+                          setDuration?.(v === '' ? '' : Math.max(1, Math.min(480, Number(v))));
+                        }}
+                        style={{
                       width: 64,
                       textAlign: 'right',
                       border: '1px solid var(--border-subtle)',
@@ -280,6 +283,8 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                       outline: 'none'
                     }}
                   />
+                    );
+                  })()}
                   <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>min</span>
                 </div>
               </div>

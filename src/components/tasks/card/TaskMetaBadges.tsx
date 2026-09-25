@@ -33,6 +33,7 @@ export function TaskMetaBadges({
 }: TaskMetaBadgesProps) {
   const updateTask = useAppStore(state => state.updateTask);
   const listSections = useAppStore(state => state.listSections);
+  const showDuration = useAppStore(state => state.showDuration);
   const durationInfo = getTaskDuration(task, listSections, lists);
 
   const inAppListTarget = (() => {
@@ -49,8 +50,9 @@ export function TaskMetaBadges({
   })();
 
   const showDueDate = !!task.dueDate && !hideDueDate;
-  const hasDuration = Boolean(durationInfo && durationInfo.activeMinutes > 0);
+  const hasDuration = showDuration && Boolean(durationInfo && durationInfo.activeMinutes > 0);
   const hasMeta = showListName || showDueDate || Boolean(cycleBadge) || timeOfDayInfo || Boolean(inAppListTarget) || hasDuration;
+
 
   return (
     <>

@@ -35,6 +35,7 @@ import {
 } from './utils/sectionRoutine';
 import { normalizeTaskPrices } from './utils/priceExtractor';
 import { ensureLimpiezaSections, getRoomForCleaningTask } from './utils/specialLists';
+import { isKnownRedundantTask, semanticKey, normalizeTitle } from './utils/taskDeduplication';
 import type { TaskItem } from './models/Task';
 import { useSystemTheme } from './hooks/useSystemTheme';
 
@@ -301,28 +302,40 @@ function App() {
       }
     });
 
+    // Hygiene: remove known redundant or cross-frequency tasks
+    activeTasks.forEach((t: any) => {
+      if (isKnownRedundantTask(t.title)) {
+        state.deleteTask(t.id);
+      }
+    });
+
     const targetCategories = ['care', 'limpieza', 'compra', 'quehaceres'];
     for (const cat of targetCategories) {
-      const catTasks = activeTasks.filter((t: any) => (t.categoryId || (t as any).category_id) === cat);
+      // Re-filter active tasks after pruning known redundant items
+      const catTasks = Object.values(state.tasks || {}).filter(
+        (t: any) => !t.deleted_at && (t.categoryId || (t as any).category_id) === cat
+      );
       const titleGroups = new Map<string, any[]>();
       for (const t of catTasks) {
-        const cleanTitle = (t.title || '')
-          .replace(/^\[[DSMA]\]\s*/i, '')
-          .trim()
-          .toLowerCase();
-        const groupKey = cat === 'quehaceres' 
-          ? `${cleanTitle}:::${t.sectionId || ''}` 
-          : cleanTitle;
-        if (!titleGroups.has(groupKey)) {
-          titleGroups.set(groupKey, []);
+        const key = semanticKey(t.title) || normalizeTitle(t.title);
+        if (!key) continue;
+        if (!titleGroups.has(key)) {
+          titleGroups.set(key, []);
         }
-        titleGroups.get(groupKey)!.push(t);
+        titleGroups.get(key)!.push(t);
       }
       for (const [, items] of titleGroups.entries()) {
         if (items.length > 1) {
           items.sort((a, b) => {
             const score = (p: any) => {
               let s = 0;
+              // Higher frequency tasks take precedence over lower frequency tasks when cross-frequency duplicates occur
+              const sec = (p.sectionId || '').toLowerCase();
+              if (sec.includes('diari')) s += 80;
+              else if (sec.includes('seman')) s += 60;
+              else if (sec.includes('mensu')) s += 40;
+              else if (sec.includes('anual')) s += 20;
+
               if (p.status === 'completed') s += 100;
               if (p.notes || (p.description && p.description.length > 15)) s += 50;
               if (p.parentId) s += 40;

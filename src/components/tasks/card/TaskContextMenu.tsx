@@ -201,8 +201,10 @@ function MenuActions({
 }: MenuActionsProps) {
   const addTask = useAppStore(state => state.addTask);
   const restoreTask = useAppStore(state => state.restoreTask);
+  const postponeTask = useAppStore(state => state.postponeTask);
   const lists = useAppStore(state => state.lists);
   const listSections = useAppStore(state => state.listSections);
+
   const [currentSubmenu, setCurrentSubmenu] = useState<'main' | 'move_list' | 'move_section' | 'due_date' | 'priority' | 'price'>('main');
   const [showMoreActions, setShowMoreActions] = useState(false);
 
@@ -634,6 +636,18 @@ function MenuActions({
           setContextMenuOpen(false); 
           updateTask(task.id, { flagged: !task.flagged }); 
         }} 
+      />
+
+      {/* 7. Dejar para luego */}
+      <ActionRow
+        icon={<Clock size={16} color="var(--accent-primary)" />}
+        label="Dejar para luego"
+        sublabel="Mover al final de la lista"
+        onClick={() => {
+          setContextMenuOpen(false);
+          postponeTask(task.id);
+          HapticService.selection();
+        }}
       />
 
       <div className="ios-dropdown-divider" />

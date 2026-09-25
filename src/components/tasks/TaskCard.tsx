@@ -158,7 +158,29 @@ export const TaskCard = React.memo(function TaskCard({
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [editNote, setEditNote] = useState(task.description || '');
   const cardRef = useRef<HTMLDivElement>(null);
+  const titleTextareaRef = useRef<HTMLTextAreaElement>(null);
   const updateTask = useAppStore(state => state.updateTask);
+  const inlineEditingTaskId = useAppStore(state => state.inlineEditingTaskId);
+  const setInlineEditingTaskId = useAppStore(state => state.setInlineEditingTaskId);
+
+  const adjustTitleTextarea = useCallback((el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.max(24, el.scrollHeight)}px`;
+  }, []);
+
+  useEffect(() => {
+    if (inlineEditingTaskId === task.id) {
+      setIsEditingTitle(true);
+      setEditTitle(task.title || '');
+    }
+  }, [inlineEditingTaskId, task.id, task.title]);
+
+  useEffect(() => {
+    if (isEditingTitle && titleTextareaRef.current) {
+      adjustTitleTextarea(titleTextareaRef.current);
+    }
+  }, [isEditingTitle, editTitle, adjustTitleTextarea]);
 
   const [isPriorityPopoverOpen, setIsPriorityPopoverOpen] = useState(false);
   const [priorityPopoverPos, setPriorityPopoverPos] = useState<{ x: number; y: number } | null>(null);
@@ -217,38 +239,28 @@ export const TaskCard = React.memo(function TaskCard({
     HapticService.impact('medium');
     x.set(0); // Reset any active horizontal swipe offset immediately
     if (cardRef.current) {
+      // Desplazar suavemente hacia arriba para que el recordatorio quede arriba y el menú quepa entero abajo
+      const scrollContainer = cardRef.current.closest('.content-scroll') as HTMLElement | null;
+      if (scrollContainer) {
+        const currentScrollTop = scrollContainer.scrollTop;
+        const currentRect = cardRef.current.getBoundingClientRect();
+        const targetTop = 120; // garantiza que el menú tenga espacio debajo sin cortarse
+        if (currentRect.top > targetTop + 10) {
+          const delta = currentRect.top - targetTop;
+          scrollContainer.scrollTop = Math.max(0, currentScrollTop + delta);
+        }
+      }
+
       const rect = cardRef.current.getBoundingClientRect();
       setContextMenuTriggerRect({ top: rect.top, left: rect.left, width: rect.width, height: rect.height });
       const viewportH = window.innerHeight;
       const viewportW = window.innerWidth;
       const menuWidth = Math.min(260, viewportW - 24);
-      const estimatedMenuHeight = 440;
       const padding = 12;
       
-      const spaceBelow = viewportH - rect.bottom - padding;
-      const spaceAbove = rect.top - padding;
-      
-      let top: number;
-      let maxH: number;
-      
-      if (spaceBelow >= 220) {
-        // Place strictly below the card — never covers the task!
-        top = rect.bottom + 8;
-        maxH = Math.min(estimatedMenuHeight, spaceBelow - 8);
-      } else if (spaceAbove >= 220) {
-        // Place strictly above the card — never covers the task!
-        maxH = Math.min(estimatedMenuHeight, spaceAbove - 8);
-        top = Math.max(padding, rect.top - maxH - 8);
-      } else {
-        // Very tight vertical space: position beside if wide screen, otherwise place below clamped
-        if (viewportW - rect.right >= menuWidth + 16) {
-          top = Math.max(padding, Math.min(viewportH - estimatedMenuHeight - padding, rect.top));
-          maxH = viewportH - top - padding;
-        } else {
-          top = Math.max(padding, rect.bottom + 4);
-          maxH = Math.max(140, viewportH - top - padding);
-        }
-      }
+      // Siempre abajo del recordatorio ahora que está arriba
+      const top = rect.bottom + 8;
+      const maxH = Math.max(160, viewportH - top - padding);
 
       let left = rect.right - menuWidth;
       if (viewportW <= 640) {
@@ -544,6 +556,7 @@ export const TaskCard = React.memo(function TaskCard({
       {/* Main card — physically slides */}
       <motion.div
         ref={cardRef}
+        className={contextMenuOpen ? 'selected-card' : undefined}
         drag={contextMenuOpen ? false : "x"}
         dragSnapToOrigin
         dragConstraints={{ left: -140, right: 140 }}
@@ -786,33 +799,81 @@ export const TaskCard = React.memo(function TaskCard({
               </button>
             )}
             {isEditingTitle ? (
-              <motion.input
+              <textarea
+                ref={(el) => {
+                  titleTextareaRef.current = el;
+                  if (el) {
+                    adjustTitleTextarea(el);
+                    if (inlineEditingTaskId === task.id) {
+                      el.focus();
+                      setInlineEditingTaskId(null);
+                    }
+                  }
+                }}
                 className="task-title-input"
                 value={editTitle}
                 autoFocus
-                onChange={e => setEditTitle(e.target.value)}
+                rows={1}
+                placeholder="Nuevo recordatorio..."
+                onChange={e => {
+                  setEditTitle(e.target.value);
+                  adjustTitleTextarea(e.target);
+                }}
                 onBlur={handleTitleSubmit}
                 onKeyDown={e => {
                   e.stopPropagation();
                   if (e.key === 'Enter') {
                     e.preventDefault();
-                    if (!editTitle.trim()) {
+                    const raw = editTitle.trim();
+                    if (!raw) {
                       setIsEditingTitle(false);
+                      setInlineEditingTaskId(null);
                       HapticService.selection();
                       if (onDelete) onDelete(task.id);
                       else useAppStore.getState().deleteTask(task.id);
                     } else {
-                      e.currentTarget.blur();
+                      // 1. Guardar el recordatorio actual
+                      setIsEditingTitle(false);
+                      if (raw !== task.title) {
+                        const extracted = extractPrice(raw, false);
+                        if (extracted && extracted.price > 0) {
+                          updateTask(task.id, {
+                            title: extracted.cleanText || raw,
+                            price: extracted.price
+                          });
+                        } else {
+                          updateTask(task.id, { title: raw });
+                        }
+                      }
+                      // 2. Crear inmediatamente el siguiente recordatorio (comportamiento Apple Reminders)
+                      const newTaskId = crypto.randomUUID();
+                      const currentOrder = typeof task.order === 'number' ? task.order : 0;
+                      useAppStore.getState().addTask({
+                        id: newTaskId,
+                        title: '',
+                        categoryId: task.categoryId,
+                        sectionId: task.sectionId,
+                        cycle_id: task.cycle_id,
+                        order: currentOrder + 1,
+                        status: 'pending',
+                        type: 'task',
+                        created_at: new Date().toISOString()
+                      });
+                      // 3. Enfocar el nuevo recordatorio creado
+                      useAppStore.getState().setInlineEditingTaskId(newTaskId);
+                      HapticService.selection();
                     }
                   } else if (e.key === 'Backspace' && !editTitle) {
                     e.preventDefault();
                     setIsEditingTitle(false);
+                    setInlineEditingTaskId(null);
                     HapticService.selection();
                     if (onDelete) onDelete(task.id);
                     else useAppStore.getState().deleteTask(task.id);
                   } else if (e.key === 'Escape') {
                     e.preventDefault();
                     setIsEditingTitle(false);
+                    setInlineEditingTaskId(null);
                     if (!editTitle.trim()) {
                       if (onDelete) onDelete(task.id);
                       else useAppStore.getState().deleteTask(task.id);
@@ -824,6 +885,7 @@ export const TaskCard = React.memo(function TaskCard({
                 onClick={e => e.stopPropagation()}
                 onPointerDown={e => e.stopPropagation()}
                 onPointerDownCapture={e => e.stopPropagation()}
+                onTouchStart={e => e.stopPropagation()}
                 onPaste={e => {
                   const pasted = e.clipboardData.getData('text');
                   if (pasted.includes('\n')) {
@@ -832,11 +894,13 @@ export const TaskCard = React.memo(function TaskCard({
                     if (lines.length > 0) {
                       setEditTitle(lines[0]);
                       const { addTask } = useAppStore.getState();
-                      lines.slice(1).forEach(line => {
+                      lines.slice(1).forEach((line, idx) => {
                         addTask({
                           id: crypto.randomUUID(),
                           title: line,
                           categoryId: task.categoryId,
+                          sectionId: task.sectionId,
+                          order: (task.order ?? 0) + idx + 1,
                           type: 'task',
                           completed: false,
                           created_at: new Date().toISOString()
@@ -846,10 +910,26 @@ export const TaskCard = React.memo(function TaskCard({
                   }
                 }}
                 style={{
-                  fontSize: '1.05rem', fontWeight: 400, width: '100%',
-                  border: 'none', background: 'transparent', outline: 'none',
-                  boxShadow: 'none', WebkitBoxShadow: 'none',
-                  color: 'var(--text-primary)', padding: 0, lineHeight: '1.4', boxSizing: 'border-box'
+                  fontSize: '1.05rem',
+                  fontWeight: 400,
+                  width: '100%',
+                  border: 'none',
+                  background: 'transparent',
+                  outline: 'none',
+                  boxShadow: 'none',
+                  WebkitBoxShadow: 'none',
+                  color: 'var(--text-primary)',
+                  padding: '2px 0',
+                  margin: 0,
+                  lineHeight: '1.4',
+                  resize: 'none',
+                  overflow: 'hidden',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'normal',
+                  overflowWrap: 'anywhere',
+                  boxSizing: 'border-box',
+                  fontFamily: 'inherit',
+                  display: 'block'
                 }}
               />
             ) : (
@@ -879,12 +959,16 @@ export const TaskCard = React.memo(function TaskCard({
                   minWidth: 0
                 }}
               >
-                {stripPeriodicityPrefix(task.title || '').split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
-                  part.match(/^https?:\/\//) ? (
-                    <a key={i} href={part} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>
-                      {part}
-                    </a>
-                  ) : part
+                {task.title ? (
+                  stripPeriodicityPrefix(task.title).split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
+                    part.match(/^https?:\/\//) ? (
+                      <a key={i} href={part} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>
+                        {part}
+                      </a>
+                    ) : part
+                  )
+                ) : (
+                  <span style={{ color: 'var(--text-tertiary)', fontStyle: 'italic' }}>Nuevo recordatorio</span>
                 )}
 
                 {/* Línea de tachado animada de izquierda a derecha */}

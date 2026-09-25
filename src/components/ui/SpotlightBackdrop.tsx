@@ -8,24 +8,24 @@ export interface SpotlightRect {
 }
 
 interface SpotlightBackdropProps {
-  /** Área a mantener nítida (sin desenfoque) mientras el menú está abierto. `null` = telón completo, sin recorte. */
+  /** Área a mantener nítida mientras el menú está abierto. */
   rect: SpotlightRect | null;
   onClose: () => void;
   onWheel?: () => void;
   onContextMenu?: (e: React.MouseEvent) => void;
   zIndex?: number;
-  /** Margen alrededor del elemento seleccionado antes de aplicar el desenfoque. */
+  /** Margen alrededor del elemento seleccionado antes de aplicar el resalte. */
   padding?: number;
-  /** Radio de esquina del "hueco", a juego con el elemento resaltado. */
+  /** Radio de esquina a juego con el elemento resaltado. */
   radius?: number;
   background?: string;
   blur?: string;
 }
 
 /**
- * Telón de fondo con desenfoque cinematográfico para menús contextuales.
- * Bloquea la interacción y el scroll de fondo mientras el menú está activo,
- * y enmarca nítidamente el elemento seleccionado con cero parpadeos (0 flicker).
+ * Telón de fondo cinematográfico para menús contextuales estilo Apple.
+ * Un único backdrop continuo que evita cualquier línea, costura o corte en el desenfoque,
+ * bloquea la interacción de fondo y enmarca con elegancia el elemento seleccionado.
  */
 export function SpotlightBackdrop({
   rect,
@@ -36,10 +36,10 @@ export function SpotlightBackdrop({
   padding = 4,
   radius = 12,
   background,
-  blur = 'blur(16px)'
+  blur = 'blur(20px)'
 }: SpotlightBackdropProps) {
   const isDark = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark';
-  const effectiveBg = background ?? (isDark ? 'rgba(0, 0, 0, 0.45)' : 'rgba(0, 0, 0, 0.20)');
+  const effectiveBg = background ?? (isDark ? 'rgba(0, 0, 0, 0.45)' : 'rgba(0, 0, 0, 0.18)');
 
   // Bloqueo total de la pantalla detrás mientras el menú está abierto
   useEffect(() => {
@@ -89,55 +89,16 @@ export function SpotlightBackdrop({
 
   return (
     <>
-      {/* Panel Superior */}
+      {/* Telón cinematográfico continuo: 1 único plano para garantizar cero cortes ni líneas en el blur */}
       <div
         style={{
           ...panelStyle,
-          top: 0,
-          left: 0,
-          right: 0,
-          height: y
+          inset: 0
         }}
         {...sharedProps}
       />
 
-      {/* Panel Inferior */}
-      <div
-        style={{
-          ...panelStyle,
-          top: y + h,
-          left: 0,
-          right: 0,
-          bottom: 0
-        }}
-        {...sharedProps}
-      />
-
-      {/* Panel Izquierdo */}
-      <div
-        style={{
-          ...panelStyle,
-          top: y,
-          left: 0,
-          width: x,
-          height: h
-        }}
-        {...sharedProps}
-      />
-
-      {/* Panel Derecho */}
-      <div
-        style={{
-          ...panelStyle,
-          top: y,
-          left: x + w,
-          right: 0,
-          height: h
-        }}
-        {...sharedProps}
-      />
-
-      {/* Anillo de resalte Apple alrededor del elemento enfocado */}
+      {/* Sutil halo Apple suave sobre el elemento seleccionado */}
       <div
         style={{
           position: 'fixed',
@@ -147,8 +108,9 @@ export function SpotlightBackdrop({
           height: h,
           borderRadius: r,
           zIndex: zIndex + 1,
-          boxShadow: '0 0 0 1.5px var(--accent-primary, #007aff), 0 8px 32px rgba(0,0,0,0.18)',
-          pointerEvents: 'none'
+          boxShadow: '0 0 0 1.5px var(--accent-primary, #007aff), 0 14px 44px rgba(0,0,0,0.22)',
+          pointerEvents: 'none',
+          transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
         }}
       />
 

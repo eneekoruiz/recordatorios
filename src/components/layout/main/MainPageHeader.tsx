@@ -10,10 +10,15 @@ import {
   ShieldAlert,
   Wand2,
   Star,
-  Trash2
+  Trash2,
+  Sparkles,
+  CheckSquare,
+  Calendar,
+  Target,
+  BookOpen
 } from 'lucide-react';
 import { HapticService } from '../../../services/HapticService';
-import { isCaducidadesList, isQueHeHechoList } from '../../../utils/specialLists';
+import { isCaducidadesList, isQueHeHechoList, getListType, LIST_TYPE_CONFIG } from '../../../utils/specialLists';
 import { confirmDialog } from '../../ui/confirmDialog';
 import { useAppStore } from '../../../store/useAppStore';
 import type { TaskItem, CustomCycle, CustomList } from '../../../models/Task';
@@ -243,6 +248,50 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                   </>
                 )}
               </div>
+            )}
+
+            {/* Pill indicador de tipo de lista con acceso a configuración */}
+            {currentList && !currentList.isFolder && (
+              <button
+                type="button"
+                data-testid="list-type-pill"
+                onClick={() => {
+                  HapticService.selection();
+                  _setIsListConfigOpen(true);
+                }}
+                title={`Tipo de lista: ${LIST_TYPE_CONFIG[getListType(currentList, currentView)].label}. Toca para cambiar.`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  padding: '3px 9px',
+                  borderRadius: 999,
+                  background: 'var(--bg-card, rgba(0,0,0,0.03))',
+                  border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                  fontSize: '0.74rem',
+                  fontWeight: 600,
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {(() => {
+                  const type = getListType(currentList, currentView);
+                  const conf = LIST_TYPE_CONFIG[type];
+                  const TypeIcon = conf.iconName === 'sparkles' ? Sparkles :
+                                   conf.iconName === 'check-square' ? CheckSquare :
+                                   conf.iconName === 'calendar' ? Calendar :
+                                   conf.iconName === 'target' ? Target :
+                                   conf.iconName === 'credit-card' ? CreditCard : BookOpen;
+                  return (
+                    <>
+                      <TypeIcon size={12} color={conf.color} strokeWidth={2.4} />
+                      <span>{conf.badgeLabel}</span>
+                    </>
+                  );
+                })()}
+              </button>
             )}
           </div>
 

@@ -73,5 +73,46 @@ describe('TaskDuration & Parallel Tasks Engine', () => {
       expect(summary.activeMinutes).toBe(175); // ~2h 55m (aprox. 3 horas)
       expect(summary.formattedActive).toBe('2h 55m');
     });
+
+    it('differentiates duration between solo annual tasks and full accumulated routine', () => {
+      const annualOnlyTasks: TaskItem[] = [
+        { id: 'a1', title: 'Limpieza a fondo detrás de electrodomésticos', status: 'pending', created_at: '', version: 1, user_id: 'u1', type: 'task', cycle_id: 'cycle_year', duration: 60 },
+        { id: 'a2', title: 'Pintar rodapiés y retocar paredes', status: 'pending', created_at: '', version: 1, user_id: 'u1', type: 'task', cycle_id: 'cycle_year', duration: 60 },
+      ];
+
+      const monthlyTasks: TaskItem[] = [
+        { id: 'm1', title: 'Descalcificar cafetera y hervidor', status: 'pending', created_at: '', version: 1, user_id: 'u1', type: 'task', cycle_id: 'cycle_month', duration: 45 },
+        { id: 'm2', title: 'Limpiar filtros de campana y aire', status: 'pending', created_at: '', version: 1, user_id: 'u1', type: 'task', cycle_id: 'cycle_month', duration: 45 },
+      ];
+
+      const weeklyTasks: TaskItem[] = [
+        { id: 'w1', title: 'Limpiar nevera por dentro', status: 'pending', created_at: '', version: 1, user_id: 'u1', type: 'task', cycle_id: 'cycle_week', duration: 30 },
+        { id: 'w2', title: 'Aspirar sofás', status: 'pending', created_at: '', version: 1, user_id: 'u1', type: 'task', cycle_id: 'cycle_week', duration: 30 },
+      ];
+
+      const dailyTasks: TaskItem[] = [
+        { id: 'd1', title: 'Fregar platos', status: 'pending', created_at: '', version: 1, user_id: 'u1', type: 'task', cycle_id: 'cycle_day', duration: 15 },
+        { id: 'd2', title: 'Barrer la cocina', status: 'pending', created_at: '', version: 1, user_id: 'u1', type: 'task', cycle_id: 'cycle_day', duration: 15 },
+      ];
+
+      const accumulatedFullRoutine = [
+        ...annualOnlyTasks,
+        ...monthlyTasks,
+        ...weeklyTasks,
+        ...dailyTasks
+      ];
+
+      const soloDuration = calculateTasksDuration(annualOnlyTasks);
+      const fullDuration = calculateTasksDuration(accumulatedFullRoutine);
+
+      // Solo anuales: 120 mins = 2h
+      expect(soloDuration.activeMinutes).toBe(120);
+      expect(soloDuration.formattedActive).toBe('2h');
+
+      // Rutina acumulada: 120 + 90 + 60 + 30 = 300 mins = 5h
+      expect(fullDuration.activeMinutes).toBe(300);
+      expect(fullDuration.formattedActive).toBe('5h');
+      expect(fullDuration.activeMinutes).toBeGreaterThan(soloDuration.activeMinutes);
+    });
   });
 });

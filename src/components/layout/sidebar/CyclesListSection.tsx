@@ -71,8 +71,8 @@ export const CyclesListSection: React.FC<CyclesListSectionProps> = ({
 
   return (
     <div style={{ marginTop: 'var(--space-16)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 12px 8px 16px' }}>
-        <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Frecuencia</span>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 16px 8px 16px' }}>
+        <span style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Frecuencia</span>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           {isEditCyclesMode && (() => {
             const allVisible = allCycles.every(c => cycleVisibility[c.id] !== false);
@@ -161,10 +161,10 @@ export const CyclesListSection: React.FC<CyclesListSectionProps> = ({
                 }}
               >
                 <div className="list-icon" style={{ backgroundColor: cycleColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Icon size={15} color="white" strokeWidth={2.4} />
+                  <Icon size={16} color="white" strokeWidth={2.2} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-                  <span className="title" style={{ color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)', fontWeight: isActive ? 600 : 500 }}>{cycle.name}</span>
+                  <span className="title" style={{ fontSize: '1.05rem', color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)', fontWeight: isActive ? 600 : 500 }}>{cycle.name}</span>
                 </div>
                 {!isEditCyclesMode && <span className="count">{taskCount}</span>}
               </div>

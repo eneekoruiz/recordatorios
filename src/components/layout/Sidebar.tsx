@@ -162,12 +162,12 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   return (
     <aside className="sidebar" onScroll={() => window.dispatchEvent(new Event('close-list-menus'))}>
       {/* 1 & 2. STICKY HEADER: COLLAPSIBLE CIRCULAR SEARCH + USER PROFILE */}
-      <div className="sidebar-header" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 14px 8px', width: '100%', boxSizing: 'border-box' }}>
+      <div className="sidebar-header" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '14px 18px 10px', width: '100%', boxSizing: 'border-box' }}>
         {!isSearchExpanded ? (
           <>
             {/* Header Title / Logo */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-              <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 Recordatorios
               </span>
             </div>
@@ -371,8 +371,8 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
 
         {/* MIS LISTAS */}
         <div className="categories-section" style={{ flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 12px 8px 16px' }}>
-            <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Mis listas</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 16px 8px 16px' }}>
+            <span style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Mis listas</span>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               <button 
                 type="button"
@@ -417,10 +417,10 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 style={{ transition: 'background-color 150ms ease' }}
               >
                 <div className="list-icon" style={{ backgroundColor: '#ff2d55', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Rocket size={15} color="white" strokeWidth={2.4} />
+                  <Rocket size={17} color="white" strokeWidth={2.2} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-                  <span className="title" style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Primeros Pasos</span>
+                  <span className="title" style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text-primary)' }}>Primeros Pasos</span>
                 </div>
                 <span className="count" style={{ color: '#ff2d55', fontWeight: 700 }}>
                   {getTaskCount('smart_primeros_pasos')}
@@ -513,10 +513,10 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               style={{ transition: 'background-color 150ms ease' }}
             >
               <div className="list-icon" style={{ backgroundColor: '#0a84ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Inbox size={15} color="white" strokeWidth={2.4} />
+                <Inbox size={17} color="white" strokeWidth={2.2} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-                <span className="title" style={{ color: currentView === 'list_inbox' ? 'var(--accent-primary)' : 'var(--text-primary)' }}>Bandeja de entrada</span>
+                <span className="title" style={{ fontSize: '1.05rem', fontWeight: 600, color: currentView === 'list_inbox' ? 'var(--accent-primary)' : 'var(--text-primary)' }}>Bandeja de entrada</span>
               </div>
               <span className="count">
                 {Object.values(tasks || {}).filter(t => {
@@ -566,10 +566,10 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               style={{ transition: 'background-color 150ms ease' }}
             >
               <div className="list-icon" style={{ backgroundColor: '#8e8e93', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Trash2 size={15} color="white" strokeWidth={2.4} />
+                <Trash2 size={17} color="white" strokeWidth={2.2} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-                <span className="title" style={{ color: currentView === 'TRASH' ? 'var(--accent-primary)' : 'var(--text-primary)' }}>Papelera</span>
+                <span className="title" style={{ fontSize: '1.05rem', fontWeight: 600, color: currentView === 'TRASH' ? 'var(--accent-primary)' : 'var(--text-primary)' }}>Papelera</span>
               </div>
               <span className="count">
                 {Object.values(tasks || {}).filter(t => t.deleted_at).length}
@@ -577,6 +577,36 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
             </motion.div>
           </div>
         </div>
+      </div>
+
+      {/* 4. APPLE REMINDERS BOTTOM ACTION TOOLBAR */}
+      <div className="sidebar-bottom-toolbar">
+        <button
+          type="button"
+          className="apple-sidebar-bottom-btn"
+          onClick={() => {
+            HapticService.selection();
+            window.dispatchEvent(new CustomEvent('open-new-task-drawer'));
+          }}
+          title="Crear nuevo recordatorio"
+        >
+          <div className="apple-plus-circle">
+            <Plus size={16} strokeWidth={2.8} />
+          </div>
+          <span>Nuevo recordatorio</span>
+        </button>
+
+        <button
+          type="button"
+          className="apple-sidebar-bottom-btn right-btn"
+          onClick={() => {
+            HapticService.selection();
+            handleAddList();
+          }}
+          title="Crear nueva lista"
+        >
+          <span>Añadir lista</span>
+        </button>
       </div>
       
       {/* MODALS (OUTSIDE SCROLL) */}

@@ -78,8 +78,14 @@ interface AppState {
   togglePinSmartList: (listId: string) => void;
   toggleCycleVisibility: (cycleId: string) => void;
   globalCyclesEnabled: boolean;
+  showDuration: boolean; // flag to display automatic duration badge
   toggleGlobalCycles: () => void;
+  setShowDuration: (val: boolean) => void;
+  postponeTask: (taskId: string) => void;
+  inlineEditingTaskId: string | null;
+  setInlineEditingTaskId: (id: string | null) => void;
   dismissOnboarding: () => void;
+
   
   addTask: (task: Partial<TaskItem>) => void;
   addTasksBatch: (tasks: Partial<TaskItem>[], options?: { createList?: CustomList }) => void;
@@ -151,6 +157,8 @@ export const useAppStore = create<AppState>()(
       tasks: {},
       cycles: INITIAL_CYCLES,
       lists: INITIAL_LISTS,
+      showDuration: true, // default to show duration
+      inlineEditingTaskId: null,
       listSections: [],
       tombstones: { lists: [], cycles: [], tasks: [] },
       sessionExpired: false,
@@ -238,6 +246,27 @@ export const useAppStore = create<AppState>()(
 
       toggleGlobalCycles: () => set((state: any) => ({ globalCyclesEnabled: !state.globalCyclesEnabled })),
 
+      setShowDuration: (val: boolean) => set({ showDuration: val }),
+
+      postponeTask: (taskId: string) => optimisticUpdate(get, set, (state) => {
+        const task = state.tasks[taskId];
+        if (!task) return state;
+        // Find max order among siblings (same list + section)
+        const siblings = Object.values(state.tasks).filter(
+          (t: any) => !t.deleted_at && t.categoryId === task.categoryId && t.sectionId === task.sectionId
+        );
+        const maxOrder = siblings.reduce((max: number, t: any) => Math.max(max, t.order ?? 0), 0);
+        return {
+          tasks: {
+            ...state.tasks,
+            [taskId]: TaskRepository.update(task, { order: maxOrder + 1 } as any)
+          }
+        };
+      }),
+
+      setInlineEditingTaskId: (id: string | null) => set({ inlineEditingTaskId: id }),
+
+
       togglePinSmartList: (listId) => optimisticUpdate(get, set, (state) => {
         const currentPinned = state.pinnedSmartLists || [];
         const pinnedSmartLists = currentPinned.includes(listId)
@@ -249,6 +278,7 @@ export const useAppStore = create<AppState>()(
           _preferences_dirty: true 
         };
       }),
+
 
       toggleSmartList: (listId) => optimisticUpdate(get, set, (state) => ({
         smartListVisibility: { ...state.smartListVisibility, [listId]: !state.smartListVisibility[listId] },

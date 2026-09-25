@@ -209,7 +209,7 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
           display: 'flex',
           flexDirection: 'column',
           gap: 2,
-          maxHeight: '85vh',
+          maxHeight: `calc(100dvh - ${targetY}px - 16px)`,
           overflowY: 'auto',
           overflowX: 'hidden'
         }}

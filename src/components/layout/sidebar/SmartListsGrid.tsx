@@ -35,12 +35,12 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
   return (
     <div>
       {/* SMART LISTS GRID HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 14px', marginBottom: 4 }}>
-        <span className="section-header" style={{ margin: 0, padding: 0, marginLeft: 4 }}>Listas inteligentes</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 16px', marginBottom: 6 }}>
+        <span className="section-header" style={{ margin: 0, padding: 0, fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '-0.01em' }}>Listas inteligentes</span>
         <button 
           type="button"
           onClick={() => setIsEditMode(!isEditMode)}
-          style={{ background: 'transparent', border: 'none', color: isEditMode ? 'var(--accent-primary)' : 'var(--text-tertiary)', fontSize: '0.85rem', cursor: 'pointer' }}
+          style={{ background: 'transparent', border: 'none', color: isEditMode ? 'var(--accent-primary)' : 'var(--text-tertiary)', fontSize: '0.88rem', fontWeight: 500, cursor: 'pointer' }}
         >
           {isEditMode ? 'Hecho' : 'Editar'}
         </button>
@@ -50,9 +50,9 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
       <div style={{ 
         display: 'grid', 
         gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', 
-        gap: 10, 
-        padding: '0 14px',
-        marginBottom: 0
+        gap: 12, 
+        padding: '0 16px',
+        marginBottom: 4
       }}>
         {availableGridLists.length === 0 ? (
           <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 'var(--space-16) 0', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>
@@ -68,7 +68,7 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
               <motion.div 
                 key={list.id}
                 layoutId={"smart-card-" + list.id}
-                className="ios-smart-card"
+                className={`ios-smart-card ${isActive ? 'is-active' : ''}`}
                 onClick={() => {
                   if (isEditMode) {
                     toggleSmartList(list.id);
@@ -78,14 +78,14 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
                 }}
                 style={{
                   background: isActive 
-                    ? list.color 
-                    : `linear-gradient(135deg, color-mix(in srgb, ${list.color} 24%, var(--bg-elevated)) 0%, color-mix(in srgb, ${list.color} 14%, var(--bg-elevated)) 100%)`,
+                    ? 'color-mix(in srgb, var(--accent-primary) 8%, var(--bg-elevated))' 
+                    : 'var(--bg-elevated)',
                   border: isActive 
-                    ? `1.5px solid ${list.color}` 
-                    : `1px solid color-mix(in srgb, ${list.color} 32%, transparent)`,
+                    ? '1.5px solid var(--accent-primary)' 
+                    : '1px solid var(--border-subtle)',
                   boxShadow: isActive 
-                    ? `0 8px 24px ${list.color}50` 
-                    : `0 2px 8px ${list.color}18`,
+                    ? '0 4px 16px rgba(0, 122, 255, 0.16)' 
+                    : '0 1px 3px rgba(0, 0, 0, 0.04)',
                   opacity: isEditMode && !smartListVisibility[list.id] ? 0.5 : 1,
                   transition: 'all 180ms cubic-bezier(0.16, 1, 0.3, 1)'
                 }}
@@ -123,20 +123,20 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
                   layoutId={"smart-icon-" + list.id} 
                   className="icon-circle" 
                   style={{
-                    backgroundColor: isActive ? 'rgba(255, 255, 255, 0.28)' : list.color,
-                    boxShadow: isActive ? 'none' : `0 4px 12px ${list.color}40`,
+                    backgroundColor: list.color,
+                    boxShadow: `0 2px 8px color-mix(in srgb, ${list.color} 36%, transparent)`,
                     border: 'none',
                     transition: 'all 150ms ease'
                   }}
                 >
-                  <Icon size={18} color="white" />
+                  <Icon size={20} color="white" />
                 </motion.div>
                 {!isEditMode && (
                   <span 
                     className="count" 
                     style={{ 
-                      fontSize: getTaskCount(list.id) >= 100 ? '1.4rem' : getTaskCount(list.id) >= 10 ? '1.7rem' : '2rem',
-                      color: isActive ? '#ffffff' : 'var(--text-primary)',
+                      fontSize: getTaskCount(list.id) >= 100 ? '1.65rem' : getTaskCount(list.id) >= 10 ? '1.95rem' : '2.25rem',
+                      color: 'var(--text-primary)',
                       transition: 'color 150ms ease'
                     }}
                   >
@@ -144,17 +144,17 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
                   </span>
                 )}
                 <h3 style={{ 
-                  color: isActive ? '#ffffff' : 'var(--text-primary)', 
+                  color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)', 
                   fontWeight: 600,
-                  fontSize: '0.84rem',
-                  letterSpacing: '-0.2px',
+                  fontSize: '0.96rem',
+                  letterSpacing: '-0.01em',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   maxWidth: '100%',
                   paddingRight: 4,
                   margin: 0,
-                  marginTop: 10,
+                  marginTop: 12,
                   lineHeight: 1.25,
                   transition: 'color 150ms ease'
                 }}>

@@ -7,8 +7,8 @@
   max-height: 100dvh;
   display: flex;
   flex-direction: column;
-  padding: 24px 20px;
-  gap: 16px;
+  padding: 0;
+  gap: 0;
   overflow: hidden !important; /* Inner .sidebar-content handles scroll */
   background: transparent;
   backdrop-filter: blur(24px);
@@ -106,7 +106,8 @@
   overflow-x: hidden !important;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
+  padding: 4px 16px 20px 16px;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 
@@ -408,7 +409,7 @@
 ======================================================== */
 @media (max-width: 768px) {
   .sidebar {
-    padding: 20px 16px;
+    padding: 0;
   }
 
   .content-header {
@@ -438,8 +439,8 @@
    LEVEL 100 APP SURFACES
 ======================================================== */
 .sidebar {
-  padding: 24px 20px;
-  gap: 20px;
+  padding: 0;
+  gap: 0;
 }
 
 .user-profile {
@@ -519,17 +520,17 @@
 }
 
 .ios-smart-card {
-  min-height: 88px;
+  min-height: 94px;
   border-radius: 16px;
   overflow: hidden;
   isolation: isolate;
   background: var(--bg-surface-glass);
   border: 1px solid var(--border-color);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   backdrop-filter: blur(24px) saturate(1.2);
   -webkit-backdrop-filter: blur(24px) saturate(1.2);
   transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  padding: 11px 12px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -549,12 +550,12 @@
 .ios-smart-card:hover {
   transform: translateY(-2px);
   border-color: var(--border-focus);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
 }
 .ios-smart-card:active { transform: translateY(1px) scale(0.98); }
 .ios-smart-card .icon-circle {
-  width: 32px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   background: var(--bg-surface);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
@@ -564,11 +565,11 @@
   flex-shrink: 0;
 }
 .ios-smart-card h3 {
-  font-size: 0.84rem;
+  font-size: 0.96rem;
   font-weight: 600;
-  letter-spacing: -0.2px;
+  letter-spacing: -0.01em;
   color: var(--text-secondary);
-  margin-top: 10px;
+  margin-top: 12px;
   margin-bottom: 0;
   line-height: 1.25;
   white-space: nowrap;
@@ -579,10 +580,10 @@
 }
 .ios-smart-card .count {
   position: absolute;
-  top: 10px;
-  right: 14px;
-  font-family: var(--font-display);
-  font-size: 1.85rem;
+  top: 12px;
+  right: 16px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Rounded", "SF Pro Display", sans-serif;
+  font-size: 2.25rem;
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1;
@@ -595,13 +596,13 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.03);
   backdrop-filter: blur(20px) saturate(1.2);
   -webkit-backdrop-filter: blur(20px) saturate(1.2);
-  padding: 6px 0;
+  padding: 4px 0;
 }
 .ios-list-item {
-  min-height: 48px;
-  margin: 3px 6px;
+  min-height: 52px;
+  margin: 2px 6px;
   border-radius: 12px;
-  padding: 10px 14px;
+  padding: 10px 16px;
   transition: background-color 0.15s ease;
   background: transparent;
   border: 1px solid transparent;
@@ -616,8 +617,8 @@
   border-radius: 12px;
 }
 .ios-list-item .list-icon {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
   display: flex;
@@ -625,10 +626,10 @@
   justify-content: center;
   flex-shrink: 0;
 }
-.ios-list-item span.title { font-weight: 600; font-size: 0.95rem; }
+.ios-list-item span.title { font-weight: 600; font-size: 1.05rem; }
 .ios-list-item .count {
-  font-size: 0.95rem;
-  font-weight: 400;
+  font-size: 1.05rem;
+  font-weight: 500;
   color: var(--text-tertiary, #8e8e93);
   margin-left: auto;
   padding: 0 4px;
@@ -861,7 +862,7 @@
 
 
 @media (max-width: 768px), (max-height: 500px) and (orientation: landscape) {
-  .sidebar { padding: max(16px, calc(env(safe-area-inset-top, 0px) + 8px)) max(16px, env(safe-area-inset-right)) calc(30px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+  .sidebar { padding: 0; }
   .sidebar-container { background: transparent; box-shadow: none; border: none; }
   .content-header { padding: 16px 0 20px; }
   .content-title-row { align-items: flex-start; flex-direction: column; gap: 12px; }

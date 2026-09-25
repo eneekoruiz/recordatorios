@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, MoreHorizontal, Check, Settings, FolderPlus, Play } from 'lucide-react';
 import type { CustomList } from '../../../models/Task';
 import { HapticService } from '../../../services/HapticService';
+import { getListType, LIST_TYPE_CONFIG } from '../../../utils/specialLists';
 
 export const SMART_COLORS: Record<string, string> = {
   'smart_today': 'var(--accent-blue)',
@@ -34,6 +35,8 @@ interface MainGlassHeaderProps {
   setIsListConfigOpen: (val: boolean) => void;
   onAddSection: () => void;
   onStartSequence?: () => void;
+  showProminentStartButton?: boolean;
+  startDuration?: string;
   completedCount?: number;
 }
 
@@ -58,6 +61,8 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
   setIsListConfigOpen,
   onAddSection,
   onStartSequence,
+  showProminentStartButton = true,
+  startDuration,
   completedCount
 }) => {
   const listAccentColor = isSmartView 
@@ -151,8 +156,8 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
 
       {/* Right: Actions unified in the top line */}
       <div className="header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginLeft: 'auto', flexWrap: 'nowrap', flexShrink: 0, justifyContent: 'flex-end', position: 'relative' }}>
-        {/* Empezar secuencia inmediata */}
-        {onStartSequence && (
+        {/* Empezar secuencia inmediata (prominente solo en listas de rutinas/acción) */}
+        {onStartSequence && showProminentStartButton && (
           <button
             type="button"
             className="apple-nav-start-btn"
@@ -182,6 +187,11 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
           >
             <Play size={11} fill="currentColor" style={{ flexShrink: 0 }} />
             <span>Empezar</span>
+            {startDuration && startDuration !== '0 min' && (
+              <span style={{ opacity: 0.85, fontSize: '0.72rem', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
+                ({startDuration})
+              </span>
+            )}
           </button>
         )}
 
@@ -388,11 +398,37 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                         </button>
                         <button 
                           className="ios-dropdown-item"
-                          onClick={() => { setIsListConfigOpen(true); setIsMenuOpen(false); }}
-                          style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
+                          onClick={() => { 
+                            const nextVal = currentList.autoEstimateDuration === false ? true : false;
+                            updateList(currentList.id, { autoEstimateDuration: nextVal }); 
+                            setIsMenuOpen(false); 
+                          }}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
                         >
-                          <Settings size={15} color="var(--text-secondary)" />
-                          <span style={{ whiteSpace: 'nowrap' }}>Personalizar lista</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <Check size={14} color="var(--accent-primary)" style={{ opacity: currentList.autoEstimateDuration !== false ? 1 : 0 }} />
+                            <span style={{ whiteSpace: 'nowrap' }}>Estimar duración automática</span>
+                          </div>
+                        </button>
+                        <button 
+                          className="ios-dropdown-item"
+                          onClick={() => { setIsListConfigOpen(true); setIsMenuOpen(false); }}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <Settings size={15} color="var(--text-secondary)" />
+                            <span style={{ whiteSpace: 'nowrap' }}>Personalizar lista</span>
+                          </div>
+                          <span style={{ 
+                            fontSize: '0.72rem', 
+                            fontWeight: 600, 
+                            color: LIST_TYPE_CONFIG[getListType(currentList, currentView)].color,
+                            background: 'var(--bg-hover, rgba(0,0,0,0.04))',
+                            padding: '1px 6px',
+                            borderRadius: 6
+                          }}>
+                            {LIST_TYPE_CONFIG[getListType(currentList, currentView)].badgeLabel}
+                          </span>
                         </button>
                       </>
                     )}
