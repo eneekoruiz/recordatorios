@@ -144,7 +144,7 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Clock size={16} color="var(--accent-primary, #007aff)" />
           <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-            Temporizador estimado
+            Duración estimada
           </span>
         </div>
         <span 

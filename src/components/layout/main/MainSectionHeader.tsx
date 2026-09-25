@@ -1,10 +1,11 @@
-﻿import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { MoreHorizontal, ChevronDown, Repeat } from 'lucide-react';
 import { HapticService } from '../../../services/HapticService';
 import type { SectionMenuState } from './SectionContextMenu';
 import type { TasksDurationSummary } from '../../../utils/taskDuration';
 import { isShoppingList } from '../../../utils/specialLists';
 import { useAppStore } from '../../../store/useAppStore';
+import { formatEuro } from '../../../utils/format';
 
 interface SectionData {
   title: string;
@@ -441,7 +442,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               }}
               title="Subtotal de la sección"
             >
-              {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(sectionTotal)} €
+              {formatEuro(sectionTotal)}
             </span>
           )}
           {isCustomSection && !isMobile && (

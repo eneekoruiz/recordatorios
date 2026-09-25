@@ -406,6 +406,22 @@ input:checked + .slider::before {
 .slider.round::before {
   border-radius: 50%;
 }
+/* Texto solo para lectores de pantalla */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+/* Variante para tarjetas naranjas (tarea en segundo plano) */
+.switch--orange input:checked + .slider {
+  background-color: #ff9500;
+}
 
 /* ========================================================
    FAB (Floating Action Button)
@@ -584,12 +600,22 @@ input:checked + .slider::before {
   margin-left: auto;
   margin-right: 4px;
 }
-.ios-list-item:active, .ios-list-item:hover, .ios-list-item.active {
+.ios-list-item:active, .ios-list-item.active {
   background: var(--bg-hover);
   border-radius: 12px;
   border-color: transparent;
   transform: none;
   box-shadow: none;
+}
+/* En pantallas táctiles el :hover se queda "pegado" tras un toque: solo con ratón */
+@media (hover: hover) {
+  .ios-list-item:hover {
+    background: var(--bg-hover);
+    border-radius: 12px;
+    border-color: transparent;
+    transform: none;
+    box-shadow: none;
+  }
 }
 
 /* ========================================================

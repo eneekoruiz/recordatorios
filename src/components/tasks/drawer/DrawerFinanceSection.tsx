@@ -35,7 +35,7 @@ export const DrawerFinanceSection: React.FC<DrawerFinanceSectionProps> = ({
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Wallet size={15} strokeWidth={2.1} />
-          Modo Financiero (Costes)
+          Precio y costes
         </span>
         <ChevronDown size={18} style={{ transform: cardFinanceOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
       </button>

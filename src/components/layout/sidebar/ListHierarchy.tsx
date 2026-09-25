@@ -22,6 +22,11 @@ import { confirmDialog } from '../../ui/confirmDialog';
 import { shareList, unshareList } from '../../../services/ShareService';
 import { getListIcon, getSuggestedListIconAndColor } from '../../../constants/icons';
 
+// Menú contextual de escritorio: ancho suficiente para las etiquetas largas y
+// posición que nunca se sale por abajo de la ventana.
+const MENU_WIDTH = 280;
+const clampMenuTop = (top: number) => Math.max(12, Math.min(top, window.innerHeight - 330));
+
 interface ListHierarchyProps {
   lists: CustomList[];
   currentView: string;
@@ -152,7 +157,7 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
             const rect = el.getBoundingClientRect();
             setMenuCoords({
               top: rect.bottom + 2,
-              left: Math.max(12, Math.min(rect.right - 230, window.innerWidth - 245))
+              left: Math.max(12, Math.min(rect.right - MENU_WIDTH, window.innerWidth - MENU_WIDTH - 12))
             });
           } else {
             setMenuCoords({ top: 120, left: 120 });
@@ -425,10 +430,12 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                       overflowY: 'auto'
                     } : { 
                       position: 'fixed',
-                      top: Math.min(menuCoords.top, window.innerHeight - 300),
-                      left: Math.max(12, Math.min(menuCoords.left, window.innerWidth - 235)),
+                      top: clampMenuTop(menuCoords.top),
+                      left: Math.max(12, Math.min(menuCoords.left, window.innerWidth - MENU_WIDTH - 12)),
                       zIndex: 99999,
-                      width: 230,
+                      width: MENU_WIDTH,
+                      maxHeight: window.innerHeight - clampMenuTop(menuCoords.top) - 12,
+                      overflowY: 'auto',
                       background: 'var(--bg-material, rgba(255,255,255,0.85))',
                       backdropFilter: 'blur(30px) saturate(180%)',
                       WebkitBackdropFilter: 'blur(30px) saturate(180%)',
@@ -520,7 +527,7 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                             }}
                             style={isMobile ? mobileItemStyle : undefined}
                           >
-                            <IndentIncrease size={16} /> Sangrar (Anidar en anterior)
+                            <IndentIncrease size={16} /> Anidar en la lista anterior
                           </button>
                         )}
                         {list.parentId && (
@@ -536,7 +543,7 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                             }}
                             style={isMobile ? mobileItemStyle : undefined}
                           >
-                            <IndentDecrease size={16} /> Des-sangrar (Subir de nivel)
+                            <IndentDecrease size={16} /> Subir un nivel
                           </button>
                         )}
                         {!list.isFolder && (
@@ -579,7 +586,7 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                           }}
                           style={isMobile ? mobileItemStyle : undefined}
                         >
-                          <Edit3 size={16} /> Editar {list.isFolder ? 'Carpeta' : 'Lista'}
+                          <Edit3 size={16} /> Editar {list.isFolder ? 'carpeta' : 'lista'}
                         </button>
                         <div className="ios-dropdown-divider" style={isMobile ? { margin: '4px 0', borderTop: '1px solid var(--border-subtle, rgba(255,255,255,0.1))' } : undefined} />
                         <button 
@@ -608,7 +615,7 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                           onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
                           onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                         >
-                          <Trash2 size={16} /> Eliminar {list.isFolder ? 'Carpeta' : 'Lista'}
+                          <Trash2 size={16} /> Eliminar {list.isFolder ? 'carpeta' : 'lista'}
                         </button>
                       </>
                     )}

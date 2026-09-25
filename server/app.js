@@ -35,6 +35,17 @@ export function getJwtSecret() {
   return DEV_FALLBACK_SECRET;
 }
 
+/**
+ * Origen de los enlaces de recuperación de contraseña. En producción nunca se usa la
+ * cabecera Origin: la controla quien hace la petición y permitiría enviar a la víctima
+ * un enlace legítimo (con un token válido) que apunta a un dominio ajeno.
+ */
+export function resetLinkBase({ appUrl, production, origin, protocol, host }) {
+  if (appUrl) return appUrl.replace(/\/$/, '');
+  if (!production && origin) return origin.replace(/\/$/, '');
+  return `${protocol}://${host}`;
+}
+
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const normalizeEmail = (email) => (typeof email === 'string' ? email.toLowerCase().trim() : '');
 
@@ -292,8 +303,14 @@ export function createApp({ prisma }) {
         expiresIn: RESET_TTL,
         algorithm: 'HS256',
       });
-      const appUrl = process.env.APP_URL || req.headers.origin || `${req.protocol}://${req.get('host')}`;
-      const resetUrl = `${appUrl.replace(/\/$/, '')}/?reset=${encodeURIComponent(resetToken)}`;
+      const appUrl = resetLinkBase({
+        appUrl: process.env.APP_URL,
+        production: isProduction(),
+        origin: req.headers.origin,
+        protocol: req.protocol,
+        host: req.get('host'),
+      });
+      const resetUrl = `${appUrl}/?reset=${encodeURIComponent(resetToken)}`;
 
       if (mailReady) {
         await sendPasswordResetEmail(user.email, resetUrl);

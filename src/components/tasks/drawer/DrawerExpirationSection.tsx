@@ -40,7 +40,7 @@ export const DrawerExpirationSection: React.FC<DrawerExpirationSectionProps> = (
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <CreditCard size={15} color="var(--accent-primary)" />
-          Tipo de Caducidad {expirationType ? `(${expirationType === 'card' ? 'Tarjeta' : expirationType === 'subscription' ? 'Suscripción' : 'Otro'})` : ''}
+          Tipo de caducidad {expirationType ? `(${expirationType === 'card' ? 'Tarjeta' : expirationType === 'subscription' ? 'Suscripción' : 'Otro'})` : ''}
         </span>
         <ChevronDown size={18} style={{ transform: cardCaducidadOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
       </button>

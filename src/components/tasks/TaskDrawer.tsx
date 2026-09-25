@@ -740,7 +740,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                     }}
                   />
                 )}
-                <h3 id="drawer-title">{taskId ? 'Detalles adicionales' : 'Nuevo recordatorio'}</h3>
+                <h3 id="drawer-title">{taskId ? 'Detalles' : 'Nuevo recordatorio'}</h3>
               </div>
               <button className="save-btn" onClick={handleSave} disabled={!title.trim()} aria-label={taskId ? 'Guardar cambios' : 'Guardar nueva tarea'}>
                 {taskId ? 'Listo' : 'Añadir'}
@@ -793,7 +793,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                 addAnticipationAlert={addAnticipationAlert}
               />
 
-              {/* Card 2: Repetición y Ubicación */}
+              {/* Card 2: Repetición y ubicación */}
               <DrawerRecurrenceSection
                 cardRepeatOpen={cardRepeatOpen}
                 setCardRepeatOpen={setCardRepeatOpen}
@@ -835,7 +835,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                 />
               </DrawerRecurrenceSection>
 
-              {/* Card 3: Requisitos / Dependencias */}
+              {/* Card 3: Requisitos y dependencias */}
               <DrawerRequirementsSection
                 cardReqOpen={cardReqOpen}
                 setCardReqOpen={setCardReqOpen}
@@ -860,7 +860,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                 setTargetCount={setTargetCount}
               />
 
-              {/* Card 5: Modo Financiero (Costes) */}
+              {/* Card 5: Precio y costes */}
               <DrawerFinanceSection
                 cardFinanceOpen={cardFinanceOpen}
                 setCardFinanceOpen={setCardFinanceOpen}

@@ -28,7 +28,7 @@ export const DrawerRequirementsSection: React.FC<DrawerRequirementsSectionProps>
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Link2 size={16} color="var(--accent-orange)" />
-          Requisitos / Dependencias
+          Requisitos y dependencias
         </span>
         <ChevronDown size={18} style={{ transform: cardReqOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
       </button>

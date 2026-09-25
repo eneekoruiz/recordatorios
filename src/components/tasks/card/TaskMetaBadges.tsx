@@ -1,10 +1,11 @@
-﻿import { Fragment, type ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { Calendar, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen, Zap, Tag } from 'lucide-react';
 import type { TaskItem, CustomList } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
 import { getTaskDuration, formatDuration } from '../../../utils/taskDuration';
 import { isShoppingList } from '../../../utils/specialLists';
+import { formatEuro } from '../../../utils/format';
 
 export interface TaskMetaBadgesProps {
   task: TaskItem;
@@ -208,7 +209,7 @@ export function TaskMetaBadges({
                   {task.quantity && task.quantity > 1 && (
                     <span style={{ color: 'var(--text-tertiary)', fontSize: '0.72rem', fontWeight: 500 }}>{task.quantity}×</span>
                   )}
-                  <span>{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(task.price)}</span>
+                  <span>{formatEuro(task.price)}</span>
                 </span>
               );
             }

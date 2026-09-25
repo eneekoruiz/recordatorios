@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import jwt from 'jsonwebtoken';
-import { createApp } from '../../server/app.js';
+import { createApp, resetLinkBase } from '../../server/app.js';
 import { createMemoryPrisma } from '../support/memoryPrisma.js';
 
 let server;
@@ -334,5 +334,22 @@ describe('robustez', () => {
     } finally {
       delete process.env.VERCEL;
     }
+  });
+});
+
+describe('resetLinkBase', () => {
+  it('en producción ignora la cabecera Origin (la controla el atacante)', () => {
+    expect(resetLinkBase({ production: true, origin: 'https://evil.example', protocol: 'https', host: 'recordatorios.app' }))
+      .toBe('https://recordatorios.app');
+  });
+
+  it('usa APP_URL cuando está configurada, sin barra final', () => {
+    expect(resetLinkBase({ appUrl: 'https://recordatorios.app/', production: true, origin: 'https://evil.example', protocol: 'https', host: 'x' }))
+      .toBe('https://recordatorios.app');
+  });
+
+  it('en desarrollo apunta al frontend que hizo la petición', () => {
+    expect(resetLinkBase({ production: false, origin: 'http://localhost:5173', protocol: 'http', host: 'localhost:3001' }))
+      .toBe('http://localhost:5173');
   });
 });

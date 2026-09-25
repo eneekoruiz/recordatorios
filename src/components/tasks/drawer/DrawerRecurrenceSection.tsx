@@ -49,7 +49,7 @@ export const DrawerRecurrenceSection: React.FC<DrawerRecurrenceSectionProps> = (
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Repeat size={16} color="var(--accent-green)" />
-          Repetición y Ubicación
+          Repetición y ubicación
         </span>
         <ChevronDown size={18} style={{ transform: cardRepeatOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
       </button>
@@ -97,7 +97,7 @@ export const DrawerRecurrenceSection: React.FC<DrawerRecurrenceSectionProps> = (
                 
                 {showInlineInput && (
                   <div style={{ marginTop: '12px', padding: '12px', background: 'var(--bg-elevated)', borderRadius: '8px', border: '1px solid var(--border-subtle)', display: 'flex', gap: '8px', flexDirection: 'column' }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>Nueva Sección</span>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>Nueva sección</span>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <input 
                         autoFocus

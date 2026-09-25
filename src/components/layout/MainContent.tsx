@@ -965,12 +965,12 @@ const CORE_CYCLES = [
     storeAddSection({
       id: newSecId,
       listId: currentList.id,
-      name: 'Nueva Sección',
+      name: 'Nueva sección',
       parentId,
       order: existing.length
     });
     setEditingSectionId(newSecId);
-    setEditingSectionName('Nueva Sección');
+    setEditingSectionName('Nueva sección');
   }, [currentList, listSections]);
 
   const startEditingSection = useCallback((e: any, id: string, name: string) => {

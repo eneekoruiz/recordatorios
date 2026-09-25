@@ -24,6 +24,13 @@ export function joinNatural(items: string[]): string {
   return `${items.slice(0, -1).join(', ')} y ${items[items.length - 1]}`;
 }
 
+const EURO_FORMAT = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' });
+
+/** "1,20 €" · "10,10 €": importes siempre con dos decimales y un solo símbolo. */
+export function formatEuro(amount: number): string {
+  return EURO_FORMAT.format(amount);
+}
+
 export function capitalize(text: string): string {
   return text ? text.charAt(0).toUpperCase() + text.slice(1) : text;
 }

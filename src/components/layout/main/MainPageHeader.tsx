@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   ArrowUpDown,
   X,
@@ -17,6 +17,7 @@ import { confirmDialog } from '../../ui/confirmDialog';
 import { useAppStore } from '../../../store/useAppStore';
 import type { TaskItem, CustomCycle, CustomList } from '../../../models/Task';
 import type { TasksDurationSummary } from '../../../utils/taskDuration';
+import { formatEuro } from '../../../utils/format';
 
 interface MainPageHeaderProps {
   scrollTop?: number;
@@ -305,7 +306,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                   }}
                   title="Presupuesto total pendiente"
                 >
-                  {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(totalCost)} €
+                  {formatEuro(totalCost)}
                 </span>
               )}
               <span className="apple-large-counter" style={{ color: viewColor }}>

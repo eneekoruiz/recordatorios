@@ -598,9 +598,11 @@
   background: transparent;
   border: 1px solid transparent;
 }
-.ios-list-item:hover { 
-  background: var(--bg-hover); 
-  border-radius: 12px;
+@media (hover: hover) {
+  .ios-list-item:hover {
+    background: var(--bg-hover);
+    border-radius: 12px;
+  }
 }
 .ios-list-item.active {
   background: var(--bg-hover);

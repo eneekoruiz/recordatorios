@@ -16,6 +16,8 @@ import { LIST_ICON_MAP as ICONS, getSuggestedListIconAndColor } from '../../cons
 import { CheckSquare, Folder, Check, X, CreditCard, BookOpen, Sparkles, Calendar, Target, Clock } from 'lucide-react';
 
 const COLORS = LIST_AVAILABLE_COLORS;
+// Una fila completa de muestras (7 columnas) antes de «Ver más»: sin muestras huérfanas.
+const COLOR_PREVIEW_COUNT = 7;
 
 import { 
   isCaducidadesList, 
@@ -59,11 +61,11 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
         setIsFolder(!!existingList.isFolder);
         setListType(getListType(existingList, existingList.id));
         setAutoEstimateDuration(existingList.autoEstimateDuration !== false);
-        setShowAllColors(!(COLORS.slice(0, 8) as readonly string[]).includes(cleanColor));
+        setShowAllColors(!(COLORS.slice(0, COLOR_PREVIEW_COUNT) as readonly string[]).includes(cleanColor));
         setShowAllIcons(!Object.keys(ICONS).slice(0, 12).includes(initialIcon));
       } else {
         setName('');
-        const initialColor = COLORS[Math.floor(Math.random() * 8)];
+        const initialColor = COLORS[Math.floor(Math.random() * COLOR_PREVIEW_COUNT)];
         setColor(initialColor); // Random from first 8
         const initialIcon = defaultIsFolder ? 'folder' : 'list';
         setIcon(initialIcon);
@@ -247,7 +249,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                     alignItems: 'center',
                     gap: 4
                   }}>
-                    {LIST_TYPE_CONFIG[listType].supportsDuration ? '⏱ Con duraciones estimadas' : 'Sin duraciones'}
+                    {LIST_TYPE_CONFIG[listType].supportsDuration ? 'Con duraciones estimadas' : 'Sin duraciones'}
                   </span>
                 </div>
 
@@ -296,11 +298,11 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                           {item.badgeLabel}
                         </span>
                         <span style={{ fontSize: '0.67rem', color: 'var(--text-tertiary)', lineHeight: 1.1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                          {typeKey === 'routines' ? 'Limpieza / Compra' :
-                           typeKey === 'simple' ? 'Checklist / Notas' :
-                           typeKey === 'events' ? 'Citas y Fechas' :
+                          {typeKey === 'routines' ? 'Limpieza y hogar' :
+                           typeKey === 'simple' ? 'Notas y compras' :
+                           typeKey === 'events' ? 'Citas y fechas' :
                            typeKey === 'goals' ? 'Metas del año' :
-                           typeKey === 'caducidades' ? 'Suscripciones' : 'Bitácora'}
+                           typeKey === 'caducidades' ? 'Suscripciones' : 'Diario personal'}
                         </span>
                       </button>
                     );
@@ -427,8 +429,8 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
             {/* Colors */}
             <div>
               <span style={{ display: 'block', marginBottom: 10, fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.02em', textTransform: 'uppercase' }}>Color</span>
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-                {(showAllColors ? COLORS : COLORS.slice(0, 8)).map(c => {
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${COLOR_PREVIEW_COUNT}, minmax(0, 1fr))`, gap: '12px 0', justifyItems: 'center' }}>
+                {(showAllColors ? COLORS : COLORS.slice(0, COLOR_PREVIEW_COUNT)).map(c => {
                   const isSelected = color === c;
                   return (
                     <button 
@@ -484,7 +486,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                     e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
                   }}
                 >
-                  {showAllColors ? 'Ver menos' : `Ver más (${COLORS.length - 8} más)`}
+                  {showAllColors ? 'Ver menos' : `Ver ${COLORS.length - COLOR_PREVIEW_COUNT} más`}
                 </button>
               </div>
             </div>
@@ -566,7 +568,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                     e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
                   }}
                 >
-                  {showAllIcons ? 'Ver menos' : `Ver más (${Object.keys(ICONS).length - 12} más)`}
+                  {showAllIcons ? 'Ver menos' : `Ver ${Object.keys(ICONS).length - 12} más`}
                 </button>
               </div>
             </div>

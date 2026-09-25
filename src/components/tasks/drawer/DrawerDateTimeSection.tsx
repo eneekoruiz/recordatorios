@@ -5,6 +5,7 @@ import type { AlertDef } from '../../../models/Task';
 import { isCaducidadesList, getListType, doesListSupportDuration } from '../../../utils/specialLists';
 import { Sunrise, Sun, Moon } from 'lucide-react';
 import { AppleTimerPicker } from '../../ui/AppleTimerPicker';
+import { useAppStore } from '../../../store/useAppStore';
 
 interface DrawerDateTimeSectionProps {
   cardTimeOpen: boolean;
@@ -55,6 +56,9 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
   removeAlert,
   addAnticipationAlert
 }) => {
+  const list = useAppStore((state) => state.lists.find((l) => l.id === category));
+  const isRoutineList = doesListSupportDuration(getListType(list, category));
+
   return (
     <div className="section-card">
       <button 
@@ -262,11 +266,11 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                 <AppleTimerPicker
                   duration={duration}
                   onChange={(mins) => setDuration?.(mins)}
-                  isRoutineCategory={doesListSupportDuration(getListType(undefined, category))}
+                  isRoutineCategory={isRoutineList}
                 />
 
                 {/* Opción Tarea en Paralelo / Segundo plano (ej: lavadora, mascarilla, secadora) */}
-                {setIsParallel && (
+                {setIsParallel && (isRoutineList || isParallel) && (
                   <div style={{
                     marginTop: 12,
                     padding: '12px 14px',
@@ -286,14 +290,14 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                         </div>
                         <div style={{ minWidth: 0 }}>
                           <div style={{ fontSize: '0.84rem', fontWeight: 650, color: 'var(--text-primary)', lineHeight: 1.2 }}>
-                            Tarea en segundo plano (Paralela)
+                            Tarea en segundo plano
                           </div>
                           <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.2, marginTop: 2 }}>
                             Lavadora, mascarilla, secadora... se ejecuta sola mientras haces otras tareas
                           </div>
                         </div>
                       </div>
-                      <label className="switch" style={{ flexShrink: 0 }}>
+                      <label className="switch switch--orange" style={{ flexShrink: 0 }}>
                         <input
                           type="checkbox"
                           checked={Boolean(isParallel)}

@@ -17,7 +17,7 @@ export const LIST_TYPE_CONFIG: Record<ListType, ListTypeInfo> = {
   routines: {
     type: 'routines',
     label: 'Rutinas',
-    description: 'Limpieza, compra o quehaceres con duraciones y frecuencias',
+    description: 'Limpieza, hogar y quehaceres con duraciones y frecuencias',
     badgeLabel: 'Rutinas',
     iconName: 'sparkles',
     color: '#0a84ff',

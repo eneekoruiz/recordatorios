@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -12,6 +12,7 @@ import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
 import { SoundService } from '../../../services/SoundService';
 import { SpotlightBackdrop, type SpotlightRect } from '../../ui/SpotlightBackdrop';
+import { formatEuro } from '../../../utils/format';
 
 export interface TaskContextMenuProps {
   task: TaskItem;
@@ -622,7 +623,7 @@ function MenuActions({
         <ActionRow 
           icon={<Coins size={16} />} 
           label="Precio / Coste"
-          sublabel={task.price !== undefined && task.price > 0 ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(task.price) : undefined}
+          sublabel={task.price !== undefined && task.price > 0 ? formatEuro(task.price) : undefined}
           trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
           onClick={() => setCurrentSubmenu('price')} 
         />

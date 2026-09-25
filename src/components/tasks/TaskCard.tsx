@@ -1153,13 +1153,18 @@ export const TaskCard = React.memo(function TaskCard({
                 }}
               >
                 {Boolean(task.priority && task.priority !== 'none' && (task.priority as any) !== 0) && (
-                  <button
-                    type="button"
+                  <>
+                  {/* Dentro del título (que ya es un botón) no puede ir otro botón: los signos se
+                      ocultan a los lectores de pantalla y se anuncia la prioridad como texto. */}
+                  <span className="sr-only">
+                    {task.priority === 'low' || (task.priority as any) === 9 ? 'Prioridad baja: ' : task.priority === 'medium' || (task.priority as any) === 5 ? 'Prioridad media: ' : 'Prioridad alta: '}
+                  </span>
+                  <span
                     className={`priority-badge ${typeof task.priority === 'number' ? ((task.priority as any) === 1 ? 'high' : (task.priority as any) === 5 ? 'medium' : 'low') : task.priority}`}
                     onClick={handlePriorityBadgeClick}
                     onPointerDown={(e) => e.stopPropagation()}
                     title="Cambiar urgencia"
-                    aria-label="Cambiar urgencia"
+                    aria-hidden="true"
                     style={{
                       cursor: 'pointer',
                       border: 'none',
@@ -1182,7 +1187,8 @@ export const TaskCard = React.memo(function TaskCard({
                     onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.filter = 'none'; }}
                   >
                     {task.priority === 'low' || (task.priority as any) === 9 ? '!' : task.priority === 'medium' || (task.priority as any) === 5 ? '!!' : '!!!'}
-                  </button>
+                  </span>
+                  </>
                 )}
                 {task.title ? (
                   stripPeriodicityPrefix(task.title).split(/(https?:\/\/[^\s]+)/g).map((part, i) => 

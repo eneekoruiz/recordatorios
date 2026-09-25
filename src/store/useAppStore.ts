@@ -737,7 +737,7 @@ export const useAppStore = create<AppState>()(
           ...(state.listSections || []).filter((s: any) => s.id !== section.id),
           {
             ...section,
-            name: (typeof section?.name === 'string' && section.name.trim()) ? section.name.trim() : 'Nueva Sección',
+            name: (typeof section?.name === 'string' && section.name.trim()) ? section.name.trim() : 'Nueva sección',
             _is_dirty: true,
             updated_at: section.updated_at || new Date().toISOString()
           }
@@ -748,7 +748,7 @@ export const useAppStore = create<AppState>()(
         listSections: (state.listSections || []).map((s: any) => s.id === id ? {
           ...s,
           ...(typeof updatesOrName === 'string'
-            ? { name: updatesOrName.trim() || s.name || 'Nueva Sección' }
+            ? { name: updatesOrName.trim() || s.name || 'Nueva sección' }
             : updatesOrName),
           _is_dirty: true,
           updated_at: new Date().toISOString()
@@ -1327,7 +1327,7 @@ export const useAppStore = create<AppState>()(
                 s.id,
                 {
                   ...s,
-                  name: (typeof s.name === 'string' && s.name.trim()) ? s.name.trim() : 'Nueva Sección'
+                  name: (typeof s.name === 'string' && s.name.trim()) ? s.name.trim() : 'Nueva sección'
                 }
               ])
           ).values()

@@ -404,7 +404,7 @@ select[multiple].detail-select {
   font-weight: 700;
   transition: transform 0.18s var(--ease-spring), opacity 0.18s ease;
 }
-.cancel-btn { color: var(--text-secondary); }
+.cancel-btn { color: var(--accent-primary); }
 .save-btn {
   color: var(--text-inverse, #ffffff);
   background: var(--accent-primary);
