@@ -172,8 +172,26 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               </span>
             </div>
 
-            {/* Actions: Circular Search Button + Profile Button */}
+            {/* Actions: Editar + Circular Search Button + Profile Button */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              <button
+                type="button"
+                className="apple-nav-text-btn"
+                onClick={() => { HapticService.selection(); setIsEditMode(!isEditMode); }}
+                aria-pressed={isEditMode}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  padding: '6px 4px',
+                  minHeight: 44,
+                  color: 'var(--accent-primary)',
+                  fontSize: '1.0625rem',
+                  fontWeight: isEditMode ? 600 : 400,
+                  cursor: 'pointer'
+                }}
+              >
+                {isEditMode ? 'Hecho' : 'Editar'}
+              </button>
               <button
                 type="button"
                 data-testid="sidebar-search-btn"
@@ -460,9 +478,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                     position: 'fixed', 
                     inset: 0, 
                     zIndex: 99998, 
-                    background: isMobile ? 'rgba(0, 0, 0, 0.45)' : 'transparent',
-                    backdropFilter: isMobile ? 'blur(16px)' : 'none',
-                    WebkitBackdropFilter: isMobile ? 'blur(16px)' : 'none',
+                    background: isMobile ? 'var(--scrim)' : 'transparent',
                     transition: 'all 0.2s ease'
                   }} 
                   onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); setMenuCoords(null); }} 

@@ -326,9 +326,7 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'rgba(0, 0, 0, 0.4)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)'
+            background: 'var(--scrim)'
           }}
         />
 

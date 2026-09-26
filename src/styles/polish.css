@@ -446,13 +446,11 @@ input:focus, input:focus-visible, textarea:focus, textarea:focus-visible {
     min-height: 52px !important;
     padding: 11px 14px !important;
   }
+  /* El área táctil de 44 pt la da ::before (capa Apple); la opacidad la decide la fila */
   .task-info-btn {
-    min-width: 44px;
-    min-height: 44px;
     display: flex !important;
     align-items: center;
     justify-content: center;
-    opacity: 0.85 !important;
   }
   .section-start-btn {
     min-height: 36px;
@@ -635,4 +633,168 @@ input:focus, input:focus-visible, textarea:focus, textarea:focus-visible {
   outline-offset: -2px;
   background: rgba(0, 122, 255, 0.08) !important;
   border-radius: 10px;
+}
+
+/* ==========================================================================
+   Capa Apple (HIG): fondo agrupado, tarjetas blancas sin borde, velos
+   suaves, botones de cristal y áreas táctiles de 44 pt.
+   ========================================================================== */
+:root {
+  --bg-grouped: #f2f2f7;
+  --bg-grouped-card: #ffffff;
+  --scrim: rgba(0, 0, 0, 0.22);
+  --glass-fill: rgba(255, 255, 255, 0.62);
+  --glass-stroke: rgba(0, 0, 0, 0.08);
+}
+[data-theme="dark"], [data-theme="dark"] :root, html.dark, body.dark {
+  --bg-grouped: #000000;
+  --bg-grouped-card: #1c1c1e;
+  --scrim: rgba(0, 0, 0, 0.5);
+  --glass-fill: rgba(44, 44, 46, 0.62);
+  --glass-stroke: rgba(255, 255, 255, 0.1);
+}
+
+/* Pantalla principal / barra lateral: gris agrupado con tarjetas blancas
+   (el selector cubre también la regla oscura de index.css, más específica) */
+.sidebar-container,
+[data-theme="dark"] .sidebar-container,
+body.dark .sidebar-container {
+  background: var(--bg-grouped) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.ios-smart-card {
+  background: var(--bg-grouped-card) !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+@media (hover: hover) {
+  .ios-smart-card:hover {
+    transform: none !important;
+    box-shadow: none !important;
+    filter: brightness(0.97);
+  }
+}
+/* Selección (iPad/Mac): la tarjeta activa se rellena con su color */
+@media (min-width: 769px) {
+  .ios-smart-card.is-active {
+    background: var(--card-color) !important;
+  }
+  .ios-smart-card.is-active h3,
+  .ios-smart-card.is-active .count {
+    color: #ffffff !important;
+  }
+  .ios-smart-card.is-active .icon-circle {
+    background: #ffffff !important;
+  }
+  .ios-smart-card.is-active .icon-circle,
+  .ios-smart-card.is-active .icon-circle * {
+    color: var(--card-color) !important;
+  }
+  .ios-smart-card.is-active .icon-circle svg {
+    stroke: var(--card-color) !important;
+  }
+}
+/* «···» de cada lista: solo al pasar el ratón (como en el Mac) */
+@media (hover: hover) {
+  .ios-list-item .list-action-btn {
+    opacity: 0 !important;
+  }
+  .ios-list-item:hover .list-action-btn,
+  .ios-list-item .list-action-btn:focus-visible {
+    opacity: 0.85 !important;
+  }
+}
+.ios-list-block {
+  background: var(--bg-grouped-card) !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 12px !important;
+}
+
+/* Un solo separador entre filas: el de .list-separator-line (evita la línea doble) */
+.ios-list-block .ios-list-item:has(+ .list-separator-line)::after,
+.ios-list-block div:has(> .ios-list-item + .list-separator-line) > .ios-list-item::after {
+  display: none !important;
+}
+
+/* En el iPhone la navegación es por pantallas: nada queda «seleccionado» */
+@media (max-width: 768px) {
+  .ios-list-block .ios-list-item.active {
+    background: transparent !important;
+  }
+  .ios-list-block .ios-list-item.active .title {
+    color: var(--text-primary) !important;
+  }
+  /* Indicador «›» de que la fila abre la lista (salvo si la fila ya tiene «···») */
+  .ios-list-block .ios-list-item:not(:has(.list-action-btn)) .count::after {
+    content: "";
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-left: 12px;
+    border-top: 2px solid var(--text-tertiary);
+    border-right: 2px solid var(--text-tertiary);
+    transform: rotate(45deg);
+    position: relative;
+    top: -2px;
+  }
+}
+
+/* Barra inferior de la barra lateral: en escritorio solo «Añadir lista»
+   (los recordatorios se añaden desde la barra de la lista) */
+@media (min-width: 769px) {
+  .sidebar-bottom-toolbar .apple-sidebar-bottom-btn:not(.right-btn) {
+    display: none !important;
+  }
+  .sidebar-bottom-toolbar {
+    justify-content: flex-start !important;
+  }
+}
+
+/* Velos: oscurecen poco y no desenfocan (como las hojas de iOS) */
+.drawer-overlay,
+.drawer-backdrop,
+.premium-overlay {
+  background: var(--scrim) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Botones redondos de la cabecera: cristal translúcido */
+.apple-nav-action-btn {
+  background: var(--glass-fill) !important;
+  border: 0.5px solid var(--glass-stroke) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+/* «▶ Empezar»: el texto se oscurece para leerse bien sobre el tinte */
+.apple-nav-start-btn {
+  color: color-mix(in srgb, var(--start-color, #007aff) 64%, #000000) !important;
+}
+[data-theme="dark"] .apple-nav-start-btn,
+html.dark .apple-nav-start-btn {
+  color: color-mix(in srgb, var(--start-color, #0a84ff) 78%, #ffffff) !important;
+}
+
+/* Áreas táctiles de 44 × 44 pt sin cambiar el tamaño visible */
+.hit-44,
+.task-info-btn,
+.list-action-btn,
+button[aria-label="Opciones de sección"] {
+  position: relative;
+}
+.hit-44::before,
+.task-info-btn::before,
+.list-action-btn::before,
+button[aria-label="Opciones de sección"]::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
 }

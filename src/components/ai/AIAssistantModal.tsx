@@ -338,9 +338,7 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'rgba(0, 0, 0, 0.45)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
+            background: 'var(--scrim)',
           }}
         />
 

@@ -184,6 +184,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
             title={isStartDisabled ? "No hay recordatorios pendientes para empezar" : "Empezar lista en modo enfoque"}
             aria-label="Empezar lista"
             style={{
+              ['--start-color' as string]: listAccentColor || '#007aff',
               height: 32,
               padding: '0 12px',
               borderRadius: 999,

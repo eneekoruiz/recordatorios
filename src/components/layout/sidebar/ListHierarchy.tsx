@@ -397,9 +397,7 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                       position: 'fixed', 
                       inset: 0, 
                       zIndex: 99998, 
-                      background: isMobile ? 'rgba(0, 0, 0, 0.45)' : 'transparent',
-                      backdropFilter: isMobile ? 'blur(16px)' : 'none',
-                      WebkitBackdropFilter: isMobile ? 'blur(16px)' : 'none',
+                      background: isMobile ? 'var(--scrim)' : 'transparent',
                       transition: 'all 0.2s ease'
                     }} 
                     onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); setMenuCoords(null); }} 

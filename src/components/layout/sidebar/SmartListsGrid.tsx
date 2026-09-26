@@ -19,7 +19,6 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
   smartListVisibility,
   pinnedSmartLists,
   isEditMode,
-  setIsEditMode,
   currentView,
   onSelectView,
   toggleSmartList,
@@ -34,18 +33,6 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
 
   return (
     <div>
-      {/* SMART LISTS GRID HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 0', marginBottom: 6 }}>
-        <span className="section-header" style={{ margin: 0, padding: 0, fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '-0.01em' }}>Listas inteligentes</span>
-        <button 
-          type="button"
-          onClick={() => setIsEditMode(!isEditMode)}
-          style={{ background: 'transparent', border: 'none', color: isEditMode ? 'var(--accent-primary)' : 'var(--text-tertiary)', fontSize: '0.88rem', fontWeight: 500, cursor: 'pointer' }}
-        >
-          {isEditMode ? 'Hecho' : 'Editar'}
-        </button>
-      </div>
-
       {/* SMART LISTS GRID CONTENT */}
       <div style={{ 
         display: 'grid', 
@@ -77,15 +64,9 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
                   }
                 }}
                 style={{
-                  background: isActive 
-                    ? `color-mix(in srgb, ${list.color} 16%, var(--bg-elevated))` 
-                    : `color-mix(in srgb, ${list.color} 7%, var(--bg-elevated))`,
-                  border: isActive 
-                    ? `1.5px solid ${list.color}` 
-                    : `1px solid color-mix(in srgb, ${list.color} 16%, var(--border-subtle))`,
-                  boxShadow: isActive 
-                    ? `0 4px 16px color-mix(in srgb, ${list.color} 22%, transparent)` 
-                    : '0 1px 3px rgba(0, 0, 0, 0.04)',
+                  // Tarjeta neutra como en Recordatorios: el color vive en el icono
+                  // (y rellena la tarjeta seleccionada en iPad/Mac, vía CSS).
+                  ['--card-color' as string]: list.color,
                   opacity: isEditMode && !smartListVisibility[list.id] ? 0.5 : 1,
                   transition: 'all 180ms cubic-bezier(0.16, 1, 0.3, 1)'
                 }}
@@ -124,7 +105,7 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
                   className="icon-circle" 
                   style={{
                     backgroundColor: list.color,
-                    boxShadow: `0 2px 8px color-mix(in srgb, ${list.color} 36%, transparent)`,
+                    boxShadow: 'none',
                     border: 'none',
                     transition: 'all 150ms ease'
                   }}
@@ -144,7 +125,7 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
                   </span>
                 )}
                 <h3 style={{ 
-                  color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)', 
+                  color: 'var(--text-secondary)', 
                   fontWeight: 600,
                   fontSize: '0.96rem',
                   letterSpacing: '-0.01em',

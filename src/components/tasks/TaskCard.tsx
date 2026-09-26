@@ -754,8 +754,10 @@ export const TaskCard = React.memo(function TaskCard({
           zIndex: contextMenuOpen ? 999992 : 1,
           minHeight: 52,
           display: 'flex',
-          alignItems: 'center',
-          padding: `8px 12px 8px ${8 + indent}px`,
+          // Como en Recordatorios: la casilla y el (i) se alinean con la primera
+          // línea del título, no con el centro de una tarea de varias líneas.
+          alignItems: 'flex-start',
+          padding: `12px 12px 12px ${8 + indent}px`,
           margin: 0,
           width: '100%',
           boxSizing: 'border-box',
@@ -777,6 +779,7 @@ export const TaskCard = React.memo(function TaskCard({
         {/* Checkbox o Botón Restaurar en Papelera */}
         {task.deleted_at ? (
           <motion.button
+            className="hit-44"
             whileTap={{ scale: 0.85 }}
             whileHover={{ scale: 1.15 }}
             aria-label="Restaurar recordatorio"
@@ -790,6 +793,7 @@ export const TaskCard = React.memo(function TaskCard({
             }}
             style={{
               width: 24, height: 24,
+              marginTop: `calc(2px + ((1.05rem * 1.4) - 24px) / 2)`,
               padding: 0,
               background: 'rgba(0, 122, 255, 0.12)',
               border: '1px solid rgba(0, 122, 255, 0.28)',
@@ -807,6 +811,7 @@ export const TaskCard = React.memo(function TaskCard({
           </motion.button>
         ) : (
           <motion.button
+            className="hit-44"
             whileTap={{ scale: 0.85 }}
             aria-label={isEffectivelyDone ? 'Marcar como pendiente' : 'Completar tarea'}
             disabled={!!isBlocked}
@@ -837,6 +842,7 @@ export const TaskCard = React.memo(function TaskCard({
             }}
             style={{
               width: 26, height: 26,
+              marginTop: `calc(2px + ((1.05rem * 1.4) - 26px) / 2)`,
               padding: 0,
               background: 'transparent',
               border: 'none',
@@ -945,7 +951,7 @@ export const TaskCard = React.memo(function TaskCard({
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             {isBlocked && <Lock size={15} color="var(--accent-red)" />}
             {isEditingTitle ? (
-              <div style={{ display: 'flex', width: '100%', gap: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', width: '100%', gap: 4 }}>
                 {Boolean(task.priority && task.priority !== 'none' && (task.priority as any) !== 0) && (
                   <button
                     type="button"
@@ -1495,6 +1501,7 @@ export const TaskCard = React.memo(function TaskCard({
               fontSize: '0.8rem',
               minWidth: 32,
               minHeight: 32,
+              marginTop: `calc(2px + ((1.05rem * 1.4) - 32px) / 2)`,
               WebkitTapHighlightColor: 'transparent',
               flexShrink: 0,
               opacity: 0.75,
@@ -1517,7 +1524,7 @@ export const TaskCard = React.memo(function TaskCard({
 
         {/* Apple Reminders Info (i) button & subtle more options */}
         {!isBlocked && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: `calc(2px + ((1.05rem * 1.4) - 32px) / 2)` }}>
             <button
               className="task-info-btn"
               onPointerDown={(e) => e.stopPropagation()}
@@ -1538,7 +1545,8 @@ export const TaskCard = React.memo(function TaskCard({
                 border: 'none',
                 cursor: 'pointer',
                 color: taskColor || 'var(--accent-primary)',
-                opacity: isMobile ? 0.85 : (isHovered || contextMenuOpen ? 0.95 : 0.4),
+                opacity: isMobile ? (isEditingTitle || isEditingNote || contextMenuOpen ? 0.85 : 0) : (isHovered || contextMenuOpen ? 0.95 : 0.4),
+                pointerEvents: isMobile && !(isEditingTitle || isEditingNote || contextMenuOpen) ? 'none' : 'auto',
                 transition: 'opacity 0.2s ease, background-color 0.15s ease, transform 0.12s ease',
                 WebkitTapHighlightColor: 'transparent',
                 flexShrink: 0

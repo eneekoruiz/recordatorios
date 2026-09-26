@@ -183,7 +183,7 @@ export function CommandPalette({ onSelectView, onOpenZenMode }: CommandPalettePr
           style={{
             position: 'fixed',
             top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0, 0, 0, 0.4)',
+            background: 'var(--scrim)',
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)',
             zIndex: 10000,
