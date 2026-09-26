@@ -131,12 +131,10 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
 }) => {
   const [currentSubmenu, setCurrentSubmenu] = useState<'main' | 'sort' | 'move_tasks'>('main');
 
-  // Reset submenu when closed or opened for another section
-  useEffect(() => {
-    if (!sectionMenu.open) {
-      setCurrentSubmenu('main');
-    }
-  }, [sectionMenu.open, sectionMenu.sectionId]);
+  // Al cerrarse, el menú vuelve a su pantalla principal (se ajusta durante el render).
+  if (!sectionMenu.open && currentSubmenu !== 'main') {
+    setCurrentSubmenu('main');
+  }
 
   // Escape cierra el menú
   useEffect(() => {

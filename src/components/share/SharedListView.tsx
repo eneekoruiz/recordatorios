@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { createElement, useEffect, useMemo, useState } from 'react';
 import { Circle, CheckCircle2, Link2Off, ListChecks } from 'lucide-react';
 import { apiUrl } from '../../sync/syncManager';
 import { getListIcon } from '../../constants/icons';
@@ -40,7 +40,9 @@ export function SharedListView({ token, onExit }: { token: string; onExit: () =>
   }, [data]);
 
   const color = data?.list.color || 'var(--accent-primary)';
-  const Icon = data ? getListIcon(data.list.icon) : ListChecks;
+  // Icono de la lista: un componente fijo del catálogo (createElement deja claro que no
+  // se define en cada render, solo se elige cuál pintar).
+  const icon = createElement(data ? getListIcon(data.list.icon) : ListChecks, { size: 20, color: '#fff' });
   const pending = data?.tasks.filter((t) => t.status !== 'completed').length ?? 0;
 
   return (
@@ -57,7 +59,7 @@ export function SharedListView({ token, onExit }: { token: string; onExit: () =>
         ) : (
           <>
             <header className="shared-header">
-              <span className="shared-icon" style={{ background: color }}><Icon size={20} color="#fff" /></span>
+              <span className="shared-icon" style={{ background: color }}>{icon}</span>
               <div>
                 <h1 style={{ color }}>{data.list.name}</h1>
                 <p>{pending} pendiente{pending === 1 ? '' : 's'} · Lista compartida de solo lectura</p>

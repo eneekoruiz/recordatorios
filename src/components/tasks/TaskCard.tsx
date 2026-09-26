@@ -52,6 +52,10 @@ interface TaskCardProps {
   onReorderTasks?: (sourceId: string, targetId: string, position: 'before' | 'after') => void;
 }
 
+// Recorrido del dedo (px) a partir del cual deslizar completa (→) o pide borrar (←).
+const SWIPE_COMPLETE_THRESHOLD = 65;
+const SWIPE_DELETE_THRESHOLD = -65;
+
 export const TaskCard = React.memo(function TaskCard({
   task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, showListName = true, hideDueDate = false, isFirstInSection, isLastInSection, previousTaskId, hasChildren, isExpanded, onToggleExpand, indent = 0, onNavigateView, onPersonClick, isGracePeriod,
   onMoveUp, onMoveDown, canMoveUp, canMoveDown, onReorderTasks
@@ -176,12 +180,16 @@ export const TaskCard = React.memo(function TaskCard({
     el.style.height = `${Math.max(24, el.scrollHeight)}px`;
   }, []);
 
-  useEffect(() => {
-    if (inlineEditingTaskId === task.id) {
+  // Recién creada desde la fila en línea: entra directa a editar el título (durante el render).
+  const isInlineTarget = inlineEditingTaskId === task.id;
+  const [wasInlineTarget, setWasInlineTarget] = useState(false);
+  if (isInlineTarget !== wasInlineTarget) {
+    setWasInlineTarget(isInlineTarget);
+    if (isInlineTarget) {
       setIsEditingTitle(true);
       setEditTitle(task.title || '');
     }
-  }, [inlineEditingTaskId, task.id, task.title]);
+  }
 
   useEffect(() => {
     if (isEditingTitle && titleTextareaRef.current) {
@@ -275,11 +283,10 @@ export const TaskCard = React.memo(function TaskCard({
     setContextMenuOpen(true);
   }, [x]);
 
-  // Sync state if task changes externally but not while editing
-  useEffect(() => {
-    if (!isEditingTitle) setEditTitle(task.title || '');
-    if (!isEditingNote) setEditNote(task.description || '');
-  }, [task.title, task.description, isEditingTitle, isEditingNote]);
+  // Si la tarea cambia desde fuera (otra pestaña, sincronización) y no se está editando,
+  // los campos reflejan el valor guardado (se ajusta durante el render).
+  if (!isEditingTitle && editTitle !== (task.title || '')) setEditTitle(task.title || '');
+  if (!isEditingNote && editNote !== (task.description || '')) setEditNote(task.description || '');
 
   const handleTitleSubmit = () => {
     // Delay setting isEditingTitle to false to prevent race condition with clicking "Añadir nota..."
@@ -354,9 +361,6 @@ export const TaskCard = React.memo(function TaskCard({
   const rightIconScale = useTransform(x, [-20, -80], [0.6, 1]);
   const leftIconX = useTransform(x, [0, 100], [-30, 10]);
   const rightIconX = useTransform(x, [0, -100], [30, -10]);
-
-  const SWIPE_COMPLETE_THRESHOLD = 65;
-  const SWIPE_DELETE_THRESHOLD = -65;
 
   useMotionValueEvent(x, "change", (latest) => {
     if (latest > SWIPE_COMPLETE_THRESHOLD) {
@@ -576,7 +580,7 @@ export const TaskCard = React.memo(function TaskCard({
     }, { once: true });
 
     void startY; void startX;
-  }, [onReorderTasks, task.id, openContextMenu]);
+  }, [onReorderTasks, task.id, openContextMenu, nestTask]);
 
   return (
     <div

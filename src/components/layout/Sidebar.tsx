@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   Plus,
@@ -127,7 +127,6 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
     name: getUserDisplayName() || (isGuest ? 'Sin cuenta' : 'Mi cuenta'),
     email: isGuest ? 'Datos solo en este dispositivo' : getUserEmail(),
   };
-  const userProfileRef = useRef<HTMLDivElement>(null);
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [isEditCyclesMode, setIsEditCyclesMode] = useState(false);
@@ -139,12 +138,17 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   const [isNewFolderDefault, setIsNewFolderDefault] = useState(false);
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  // Posición del menú de perfil: se mide al abrirlo (no se leen refs al renderizar).
+  const [profileAnchor, setProfileAnchor] = useState<DOMRect | null>(null);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(SoundService.enabled);
 
-  useEffect(() => {
+  // Al cambiar de vista se cierra el menú de perfil (se ajusta durante el render).
+  const [profileView, setProfileView] = useState(currentView);
+  if (profileView !== currentView) {
+    setProfileView(currentView);
     setIsProfileOpen(false);
-  }, [currentView]);
+  }
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -222,9 +226,12 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               </button>
 
               <div 
-                ref={userProfileRef}
                 className="user-profile-trigger"
-                onClick={(e) => { e.stopPropagation(); setIsProfileOpen((prev) => !prev); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setProfileAnchor(e.currentTarget.getBoundingClientRect());
+                  setIsProfileOpen((prev) => !prev);
+                }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -336,7 +343,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
       <UserProfileDropdown
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
-        anchorEl={userProfileRef.current}
+        anchorRect={profileAnchor}
         user={user}
         syncStatus={syncStatus}
         lastSyncedAt={lastSyncedAt}

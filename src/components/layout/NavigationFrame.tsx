@@ -62,7 +62,7 @@ export function NavigationFrame({
     if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
       try {
         window.navigator.vibrate(10);
-      } catch (_err) {
+      } catch {
         // Ignorar si el dispositivo/navegador restringe vibración sin interacción directa
       }
     }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -31,10 +31,10 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
   const [internalOpen, setInternalOpen] = useState(false);
   const isModalOpen = isOpen !== undefined ? isOpen : internalOpen;
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setInternalOpen(false);
     onClose?.();
-  };
+  }, [onClose]);
 
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -66,13 +66,19 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
     };
   }, []);
 
-  // Focus input on open
-  useEffect(() => {
+  // Al abrir: búsqueda limpia (se ajusta durante el render) y foco en el campo.
+  const [wasOpen, setWasOpen] = useState(isModalOpen);
+  if (isModalOpen !== wasOpen) {
+    setWasOpen(isModalOpen);
     if (isModalOpen) {
       setQuery('');
       setSelectedIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 50);
     }
+  }
+  useEffect(() => {
+    if (!isModalOpen) return;
+    const timer = window.setTimeout(() => inputRef.current?.focus(), 50);
+    return () => window.clearTimeout(timer);
   }, [isModalOpen]);
 
   const items = useMemo<CommandItem[]>(() => {
@@ -270,7 +276,7 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
     }
 
     return result;
-  }, [query, tasks, lists, cycles, theme, onSelectView, onEditTask, onOpenZenMode, setTheme]);
+  }, [query, tasks, lists, cycles, theme, onSelectView, onEditTask, onOpenZenMode, setTheme, handleClose]);
 
   // Manejo de teclado: Flechas arriba/abajo, Enter, Escape
   useEffect(() => {
@@ -296,7 +302,7 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isModalOpen, items, selectedIndex]);
+  }, [isModalOpen, items, selectedIndex, handleClose]);
 
   // Asegurar que el elemento seleccionado esté visible en scroll
   useEffect(() => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isParallelTask, getTaskDuration, formatDuration, calculateTasksDuration } from '../../src/utils/taskDuration';
+import { isParallelTask, formatDuration, calculateTasksDuration } from '../../src/utils/taskDuration';
 import type { TaskItem } from '../../src/models/Task';
 
 describe('TaskDuration & Parallel Tasks Engine', () => {
@@ -25,6 +25,13 @@ describe('TaskDuration & Parallel Tasks Engine', () => {
       expect(formatDuration(0)).toBe('0 min');
       expect(formatDuration(5)).toBe('5 min');
       expect(formatDuration(45)).toBe('45 min');
+    });
+
+    it('respeta los segundos por debajo de la hora', () => {
+      expect(formatDuration(0.75)).toBe('45 s');
+      expect(formatDuration(1.5)).toBe('1 min 30 s');
+      expect(formatDuration(67 / 60)).toBe('1 min 7 s');
+      expect(formatDuration(59 + 59 / 60)).toBe('59 min 59 s');
     });
 
     it('formats exact hours', () => {

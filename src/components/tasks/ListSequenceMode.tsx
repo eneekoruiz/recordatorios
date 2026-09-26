@@ -208,6 +208,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
   const [isActive, setIsActive] = useState(false);
   const [showDurationPicker, setShowDurationPicker] = useState(false);
   const [startedAt] = useState(() => Date.now());
+  const [lastStepAt, setLastStepAt] = useState(startedAt);
 
   // Background / Parallel running tasks
   const [runningParallelTasks, setRunningParallelTasks] = useState<RunningParallelTask[]>([]);
@@ -254,42 +255,45 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     }, 0);
   }, [activeTaskIds, index, tasks, listSections, lists]);
 
-  // Load task on index change: start immediately with heuristic or user-set duration
+  // Al pasar a otra tarea, el temporizador arranca con su duración (la del usuario, la
+  // aprendida o la estimada). Se ajusta durante el render y solo al cambiar de tarea: antes
+  // era un efecto que también se reiniciaba si llegaba una sincronización a mitad de tarea.
+  const loadKey = currentTask ? `${index}|${currentTask.id}` : null;
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  if (loadKey !== loadedKey) {
+    setLoadedKey(loadKey);
+    if (currentTask) {
+      const dInfo = getTaskDuration(currentTask, listSections, lists);
+      const learned = useAppStore.getState().learnedDurations[currentTask.id];
+      const activeMins = (typeof currentTask.duration === 'number' && currentTask.duration > 0)
+        ? currentTask.duration
+        : (learned || dInfo.activeMinutes);
+      // Segundos exactos: hay tareas de menos de un minuto.
+      const secs = Math.max(1, Math.round(activeMins * 60));
+      setShowDurationPicker(false);
+      setTimeLeft(secs);
+      setInitialDuration(secs);
+      setIsActive(true);
+    }
+  }
   useEffect(() => {
-    if (!currentTask) return;
-    setIsActive(false);
+    if (loadKey) SoundService.playPop();
+  }, [loadKey]);
 
-    const dInfo = getTaskDuration(currentTask, listSections, lists);
-    // If we have a learned duration from the store, use it? The prompt says "getTaskDuration uses keyword heuristics. We want the store to remember user-adjusted durations."
-    // Wait, the store provides learnedDurations. I need to get learnedDurations from useAppStore.
-    const learnedDurations = useAppStore.getState().learnedDurations;
-    const learned = learnedDurations[currentTask.id];
-
-    const activeMins = (typeof currentTask.duration === 'number' && currentTask.duration > 0)
-      ? currentTask.duration
-      : (learned || dInfo.activeMinutes);
-
-    const secs = Math.max(60, activeMins * 60);
-    setShowDurationPicker(false);
-    setTimeLeft(secs);
-    setInitialDuration(secs);
-    setIsActive(true);
-    SoundService.playPop();
-  }, [index, currentTask?.id, listSections, lists]);
-
-  // Main task countdown
+  // Cuenta atrás de la tarea: un paso por segundo; al llegar a cero, suena y se para.
   useEffect(() => {
-    if (!isActive || timeLeft <= 0) {
-      if (timeLeft === 0 && isActive && initialDuration > 0) {
+    if (!isActive || timeLeft <= 0) return;
+    const timer = setTimeout(() => {
+      const next = timeLeft - 1;
+      setTimeLeft(next);
+      if (next <= 0) {
         setIsActive(false);
         SoundService.playComplete();
         SoundService.stopAmbientSound();
       }
-      return;
-    }
-    const id = setInterval(() => setTimeLeft(t => t - 1), 1000);
-    return () => clearInterval(id);
-  }, [isActive, timeLeft, initialDuration]);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [isActive, timeLeft]);
 
   // Parallel background countdown interval
   useEffect(() => {
@@ -355,6 +359,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     setCompletedIds(prev => [...prev, currentTask.id]);
     setIsActive(false);
     SoundService.stopAmbientSound();
+    setLastStepAt(Date.now());
     setIndex(i => i + 1);
   }, [currentTask, toggleTask]);
 
@@ -365,6 +370,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     setSkippedIds(prev => [...prev, currentTask.id]);
     setIsActive(false);
     SoundService.stopAmbientSound();
+    setLastStepAt(Date.now());
     setIndex(i => i + 1);
   }, [currentTask]);
 
@@ -375,23 +381,17 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     SoundService.playPop();
 
     const currentId = currentTask.id;
-    const taskTitle = currentTask.title;
-
-    setSequenceTaskIds(prev => {
-      const activeRemaining = prev.slice(index);
-      if (activeRemaining.length <= 1) {
-        setParallelToast('ℹ️ Esta tarea ya es la última de la lista');
-        setTimeout(() => setParallelToast(null), 2500);
-        return prev;
-      }
-
-      const before = prev.slice(0, index);
-      const after = prev.slice(index + 1);
-      setParallelToast(`⏳ «${taskTitle}» pospuesta al final`);
-      setTimeout(() => setParallelToast(null), 3000);
-      return [...before, ...after, currentId];
-    });
-  }, [currentTask, index]);
+    if (activeTaskIds.length - index <= 1) {
+      setParallelToast('ℹ️ Esta tarea ya es la última de la lista');
+      setTimeout(() => setParallelToast(null), 2500);
+      return;
+    }
+    // Se mueve por su posición real (el índice cuenta solo las tareas que siguen existiendo).
+    const position = sequenceTaskIds.indexOf(currentId);
+    setSequenceTaskIds([...sequenceTaskIds.slice(0, position), ...sequenceTaskIds.slice(position + 1), currentId]);
+    setParallelToast(`⏳ «${currentTask.title}» pospuesta al final`);
+    setTimeout(() => setParallelToast(null), 3000);
+  }, [currentTask, index, activeTaskIds.length, sequenceTaskIds]);
 
   // Parallel task launcher: completes active setup and advances sequence immediately!
   const handleStartParallelAndNext = useCallback(() => {
@@ -415,6 +415,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     setCompletedIds(prev => [...prev, currentTask.id]);
     setIsActive(false);
     SoundService.stopAmbientSound();
+    setLastStepAt(Date.now());
     setIndex(i => i + 1);
   }, [currentTask, currentDurationInfo, toggleTask]);
 
@@ -437,14 +438,14 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
   }, [isFinished]);
 
   if (isFinished) {
-    const elapsedMins = Math.max(1, Math.ceil((Date.now() - startedAt) / 60000));
+    const elapsedMins = Math.max(1, Math.ceil((lastStepAt - startedAt) / 60000));
 
     const handleShare = async () => {
       const text = `✅ ¡He completado ${listName}! ${completedIds.length} tareas en ${elapsedMins} min.`;
       if (navigator.share) {
         try {
           await navigator.share({ text });
-        } catch (e) {
+        } catch {
           // Ignorar aborto
         }
       } else {

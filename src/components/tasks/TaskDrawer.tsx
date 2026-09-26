@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -28,6 +28,26 @@ interface TaskDrawerProps {
   initialFocus?: string;
   /** Texto ya escrito en la barra de añadir al abrir el editor completo. */
   initialTitle?: string;
+}
+
+type TitleChip = { type: 'time' | 'date' | 'cycle' | 'priority' | 'category'; label: string };
+
+/** Chips de lo que se entiende del título (solo visual). */
+function readTitleChips(text: string, cycles: { id: string; name: string }[]): TitleChip[] {
+  const nlp = parseNaturalLanguage(text);
+  const chips: TitleChip[] = [];
+  nlp.times.forEach(t => chips.push({ type: 'time', label: t }));
+  if (nlp.suggestedDueDate) {
+    chips.push({ type: 'date', label: nlp.suggestedDueDate.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }) });
+  }
+  if (nlp.suggestedCycleId) {
+    chips.push({ type: 'cycle', label: cycles.find(c => c.id === nlp.suggestedCycleId)?.name || 'Ciclo' });
+  }
+  if (nlp.suggestedPriority) {
+    chips.push({ type: 'priority', label: nlp.suggestedPriority === 'high' ? 'Alta' : nlp.suggestedPriority === 'medium' ? 'Media' : 'Baja' });
+  }
+  if (nlp.suggestedCategory) chips.push({ type: 'category', label: `@${nlp.suggestedCategory}` });
+  return chips;
 }
 
 export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionId, taskId, initialFocus, initialTitle }: TaskDrawerProps) {
@@ -121,13 +141,46 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   const [subscriptionPeriod, setSubscriptionPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [managementUrl, setManagementUrl] = useState<string>('');
 
-  // Suggested chips purely for visual feedback
-  const [suggestedChips, setSuggestedChips] = useState<{ type: 'time' | 'date' | 'cycle' | 'priority' | 'category'; label: string }[]>([]);
+  // El título lo ha escrito (o dictado) el usuario en esta apertura: solo entonces se
+  // muestran los chips de lo que se ha entendido.
+  const [titleEdited, setTitleEdited] = useState(false);
 
   const task = useAppStore(state => taskId ? state.tasks[taskId] : undefined);
 
-  useEffect(() => {
-    if (isOpen) {
+  // Aplica al formulario lo que se entiende del título: hora (aviso), fecha, repetición y
+  // prioridad. Se llama al escribir o dictar, nunca al abrir una tarea ya guardada.
+  function applyTitleSuggestions(text: string, haptic: boolean) {
+    if (!text) return;
+    const nlp = parseNaturalLanguage(text);
+    if (nlp.times.length > 0) {
+      setAlerts(prev => {
+        const fresh = nlp.times
+          .filter(t => !prev.some(a => a.time === t))
+          .map(t => ({ id: `alert_at_${t.replace(':', '')}`, type: 'at_time' as const, time: t }));
+        return fresh.length > 0 ? [...prev, ...fresh] : prev;
+      });
+      // Un toque suave solo cuando aparece una hora nueva, no en cada pulsación.
+      const isNewTime = nlp.times.some(t => !alerts.some(a => a.time === t));
+      if (haptic && isNewTime && typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate(20);
+    }
+    if (nlp.suggestedDueDate) {
+      setDueDate(nlp.suggestedDueDate);
+      setHasDate(true);
+    }
+    if (nlp.suggestedCycleId) setCycleId(nlp.suggestedCycleId);
+    if (nlp.suggestedPriority) setPriority(nlp.suggestedPriority);
+  }
+
+  // El formulario se carga al abrirse (o si cambia qué se edita), durante el render. Antes era
+  // un efecto que dependía del objeto de la tarea: una sincronización a mitad de edición
+  // reiniciaba lo escrito. El editor solo guarda al pulsar «Guardar».
+  const formKey = isOpen
+    ? [taskId || 'nuevo', task ? 'cargada' : 'sin-cargar', defaultCategoryId, defaultSectionId, initialFocus, initialTitle].join('|')
+    : null;
+  const [loadedFormKey, setLoadedFormKey] = useState<string | null>(null);
+  if (formKey !== loadedFormKey) {
+    setLoadedFormKey(formKey);
+    if (formKey !== null) {
       if (task) {
         setTitle(task.title || '');
         setNotes(task.description || '');
@@ -190,6 +243,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setAutoRollover(task.autoRollover ?? true);
         setSubscriptionPeriod(task.subscriptionPeriod || 'monthly');
         setManagementUrl(task.managementUrl || '');
+        setTitleEdited(false);
         
         // Abrir inteligentemente solo las tarjetas que contienen datos relevantes o el foco solicitado
         setCardTimeOpen(
@@ -265,9 +319,12 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setCycleId(undefined);
         setTimeOfDay(undefined);
         setManagementUrl('');
+        // Borrador de la barra rápida: se aplica lo que dice («mañana a las 10»…).
+        setTitleEdited(Boolean(initialTitle));
+        if (initialTitle) applyTitleSuggestions(initialTitle, false);
       }
     }
-  }, [isOpen, taskId, task, defaultCategoryId, defaultSectionId, initialFocus, initialTitle]);
+  }
 
   // Enfoque directo y desplazamiento al campo solicitado cuando el usuario pulsa para editarlo
   useEffect(() => {
@@ -366,55 +423,19 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
     };
   }, [isOpen, onClose]);
 
-  useEffect(() => {
-    if (isOpen && defaultCategoryId) {
-      setCategory(defaultCategoryId);
-    }
-  }, [isOpen, defaultCategoryId]);
 
   const availableTasks = Object.values(useAppStore(state => state.tasks)).filter(t => t.status === 'pending' && !t.deleted_at);
 
-  useEffect(() => {
-    if (title) {
-      const nlp = parseNaturalLanguage(title);
-      const newChips: { type: 'time' | 'date' | 'cycle' | 'priority' | 'category'; label: string }[] = [];
-      
-      if (nlp.times.length > 0) {
-        if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate(20);
-        const newAlerts = nlp.times.filter(t => !alerts.find(a => a.time === t)).map(t => ({ id: `alert_${Date.now()}_${t}`, type: 'at_time' as const, time: t }));
-        if (newAlerts.length > 0) {
-          setAlerts(prev => [...prev, ...newAlerts]);
-        }
-        nlp.times.forEach(t => newChips.push({ type: 'time', label: t }));
-      }
+  const suggestedChips = useMemo(
+    () => (titleEdited && title ? readTitleChips(title, cycles) : []),
+    [titleEdited, title, cycles]
+  );
 
-      if (nlp.suggestedDueDate) {
-        setDueDate(nlp.suggestedDueDate);
-        setHasDate(true);
-        newChips.push({ type: 'date', label: nlp.suggestedDueDate.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }) });
-      }
-
-      if (nlp.suggestedCycleId) {
-        setCycleId(nlp.suggestedCycleId);
-        const cName = cycles.find(c => c.id === nlp.suggestedCycleId)?.name || 'Ciclo';
-        newChips.push({ type: 'cycle', label: cName });
-      }
-
-      if (nlp.suggestedPriority) {
-        setPriority(nlp.suggestedPriority);
-        const prioLabel = nlp.suggestedPriority === 'high' ? 'Alta' : nlp.suggestedPriority === 'medium' ? 'Media' : 'Baja';
-        newChips.push({ type: 'priority', label: prioLabel });
-      }
-
-      if (nlp.suggestedCategory) {
-        newChips.push({ type: 'category', label: `@${nlp.suggestedCategory}` });
-      }
-      
-      setSuggestedChips(newChips);
-    } else {
-      setSuggestedChips([]);
-    }
-  }, [title, alerts, cycles]);
+  const handleTitleInput = (value: string) => {
+    setTitle(value);
+    setTitleEdited(true);
+    applyTitleSuggestions(value, true);
+  };
 
   const saveHomeLocation = (loc: { lat: number; lng: number; address: string }) => {
     localStorage.setItem('home_location', JSON.stringify(loc));
@@ -671,6 +692,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
     recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
       setTitle(prev => prev ? `${prev} ${transcript}` : transcript);
+      setTitleEdited(true);
+      applyTitleSuggestions(transcript, true);
       setIsListening(false);
     };
 
@@ -758,7 +781,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                 taskId={taskId}
                 task={task}
                 title={title}
-                setTitle={setTitle}
+                setTitle={handleTitleInput}
                 notes={notes}
                 setNotes={setNotes}
                 isListening={isListening}

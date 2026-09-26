@@ -36,7 +36,6 @@ interface MainSectionHeaderProps {
   setDragOverSectionId: (id: string | null) => void;
   updateTaskSection: (taskId: string, sectionId: string) => void;
   setSectionMenu: (menu: SectionMenuState) => void;
-  sectionTouchTimer: React.MutableRefObject<any>;
   editingSectionId: string | null;
   editingSectionName: string;
   setEditingSectionName: (name: string) => void;
@@ -80,7 +79,6 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   setDragOverSectionId,
   updateTaskSection,
   setSectionMenu,
-  sectionTouchTimer,
   editingSectionId,
   editingSectionName,
   setEditingSectionName,
@@ -117,6 +115,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   const [isPressed, setIsPressed] = useState(false);
   const [sectionDragOverPos, setSectionDragOverPos] = useState<'top' | 'bottom' | 'inside' | null>(null);
   const didSectionLongPressRef = useRef(false);
+  const sectionTouchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const rowRef = useRef<HTMLDivElement>(null);
   const moreBtnRef = useRef<HTMLButtonElement>(null);

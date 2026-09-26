@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Clock, ChevronUp, ChevronDown } from 'lucide-react';
 import { HapticService } from '../../services/HapticService';
 
@@ -20,8 +20,10 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
   const [minutes, setMinutes] = useState(Math.floor((initialTotalSeconds % 3600) / 60));
   const [seconds, setSeconds] = useState(initialTotalSeconds % 60);
 
-  // Sync state if duration prop changes externally
-  useEffect(() => {
+  // Si la duración cambia desde fuera, las ruedas se ajustan (durante el render, sin efecto).
+  const [syncedDuration, setSyncedDuration] = useState(duration);
+  if (duration !== syncedDuration) {
+    setSyncedDuration(duration);
     if (typeof duration === 'number' && duration > 0) {
       const totalSec = Math.round(duration * 60);
       setHours(Math.floor(totalSec / 3600));
@@ -32,66 +34,59 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
       setMinutes(0);
       setSeconds(0);
     }
-  }, [duration]);
+  }
 
   const commitChanges = useCallback((newH: number, newM: number, newS: number) => {
     const totalSec = newH * 3600 + newM * 60 + newS;
     if (totalSec <= 0) {
       onChange('');
     } else {
-      // Calculate minutes with clean fraction or rounded
-      const totalMins = newS > 0 ? Math.round((totalSec / 60) * 10) / 10 : Math.round(totalSec / 60);
-      onChange(totalMins);
+      // Minutos exactos (1 min 7 s = 67/60): redondear a décimas perdía segundos al volver.
+      onChange(totalSec / 60);
     }
   }, [onChange]);
 
   const updateHours = (delta: number) => {
     HapticService.selection();
-    setHours(prev => {
-      const next = Math.max(0, Math.min(23, prev + delta));
-      commitChanges(next, minutes, seconds);
-      return next;
-    });
+    const next = Math.max(0, Math.min(23, hours + delta));
+    setHours(next);
+    commitChanges(next, minutes, seconds);
   };
 
   const updateMinutes = (delta: number) => {
     HapticService.selection();
-    setMinutes(prev => {
-      let next = prev + delta;
-      let nextH = hours;
-      if (next >= 60) {
-        next = 0;
-        if (nextH < 23) nextH += 1;
-      } else if (next < 0) {
-        next = 59;
-        if (nextH > 0) nextH -= 1;
-      }
-      setHours(nextH);
-      commitChanges(nextH, next, seconds);
-      return next;
-    });
+    let next = minutes + delta;
+    let nextH = hours;
+    if (next >= 60) {
+      next = 0;
+      if (nextH < 23) nextH += 1;
+    } else if (next < 0) {
+      next = 59;
+      if (nextH > 0) nextH -= 1;
+    }
+    setHours(nextH);
+    setMinutes(next);
+    commitChanges(nextH, next, seconds);
   };
 
   const updateSeconds = (delta: number) => {
     HapticService.selection();
-    setSeconds(prev => {
-      let next = prev + delta;
-      let nextM = minutes;
-      let nextH = hours;
-      if (next >= 60) {
-        next = 0;
-        if (nextM < 59) nextM += 1;
-        else if (nextH < 23) { nextM = 0; nextH += 1; }
-      } else if (next < 0) {
-        next = 59;
-        if (nextM > 0) nextM -= 1;
-        else if (nextH > 0) { nextM = 59; nextH -= 1; }
-      }
-      setHours(nextH);
-      setMinutes(nextM);
-      commitChanges(nextH, nextM, next);
-      return next;
-    });
+    let next = seconds + delta;
+    let nextM = minutes;
+    let nextH = hours;
+    if (next >= 60) {
+      next = 0;
+      if (nextM < 59) nextM += 1;
+      else if (nextH < 23) { nextM = 0; nextH += 1; }
+    } else if (next < 0) {
+      next = 59;
+      if (nextM > 0) nextM -= 1;
+      else if (nextH > 0) { nextM = 59; nextH -= 1; }
+    }
+    setHours(nextH);
+    setMinutes(nextM);
+    setSeconds(next);
+    commitChanges(nextH, nextM, next);
   };
 
   const applyPreset = (mins: number) => {

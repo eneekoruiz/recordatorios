@@ -8,9 +8,15 @@ export function PromptModal() {
   const [inputValue, setInputValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Cada vez que se abre, el campo empieza vacío.
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
+    if (isOpen) setInputValue('');
+  }
+
   useEffect(() => {
     if (!isOpen) return;
-    setInputValue('');
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const timer = window.setTimeout(() => inputRef.current?.focus(), 100);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
@@ -48,8 +48,14 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
   const [showAllColors, setShowAllColors] = useState(false);
   const [showAllIcons, setShowAllIcons] = useState(false);
 
-  useEffect(() => {
-    if (isOpen) {
+  // El formulario se rellena al abrirse (o al cambiar de lista), durante el render.
+  // Antes era un efecto que dependía del objeto de la lista y reiniciaba lo escrito
+  // si llegaba una sincronización con el modal abierto.
+  const formKey = isOpen ? `${listId || ''}|${defaultIsFolder ? 'folder' : 'list'}` : null;
+  const [loadedFormKey, setLoadedFormKey] = useState<string | null>(null);
+  if (formKey !== loadedFormKey) {
+    setLoadedFormKey(formKey);
+    if (formKey !== null) {
       if (existingList) {
         setName(existingList.name);
         const cleanColor = isReservedFrequencyColor(existingList.color)
@@ -65,8 +71,8 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
         setShowAllIcons(!Object.keys(ICONS).slice(0, 12).includes(initialIcon));
       } else {
         setName('');
-        const initialColor = COLORS[Math.floor(Math.random() * COLOR_PREVIEW_COUNT)];
-        setColor(initialColor); // Random from first 8
+        // Cada lista nueva estrena el siguiente color de la paleta visible.
+        setColor(COLORS[lists.length % COLOR_PREVIEW_COUNT]);
         const initialIcon = defaultIsFolder ? 'folder' : 'list';
         setIcon(initialIcon);
         setIsFolder(!!defaultIsFolder);
@@ -76,7 +82,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
         setShowAllIcons(false);
       }
     }
-  }, [isOpen, existingList, defaultIsFolder]);
+  }
 
   if (!isOpen) return null;
 

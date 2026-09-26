@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useEffectEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -15,7 +15,6 @@ import { HapticService } from '../../services/HapticService';
 interface AIAssistantModalProps {
   isOpen: boolean;
   onClose: () => void;
-  initialPrompt?: string;
   onSelectView?: (view: string) => void;
 }
 
@@ -27,7 +26,14 @@ interface ChatMessage {
   timestamp: string;
 }
 
-export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelectView }: AIAssistantModalProps) {
+const WELCOME_MESSAGE: ChatMessage = {
+  id: 'welcome_1',
+  sender: 'assistant',
+  text: '¡Hola! Soy tu asistente de Recordatorios con IA. Puedes hablarme o escribirme tus tareas en lenguaje natural (con fechas, horas, listas y precios en euros) y prepararé todos los recordatorios para importarlos al instante.',
+  timestamp: '',
+};
+
+export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantModalProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -36,7 +42,10 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
   const [config, setConfig] = useState<AIConfig>(() => AIService.getConfig());
   const [tempApiKey, setTempApiKey] = useState(config.apiKey || '');
   const [tempProvider, setTempProvider] = useState(config.provider);
-  const [speechSupported, setSpeechSupported] = useState(false);
+  // El dictado depende del navegador: se sabe desde el primer render.
+  const [speechSupported] = useState(() =>
+    typeof window !== 'undefined' && Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
+  );
 
   const lists = useAppStore(state => state.lists);
   const addTasksBatch = useAppStore(state => state.addTasksBatch);
@@ -47,7 +56,6 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
-      setSpeechSupported(true);
       const recognition = new SpeechRecognition();
       recognition.continuous = false;
       recognition.interimResults = false;
@@ -121,23 +129,8 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
     };
   }, []);
 
-  // Process initial prompt when opened with text
-  useEffect(() => {
-    if (isOpen) {
-      if (initialPrompt && messages.length === 0) {
-        handleSend(initialPrompt);
-      } else if (messages.length === 0) {
-        setMessages([
-          {
-            id: 'welcome_1',
-            sender: 'assistant',
-            text: '¡Hola! Soy tu asistente de Recordatorios con IA. Puedes hablarme o escribirme tus tareas en lenguaje natural (con fechas, horas, listas y precios en euros) y prepararé todos los recordatorios para importarlos al instante.',
-            timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
-          }
-        ]);
-      }
-    }
-  }, [isOpen, initialPrompt]);
+  // Sin conversación, el asistente saluda (el saludo pasa a la conversación al escribir).
+  const shownMessages = messages.length > 0 ? messages : [WELCOME_MESSAGE];
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -154,13 +147,13 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
       timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
     };
 
-    setMessages(prev => [...prev, userMsg]);
+    setMessages(prev => [...(prev.length > 0 ? prev : [WELCOME_MESSAGE]), userMsg]);
     setInput('');
     setLoading(true);
     HapticService.impact('light');
 
     try {
-      const history = messages.map(m => ({
+      const history = shownMessages.map(m => ({
         role: m.sender,
         text: m.text
       }));
@@ -191,6 +184,20 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
       setLoading(false);
     }
   };
+
+  // Lo que llega desde la barra rápida (✨) se envía al abrir el asistente. Se atiende en el
+  // propio evento que lo abre, no en un efecto que dependa de «isOpen».
+  const askFromOutside = useEffectEvent((text: string) => {
+    handleSend(text);
+  });
+  useEffect(() => {
+    const onOpen = (event: Event) => {
+      const text = (event as CustomEvent<string | undefined>).detail;
+      if (typeof text === 'string' && text.trim()) askFromOutside(text);
+    };
+    window.addEventListener('open-ai-assistant', onOpen);
+    return () => window.removeEventListener('open-ai-assistant', onOpen);
+  }, []);
 
   const handleToggleTaskSelected = (messageId: string, taskId: string) => {
     setMessages(prev => prev.map(m => {
@@ -529,7 +536,7 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
             flexDirection: 'column',
             gap: 16
           }}>
-            {messages.map(msg => (
+            {shownMessages.map(msg => (
               <div 
                 key={msg.id}
                 style={{

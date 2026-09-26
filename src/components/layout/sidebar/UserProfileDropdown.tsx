@@ -23,7 +23,8 @@ import { PushService, type PushStatus } from '../../../services/PushService';
 interface UserProfileDropdownProps {
   isOpen: boolean;
   onClose: () => void;
-  anchorEl: HTMLElement | null;
+  /** Rectángulo del botón de perfil, medido al abrir el menú. */
+  anchorRect: DOMRect | null;
   user: { name: string; email: string };
   syncStatus: string;
   lastSyncedAt: number | null;
@@ -40,7 +41,7 @@ interface UserProfileDropdownProps {
 export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
   isOpen,
   onClose,
-  anchorEl,
+  anchorRect,
   user,
   syncStatus,
   lastSyncedAt,
@@ -86,7 +87,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
     setPushBusy(false);
   };
 
-  const rect = anchorEl ? anchorEl.getBoundingClientRect() : null;
+  const rect = anchorRect;
   const top = (rect?.bottom || 50) + 8;
   const left = Math.max(12, Math.min((typeof window !== 'undefined' ? window.innerWidth : 360) - 302, (rect?.right || 290) - 290));
 

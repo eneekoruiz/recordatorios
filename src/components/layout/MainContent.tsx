@@ -148,7 +148,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const inlineInputRef = useRef<HTMLInputElement>(null);
 
   // Quick long press timer for section options
-  const sectionTouchTimer = useRef<any>(null);
 
   // Grace period IDs for recently completed tasks to avoid vanishing instantly
   const [recentlyCompletedIds, setRecentlyCompletedIds] = useState<string[]>([]);
@@ -2345,7 +2344,6 @@ const CORE_CYCLES = [
                         updateTaskSection={updateTaskSection}
                         setSectionMenu={setSectionMenu}
                         sectionMenu={sectionMenu}
-                        sectionTouchTimer={sectionTouchTimer}
                         editingSectionId={editingSectionId}
                         editingSectionName={editingSectionName}
                         setEditingSectionName={setEditingSectionName}

@@ -33,38 +33,41 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
   const [showDurationPrompt, setShowDurationPrompt] = useState<boolean>(false);
   const [promptMinutes, setPromptMinutes] = useState<string>('25');
 
-  // Sync state on task open
-  useEffect(() => {
-    if (!task) return;
-
-    if (!task.duration || task.duration <= 0) {
-      setShowDurationPrompt(true);
-      setInitialDuration(25 * 60);
-      setTimeLeft(25 * 60);
-      setIsActive(false);
-    } else {
-      setShowDurationPrompt(false);
-      const secs = task.duration * 60;
-      setInitialDuration(secs);
-      setTimeLeft(secs);
-      setIsActive(true); // Iniciar automáticamente cuando ya tiene duración definida
+  // Al abrir una tarea (o cambiar su duración) se prepara el temporizador, durante el render.
+  const timerKey = task ? `${task.id}|${task.duration ?? ''}` : null;
+  const [loadedTimerKey, setLoadedTimerKey] = useState<string | null>(null);
+  if (timerKey !== loadedTimerKey) {
+    setLoadedTimerKey(timerKey);
+    if (task) {
+      if (!task.duration || task.duration <= 0) {
+        setShowDurationPrompt(true);
+        setInitialDuration(25 * 60);
+        setTimeLeft(25 * 60);
+        setIsActive(false);
+      } else {
+        setShowDurationPrompt(false);
+        const secs = Math.round(task.duration * 60); // la duración puede llevar segundos
+        setInitialDuration(secs);
+        setTimeLeft(secs);
+        setIsActive(true); // Iniciar automáticamente cuando ya tiene duración definida
+      }
+      setAmbientType('off');
     }
-    setAmbientType('off');
-  }, [taskId, task?.id, task?.duration]);
+  }
 
-  // Manejo del temporizador
+  // Manejo del temporizador: un paso por segundo; al llegar a cero, suena y se para.
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null;
-    if (isActive && timeLeft > 0) {
-      interval = setInterval(() => setTimeLeft((t) => t - 1), 1000);
-    } else if (timeLeft === 0 && isActive) {
-      setIsActive(false);
-      SoundService.playComplete();
-      SoundService.stopAmbientSound();
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
+    if (!isActive || timeLeft <= 0) return;
+    const timer = setTimeout(() => {
+      const next = timeLeft - 1;
+      setTimeLeft(next);
+      if (next <= 0) {
+        setIsActive(false);
+        SoundService.playComplete();
+        SoundService.stopAmbientSound();
+      }
+    }, 1000);
+    return () => clearTimeout(timer);
   }, [isActive, timeLeft]);
 
   // Manejo del sonido ambiente

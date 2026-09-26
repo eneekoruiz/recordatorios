@@ -224,8 +224,15 @@ export function getTaskDuration(
  */
 export function formatDuration(minutes: number): string {
   if (!minutes || minutes <= 0) return '0 min';
+  // Por debajo de la hora se respetan los segundos (hay tareas de casa de 45 s).
+  const totalSeconds = Math.round(minutes * 60);
+  if (totalSeconds < 60) return `${totalSeconds} s`;
+  if (totalSeconds < 3600) {
+    const wholeMinutes = Math.floor(totalSeconds / 60);
+    const restSeconds = totalSeconds % 60;
+    return restSeconds ? `${wholeMinutes} min ${restSeconds} s` : `${wholeMinutes} min`;
+  }
   const mins = Math.round(minutes);
-  if (mins < 60) return `${mins} min`;
 
   const hours = Math.floor(mins / 60);
   const remainingMins = mins % 60;

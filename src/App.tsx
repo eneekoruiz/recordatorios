@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useEffectEvent, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
@@ -23,7 +23,7 @@ import { DailyGreetingModal } from './components/layout/DailyGreetingModal';
 import { syncManager } from './sync/syncManager';
 import { TaskSkeletonLoader } from './components/ui/TaskSkeletonLoader';
 import { AIAssistantModal } from './components/ai/AIAssistantModal';
-import { ConfirmHost } from './components/ui/confirmDialog';
+import { ConfirmHost } from './components/ui/ConfirmHost';
 import { SharedListView } from './components/share/SharedListView';
 import { syncSharedStatus } from './services/ShareService';
 import { 
@@ -61,7 +61,6 @@ function App() {
   const [sequenceMode, setSequenceMode] = useState<{ taskIds: string[]; listName: string; listColor?: string } | null>(null);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
-  const [aiInitialPrompt, setAiInitialPrompt] = useState('');
   const hasHydrated = useAppStore((state) => state.hasHydrated);
   // Enlaces especiales: recuperación de contraseña (?reset=) y lista compartida (?share=)
   const [resetToken, setResetToken] = useState(() => new URLSearchParams(window.location.search).get('reset'));
@@ -74,10 +73,8 @@ function App() {
 
   // Global listener for AI Assistant (shortcut Ctrl+J / Cmd+J and custom event)
   useEffect(() => {
-    const handleOpenAI = (e: any) => {
-      setAiInitialPrompt(e.detail || '');
-      setIsAIAssistantOpen(true);
-    };
+    // El texto que acompaña al evento lo envía el propio asistente.
+    const handleOpenAI = () => setIsAIAssistantOpen(true);
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'j') {
         const target = e.target as HTMLElement;
@@ -1002,6 +999,8 @@ function App() {
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [token, hasHydrated]);
 
+  // Siempre con la navegación actual (antes el oyente se quedaba con la del primer render).
+  const selectViewFromEvent = useEffectEvent((view: string) => handleSelectView(view));
   useEffect(() => {
     const handleOpenShortcuts = () => setIsShortcutsOpen(true);
     const handleOpenNewTask = () => {
@@ -1010,7 +1009,7 @@ function App() {
       setIsDrawerOpen(true);
     };
     const handleSelectViewCustom = (e: any) => {
-      if (e.detail) handleSelectView(e.detail);
+      if (e.detail) selectViewFromEvent(e.detail);
     };
     window.addEventListener('open-shortcuts-modal', handleOpenShortcuts);
     window.addEventListener('open-new-task-drawer', handleOpenNewTask);
@@ -1116,8 +1115,7 @@ function App() {
 
       <AIAssistantModal
         isOpen={isAIAssistantOpen}
-        onClose={() => { setIsAIAssistantOpen(false); setAiInitialPrompt(''); }}
-        initialPrompt={aiInitialPrompt}
+        onClose={() => setIsAIAssistantOpen(false)}
         onSelectView={(view) => handleSelectView(view)}
       />
 
