@@ -92,6 +92,7 @@ export function createMemoryPrisma() {
     lists: { rows: [] },
     sections: { rows: [] },
     links: { rows: [] },
+    push: { rows: [] },
   };
   stores.links.lists = stores.lists;
   return {
@@ -102,6 +103,7 @@ export function createMemoryPrisma() {
     list: createDelegate(stores.lists),
     listSection: createDelegate(stores.sections),
     sharedLink: createDelegate(stores.links, { hasUpdatedAt: false }),
+    pushSubscription: createDelegate(stores.push, { hasUpdatedAt: false }),
     async $transaction(ops) {
       return Promise.all(ops);
     },

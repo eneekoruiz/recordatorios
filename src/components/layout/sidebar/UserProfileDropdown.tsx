@@ -10,13 +10,15 @@ import {
   HelpCircle, 
   Settings, 
   BarChart, 
-  LogOut 
+  LogOut,
+  Bell
 } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { SoundService } from '../../../services/SoundService';
 import { HapticService } from '../../../services/HapticService';
 import { syncManager } from '../../../sync/syncManager';
 import { confirmDialog } from '../../ui/confirmDialog';
+import { PushService, type PushStatus } from '../../../services/PushService';
 
 interface UserProfileDropdownProps {
   isOpen: boolean;
@@ -52,11 +54,41 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
   onSelectView
 }) => {
   const isSystemTheme = useAppStore((state) => state.useSystemTheme);
+  const [pushStatus, setPushStatus] = React.useState<PushStatus>('off');
+  const [pushBusy, setPushBusy] = React.useState(false);
+  React.useEffect(() => {
+    if (isOpen) PushService.status().then(setPushStatus);
+  }, [isOpen]);
   if (!isOpen || typeof document === 'undefined') return null;
+
+  const togglePush = async () => {
+    if (pushBusy) return;
+    if (pushStatus === 'unsupported' || pushStatus === 'denied') {
+      window.dispatchEvent(new CustomEvent('show-toast', {
+        detail: pushStatus === 'denied'
+          ? 'Las notificaciones están bloqueadas: actívalas en los ajustes del navegador.'
+          : 'En iPhone, añade la app a la pantalla de inicio y ábrela desde ahí para recibir avisos.',
+      }));
+      return;
+    }
+    setPushBusy(true);
+    HapticService.selection();
+    if (pushStatus === 'on') {
+      await PushService.disable();
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Avisos desactivados en este dispositivo' }));
+    } else {
+      const result = await PushService.enable();
+      window.dispatchEvent(new CustomEvent('show-toast', {
+        detail: result.ok ? 'Listo: un resumen al día y tus alertas con hora, aunque cierres la app' : result.reason,
+      }));
+    }
+    setPushStatus(await PushService.status());
+    setPushBusy(false);
+  };
 
   const rect = anchorEl ? anchorEl.getBoundingClientRect() : null;
   const top = (rect?.bottom || 50) + 8;
-  const left = Math.max(12, Math.min((typeof window !== 'undefined' ? window.innerWidth : 360) - 264, (rect?.right || 240) - 240));
+  const left = Math.max(12, Math.min((typeof window !== 'undefined' ? window.innerWidth : 360) - 302, (rect?.right || 290) - 290));
 
   return createPortal(
     <AnimatePresence>
@@ -79,7 +111,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           position: 'fixed', 
           top, 
           left, 
-          width: 250, 
+          width: 290, 
           maxHeight: `calc(100dvh - ${top + 16}px)`,
           overflowY: 'auto',
           overscrollBehavior: 'contain',
@@ -114,7 +146,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
             Sincronizar ahora
           </span>
           <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>
-            {lastSyncedAt ? new Date(lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pendiente'}
+            {lastSyncedAt ? new Date(lastSyncedAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : 'Pendiente'}
           </span>
         </div>
         <div 
@@ -128,7 +160,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Download size={16} /> Instalar como App
+            <Download size={16} /> Instalar como app
           </span>
         </div>
         <div 
@@ -137,7 +169,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Volume2 size={16} /> Sonidos de Interfaz
+            <Volume2 size={16} /> Sonidos de la interfaz
           </span>
           <div style={{
             width: '36px', height: '22px', borderRadius: '11px',
@@ -161,7 +193,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Smartphone size={16} /> Vibración Háptica
+            <Smartphone size={16} /> Vibración
           </span>
           <div style={{
             width: '36px', height: '22px', borderRadius: '11px',
@@ -181,7 +213,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Moon size={16} /> Modo Oscuro {isSystemTheme && <span className="theme-auto-badge" style={{ marginLeft: 4 }}>(auto)</span>}
+            <Moon size={16} /> Modo oscuro {isSystemTheme && <span className="theme-auto-badge" style={{ marginLeft: 4 }}>(auto)</span>}
           </span>
           <div style={{
             width: '36px', height: '22px', borderRadius: '11px',
@@ -201,7 +233,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <HelpCircle size={16} /> Atajos de Teclado
+            <HelpCircle size={16} /> Atajos de teclado
           </span>
           <kbd style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-color)', borderRadius: 4, padding: '2px 6px', fontSize: '0.75rem', fontWeight: 600 }}>?</kbd>
         </div>
@@ -224,9 +256,33 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           title="Descargar copia de seguridad en JSON"
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Download size={16} /> Copia de Seguridad Rápida
+            <Download size={16} /> Copia de seguridad rápida
           </span>
           <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>JSON</span>
+        </div>
+        <div
+          className="ios-dropdown-item"
+          role="switch"
+          aria-checked={pushStatus === 'on'}
+          onClick={(e) => { e.stopPropagation(); togglePush(); }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer', opacity: pushBusy ? 0.6 : 1 }}
+          title={pushStatus === 'unsupported' ? 'En iPhone, añade la app a la pantalla de inicio para recibir avisos' : 'Un resumen al día y las alertas con hora, aunque cierres la app'}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Bell size={16} /> Avisos con la app cerrada
+          </span>
+          <div aria-hidden="true" style={{
+            width: '36px', height: '22px', borderRadius: '11px',
+            background: pushStatus === 'on' ? 'var(--accent-primary)' : 'rgba(120,120,128,0.3)',
+            position: 'relative', transition: 'background-color 0.2s ease', flexShrink: 0,
+            opacity: pushStatus === 'unsupported' || pushStatus === 'denied' ? 0.45 : 1
+          }}>
+            <div style={{
+              width: '18px', height: '18px', borderRadius: '50%', background: '#ffffff',
+              position: 'absolute', top: '2px', left: pushStatus === 'on' ? '16px' : '2px',
+              transition: 'left 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+            }} />
+          </div>
         </div>
         <div className="ios-dropdown-divider" />
         <div 
@@ -234,14 +290,14 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           onClick={(e) => { e.stopPropagation(); setIsListConfigOpen(true); onClose(); }}
           style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', cursor: 'pointer' }}
         >
-          <Settings size={16} /> Gestionar Listas
+          <Settings size={16} /> Gestionar listas
         </div>
         <div 
           className="ios-dropdown-item"
           onClick={(e) => { e.stopPropagation(); onSelectView('ANALYTICS'); onClose(); }}
           style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', cursor: 'pointer' }}
         >
-          <BarChart size={16} /> Estadísticas y Productividad
+          <BarChart size={16} /> Estadísticas y productividad
         </div>
         <div className="ios-dropdown-divider" />
         <div 
@@ -264,7 +320,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           }}
           style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', cursor: 'pointer' }}
         >
-          <LogOut size={16} /> Cerrar Sesión
+          <LogOut size={16} /> Cerrar sesión
         </div>
       </motion.div>
     </AnimatePresence>,

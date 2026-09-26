@@ -18,6 +18,7 @@ model User {
   cycles       Cycle[]
   lists        List[]
   listSections ListSection[]
+  pushSubscriptions PushSubscription[]
   createdAt    DateTime      @default(now())
 }
 
@@ -77,4 +78,21 @@ model ListSection {
 
   @@index([userId, updatedAt])
   @@index([userId, deletedAt])
+}
+
+// Suscripciones Web Push (avisos con la app cerrada), una por navegador/dispositivo.
+model PushSubscription {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint      String   @unique
+  keys          Json
+  timeZone      String   @default("Europe/Madrid")
+  digestHour    Int      @default(9)
+  weeklyDay     Int      @default(6)
+  lastCheckedAt DateTime @default(now())
+  sentLog       Json?
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
 }

@@ -34,6 +34,17 @@ npm run dev                   # frontend (Vite, :5173) + API (Express, :3001)
 
 > En Vercel no hay tiempo real por SSE (las funciones son efímeras); la app sincroniza cada 30 s, al volver a la pestaña y tras cada cambio.
 
+## Avisos con la app cerrada
+
+La app avisa sin saturar: **un resumen al día** a las 9:00 de tu zona horaria («Completa tus recordatorios diarios», «Hoy te tocan los recordatorios semanales» en tu día semanal, «Hoy toca la ronda mensual» el día 1, la revisión anual el 1 de enero) y **las alertas con hora** que pongas en un recordatorio, agrupadas si coinciden. Se activan en el menú del perfil → *Avisos con la app cerrada* (en iPhone, con la app añadida a la pantalla de inicio).
+
+Para ponerlo en marcha:
+
+1. `npx web-push generate-vapid-keys` y guarda `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `VAPID_SUBJECT` en Vercel.
+2. Define `CRON_SECRET` en Vercel. `vercel.json` ya programa una llamada diaria a `/api/cron/notify` (vale para el resumen, también en el plan gratuito).
+3. Para que las alertas con hora lleguen puntuales, añade en GitHub los secretos `APP_URL` y `CRON_SECRET`: el flujo `.github/workflows/notify.yml` llama cada 10 minutos.
+4. `npx prisma db push` contra producción para crear la tabla de suscripciones (y los índices).
+
 ## Scripts
 
 | Comando | Qué hace |

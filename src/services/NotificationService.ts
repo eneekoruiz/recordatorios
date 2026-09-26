@@ -96,17 +96,12 @@ export class NotificationService {
       const lastSent = localStorage.getItem('weekly_notif_sent_date');
       if (lastSent === todayStr) return; // Solo una vez al día
 
-      const notification = new Notification('Recordatorios: ¡Día de tareas semanales!', {
-        body: `Hoy es día de tareas semanales. Tienes ${pendingDaily} diarias y ${pendingWeekly} semanales pendientes.`,
+      this.show('Hoy te tocan los recordatorios semanales', {
+        body: `Pendientes: ${pendingWeekly} semanales y ${pendingDaily} diarios.`,
         icon: '/icons/icon-192.png',
         badge: '/icons/icon-192.png',
-        requireInteraction: true
+        tag: `weekly-${todayStr}`,
       });
-
-      notification.onclick = () => {
-        window.focus();
-        notification.close();
-      };
 
       localStorage.setItem('weekly_notif_sent_date', todayStr);
     } catch {
@@ -114,20 +109,32 @@ export class NotificationService {
     }
   }
 
-  private fireNotification(title: string, _taskId: string) {
-    try {
-      const notification = new Notification('Recordatorio', {
-        body: title,
-        icon: '/icons/icon-192.png',
-        requireInteraction: true 
-      });
+  private fireNotification(title: string, taskId: string) {
+    this.show('Recordatorio', { body: title, icon: '/icons/icon-192.png', tag: `alert-${taskId}` });
+  }
 
-      notification.onclick = () => {
-        window.focus(); 
-        notification.close();
-      };
-    } catch {
-      // Silencioso
+  /**
+   * En Android `new Notification()` lanza «Illegal constructor»: allí solo vale el
+   * service worker. Se usa siempre que exista y el constructor queda de respaldo.
+   */
+  private show(title: string, options: NotificationOptions) {
+    const fallback = () => {
+      try {
+        const notification = new Notification(title, options);
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+        };
+      } catch {
+        // Silencioso
+      }
+    };
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistration()
+        .then((registration) => (registration ? registration.showNotification(title, options) : fallback()))
+        .catch(fallback);
+    } else {
+      fallback();
     }
   }
 }

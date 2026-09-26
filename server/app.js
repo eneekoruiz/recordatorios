@@ -5,6 +5,8 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { handleMcpRequest, MCP_TOOLS } from './mcp.js';
 import { isMailConfigured, sendPasswordResetEmail } from './mail.js';
+import webpush from 'web-push';
+import { planNotifications, safeTimeZone } from './notifications.js';
 import {
   scopedId,
   clientIdOf,
@@ -86,7 +88,17 @@ const clientIp = (req) => {
   return (typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : null) || req.socket?.remoteAddress || 'unknown';
 };
 
-export function createApp({ prisma }) {
+/** Envío real con Web Push si hay claves VAPID; null si el servidor no está configurado. */
+function defaultPushSender() {
+  const publicKey = process.env.VAPID_PUBLIC_KEY;
+  const privateKey = process.env.VAPID_PRIVATE_KEY;
+  if (!publicKey || !privateKey) return null;
+  webpush.setVapidDetails(process.env.VAPID_SUBJECT || 'mailto:avisos@recordatorios.app', publicKey, privateKey);
+  return (subscription, message) =>
+    webpush.sendNotification(subscription, JSON.stringify(message), { TTL: 6 * 60 * 60, urgency: 'normal' });
+}
+
+export function createApp({ prisma, pushSender = defaultPushSender() }) {
   const app = express();
   const clients = new Map(); // userId -> Set<Response> (SSE, solo en servidores persistentes)
 
@@ -698,6 +710,102 @@ export function createApp({ prisma }) {
     } catch (err) {
       console.error('Share read error:', err);
       res.status(500).json({ error: 'No se pudo cargar la lista compartida' });
+    }
+  });
+
+  // --- AVISOS CON LA APP CERRADA (Web Push) ---
+  app.get(['/api/push/public-key', '/push/public-key'], (req, res) => {
+    const publicKey = process.env.VAPID_PUBLIC_KEY;
+    if (!publicKey || !pushSender) return res.status(503).json({ error: 'Los avisos todavía no están activados en este servidor.' });
+    res.json({ publicKey });
+  });
+
+  app.post(['/api/push/subscribe', '/push/subscribe'], authenticateToken, async (req, res) => {
+    const { subscription, timeZone, digestHour, weeklyDay } = req.body || {};
+    const endpoint = subscription?.endpoint;
+    const keys = subscription?.keys;
+    if (typeof endpoint !== 'string' || !endpoint.startsWith('https://') || endpoint.length > 1000
+      || typeof keys?.p256dh !== 'string' || typeof keys?.auth !== 'string') {
+      return res.status(400).json({ error: 'Suscripción no válida' });
+    }
+    const prefs = {
+      timeZone: safeTimeZone(timeZone),
+      digestHour: Number.isInteger(digestHour) && digestHour >= 0 && digestHour <= 23 ? digestHour : 9,
+      weeklyDay: Number.isInteger(weeklyDay) && weeklyDay >= 0 && weeklyDay <= 6 ? weeklyDay : 6,
+    };
+    try {
+      await prisma.pushSubscription.upsert({
+        where: { endpoint },
+        update: { userId: req.user.id, keys: { p256dh: keys.p256dh, auth: keys.auth }, ...prefs },
+        create: { userId: req.user.id, endpoint, keys: { p256dh: keys.p256dh, auth: keys.auth }, ...prefs, lastCheckedAt: new Date() },
+      });
+      res.json({ success: true, ...prefs });
+    } catch (error) {
+      console.error('Push subscribe error:', error);
+      res.status(503).json({ error: 'No se pudieron activar los avisos. Inténtalo más tarde.' });
+    }
+  });
+
+  app.post(['/api/push/unsubscribe', '/push/unsubscribe'], authenticateToken, async (req, res) => {
+    const endpoint = req.body?.endpoint;
+    if (typeof endpoint !== 'string') return res.status(400).json({ error: 'Suscripción no válida' });
+    try {
+      await prisma.pushSubscription.deleteMany({ where: { endpoint, userId: req.user.id } });
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Push unsubscribe error:', error);
+      res.status(503).json({ error: 'No se pudieron desactivar los avisos.' });
+    }
+  });
+
+  // Tarea programada (Vercel Cron o GitHub Actions): envía lo que toque desde la última pasada.
+  // Se protege con CRON_SECRET (Vercel Cron manda «Authorization: Bearer <CRON_SECRET>»).
+  app.all(['/api/cron/notify', '/cron/notify'], async (req, res) => {
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret || req.headers['authorization'] !== `Bearer ${cronSecret}`) {
+      return res.status(401).json({ error: 'No autorizado' });
+    }
+    if (!pushSender) return res.status(503).json({ error: 'Faltan las claves VAPID' });
+    const now = new Date();
+    let sent = 0;
+    let removed = 0;
+    try {
+      const subscriptions = await prisma.pushSubscription.findMany({});
+      const tasksByUser = new Map();
+      for (const sub of subscriptions) {
+        if (!tasksByUser.has(sub.userId)) {
+          const rows = await prisma.task.findMany({ where: { userId: sub.userId, deletedAt: null } });
+          tasksByUser.set(sub.userId, rows.map((r) => toClientPayload(sub.userId, r)));
+        }
+        const { messages, sentLog } = planNotifications({
+          tasks: tasksByUser.get(sub.userId),
+          prefs: sub,
+          now,
+          since: sub.lastCheckedAt,
+          sentLog: sub.sentLog || {},
+        });
+        let gone = false;
+        for (const message of messages) {
+          try {
+            await pushSender({ endpoint: sub.endpoint, keys: sub.keys }, message);
+            sent++;
+          } catch (error) {
+            // 404/410: el navegador anuló la suscripción; se borra para no reintentar.
+            if (error?.statusCode === 404 || error?.statusCode === 410) { gone = true; break; }
+            console.error('Push send error:', error?.statusCode || error);
+          }
+        }
+        if (gone) {
+          await prisma.pushSubscription.delete({ where: { id: sub.id } });
+          removed++;
+        } else {
+          await prisma.pushSubscription.update({ where: { id: sub.id }, data: { lastCheckedAt: now, sentLog } });
+        }
+      }
+      res.json({ subscriptions: subscriptions.length, sent, removed });
+    } catch (error) {
+      console.error('Cron notify error:', error);
+      res.status(500).json({ error: 'No se pudieron enviar los avisos' });
     }
   });
 

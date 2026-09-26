@@ -4,6 +4,7 @@ import { AlertCircle, ChevronDown, ChevronUp, CreditCard, Flame, Moon, Sun, Suns
 import { useAppStore } from '../../store/useAppStore';
 import { buildDailyBriefing } from '../../services/DailyBriefingService';
 import { NotificationService } from '../../services/NotificationService';
+import { PushService } from '../../services/PushService';
 import { getUserFirstName } from '../../utils/userIdentity';
 import { formatRelativeDay, plural } from '../../utils/format';
 import './DailyBriefingBanner.css';
@@ -39,10 +40,14 @@ export function DailyBriefingBanner() {
 
   useEffect(() => {
     if (briefing.isWeeklyDay && (briefing.pendingWeekly.length > 0 || briefing.pendingDaily.length > 0)) {
-      NotificationService.getInstance().checkAndSendWeeklyNotification(
-        briefing.pendingDaily.length,
-        briefing.pendingWeekly.length
-      );
+      // Con los avisos push activos, el resumen ya llega del servidor: no se duplica.
+      PushService.status().then((status) => {
+        if (status === 'on') return;
+        NotificationService.getInstance().checkAndSendWeeklyNotification(
+          briefing.pendingDaily.length,
+          briefing.pendingWeekly.length
+        );
+      });
     }
   }, [briefing.isWeeklyDay, briefing.pendingDaily.length, briefing.pendingWeekly.length]);
 
@@ -126,14 +131,18 @@ export function DailyBriefingBanner() {
                 <button
                   type="button"
                   onClick={async () => {
-                    await NotificationService.getInstance().requestPermissions();
+                    const result = await PushService.enable();
+                    if (!result.ok) await NotificationService.getInstance().requestPermissions();
+                    window.dispatchEvent(new CustomEvent('show-toast', {
+                      detail: result.ok ? 'Listo: un resumen al día y tus alertas con hora, aunque cierres la app' : result.reason,
+                    }));
                   }}
                   className="briefing-chip"
                   style={{ cursor: 'pointer', background: 'rgba(255, 149, 0, 0.12)', color: '#ff9500', border: 'none', fontWeight: 600 }}
-                  title="Permitir notificaciones de tareas periódicas"
+                  title="Un resumen al día y las alertas con hora, aunque cierres la app"
                 >
                   <Bell size={13} />
-                  <span>Avisos semanales</span>
+                  <span>Activar avisos</span>
                 </button>
               )}
             </div>

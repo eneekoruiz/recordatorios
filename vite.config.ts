@@ -40,6 +40,8 @@ export default defineConfig({
         skipWaiting: true,
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api/],
+        // Avisos push con la app cerrada (public/push-sw.js)
+        importScripts: ['push-sw.js'],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         // Solo precacheamos las fuentes latinas (español); el resto se descarga bajo demanda.
         globIgnores: ['**/*cyrillic*', '**/*greek*', '**/*vietnamese*']

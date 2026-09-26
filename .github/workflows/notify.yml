@@ -1,0 +1,29 @@
+name: Avisos push (cada 10 minutos)
+
+# Vercel Cron (vercel.json) llama una vez al día para el resumen. Para que las
+# alertas con hora lleguen a su hora, este flujo llama cada 10 minutos.
+# Requiere los secretos del repositorio APP_URL (p. ej. https://tu-app.vercel.app)
+# y CRON_SECRET (el mismo valor que en Vercel). Sin ellos, no hace nada.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Lanzar el planificador de avisos
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "Faltan los secretos APP_URL y CRON_SECRET: no se envían avisos."
+            exit 0
+          fi
+          curl --fail --silent --show-error --max-time 60 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "${APP_URL%/}/api/cron/notify"

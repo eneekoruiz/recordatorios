@@ -132,7 +132,7 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
             id: 'welcome_1',
             sender: 'assistant',
             text: '¡Hola! Soy tu asistente de Recordatorios con IA. Puedes hablarme o escribirme tus tareas en lenguaje natural (con fechas, horas, listas y precios en euros) y prepararé todos los recordatorios para importarlos al instante.',
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
           }
         ]);
       }
@@ -151,7 +151,7 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
       id: `msg_user_${Date.now()}`,
       sender: 'user',
       text,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
     };
 
     setMessages(prev => [...prev, userMsg]);
@@ -172,7 +172,7 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
         sender: 'assistant',
         text: batch.reply,
         batch,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
       };
 
       setMessages(prev => [...prev, aiMsg]);
@@ -184,7 +184,7 @@ export function AIAssistantModal({ isOpen, onClose, initialPrompt = '', onSelect
           id: `msg_err_${Date.now()}`,
           sender: 'assistant',
           text: `Ocurrió un inconveniente: ${err.message || 'No se pudo procesar la solicitud'}.`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
         }
       ]);
     } finally {
