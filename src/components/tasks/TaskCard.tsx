@@ -15,7 +15,7 @@ import { HapticService } from '../../services/HapticService';
 import { ConfettiService } from '../../services/ConfettiService';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import type { SpotlightRect } from '../ui/SpotlightBackdrop';
-import { isCaducidadesList } from '../../utils/specialLists';
+import { isCaducidadesList, isQueHeHechoList } from '../../utils/specialLists';
 import { TaskContextMenu } from './card/TaskContextMenu';
 import { TaskSwipeBackground } from './card/TaskSwipeBackground';
 import { TaskMetaBadges } from './card/TaskMetaBadges';
@@ -352,6 +352,7 @@ export const TaskCard = React.memo(function TaskCard({
 
   const isBlocked = task.blockedBy && task.blockedBy.some(id => tasks[id] && tasks[id].status === 'pending');
   const isCompletedPeriod = isCompletedInCurrentPeriod(task, cycles, listSections, lists);
+  const isJournalEntry = task.type === 'log' || isQueHeHechoList(task.categoryId, lists.find(l => l.id === task.categoryId));
   const isEffectivelyDone = isCompletedPeriod || !!isGracePeriod || isTaskCompleted(task);
 
   // Background reveal: opacity tied to card x position
@@ -765,7 +766,8 @@ export const TaskCard = React.memo(function TaskCard({
           margin: 0,
           width: '100%',
           boxSizing: 'border-box',
-          background: 'var(--bg-elevated)',
+          // Opaca (tapa el fondo del deslizamiento) y del mismo color que la vista en claro y oscuro.
+          background: 'var(--list-row-bg)',
           borderRadius: `${isFirstInSection ? 10 : 0}px ${isFirstInSection ? 10 : 0}px ${isLastInSection ? 10 : 0}px ${isLastInSection ? 10 : 0}px`,
           borderBottom: 'none',
           opacity: isBlocked ? 0.5 : 1,
@@ -813,6 +815,20 @@ export const TaskCard = React.memo(function TaskCard({
           >
             <RotateCcw size={12} strokeWidth={2.5} />
           </motion.button>
+        ) : isJournalEntry ? (
+          // Entradas del diario («Qué he hecho»): ya están hechas; nada que marcar.
+          <span
+            aria-hidden="true"
+            style={{
+              width: 26, height: 26,
+              marginTop: `calc(2px + ((1.05rem * 1.4) - 26px) / 2)`,
+              marginRight: 8,
+              flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}
+          >
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent-purple, #af52de)' }} />
+          </span>
         ) : (
           <motion.button
             className="hit-44"

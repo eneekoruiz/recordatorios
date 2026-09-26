@@ -8,6 +8,7 @@ import { getEffectiveCycleId, getPureCyclicPeriodicity } from '../utils/sectionR
 import { isValidWeekday, readStoredWeeklyDay, writeStoredWeeklyDay } from '../utils/routineDay';
 import { DEFAULT_SMART_LIST_VISIBILITY } from '../constants/smartLists';
 import { smartSortTasks } from '../utils/smartSort';
+import { readStoredDisplayName, writeStoredDisplayName } from '../utils/userIdentity';
 import { findDuplicateTask, normalizeTitle } from '../utils/taskDeduplication';
 
 const optimisticUpdate = (
@@ -81,6 +82,9 @@ interface AppState {
   /** Día de las tareas semanales (0 = domingo … 6 = sábado); se sincroniza entre dispositivos. */
   weeklyTasksDay: number;
   setWeeklyTasksDay: (day: number) => void;
+  /** Nombre para saludar; se sincroniza entre dispositivos. Vacío = sin nombre (no se inventa). */
+  displayName: string;
+  setDisplayName: (name: string) => void;
   togglePinSmartList: (listId: string) => void;
   toggleCycleVisibility: (cycleId: string) => void;
   globalCyclesEnabled: boolean;
@@ -279,6 +283,12 @@ export const useAppStore = create<AppState>()(
       }),
 
 
+      displayName: readStoredDisplayName(),
+      setDisplayName: (name) => {
+        const clean = name.trim().slice(0, 60);
+        writeStoredDisplayName(clean);
+        set({ displayName: clean, preferences_updated_at: new Date().toISOString(), _preferences_dirty: true });
+      },
       weeklyTasksDay: readStoredWeeklyDay(),
       setWeeklyTasksDay: (day) => {
         if (!isValidWeekday(day)) return;
@@ -1224,9 +1234,6 @@ export const useAppStore = create<AppState>()(
       }),
 
       cleanupDataHygiene: () => optimisticUpdate(get, set, (state) => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayTimestamp = today.getTime();
         const RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
         const cleanedTasks: Record<string, TaskItem> = {};
         let changed = false;
@@ -1243,16 +1250,8 @@ export const useAppStore = create<AppState>()(
             return;
           }
 
-          // Las tareas vencidas y no completadas pierden la fecha (política de "sin agobio").
-          const isCompleted = isTaskCompleted(t) || (t as any).completed;
-          if (t.dueDate && !isCompleted) {
-            const due = new Date(t.dueDate).getTime();
-            if (!isNaN(due) && due < todayTimestamp) {
-              cleanedTasks[id] = TaskRepository.update(t, { dueDate: undefined });
-              changed = true;
-              return;
-            }
-          }
+          // Las vencidas conservan su fecha (antes se borraba al abrir la app y se sincronizaba:
+          // se perdía el dato y «Vencidos» nunca mostraba nada).
           cleanedTasks[id] = t;
         });
 

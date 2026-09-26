@@ -25,7 +25,7 @@ import { PinnedListsSection } from './sidebar/PinnedListsSection';
 import { SmartListsGrid } from './sidebar/SmartListsGrid';
 import { CyclesListSection } from './sidebar/CyclesListSection';
 import { UserProfileDropdown } from './sidebar/UserProfileDropdown';
-import { getUserDisplayName, getUserEmail } from '../../utils/userIdentity';
+import { getUserEmail } from '../../utils/userIdentity';
 
 interface SidebarProps {
   currentView: string;
@@ -123,10 +123,13 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   };
 
   const isGuest = useAppStore((state) => !state.token || state.token.startsWith('local_offline'));
+  const displayName = useAppStore((state) => state.displayName);
   const user = {
-    name: getUserDisplayName() || (isGuest ? 'Sin cuenta' : 'Mi cuenta'),
+    name: displayName || (isGuest ? 'Sin cuenta' : 'Tu cuenta'),
     email: isGuest ? 'Datos solo en este dispositivo' : getUserEmail(),
   };
+  // Inicial del avatar: la del nombre si lo hay; si no, la del email.
+  const avatarInitial = (displayName || getUserEmail() || '·').charAt(0).toUpperCase();
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [isEditCyclesMode, setIsEditCyclesMode] = useState(false);
@@ -257,7 +260,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                     fontSize: '0.84rem',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.12)'
                   }}>
-                    {user.name.charAt(0)}
+                    {avatarInitial}
                   </div>
                   {/* Sync status micro-dot */}
                   <span style={{

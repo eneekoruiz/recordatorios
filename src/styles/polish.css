@@ -644,6 +644,7 @@ input:focus, input:focus-visible, textarea:focus, textarea:focus-visible {
    suaves, botones de cristal y áreas táctiles de 44 pt.
    ========================================================================== */
 :root {
+  --list-row-bg: #ffffff;
   --bg-grouped: #f2f2f7;
   --bg-grouped-card: #ffffff;
   --scrim: rgba(0, 0, 0, 0.22);
@@ -651,6 +652,7 @@ input:focus, input:focus-visible, textarea:focus, textarea:focus-visible {
   --glass-stroke: rgba(0, 0, 0, 0.08);
 }
 [data-theme="dark"], [data-theme="dark"] :root, html.dark, body.dark {
+  --list-row-bg: #000000;
   --bg-grouped: #000000;
   --bg-grouped-card: #1c1c1e;
   --scrim: rgba(0, 0, 0, 0.5);
@@ -876,4 +878,43 @@ button[aria-label="Opciones de sección"]::before {
 }
 .quick-add-shell:focus-within {
   box-shadow: 0 0 0 3px var(--accent-glow), 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Resumen de Caducidades bajo el título */
+.cad-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  font-size: 15px;
+  color: var(--text-secondary);
+}
+.cad-summary-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.cad-summary-item strong {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.cad-summary-cost strong {
+  color: #248a3d;
+}
+[data-theme="dark"] .cad-summary-cost strong,
+body.dark .cad-summary-cost strong {
+  color: #30d158;
+}
+.cad-summary-critical,
+.cad-summary-critical strong {
+  color: #ff3b30;
+}
+
+/* Pistas de teclado («Esc para salir»…): solo donde hay teclado y ratón */
+@media (hover: none) {
+  .kbd-hint {
+    display: none !important;
+  }
 }

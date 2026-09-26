@@ -4,6 +4,8 @@ import { ArrowRight, CheckCircle2, Eye, EyeOff, KeyRound, LogIn, Mail, RotateCcw
 import { useAppStore } from '../../store/useAppStore';
 import { apiUrl } from '../../sync/syncManager';
 import { DEFAULT_SMART_LIST_VISIBILITY } from '../../constants/smartLists';
+import { writeStoredDisplayName } from '../../utils/userIdentity';
+import { isValidWeekday, writeStoredWeeklyDay } from '../../utils/routineDay';
 import './AuthScreen.css';
 
 export const MIN_PASSWORD_LENGTH = 8;
@@ -31,6 +33,14 @@ function applyServerPreferences(prefs: any) {
     try {
       localStorage.setItem('hide_onboarding_guide', 'true');
     } catch { /* sin almacenamiento */ }
+  }
+  if (typeof prefs.displayName === 'string') {
+    update.displayName = prefs.displayName.trim().slice(0, 60);
+    writeStoredDisplayName(update.displayName as string);
+  }
+  if (isValidWeekday(prefs.weeklyTasksDay)) {
+    update.weeklyTasksDay = prefs.weeklyTasksDay;
+    writeStoredWeeklyDay(prefs.weeklyTasksDay);
   }
   update._preferences_dirty = false;
   if (prefs.updated_at) update.preferences_updated_at = prefs.updated_at;
@@ -107,9 +117,10 @@ export function AuthScreen({ onSuccess, resetToken, onResetFinished }: AuthScree
     setToken(data.token, data.user.id);
     try {
       localStorage.setItem('userEmail', data.user.email || cleanEmail || '');
-      if (name.trim()) localStorage.setItem('userName', name.trim());
     } catch { /* sin almacenamiento */ }
     applyServerPreferences(data.preferences);
+    // El nombre de la cuenta nueva viaja como preferencia: llega a todos los dispositivos.
+    if (mode === 'register' && name.trim()) useAppStore.getState().setDisplayName(name.trim());
     onSuccess();
   };
 

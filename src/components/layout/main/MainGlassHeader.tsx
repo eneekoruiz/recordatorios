@@ -268,10 +268,12 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
             >
               <MoreHorizontal size={18} strokeWidth={2.2} />
             </button>
-            <AnimatePresence>
-              {isMenuOpen && (
-                isMobile ? (
-                  createPortal(
+            {/* En móvil el portal va por fuera: AnimatePresence descarta los portales como
+                hijos y el menú no llegaba a pintarse. */}
+            {isMobile ? (
+              createPortal(
+                <AnimatePresence>
+                  {isMenuOpen && (
                     <>
                       <motion.div 
                         initial={{ opacity: 0 }} 
@@ -505,10 +507,14 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                           Cerrar
                         </button>
                       </motion.div>
-                    </>,
-                    document.body
-                  )
-                ) : (
+                    </>
+                  )}
+                </AnimatePresence>,
+                document.body
+              )
+            ) : (
+              <AnimatePresence>
+                {isMenuOpen && (
                   <>
                     <motion.div 
                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -692,9 +698,9 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                       )}
                     </motion.div>
                   </>
-                )
-              )}
-            </AnimatePresence>
+                )}
+              </AnimatePresence>
+            )}
           </div>
         )}
       </div>

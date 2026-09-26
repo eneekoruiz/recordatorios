@@ -614,11 +614,11 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
 
     await page.waitForTimeout(500);
 
-    // Check financial cost calculation badge in header (10.99 + 120/12 = 20.99 €/mes)
-    const costBadge = page.locator('text=Gasto recurrente').first();
+    // Gasto mensual de las suscripciones en el resumen bajo el título (10,99 + 120/12 = 20,99 € al mes)
+    const costBadge = page.locator('.cad-summary-cost').first();
     await expect(costBadge).toBeVisible();
-    const costText = page.locator('text=/mes').first();
-    await expect(costText).toBeVisible();
+    await expect(costBadge).toContainText('20,99');
+    await expect(costBadge).toContainText('al mes');
 
     // Check Apple Wallet chip on Spotify task (desplegar sección si está colapsada)
     const subSection = page.locator('.group-header:has-text("Suscripciones")').first();

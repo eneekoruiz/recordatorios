@@ -773,8 +773,9 @@ const CORE_CYCLES = [
     return sum;
   }, [visibleTasks]);
 
-  const activeVisibleCount = useMemo(() => visibleTasks.filter(t => !isTaskCompleted(t)).length, [visibleTasks]);
-  const completedVisibleCount = useMemo(() => visibleTasks.filter(t => !isTaskCompleted(t) ? false : true).length, [visibleTasks]);
+  // Por tareas distintas: en «Por personas» una entrada con dos personas aparece dos veces.
+  const activeVisibleCount = useMemo(() => new Set(visibleTasks.filter(t => !isTaskCompleted(t)).map(t => t.id)).size, [visibleTasks]);
+  const completedVisibleCount = useMemo(() => new Set(visibleTasks.filter(t => isTaskCompleted(t)).map(t => t.id)).size, [visibleTasks]);
 
   const allTasksArray = useMemo(() => Object.values(tasks), [tasks]);
   const flashbackMemories = useMemo(() => 

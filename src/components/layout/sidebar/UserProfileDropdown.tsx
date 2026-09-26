@@ -19,6 +19,7 @@ import { HapticService } from '../../../services/HapticService';
 import { syncManager } from '../../../sync/syncManager';
 import { confirmDialog } from '../../ui/confirmDialog';
 import { PushService, type PushStatus } from '../../../services/PushService';
+import { usePromptStore } from '../../../store/usePromptStore';
 
 interface UserProfileDropdownProps {
   isOpen: boolean;
@@ -55,6 +56,13 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
   onSelectView
 }) => {
   const isSystemTheme = useAppStore((state) => state.useSystemTheme);
+  const displayName = useAppStore((state) => state.displayName);
+  const setDisplayName = useAppStore((state) => state.setDisplayName);
+  const editName = async () => {
+    const next = await usePromptStore.getState().openPrompt('¿Cómo quieres que te llamemos?', 'Tu nombre');
+    if (next !== null) setDisplayName(next);
+  };
+
   const [pushStatus, setPushStatus] = React.useState<PushStatus>('off');
   const [pushBusy, setPushBusy] = React.useState(false);
   React.useEffect(() => {
@@ -127,11 +135,19 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
         onClick={(e) => e.stopPropagation()}
         onWheel={(e) => e.stopPropagation()}
       >
-        {/* User info in dropdown */}
-        <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid var(--border-subtle)' }}>
-          <div style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name}</div>
+        {/* Cuenta: el nombre se cambia tocándolo (se sincroniza entre dispositivos) */}
+        <button
+          type="button"
+          onClick={editName}
+          title="Cambiar el nombre con el que te saluda la app"
+          style={{ display: 'block', width: '100%', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-subtle)', padding: '10px 14px 8px', cursor: 'pointer', font: 'inherit', color: 'inherit' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+            <span style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name}</span>
+            <span style={{ fontSize: '0.76rem', color: 'var(--accent-primary)', flexShrink: 0 }}>{displayName ? 'Cambiar' : 'Poner nombre'}</span>
+          </div>
           <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</div>
-        </div>
+        </button>
 
         <div 
           className="ios-dropdown-item"

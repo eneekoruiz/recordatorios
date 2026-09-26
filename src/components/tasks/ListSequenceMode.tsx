@@ -722,7 +722,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
             >
               {/* Step indicator */}
               <div style={{ fontSize: '0.8rem', color: isDark ? 'rgba(255,255,255,0.5)' : 'var(--text-tertiary, #8e8e93)', fontWeight: 600, marginBottom: 8, letterSpacing: '0.04em', fontVariantNumeric: 'tabular-nums' }}>
-                {index + 1} de {activeTaskIds.length} tareas{totalEstimatedMins > 0 ? ` · ~${formatDuration(totalEstimatedMins)} total` : ''}
+                {index + 1} de {activeTaskIds.length} {activeTaskIds.length === 1 ? 'tarea' : 'tareas'}
               </div>
 
               {/* Parallel Task Badge */}
@@ -738,7 +738,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                   <Zap size={14} fill="currentColor" />
                   <span>Tarea en paralelo</span>
                   <span style={{ opacity: 0.5 }}>·</span>
-                  <span>~{currentDurationInfo.activeMinutes} min activo + ~{formatDuration(currentDurationInfo.parallelMinutes)} segundo plano</span>
+                  <span>~{formatDuration(currentDurationInfo.activeMinutes)} activo + ~{formatDuration(currentDurationInfo.parallelMinutes)} en segundo plano</span>
                 </div>
               )}
 
@@ -772,6 +772,10 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
               {/* Circular timer */}
               {initialDuration > 0 && (
                 <div
+                  role="button"
+                  tabIndex={0}
+                  aria-label={isActive ? 'Pausar' : 'Reanudar'}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsActive(v => !v); } }}
                   onClick={() => setIsActive(v => !v)}
                   style={{ position: 'relative', width: 196, height: 196, margin: '2px 0 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   title={isActive ? 'Pausar' : 'Reanudar'}
@@ -805,7 +809,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                       boxShadow: isActive ? 'none' : `0 4px 14px ${listColor}60`,
                       transition: 'all 0.2s ease'
                     }}>
-                      {isActive ? <><Pause size={11} fill={isDark ? "white" : "currentColor"} /> EN PROGRESO</> : <><Play size={11} fill="white" style={{ marginLeft: 2 }} /> REANUDAR</>}
+                      {isActive ? <><Pause size={11} fill={isDark ? "white" : "currentColor"} /> Pausar</> : <><Play size={11} fill="white" style={{ marginLeft: 2 }} /> Reanudar</>}
                     </div>
                   </div>
                 </div>
@@ -822,7 +826,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                   marginBottom: 10
                 }}
               >
-                <Clock size={12} /> Ajustar tiempo ({Math.ceil(timeLeft / 60)} min)
+                <Clock size={12} /> Ajustar tiempo ({formatDuration(initialDuration / 60)})
               </button>
 
               {/* Ambient sound dock */}
@@ -964,7 +968,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
         </AnimatePresence>
 
         {/* ── FOOTER ──────────────────────────────────────────────────────── */}
-        <div style={{ color: isDark ? 'rgba(255,255,255,0.28)' : 'var(--text-tertiary, #8e8e93)', fontSize: '0.78rem', textAlign: 'center' }}>
+        <div className="kbd-hint" style={{ color: isDark ? 'rgba(255,255,255,0.28)' : 'var(--text-tertiary, #8e8e93)', fontSize: '0.78rem', textAlign: 'center' }}>
           <kbd style={{ background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', padding: '2px 6px', borderRadius: 4, color: isDark ? 'rgba(255,255,255,0.5)' : 'var(--text-secondary, #636366)' }}>Esc</kbd> para salir
         </div>
       </motion.div>

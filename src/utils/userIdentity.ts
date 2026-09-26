@@ -12,13 +12,26 @@ export function getUserEmail(): string {
   return read('userEmail');
 }
 
-/** Nombre para saludos: el alias guardado o, si no hay, la parte local del email capitalizada. */
+/** Nombre guardado en este dispositivo (lo sincroniza el store como preferencia). */
+export function readStoredDisplayName(): string {
+  return read('userName').trim();
+}
+
+export function writeStoredDisplayName(name: string): void {
+  try {
+    if (name) localStorage.setItem('userName', name);
+    else localStorage.removeItem('userName');
+  } catch {
+    /* sin almacenamiento: basta con el store */
+  }
+}
+
+/**
+ * Nombre para saludos: el que el usuario escribió (al crear la cuenta o en su perfil).
+ * Si no hay, no se inventa a partir del email («eneko.r_94» no es un nombre).
+ */
 export function getUserDisplayName(): string {
-  const stored = read('userName').trim();
-  if (stored) return stored;
-  const local = getUserEmail().split('@')[0].replace(/[._-]+/g, ' ').replace(/\d+/g, '').trim();
-  if (!local) return '';
-  return local.charAt(0).toUpperCase() + local.slice(1);
+  return readStoredDisplayName();
 }
 
 export function getUserFirstName(): string {

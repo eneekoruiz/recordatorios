@@ -236,51 +236,6 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
               )}
             </h1>
 
-            {/* Caducidades stats en la misma línea del título — diseño Apple con iconos profesionales sin emojis */}
-            {isCaducidadesList(currentView, currentList) && caducidadesStats && (
-              <div style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '4px 12px',
-                borderRadius: 999,
-                background: 'var(--bg-card, rgba(0,0,0,0.03))',
-                border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-                fontSize: '0.80rem',
-                color: 'var(--text-secondary)'
-              }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 500 }}>
-                  <CreditCard size={14} color="#ff9500" />
-                  <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{caducidadesStats.cards}</strong>
-                  <span>tarjetas</span>
-                </span>
-                <span style={{ width: 1, height: 12, background: 'var(--border-subtle, rgba(0,0,0,0.1))' }} />
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 500 }}>
-                  <Clock size={14} color="#0a84ff" />
-                  <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{caducidadesStats.subs}</strong>
-                  <span>suscripciones</span>
-                </span>
-                {caducidadesStats.subCosts && caducidadesStats.subCosts.count > 0 && (
-                  <>
-                    <span style={{ width: 1, height: 12, background: 'var(--border-subtle, rgba(0,0,0,0.1))' }} />
-                    <span style={{ color: '#34c759', fontWeight: 650, fontVariantNumeric: 'tabular-nums' }}>
-                      <span style={{ fontWeight: 500, color: 'var(--text-secondary)', marginRight: 4 }}>Gasto recurrente:</span>
-                      {caducidadesStats.subCosts.formattedMonthly}/mes
-                    </span>
-                  </>
-                )}
-                {caducidadesStats.critical > 0 && (
-                  <>
-                    <span style={{ width: 1, height: 12, background: 'var(--border-subtle, rgba(0,0,0,0.1))' }} />
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#ff3b30', fontWeight: 650 }}>
-                      <ShieldAlert size={13} />
-                      <span>{caducidadesStats.critical} por vencer</span>
-                    </span>
-                  </>
-                )}
-              </div>
-            )}
 
 
           </div>
@@ -288,7 +243,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
           {/* Gran Contador Apple Reminders en el color de la lista */}
           {currentView !== 'TRASH' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-              {totalCost > 0 && !currentCycle && (
+              {totalCost > 0 && !currentCycle && !isCaducidadesList(currentView, currentList) && (
                 <span 
                   style={{
                     display: 'inline-flex',
@@ -317,6 +272,32 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
             </div>
           )}
         </div>
+
+        {/* Resumen de Caducidades: una línea propia bajo el título (antes iba en una cápsula
+            que en el móvil se partía en tres líneas y empujaba el contador abajo). */}
+        {isCaducidadesList(currentView, currentList) && caducidadesStats && (
+          <div className="cad-summary" style={{ opacity: titleOpacity }}>
+            <span className="cad-summary-item">
+              <CreditCard size={14} color="#ff9500" aria-hidden="true" />
+              <strong>{caducidadesStats.cards}</strong> {caducidadesStats.cards === 1 ? 'tarjeta' : 'tarjetas'}
+            </span>
+            <span className="cad-summary-item">
+              <Clock size={14} color="#0a84ff" aria-hidden="true" />
+              <strong>{caducidadesStats.subs}</strong> {caducidadesStats.subs === 1 ? 'suscripción' : 'suscripciones'}
+            </span>
+            {caducidadesStats.subCosts && caducidadesStats.subCosts.count > 0 && (
+              <span className="cad-summary-item cad-summary-cost">
+                <strong>{caducidadesStats.subCosts.formattedMonthly}</strong> al mes
+              </span>
+            )}
+            {caducidadesStats.critical > 0 && (
+              <span className="cad-summary-item cad-summary-critical">
+                <ShieldAlert size={13} aria-hidden="true" />
+                <strong>{caducidadesStats.critical}</strong> por vencer
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Conmutador general de frecuencia (Apple Segmented Control) */}
         {currentCycle && currentCycle.id !== 'cycle_day' && onToggleCycleRoutineMode && (
