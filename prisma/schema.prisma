@@ -28,6 +28,9 @@ model Task {
   payload     Json
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime?
+
+  @@index([userId, updatedAt])
+  @@index([userId, deletedAt])
 }
 
 model Cycle {
@@ -37,6 +40,9 @@ model Cycle {
   payload     Json
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime?
+
+  @@index([userId, updatedAt])
+  @@index([userId, deletedAt])
 }
 
 model List {
@@ -47,6 +53,9 @@ model List {
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime?
   sharedLinks SharedLink[]
+
+  @@index([userId, updatedAt])
+  @@index([userId, deletedAt])
 }
 
 model SharedLink {
@@ -54,6 +63,8 @@ model SharedLink {
   listId    String
   list      List     @relation(fields: [listId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+
+  @@index([listId])
 }
 
 model ListSection {
@@ -63,4 +74,7 @@ model ListSection {
   payload     Json
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime?
+
+  @@index([userId, updatedAt])
+  @@index([userId, deletedAt])
 }

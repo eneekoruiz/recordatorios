@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'node:crypto';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
@@ -44,6 +45,14 @@ export function resetLinkBase({ appUrl, production, origin, protocol, host }) {
   if (appUrl) return appUrl.replace(/\/$/, '');
   if (!production && origin) return origin.replace(/\/$/, '');
   return `${protocol}://${host}`;
+}
+
+/**
+ * Huella de la contraseña actual que viaja dentro del token de sesión. Si la
+ * contraseña cambia, la huella deja de coincidir y las demás sesiones se cierran.
+ */
+export function passwordFingerprint(passwordHash) {
+  return crypto.createHash('sha256').update(String(passwordHash || '')).digest('base64url').slice(0, 16);
 }
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -121,8 +130,12 @@ export function createApp({ prisma }) {
     return secret;
   };
 
+  // `user` debe traer el hash de su contraseña (la huella va dentro del token).
   const signSession = (user, secret) =>
-    jwt.sign({ id: user.id, email: user.email }, secret, { expiresIn: SESSION_TTL, algorithm: 'HS256' });
+    jwt.sign({ id: user.id, email: user.email, pv: passwordFingerprint(user.password) }, secret, {
+      expiresIn: SESSION_TTL,
+      algorithm: 'HS256',
+    });
 
   const sessionResponse = (user, secret) => ({
     token: signSession(user, secret),
@@ -136,36 +149,63 @@ export function createApp({ prisma }) {
     return payload;
   };
 
-  const authenticateToken = (req, res, next) => {
+  /**
+   * Devuelve el usuario de un token válido cuya huella coincide con su contraseña
+   * actual; null si la sesión ya no vale (contraseña cambiada, usuario borrado o
+   * token anterior a las huellas). Los fallos de base de datos se propagan: no
+   * deben confundirse con una sesión caducada.
+   */
+  const sessionUser = async (payload) => {
+    const user = await prisma.user.findUnique({
+      where: { id: String(payload.id) },
+      select: { id: true, email: true, password: true },
+    });
+    if (!user || !payload.pv || payload.pv !== passwordFingerprint(user.password)) return null;
+    return user;
+  };
+
+  const bearerToken = (req) => {
+    const authHeader = req.headers['authorization'];
+    return typeof authHeader === 'string' && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  };
+
+  const authenticateToken = async (req, res, next) => {
     const secret = requireSecret(res);
     if (!secret) return;
-    const authHeader = req.headers['authorization'];
-    const token = typeof authHeader === 'string' && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    const token = bearerToken(req);
     if (!token) return res.status(401).json({ error: 'No autenticado' });
+    let payload;
     try {
-      const payload = verifySession(token, secret);
-      req.user = { id: payload.id, email: payload.email };
-      // Renovación deslizante: tokens antiguos o sin caducidad se reemiten de forma transparente.
-      const issuedAtMs = (payload.iat || 0) * 1000;
-      if (!payload.exp || Date.now() - issuedAtMs > SESSION_REFRESH_AFTER_MS) {
-        res.setHeader('X-Refreshed-Token', signSession(req.user, secret));
-      }
-      next();
+      payload = verifySession(token, secret);
     } catch {
       return res.status(401).json({ error: 'Sesión caducada. Vuelve a iniciar sesión.' });
     }
+    let user;
+    try {
+      user = await sessionUser(payload);
+    } catch (error) {
+      console.error('Session check error:', error);
+      return res.status(503).json({ error: 'Servicio no disponible. Inténtalo de nuevo en unos segundos.' });
+    }
+    if (!user) return res.status(401).json({ error: 'Sesión caducada. Vuelve a iniciar sesión.' });
+    req.user = { id: user.id, email: user.email };
+    // Renovación deslizante: los tokens con más de 7 días se reemiten de forma transparente.
+    const issuedAtMs = (payload.iat || 0) * 1000;
+    if (!payload.exp || Date.now() - issuedAtMs > SESSION_REFRESH_AFTER_MS) {
+      res.setHeader('X-Refreshed-Token', signSession(user, secret));
+    }
+    next();
   };
 
-  const optionalAuthenticateToken = (req, res, next) => {
+  const optionalAuthenticateToken = async (req, res, next) => {
     const secret = getJwtSecret();
-    const authHeader = req.headers['authorization'];
-    const token = typeof authHeader === 'string' && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    const token = bearerToken(req);
     if (token && secret) {
       try {
-        const payload = verifySession(token, secret);
-        req.user = { id: payload.id, email: payload.email };
+        const user = await sessionUser(verifySession(token, secret));
+        if (user) req.user = { id: user.id, email: user.email };
       } catch {
-        /* token inválido: se trata como anónimo */
+        /* token inválido o sesión cerrada: se trata como anónimo */
       }
     }
     next();
@@ -536,7 +576,7 @@ export function createApp({ prisma }) {
   // Tiempo real por SSE. En Vercel (funciones efímeras) no es viable mantener conexiones
   // abiertas ni compartir memoria entre instancias: respondemos 204 y el cliente se queda
   // con el sondeo periódico + sincronización al volver a la pestaña.
-  app.get(['/api/sync/live', '/sync/live'], (req, res) => {
+  app.get(['/api/sync/live', '/sync/live'], async (req, res) => {
     if (process.env.VERCEL) return res.status(204).end();
     const secret = getJwtSecret();
     const token = typeof req.query.token === 'string' ? req.query.token : null;
@@ -544,7 +584,9 @@ export function createApp({ prisma }) {
 
     let userId;
     try {
-      userId = verifySession(token, secret).id;
+      const user = await sessionUser(verifySession(token, secret));
+      if (!user) return res.sendStatus(401);
+      userId = user.id;
     } catch {
       return res.sendStatus(401);
     }

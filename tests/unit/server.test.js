@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import jwt from 'jsonwebtoken';
-import { createApp, resetLinkBase } from '../../server/app.js';
+import { createApp, resetLinkBase, passwordFingerprint } from '../../server/app.js';
 import { createMemoryPrisma } from '../support/memoryPrisma.js';
 
 let server;
@@ -109,14 +109,48 @@ describe('autenticación', () => {
     expect((await get('/api/sync/pull', forged)).status).toBe(401);
   });
 
-  it('renueva tokens heredados sin caducidad', async () => {
+  it('los tokens anteriores a la huella de contraseña ya no valen (se vuelve a entrar una vez)', async () => {
     const { user } = await register(email);
     const legacy = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET);
-    const res = await get('/api/sync/pull', legacy);
+    expect((await get('/api/sync/pull', legacy)).status).toBe(401);
+  });
+
+  it('renueva de forma transparente los tokens con más de 7 días', async () => {
+    const { user } = await register(email);
+    const stored = await prisma.user.findUnique({ where: { id: user.id } });
+    const eightDaysAgo = Math.floor(Date.now() / 1000) - 8 * 24 * 3600;
+    const old = jwt.sign(
+      { id: user.id, email: user.email, pv: passwordFingerprint(stored.password), iat: eightDaysAgo },
+      process.env.JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+    const res = await get('/api/sync/pull', old);
     expect(res.status).toBe(200);
     const refreshed = res.headers.get('x-refreshed-token');
     expect(refreshed).toBeTruthy();
-    expect(jwt.decode(refreshed).exp).toBeTruthy();
+    expect(jwt.decode(refreshed).pv).toBe(passwordFingerprint(stored.password));
+  });
+
+  it('cambiar la contraseña cierra las demás sesiones y mantiene la actual', async () => {
+    const { token: phone } = await register(email);
+    const login = await post('/api/auth/login', { email, password: 'Password123!' });
+    const { token: laptop } = await login.json();
+    const change = await post('/api/auth/change-password', { currentPassword: 'Password123!', newPassword: 'Cambiada123!' }, phone);
+    expect(change.status).toBe(200);
+    const { token: phoneRenewed } = await change.json();
+    expect((await get('/api/sync/pull', laptop)).status).toBe(401);
+    expect((await get('/api/sync/pull', phone)).status).toBe(401);
+    expect((await get('/api/sync/pull', phoneRenewed)).status).toBe(200);
+  });
+
+  it('restablecer la contraseña por email también cierra las sesiones abiertas', async () => {
+    const { token: stolen } = await register(email);
+    const forgot = await post('/api/auth/forgot-password', { email });
+    const resetToken = new URL((await forgot.json()).devResetUrl).searchParams.get('reset');
+    const reset = await post('/api/auth/reset-password', { token: resetToken, newPassword: 'NuevaClave456!' });
+    expect(reset.status).toBe(200);
+    expect((await get('/api/sync/pull', stolen)).status).toBe(401);
+    expect((await get('/api/sync/pull', (await reset.json()).token)).status).toBe(200);
   });
 
   it('en producción sin JWT_SECRET deshabilita el login en vez de usar un secreto conocido', async () => {
