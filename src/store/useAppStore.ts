@@ -5,6 +5,8 @@ import type { TaskItem, CustomCycle, CustomList, ListSection } from '../models/T
 import { TaskRepository } from '../repositories/TaskRepository';
 import { isCompletedInCurrentPeriod, wouldCreateDependencyCycle } from '../services/TaskService';
 import { getEffectiveCycleId, getPureCyclicPeriodicity } from '../utils/sectionRoutine';
+import { isValidWeekday, readStoredWeeklyDay, writeStoredWeeklyDay } from '../utils/routineDay';
+import { DEFAULT_SMART_LIST_VISIBILITY } from '../constants/smartLists';
 import { findDuplicateTask, normalizeTitle } from '../utils/taskDeduplication';
 
 const optimisticUpdate = (
@@ -75,6 +77,9 @@ interface AppState {
   emptyTrash: () => void;
   
   toggleSmartList: (listId: string) => void;
+  /** Día de las tareas semanales (0 = domingo … 6 = sábado); se sincroniza entre dispositivos. */
+  weeklyTasksDay: number;
+  setWeeklyTasksDay: (day: number) => void;
   togglePinSmartList: (listId: string) => void;
   toggleCycleVisibility: (cycleId: string) => void;
   globalCyclesEnabled: boolean;
@@ -186,14 +191,7 @@ export const useAppStore = create<AppState>()(
       setLearnedDuration: (taskId, minutes) => set((state: AppState) => ({
         learnedDurations: { ...state.learnedDurations, [taskId]: minutes }
       })),
-      smartListVisibility: {
-        smart_primeros_pasos: false,
-        smart_today: true,
-        smart_scheduled: true,
-        smart_all: true,
-        smart_flagged: true,
-        smart_completed: false
-      },
+      smartListVisibility: { ...DEFAULT_SMART_LIST_VISIBILITY },
       pinnedSmartLists: [],
       cycleVisibility: { cycle_day: true, cycle_week: true, cycle_month: true, cycle_year: true },
       globalCyclesEnabled: true,
@@ -279,6 +277,13 @@ export const useAppStore = create<AppState>()(
         };
       }),
 
+
+      weeklyTasksDay: readStoredWeeklyDay(),
+      setWeeklyTasksDay: (day) => {
+        if (!isValidWeekday(day)) return;
+        writeStoredWeeklyDay(day);
+        set({ weeklyTasksDay: day, preferences_updated_at: new Date().toISOString(), _preferences_dirty: true });
+      },
 
       toggleSmartList: (listId) => optimisticUpdate(get, set, (state) => ({
         smartListVisibility: { ...state.smartListVisibility, [listId]: !state.smartListVisibility[listId] },

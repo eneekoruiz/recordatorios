@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Search, Sun, Moon, Sparkles, Calendar, Inbox, CheckCircle2, 
+  Search, Sun, Moon, Sparkles, Calendar, CalendarDays, Inbox, CheckCircle2, 
   Plus, Folder, CornerDownLeft, X, BarChart2, FileText, Play, Repeat
 } from 'lucide-react';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -101,9 +101,17 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
         id: 'action_scheduled',
         type: 'action',
         title: 'Ir a Programados',
-        subtitle: 'Ver calendario y tareas futuras',
+        subtitle: 'Ver los recordatorios con fecha futura',
         icon: <Calendar size={16} color="#ff3b30" />,
         action: () => { onSelectView('smart_scheduled'); handleClose(); }
+      },
+      {
+        id: 'action_calendar',
+        type: 'action',
+        title: 'Ir a Calendario',
+        subtitle: 'Qué toca cada día: fechas, renovaciones y rutinas',
+        icon: <CalendarDays size={16} color="#5856d6" />,
+        action: () => { onSelectView('smart_calendar'); handleClose(); }
       },
       {
         id: 'action_ai',

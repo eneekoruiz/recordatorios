@@ -28,7 +28,7 @@ export const MainInlineAdd: React.FC<MainInlineAddProps> = ({
   const [selectedDueDate, setSelectedDueDate] = useState<string | undefined>(undefined);
   const [selectedPriority, setSelectedPriority] = useState<'none' | 'low' | 'medium' | 'high'>('none');
 
-  if (currentView === 'TRASH' || currentView === 'smart_completed') {
+  if (currentView === 'TRASH' || currentView === 'smart_completed' || currentView === 'smart_calendar') {
     return null;
   }
 

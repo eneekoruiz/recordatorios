@@ -32,9 +32,17 @@ Los IDs los genera el cliente y algunos son fijos (`compras`, `caducidades`, `cy
 
 - Contraseñas con bcrypt (mínimo 8 caracteres) y migración transparente de contraseñas heredadas.
 - JWT HS256 con caducidad de 30 días y renovación deslizante (cabecera `X-Refreshed-Token`). `JWT_SECRET` es obligatorio en producción.
+- Cada token lleva una huella del hash de la contraseña (`pv`): al cambiarla o restablecerla, el resto de sesiones deja de valer y la actual recibe un token nuevo.
 - Recuperación de contraseña con enlace firmado de 30 minutos y un solo uso (firmado con el hash actual de la contraseña), enviado por email mediante Resend.
 - Límite de intentos por IP y por email en login y recuperación (en memoria, *best-effort* en serverless).
 - Si la sesión caduca, la app pide volver a entrar pero conserva los cambios locales; si entra otra cuenta en el mismo dispositivo, se limpian los datos de la anterior.
+
+## Avisos y calendario
+
+- `shared/periodicity.js` es la única definición de «qué frecuencia tiene un recordatorio» (prefijo del título, `cycle_id`, lista o sección y su sección padre) y de qué rondas tocan cada día: las semanales en el día elegido, la mensual el primero de esos días del mes y la anual, el de enero. La usan la app (TypeScript, tipos en `periodicity.d.ts`) y el servidor.
+- `server/notifications.js` decide qué avisos mandar a cada suscripción (función pura, probada en `tests/unit/notifications.test.js`): un resumen al día a la hora elegida y las alertas con hora, agrupadas. Lo ya hecho en su periodo no cuenta, con las fechas en la zona horaria del usuario.
+- `/api/cron/notify` (Vercel Cron a diario y GitHub Actions cada 10 min, protegido con `CRON_SECRET`) carga tareas, listas, secciones y el día semanal sincronizado en `User.preferences.weeklyTasksDay`.
+- `src/utils/calendar.ts` calcula el calendario (recordatorios con fecha, renovaciones previstas y rondas pendientes) sin React; la vista es `src/components/views/CalendarView.tsx`.
 
 ## Interfaz
 
@@ -44,5 +52,5 @@ Los IDs los genera el cliente y algunos son fijos (`compras`, `caducidades`, `cy
 
 ## Calidad
 
-- `tests/unit` (Vitest): API completa contra un Prisma en memoria (`tests/support/memoryPrisma.js`), lógica de fusión y NLP.
+- `tests/unit` (Vitest): API completa contra un Prisma en memoria (`tests/support/memoryPrisma.js`), lógica de fusión, NLP, avisos y calendario.
 - `tests/*.spec.ts` (Playwright): flujos de interfaz. En CI corren contra un PostgreSQL efímero, nunca contra producción.

@@ -7,6 +7,8 @@ import { SoundService } from '../../services/SoundService';
 import { extractPeopleFromText, getAnticipationAlerts } from '../../services/TaskService';
 import { isCaducidadesList } from '../../utils/specialLists';
 import { formatEuro } from '../../utils/format';
+import { useCalendarStore } from '../../store/useCalendarStore';
+import { parseDayKey } from '../../utils/calendar';
 
 interface QuickAddBarProps {
   currentView: string;
@@ -23,6 +25,9 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
   const addTask = useAppStore(state => state.addTask);
   const lists = useAppStore(state => state.lists);
   const listSections = useAppStore(state => state.listSections);
+  const calendarDay = useCalendarStore(state => state.selectedDay);
+  // En el calendario, lo que se escribe va al día elegido (salvo que diga otra fecha).
+  const calendarDate = currentView === 'smart_calendar' ? (calendarDay ? parseDayKey(calendarDay) : new Date()) : null;
 
   const nlp = parseNaturalLanguage(text);
   // «@Compras» es una lista, no una persona: evitamos mostrarlo dos veces.
@@ -89,12 +94,16 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
       targetCycleId = nlp.suggestedCycleId;
     }
 
-    // Determinar dueDate
+    // Determinar dueDate: manda la fecha escrita («mañana», «el viernes»…); si no hay,
+    // la de la vista (Hoy, o el día elegido en el calendario, a mediodía).
     let targetDueDate: string | undefined = undefined;
-    if (currentView === 'smart_today') {
-      targetDueDate = new Date().toISOString();
-    } else if (nlp.suggestedDueDate) {
+    if (nlp.suggestedDueDate) {
       targetDueDate = nlp.suggestedDueDate.toISOString();
+    } else if (currentView === 'smart_today') {
+      targetDueDate = new Date().toISOString();
+    } else if (currentView === 'smart_calendar') {
+      const day = calendarDay ? parseDayKey(calendarDay) : new Date();
+      targetDueDate = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 12).toISOString();
     }
 
     // Alertas por hora
@@ -134,7 +143,8 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
     inputRef.current?.blur();
   };
 
-  const hasChips = nlp.times.length > 0 || nlp.suggestedDueDate || nlp.suggestedCycleId || nlp.suggestedPriority || nlp.suggestedCategory || extractedPeople.length > 0 || Boolean(nlp.suggestedPrice);
+  const showCalendarDay = Boolean(calendarDate && text.trim() && !nlp.suggestedDueDate);
+  const hasChips = nlp.times.length > 0 || nlp.suggestedDueDate || showCalendarDay || nlp.suggestedCycleId || nlp.suggestedPriority || nlp.suggestedCategory || extractedPeople.length > 0 || Boolean(nlp.suggestedPrice);
 
   return (
     <div 
@@ -173,6 +183,11 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
               {nlp.suggestedDueDate && (
                 <span className="qa-chip">
                   <Calendar size={12} /> {nlp.suggestedDueDate.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
+                </span>
+              )}
+              {showCalendarDay && calendarDate && (
+                <span className="qa-chip">
+                  <Calendar size={12} /> {calendarDate.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
                 </span>
               )}
               {nlp.times.map(t => (

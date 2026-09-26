@@ -161,6 +161,10 @@ h1, h2, h3,
     margin-right: auto;
     width: 100%;
   }
+  /* El calendario aprovecha el ancho (rejilla + agenda lateral), como Calendario en el Mac. */
+  .content-scroll > div:has(.cal) {
+    max-width: 1240px;
+  }
 }
 
 /* ---------- Filas de tareas ---------- */

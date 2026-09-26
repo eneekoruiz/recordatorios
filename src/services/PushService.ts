@@ -19,16 +19,6 @@ function base64UrlToBytes(base64Url: string): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 
-function weeklyDay(): number {
-  try {
-    const stored = localStorage.getItem('weekly_tasks_day');
-    const day = stored === null ? 6 : Number(stored);
-    return Number.isInteger(day) && day >= 0 && day <= 6 ? day : 6;
-  } catch {
-    return 6;
-  }
-}
-
 function authHeaders(): Record<string, string> {
   const token = useAppStore.getState().token;
   return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
@@ -72,7 +62,7 @@ export const PushService = {
           subscription: subscription.toJSON(),
           timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           digestHour: DIGEST_HOUR,
-          weeklyDay: weeklyDay(),
+          weeklyDay: useAppStore.getState().weeklyTasksDay,
         }),
       });
       if (!response.ok) return { ok: false, reason: 'No se pudieron activar los avisos. Inténtalo de nuevo.' };

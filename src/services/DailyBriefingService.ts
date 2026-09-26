@@ -5,6 +5,7 @@ import { isTaskCompleted } from '../store/useAppStore';
 import { calculateHabitStreak, isCompletedInCurrentPeriod } from './TaskService';
 import { getTaskPeriodicity } from '../utils/sectionRoutine';
 import { formatLongDate, joinNatural, numberWord, pluralWord } from '../utils/format';
+import { readStoredWeeklyDay } from '../utils/routineDay';
 
 export type DayPeriod = 'morning' | 'afternoon' | 'evening';
 
@@ -91,11 +92,7 @@ export function buildDailyBriefing(
 
   // Día de tareas semanales (por defecto 6 = Sábado, o configurable en opciones/localStorage)
   const currentDayOfWeek = now.getDay();
-  let weeklyDayPref = 6;
-  try {
-    const stored = localStorage.getItem('weekly_tasks_day');
-    if (stored !== null) weeklyDayPref = Number(stored);
-  } catch {}
+  const weeklyDayPref = readStoredWeeklyDay();
   const isWeeklyDay = options.weeklyDayOfWeek !== undefined 
     ? currentDayOfWeek === options.weeklyDayOfWeek 
     : currentDayOfWeek === weeklyDayPref;

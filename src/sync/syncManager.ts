@@ -9,6 +9,8 @@ import {
   serverWins,
   chunk,
 } from './merge';
+import { isValidWeekday, writeStoredWeeklyDay } from '../utils/routineDay';
+import { DEFAULT_SMART_LIST_VISIBILITY } from '../constants/smartLists';
 
 // En producción se usan URLs relativas (mismo dominio). En desarrollo, el backend corre en :3001
 // del mismo host para que los móviles de la red local también puedan conectarse.
@@ -202,6 +204,7 @@ class SyncManager {
           pinnedSmartLists: state.pinnedSmartLists,
           cycleVisibility: state.cycleVisibility,
           hideOnboarding: safeLocalStorageGet('hide_onboarding_guide') === 'true',
+          weeklyTasksDay: state.weeklyTasksDay,
           updated_at: state.preferences_updated_at || new Date().toISOString(),
         }
       : undefined;
@@ -345,21 +348,17 @@ class SyncManager {
 
         if (shouldApply) {
           if (prefs.smartListVisibility && typeof prefs.smartListVisibility === 'object') {
-            update.smartListVisibility = { 
-              smart_primeros_pasos: false,
-              smart_today: true,
-              smart_scheduled: true,
-              smart_all: true,
-              smart_flagged: true,
-              smart_completed: false,
-              ...prefs.smartListVisibility 
-            };
+            update.smartListVisibility = { ...DEFAULT_SMART_LIST_VISIBILITY, ...prefs.smartListVisibility };
           }
           if (Array.isArray(prefs.pinnedSmartLists)) update.pinnedSmartLists = prefs.pinnedSmartLists;
           if (prefs.cycleVisibility && typeof prefs.cycleVisibility === 'object') {
             update.cycleVisibility = { ...prefs.cycleVisibility };
           }
           if (prefs.hideOnboarding) safeLocalStorageSet('hide_onboarding_guide', 'true');
+          if (isValidWeekday(prefs.weeklyTasksDay)) {
+            update.weeklyTasksDay = prefs.weeklyTasksDay;
+            writeStoredWeeklyDay(prefs.weeklyTasksDay);
+          }
           if (serverUpdatedAt >= localUpdatedAt) {
             update._preferences_dirty = false;
             update.preferences_updated_at = prefs.updated_at;

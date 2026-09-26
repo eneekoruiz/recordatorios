@@ -89,6 +89,8 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         return active.filter(t => Boolean(t.flagged || (t.priority && t.priority !== 'none'))).length;
       case 'smart_completed': 
         return all.filter(t => isDone(t)).length;
+      case 'smart_calendar':
+        return 0; // el calendario no es una lista: no muestra recuento
       case 'smart_overdue': {
         const today = new Date();
         today.setHours(0, 0, 0, 0);

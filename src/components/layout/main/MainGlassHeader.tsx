@@ -12,7 +12,8 @@ const SMART_COLORS: Record<string, string> = {
   'smart_all': 'var(--text-secondary)',
   'smart_flagged': 'var(--accent-orange)',
   'smart_completed': 'var(--text-tertiary)',
-  'smart_overdue': 'var(--accent-red)'
+  'smart_overdue': 'var(--accent-red)',
+  'smart_calendar': '#5856d6'
 };
 
 interface MainGlassHeaderProps {
@@ -243,7 +244,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
         )}
 
         {/* Opciones de lista */}
-        {(isListView || isSmartView || isFolderView) && (
+        {(isListView || (isSmartView && currentView !== 'smart_calendar') || isFolderView) && (
           <div style={{ position: 'relative' }}>
             <button 
               type="button"

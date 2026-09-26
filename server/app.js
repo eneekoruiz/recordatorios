@@ -771,15 +771,29 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
     let removed = 0;
     try {
       const subscriptions = await prisma.pushSubscription.findMany({});
-      const tasksByUser = new Map();
+      // Tareas, listas y secciones de cada usuario (la frecuencia sale también de la sección).
+      const dataByUser = new Map();
       for (const sub of subscriptions) {
-        if (!tasksByUser.has(sub.userId)) {
-          const rows = await prisma.task.findMany({ where: { userId: sub.userId, deletedAt: null } });
-          tasksByUser.set(sub.userId, rows.map((r) => toClientPayload(sub.userId, r)));
+        if (!dataByUser.has(sub.userId)) {
+          const where = { userId: sub.userId, deletedAt: null };
+          const [tasks, lists, sections, user] = await Promise.all([
+            prisma.task.findMany({ where }),
+            prisma.list.findMany({ where }),
+            prisma.listSection.findMany({ where }),
+            prisma.user.findUnique({ where: { id: sub.userId }, select: { preferences: true } }),
+          ]);
+          const toClient = (rows) => rows.map((r) => toClientPayload(sub.userId, r));
+          // El día semanal elegido en la app (sincronizado) manda sobre el de la suscripción.
+          const weeklyDay = user?.preferences?.weeklyTasksDay;
+          dataByUser.set(sub.userId, {
+            data: { tasks: toClient(tasks), lists: toClient(lists), sections: toClient(sections) },
+            weeklyDay: Number.isInteger(weeklyDay) && weeklyDay >= 0 && weeklyDay <= 6 ? weeklyDay : undefined,
+          });
         }
+        const { data, weeklyDay } = dataByUser.get(sub.userId);
         const { messages, sentLog } = planNotifications({
-          tasks: tasksByUser.get(sub.userId),
-          prefs: sub,
+          ...data,
+          prefs: { timeZone: sub.timeZone, digestHour: sub.digestHour, weeklyDay: weeklyDay ?? sub.weeklyDay },
           now,
           since: sub.lastCheckedAt,
           sentLog: sub.sentLog || {},

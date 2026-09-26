@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Pin, Check } from 'lucide-react';
-import { SMART_LISTS } from '../../../constants/smartLists';
+import { SMART_LISTS, SMART_LISTS_WITHOUT_COUNT } from '../../../constants/smartLists';
 
 interface SmartListsGridProps {
   smartListVisibility: Record<string, boolean>;
@@ -112,7 +112,7 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
                 >
                   <Icon size={20} color="white" />
                 </motion.div>
-                {!isEditMode && (
+                {!isEditMode && !SMART_LISTS_WITHOUT_COUNT.has(list.id) && (
                   <span 
                     className="count" 
                     style={{ 

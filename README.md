@@ -9,6 +9,7 @@ PWA de recordatorios inspirada en Recordatorios de Apple: listas y carpetas, cic
 - **Offline-first:** todo el estado vive en el dispositivo (Zustand + IndexedDB) y se sincroniza en segundo plano cuando hay conexión.
 - **Sincronización multi-dispositivo:** push/pull incremental con Last-Write-Wins por versión, en cliente y servidor. Los datos de cada cuenta están aislados.
 - **Lenguaje natural:** `Reunión mañana a las 10:00 !alta @Trabajo` crea el recordatorio con fecha, hora, prioridad y lista.
+- **Calendario:** qué toca cada día: recordatorios con fecha, próximas renovaciones de suscripciones y las rondas de rutina (semanales en su día, la mensual el primer día semanal del mes y la anual, el de enero). Desde un día se crea un recordatorio con la barra rápida.
 - **Listas compartidas de solo lectura** mediante enlace (menú de la lista → *Compartir enlace*).
 - **Servidor MCP** (`/api/mcp`) para que un asistente IA lea y cree recordatorios en tu cuenta (requiere token de sesión).
 - **Instalable** en iOS, Android y escritorio como PWA.
@@ -36,7 +37,7 @@ npm run dev                   # frontend (Vite, :5173) + API (Express, :3001)
 
 ## Avisos con la app cerrada
 
-La app avisa sin saturar: **un resumen al día** a las 9:00 de tu zona horaria («Completa tus recordatorios diarios», «Hoy te tocan los recordatorios semanales» en tu día semanal, «Hoy toca la ronda mensual» el día 1, la revisión anual el 1 de enero) y **las alertas con hora** que pongas en un recordatorio, agrupadas si coinciden. Se activan en el menú del perfil → *Avisos con la app cerrada* (en iPhone, con la app añadida a la pantalla de inicio).
+La app avisa sin saturar: **un resumen al día** a las 9:00 de tu zona horaria («Completa tus recordatorios diarios», «Hoy te tocan los recordatorios semanales» en tu día semanal, «Hoy toca la ronda mensual» el primer día semanal del mes y la revisión anual, el de enero) y **las alertas con hora** que pongas en un recordatorio, agrupadas si coinciden. El resumen cuenta lo mismo que ves en la app (la frecuencia sale también de la sección, y lo ya hecho en su periodo no cuenta). El día semanal se elige en *Calendario* y se sincroniza entre dispositivos. Se activan en el menú del perfil → *Avisos con la app cerrada* (en iPhone, con la app añadida a la pantalla de inicio).
 
 Para ponerlo en marcha:
 
@@ -50,14 +51,15 @@ Para ponerlo en marcha:
 | Comando | Qué hace |
 | --- | --- |
 | `npm run dev` | Frontend + API en local |
-| `npm test` | Tests unitarios (API, sincronización, NLP) con Vitest |
+| `npm test` | Tests unitarios (API, sincronización, NLP, avisos, calendario) con Vitest |
 | `npm run test:e2e` | Tests end-to-end con Playwright (`E2E_MEMORY_DB=1` para no necesitar PostgreSQL) |
 | `npm run lint` / `npm run typecheck` | Calidad estática |
 | `npm run build` | Build de producción |
 
 ## Estructura
 
-- `server/` — API Express: autenticación, sincronización, listas compartidas y MCP (`app.js`), utilidades puras de sincronización (`syncUtils.js`), email (`mail.js`).
+- `server/` — API Express: autenticación, sincronización, listas compartidas y MCP (`app.js`), utilidades puras de sincronización (`syncUtils.js`), avisos push (`notifications.js`), email (`mail.js`).
+- `shared/` — lógica pura que usan a la vez la app y el servidor (frecuencia de cada recordatorio y rondas de rutina).
 - `api/index.js` — punto de entrada de la función serverless de Vercel.
 - `src/store/` — estado global (Zustand) persistido en IndexedDB.
 - `src/sync/` — motor de sincronización (`syncManager.ts`) y lógica de fusión testeable (`merge.ts`).

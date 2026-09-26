@@ -68,6 +68,25 @@ describe('avisos push', () => {
     expect(sent.filter((m) => m.endpoint.endsWith('/resumen'))).toHaveLength(0);
   });
 
+  it('usa las secciones y el día semanal sincronizado para contar como la app', async () => {
+    const { token } = await user();
+    const now = new Date().toISOString();
+    const today = new Date().getUTCDay();
+    await call('POST', '/api/sync/push', {
+      lists: [{ id: 'casa', name: 'Casa', color: '#007aff', version: 1, updated_at: now }],
+      listSections: [{ id: 'sec_rutina', listId: 'casa', name: 'Semanales', updated_at: now }],
+      tasks: [{ id: 'w1', title: 'Limpiar horno', categoryId: 'casa', sectionId: 'sec_rutina', status: 'pending', version: 1, updated_at: now }],
+      preferences: { weeklyTasksDay: today, updated_at: now },
+    }, token);
+    // La suscripción dice otro día: manda el que el usuario eligió en la app.
+    await call('POST', '/api/push/subscribe', { subscription: subscription('semanal'), timeZone: 'Etc/UTC', digestHour: 0, weeklyDay: (today + 3) % 7 }, token);
+    sent.length = 0;
+    await call('POST', '/api/cron/notify', null, 'cron-de-prueba');
+    const mine = sent.filter((m) => m.endpoint.endsWith('/semanal'));
+    expect(mine).toHaveLength(1);
+    expect(mine[0]).toMatchObject({ title: 'Hoy te tocan los recordatorios semanales', body: 'Pendientes: 1 semanal.' });
+  });
+
   it('borra las suscripciones que el navegador anuló (410)', async () => {
     const { token } = await user();
     await call('POST', '/api/sync/push', { tasks: [{ id: 'd2', title: 'Leer', cycle_id: 'cycle_day', status: 'pending', version: 1, updated_at: new Date().toISOString() }] }, token);

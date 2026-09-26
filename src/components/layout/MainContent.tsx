@@ -36,6 +36,7 @@ import { SectionContextMenu, type SectionMenuState } from './main/SectionContext
 import { MonthlySummaryModal } from './main/MonthlySummaryModal';
 import { MainPageHeader } from './main/MainPageHeader';
 import { DailyBriefingBanner } from './DailyBriefingBanner';
+import { CalendarView } from '../views/CalendarView';
 import { WeeklyStreakWidget } from './main/WeeklyStreakWidget';
 import { confirmDialog } from '../ui/confirmDialog';
 import { deduplicateTaskList } from '../../utils/taskDeduplication';
@@ -95,7 +96,8 @@ const SMART_COLORS: Record<string, string> = {
   'smart_all': 'var(--text-secondary)',
   'smart_flagged': 'var(--accent-orange)',
   'smart_completed': 'var(--text-tertiary)',
-  'smart_overdue': 'var(--accent-red)'
+  'smart_overdue': 'var(--accent-red)',
+  'smart_calendar': '#5856d6'
 };
 
 export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditTask, onBackToSidebar, onSelectView, isMobile, onStartSequence }: MainContentProps) {
@@ -282,6 +284,7 @@ const CORE_CYCLES = [
 
   // Determinar el contexto actual
   const isSmartView = currentView.startsWith('smart_');
+  const isCalendarView = currentView === 'smart_calendar';
   const isListView = currentView.startsWith('list_') && !lists?.find(l => l.id === currentView.replace('list_', ''))?.isFolder;
   const isFolderView = currentView.startsWith('folder_') || !!lists?.find(l => l.id === currentView.replace('list_', ''))?.isFolder;
   const currentList = lists?.find((l) => l.id === currentView.replace('list_', '').replace('folder_', ''));
@@ -2200,7 +2203,7 @@ const CORE_CYCLES = [
       {/* Main Scrollable View */}
       {(() => {
         const hasSections = flattenedData.some(item => item.type === 'header' || item.type === 'empty-section');
-        const isActuallyEmpty = visibleTasks.length === 0 && smartTasks.length === 0 && !hasSections;
+        const isActuallyEmpty = visibleTasks.length === 0 && smartTasks.length === 0 && !hasSections && !isCalendarView;
         return (
           <div 
             ref={parentRef}
@@ -2302,6 +2305,9 @@ const CORE_CYCLES = [
                             <DailyBriefingBanner />
                             <WeeklyStreakWidget />
                           </>
+                        )}
+                        {isCalendarView && (
+                          <CalendarView onSelectView={(view) => onSelectView?.(view)} onEditTask={(taskId) => onEditTask?.(taskId)} />
                         )}
                       </div>
                     );

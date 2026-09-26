@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { PinOff } from 'lucide-react';
-import { SMART_LISTS } from '../../../constants/smartLists';
+import { SMART_LISTS, SMART_LISTS_WITHOUT_COUNT } from '../../../constants/smartLists';
 import type { CustomList } from '../../../models/Task';
 
 interface PinnedListsSectionProps {
@@ -99,7 +99,7 @@ export const PinnedListsSection: React.FC<PinnedListsSectionProps> = ({
                 {smartItem.name}
               </span>
               
-              {!isEditMode && (
+              {!isEditMode && !SMART_LISTS_WITHOUT_COUNT.has(smartId) && (
                 <span style={{
                   fontSize: '0.9rem', fontWeight: 600,
                   color: 'var(--text-tertiary)',

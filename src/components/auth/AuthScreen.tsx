@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, CheckCircle2, Eye, EyeOff, KeyRound, LogIn, Mail, RotateCcw, UserPlus, WifiOff } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { apiUrl } from '../../sync/syncManager';
+import { DEFAULT_SMART_LIST_VISIBILITY } from '../../constants/smartLists';
 import './AuthScreen.css';
 
 export const MIN_PASSWORD_LENGTH = 8;
@@ -20,15 +21,7 @@ function applyServerPreferences(prefs: any) {
   if (!prefs || typeof prefs !== 'object') return;
   const update: Record<string, unknown> = {};
   if (prefs.smartListVisibility && typeof prefs.smartListVisibility === 'object') {
-    update.smartListVisibility = { 
-      smart_primeros_pasos: false,
-      smart_today: true,
-      smart_scheduled: true,
-      smart_all: true,
-      smart_flagged: true,
-      smart_completed: false,
-      ...prefs.smartListVisibility 
-    };
+    update.smartListVisibility = { ...DEFAULT_SMART_LIST_VISIBILITY, ...prefs.smartListVisibility };
   }
   if (Array.isArray(prefs.pinnedSmartLists)) update.pinnedSmartLists = prefs.pinnedSmartLists;
   if (prefs.cycleVisibility && typeof prefs.cycleVisibility === 'object') {

@@ -1,6 +1,16 @@
 import type { TaskItem, CustomList, ListSection } from '../models/Task';
+import type { PeriodicityType } from '../../shared/periodicity.js';
+import { PERIODICITY_PREFIX_REGEX, getTaskPeriodicity } from '../../shared/periodicity.js';
 
-export type PeriodicityType = 'day' | 'week' | 'month' | 'year';
+// La detección de periodicidad vive en shared/ para que el servidor (avisos push)
+// cuente exactamente lo mismo que la app.
+export type { PeriodicityType };
+export {
+  PERIODICITY_PREFIX_REGEX,
+  getPeriodicityFromPrefix,
+  getTaskPeriodicity,
+  getEffectiveCycleId,
+} from '../../shared/periodicity.js';
 
 /**
  * Detecta la periodicidad temporal de una sección a partir de su clave, título, objeto sección o lista.
@@ -51,29 +61,11 @@ export const getSectionPeriodicity = (
 };
 
 /**
- * Expresión regular para detectar prefijos de periodicidad en el título (ej. [D], [Diario], [Diaria], [S], [Semanal], [M], [Mensual], [A], [Anual] o con paréntesis).
- */
-export const PERIODICITY_PREFIX_REGEX = /^\s*(\[|\()(D|Diari[oa]|S|Semanal|M|Mensual|A|Anual)(\]|\))\s*[:-]?\s*/i;
-
-/**
  * Comprueba si un título contiene un prefijo de periodicidad al inicio.
  */
 export const hasPeriodicityPrefix = (title?: string | null): boolean => {
   if (!title) return false;
   return PERIODICITY_PREFIX_REGEX.test(title);
-};
-
-/**
- * Extrae la periodicidad ('day' | 'week' | 'month' | 'year') a partir del prefijo en el título.
- */
-export const getPeriodicityFromPrefix = (title?: string | null): PeriodicityType | null => {
-  if (!title) return null;
-  const trimmed = title.trim();
-  if (/^(\[|\()(D|Diari[oa])(\]|\))/i.test(trimmed)) return 'day';
-  if (/^(\[|\()(S|Semanal)(\]|\))/i.test(trimmed)) return 'week';
-  if (/^(\[|\()(M|Mensual)(\]|\))/i.test(trimmed)) return 'month';
-  if (/^(\[|\()(A|Anual)(\]|\))/i.test(trimmed)) return 'year';
-  return null;
 };
 
 /**
@@ -84,100 +76,6 @@ export const stripPeriodicityPrefix = (title?: string | null): string => {
   if (!title) return '';
   return title.replace(PERIODICITY_PREFIX_REGEX, '').trim();
 };
-
-/**
- * Detecta la periodicidad de un recordatorio individual según su cycle_id,
- * repeticiones diarias de hábito, lista de procedencia, título o sección asignada.
- */
-export const getTaskPeriodicity = (
-  task: TaskItem,
-  sections?: ListSection[],
-  lists?: CustomList[]
-): PeriodicityType | null => {
-  // 0. Prefijos y etiquetas en el título (ej. [D], [Diario], [Diaria], [S], [Semanal], [M], [Mensual], [A], [Anual] o en paréntesis)
-  const fromPrefix = getPeriodicityFromPrefix(task.title);
-  if (fromPrefix) return fromPrefix;
-
-  // 1. cycle_id explícito
-  if (task.cycle_id) {
-    const c = (task.cycle_id || '').toLowerCase();
-    if (c === 'cycle_day' || c.includes('day') || c.includes('diari')) return 'day';
-    if (c === 'cycle_week' || c.includes('week') || c.includes('seman')) return 'week';
-    if (c === 'cycle_month' || c.includes('month') || c.includes('mensu')) return 'month';
-    if (c === 'cycle_year' || c.includes('year') || c.includes('anual')) return 'year';
-  }
-
-  // 2. frequencyLevel si viene de importación o metadato
-  const freq = (((task as any).frequencyLevel || (task as any).frequency) || '').toString().toLowerCase();
-  if (freq.includes('day') || freq.includes('diari')) return 'day';
-  if (freq.includes('week') || freq.includes('seman')) return 'week';
-  if (freq.includes('month') || freq.includes('mensu')) return 'month';
-  if (freq.includes('year') || freq.includes('anual')) return 'year';
-
-  // 3. Hábitos o contador diario
-  if (task.targetCount && task.targetCount > 1) return 'day';
-
-  // 4. Sublista o lista (ej. limpieza_diaria, limpieza_semanal, etc.)
-  const catId = task.categoryId || (task as any).category_id;
-  if (catId) {
-    const catLower = (catId || '').toLowerCase();
-    if (catLower === 'limpieza_diaria' || catLower.includes('diari')) return 'day';
-    if (catLower === 'limpieza_semanal' || catLower.includes('seman')) return 'week';
-    if (catLower === 'limpieza_mensual' || catLower.includes('mensu')) return 'month';
-    if (catLower === 'limpieza_anual' || catLower.includes('anual')) return 'year';
-
-    const listObj = lists?.find(l => l.id === catId);
-    if (listObj) {
-      const listName = (listObj.name || catId || '').toLowerCase();
-      if (listName.includes('diari') || listName.includes('recurrent') || /\b(d[ií]as?)\b/i.test(listName)) return 'day';
-      if (listName.includes('seman') || /\b(sem)\b/i.test(listName)) return 'week';
-      if (listName.includes('mensu') || /\b(mes(es)?)\b/i.test(listName)) return 'month';
-      if (listName.includes('anual') || /\b(a[ñn]os?)\b/i.test(listName)) return 'year';
-    }
-  }
-
-  // 5. Sección manual asignada (con soporte para sub-secciones jerárquicas que heredan de su sección padre)
-  const secId = task.sectionId || (task as any).section_id;
-  if (secId) {
-    const secLower = (secId || '').toLowerCase();
-    if (secLower.includes('diari')) return 'day';
-    if (secLower.includes('seman')) return 'week';
-    if (secLower.includes('mensu')) return 'month';
-    if (secLower.includes('anual')) return 'year';
-
-    let secObj = sections?.find(s => s.id === secId);
-    while (secObj) {
-      const secText = `${secObj.name || ''} ${secObj.id || ''}`.toLowerCase();
-      if (secText.includes('diari') || secText.includes('recurrent') || /\b(d[ií]as?)\b/i.test(secText)) return 'day';
-      if (secText.includes('seman') || /\b(sem)\b/i.test(secText)) return 'week';
-      if (secText.includes('mensu') || /\b(mes(es)?)\b/i.test(secText)) return 'month';
-      if (secText.includes('anual') || /\b(a[ñn]os?)\b/i.test(secText)) return 'year';
-      secObj = secObj.parentId ? sections?.find(s => s.id === secObj!.parentId) : undefined;
-    }
-  }
-
-  return null;
-};
-
-/**
- * Retorna el cycle_id canónico ('cycle_day', 'cycle_week', etc.)
- * ya sea deducido de la periodicidad de la tarea (título [D]/[S]..., sección, lista)
- * o explícito en el task.cycle_id.
- */
-export const getEffectiveCycleId = (
-  task: Partial<TaskItem>,
-  sections?: ListSection[],
-  lists?: CustomList[]
-): string | null => {
-  const p = getTaskPeriodicity(task as TaskItem, sections, lists);
-  if (p === 'day') return 'cycle_day';
-  if (p === 'week') return 'cycle_week';
-  if (p === 'month') return 'cycle_month';
-  if (p === 'year') return 'cycle_year';
-  if (task.cycle_id) return task.cycle_id;
-  return null;
-};
-
 
 /**
  * Retorna el conjunto de periodicidades que corresponden a la rutina de una sección.

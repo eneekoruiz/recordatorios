@@ -309,9 +309,11 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                   {formatEuro(totalCost)}
                 </span>
               )}
-              <span className="apple-large-counter" style={{ color: viewColor }}>
-                {activeVisibleCount}
-              </span>
+              {currentView !== 'smart_calendar' && (
+                <span className="apple-large-counter" style={{ color: viewColor }}>
+                  {activeVisibleCount}
+                </span>
+              )}
             </div>
           )}
         </div>
