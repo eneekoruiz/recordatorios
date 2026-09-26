@@ -2,10 +2,55 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Download, AlertCircle, Monitor, Share2 } from 'lucide-react';
 
+type InstallInfo = { title: string; desc: string; isError?: boolean; isEdge?: boolean };
+
+/** Instrucciones de instalación según el navegador (se calculan una sola vez). */
+function detectInstallInfo(): InstallInfo | null {
+  if (typeof navigator === 'undefined') return null;
+  const ua = navigator.userAgent.toLowerCase();
+  const isIOS = /iphone|ipad|ipod/.test(ua);
+  const isSafari = isIOS && /safari/.test(ua) && !/crios/.test(ua) && !/fxios/.test(ua);
+  const isChromeIOS = isIOS && /crios/.test(ua);
+  const isAndroid = /android/.test(ua);
+  const isEdge = /edg\//.test(ua);
+
+  if (isIOS) {
+    if (isChromeIOS) {
+      return {
+        title: 'Abre Safari para instalar',
+        desc: 'Apple solo permite instalar apps desde Safari. Copia el enlace, ábrelo en Safari y toca "Añadir a pantalla de inicio".',
+        isError: true
+      };
+    } else if (isSafari) {
+      return {
+        title: 'Añade a tu pantalla de inicio',
+        desc: 'Toca el botón Compartir (⬆️) en la barra de Safari y selecciona "Añadir a pantalla de inicio" para la experiencia completa.',
+      };
+    }
+  } else if (isAndroid) {
+    return {
+      title: 'Instala en tu móvil',
+      desc: 'Toca el menú del navegador (⋮) y selecciona "Instalar aplicación" o "Añadir a pantalla de inicio".',
+    };
+  } else if (isEdge) {
+    return {
+      title: 'Instalar en Microsoft Edge',
+      desc: 'Abre el menú ··· en la esquina superior derecha → "Aplicaciones" → "Instalar este sitio como aplicación".',
+      isEdge: true
+    };
+  } else {
+    return {
+      title: 'Instalar como app de escritorio',
+      desc: 'Abre el menú del navegador y selecciona "Instalar aplicación" o "Guardar como aplicación".',
+    };
+  }
+  return null;
+}
+
 export function InstallPromptModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [installInfo, setInstallInfo] = useState<{ title: string; desc: string; isError?: boolean; isEdge?: boolean } | null>(null);
+  const [installInfo] = useState<InstallInfo | null>(detectInstallInfo);
 
   useEffect(() => {
     // Evento nativo de instalación PWA (Chrome, Edge)
@@ -15,44 +60,6 @@ export function InstallPromptModal() {
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    const ua = navigator.userAgent.toLowerCase();
-    const isIOS = /iphone|ipad|ipod/.test(ua);
-    const isSafari = isIOS && /safari/.test(ua) && !/crios/.test(ua) && !/fxios/.test(ua);
-    const isChromeIOS = isIOS && /crios/.test(ua);
-    const isAndroid = /android/.test(ua);
-    const isEdge = /edg\//.test(ua);
-
-    if (isIOS) {
-      if (isChromeIOS) {
-        setInstallInfo({
-          title: 'Abre Safari para instalar',
-          desc: 'Apple solo permite instalar apps desde Safari. Copia el enlace, ábrelo en Safari y toca "Añadir a pantalla de inicio".',
-          isError: true
-        });
-      } else if (isSafari) {
-        setInstallInfo({
-          title: 'Añade a tu pantalla de inicio',
-          desc: 'Toca el botón Compartir (⬆️) en la barra de Safari y selecciona "Añadir a pantalla de inicio" para la experiencia completa.',
-        });
-      }
-    } else if (isAndroid) {
-      setInstallInfo({
-        title: 'Instala en tu móvil',
-        desc: 'Toca el menú del navegador (⋮) y selecciona "Instalar aplicación" o "Añadir a pantalla de inicio".',
-      });
-    } else if (isEdge) {
-      setInstallInfo({
-        title: 'Instalar en Microsoft Edge',
-        desc: 'Abre el menú ··· en la esquina superior derecha → "Aplicaciones" → "Instalar este sitio como aplicación".',
-        isEdge: true
-      });
-    } else {
-      setInstallInfo({
-        title: 'Instalar como app de escritorio',
-        desc: 'Abre el menú del navegador y selecciona "Instalar aplicación" o "Guardar como aplicación".',
-      });
-    }
 
     const handleOpenManual = () => setIsOpen(true);
     window.addEventListener('open-install-modal', handleOpenManual);

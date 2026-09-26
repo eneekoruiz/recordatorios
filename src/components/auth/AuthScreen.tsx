@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useId, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, CheckCircle2, Eye, EyeOff, KeyRound, LogIn, Mail, RotateCcw, UserPlus, WifiOff } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
@@ -81,9 +81,12 @@ export function AuthScreen({ onSuccess, resetToken, onResetFinished }: AuthScree
   const passwordId = useId();
   const confirmId = useId();
 
-  useEffect(() => {
+  // Si llega un enlace de recuperación con la pantalla ya abierta, se pasa a «reset».
+  const [seenResetToken, setSeenResetToken] = useState(resetToken);
+  if (resetToken !== seenResetToken) {
+    setSeenResetToken(resetToken);
     if (resetToken) setMode('reset');
-  }, [resetToken]);
+  }
 
   const switchMode = (next: AuthMode) => {
     setMode(next);
