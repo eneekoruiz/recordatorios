@@ -7,6 +7,7 @@ import { isCompletedInCurrentPeriod, wouldCreateDependencyCycle } from '../servi
 import { getEffectiveCycleId, getPureCyclicPeriodicity } from '../utils/sectionRoutine';
 import { isValidWeekday, readStoredWeeklyDay, writeStoredWeeklyDay } from '../utils/routineDay';
 import { DEFAULT_SMART_LIST_VISIBILITY } from '../constants/smartLists';
+import { smartSortTasks } from '../utils/smartSort';
 import { findDuplicateTask, normalizeTitle } from '../utils/taskDeduplication';
 
 const optimisticUpdate = (
@@ -1064,45 +1065,7 @@ export const useAppStore = create<AppState>()(
         return grouped;
       },
 
-      getSmartSortTasks: (temporarilyShowIds = []) => {
-        const tasks = get().tasks as Record<string, TaskItem>;
-        const cycles = get().cycles as CustomCycle[];
-        const tasksArray = (Object.values(tasks) as TaskItem[]).filter((t: any) => 
-          !t.deleted_at && t.categoryId !== 'primeros_pasos' && 
-          (t.status === 'pending' || temporarilyShowIds.includes(t.id))
-        );
-        const now = new Date();
-        const currentHours = now.getHours();
-
-        const scoredTasks = tasksArray.map((task: any) => {
-          let score = 0;
-          if (task.alerts && task.alerts.length > 0) {
-            let closestDiff = 999;
-            task.alerts.forEach((alert: any) => {
-              if (alert.type === 'at_time' && alert.time) {
-                const [h] = alert.time.split(':');
-                const alertHour = parseInt(h, 10);
-                const diff = alertHour - currentHours;
-                if (diff >= 0 && diff < closestDiff) closestDiff = diff;
-              }
-            });
-            if (closestDiff <= 2) score += 50; 
-            else if (closestDiff <= 5) score += 20;
-          }
-          
-          // SmartSort: Tareas Diarias por la tarde
-          const taskCycle = cycles.find((c: any) => c.id === task.cycle_id);
-          if (taskCycle && taskCycle.daysValue === 1 && currentHours > 18) {
-            score += 30;
-          }
-          return { ...task, _score: score };
-        });
-
-        return scoredTasks.sort((a: any, b: any) => {
-          if (b._score !== a._score) return b._score - a._score;
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        });
-      },
+      getSmartSortTasks: (temporarilyShowIds = []) => smartSortTasks(get().tasks, get().cycles, temporarilyShowIds),
 
       exportData: () => {
         const { tasks, cycles, lists, listSections, smartListVisibility } = get();

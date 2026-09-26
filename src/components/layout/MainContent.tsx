@@ -37,6 +37,7 @@ import { MonthlySummaryModal } from './main/MonthlySummaryModal';
 import { MainPageHeader } from './main/MainPageHeader';
 import { DailyBriefingBanner } from './DailyBriefingBanner';
 import { CalendarView } from '../views/CalendarView';
+import { smartSortTasks } from '../../utils/smartSort';
 import { WeeklyStreakWidget } from './main/WeeklyStreakWidget';
 import { confirmDialog } from '../ui/confirmDialog';
 import { deduplicateTaskList } from '../../utils/taskDeduplication';
@@ -122,7 +123,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const toggleTask = useAppStore((state) => state.toggleTask);
   const getTasksByList = useAppStore((state) => state.getTasksByList);
   const getTasksByCycle = useAppStore((state) => state.getTasksByCycle);
-  const getSmartSortTasks = useAppStore((state) => state.getSmartSortTasks);
 
   // Local state
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -647,7 +647,10 @@ const CORE_CYCLES = [
     return sortedGrouped;
   }, [currentView, isFolderView, isSmartView, isListView, getTasksForSmartView, getTasksByList, getTasksByCycle, tasks, resolvedShowCompleted, recentlyCompletedIds, lists, currentCycle, cycleInclusion, listSectionFilter, dailyTimeFilter, resolveTimeOfDay, currentList, sortBy, sortTaskList, lifeLogViewMode, selectedPersonFilter, sectionRoutineModes, cycleGeneralModes]);
     
-  const smartTasks = useMemo(() => currentView === 'cycle_day' ? getSmartSortTasks(recentlyCompletedIds) : [], [currentView, getSmartSortTasks, tasks, recentlyCompletedIds]);
+  const smartTasks = useMemo(
+    () => (currentView === 'cycle_day' ? smartSortTasks(tasks, cycles, recentlyCompletedIds) : []),
+    [currentView, tasks, cycles, recentlyCompletedIds]
+  );
 
   // Tareas visibles en pantalla respetando el aislamiento y rutinas
   const visibleTasks = useMemo(() => {

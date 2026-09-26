@@ -1,4 +1,6 @@
+import { useMemo } from 'react';
 import { useAppStore } from '../../store/useAppStore';
+import { smartSortTasks } from '../../utils/smartSort';
 import { motion, AnimatePresence } from 'framer-motion';
 import './Layout.css';
 
@@ -7,7 +9,9 @@ import './Layout.css';
  * Pensado para ser renderizado en un iframe, WebView de Capacitor o Chrome OS widget.
  */
 export function WidgetDashboard() {
-  const smartTasks = useAppStore(state => state.getSmartSortTasks());
+  const tasks = useAppStore(state => state.tasks);
+  const cycles = useAppStore(state => state.cycles);
+  const smartTasks = useMemo(() => smartSortTasks(tasks, cycles), [tasks, cycles]);
   const toggleTask = useAppStore(state => state.toggleTask);
 
   // Filtramos tareas para el widget
