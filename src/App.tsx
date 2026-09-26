@@ -55,6 +55,7 @@ function App() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [drawerInitialFocus, setDrawerInitialFocus] = useState<string | undefined>(undefined);
+  const [drawerInitialTitle, setDrawerInitialTitle] = useState<string | undefined>(undefined);
   const [defaultSectionId, setDefaultSectionId] = useState<string | undefined>(undefined);
   const [zenModeTaskId, setZenModeTaskId] = useState<string | null>(null);
   const [sequenceMode, setSequenceMode] = useState<{ taskIds: string[]; listName: string; listColor?: string } | null>(null);
@@ -1085,7 +1086,7 @@ function App() {
           {navView === 'HOME' && (
             <MainContent
               currentView={currentView}
-              onOpenNewTask={(sectionId) => { setEditingTaskId(null); setDrawerInitialFocus(undefined); setDefaultSectionId(sectionId); setIsDrawerOpen(true); }}
+              onOpenNewTask={(sectionId, initialTitle) => { setEditingTaskId(null); setDrawerInitialFocus(undefined); setDrawerInitialTitle(initialTitle); setDefaultSectionId(sectionId); setIsDrawerOpen(true); }}
               onOpenZenMode={(taskId) => setZenModeTaskId(taskId)}
               onEditTask={(taskId, initialFocus) => { setEditingTaskId(taskId); setDrawerInitialFocus(initialFocus); setIsDrawerOpen(true); }}
               onBackToSidebar={isMobile ? () => setMobileView('sidebar') : undefined}
@@ -1103,13 +1104,14 @@ function App() {
 
       <TaskDrawer
         isOpen={isDrawerOpen}
-        onClose={() => { setIsDrawerOpen(false); setEditingTaskId(null); setDefaultSectionId(undefined); setDrawerInitialFocus(undefined); }}
+        onClose={() => { setIsDrawerOpen(false); setEditingTaskId(null); setDefaultSectionId(undefined); setDrawerInitialFocus(undefined); setDrawerInitialTitle(undefined); }}
         defaultCategoryId={
           currentView.startsWith('list_') ? currentView.replace('list_', '') : undefined
         }
         defaultSectionId={defaultSectionId}
         taskId={editingTaskId || undefined}
         initialFocus={drawerInitialFocus}
+        initialTitle={drawerInitialTitle}
       />
 
       <AIAssistantModal

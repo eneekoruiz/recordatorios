@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Repeat, ChevronDown } from 'lucide-react';
+import { Repeat } from 'lucide-react';
+import { SectionTrailing } from './SectionTrailing';
 import { CustomSelect } from '../../ui/CustomSelect';
 import type { CustomCycle, ListSection } from '../../../models/Task';
 import { formatSectionTitle } from '../../../utils/sectionRoutine';
@@ -46,12 +47,13 @@ export const DrawerRecurrenceSection: React.FC<DrawerRecurrenceSectionProps> = (
         type="button"
         className="section-card-header"
         onClick={() => setCardRepeatOpen(!cardRepeatOpen)}
+        aria-expanded={cardRepeatOpen}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Repeat size={16} color="var(--accent-green)" />
           Repetición y ubicación
         </span>
-        <ChevronDown size={18} style={{ transform: cardRepeatOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+        <SectionTrailing open={cardRepeatOpen} summary={cycleId ? (cycles.find((c) => c.id === cycleId)?.name ?? '') : ''} />
       </button>
       <AnimatePresence>
         {cardRepeatOpen && (

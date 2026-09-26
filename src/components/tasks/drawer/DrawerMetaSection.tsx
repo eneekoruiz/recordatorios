@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings2, ChevronDown } from 'lucide-react';
+import { Settings2 } from 'lucide-react';
+import { SectionTrailing } from './SectionTrailing';
 import { CustomSelect } from '../../ui/CustomSelect';
 
 interface DrawerMetaSectionProps {
@@ -38,12 +39,13 @@ export const DrawerMetaSection: React.FC<DrawerMetaSectionProps> = ({
         type="button"
         className="section-card-header"
         onClick={() => setCardDetailsOpen(!cardDetailsOpen)}
+        aria-expanded={cardDetailsOpen}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Settings2 size={16} color="var(--text-secondary)" />
           Detalles adicionales
         </span>
-        <ChevronDown size={18} style={{ transform: cardDetailsOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+        <SectionTrailing open={cardDetailsOpen} summary={[priority !== 'none' ? `Prioridad ${({ low: 'baja', medium: 'media', high: 'alta' } as const)[priority]}` : '', flagged ? 'Con marca' : ''].filter(Boolean).join(' · ')} />
       </button>
       <AnimatePresence>
         {cardDetailsOpen && (

@@ -14,6 +14,25 @@ export interface ParsedNLPResult {
  * Motor de lenguaje natural avanzado para Recordatorios Élite.
  * Extrae fechas, horas, ciclos, prioridades y listas en español.
  */
+// «a las 18:30», «y a las 9 de la noche», «a la 1»
+const TIME_PHRASE = /(?:y\s+)?(?:a las?|a la)\s*\d{1,2}(?::\d{2})?\s*(?:am|pm|de la mañana|de la tarde|de la noche)?/gi;
+
+/** Quita del título las expresiones de fecha y hora que ya se han convertido en datos. */
+function stripDateTimePhrases(title: string, found: { time: boolean; date: boolean }): string {
+  let t = title;
+  if (found.time) {
+    t = t.replace(TIME_PHRASE, ' ').replace(/(?:^|\s)(?:a|al|a la)?\s*(?:mediod[íi]a|medianoche)\b/gi, ' ');
+  }
+  if (found.date) {
+    t = t
+      .replace(/(?:^|\s)(?:para|de|del|hasta)?\s*(?:hoy|pasado ma[ñn]ana|ma[ñn]ana|(?:la\s+)?pr[óo]xima semana)\b/gi, ' ')
+      .replace(/(?:^|\s)(?:para|de|del|hasta)?\s*(?:el|este|pr[óo]ximo)\s+(?:domingo|lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado)\b/gi, ' ');
+  }
+  t = t.replace(/\s+/g, ' ').trim();
+  // Nunca dejar el título vacío (p. ej. si solo se escribió «mañana a las 10»)
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : title;
+}
+
 export function parseNaturalLanguage(text: string): ParsedNLPResult {
   if (!text) {
     return { times: [], cleanTitle: '' };
@@ -128,19 +147,22 @@ export function parseNaturalLanguage(text: string): ParsedNLPResult {
     }
   }
 
-  // Fechas relativas
-  if (/\bhoy\b/.test(textLower)) {
+  // Fechas relativas (sin las horas: «a las 9 de la mañana» o «por la mañana» no son «mañana»)
+  const dateText = textLower
+    .replace(TIME_PHRASE, ' ')
+    .replace(/\b(?:por|de|en) la ma[ñn]ana\b/g, ' ');
+  if (/\bhoy\b/.test(dateText)) {
     const today = new Date(now);
     suggestedDueDate = today;
-  } else if (/\bpasado ma[ñn]ana\b/.test(textLower)) {
+  } else if (/\bpasado ma[ñn]ana\b/.test(dateText)) {
     const afterTomorrow = new Date(now);
     afterTomorrow.setDate(afterTomorrow.getDate() + 2);
     suggestedDueDate = afterTomorrow;
-  } else if (/\bma[ñn]ana\b/.test(textLower)) {
+  } else if (/\bma[ñn]ana\b/.test(dateText)) {
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
     suggestedDueDate = tomorrow;
-  } else if (/\bp[rR][óo]xima semana\b/.test(textLower)) {
+  } else if (/\bp[rR][óo]xima semana\b/.test(dateText)) {
     const nextWeek = new Date(now);
     nextWeek.setDate(nextWeek.getDate() + 7);
     suggestedDueDate = nextWeek;
@@ -152,7 +174,7 @@ export function parseNaturalLanguage(text: string): ParsedNLPResult {
     };
     for (const [dayName, dayIndex] of Object.entries(daysMap)) {
       const regex = new RegExp(`(?:el|este|pr[óo]ximo)\\s+${dayName}`, 'i');
-      if (regex.test(textLower)) {
+      if (regex.test(dateText)) {
         const target = new Date(now);
         const currentDay = target.getDay();
         let diff = dayIndex - currentDay;
@@ -180,6 +202,10 @@ export function parseNaturalLanguage(text: string): ParsedNLPResult {
       }
     }
   }
+
+  // 6b. La fecha y la hora detectadas salen del título, como en Recordatorios de Apple:
+  //     «Reunión mañana a las 10:00» → «Reunión» (y así el precio queda al final).
+  cleanTitle = stripDateTimePhrases(cleanTitle, { time: times.length > 0, date: Boolean(suggestedDueDate) });
 
   // 7. Detección de Precio/Coste (100 e, 100€, 15.50 euros, etc.)
   let suggestedPrice: number | undefined = undefined;

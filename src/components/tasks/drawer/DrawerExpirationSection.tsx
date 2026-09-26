@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, CreditCard, RefreshCw, FileText, Link2 } from 'lucide-react';
+import { CreditCard, RefreshCw, FileText, Link2 } from 'lucide-react';
+import { SectionTrailing } from './SectionTrailing';
 
 interface DrawerExpirationSectionProps {
   cardCaducidadOpen: boolean;
@@ -37,12 +38,13 @@ export const DrawerExpirationSection: React.FC<DrawerExpirationSectionProps> = (
         type="button"
         className="section-card-header"
         onClick={() => setCardCaducidadOpen(!cardCaducidadOpen)}
+        aria-expanded={cardCaducidadOpen}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <CreditCard size={15} color="var(--accent-primary)" />
-          Tipo de caducidad {expirationType ? `(${expirationType === 'card' ? 'Tarjeta' : expirationType === 'subscription' ? 'Suscripción' : 'Otro'})` : ''}
+          Tipo de caducidad
         </span>
-        <ChevronDown size={18} style={{ transform: cardCaducidadOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+        <SectionTrailing open={cardCaducidadOpen} summary={expirationType === 'card' ? 'Tarjeta' : expirationType === 'subscription' ? 'Suscripción' : expirationType === 'other' ? 'Otro' : ''} />
       </button>
       <AnimatePresence>
         {cardCaducidadOpen && (

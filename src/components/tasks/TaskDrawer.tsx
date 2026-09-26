@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 import { parseNaturalLanguage } from '../../utils/nlp';
 import { ConfirmModal } from '../ui/ConfirmModal';
-import { isCaducidadesList } from '../../utils/specialLists';
+import { isCaducidadesList, getListType, isShoppingList } from '../../utils/specialLists';
 import './TaskDrawer.css';
 
 // Modular drawer subcomponents
@@ -26,9 +26,11 @@ interface TaskDrawerProps {
   defaultSectionId?: string;
   taskId?: string;
   initialFocus?: string;
+  /** Texto ya escrito en la barra de añadir al abrir el editor completo. */
+  initialTitle?: string;
 }
 
-export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionId, taskId, initialFocus }: TaskDrawerProps) {
+export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionId, taskId, initialFocus, initialTitle }: TaskDrawerProps) {
   const addTask = useAppStore(state => state.addTask);
   const updateTask = useAppStore(state => state.updateTask);
   const deleteTask = useAppStore(state => state.deleteTask);
@@ -42,6 +44,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   const [cycleId, setCycleId] = useState<string | undefined>(undefined);
   const [dueDate, setDueDate] = useState<Date>(new Date());
   const [category, setCategory] = useState(defaultCategoryId || 'inbox');
+  // Tipo de la lista destino: decide qué secciones del editor tienen sentido
+  const listType = getListType(lists.find((l) => l.id === category), category);
   const [type, setType] = useState<'task' | 'log'>('task');
   const [alerts, setAlerts] = useState<import('../../models/Task').AlertDef[]>([]);
   const [isListening, setIsListening] = useState(false);
@@ -212,7 +216,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         );
       } else {
         // Reset defaults
-        setTitle('');
+        setTitle(initialTitle || '');
         setNotes('');
         setDueDate(new Date());
         setCategory(defaultCategoryId || 'inbox');
@@ -263,7 +267,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setManagementUrl('');
       }
     }
-  }, [isOpen, taskId, task, defaultCategoryId, defaultSectionId, initialFocus]);
+  }, [isOpen, taskId, task, defaultCategoryId, defaultSectionId, initialFocus, initialTitle]);
 
   // Enfoque directo y desplazamiento al campo solicitado cuando el usuario pulsa para editarlo
   useEffect(() => {
@@ -860,7 +864,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                 setTargetCount={setTargetCount}
               />
 
-              {/* Card 5: Precio y costes */}
+              {/* Card 5: Precio y costes (compras, checklists y caducidades; o si ya tiene precio) */}
+              {(listType === 'simple' || listType === 'caducidades' || price !== undefined || Boolean(brand)) && (
               <DrawerFinanceSection
                 cardFinanceOpen={cardFinanceOpen}
                 setCardFinanceOpen={setCardFinanceOpen}
@@ -873,8 +878,10 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                 brand={brand}
                 setBrand={setBrand}
               />
+              )}
 
-              {/* Card Especial: Personas involucradas */}
+              {/* Card Especial: Personas (no en rutinas, compras ni caducidades, salvo que ya tenga personas) */}
+              {((listType !== 'routines' && listType !== 'caducidades' && !isShoppingList(category)) || people.length > 0) && (
               <DrawerPeopleSection
                 cardPeopleOpen={cardPeopleOpen}
                 setCardPeopleOpen={setCardPeopleOpen}
@@ -885,8 +892,10 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                 vibe={vibe}
                 setVibe={setVibe}
               />
+              )}
 
-              {/* Card Especial: Caducidades y Suscripciones */}
+              {/* Card Especial: Caducidades y Suscripciones (solo en su lista o si ya es una caducidad) */}
+              {(listType === 'caducidades' || Boolean(expirationType)) && (
               <DrawerExpirationSection
                 cardCaducidadOpen={cardCaducidadOpen}
                 setCardCaducidadOpen={setCardCaducidadOpen}
@@ -901,6 +910,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                 managementUrl={managementUrl}
                 setManagementUrl={setManagementUrl}
               />
+              )}
 
             </div>
           </motion.div>

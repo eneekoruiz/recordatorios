@@ -798,3 +798,78 @@ button[aria-label="Opciones de sección"]::before {
   height: 44px;
   transform: translate(-50%, -50%);
 }
+
+/* ---------- Editor de recordatorios: formulario agrupado de iOS ---------- */
+:root {
+  --sheet-grouped: #f2f2f7;
+  --sheet-card: #ffffff;
+}
+[data-theme="dark"], [data-theme="dark"] :root, html.dark, body.dark {
+  /* En iOS las hojas oscuras usan los tonos «elevados» */
+  --sheet-grouped: #1c1c1e;
+  --sheet-card: #2c2c2e;
+}
+.drawer {
+  background: var(--sheet-grouped) !important;
+}
+.drawer .drawer-header {
+  background: color-mix(in srgb, var(--sheet-grouped) 86%, transparent) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+.drawer .section-card,
+.drawer .input-group,
+.drawer .details-group {
+  background: var(--sheet-card) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+.drawer .section-card:focus-within,
+.drawer .input-group:focus-within,
+.drawer .details-group:focus-within {
+  border: none !important;
+  box-shadow: none !important;
+}
+.drawer .section-card-header {
+  min-height: 44px;
+  gap: 12px;
+  padding: 11px 16px !important;
+  font-size: 1.0625rem !important;
+  font-weight: 400 !important;
+}
+.drawer .section-card-content {
+  border-top: 0.5px solid var(--separator) !important;
+}
+.section-card-trailing {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  min-width: 0;
+}
+.section-card-summary {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 48vw;
+}
+.section-card-chevron {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  transition: transform 0.2s ease;
+}
+
+/* ---------- Barra de añadir: cápsula de cristal ligera ---------- */
+.quick-add-shell {
+  background: var(--glass-fill) !important;
+  border: 0.5px solid var(--glass-stroke) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+}
+.quick-add-shell:focus-within {
+  box-shadow: 0 0 0 3px var(--accent-glow), 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+}

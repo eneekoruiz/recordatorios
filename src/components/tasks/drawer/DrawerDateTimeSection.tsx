@@ -1,6 +1,8 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar as CalendarIcon, ChevronDown, Clock, PlusCircle, X, Zap, CreditCard, Bell } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, PlusCircle, X, Zap, CreditCard, Bell } from 'lucide-react';
+import { SectionTrailing } from './SectionTrailing';
+import { formatRelativeDay, formatTime } from '../../../utils/format';
 import type { AlertDef } from '../../../models/Task';
 import { isCaducidadesList, getListType, doesListSupportDuration } from '../../../utils/specialLists';
 import { Sunrise, Sun, Moon } from 'lucide-react';
@@ -65,12 +67,13 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
         type="button"
         className="section-card-header"
         onClick={() => setCardTimeOpen(!cardTimeOpen)}
+        aria-expanded={cardTimeOpen}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <CalendarIcon size={16} color="var(--accent-red)" />
           Fecha y hora
         </span>
-        <ChevronDown size={18} style={{ transform: cardTimeOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+        <SectionTrailing open={cardTimeOpen} summary={hasDate ? `${formatRelativeDay(dueDate)}${hasTime ? `, ${formatTime(dueDate)}` : ''}` : timeOfDay ? ({ morning: 'Por la mañana', afternoon: 'Por la tarde', night: 'Por la noche' } as const)[timeOfDay] : ''} />
       </button>
       <AnimatePresence>
         {cardTimeOpen && (

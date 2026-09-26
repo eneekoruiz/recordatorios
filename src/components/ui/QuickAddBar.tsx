@@ -10,7 +10,8 @@ import { formatEuro } from '../../utils/format';
 
 interface QuickAddBarProps {
   currentView: string;
-  onExpandDrawer: () => void;
+  /** Abre el editor completo; recibe lo ya escrito para no perderlo. */
+  onExpandDrawer: (initialTitle?: string) => void;
 }
 
 const PRIORITY_LABELS: Record<string, string> = { high: 'alta', medium: 'media', low: 'baja' };
@@ -277,7 +278,11 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
           {/* Expand into full drawer */}
           <button
             type="button"
-            onClick={onExpandDrawer}
+            onClick={() => {
+              const draft = text.trim();
+              onExpandDrawer(draft || undefined);
+              if (draft) setText('');
+            }}
             title="Opciones detalladas (editor completo)"
             style={{
               background: 'transparent',

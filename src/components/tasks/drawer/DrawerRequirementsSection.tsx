@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link2, ChevronDown, X } from 'lucide-react';
+import { Link2, X } from 'lucide-react';
+import { SectionTrailing } from './SectionTrailing';
 import { CustomSelect } from '../../ui/CustomSelect';
 import type { TaskItem } from '../../../models/Task';
 
@@ -25,12 +26,13 @@ export const DrawerRequirementsSection: React.FC<DrawerRequirementsSectionProps>
         type="button"
         className="section-card-header"
         onClick={() => setCardReqOpen(!cardReqOpen)}
+        aria-expanded={cardReqOpen}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Link2 size={16} color="var(--accent-orange)" />
           Requisitos y dependencias
         </span>
-        <ChevronDown size={18} style={{ transform: cardReqOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+        <SectionTrailing open={cardReqOpen} summary={blockedBy.length === 0 ? '' : blockedBy.length === 1 ? '1 requisito' : `${blockedBy.length} requisitos`} />
       </button>
       <AnimatePresence>
         {cardReqOpen && (

@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, X, Users, User } from 'lucide-react';
+import { X, Users, User } from 'lucide-react';
+import { SectionTrailing } from './SectionTrailing';
 
 interface DrawerPeopleSectionProps {
   cardPeopleOpen: boolean;
@@ -37,12 +38,13 @@ export const DrawerPeopleSection: React.FC<DrawerPeopleSectionProps> = ({
         type="button"
         className="section-card-header"
         onClick={() => setCardPeopleOpen(!cardPeopleOpen)}
+        aria-expanded={cardPeopleOpen}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Users size={15} strokeWidth={2.1} />
-          Personas involucradas ({people.length})
+          Personas
         </span>
-        <ChevronDown size={18} style={{ transform: cardPeopleOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+        <SectionTrailing open={cardPeopleOpen} summary={people.length === 0 ? '' : people.length === 1 ? people[0] : `${people.length} personas`} />
       </button>
       <AnimatePresence>
         {cardPeopleOpen && (

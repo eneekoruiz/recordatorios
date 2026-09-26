@@ -1,6 +1,8 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Wallet } from 'lucide-react';
+import { Wallet } from 'lucide-react';
+import { SectionTrailing } from './SectionTrailing';
+import { formatEuro } from '../../../utils/format';
 
 interface DrawerFinanceSectionProps {
   cardFinanceOpen: boolean;
@@ -32,12 +34,13 @@ export const DrawerFinanceSection: React.FC<DrawerFinanceSectionProps> = ({
         type="button"
         className="section-card-header"
         onClick={() => setCardFinanceOpen(!cardFinanceOpen)}
+        aria-expanded={cardFinanceOpen}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Wallet size={15} strokeWidth={2.1} />
           Precio y costes
         </span>
-        <ChevronDown size={18} style={{ transform: cardFinanceOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+        <SectionTrailing open={cardFinanceOpen} summary={price ? `${quantity > 1 ? `${quantity} × ` : ''}${formatEuro(price)}` : ''} />
       </button>
       <AnimatePresence>
         {cardFinanceOpen && (

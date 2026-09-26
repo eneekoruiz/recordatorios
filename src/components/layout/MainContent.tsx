@@ -44,7 +44,7 @@ import { getReservedFrequencyColor } from '../../constants/colors';
 
 interface MainContentProps {
   currentView: string;
-  onOpenNewTask: (sectionId?: string) => void;
+  onOpenNewTask: (sectionId?: string, initialTitle?: string) => void;
   onOpenZenMode: (taskId: string) => void;
   onEditTask?: (taskId: string, initialFocus?: string) => void;
   onBackToSidebar?: () => void;
@@ -2749,7 +2749,7 @@ const CORE_CYCLES = [
             }}
           >
             <div style={{ flex: 1, maxWidth: 560, minWidth: 0, pointerEvents: 'auto' }}>
-              <QuickAddBar currentView={currentView} onExpandDrawer={() => onOpenNewTask()} />
+              <QuickAddBar currentView={currentView} onExpandDrawer={(draft) => onOpenNewTask(undefined, draft)} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, pointerEvents: 'auto', flexShrink: 0 }}>
               <BottomShortcutBar />
