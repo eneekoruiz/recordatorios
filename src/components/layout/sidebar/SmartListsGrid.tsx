@@ -34,7 +34,7 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
   return (
     <div>
       {/* SMART LISTS GRID CONTENT */}
-      <div style={{ 
+      <div className="smart-cards-grid" style={{ 
         display: 'grid', 
         gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', 
         gap: 12, 

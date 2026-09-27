@@ -30,7 +30,6 @@ import {
 import { MainEmptyState } from './main/MainEmptyState';
 import { MainGlassHeader } from './main/MainGlassHeader';
 import { MainSectionHeader } from './main/MainSectionHeader';
-import { MainInlineAdd } from './main/MainInlineAdd';
 import { DeletedTaskToast } from './main/DeletedTaskToast';
 import { SectionContextMenu, type SectionMenuState } from './main/SectionContextMenu';
 import { MonthlySummaryModal } from './main/MonthlySummaryModal';
@@ -148,9 +147,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const [sectionMenu, setSectionMenu] = useState<SectionMenuState>({ open: false, x: 0, y: 0 });
 
   // Creation inline input state
-  const [isInlineAdding, setIsInlineAdding] = useState(false);
-  const [inlineTitle, setInlineTitle] = useState('');
-  const inlineInputRef = useRef<HTMLInputElement>(null);
 
   // Quick long press timer for section options
 
@@ -2550,16 +2546,7 @@ const CORE_CYCLES = [
                 );
               })}
 
-          {/* Quick inline row to add a task natively */}
-          <MainInlineAdd
-            currentView={currentView}
-            viewColor={viewColor}
-            isInlineAdding={isInlineAdding}
-            setIsInlineAdding={setIsInlineAdding}
-            inlineTitle={inlineTitle}
-            setInlineTitle={setInlineTitle}
-            inlineInputRef={inlineInputRef}
-          />
+          {/* Se añade desde la barra de abajo (una sola forma de añadir, siempre en el mismo sitio) */}
 
           {isActuallyEmpty && (
             <div style={{
@@ -2577,7 +2564,6 @@ const CORE_CYCLES = [
                   currentView={currentView}
                   currentList={currentList}
                   currentCycle={currentCycle}
-                  onOpenNewTask={onOpenNewTask}
                 />
               </div>
             </div>

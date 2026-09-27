@@ -363,7 +363,7 @@ function App() {
     const EPOCH = new Date(0).toISOString();
     if (!lists || lists.length === 0) {
       const initial = [
-        ...(isHidden ? [] : [{ id: 'primeros_pasos', name: 'Primeros Pasos', color: '#ff2d55', icon: 'rocket', isPinned: false }]),
+        ...(isHidden ? [] : [{ id: 'primeros_pasos', name: 'Primeros pasos', color: '#ff2d55', icon: 'rocket', isPinned: false }]),
         { id: 'compras', name: 'Compras', color: '#ff9500', icon: 'shopping-cart' },
         { id: 'personal', name: 'Personal', color: '#af52de', icon: 'heart' },
         { id: 'trabajo', name: 'Trabajo', color: '#0a84ff', icon: 'briefcase' },
@@ -394,7 +394,7 @@ function App() {
       state.addListSection({ id: 'sec_compras_anuales', listId: 'compras', name: 'Anuales', order: 3, updated_at: EPOCH });
     } else {
       if (!lists.some(l => l.id === 'primeros_pasos') && !isHidden) {
-        state.addList({ id: 'primeros_pasos', name: 'Primeros Pasos', color: '#ff2d55', icon: 'rocket', isPinned: false, updated_at: EPOCH });
+        state.addList({ id: 'primeros_pasos', name: 'Primeros pasos', color: '#ff2d55', icon: 'rocket', isPinned: false, updated_at: EPOCH });
       }
       if (!lists.some(l => l.id === 'caducidades')) {
         state.addList({ id: 'caducidades', name: 'Caducidades', color: '#ff9500', icon: 'credit-card', updated_at: EPOCH });

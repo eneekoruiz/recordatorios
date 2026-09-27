@@ -71,7 +71,7 @@ export const CyclesListSection: React.FC<CyclesListSectionProps> = ({
 
   return (
     <div style={{ marginTop: 'var(--space-16)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 16px 8px 16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 0 8px 0' }}>
         <span style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Frecuencia</span>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           {isEditCyclesMode && (() => {
@@ -107,7 +107,7 @@ export const CyclesListSection: React.FC<CyclesListSectionProps> = ({
           <button 
             type="button"
             onClick={() => setIsEditCyclesMode(!isEditCyclesMode)}
-            style={{ background: 'transparent', border: 'none', color: isEditCyclesMode ? 'var(--accent-primary)' : 'var(--text-tertiary)', fontSize: '0.85rem', cursor: 'pointer' }}
+            style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', fontSize: '0.94rem', fontWeight: isEditCyclesMode ? 600 : 400, cursor: 'pointer', padding: '6px 2px' }}
           >
             {isEditCyclesMode ? 'Hecho' : 'Editar'}
           </button>
@@ -151,7 +151,7 @@ export const CyclesListSection: React.FC<CyclesListSectionProps> = ({
               style={{ position: 'relative', opacity: isEditCyclesMode && !isVisible ? 0.5 : 1, transition: 'background-color 150ms ease' }}
             >
               <div 
-                style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, cursor: isEditCyclesMode ? 'default' : 'pointer' }} 
+                style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 0, minWidth: 0, cursor: isEditCyclesMode ? 'default' : 'pointer' }} 
                 onClick={() => {
                   if (!isEditCyclesMode) {
                     onSelectView(cycle.id);

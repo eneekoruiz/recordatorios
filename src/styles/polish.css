@@ -94,7 +94,7 @@ h1, h2, h3,
   display: block !important;
   position: absolute !important;
   bottom: 0 !important;
-  left: 54px !important; /* Desplazamiento exacto tras el icono como en Apple Reminders */
+  left: 55px !important; /* Alineado con el nombre, como en Recordatorios */
   right: 0 !important;
   height: 0.5px !important;
   background-color: var(--border-subtle, rgba(120, 120, 128, 0.2)) !important;
@@ -740,6 +740,9 @@ body.dark .sidebar-container {
   .ios-list-block .ios-list-item.active .title {
     color: var(--text-primary) !important;
   }
+  .ios-list-block .ios-list-item.active .count {
+    color: var(--text-tertiary) !important;
+  }
   /* Indicador «›» de que la fila abre la lista (salvo si la fila ya tiene «···») */
   .ios-list-block .ios-list-item:not(:has(.list-action-btn)) .count::after {
     content: "";
@@ -1074,4 +1077,9 @@ body.dark .cad-summary-cost strong {
   color: var(--text-tertiary);
   opacity: 0.45;
   cursor: default;
+}
+
+/* Tarjetas inteligentes: si la última queda sola en su fila, ocupa todo el ancho (sin hueco) */
+.smart-cards-grid > .ios-smart-card:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
 }

@@ -68,4 +68,38 @@ describe('resumen del día', () => {
     const briefing = build([task({ title: 'Renovar DNI', dueDate: tomorrow, categoryId: 'caducidades' })]);
     expect(briefing.expiring.map((t) => t.title)).toEqual(['Renovar DNI']);
   });
+
+  it('«urgentes» cuenta solo lo que toca hoy, y lo de hoy no es «diaria»', () => {
+    const today = at(12).toISOString();
+    const inTenDays = new Date(Date.now() + 10 * 86400000).toISOString();
+    const briefing = build([
+      task({ title: 'Análisis', dueDate: today }),
+      task({ title: 'Fregar', cycle_id: 'cycle_day', priority: 'high' }),
+      task({ title: 'Hacer la cama', cycle_id: 'cycle_day' }),
+      task({ title: 'Dentista', dueDate: inTenDays, priority: 'high' }),
+    ]);
+    expect(briefing.pendingDaily.map((t) => t.title)).toEqual(['Fregar', 'Hacer la cama']);
+    expect(briefing.highPriorityToday).toBe(1);
+    expect(briefing.headline).toBe('Tienes una tarea para hoy y dos diarias.');
+    expect(briefing.detail).toBe('Una es urgente.');
+    expect(briefing.focus[0].title).toBe('Fregar');
+    expect(briefing.focus.map((t) => t.title)).not.toContain('Dentista');
+  });
+
+  it('cuenta lo vencido y la ronda semanal en su día', () => {
+    const yesterday = new Date(at(12).getTime() - 86400000).toISOString();
+    const briefing = build([
+      task({ title: 'Pagar multa', dueDate: yesterday }),
+      task({ title: 'Aspirar', cycle_id: 'cycle_week' }),
+      task({ title: 'Fregar', cycle_id: 'cycle_day' }),
+    ], { weeklyDayOfWeek: at(10).getDay() });
+    expect(briefing.headline).toBe('Hoy toca la ronda semanal: una semanal y una diaria.');
+    expect(briefing.detail).toBe('Tienes una vencida.');
+  });
+
+  it('la guía de inicio no cuenta', () => {
+    const briefing = build([task({ title: 'Prueba', categoryId: 'primeros_pasos', cycle_id: 'cycle_day' })]);
+    expect(briefing.pendingDaily).toHaveLength(0);
+    expect(briefing.isQuiet).toBe(true);
+  });
 });

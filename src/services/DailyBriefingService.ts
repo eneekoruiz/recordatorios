@@ -58,27 +58,27 @@ export function buildDailyBriefing(
   const { period, greeting } = greetingFor(now.getHours());
   const todayStr = now.toDateString();
 
-  const all = Object.values(tasksMap || {}).filter((t) => !t.deleted_at);
+  // La guía de inicio no cuenta: son ejemplos, no cosas por hacer.
+  const all = Object.values(tasksMap || {}).filter((t) => !t.deleted_at && t.categoryId !== 'primeros_pasos');
+  const isDoneNow = (t: TaskItem) => isTaskCompleted(t) || isCompletedInCurrentPeriod(t, cycles, options.listSections, options.lists);
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const dueDay = (t: TaskItem) => {
+    const d = new Date(t.dueDate!);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  };
   const today = all.filter((t) => t.dueDate && new Date(t.dueDate).toDateString() === todayStr);
-  const pendingToday = today.filter((t) => !isTaskCompleted(t));
-  const completedToday = today.filter((t) => isTaskCompleted(t)).length;
-  const highPriority = all.filter((t) => !isTaskCompleted(t) && t.priority === 'high');
+  const pendingToday = today.filter((t) => !isDoneNow(t));
+  const completedToday = today.filter((t) => isDoneNow(t)).length;
+  const overdue = all.filter((t) => t.dueDate && !Number.isNaN(new Date(t.dueDate).getTime()) && dueDay(t) < startOfToday && !isDoneNow(t));
 
-  // ── Detección de Tareas Diarias y Semanales ────────────────────────────────
+  // ── Rutinas: diarias (y hábitos) y semanales. Una tarea con fecha de hoy no es «diaria». ──
   const dailyTasks = all.filter((t) => {
     if (t.cycle_id === 'cycle_day' || (t.targetCount && t.targetCount > 1)) return true;
-    const p = getTaskPeriodicity(t, options.listSections, options.lists);
-    if (p === 'day') return true;
-    if (t.dueDate && new Date(t.dueDate).toDateString() === todayStr) return true;
-    return false;
+    return getTaskPeriodicity(t, options.listSections, options.lists) === 'day';
   });
 
-  const pendingDaily = dailyTasks.filter(
-    (t) => !isCompletedInCurrentPeriod(t, cycles, options.listSections, options.lists) && !isTaskCompleted(t)
-  );
-  const completedDailyToday = dailyTasks.filter(
-    (t) => isCompletedInCurrentPeriod(t, cycles, options.listSections, options.lists) || (isTaskCompleted(t) && !t.cycle_id)
-  ).length;
+  const pendingDaily = dailyTasks.filter((t) => !isDoneNow(t));
+  const completedDailyToday = dailyTasks.filter((t) => isDoneNow(t)).length;
 
   const weeklyTasks = all.filter((t) => {
     if (t.cycle_id === 'cycle_week') return true;
@@ -86,9 +86,7 @@ export function buildDailyBriefing(
     return p === 'week';
   });
 
-  const pendingWeekly = weeklyTasks.filter(
-    (t) => !isCompletedInCurrentPeriod(t, cycles, options.listSections, options.lists)
-  );
+  const pendingWeekly = weeklyTasks.filter((t) => !isDoneNow(t));
 
   // Día de tareas semanales (por defecto 6 = Sábado, o configurable en opciones/localStorage)
   const currentDayOfWeek = now.getDay();
@@ -98,7 +96,7 @@ export function buildDailyBriefing(
     : currentDayOfWeek === weeklyDayPref;
 
   const habits = all.filter((t) => t.cycle_id === 'cycle_day' || (t.targetCount && t.targetCount > 1));
-  const habitsDone = habits.filter((t) => isCompletedInCurrentPeriod(t, cycles, options.listSections, options.lists) || isTaskCompleted(t)).length;
+  const habitsDone = habits.filter((t) => isDoneNow(t)).length;
   const topStreak = habits.reduce((max, habit) => Math.max(max, calculateHabitStreak(habit, cycles).count), 0);
 
   const expiring = all.filter((t) => {
@@ -108,18 +106,15 @@ export function buildDailyBriefing(
     return hours >= -12 && hours <= 48;
   });
 
-  // Tareas prioritarias para empezar el día: urgentes primero, luego vencimiento de hoy o diarias pendientes
-  const focusMap = new Map<string, TaskItem>();
-  all.forEach(t => {
-    if (isTaskCompleted(t)) return;
-    if (t.priority === 'high' || t.priority === 'medium') {
-      focusMap.set(t.id, t);
-    }
-  });
-  pendingToday.forEach(t => focusMap.set(t.id, t));
-  pendingDaily.forEach(t => focusMap.set(t.id, t));
+  // Lo que toca hoy: con fecha de hoy, vencido, diarias y (en su día) semanales. Solo eso cuenta
+  // para «urgentes» y para sugerir por dónde empezar (lo urgente de dentro de un mes, no).
+  const onTodayPlate = new Map<string, TaskItem>();
+  [...pendingToday, ...overdue, ...pendingDaily, ...(isWeeklyDay ? pendingWeekly : [])].forEach((t) => onTodayPlate.set(t.id, t));
+  const plate = Array.from(onTodayPlate.values());
+  const highPriority = plate.filter((t) => t.priority === 'high');
 
-  const focus = Array.from(focusMap.values())
+  const focus = plate
+    .slice()
     .sort((a, b) => {
       const weight = (PRIORITY_WEIGHT[b.priority || 'none'] || 0) - (PRIORITY_WEIGHT[a.priority || 'none'] || 0);
       if (weight !== 0) return weight;
@@ -127,38 +122,29 @@ export function buildDailyBriefing(
     })
     .slice(0, 8);
 
-  // ── Redacción del Titular ──────────────────────────────────────────────────
+  // ── Redacción: una frase que lo dice todo, sin repetirlo luego en cápsulas ──
   const who = name ? `, ${name}` : '';
   let headline: string;
+  const dated = pendingToday.length ? pluralWord(pendingToday.length, 'tarea') : '';
+  const daily = pendingDaily.length ? pluralWord(pendingDaily.length, 'diaria') : '';
 
-  if (isWeeklyDay && weeklyTasks.length > 0) {
-    headline = `¡Hoy es día de tareas semanales! Además de las diarias (${pendingDaily.length}), tienes que hacer las semanales (${pendingWeekly.length}).`;
+  if (isWeeklyDay && pendingWeekly.length > 0) {
+    const items = [pluralWord(pendingWeekly.length, 'semanal', 'semanales'), daily, dated && `${dated} con fecha`].filter(Boolean);
+    headline = `Hoy toca la ronda semanal: ${joinNatural(items)}.`;
   } else if (pendingToday.length > 0) {
-    if (pendingToday.length === 1) {
-      headline = 'Tienes una tarea para hoy.';
-    } else {
-      headline = `Tienes ${pluralWord(pendingToday.length, 'tarea')} para hoy.`;
-    }
-  } else if (pendingDaily.length === 0) {
-    headline = completedDailyToday > 0 ? '¡Todo listo por hoy! Has completado todas tus tareas diarias.' : 'Hoy no tienes tareas diarias pendientes.';
-  } else if (pendingDaily.length === 1) {
-    headline = 'Hola, hoy te queda por hacer 1 tarea diaria.';
+    headline = `Tienes ${dated} para hoy${daily ? ` y ${daily}` : ''}.`;
+  } else if (pendingDaily.length > 0) {
+    headline = pendingDaily.length === 1 ? 'Hoy te queda una diaria.' : `Hoy te quedan ${daily}.`;
   } else {
-    headline = `Hola, hoy te quedan por hacer ${pendingDaily.length} tareas diarias.`;
+    headline = completedDailyToday + completedToday > 0 ? 'Todo hecho por hoy.' : 'Hoy no tienes nada pendiente.';
   }
 
   const details: string[] = [];
   if (highPriority.length === 1) details.push('una es urgente');
   else if (highPriority.length > 1) details.push(`${numberWord(highPriority.length)} son urgentes`);
-  if (completedDailyToday > 0) details.push(`ya has completado ${pluralWord(completedDailyToday, 'tarea diaria')}`);
-  const habitsLeft = habits.length - habitsDone;
-  if (habitsLeft === 1) {
-    details.push('te queda un hábito del día');
-  } else if (habitsLeft > 1) {
-    details.push(`te quedan ${pluralWord(habitsLeft, 'hábito')} del día`);
-  } else if (habits.length > 0) {
-    details.push('tus hábitos de hoy están al día');
-  }
+  if (overdue.length > 0) details.push(overdue.length === 1 ? 'tienes una vencida' : `tienes ${pluralWord(overdue.length, 'vencida')}`);
+  const doneSoFar = completedDailyToday + completedToday;
+  if (doneSoFar > 0 && plate.length > 0) details.push(`llevas ${pluralWord(doneSoFar, 'hecha')}`);
   const detail = details.length ? `${joinNatural(details).replace(/^./, (c) => c.toUpperCase())}.` : '';
 
   return {
@@ -179,6 +165,6 @@ export function buildDailyBriefing(
     habitsTotal: habits.length,
     topStreak,
     expiring,
-    isQuiet: pendingDaily.length === 0 && completedDailyToday === 0 && habits.length === 0 && expiring.length === 0,
+    isQuiet: plate.length === 0 && completedDailyToday === 0 && completedToday === 0 && habits.length === 0 && expiring.length === 0,
   };
 }

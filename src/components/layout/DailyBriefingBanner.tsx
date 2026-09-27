@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, ChevronDown, ChevronUp, CreditCard, Flame, Moon, Sun, Sunset, Calendar, Bell } from 'lucide-react';
+import { ChevronDown, ChevronUp, CreditCard, Flame, Moon, Sun, Sunset, Bell } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { buildDailyBriefing } from '../../services/DailyBriefingService';
 import { NotificationService } from '../../services/NotificationService';
@@ -63,6 +63,7 @@ export function DailyBriefingBanner() {
 
   const { Icon, accent } = PERIOD_STYLE[briefing.period];
   const expiring = briefing.expiring[0];
+  const canAskNotifications = 'Notification' in window && Notification.permission === 'default';
 
   return (
     <div className="daily-briefing-container" style={{ ['--briefing-accent' as string]: accent }}>
@@ -98,54 +99,37 @@ export function DailyBriefingBanner() {
               {briefing.detail ? ` ${briefing.detail}` : ''}
             </p>
 
-            <div className="briefing-stats">
-              <span><b>{briefing.pendingDaily.length}</b> {briefing.pendingDaily.length === 1 ? 'diaria pendiente' : 'diarias pendientes'}</span>
-              {briefing.isWeeklyDay && (
-                <span className="briefing-chip" style={{ background: 'rgba(0, 122, 255, 0.12)', color: '#007aff', fontWeight: 600 }}>
-                  <Calendar size={14} /> 
-                  <span>{briefing.pendingWeekly.length} {briefing.pendingWeekly.length === 1 ? 'semanal pendiente' : 'semanales pendientes'}</span>
-                </span>
-              )}
-              {briefing.completedDailyToday > 0 && (
-                <span><b>{briefing.completedDailyToday}</b> completadas hoy</span>
-              )}
-              {briefing.habitsTotal > 0 && (
-                <span><b>{briefing.habitsDone}/{briefing.habitsTotal}</b> hábitos</span>
-              )}
-              {briefing.topStreak >= 2 && (
-                <span className="briefing-chip"><Flame size={14} /> <span>Racha de {plural(briefing.topStreak, 'día')}</span></span>
-              )}
-              {briefing.highPriorityToday > 0 && (
-                <span className="briefing-chip briefing-chip--urgent">
-                  <AlertCircle size={14} />
-                  <span>{briefing.highPriorityToday === 1 ? '1 urgente' : `${briefing.highPriorityToday} urgentes`}</span>
-                </span>
-              )}
-              {expiring && (
-                <span className="briefing-chip" data-testid="briefing-caducidad-chip">
-                  <CreditCard size={14} />
-                  <span>{expiring.title} vence {formatRelativeDay(new Date(expiring.dueDate!)).toLowerCase()}</span>
-                </span>
-              )}
-              {'Notification' in window && Notification.permission === 'default' && (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const result = await PushService.enable();
-                    if (!result.ok) await NotificationService.getInstance().requestPermissions();
-                    window.dispatchEvent(new CustomEvent('show-toast', {
-                      detail: result.ok ? 'Listo: un resumen al día y tus alertas con hora, aunque cierres la app' : result.reason,
-                    }));
-                  }}
-                  className="briefing-chip"
-                  style={{ cursor: 'pointer', background: 'rgba(255, 149, 0, 0.12)', color: '#ff9500', border: 'none', fontWeight: 600 }}
-                  title="Un resumen al día y las alertas con hora, aunque cierres la app"
-                >
-                  <Bell size={13} />
-                  <span>Activar avisos</span>
-                </button>
-              )}
-            </div>
+            {/* Solo lo que la frase no dice: la caducidad cercana, la racha y activar avisos */}
+            {(expiring || briefing.topStreak >= 2 || canAskNotifications) && (
+              <div className="briefing-stats">
+                {expiring && (
+                  <span className="briefing-chip briefing-chip--info" data-testid="briefing-caducidad-chip">
+                    <CreditCard size={14} />
+                    <span>{expiring.title} vence {formatRelativeDay(new Date(expiring.dueDate!)).toLowerCase()}</span>
+                  </span>
+                )}
+                {briefing.topStreak >= 2 && (
+                  <span className="briefing-chip"><Flame size={14} /> <span>Racha de {plural(briefing.topStreak, 'día')}</span></span>
+                )}
+                {canAskNotifications && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const result = await PushService.enable();
+                      if (!result.ok) await NotificationService.getInstance().requestPermissions();
+                      window.dispatchEvent(new CustomEvent('show-toast', {
+                        detail: result.ok ? 'Listo: un resumen al día y tus alertas con hora, aunque cierres la app' : result.reason,
+                      }));
+                    }}
+                    className="briefing-chip briefing-chip--action"
+                    title="Un resumen al día y las alertas con hora, aunque cierres la app"
+                  >
+                    <Bell size={13} />
+                    <span>Activar avisos</span>
+                  </button>
+                )}
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

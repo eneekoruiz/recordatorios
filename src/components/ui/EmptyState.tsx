@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Calendar, Clock, Flag, CheckCircle2, AlertCircle, Inbox, Trash2, Folder, Sun } from 'lucide-react';
+import { Sparkles, Calendar, Clock, Flag, CheckCircle2, AlertCircle, Inbox, Trash2, Folder, Sun, ListTodo, ShoppingCart } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const getIconByName = (name?: string, fallbackNode?: React.ReactNode, accentColor?: string) => {
@@ -19,7 +19,8 @@ const getIconByName = (name?: string, fallbackNode?: React.ReactNode, accentColo
     case 'alert': return <AlertCircle size={size} color={accentColor || "var(--accent-red, #FF3B30)"} strokeWidth={strokeWidth} />;
     case 'trash': return <Trash2 size={size} color="var(--text-tertiary)" strokeWidth={strokeWidth} />;
     case 'inbox': return <Inbox size={size} color={color} strokeWidth={strokeWidth} />;
-    case 'list':
+    case 'list': return <ListTodo size={size} color={color} strokeWidth={strokeWidth} />;
+    case 'cart': return <ShoppingCart size={size} color={color} strokeWidth={strokeWidth} />;
     case 'folder': return <Folder size={size} color={color} strokeWidth={strokeWidth} />;
     case 'clock': return <Clock size={size} color={color} strokeWidth={strokeWidth} />;
     case 'sparkles': return <Sparkles size={size} color={color} strokeWidth={strokeWidth} />;

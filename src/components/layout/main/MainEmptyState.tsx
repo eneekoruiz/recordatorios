@@ -1,12 +1,12 @@
 import React, { useMemo } from 'react';
 import { EmptyState } from '../../ui/EmptyState';
 import type { CustomList, CustomCycle } from '../../../models/Task';
+import { isShoppingList } from '../../../utils/specialLists';
 
 interface MainEmptyStateProps {
   currentView: string;
   currentList?: CustomList;
   currentCycle?: CustomCycle;
-  onOpenNewTask?: (sectionId?: string) => void;
 }
 
 import { FREQUENCY_RESERVED_COLORS } from '../../../constants/colors';
@@ -30,109 +30,45 @@ export const MainEmptyState: React.FC<MainEmptyStateProps> = ({
   currentView,
   currentList,
   currentCycle,
-  onOpenNewTask
 }) => {
   const accentColor = SMART_ACCENTS[currentView] || currentList?.color || '#007AFF';
 
   const emptyStateProps = useMemo(() => {
+    // Textos cortos y en calma, como en Recordatorios: qué aparecerá aquí y cómo añadirlo.
+    const s = (title: string, subtitle: string, iconName: string, color = accentColor) => ({ title, subtitle, iconName, accentColor: color });
     switch (currentView) {
       case 'smart_primeros_pasos':
-        return {
-          title: "¡Primeros Pasos completados!",
-          subtitle: "Has completado todos los recordatorios guía. Puedes ocultar esta lista inteligente desde el botón Editar de la barra lateral.",
-          iconName: "sparkles",
-          accentColor
-        };
+        return s('Guía completada', 'Ya conoces lo básico. Puedes ocultar esta lista con «Editar».', 'sparkles');
       case 'smart_today':
-        return {
-          title: "Todo al día para hoy",
-          subtitle: "No tienes tareas programadas para el día de hoy. Disfruta tu tiempo o añade algo nuevo.",
-          iconName: "today",
-          accentColor
-        };
+        return s('Nada para hoy', 'Lo que tenga fecha de hoy aparecerá aquí.', 'today');
       case 'smart_scheduled':
-        return {
-          title: "Sin tareas programadas",
-          subtitle: "Planifica tus próximos días añadiendo tareas con fecha límite.",
-          iconName: "scheduled",
-          accentColor
-        };
+        return s('Nada programado', 'Los recordatorios con fecha aparecerán aquí.', 'scheduled');
       case 'smart_all':
-        return {
-          title: "No hay tareas en absoluto",
-          subtitle: "Tienes todo bajo control. Relájate o añade un nuevo recordatorio.",
-          iconName: "sparkles",
-          accentColor
-        };
+        return s('Sin recordatorios', 'Escribe abajo para añadir el primero.', 'sparkles');
       case 'smart_flagged':
-        return {
-          title: "Sin tareas destacadas",
-          subtitle: "Marca tareas importantes con una bandera para tenerlas siempre a la mano.",
-          iconName: "flagged",
-          accentColor
-        };
+        return s('Nada con marca', 'Marca lo importante para tenerlo siempre a mano.', 'flagged');
       case 'smart_completed':
-        return {
-          title: "Sin tareas completadas",
-          subtitle: "A medida que vayas marcando tareas como terminadas, se guardarán aquí.",
-          iconName: "completed",
-          accentColor
-        };
+        return s('Nada completado todavía', 'Lo que vayas terminando se guardará aquí.', 'completed');
       case 'smart_overdue':
-        return {
-          title: "¡Todo al día!",
-          subtitle: "Excelente trabajo, no tienes ninguna tarea atrasada o vencida.",
-          iconName: "overdue",
-          accentColor
-        };
+        return s('Nada vencido', 'Todo está al día.', 'overdue');
       case 'list_inbox':
-        return {
-          title: "Bandeja de entrada vacía",
-          subtitle: "Todos tus pendientes rápidos están procesados. ¡Gran productividad!",
-          iconName: "inbox",
-          accentColor
-        };
+        return s('Bandeja vacía', 'Lo que añadas sin elegir lista llegará aquí.', 'inbox');
       case 'TRASH':
-        return {
-          title: "La papelera está vacía",
-          subtitle: "Cuando elimines tareas o listas, aparecerán aquí antes de borrarse permanentemente.",
-          iconName: "trash",
-          accentColor: '#8E8E93'
-        };
+        return s('La papelera está vacía', 'Lo que elimines se guarda aquí 30 días.', 'trash', '#8E8E93');
       case 'cycle_day':
-        return {
-          title: "Día libre de ciclos",
-          subtitle: "No hay tareas activas para tu ciclo diario actual.",
-          iconName: "clock",
-          accentColor
-        };
+        return s('Nada diario', 'Las tareas de cada día aparecerán aquí.', 'clock');
       case 'cycle_week':
-        return {
-          title: "Semana despejada",
-          subtitle: "No hay tareas asignadas para tu ciclo semanal actual.",
-          iconName: "clock",
-          accentColor
-        };
+        return s('Nada semanal', 'Las tareas de cada semana aparecerán aquí.', 'clock');
       case 'cycle_month':
+        return s('Nada mensual', 'Las tareas de cada mes aparecerán aquí.', 'clock');
       case 'cycle_year':
-        return {
-          title: "Ciclo temporal despejado",
-          subtitle: "No tienes objetivos o recordatorios para este ciclo temporal.",
-          iconName: "clock",
-          accentColor
-        };
+        return s('Nada anual', 'Las tareas de cada año aparecerán aquí.', 'clock');
       default: {
-        const isFolder = currentList?.isFolder;
-        return {
-          title: isFolder 
-            ? `La carpeta "${currentList?.name || 'Carpeta'}" está vacía`
-            : `Sin tareas en "${currentList?.name || (currentCycle ? currentCycle.name : 'la lista')}"`,
-          subtitle: isFolder 
-            ? "Esta carpeta no contiene sublistas ni tareas activas. Puedes añadir una nueva lista o crear un recordatorio dentro."
-            : "Esta lista está vacía en este momento. Empieza añadiendo tu primer ítem.",
-          iconName: isFolder ? "folder" : "list",
-          accentColor
-        };
+        if (currentList?.isFolder) {
+          return s(`«${currentList.name || 'Carpeta'}» está vacía`, 'Añade una lista dentro o un recordatorio.', 'folder');
+        }
+        const name = currentList?.name || currentCycle?.name || 'La lista';
+        return s(`«${name}» está vacía`, 'Escribe abajo para añadir el primer recordatorio.', isShoppingList(currentView, currentList) ? 'cart' : 'list');
       }
     }
   }, [currentView, currentList, currentCycle, accentColor]);
@@ -141,8 +77,7 @@ export const MainEmptyState: React.FC<MainEmptyStateProps> = ({
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', width: '100%', padding: '16px', boxSizing: 'border-box' }}>
       <EmptyState 
         {...emptyStateProps}
-        onAction={currentView !== 'TRASH' && onOpenNewTask ? () => onOpenNewTask() : undefined}
-        actionLabel={currentView !== 'TRASH' && onOpenNewTask ? "Nuevo recordatorio" : undefined}
+
       />
     </div>
   );

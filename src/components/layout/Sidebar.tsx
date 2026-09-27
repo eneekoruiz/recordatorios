@@ -228,6 +228,32 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 <Search size={16} style={{ flexShrink: 0 }} />
               </button>
 
+              {/* Asistente: crear recordatorios hablando o escribiendo con naturalidad */}
+              <button
+                type="button"
+                onClick={() => {
+                  HapticService.selection();
+                  window.dispatchEvent(new CustomEvent('open-ai-assistant'));
+                }}
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: '50%',
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-subtle)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: 'var(--accent-primary)',
+                  flexShrink: 0
+                }}
+                title="Asistente IA (Ctrl+J)"
+                aria-label="Asistente IA"
+              >
+                <Sparkles size={16} />
+              </button>
+
               <div 
                 className="user-profile-trigger"
                 onClick={(e) => {
@@ -401,42 +427,8 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
 
         {/* MIS LISTAS */}
         <div className="categories-section" style={{ flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 0 8px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0 8px 0' }}>
             <span style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Mis listas</span>
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <button 
-                type="button"
-                className="btn-icon"
-                style={{ 
-                  padding: '3px 8px', 
-                  borderRadius: 999,
-                  background: 'var(--accent-glow)',
-                  border: '1px solid var(--accent-primary)',
-                  color: 'var(--accent-primary)',
-                  fontSize: '0.72rem',
-                  fontWeight: 650,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  cursor: 'pointer'
-                }}
-                title="Abrir Asistente IA (Ctrl+J)"
-                onClick={() => {
-                  window.dispatchEvent(new CustomEvent('open-ai-assistant'));
-                }}
-              >
-                <Sparkles size={12} /> IA
-              </button>
-              <button 
-                type="button"
-                className="btn-icon"
-                style={{ padding: 4, cursor: 'pointer' }}
-                title="Añadir lista"
-                onClick={handleAddList}
-              >
-                <Plus size={16} color="var(--accent-primary)" />
-              </button>
-            </div>
           </div>
           <div className="ios-list-block">
             {/* 🚀 Primeros Pasos (Banner distinguido en la parte superior) */}
@@ -450,15 +442,15 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                   <Rocket size={17} color="white" strokeWidth={2.2} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-                  <span className="title" style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text-primary)' }}>Primeros Pasos</span>
+                  <span className="title" style={{ fontWeight: 600, fontSize: '1.05rem', color: 'var(--text-primary)' }}>Primeros pasos</span>
                 </div>
-                <span className="count" style={{ color: '#ff2d55', fontWeight: 700 }}>
+                <span className="count">
                   {getTaskCount('smart_primeros_pasos')}
                 </span>
                 
-                <button 
+                {!isMobile && <button 
                   type="button"
-                  className="list-action-btn"
+                  className="list-action-btn desktop-only-action"
                   onClick={(e) => { 
                     e.stopPropagation(); 
                     if (activeMenuId === 'primeros_pasos') {
@@ -478,8 +470,15 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                   title="Opciones de Guía"
                 >
                   <MoreHorizontal size={14} />
-                </button>
+                </button>}
               </motion.div>
+            )}
+            {lists?.some(l => l.id === 'primeros_pasos') && (getTaskCount('smart_primeros_pasos') > 0 || isEditMode) && !pinnedSmartLists.includes('smart_primeros_pasos') && !lists.some(l => l.id === 'primeros_pasos' && l.isPinned) && (
+              <div
+                className="list-separator-line"
+                aria-hidden="true"
+                style={{ height: 1, minHeight: 1, background: 'var(--border-subtle, rgba(120, 120, 128, 0.28))', marginLeft: 55, marginRight: 0 }}
+              />
             )}
 
             {/* Portal flotante para menú de Primeros Pasos */}
@@ -569,8 +568,8 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 height: 1,
                 minHeight: 1,
                 background: 'var(--border-subtle, rgba(120, 120, 128, 0.28))',
-                marginLeft: 52,
-                marginRight: 8,
+                marginLeft: 55,
+                marginRight: 0,
                 opacity: 0.95,
                 flexShrink: 0
               }} 
