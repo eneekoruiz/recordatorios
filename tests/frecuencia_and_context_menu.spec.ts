@@ -87,7 +87,7 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     await page.keyboard.press('Escape');
   });
 
-  test('2. «+ Diarias» en Semanales: las diarias van aparte y el número de la sección no cambia', async ({ page }) => {
+  test('2. «+ Diarias» en Semanales: las diarias se mezclan al mismo nivel y el número las cuenta', async ({ page }) => {
     await ensureAppUnlocked(page);
 
     // Set up a list with a Diarias section and a Semanales section
@@ -164,21 +164,23 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     await expect(chip).toBeVisible({ timeout: 5000 });
     await expect(chip).toHaveAttribute('aria-pressed', 'false');
     await expect(semanalHeader.locator('.section-total-count')).toHaveText('1');
+    await expect(page.locator('.task-item-wrapper[data-task-id="task_daily_1"]')).not.toBeVisible();
 
-    // Encendida: las diarias salen en su propia subcabecera, con su número; Semanales sigue en 1
+    // Encendida: la diaria se mezcla con la semanal, al mismo nivel (sin subcabecera aparte),
+    // y el número de la cabecera pasa a contar las dos.
     await chip.click();
     await expect(chip).toHaveAttribute('aria-pressed', 'true');
-    const included = page.locator('.group-header', { has: page.locator('.included-dot') });
-    await expect(included).toHaveCount(1);
-    await expect(included).toContainText('Diarias');
-    await expect(included.locator('.section-total-count')).toHaveText('1');
-    await expect(semanalHeader.locator('.section-total-count')).toHaveText('1');
+    await expect(semanalHeader.locator('.section-total-count')).toHaveText('2');
+    // Un único nodo (Playwright falla en modo estricto si hubiera dos): no se duplica bajo su
+    // sección «Diarias» (que sigue plegada) y, además, mezclada bajo «Semanales».
     await expect(page.locator('.task-item-wrapper[data-task-id="task_daily_1"]')).toBeVisible();
+    await expect(page.locator('.task-item-wrapper[data-task-id="task_weekly_1"]')).toBeVisible();
 
-    // Apagada: la subcabecera desaparece
+    // Apagada: vuelve a mostrar solo la semanal
     await chip.click();
     await expect(chip).toHaveAttribute('aria-pressed', 'false');
-    await expect(included).toHaveCount(0);
+    await expect(semanalHeader.locator('.section-total-count')).toHaveText('1');
+    await expect(page.locator('.task-item-wrapper[data-task-id="task_daily_1"]')).not.toBeVisible();
 
     // Sin divisores redundantes dentro de las cabeceras
     expect(await page.locator('.group-header .ios-section-divider').count()).toBe(0);

@@ -71,10 +71,8 @@ type VirtualItemType =
       routineDurations?: { only: TasksDurationSummary; full: TasksDurationSummary } | null,
       routineMode?: 'full_routine' | 'only_section',
       sectionTaskIds?: string[],
-      /** Pendientes propias (sin las incluidas de otras frecuencias): el número de la cabecera. */
-      pendingCount?: number,
-      /** Subcabecera de las tareas de otras frecuencias incluidas («+ Diarias»). */
-      accumulated?: boolean
+      /** Pendientes de esta cabecera (con las incluidas ya mezcladas, si «+ Diarias» está activo). */
+      pendingCount?: number
     }
   | { type: 'empty-section', title: string, category: string, color: string, sectionId?: string, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean }
   | { type: 'task', task: TaskItem, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean };
@@ -1070,33 +1068,6 @@ const CORE_CYCLES = [
     const countPending = (list: TaskItem[]) =>
       list.filter(t => !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists)).length;
 
-    // Tareas de otras frecuencias incluidas en una sección («+ Diarias»): van aparte, tras las
-    // propias, con una subcabecera mínima por frecuencia («Diarias») y su propio recuento.
-    const INCLUDED_ORDER: PeriodicityType[] = ['year', 'month', 'week', 'day'];
-    const INCLUDED_LABEL: Record<PeriodicityType, string> = { day: 'Diarias', week: 'Semanales', month: 'Mensuales', year: 'Anuales' };
-    const pushIncludedGroups = (ownKey: string, ownPeriodicity: PeriodicityType | null | undefined, included: TaskItem[], depth: number) => {
-      INCLUDED_ORDER.forEach((p) => {
-        if (p === ownPeriodicity) return;
-        const group = included.filter(t => (getTaskPeriodicity(t, listSections, lists) || 'day') === p);
-        if (group.length === 0) return;
-        const key = `incluidas_${ownKey}_${p}`;
-        flat.push({
-          type: 'header',
-          title: INCLUDED_LABEL[p],
-          category: key,
-          color: getReservedFrequencyColor(`cycle_${p}`) || 'var(--text-tertiary)',
-          depth,
-          periodicity: p,
-          accumulated: true,
-          sectionTaskIds: group.filter(t => !isTaskCompleted(t)).map(t => t.id),
-          pendingCount: countPending(group)
-        });
-        if (!isCatCollapsed(key)) {
-          sortTasksByUserPreference(group, sortBy).forEach(task => flat.push({ type: 'task', task, depth }));
-        }
-      });
-    };
-
     // Categorías (Si estamos en ciclo o carpeta) o Ciclos/Secciones (Si estamos en Lista)
     if (currentView === 'TRASH') {
       const trashTasks = (groupedTasks['Papelera'] || []).sort((a, b) => {
@@ -1134,12 +1105,9 @@ const CORE_CYCLES = [
         const sectionPeriodicity = currentCycle 
           ? (currentCycle.id.replace('cycle_', '') as PeriodicityType)
           : getSectionPeriodicity(categoryOrCycle, headerTitle, listSections, lists);
-        // Con «Incluir diarias» (o acumuladas), las de otras frecuencias van aparte, tras las propias:
-        // así el número de cada lista es el de su frecuencia, como en la barra lateral.
-        const splitIncluded = Boolean(currentCycle && currentCycle.id !== 'cycle_day' && cycleViewMode === 'full_routine');
-        const isOwnCycleTask = (t: TaskItem) => getEffectiveCycleId(t, listSections, lists) === currentCycle?.id;
-        const tasksToRender = splitIncluded ? categoryTasks.filter(isOwnCycleTask) : categoryTasks;
-        const includedCycleTasks = splitIncluded ? categoryTasks.filter(t => !isOwnCycleTask(t)) : [];
+        // «Incluir diarias» (o acumuladas): categoryTasks ya trae las de frecuencias más cortas
+        // mezcladas (groupedTasks las filtra según cycleViewMode), al mismo nivel, sin subcabecera.
+        const tasksToRender = categoryTasks;
         let routineCounts = null;
         if (currentCycle && currentCycle.id !== 'cycle_day') {
           const rCounts = cycleRoutineCounts[categoryOrCycle];
@@ -1160,7 +1128,6 @@ const CORE_CYCLES = [
           // En las vistas de frecuencia manda el interruptor de la vista: sin conmutador por grupo.
           routineCounts: currentCycle ? null : routineCounts,
           routineMode: sectionRoutineMode,
-          // Duración y número de la lista: solo lo suyo (las incluidas llevan los suyos en su subcabecera)
           sectionTaskIds: tasksToRender.filter(t => !isTaskCompleted(t)).map(t => t.id),
           pendingCount: countPending(tasksToRender)
         });
@@ -1463,7 +1430,6 @@ const CORE_CYCLES = [
           };
 
           renderSectionTreeForTasks(tasksToRender, categoryOrCycle, 1, color);
-          if (includedCycleTasks.length > 0) pushIncludedGroups(categoryOrCycle, sectionPeriodicity, includedCycleTasks, 1);
         }
       });
     } else {
@@ -1610,7 +1576,6 @@ const CORE_CYCLES = [
           ]);
 
           const thisSectionTasksTotal = deduplicateTaskList([...categoryTasks, ...allChildTasks]);
-          let includedTasks: TaskItem[] = [];
 
           if (sectionPeriodicity && sectionPeriodicity !== 'day') {
             const allTasksInList = Object.values(groupedTasks).flat();
@@ -1632,9 +1597,8 @@ const CORE_CYCLES = [
 
               const currentRoutineMode = sectionRoutineModes[categoryKey] || 'only_section';
               if (currentRoutineMode === 'full_routine') {
-                // Las propias se quedan como están; las de otras frecuencias van aparte (abajo).
-                const ownIds = new Set(thisSectionTasksTotal.map(t => t.id));
-                includedTasks = fullRoutineTasks.filter(t => !ownIds.has(t.id));
+                // Las incluidas se mezclan con las propias, al mismo nivel (sin subcabecera).
+                tasksToRender = deduplicateTaskList(sortTasksByUserPreference(fullRoutineTasks, sortBy));
               }
             }
           }
@@ -1644,24 +1608,26 @@ const CORE_CYCLES = [
             return;
           }
 
-          const allSectionPendingTaskIds = [...thisSectionTasksTotal, ...includedTasks].filter(t => !isTaskCompleted(t)).map(t => t.id);
+          const currentRoutineMode = sectionRoutineModes[categoryKey] || 'only_section';
+          const sectionScopeForCounts = currentRoutineMode === 'full_routine' && routineCounts ? tasksToRender : thisSectionTasksTotal;
+          const allSectionPendingTaskIds = sectionScopeForCounts.filter(t => !isTaskCompleted(t)).map(t => t.id);
 
-          flat.push({ 
-            type: 'header', 
-            title: formatSectionTitle(sec.name), 
-            category: categoryKey, 
-            color, 
-            sectionId: sec.id, 
+          flat.push({
+            type: 'header',
+            title: formatSectionTitle(sec.name),
+            category: categoryKey,
+            color,
+            sectionId: sec.id,
             depth,
             periodicity: sectionPeriodicity,
             routineCounts,
             routineDurations,
             sectionTaskIds: allSectionPendingTaskIds,
-            pendingCount: countPending(thisSectionTasksTotal)
+            pendingCount: countPending(sectionScopeForCounts)
           });
-          
+
           if (!isCatCollapsed(categoryKey)) {
-            if (tasksToRender.length === 0 && childSections.length === 0 && includedTasks.length === 0) {
+            if (tasksToRender.length === 0 && childSections.length === 0) {
               flat.push({ type: 'empty-section', title: 'Aquí no hay tareas', category: categoryKey, color, sectionId: sec.id, depth });
             } else {
               if (tasksToRender.length > 0) {
@@ -1680,7 +1646,6 @@ const CORE_CYCLES = [
               if (childSections.length > 0) {
                 childSections.forEach(child => processSection(child.id, depth + 1));
               }
-              if (includedTasks.length > 0) pushIncludedGroups(categoryKey, sectionPeriodicity, includedTasks, depth + 1);
             }
           }
         };
@@ -1740,10 +1705,10 @@ const CORE_CYCLES = [
             const routineDurations = routineCounts ? { only: onlyDuration, full: fullDuration } : null;
 
             const mode = sectionRoutineModes[`limpieza_freq_${periodicity}`] || 'only_section';
-            // Las habitaciones muestran las tareas propias; las acumuladas van aparte, al final.
-            const tasksToGroup = freqTasks;
-            const freqOwnIds = new Set(freqTasks.map(t => t.id));
-            const includedFreqTasks = mode === 'full_routine' ? cumulativeTasks.filter(t => !freqOwnIds.has(t.id)) : [];
+            // Con «+ Acumuladas», las incluidas se mezclan en su habitación, al mismo nivel.
+            const tasksToGroup = (mode === 'full_routine' && cumulativeTasks.length > freqTasks.length)
+              ? cumulativeTasks
+              : freqTasks;
 
             const freqCatKey = `limpieza_freq_${periodicity}`;
             // Sección manual del store (por si existe "Semanal", "Diaria"...)
@@ -1787,8 +1752,8 @@ const CORE_CYCLES = [
               roomBuckets.get(roomKey!)!.tasks.push(t);
             });
 
-            // Calcular IDs pendientes de toda la frecuencia (todas habitaciones juntas + incluidas)
-            const freqPendingIds = [...tasksToGroup, ...includedFreqTasks].filter(t => !isTaskCompleted(t)).map(t => t.id);
+            // Calcular IDs pendientes de toda la frecuencia (todas habitaciones juntas)
+            const freqPendingIds = tasksToGroup.filter(t => !isTaskCompleted(t)).map(t => t.id);
 
             // Cabecera de frecuencia (depth 0)
             const freqColor = getReservedFrequencyColor(cycleId) || color;
@@ -1845,7 +1810,6 @@ const CORE_CYCLES = [
                   }
                 });
               }
-              if (includedFreqTasks.length > 0) pushIncludedGroups(freqCatKey, periodicity as PeriodicityType, includedFreqTasks, 1);
             }
           });
 
@@ -1949,16 +1913,17 @@ const CORE_CYCLES = [
               const routineDurations = routineCounts ? { only: onlyDuration, full: fullDuration } : null;
 
               const mode = sectionRoutineModes[catKey] || 'only_section';
-              const tasksToRender = deduplicateTaskList(categoryTasks);
-              // Con «+ Diarias», las de otras frecuencias van aparte, tras las propias.
-              const ownTreeIds = new Set(thisSectionTasksTotal.map(t => t.id));
-              const includedTreeTasks = mode === 'full_routine' && routineCounts
-                ? fullTasksTotal.filter(t => !ownTreeIds.has(t.id))
-                : [];
+              // Con «+ Diarias», las incluidas se mezclan con las propias, al mismo nivel.
+              const tasksToRender = deduplicateTaskList(
+                mode === 'full_routine' && fullTasksTotal.length > thisSectionTasksTotal.length
+                  ? sortTasksByUserPreference(fullTasksTotal, sortBy)
+                  : categoryTasks
+              );
 
-              const allSectionPendingTaskIds = [...thisSectionTasksTotal, ...includedTreeTasks].filter(t => !isTaskCompleted(t)).map(t => t.id);
+              const countScope = mode === 'full_routine' && routineCounts ? fullTasksTotal : thisSectionTasksTotal;
+              const allSectionPendingTaskIds = countScope.filter(t => !isTaskCompleted(t)).map(t => t.id);
 
-              if (tasksToRender.length === 0 && childSections.length === 0 && includedTreeTasks.length === 0) {
+              if (tasksToRender.length === 0 && childSections.length === 0) {
                 return;
               }
 
@@ -1973,7 +1938,7 @@ const CORE_CYCLES = [
                 routineCounts,
                 routineDurations,
                 sectionTaskIds: allSectionPendingTaskIds,
-                pendingCount: countPending(thisSectionTasksTotal)
+                pendingCount: countPending(countScope)
               });
 
               if (!isCatCollapsed(catKey)) {
@@ -1993,7 +1958,6 @@ const CORE_CYCLES = [
                   if (childSections.length > 0) {
                     childSections.forEach(child => processSection(child.id, 1));
                   }
-                  if (includedTreeTasks.length > 0) pushIncludedGroups(catKey, sectionPeriodicity, includedTreeTasks, 1);
               }
             });
           }
@@ -2166,6 +2130,14 @@ const CORE_CYCLES = [
     return `item-${index}`;
   }, []);
 
+  const currentListType = getListType(currentList, currentView);
+  const isRoutine = doesListSupportSequenceMode(currentListType) || isRoutineList(currentView, currentList);
+  // Empezar una tarea suelta: solo si la lista admite duración (rutinas), igual que la sección o la lista.
+  const canStartIndividualTasks = isRoutine && !isShoppingList(currentView, currentList);
+  const handleStartTask = useCallback((task: TaskItem) => {
+    onStartSequence?.([task.id], task.title);
+  }, [onStartSequence]);
+
   const renderTask = useCallback((task: TaskItem, itemStyle: React.CSSProperties, index: number, depth: number, isFirst: boolean, isLast: boolean, previousTaskId?: string, itemKey?: React.Key) => {
     const hasChildren = parentIdsWithChildren.has(task.id);
     const isExpanded = !isCatCollapsed(`task_${task.id}`);
@@ -2204,6 +2176,7 @@ const CORE_CYCLES = [
             canMoveUp={canMoveUp}
             canMoveDown={canMoveDown}
             onReorderTasks={handleReorderTasks}
+            onStartTask={canStartIndividualTasks ? handleStartTask : undefined}
             {...({
               hasChildren,
               isExpanded,
@@ -2213,7 +2186,7 @@ const CORE_CYCLES = [
         </div>
       </div>
     );
-  }, [parentIdsWithChildren, visibleIndexById, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, onSelectView, currentView, setSelectedPersonForProfile, recentlyCompletedIds, visibleTasks, handleMoveTaskUp, handleMoveTaskDown, handleReorderTasks]);
+  }, [parentIdsWithChildren, visibleIndexById, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, onSelectView, currentView, setSelectedPersonForProfile, recentlyCompletedIds, visibleTasks, handleMoveTaskUp, handleMoveTaskDown, handleReorderTasks, canStartIndividualTasks, handleStartTask]);
 
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
   const smartListInfo = isSmartView ? SMART_LISTS.find(l => l.id === currentView) : null;
@@ -2232,8 +2205,6 @@ const CORE_CYCLES = [
     return currentCycle?.name || 'Ciclos';
   };
 
-  const currentListType = getListType(currentList, currentView);
-  const isRoutine = doesListSupportSequenceMode(currentListType) || isRoutineList(currentView, currentList);
   const canStartSequence = isRoutine || (!currentList && viewTasksDuration.activeMinutes > 0);
 
   return (

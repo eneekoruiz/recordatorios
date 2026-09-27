@@ -35,6 +35,8 @@ export interface TaskContextMenuProps {
   onMoveDown?: () => void;
   canMoveUp?: boolean;
   canMoveDown?: boolean;
+  /** Solo si la lista admite duración (rutinas): empezar esta tarea sola, como una sección o una lista. */
+  onStartTask?: () => void;
 }
 
 export function TaskContextMenu({
@@ -54,7 +56,8 @@ export function TaskContextMenu({
   onMoveUp,
   onMoveDown,
   canMoveUp,
-  canMoveDown
+  canMoveDown,
+  onStartTask
 }: TaskContextMenuProps) {
   const updateTask = useAppStore(state => state.updateTask);
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
@@ -168,6 +171,7 @@ export function TaskContextMenu({
               onMoveDown={onMoveDown}
               canMoveUp={canMoveUp}
               canMoveDown={canMoveDown}
+              onStartTask={onStartTask}
             />
           </motion.div>
         </>
@@ -192,6 +196,7 @@ interface MenuActionsProps {
   onMoveDown?: () => void;
   canMoveUp?: boolean;
   canMoveDown?: boolean;
+  onStartTask?: () => void;
 }
 
 function MenuActions({
@@ -208,11 +213,11 @@ function MenuActions({
   onMoveUp,
   onMoveDown,
   canMoveUp,
-  canMoveDown
+  canMoveDown,
+  onStartTask
 }: MenuActionsProps) {
   const addTask = useAppStore(state => state.addTask);
   const restoreTask = useAppStore(state => state.restoreTask);
-  const postponeTask = useAppStore(state => state.postponeTask);
   const lists = useAppStore(state => state.lists);
   const listSections = useAppStore(state => state.listSections);
 
@@ -609,6 +614,18 @@ function MenuActions({
         }}
       />
 
+      {/* Empezar esta tarea sola (solo en listas con duración: rutinas) */}
+      {onStartTask && !isCompleted && (
+        <ActionRow
+          icon={<Play size={16} fill="var(--accent-primary)" color="var(--accent-primary)" />}
+          label="Empezar"
+          onClick={() => {
+            setContextMenuOpen(false);
+            onStartTask();
+          }}
+        />
+      )}
+
       <div className="ios-dropdown-divider" />
 
       {/* 3. Fecha límite */}
@@ -647,18 +664,6 @@ function MenuActions({
           setContextMenuOpen(false); 
           updateTask(task.id, { flagged: !task.flagged }); 
         }} 
-      />
-
-      {/* 7. Dejar para luego */}
-      <ActionRow
-        icon={<Clock size={16} />}
-        label="Dejar para luego"
-        subtitle="Al final de la lista"
-        onClick={() => {
-          setContextMenuOpen(false);
-          postponeTask(task.id);
-          HapticService.selection();
-        }}
       />
 
       <div className="ios-dropdown-divider" />

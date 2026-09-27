@@ -6,6 +6,7 @@ import type { TasksDurationSummary } from '../../../utils/taskDuration';
 import { isShoppingList } from '../../../utils/specialLists';
 import { useAppStore } from '../../../store/useAppStore';
 import { formatEuro } from '../../../utils/format';
+import { classifyDropZone, DRAG_MOVE_THRESHOLD_PX } from '../../../utils/dragDrop';
 
 interface SectionData {
   title: string;
@@ -19,10 +20,8 @@ interface SectionData {
   routineDurations?: { only: TasksDurationSummary; full: TasksDurationSummary } | null;
   routineMode?: 'full_routine' | 'only_section';
   sectionTaskIds?: string[];
-  /** Pendientes propias, sin las incluidas de otras frecuencias. */
+  /** Pendientes de esta cabecera (con las incluidas ya mezcladas, si «+ Diarias» está activo). */
   pendingCount?: number;
-  /** Subcabecera de las tareas incluidas de otra frecuencia («Diarias» dentro de «Semanales»). */
-  accumulated?: boolean;
 }
 
 interface MainSectionHeaderProps {
@@ -112,16 +111,15 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
 }) => {
   const currentSectionRoutineMode = sectionRoutineModes[data.category] || data.routineMode || 'only_section';
   const isShopping = isShoppingList(data.category);
-  // La cabecera describe solo lo suyo: las incluidas tienen su propia subcabecera.
-  const durSummary = !isShopping ? (data.routineDurations ? data.routineDurations.only : durationSummary) : null;
-  const isAccumulated = Boolean(data.accumulated);
+  // Con «+ Diarias» activo, routineDurations.full ya incluye las mezcladas (mismo nivel, sin subcabecera).
+  const isFullRoutine = currentSectionRoutineMode === 'full_routine';
+  const durSummary = !isShopping ? (data.routineDurations ? (isFullRoutine ? data.routineDurations.full : data.routineDurations.only) : durationSummary) : null;
   const sectionDurationLabel = durSummary && durSummary.activeMinutes > 0 ? durSummary.formattedActive : null;
   // Bajo el nombre, en gris y sin iconos: «~30 min · 6,20 €».
   const sectionMeta = [
     sectionDurationLabel ? `~${sectionDurationLabel}` : null,
     sectionTotal > 0 ? formatEuro(sectionTotal) : null,
   ].filter(Boolean).join(' · ');
-  const isFullRoutine = currentSectionRoutineMode === 'full_routine';
   // Corto para caber en el móvil: «+ Diarias» en las semanales, «+ Acumuladas» en mensuales y anuales.
   const includeLabel = data.periodicity === 'week' ? 'Diarias' : 'Acumuladas';
   const [isPressed, setIsPressed] = useState(false);
@@ -131,6 +129,10 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   const touchStartPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const rowRef = useRef<HTMLDivElement>(null);
   const moreBtnRef = useRef<HTMLButtonElement>(null);
+  // Arrastrar con el dedo (mantener pulsado se «arma»; mover de verdad arrastra, quieto abre el menú)
+  const [isDraggingTouchSection, setIsDraggingTouchSection] = useState(false);
+  const touchSectionGhostRef = useRef<HTMLDivElement | null>(null);
+  const touchSectionDragActiveRef = useRef(false);
   const getRowRect = useCallback(() => {
     if (!rowRef.current) return undefined;
     const rect = rowRef.current.getBoundingClientRect();
@@ -145,8 +147,6 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   );
 
   const openSectionMenu = useCallback(() => {
-    // Las subcabeceras de incluidas no son secciones: no tienen menú.
-    if (isAccumulated) return;
     HapticService.selection();
 
     const rowRect = getRowRect();
@@ -192,7 +192,120 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       triggerRect: rowRect,
       getTriggerElement: () => rowRef.current
     });
-  }, [isAccumulated, data.sectionId, data.title, data.color, data.category, data.depth, pendingTaskCount, setSectionMenu, getRowRect]);
+  }, [data.sectionId, data.title, data.color, data.category, data.depth, pendingTaskCount, setSectionMenu, getRowRect]);
+
+  // Arrastre táctil de la sección: se arma al mantener pulsado; si luego el dedo se mueve de
+  // verdad, arrastra (reordenar o anidar); si se suelta sin moverse, abre el menú de la sección.
+  // Igual que en las tareas: así una misma pulsación mantenida nunca es ambigua.
+  const startSectionTouchDrag = useCallback((startY: number, startX: number) => {
+    const sectionId = data.sectionId;
+    if (!sectionId || !rowRef.current) return;
+    const rect = rowRef.current.getBoundingClientRect();
+
+    const createGhost = () => {
+      if (!rowRef.current) return;
+      const cloned = rowRef.current.cloneNode(true) as HTMLDivElement;
+      cloned.querySelectorAll('[data-section-drag-ghost]').forEach(el => el.remove());
+      const ghost = document.createElement('div');
+      ghost.setAttribute('data-section-drag-ghost', 'true');
+      ghost.style.cssText = `
+        position:fixed;
+        left:${rect.left}px;
+        top:${startY - rect.height / 2}px;
+        width:${rect.width}px;
+        height:${rect.height}px;
+        pointer-events:none;
+        z-index:999999;
+        border-radius:12px;
+        box-shadow:0 10px 36px rgba(0,0,0,0.28),0 0 0 2px ${data.color || 'var(--accent-primary,#007aff)'};
+        opacity:0.95;
+        transform:scale(1.02);
+        overflow:hidden;
+        background:var(--bg-base);
+      `;
+      ghost.appendChild(cloned);
+      document.body.appendChild(ghost);
+      touchSectionGhostRef.current = ghost;
+      setIsDraggingTouchSection(true);
+      HapticService.impact('medium');
+    };
+
+    const onMove = (ev: TouchEvent) => {
+      const t = ev.touches[0];
+      ev.preventDefault();
+      const moved = Math.abs(t.clientY - startY) > DRAG_MOVE_THRESHOLD_PX || Math.abs(t.clientX - startX) > DRAG_MOVE_THRESHOLD_PX;
+      if (!moved && !touchSectionDragActiveRef.current) return;
+      if (!touchSectionDragActiveRef.current) createGhost();
+      touchSectionDragActiveRef.current = true;
+      if (touchSectionGhostRef.current) {
+        touchSectionGhostRef.current.style.top = `${t.clientY - rect.height / 2}px`;
+      }
+      document.querySelectorAll<HTMLElement>('[data-section-drag-key]').forEach((el) => {
+        if (el.getAttribute('data-section-drag-key') === sectionId) {
+          el.removeAttribute('data-section-drag-over');
+          return;
+        }
+        const elRect = el.getBoundingClientRect();
+        if (t.clientY >= elRect.top && t.clientY <= elRect.bottom) {
+          const relY = (t.clientY - elRect.top) / elRect.height;
+          el.setAttribute('data-section-drag-over', classifyDropZone(relY));
+        } else {
+          el.removeAttribute('data-section-drag-over');
+        }
+      });
+    };
+
+    const cleanup = () => {
+      document.removeEventListener('touchmove', onMove);
+      if (touchSectionGhostRef.current) {
+        document.body.removeChild(touchSectionGhostRef.current);
+        touchSectionGhostRef.current = null;
+      }
+      document.querySelectorAll<HTMLElement>('[data-section-drag-over]').forEach(el => el.removeAttribute('data-section-drag-over'));
+      setIsDraggingTouchSection(false);
+      document.body.style.overflow = '';
+    };
+
+    const onEnd = () => {
+      const wasActive = touchSectionDragActiveRef.current;
+      let targetId: string | null = null;
+      let dropAction: 'top' | 'bottom' | 'inside' = 'top';
+      if (wasActive) {
+        const candidates = Array.from(document.querySelectorAll<HTMLElement>('[data-section-drag-key]'));
+        for (const el of candidates) {
+          const attr = el.getAttribute('data-section-drag-over');
+          if (attr) {
+            targetId = el.getAttribute('data-section-drag-key');
+            dropAction = attr as 'top' | 'bottom' | 'inside';
+          }
+        }
+      }
+      cleanup();
+      touchSectionDragActiveRef.current = false;
+
+      if (wasActive) {
+        if (targetId && targetId !== sectionId) {
+          if (dropAction === 'inside') {
+            useAppStore.getState().updateListSection(sectionId, { parentId: targetId });
+            HapticService.notification('success');
+          } else {
+            onReorderSections?.(sectionId, targetId, dropAction === 'bottom' ? 'after' : 'before');
+            HapticService.impact('medium');
+          }
+        }
+      } else {
+        openSectionMenu();
+      }
+    };
+
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onEnd, { once: true });
+    document.addEventListener('touchcancel', () => {
+      touchSectionDragActiveRef.current = false;
+      cleanup();
+    }, { once: true });
+  }, [data.sectionId, data.color, onReorderSections, openSectionMenu]);
 
   return (
     <div
@@ -200,7 +313,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       data-index={index}
       ref={rowRef}
       className="group-header"
-      draggable={isCustomSection && !editingSectionId}
+      draggable={!isMobile && isCustomSection && !editingSectionId}
+      data-section-drag-key={data.sectionId}
       onDragStart={(e) => {
         if (!isCustomSection || !data.sectionId) return;
         e.stopPropagation();
@@ -208,8 +322,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         e.dataTransfer.setData('text/plain', data.sectionId);
         e.dataTransfer.effectAllowed = 'move';
       }}
-      style={{ 
-        ...itemStyle, 
+      style={{
+        ...itemStyle,
         position: 'sticky',
         top: data.depth === 0 ? 0 : 48,
         zIndex: isMenuOpenForThisSection ? 999992 : (data.depth === 0 ? 30 : 25),
@@ -227,8 +341,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         flexDirection: 'column',
         justifyContent: 'center',
         outline: isDraggingOver ? `2px solid ${data.color}` : undefined,
-        background: isDraggingOver 
-          ? `${data.color}14` 
+        background: isDraggingOver
+          ? `${data.color}14`
           : isMenuOpenForThisSection
           ? 'var(--bg-elevated, #ffffff)'
           : isPressed
@@ -238,12 +352,14 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         userSelect: 'none',
         WebkitUserSelect: 'none',
         borderRadius: isMenuOpenForThisSection ? 10 : 0,
-        borderLeft: isMenuOpenForThisSection 
-          ? `4px solid ${data.color || 'var(--accent-primary)'}` 
-          : isPressed 
-          ? '4px solid var(--border-subtle)' 
+        borderLeft: isMenuOpenForThisSection
+          ? `4px solid ${data.color || 'var(--accent-primary)'}`
+          : isPressed
+          ? '4px solid var(--border-subtle)'
           : '4px solid transparent',
-        transition: 'background 0.15s ease, border-color 0.15s ease, border-radius 0.15s ease'
+        opacity: isDraggingTouchSection ? 0.35 : 1,
+        touchAction: isDraggingTouchSection ? 'none' : undefined,
+        transition: 'background 0.15s ease, border-color 0.15s ease, border-radius 0.15s ease, opacity 0.15s ease'
       }}
       onClick={() => toggleCategory(data.category)}
       onClickCapture={(e) => {
@@ -260,9 +376,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           e.dataTransfer.dropEffect = 'move';
           const rect = e.currentTarget.getBoundingClientRect();
           const relY = (e.clientY - rect.top) / rect.height;
-          if (relY < 0.25) setSectionDragOverPos('top');
-          else if (relY > 0.75) setSectionDragOverPos('bottom');
-          else setSectionDragOverPos('inside');
+          setSectionDragOverPos(classifyDropZone(relY));
         } else if (isCustomSection) {
           e.preventDefault();
           setDragOverSectionId(data.sectionId!);
@@ -304,31 +418,37 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         if ((e.target as HTMLElement).closest('button, input')) return;
         setIsPressed(true);
         didSectionLongPressRef.current = false;
-        if (e.pointerType !== 'touch' || isAccumulated) return;
+        if (e.pointerType !== 'touch' || !isCustomSection) return;
+        // Mantener pulsado «arma» el gesto; startSectionTouchDrag decide, al soltar o al moverse
+        // de verdad, si era para abrir el menú o para arrastrar (reordenar o anidar).
         touchStartPos.current = { x: e.clientX, y: e.clientY };
+        const sx = e.clientX, sy = e.clientY;
         if (sectionTouchTimer.current) clearTimeout(sectionTouchTimer.current);
         sectionTouchTimer.current = setTimeout(() => {
+          sectionTouchTimer.current = null;
           setIsPressed(false);
           didSectionLongPressRef.current = true;
-          HapticService.impact('medium');
-          openSectionMenu();
-        }, 500);
+          startSectionTouchDrag(sy, sx);
+        }, 380);
       }}
-      onPointerUp={() => { 
+      onPointerUp={() => {
         setIsPressed(false);
-        if (sectionTouchTimer.current) clearTimeout(sectionTouchTimer.current); 
+        if (sectionTouchTimer.current) clearTimeout(sectionTouchTimer.current);
       }}
-      onPointerCancel={() => { 
+      onPointerCancel={() => {
         setIsPressed(false);
-        if (sectionTouchTimer.current) clearTimeout(sectionTouchTimer.current); 
+        if (sectionTouchTimer.current) clearTimeout(sectionTouchTimer.current);
       }}
-      onPointerMove={(e) => { 
-        if (isPressed && e.pointerType === 'touch') {
+      onPointerMove={(e) => {
+        // Solo mientras se espera a que el gesto se arme: si hay movimiento grande antes de
+        // eso, es un scroll de la lista, no una pulsación mantenida sobre esta fila.
+        if (sectionTouchTimer.current && e.pointerType === 'touch') {
           const dx = Math.abs(e.clientX - touchStartPos.current.x);
           const dy = Math.abs(e.clientY - touchStartPos.current.y);
-          if (dx > 12 || dy > 12) {
+          if (dx > 20 || dy > 20) {
             setIsPressed(false);
-            if (sectionTouchTimer.current) clearTimeout(sectionTouchTimer.current);
+            clearTimeout(sectionTouchTimer.current);
+            sectionTouchTimer.current = null;
           }
         }
       }}
@@ -366,9 +486,6 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, justifyContent: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                {isAccumulated && (
-                  <span aria-hidden="true" className="included-dot" style={{ background: data.color }} />
-                )}
                 {data.titleIcon && (
                   <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 2, opacity: 0.85, flexShrink: 0 }}>
                     {data.titleIcon}
@@ -433,7 +550,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               <span>Ficha</span>
             </button>
           )}
-          {isCustomSection && !isMobile && !isAccumulated && (
+          {isCustomSection && !isMobile && (
             <button 
               ref={moreBtnRef}
               type="button"
@@ -472,9 +589,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               <span>{includeLabel}</span>
             </button>
           )}
-          {/* Conteo numérico sutil estilo Apple */}
+          {/* Conteo numérico sutil estilo Apple: lo que hay bajo la cabecera (con las incluidas ya mezcladas) */}
           {(() => {
-            // Solo las propias: las incluidas llevan su número en su subcabecera, así la suma cuadra.
             const count = data.pendingCount ?? pendingTaskCount ?? data.sectionTaskIds?.length ?? 0;
             return count > 0 ? (
               <span 

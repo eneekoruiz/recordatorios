@@ -23,6 +23,7 @@ import { TaskHabitCounter } from './card/TaskHabitCounter';
 import { TaskNoteEditor } from './card/TaskNoteEditor';
 import { getTaskPeriodicity, stripPeriodicityPrefix } from '../../utils/sectionRoutine';
 import { extractPrice } from '../../utils/priceExtractor';
+import { classifyDropZone, DRAG_MOVE_THRESHOLD_PX } from '../../utils/dragDrop';
 
 interface TaskCardProps {
   task: TaskItem;
@@ -50,6 +51,8 @@ interface TaskCardProps {
   canMoveUp?: boolean;
   canMoveDown?: boolean;
   onReorderTasks?: (sourceId: string, targetId: string, position: 'before' | 'after') => void;
+  /** Solo si la lista admite duración (rutinas): empezar esta tarea sola, como una sección o una lista. */
+  onStartTask?: (task: TaskItem) => void;
 }
 
 // Recorrido del dedo (px) a partir del cual deslizar completa (→) o pide borrar (←).
@@ -58,7 +61,7 @@ const SWIPE_DELETE_THRESHOLD = -65;
 
 export const TaskCard = React.memo(function TaskCard({
   task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, showListName = true, hideDueDate = false, isFirstInSection, isLastInSection, previousTaskId, hasChildren, isExpanded, onToggleExpand, indent = 0, onNavigateView, onPersonClick, isGracePeriod,
-  onMoveUp, onMoveDown, canMoveUp, canMoveDown, onReorderTasks
+  onMoveUp, onMoveDown, canMoveUp, canMoveDown, onReorderTasks, onStartTask
 }: TaskCardProps) {
   const cycles = useAppStore(state => state.cycles);
   const tasks = useAppStore(state => state.tasks);
@@ -425,13 +428,7 @@ export const TaskCard = React.memo(function TaskCard({
       e.dataTransfer.dropEffect = 'move';
       const rect = e.currentTarget.getBoundingClientRect();
       const relY = (e.clientY - rect.top) / rect.height;
-      if (relY < 0.25) {
-        setDragOverPosition('top');
-      } else if (relY > 0.75) {
-        setDragOverPosition('bottom');
-      } else {
-        setDragOverPosition('inside');
-      }
+      setDragOverPosition(classifyDropZone(relY));
     }
   };
 
@@ -474,38 +471,45 @@ export const TaskCard = React.memo(function TaskCard({
     touchDragLiftedRef.current = true;
     touchDragActiveRef.current = false;
 
-    // Build ghost — clone the real card DOM so it looks identical
+    // El fondo (rect) se mide ya, pero el «fantasma» solo se crea si de verdad hay arrastre
+    // (ver más abajo): así, mantener quieto para abrir el menú se queda limpio, sin ninguna
+    // animación de «se está levantando» que sugiera que se está arrastrando algo.
     const rect = wrapperRef.current.getBoundingClientRect();
-    const cloned = wrapperRef.current.cloneNode(true) as HTMLDivElement;
-    // Remove any data-touch-drag-over attributes that might be set
-    cloned.removeAttribute('data-touch-drag-over');
-    // Remove interactive elements from clone to avoid ghost showing menus
-    cloned.querySelectorAll('[data-touch-drag-ghost]').forEach(el => el.remove());
-    const ghost = document.createElement('div');
-    ghost.setAttribute('data-touch-drag-ghost', 'true');
-    ghost.style.cssText = `
-      position:fixed;
-      left:${rect.left}px;
-      top:${startY - rect.height / 2}px;
-      width:${rect.width}px;
-      height:${rect.height}px;
-      pointer-events:none;
-      z-index:999999;
-      border-radius:12px;
-      box-shadow:0 10px 36px rgba(0,0,0,0.28),0 0 0 2px var(--accent-primary,#007aff);
-      opacity:0.95;
-      transform:scale(1.03);
-      overflow:hidden;
-    `;
-    ghost.appendChild(cloned);
-    document.body.appendChild(ghost);
-    touchDragGhostRef.current = ghost;
-    setIsDraggingTouch(true);
-    HapticService.impact('medium');
+    const createGhost = () => {
+      const cloned = wrapperRef.current!.cloneNode(true) as HTMLDivElement;
+      cloned.removeAttribute('data-touch-drag-over');
+      cloned.querySelectorAll('[data-touch-drag-ghost]').forEach(el => el.remove());
+      const ghost = document.createElement('div');
+      ghost.setAttribute('data-touch-drag-ghost', 'true');
+      ghost.style.cssText = `
+        position:fixed;
+        left:${rect.left}px;
+        top:${startY - rect.height / 2}px;
+        width:${rect.width}px;
+        height:${rect.height}px;
+        pointer-events:none;
+        z-index:999999;
+        border-radius:12px;
+        box-shadow:0 10px 36px rgba(0,0,0,0.28),0 0 0 2px var(--accent-primary,#007aff);
+        opacity:0.95;
+        transform:scale(1.03);
+        overflow:hidden;
+      `;
+      ghost.appendChild(cloned);
+      document.body.appendChild(ghost);
+      touchDragGhostRef.current = ghost;
+      setIsDraggingTouch(true);
+      HapticService.impact('medium');
+    };
 
     const onMove = (ev: TouchEvent) => {
       const t = ev.touches[0];
       ev.preventDefault();
+      // Por debajo del umbral no cuenta como arrastre: el pulso de la mano al mantener pulsado
+      // no debe convertir en un intento de arrastre fallido lo que solo quería abrir el menú.
+      const moved = Math.abs(t.clientY - startY) > DRAG_MOVE_THRESHOLD_PX || Math.abs(t.clientX - startX) > DRAG_MOVE_THRESHOLD_PX;
+      if (!moved && !touchDragActiveRef.current) return;
+      if (!touchDragActiveRef.current) createGhost(); // primer movimiento real: ahora sí se «levanta»
       touchDragActiveRef.current = true;
       if (touchDragGhostRef.current) {
         touchDragGhostRef.current.style.top = `${t.clientY - rect.height / 2}px`;
@@ -515,7 +519,7 @@ export const TaskCard = React.memo(function TaskCard({
         const elRect = el.getBoundingClientRect();
         if (t.clientY >= elRect.top && t.clientY <= elRect.bottom) {
           const relY = (t.clientY - elRect.top) / elRect.height;
-          el.setAttribute('data-touch-drag-over', relY < 0.25 ? 'top' : relY > 0.75 ? 'bottom' : 'inside');
+          el.setAttribute('data-touch-drag-over', classifyDropZone(relY));
         } else {
           el.removeAttribute('data-touch-drag-over');
         }
@@ -581,8 +585,6 @@ export const TaskCard = React.memo(function TaskCard({
       touchDragActiveRef.current = false;
       document.body.style.overflow = '';
     }, { once: true });
-
-    void startY; void startX;
   }, [onReorderTasks, task.id, openContextMenu, nestTask]);
 
   return (
@@ -1624,6 +1626,7 @@ export const TaskCard = React.memo(function TaskCard({
         onMoveDown={onMoveDown ? () => onMoveDown(task.id) : undefined}
         canMoveUp={canMoveUp}
         canMoveDown={canMoveDown}
+        onStartTask={onStartTask ? () => onStartTask(task) : undefined}
       />
 
       {/* ── Priority Quick Picker Popover ── */}

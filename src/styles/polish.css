@@ -1001,14 +1001,6 @@ body.dark .cad-summary-cost strong {
   cursor: pointer;
 }
 
-/* Subcabecera de las incluidas («Diarias» dentro de «Semanales»): un punto con el color de su frecuencia */
-.included-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  margin-right: 1px;
-}
 .routine-include-sub {
   display: block;
   margin-top: 1px;
