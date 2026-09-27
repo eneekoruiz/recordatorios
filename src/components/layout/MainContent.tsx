@@ -2664,12 +2664,6 @@ const CORE_CYCLES = [
               }
             } : undefined}
             onDelete={handleDeleteSectionMenu}
-            isCollapsed={sectionMenu.category ? isCatCollapsed(sectionMenu.category) : false}
-            onToggleCollapse={() => {
-              if (sectionMenu.category) {
-                toggleCategory(sectionMenu.category);
-              }
-            }}
             canMoveUp={canMoveUp}
             canMoveDown={canMoveDown}
             onMoveUp={() => {
@@ -2735,20 +2729,6 @@ const CORE_CYCLES = [
             }}
             lists={lists || []}
             sections={(listSections || []).filter(s => s.listId === currentList?.id && !s.deleted_at)}
-            routineMode={sectionMenu.category ? (sectionRoutineModes[sectionMenu.category] || 'only_section') : undefined}
-            onToggleRoutineMode={sectionMenu.category ? () => {
-              const cur = sectionRoutineModes[sectionMenu.category!] || 'only_section';
-              const next = cur === 'full_routine' ? 'only_section' : 'full_routine';
-              toggleSectionRoutineMode(sectionMenu.category!, next);
-            } : undefined}
-            routineCounts={sectionMenu.category ? (() => {
-              const secItem = flattenedData.find(item => item.type === 'header' && (item.category === sectionMenu.category || (item.sectionId && item.sectionId === sectionMenu.sectionId))) as (Extract<VirtualItemType, { type: 'header' }> | undefined);
-              return secItem?.routineCounts || cycleRoutineCounts[sectionMenu.category] || null;
-            })() : null}
-            routineDurations={sectionMenu.category ? (() => {
-              const secItem = flattenedData.find(item => item.type === 'header' && (item.category === sectionMenu.category || (item.sectionId && item.sectionId === sectionMenu.sectionId))) as (Extract<VirtualItemType, { type: 'header' }> | undefined);
-              return secItem?.routineDurations || null;
-            })() : null}
           />
         );
       })()}

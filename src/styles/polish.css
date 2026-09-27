@@ -17,11 +17,6 @@
   --spacing-md: 8px;
 }
 
-/* Tarjeta seleccionada: desenfoque suave del fondo */
-.selected-card {
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
-}
 
 [data-theme="dark"], [data-theme="dark"] :root, html.dark, body.dark {
   --bg-base: #000000;
@@ -190,7 +185,12 @@ h1, h2, h3,
   opacity: 0.55;
   transition: opacity 0.15s ease, color 0.15s ease;
 }
-.task-item-wrapper:hover .task-info-btn,
+@media (hover: hover) and (pointer: fine) {
+  .task-item-wrapper:hover .task-info-btn {
+    opacity: 1;
+    color: var(--accent-primary) !important;
+  }
+}
 .task-info-btn:focus-visible {
   opacity: 1;
   color: var(--accent-primary) !important;
@@ -354,8 +354,10 @@ input:focus, input:focus-visible, textarea:focus, textarea:focus-visible {
   cursor: default;
   transition: background 0.15s ease, transform 0.15s ease;
 }
-.section-duration-pill:hover {
-  transform: scale(1.04);
+@media (hover: hover) and (pointer: fine) {
+  .section-duration-pill:hover {
+    transform: scale(1.04);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -375,9 +377,11 @@ input:focus, input:focus-visible, textarea:focus, textarea:focus-visible {
   transition: opacity 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
   flex-shrink: 0;
 }
-.section-start-btn:hover {
-  opacity: 0.88;
-  transform: scale(1.04);
+@media (hover: hover) and (pointer: fine) {
+  .section-start-btn:hover {
+    opacity: 0.88;
+    transform: scale(1.04);
+  }
 }
 .section-start-btn:active {
   transform: scale(0.96);
@@ -396,9 +400,11 @@ input:focus, input:focus-visible, textarea:focus, textarea:focus-visible {
   white-space: nowrap !important;
   outline: none;
 }
-.apple-nav-start-btn:hover {
-  transform: translateY(-0.5px) scale(1.02);
-  filter: brightness(1.05);
+@media (hover: hover) and (pointer: fine) {
+  .apple-nav-start-btn:hover {
+    transform: translateY(-0.5px) scale(1.02);
+    filter: brightness(1.05);
+  }
 }
 .apple-nav-start-btn:active {
   transform: translateY(0) scale(0.97);
@@ -496,8 +502,10 @@ input:focus, input:focus-visible, textarea:focus, textarea:focus-visible {
 }
 
 /* Section header hover highlight */
-.group-header:hover .section-start-btn {
-  opacity: 1;
+@media (hover: hover) and (pointer: fine) {
+  .group-header:hover .section-start-btn {
+    opacity: 1;
+  }
 }
 
 /* Smooth focus ring system-wide with color from accent */
@@ -1011,15 +1019,59 @@ body.dark .cad-summary-cost strong {
   border-radius: 6px;
   transition: opacity 0.15s ease, background-color 0.15s ease;
 }
-.group-header:hover .section-more-btn,
+@media (hover: hover) and (pointer: fine) {
+  .group-header:hover .section-more-btn {
+    opacity: 0.6;
+  }
+}
 .section-more-btn:focus-visible,
 .section-more-btn[aria-expanded="true"] {
   opacity: 0.6;
 }
-.section-more-btn:hover {
-  opacity: 1 !important;
-  background-color: color-mix(in srgb, var(--text-primary) 7%, transparent) !important;
+@media (hover: hover) and (pointer: fine) {
+  .section-more-btn:hover {
+    opacity: 1 !important;
+    background-color: color-mix(in srgb, var(--text-primary) 7%, transparent) !important;
+  }
 }
 @media (hover: none) {
   .section-more-btn { opacity: 0.5; }
+}
+
+/* Menú de sección: «Subir · Bajar» compactos, en una fila */
+.section-move-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 2px 2px 4px;
+}
+.section-move-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  border: 0;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.12s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .section-move-btn:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--text-primary) 10%, transparent);
+  }
+}
+.section-move-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.section-move-btn:disabled {
+  color: var(--text-tertiary);
+  opacity: 0.45;
+  cursor: default;
 }

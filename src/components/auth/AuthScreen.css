@@ -208,7 +208,9 @@
   color: var(--text-secondary);
   cursor: pointer;
 }
-.auth-eye:hover { background: var(--bg-hover); }
+@media (hover: hover) and (pointer: fine) {
+  .auth-eye:hover { background: var(--bg-hover); }
+}
 
 .auth-strength { display: flex; align-items: center; gap: 4px; }
 .auth-strength i { flex: 1; height: 4px; border-radius: 2px; background: var(--border-color); }
@@ -231,7 +233,9 @@
   cursor: pointer;
   text-decoration: none;
 }
-.auth-inline-link:hover { text-decoration: underline; }
+@media (hover: hover) and (pointer: fine) {
+  .auth-inline-link:hover { text-decoration: underline; }
+}
 
 .auth-submit {
   height: 48px;
@@ -250,7 +254,9 @@
   cursor: pointer;
   transition: transform 0.16s var(--ease-spring), filter 0.16s ease, opacity 0.16s ease;
 }
-.auth-submit:hover { filter: brightness(1.06); transform: translateY(-1px); }
+@media (hover: hover) and (pointer: fine) {
+  .auth-submit:hover { filter: brightness(1.06); transform: translateY(-1px); }
+}
 .auth-submit:active { transform: scale(0.98); }
 .auth-submit:disabled { opacity: 0.6; cursor: progress; transform: none; }
 
@@ -269,7 +275,9 @@
   font-weight: 600;
   cursor: pointer;
 }
-.auth-secondary:hover { background: var(--bg-hover); }
+@media (hover: hover) and (pointer: fine) {
+  .auth-secondary:hover { background: var(--bg-hover); }
+}
 .auth-guest { color: var(--text-secondary); }
 
 @media (max-width: 860px) {

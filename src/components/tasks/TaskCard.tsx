@@ -250,6 +250,8 @@ export const TaskCard = React.memo(function TaskCard({
   // --- SWIPE (iOS-style: card physically moves) ---
   const x = useMotionValue(0);
 
+  const getCardElement = useCallback(() => cardRef.current, []);
+
   const openContextMenu = useCallback(() => {
     HapticService.impact('medium');
     x.set(0); // Reset any active horizontal swipe offset immediately
@@ -739,9 +741,8 @@ export const TaskCard = React.memo(function TaskCard({
         onDragEnd={(_, info) => handleSwipeEnd(info.offset.x)}
         animate={{
           scale: 1,
-          boxShadow: contextMenuOpen 
-            ? '0 12px 32px rgba(0,0,0,0.18), 0 0 0 1px var(--border-subtle)' 
-            : 'none',
+          // La elevación la pone el telón (hueco con sombra): aquí, sin bordes dobles.
+          boxShadow: 'none',
           borderRadius: contextMenuOpen 
             ? '12px' 
             : (isFirstInSection && isLastInSection 
@@ -1611,6 +1612,7 @@ export const TaskCard = React.memo(function TaskCard({
         onClose={() => setContextMenuOpen(false)}
         position={contextMenuPosition}
         triggerRect={contextMenuTriggerRect}
+        getTriggerElement={getCardElement}
         onEdit={onEdit}
         nestTask={nestTask}
         previousTaskId={previousTaskId}

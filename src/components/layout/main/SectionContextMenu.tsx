@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -7,8 +7,6 @@ import {
   Trash2, 
   FolderPlus, 
   Play,
-  ChevronDown,
-  ChevronUp,
   ArrowUp,
   ArrowDown,
   CheckCheck,
@@ -25,6 +23,7 @@ import {
 } from 'lucide-react';
 import { SpotlightBackdrop, type SpotlightRect } from '../../ui/SpotlightBackdrop';
 import { HapticService } from '../../../services/HapticService';
+import { useFitMenuInViewport } from '../../../hooks/useFitMenuInViewport';
 import type { CustomList, ListSection } from '../../../models/Task';
 
 export interface SectionMenuState {
@@ -38,6 +37,8 @@ export interface SectionMenuState {
   category?: string;
   /** Rectángulo de la cabecera de sección que abrió el menú. */
   triggerRect?: SpotlightRect | null;
+  /** La cabecera en sí: el hueco nítido la sigue si la lista se desplaza. */
+  getTriggerElement?: () => HTMLElement | null;
 }
 
 export interface SectionContextMenuProps {
@@ -50,8 +51,6 @@ export interface SectionContextMenuProps {
   onDelete?: () => void;
 
   // Acciones avanzadas de sección
-  isCollapsed?: boolean;
-  onToggleCollapse?: () => void;
   canMoveUp?: boolean;
   canMoveDown?: boolean;
   onMoveUp?: () => void;
@@ -65,10 +64,6 @@ export interface SectionContextMenuProps {
   onMoveAllTasks?: (targetListId: string, targetSectionId?: string) => void;
   lists?: CustomList[];
   sections?: ListSection[];
-  routineMode?: 'full_routine' | 'only_section';
-  onToggleRoutineMode?: () => void;
-  routineCounts?: { only: number; full: number } | null;
-  routineDurations?: { only?: { formattedActive: string }; full?: { formattedActive: string } } | null;
 }
 
 function SubmenuHeader({ title, onBack }: { title: string; onBack: () => void }) {
@@ -109,8 +104,6 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
   onAddNestedSection,
   onStartSequence,
   onDelete,
-  isCollapsed = false,
-  onToggleCollapse,
   canMoveUp = false,
   canMoveDown = false,
   onMoveUp,
@@ -124,12 +117,11 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
   onMoveAllTasks,
   lists = [],
   sections = [],
-  routineMode = 'only_section',
-  onToggleRoutineMode,
-  routineCounts,
-  routineDurations
 }) => {
   const [currentSubmenu, setCurrentSubmenu] = useState<'main' | 'sort' | 'move_tasks'>('main');
+  const sheetRef = useRef<HTMLDivElement>(null);
+  // Escritorio: con su altura real, el menú cabe siempre (debajo, encima o pegado al borde).
+  useFitMenuInViewport(sheetRef, sectionMenu.triggerRect, sectionMenu.open && window.innerWidth > 768);
 
   // Al cerrarse, el menú vuelve a su pantalla principal (se ajusta durante el render).
   if (!sectionMenu.open && currentSubmenu !== 'main') {
@@ -167,13 +159,16 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
   return createPortal(
     <>
       <SpotlightBackdrop
-        rect={isMobile ? null : (sectionMenu.triggerRect ?? null)}
+        rect={sectionMenu.triggerRect ?? null}
+        getTarget={sectionMenu.getTriggerElement}
+        sheetRef={isMobile ? sheetRef : undefined}
         onClose={onClose}
         onWheel={onClose}
         radius={10}
-        padding={3}
+        padding={0}
       />
       <motion.div
+        ref={sheetRef}
         className="ios-dropdown-menu"
         initial={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.95, y: -4 }}
         animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }}
@@ -344,109 +339,42 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
         {/* MENÚ PRINCIPAL */}
         {currentSubmenu === 'main' && (
           <>
-            {/* BARRA SUPERIOR DE ACCIONES RÁPIDAS (Plegar / Subir / Bajar) */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: 4,
-              padding: '2px 2px 4px 2px'
-            }}>
-              <button
-                type="button"
-                className="ios-quick-btn"
-                onClick={() => {
-                  HapticService.selection();
-                  onToggleCollapse?.();
-                  onClose();
-                }}
-                title={isCollapsed ? "Desplegar sección" : "Plegar sección"}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 3,
-                  padding: '7px 4px',
-                  borderRadius: 10,
-                  background: 'var(--bg-hover, rgba(0,0,0,0.04))',
-                  border: '1px solid var(--border-subtle, rgba(0,0,0,0.06))',
-                  color: 'var(--text-primary)',
-                  cursor: 'pointer',
-                  fontSize: '0.72rem',
-                  fontWeight: 600,
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                {isCollapsed ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
-                <span>{isCollapsed ? 'Desplegar' : 'Plegar'}</span>
-              </button>
-
-              <button
-                type="button"
-                className="ios-quick-btn"
-                disabled={!canMoveUp}
-                onClick={() => {
-                  HapticService.selection();
-                  onMoveUp?.();
-                  onClose();
-                }}
-                title={canMoveUp ? "Subir sección" : "Primera sección (no puede subir más)"}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 3,
-                  padding: '7px 4px',
-                  borderRadius: 10,
-                  background: 'var(--bg-hover, rgba(0,0,0,0.04))',
-                  border: '1px solid var(--border-subtle, rgba(0,0,0,0.06))',
-                  color: canMoveUp ? 'var(--text-primary)' : 'var(--text-tertiary)',
-                  opacity: canMoveUp ? 1 : 0.35,
-                  cursor: canMoveUp ? 'pointer' : 'not-allowed',
-                  fontSize: '0.72rem',
-                  fontWeight: 600,
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <ArrowUp size={15} />
-                <span>Subir</span>
-              </button>
-
-              <button
-                type="button"
-                className="ios-quick-btn"
-                disabled={!canMoveDown}
-                onClick={() => {
-                  HapticService.selection();
-                  onMoveDown?.();
-                  onClose();
-                }}
-                title={canMoveDown ? "Bajar sección" : "Última sección (no puede bajar más)"}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 3,
-                  padding: '7px 4px',
-                  borderRadius: 10,
-                  background: 'var(--bg-hover, rgba(0,0,0,0.04))',
-                  border: '1px solid var(--border-subtle, rgba(0,0,0,0.06))',
-                  color: canMoveDown ? 'var(--text-primary)' : 'var(--text-tertiary)',
-                  opacity: canMoveDown ? 1 : 0.35,
-                  cursor: canMoveDown ? 'pointer' : 'not-allowed',
-                  fontSize: '0.72rem',
-                  fontWeight: 600,
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <ArrowDown size={15} />
-                <span>Bajar</span>
-              </button>
-            </div>
-
-            <div className="ios-dropdown-divider" />
+            {/* Subir / Bajar (plegar ya se hace tocando la cabecera). Solo si hay otras secciones. */}
+            {(canMoveUp || canMoveDown) && (
+              <>
+                <div className="section-move-bar">
+                  <button
+                    type="button"
+                    className="section-move-btn"
+                    disabled={!canMoveUp}
+                    onClick={() => {
+                      HapticService.selection();
+                      onMoveUp?.();
+                      onClose();
+                    }}
+                    title={canMoveUp ? 'Subir sección' : 'Ya es la primera'}
+                  >
+                    <ArrowUp size={15} aria-hidden="true" />
+                    <span>Subir</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="section-move-btn"
+                    disabled={!canMoveDown}
+                    onClick={() => {
+                      HapticService.selection();
+                      onMoveDown?.();
+                      onClose();
+                    }}
+                    title={canMoveDown ? 'Bajar sección' : 'Ya es la última'}
+                  >
+                    <ArrowDown size={15} aria-hidden="true" />
+                    <span>Bajar</span>
+                  </button>
+                </div>
+                <div className="ios-dropdown-divider" />
+              </>
+            )}
 
             {/* ACCIONES DE TAREAS */}
             {onToggleAllCompleted && taskCount > 0 && (
@@ -507,32 +435,7 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
               <div className="ios-dropdown-divider" />
             )}
 
-            {/* GESTIÓN DE LA SECCIÓN */}
-            {onToggleRoutineMode && routineCounts && routineCounts.full > routineCounts.only && (
-              <button
-                type="button"
-                className="ios-dropdown-item"
-                onClick={() => {
-                  HapticService.selection();
-                  onToggleRoutineMode();
-                  onClose();
-                }}
-              >
-                <Layers size={16} color="var(--accent-primary)" />
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1, minWidth: 0, textAlign: 'left' }}>
-                  <span style={{ fontWeight: 600 }}>
-                    {routineMode === 'full_routine'
-                      ? `Ver sólo esta sección (${routineCounts.only})`
-                      : `Ver rutina acumulada (${routineCounts.full})`}
-                  </span>
-                  <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>
-                    {routineMode === 'full_routine'
-                      ? `Cambiar a sólo esta sección (~${routineDurations?.only?.formattedActive || ''})`
-                      : `Incluir tareas diarias y semanales (~${routineDurations?.full?.formattedActive || ''})`}
-                  </span>
-                </div>
-              </button>
-            )}
+            {/* GESTIÓN DE LA SECCIÓN («+ Diarias» está en la propia cabecera) */}
             {onStartSequence && (sectionMenu.pendingTaskCount ?? 0) > 0 && (
               <button 
                 type="button"

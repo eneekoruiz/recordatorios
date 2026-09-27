@@ -189,7 +189,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       pendingTaskCount,
       color: data.color,
       category: data.category,
-      triggerRect: rowRect
+      triggerRect: rowRect,
+      getTriggerElement: () => rowRef.current
     });
   }, [isAccumulated, data.sectionId, data.title, data.color, data.category, data.depth, pendingTaskCount, setSectionMenu, getRowRect]);
 

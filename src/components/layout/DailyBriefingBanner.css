@@ -44,7 +44,9 @@
   cursor: pointer;
   transition: background 0.15s ease;
 }
-.briefing-toggle:hover { background: var(--bg-hover); }
+@media (hover: hover) and (pointer: fine) {
+  .briefing-toggle:hover { background: var(--bg-hover); }
+}
 
 .briefing-body { display: flex; flex-direction: column; gap: 10px; }
 .briefing-lead { margin: 0; font-size: 0.95rem; line-height: 1.45; color: var(--text-secondary); }

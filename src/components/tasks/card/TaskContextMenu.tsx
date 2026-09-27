@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -13,6 +13,7 @@ import { HapticService } from '../../../services/HapticService';
 import { SoundService } from '../../../services/SoundService';
 import { SpotlightBackdrop, type SpotlightRect } from '../../ui/SpotlightBackdrop';
 import { formatEuro } from '../../../utils/format';
+import { useFitMenuInViewport } from '../../../hooks/useFitMenuInViewport';
 
 export interface TaskContextMenuProps {
   task: TaskItem;
@@ -21,6 +22,8 @@ export interface TaskContextMenuProps {
   position: { x: number; y: number; maxHeight: number };
   /** Rectángulo de la tarjeta que abrió el menú, para mantenerla nítida sobre el telón. */
   triggerRect?: SpotlightRect | null;
+  /** La tarjeta en sí: el hueco nítido la sigue si la lista se desplaza. */
+  getTriggerElement?: () => HTMLElement | null;
   onEdit: (id: string) => void;
   nestTask: (taskId: string, parentId?: string) => void;
   previousTaskId?: string;
@@ -40,6 +43,7 @@ export function TaskContextMenu({
   onClose,
   position,
   triggerRect,
+  getTriggerElement,
   onEdit,
   nestTask,
   previousTaskId,
@@ -54,6 +58,9 @@ export function TaskContextMenu({
 }: TaskContextMenuProps) {
   const updateTask = useAppStore(state => state.updateTask);
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+  const sheetRef = useRef<HTMLDivElement>(null);
+  // Escritorio: con su altura real, el menú cabe siempre (debajo, encima o pegado al borde).
+  useFitMenuInViewport(sheetRef, triggerRect, isOpen && !isMobile);
 
   // Escape cierra el menú (antes el fondo invisible seguía bloqueando los clics).
   useEffect(() => {
@@ -70,15 +77,18 @@ export function TaskContextMenu({
       {isOpen && (
         <>
           <SpotlightBackdrop
-            rect={isMobile ? null : (triggerRect ?? null)}
+            rect={triggerRect ?? null}
+            getTarget={getTriggerElement}
+            sheetRef={isMobile ? sheetRef : undefined}
             onClose={onClose}
             onWheel={onClose}
             radius={12}
-            padding={3}
+            padding={0}
           />
 
           {/* Floating Popover Container / Mobile Bottom Action Sheet */}
           <motion.div
+            ref={sheetRef}
             className="ios-dropdown-menu"
             initial={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.95, y: -4 }}
             animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }}
@@ -641,9 +651,9 @@ function MenuActions({
 
       {/* 7. Dejar para luego */}
       <ActionRow
-        icon={<Clock size={16} color="var(--accent-primary)" />}
+        icon={<Clock size={16} />}
         label="Dejar para luego"
-        sublabel="Mover al final de la lista"
+        subtitle="Al final de la lista"
         onClick={() => {
           setContextMenuOpen(false);
           postponeTask(task.id);
@@ -858,10 +868,13 @@ function SubmenuHeader({ title, onBack }: { title: string; onBack: () => void })
 }
 
 function ActionRow({
-  icon, label, sublabel, trailing, onClick, labelColor, disabled
+  icon, label, subtitle, sublabel, trailing, onClick, labelColor, disabled
 }: {
   icon: React.ReactNode;
   label: string;
+  /** Segunda línea en gris bajo el nombre (qué hace), como en los menús de iOS. */
+  subtitle?: string;
+  /** Valor actual a la derecha (p. ej. «3,50 €»). */
   sublabel?: string;
   trailing?: React.ReactNode;
   onClick: () => void;
@@ -890,8 +903,13 @@ function ActionRow({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 16, flexShrink: 0 }}>
           {icon}
         </div>
-        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {label}
+        <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+          {subtitle && (
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 1 }}>
+              {subtitle}
+            </span>
+          )}
         </span>
       </div>
       {(sublabel || trailing) && (

@@ -55,7 +55,9 @@
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 }
-.greeting-close:hover { background: var(--bg-pressed, var(--bg-hover)); color: var(--text-primary); }
+@media (hover: hover) and (pointer: fine) {
+  .greeting-close:hover { background: var(--bg-pressed, var(--bg-hover)); color: var(--text-primary); }
+}
 
 /* ── Cabecera ── */
 .greeting-head { display: flex; flex-direction: column; gap: 10px; }
@@ -117,7 +119,9 @@
   transition: background 0.15s ease;
 }
 .greeting-task + .greeting-task { box-shadow: inset 0 0.5px 0 var(--separator, var(--border-subtle)); }
-.greeting-task:hover { background: var(--bg-hover); }
+@media (hover: hover) and (pointer: fine) {
+  .greeting-task:hover { background: var(--bg-hover); }
+}
 .greeting-task-dot {
   width: 9px;
   height: 9px;
@@ -194,7 +198,9 @@
   gap: 8px;
   transition: transform 0.16s var(--ease-spring), filter 0.16s ease;
 }
-.greeting-primary:hover { filter: brightness(1.06); }
+@media (hover: hover) and (pointer: fine) {
+  .greeting-primary:hover { filter: brightness(1.06); }
+}
 .greeting-primary:active { transform: scale(0.985); }
 .greeting-secondary {
   min-height: 40px;
@@ -211,7 +217,9 @@
   gap: 6px;
   transition: color 0.15s ease, background 0.15s ease;
 }
-.greeting-secondary:hover { color: var(--text-primary); background: var(--bg-hover); }
+@media (hover: hover) and (pointer: fine) {
+  .greeting-secondary:hover { color: var(--text-primary); background: var(--bg-hover); }
+}
 .greeting-secondary svg { opacity: 0; transition: opacity 0.15s ease; }
 .greeting-secondary[aria-pressed='true'] { color: var(--accent-primary); }
 .greeting-secondary[aria-pressed='true'] svg { opacity: 1; }
