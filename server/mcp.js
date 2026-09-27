@@ -157,19 +157,55 @@ export async function handleMcpRequest(reqBody, prisma, userId) {
         return match ? match.id : 'inbox';
       };
 
+      // Tareas activas existentes del usuario para evitar duplicados en el MCP
+      const existingTaskRows = await prisma.task.findMany({ where: { userId, deletedAt: null } });
+      const existingTasks = existingTaskRows.map((r) => toClientPayload(userId, r));
+
       const now = new Date().toISOString();
       const created = [];
+      const ops = [];
+
       for (const r of reminders) {
         const title = cleanString(r?.title, 300);
         if (!title) continue;
+        const catId = resolveList(r);
+        const normTitle = title.toLowerCase().trim();
+
+        // Evitar duplicados: si ya existe una tarea idéntica pendiente en la misma lista, actualizar en vez de duplicar
+        const existingTask = existingTasks.find(
+          (t) => t.status !== 'completed' &&
+                 String(t.categoryId || 'inbox') === String(catId) &&
+                 String(t.title || '').toLowerCase().trim() === normTitle
+        );
+
         const dueDate = r.dueDate && !Number.isNaN(new Date(r.dueDate).getTime()) ? new Date(r.dueDate).toISOString() : undefined;
+
+        if (existingTask) {
+          const updatedPayload = {
+            ...existingTask,
+            dueDate: dueDate || existingTask.dueDate,
+            price: cleanNumber(r.price) ?? existingTask.price,
+            description: cleanString(r.description, 2000) || existingTask.description,
+            updated_at: now,
+            version: (existingTask.version || 1) + 1,
+          };
+          created.push(updatedPayload);
+          ops.push(
+            prisma.task.update({
+              where: { id: scopedId(userId, existingTask.id) },
+              data: { payload: updatedPayload, updatedAt: new Date() },
+            })
+          );
+          continue;
+        }
+
         const task = {
           id: randomUUID(),
           user_id: userId,
           type: 'task',
           title,
           description: cleanString(r.description, 2000) || undefined,
-          categoryId: resolveList(r),
+          categoryId: catId,
           dueDate,
           timeOfDay: VALID_TIMES.has(r.timeOfDay) ? r.timeOfDay : undefined,
           price: cleanNumber(r.price),
@@ -183,12 +219,13 @@ export async function handleMcpRequest(reqBody, prisma, userId) {
         };
         Object.keys(task).forEach((k) => task[k] === undefined && delete task[k]);
         created.push(task);
+        ops.push(prisma.task.create({ data: { id: scopedId(userId, task.id), userId, payload: task } }));
       }
       if (created.length === 0) return rpcError(id, -32602, 'Ningún recordatorio tenía título');
 
-      await prisma.$transaction(
-        created.map((task) => prisma.task.create({ data: { id: scopedId(userId, task.id), userId, payload: task } }))
-      );
+      if (ops.length > 0) {
+        await prisma.$transaction(ops);
+      }
       return rpcResult(id, { success: true, count: created.length, reminders: created });
     }
 

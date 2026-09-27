@@ -43,6 +43,8 @@ import { deduplicateTaskList } from '../../utils/taskDeduplication';
 import { calculateTasksDuration, calculateCompletedTasksDuration, getTaskDuration, type TasksDurationSummary } from '../../utils/taskDuration';
 import { getReservedFrequencyColor } from '../../constants/colors';
 import { BatchTaskActionsBar } from '../tasks/BatchTaskActionsBar';
+import { downloadIcsFile } from '../../utils/icsExporter';
+import { exportReportToPdf } from '../../utils/pdfExport';
 
 interface MainContentProps {
   currentView: string;
@@ -2332,6 +2334,35 @@ const CORE_CYCLES = [
             onStartSequence(pendingTasks.map(t => t.id), getTitle(), viewColor);
           }
         } : undefined}
+        onExportIcs={() => {
+          downloadIcsFile(visibleTasks, `${getTitle().toLowerCase().replace(/\s+/g, '_')}.ics`, getTitle());
+          window.dispatchEvent(new CustomEvent('show-toast', { detail: `Calendario "${getTitle()}" (.ics) descargado` }));
+        }}
+        onExportPdf={() => {
+          const total = visibleTasks.length;
+          const completed = visibleTasks.filter(t => isTaskCompleted(t)).length;
+          const pending = total - completed;
+          const totalCost = visibleTasks.reduce((acc, t) => acc + (t.price || 0), 0);
+
+          exportReportToPdf({
+            title: getTitle(),
+            subtitle: `Lista de recordatorios — ${total} elementos`,
+            stats: [
+              { label: 'Total Recordatorios', value: total },
+              { label: 'Completados', value: completed },
+              { label: 'Pendientes', value: pending },
+              ...(totalCost > 0 ? [{ label: 'Coste Total', value: `${totalCost.toFixed(2)} €` }] : [])
+            ],
+            items: visibleTasks.map(t => ({
+              title: t.title,
+              status: t.status,
+              dueDate: t.dueDate ? new Date(t.dueDate).toLocaleDateString('es-ES') : undefined,
+              price: t.price,
+              duration: t.duration,
+              notes: t.description
+            }))
+          });
+        }}
       />
 
       {/* Main Scrollable View */}

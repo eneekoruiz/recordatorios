@@ -49,19 +49,70 @@ export const CyclesListSection: React.FC<CyclesListSectionProps> = ({
   setIsCycleModalOpen,
   tasks
 }) => {
-  // Merge core cycles with user cycles, ensuring Diario, Semanal, Mensual, and Anual are always available
+  const isCanonicalCore = (id: string) => ['cycle_day', 'cycle_week', 'cycle_month', 'cycle_year'].includes(id);
+  const CORE_NAMES = new Set(['diario', 'diaria', 'semanal', 'mensual', 'anual']);
+  const CORE_DAYS = new Set([1, 7, 30, 365]);
+
   const cyclesMap = new Map<string, CustomCycle>();
   CORE_CYCLES.forEach(c => cyclesMap.set(c.id, { ...c } as CustomCycle));
+
+  const duplicateCycleIdsToDelete: string[] = [];
+
   (cycles || []).forEach(c => {
-    if (c && c.id) {
+    if (!c || !c.id || c.deleted_at) return;
+
+    if (isCanonicalCore(c.id)) {
       const existing = cyclesMap.get(c.id);
-      cyclesMap.set(c.id, { ...existing, ...c, isPinned: c.isPinned ?? true });
+      cyclesMap.set(c.id, { ...existing, ...c, color: getCycleColor(c), isPinned: c.isPinned ?? true });
+      return;
     }
+
+    const norm = (c.name || '').trim().toLowerCase();
+    const days = Number(c.daysValue);
+
+    // Si es un duplicado de las 4 frecuencias principales que no tiene el ID canónico, descartar y eliminar
+    if (CORE_NAMES.has(norm) || CORE_DAYS.has(days)) {
+      duplicateCycleIdsToDelete.push(c.id);
+      return;
+    }
+
+    cyclesMap.set(c.id, { ...c, isPinned: c.isPinned ?? true });
   });
+
   const allCycles = Array.from(cyclesMap.values()).sort((a, b) => (a.daysValue || 0) - (b.daysValue || 0));
   const listSections = useAppStore(state => state.listSections);
   const lists = useAppStore(state => state.lists);
   const deleteCycle = useAppStore(state => state.deleteCycle);
+
+  const duplicateCycleIdsKey = duplicateCycleIdsToDelete.join(',');
+
+  React.useEffect(() => {
+    if (!duplicateCycleIdsKey) return;
+    const ids = duplicateCycleIdsKey.split(',');
+    useAppStore.setState(state => {
+      const nextCycles = state.cycles.filter(c => !ids.includes(c.id));
+      const updatedTasks = { ...state.tasks };
+      let tasksChanged = false;
+      Object.entries(updatedTasks).forEach(([taskId, task]) => {
+        if (task.cycle_id && ids.includes(task.cycle_id)) {
+          const oldCycle = state.cycles.find(c => c.id === task.cycle_id);
+          const norm = (oldCycle?.name || '').trim().toLowerCase();
+          const days = Number(oldCycle?.daysValue);
+          let canonical = 'cycle_day';
+          if (norm === 'semanal' || days === 7) canonical = 'cycle_week';
+          else if (norm === 'mensual' || days === 30) canonical = 'cycle_month';
+          else if (norm === 'anual' || days === 365) canonical = 'cycle_year';
+
+          updatedTasks[taskId] = { ...task, cycle_id: canonical, _is_dirty: true };
+          tasksChanged = true;
+        }
+      });
+      return {
+        cycles: nextCycles,
+        tasks: tasksChanged ? updatedTasks : state.tasks
+      };
+    });
+  }, [duplicateCycleIdsKey]);
 
   const isCycleVisible = (c: CustomCycle) => {
     if (cycleVisibility[c.id] === false) return false;

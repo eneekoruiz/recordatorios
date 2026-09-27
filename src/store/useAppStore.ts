@@ -10,6 +10,7 @@ import { DEFAULT_SMART_LIST_VISIBILITY } from '../constants/smartLists';
 import { smartSortTasks } from '../utils/smartSort';
 import { readStoredDisplayName, writeStoredDisplayName } from '../utils/userIdentity';
 import { findDuplicateTask, normalizeTitle } from '../utils/taskDeduplication';
+import { FREQUENCY_RESERVED_COLORS, getReservedFrequencyColor } from '../constants/colors';
 
 const optimisticUpdate = (
   get: () => AppState,
@@ -56,10 +57,10 @@ export const isTaskCompleted = (t: any) => {
 const INITIAL_LISTS: CustomList[] = [];
 
 const INITIAL_CYCLES: CustomCycle[] = [
-  { id: 'cycle_day', name: 'Diario', daysValue: 1, isPinned: true, icon: 'sun' },
-  { id: 'cycle_week', name: 'Semanal', daysValue: 7, isPinned: true, icon: 'calendar' },
-  { id: 'cycle_month', name: 'Mensual', daysValue: 30, isPinned: true, icon: 'moon' },
-  { id: 'cycle_year', name: 'Anual', daysValue: 365, isPinned: true, icon: 'globe' },
+  { id: 'cycle_day', name: 'Diario', daysValue: 1, isPinned: true, icon: 'sun', color: FREQUENCY_RESERVED_COLORS.day },
+  { id: 'cycle_week', name: 'Semanal', daysValue: 7, isPinned: true, icon: 'calendar', color: FREQUENCY_RESERVED_COLORS.week },
+  { id: 'cycle_month', name: 'Mensual', daysValue: 30, isPinned: true, icon: 'moon', color: FREQUENCY_RESERVED_COLORS.month },
+  { id: 'cycle_year', name: 'Anual', daysValue: 365, isPinned: true, icon: 'globe', color: FREQUENCY_RESERVED_COLORS.year },
 ];
 
 interface AppState {
@@ -750,13 +751,43 @@ export const useAppStore = create<AppState>()(
         return changed ? { tasks: newTasks } : state;
       }),
 
-      addCycle: (cycle) => optimisticUpdate(get, set, (state) => ({
-        cycles: [...state.cycles.filter(c => c.id !== cycle.id), { 
-          ...cycle, 
-          _is_dirty: cycle._is_dirty ?? true, 
-          updated_at: cycle.updated_at || new Date().toISOString() 
-        }].sort((a, b) => a.daysValue - b.daysValue)
-      })),
+      addCycle: (cycle) => optimisticUpdate(get, set, (state) => {
+        const norm = (cycle.name || '').trim().toLowerCase();
+        const days = Number(cycle.daysValue);
+        let targetId = cycle.id;
+        if (cycle.id === 'cycle_day' || norm === 'diario' || norm === 'diaria' || days === 1) targetId = 'cycle_day';
+        else if (cycle.id === 'cycle_week' || norm === 'semanal' || days === 7) targetId = 'cycle_week';
+        else if (cycle.id === 'cycle_month' || norm === 'mensual' || days === 30) targetId = 'cycle_month';
+        else if (cycle.id === 'cycle_year' || norm === 'anual' || days === 365) targetId = 'cycle_year';
+
+        const isCore = ['cycle_day', 'cycle_week', 'cycle_month', 'cycle_year'].includes(targetId);
+        const cycleColor = isCore ? getReservedFrequencyColor(targetId) : (cycle.color || FREQUENCY_RESERVED_COLORS.day);
+
+        const cleanPrior = state.cycles.filter(c => {
+          if (c.id === targetId || c.id === cycle.id) return false;
+          if (isCore) {
+            const cNorm = (c.name || '').trim().toLowerCase();
+            const cDays = Number(c.daysValue);
+            if (targetId === 'cycle_day' && (cNorm === 'diario' || cNorm === 'diaria' || cDays === 1)) return false;
+            if (targetId === 'cycle_week' && (cNorm === 'semanal' || cDays === 7)) return false;
+            if (targetId === 'cycle_month' && (cNorm === 'mensual' || cDays === 30)) return false;
+            if (targetId === 'cycle_year' && (cNorm === 'anual' || cDays === 365)) return false;
+          }
+          return true;
+        });
+
+        const newCycle = {
+          ...cycle,
+          id: targetId,
+          color: cycleColor,
+          _is_dirty: cycle._is_dirty ?? true,
+          updated_at: cycle.updated_at || new Date().toISOString()
+        };
+
+        return {
+          cycles: [...cleanPrior, newCycle].sort((a, b) => (a.daysValue || 0) - (b.daysValue || 0))
+        };
+      }),
 
       updateCycle: (id, updates) => optimisticUpdate(get, set, (state) => ({
         cycles: state.cycles.map(c => c.id === id ? { 
@@ -1441,15 +1472,52 @@ export const useAppStore = create<AppState>()(
         const cleanLists = rawLists.filter((l: any) => !l.id?.startsWith('user_preferences_'));
         const uniqueLists: any[] = Array.from(new Map(cleanLists.map((l: any) => [l.id, l])).values());
         const rawCycles = persistedState?.cycles || currentState.cycles || [];
-        const cycleMap = new Map<string, any>();
-        INITIAL_CYCLES.forEach(c => cycleMap.set(c.id, { ...c }));
+        const canonicalCoreMap = new Map<string, any>();
+        INITIAL_CYCLES.forEach(c => canonicalCoreMap.set(c.id, { ...c }));
+
+        const remappedCycleIds: Record<string, string> = {};
+        const validCustomCycles: any[] = [];
+
         rawCycles.forEach((c: any) => {
-          if (c && c.id) {
-            const existing = cycleMap.get(c.id);
-            cycleMap.set(c.id, { ...existing, ...c, isPinned: c.isPinned ?? true });
+          if (!c || !c.id || c.deleted_at) return;
+          const norm = (c.name || '').trim().toLowerCase();
+          const days = Number(c.daysValue);
+
+          if (c.id === 'cycle_day' || norm === 'diario' || norm === 'diaria' || days === 1) {
+            if (c.id !== 'cycle_day') remappedCycleIds[c.id] = 'cycle_day';
+            canonicalCoreMap.set('cycle_day', { ...canonicalCoreMap.get('cycle_day'), isPinned: c.isPinned ?? true });
+            return;
+          }
+          if (c.id === 'cycle_week' || norm === 'semanal' || days === 7) {
+            if (c.id !== 'cycle_week') remappedCycleIds[c.id] = 'cycle_week';
+            canonicalCoreMap.set('cycle_week', { ...canonicalCoreMap.get('cycle_week'), isPinned: c.isPinned ?? true });
+            return;
+          }
+          if (c.id === 'cycle_month' || norm === 'mensual' || days === 30) {
+            if (c.id !== 'cycle_month') remappedCycleIds[c.id] = 'cycle_month';
+            canonicalCoreMap.set('cycle_month', { ...canonicalCoreMap.get('cycle_month'), isPinned: c.isPinned ?? true });
+            return;
+          }
+          if (c.id === 'cycle_year' || norm === 'anual' || days === 365) {
+            if (c.id !== 'cycle_year') remappedCycleIds[c.id] = 'cycle_year';
+            canonicalCoreMap.set('cycle_year', { ...canonicalCoreMap.get('cycle_year'), isPinned: c.isPinned ?? true });
+            return;
+          }
+
+          // Genuine custom cycle
+          const already = validCustomCycles.some(v => v.id === c.id || (v.name || '').trim().toLowerCase() === norm);
+          if (!already) {
+            validCustomCycles.push({ ...c, isPinned: c.isPinned ?? true });
           }
         });
-        const uniqueCycles: any[] = Array.from(cycleMap.values());
+
+        const uniqueCycles: any[] = [
+          canonicalCoreMap.get('cycle_day'),
+          canonicalCoreMap.get('cycle_week'),
+          canonicalCoreMap.get('cycle_month'),
+          canonicalCoreMap.get('cycle_year'),
+          ...validCustomCycles
+        ];
         const rawSections = persistedState?.listSections || currentState.listSections || [];
         const uniqueSections: any[] = Array.from(
           new Map(
@@ -1541,6 +1609,18 @@ export const useAppStore = create<AppState>()(
                 deleted_at: nowStr,
                 _is_dirty: true,
                 version: (dupe.version || 1) + 1
+              };
+            }
+          }
+        }
+
+        if (Object.keys(remappedCycleIds).length > 0) {
+          for (const [tId, t] of Object.entries(cleanTasks)) {
+            if (t && t.cycle_id && remappedCycleIds[t.cycle_id]) {
+              cleanTasks[tId] = {
+                ...t,
+                cycle_id: remappedCycleIds[t.cycle_id],
+                _is_dirty: true
               };
             }
           }

@@ -80,7 +80,7 @@ export class AIService {
     // 1. External LLM via Gemini API if key is present
     if (config.provider === 'gemini' && config.apiKey) {
       try {
-        return await this.callGemini(userMessage, existingLists, conversationHistory, config.apiKey);
+        return await this.callGemini(userMessage, existingLists, conversationHistory, config.apiKey, existingTasks);
       } catch (err) {
         console.warn('Gemini API call failed, falling back to local extractor:', err);
       }
@@ -89,7 +89,7 @@ export class AIService {
     // 2. External LLM via OpenAI API if key is present
     if (config.provider === 'openai' && config.apiKey) {
       try {
-        return await this.callOpenAI(userMessage, existingLists, conversationHistory, config.apiKey);
+        return await this.callOpenAI(userMessage, existingLists, conversationHistory, config.apiKey, existingTasks);
       } catch (err) {
         console.warn('OpenAI API call failed, falling back to local extractor:', err);
       }
@@ -574,23 +574,40 @@ export class AIService {
     prompt: string,
     existingLists: CustomList[],
     _history: { role: string; text: string }[],
-    apiKey: string
+    apiKey: string,
+    existingTasks?: Record<string, TaskItem> | TaskItem[]
   ): Promise<ProposedBatch> {
     const listNames = existingLists.map(l => `${l.name} (id: ${l.id})`).join(', ');
-    const systemInstruction = `Eres el Asistente IA de Recordatorios Élite (Apple Reminders & Journal companion).
-Tu objetivo es ayudar al usuario a planificar o rememorar vivencias, estructurando recordatorios o entradas de diario a partir de lenguaje natural.
-Listas existentes del usuario: [${listNames}].
+    const tasksArr = existingTasks ? (Array.isArray(existingTasks) ? existingTasks : Object.values(existingTasks)) : [];
+    const activeTasksSummary = tasksArr
+      .filter(t => !t.deleted_at && t.status !== 'completed')
+      .slice(0, 40)
+      .map(t => `"${t.title}" (lista: ${t.categoryId || 'inbox'})`)
+      .join(', ');
 
-IMPORTANTE: Si el usuario te habla de su día o te cuenta vivencias ("Buah, pues hoy he hecho...", "estuve con Irantzu..."):
-- Actúa como una IA conversacional cálida y empática.
-- Responde con naturalidad reconociendo sus actividades y personas mencionadas (ejemplo: "¡Vaya día más activo! Con todo lo que me cuentas, veo que has hecho [X] con [Persona]. ¿Quieres que lo apunte todo a tu lista «Qué he hecho»?").
-- Asigna las tareas a la lista "Qué he hecho" (id: "que_he_hecho").
-- Extrae las personas en el campo "people" (ej: ["Irantzu", "Carlos"]).
-- Extrae un emoji/vibe en "vibe" (ej: "✨ Especial", "🏔️ Aventura", "🎉 Celebración", "💼 Logro", "🍕 Relax", "💪 Deporte").
+    const systemInstruction = `Eres el Asistente IA de Recordatorios Élite (Apple Reminders & Journal companion), sumamente inteligente, analítico y meticuloso.
+Tu objetivo es comprender incluso los mensajes más densos, caóticos o enrevesados del usuario, desglosando cada instrucción sin omitir ningún detalle.
+Listas existentes del usuario: [${listNames}].
+Recordatorios activos existentes: [${activeTasksSummary}].
+
+REGLAS CRÍTICAS DE COMPRENSIÓN Y PRECISIÓN:
+1. DESGLOSE METICULOSO: Si el usuario escribe un mensaje largo o enrevesado con muchas cosas mezcladas (recordatorios, listas de compra con precios, duraciones, fechas/horas, hábitos recurrentes), desglosa cada uno como un recordatorio independiente en el array "tasks".
+2. PRECIOS: Si se menciona un precio (ej. "leche 1,20 €", "50 euros"), extrae el número en "price" (ej. 1.2 o 50).
+3. FRECUENCIAS (CICLOS): Si la tarea es recurrente/periódica, asigna EXCLUSIVAMENTE uno de estos 4 identificadores en "cycle":
+   - "cycle_day" (si es diario / cada día)
+   - "cycle_week" (si es semanal / cada semana)
+   - "cycle_month" (si es mensual / cada mes)
+   - "cycle_year" (si es anual / cada año)
+   ¡ESTÁ ESTRICTAMENTE PROHIBIDO inventar nuevos ciclos o sugerir crear listas llamadas "Semanal", "Mensual", "Diario" o "Anual"!
+4. PREVENCIÓN DE DUPLICADOS: Si una tarea que el usuario menciona ya está en sus recordatorios activos para la misma lista, no crees un duplicado idéntico.
+5. SI EL USUARIO CUENTA SU DÍA O VIVENCIAS ("Hoy estuve con...", "fui a..."):
+   - Sé empático, cercano y cálido.
+   - Asigna a la lista "Qué he hecho" (id: "que_he_hecho").
+   - Extrae los nombres de personas en "people" y el emoji en "vibe".
 
 DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
 {
-  "reply": "Respuesta conversacional empática",
+  "reply": "Respuesta conversacional empática y clara",
   "suggestedList": { "name": "NombreSiRecomiendasCrearLista", "color": "#007aff", "icon": "list" }, // opcional
   "tasks": [
     {
@@ -650,16 +667,31 @@ DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
     prompt: string,
     existingLists: CustomList[],
     _history: { role: string; text: string }[],
-    apiKey: string
+    apiKey: string,
+    existingTasks?: Record<string, TaskItem> | TaskItem[]
   ): Promise<ProposedBatch> {
     const listNames = existingLists.map(l => `${l.name} (id: ${l.id})`).join(', ');
-    const systemPrompt = `Eres el Asistente IA de Recordatorios Élite (Apple Reminders & Journal companion). 
-Listas actuales del usuario: [${listNames}].
-Si el usuario te cuenta su día ("Buah, pues hoy he hecho...", "estuve con Irantzu..."), responde con tono empático y conversacional ("¡Vaya día más activo! Con todo lo que me cuentas, veo que has hecho... ¿Quieres que lo apunte todo a tu lista «Qué he hecho»?"), extrayendo participantes en "people" y vibe en "vibe".
+    const tasksArr = existingTasks ? (Array.isArray(existingTasks) ? existingTasks : Object.values(existingTasks)) : [];
+    const activeTasksSummary = tasksArr
+      .filter(t => !t.deleted_at && t.status !== 'completed')
+      .slice(0, 40)
+      .map(t => `"${t.title}" (lista: ${t.categoryId || 'inbox'})`)
+      .join(', ');
+
+    const systemPrompt = `Eres el Asistente IA de Recordatorios Élite (Apple Reminders & Journal companion), sumamente inteligente, analítico y meticuloso.
+Tu objetivo es comprender incluso los mensajes más densos, caóticos o enrevesados del usuario, desglosando cada instrucción sin omitir ningún detalle.
+Listas existentes del usuario: [${listNames}].
+Recordatorios activos existentes: [${activeTasksSummary}].
+
+REGLAS CRÍTICAS:
+1. DESGLOSE: Extrae cada elemento individual con precisión extrema.
+2. PRECIOS: En "price" como número flotante (ej: 4.5).
+3. FRECUENCIAS: Usa EXCLUSIVAMENTE 'cycle_day', 'cycle_week', 'cycle_month' o 'cycle_year'. ¡No inventes otros!
+4. SIN DUPLICADOS: Si la tarea ya existe en activos, no la dupliques.
 
 Analiza la solicitud y devuelve un JSON con:
 {
-  "reply": "Respuesta conversacional empática",
+  "reply": "Respuesta conversacional empática y clara",
   "suggestedList": { "name": "NombreLista", "color": "#007aff", "icon": "list" }, // opcional
   "tasks": [
     {

@@ -68,24 +68,29 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Initialize Speech Recognition if supported
+  // Initialize Continuous Speech Recognition if supported
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
+      recognition.continuous = true;
+      recognition.interimResults = true;
       recognition.lang = 'es-ES';
 
       recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        if (transcript) {
-          setInput(prev => (prev ? `${prev} ${transcript}` : transcript));
+        let currentTranscript = '';
+        for (let i = 0; i < event.results.length; ++i) {
+          currentTranscript += (currentTranscript ? ' ' : '') + event.results[i][0].transcript.trim();
         }
-        setIsListening(false);
+        if (currentTranscript.trim()) {
+          setInput(currentTranscript.trim());
+        }
       };
 
-      recognition.onerror = () => setIsListening(false);
+      recognition.onerror = (err: any) => {
+        console.warn('Speech recognition status:', err);
+        setIsListening(false);
+      };
       recognition.onend = () => setIsListening(false);
       recognitionRef.current = recognition;
     }
@@ -94,13 +99,18 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
   const toggleVoiceInput = () => {
     if (!speechSupported || !recognitionRef.current) return;
     if (isListening) {
-      recognitionRef.current.stop();
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        console.warn(e);
+      }
       setIsListening(false);
+      HapticService.selection();
     } else {
       try {
         recognitionRef.current.start();
         setIsListening(true);
-        HapticService.impact('light');
+        HapticService.impact('medium');
       } catch (err) {
         console.error('Speech error:', err);
       }
@@ -1305,6 +1315,8 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                   color: isListening ? 'white' : 'var(--text-secondary)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer', flexShrink: 0,
+                  boxShadow: isListening ? '0 0 16px rgba(255, 59, 48, 0.6)' : 'none',
+                  animation: isListening ? 'pulse-badge 1.4s ease-in-out infinite' : 'none',
                   transition: 'all 0.15s ease'
                 }}
                 title={isListening ? 'Detener dictado' : 'Hablar por micrófono'}

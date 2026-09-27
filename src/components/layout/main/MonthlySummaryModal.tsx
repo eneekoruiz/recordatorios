@@ -1,6 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { X, Sparkles, Wand2 } from 'lucide-react';
+import { X, Sparkles, Wand2, Printer } from 'lucide-react';
+import { exportReportToPdf } from '../../../utils/pdfExport';
 
 interface MonthlySummaryModalProps {
   modal: { open: boolean; title: string; text: string; loading: boolean };
@@ -90,13 +91,33 @@ export const MonthlySummaryModal: React.FC<MonthlySummaryModalProps> = ({
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 4 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginTop: 4 }}>
           <button
             type="button"
             className="modal-btn-secondary"
             onClick={onClose}
           >
             Cerrar
+          </button>
+          <button
+            type="button"
+            className="modal-btn-secondary"
+            onClick={() => {
+              exportReportToPdf({
+                title: modal.title,
+                subtitle: 'Resumen Mensual y Memoria de Hábitos',
+                rawText: modal.text
+              });
+            }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6
+            }}
+          >
+            <Printer size={15} />
+            Imprimir / PDF
           </button>
           <button
             type="button"

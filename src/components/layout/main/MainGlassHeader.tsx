@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, MoreHorizontal, Check, Settings, FolderPlus, Play } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Check, Settings, FolderPlus, Play, Calendar, Printer } from 'lucide-react';
 import type { CustomList } from '../../../models/Task';
 import { HapticService } from '../../../services/HapticService';
 import { getListType, LIST_TYPE_CONFIG, getListBadgeInfo } from '../../../utils/specialLists';
@@ -41,6 +41,8 @@ interface MainGlassHeaderProps {
   startDuration?: string;
   completedCount?: number;
   isStartDisabled?: boolean;
+  onExportIcs?: () => void;
+  onExportPdf?: () => void;
 }
 
 export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
@@ -68,6 +70,8 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
   startDuration,
   completedCount,
   isStartDisabled = false,
+  onExportIcs,
+  onExportPdf,
 }) => {
   const listAccentColor = isSmartView 
     ? (SMART_COLORS[currentView] || 'var(--accent-blue, #007AFF)') 
@@ -500,6 +504,42 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                           </>
                         )}
 
+                        {(onExportIcs || onExportPdf) && (
+                          <>
+                            <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '6px 0' }} />
+                            {onExportIcs && (
+                              <button
+                                type="button"
+                                className="ios-dropdown-item"
+                                onClick={() => {
+                                  HapticService.selection();
+                                  setIsMenuOpen(false);
+                                  onExportIcs();
+                                }}
+                                style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 44, fontSize: '0.95rem' }}
+                              >
+                                <Calendar size={16} color="var(--accent-primary)" />
+                                <span>Exportar a iCalendar (.ics)</span>
+                              </button>
+                            )}
+                            {onExportPdf && (
+                              <button
+                                type="button"
+                                className="ios-dropdown-item"
+                                onClick={() => {
+                                  HapticService.selection();
+                                  setIsMenuOpen(false);
+                                  onExportPdf();
+                                }}
+                                style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 44, fontSize: '0.95rem' }}
+                              >
+                                <Printer size={16} color="#ff9500" />
+                                <span>Imprimir / Exportar a PDF</span>
+                              </button>
+                            )}
+                          </>
+                        )}
+
                         <button
                           type="button"
                           onClick={() => {
@@ -712,6 +752,40 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                               {LIST_TYPE_CONFIG[getListType(currentList, currentView)].badgeLabel}
                             </span>
                           </button>
+                        </>
+                      )}
+
+                      {(onExportIcs || onExportPdf) && (
+                        <>
+                          <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
+                          {onExportIcs && (
+                            <button 
+                              className="ios-dropdown-item"
+                              onClick={() => {
+                                HapticService.selection();
+                                setIsMenuOpen(false);
+                                onExportIcs();
+                              }}
+                              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
+                            >
+                              <Calendar size={14} color="var(--accent-primary)" />
+                              <span style={{ whiteSpace: 'nowrap' }}>Exportar a iCalendar (.ics)</span>
+                            </button>
+                          )}
+                          {onExportPdf && (
+                            <button 
+                              className="ios-dropdown-item"
+                              onClick={() => {
+                                HapticService.selection();
+                                setIsMenuOpen(false);
+                                onExportPdf();
+                              }}
+                              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
+                            >
+                              <Printer size={14} color="#ff9500" />
+                              <span style={{ whiteSpace: 'nowrap' }}>Imprimir / Exportar a PDF</span>
+                            </button>
+                          )}
                         </>
                       )}
                     </motion.div>

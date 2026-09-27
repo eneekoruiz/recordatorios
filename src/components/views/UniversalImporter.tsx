@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Download, Upload, Info, CheckCircle2, ChevronLeft, Sparkles, Target, FileText, Clipboard, Loader2 } from 'lucide-react';
+import { Download, Upload, Info, CheckCircle2, ChevronLeft, Sparkles, Target, FileText, Clipboard, Loader2, Calendar, Printer, Database } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 import { detectFormatAndParse } from '../../utils/importerParser';
 import type { ParseResult } from '../../utils/importerParser';
 import { extractTextFromPdf } from '../../utils/pdfExtractor';
+import { downloadIcsFile } from '../../utils/icsExporter';
+import { exportReportToPdf } from '../../utils/pdfExport';
 import { useNavigation } from '../../hooks/useNavigation';
 import { notify } from '../ui/confirmDialog';
 
@@ -13,7 +15,7 @@ interface UniversalImporterProps {
 }
 
 export function UniversalImporter({ onBack }: UniversalImporterProps) {
-  const { exportData, cycles, lists } = useAppStore();
+  const { exportData, cycles, lists, tasks } = useAppStore();
   const { pop, reset } = useNavigation();
 
   const handleBackClick = () => {
@@ -39,6 +41,69 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
     a.download = `recordatorios_backup_${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Copia de seguridad JSON descargada con éxito' }));
+  };
+
+  const handleExportCsv = () => {
+    const taskList = Object.values(tasks);
+    const headers = ['Título', 'Lista', 'Estado', 'Fecha', 'Prioridad', 'Coste (€)', 'Duración (seg)', 'Notas'];
+    const rows = taskList.map(t => {
+      const listName = lists.find(l => l.id === t.categoryId)?.name || 'Bandeja de entrada';
+      const escapeCsv = (val: string) => `"${(val || '').replace(/"/g, '""')}"`;
+      return [
+        escapeCsv(t.title),
+        escapeCsv(listName),
+        t.status === 'completed' ? 'Completado' : 'Pendiente',
+        t.dueDate ? t.dueDate.split('T')[0] : '',
+        t.priority || 'none',
+        t.price !== undefined ? t.price.toString() : '',
+        t.duration !== undefined ? t.duration.toString() : '',
+        escapeCsv(t.description || '')
+      ].join(',');
+    });
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `recordatorios_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Archivo CSV descargado con éxito' }));
+  };
+
+  const handleExportPdfReport = () => {
+    const taskList = Object.values(tasks);
+    const total = taskList.length;
+    const completed = taskList.filter(t => t.status === 'completed').length;
+    const pending = total - completed;
+    const totalCost = taskList.reduce((acc, t) => acc + (t.price || 0), 0);
+
+    exportReportToPdf({
+      title: 'Informe General de Recordatorios',
+      subtitle: `Exportación completa de ${total} elementos`,
+      stats: [
+        { label: 'Total Recordatorios', value: total },
+        { label: 'Completados', value: completed },
+        { label: 'Pendientes', value: pending },
+        ...(totalCost > 0 ? [{ label: 'Presupuesto Total', value: `${totalCost.toFixed(2)} €` }] : [])
+      ],
+      items: taskList.map(t => ({
+        title: t.title,
+        category: lists.find(l => l.id === t.categoryId)?.name || 'Bandeja de entrada',
+        status: t.status,
+        dueDate: t.dueDate ? new Date(t.dueDate).toLocaleDateString('es-ES') : undefined,
+        price: t.price,
+        duration: t.duration,
+        notes: t.description
+      }))
+    });
+  };
+
+  const handleExportIcs = () => {
+    const taskList = Object.values(tasks);
+    downloadIcsFile(taskList, 'recordatorios.ics', 'Mis Recordatorios');
+    window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Calendario iCalendar (.ics) descargado con éxito' }));
   };
 
   const handleProcessText = () => {
@@ -457,6 +522,172 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
               </motion.div>
             )}
           </AnimatePresence>
+        </motion.div>
+
+        {/* Export Card */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.15 }}
+          className="surface-card" 
+          style={{ padding: 'var(--space-32)', background: 'var(--bg-surface)', gridColumn: '1 / -1' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 'var(--space-16)' }}>
+            <div>
+              <h3 className="text-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Download size={20} color="var(--accent-primary)" /> Exportador Soberano y Calendarios
+              </h3>
+              <p className="text-secondary" style={{ margin: '4px 0 0 0', fontSize: '0.9rem' }}>
+                Lleva tus recordatorios a cualquier dispositivo o aplicación, o genera informes para imprimir.
+              </p>
+            </div>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>
+              {Object.keys(tasks).length} recordatorios almacenados
+            </span>
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: 14,
+            marginTop: 18
+          }}>
+            {/* 1. iCalendar (.ics) */}
+            <div 
+              style={{
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-lg)',
+                padding: 18,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                gap: 14
+              }}
+            >
+              <div>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(0, 122, 255, 0.12)', color: 'var(--accent-primary)', display: 'grid', placeItems: 'center', marginBottom: 12 }}>
+                  <Calendar size={18} />
+                </div>
+                <h4 style={{ margin: '0 0 4px 0', fontSize: '0.98rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  iCalendar (.ics)
+                </h4>
+                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                  Compatible con la app Calendario de Apple (Mac/iPhone), Google Calendar y Outlook.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleExportIcs}
+                className="modal-btn-secondary"
+                style={{ width: '100%', gap: 6, fontSize: '0.86rem' }}
+              >
+                <Download size={14} /> Descargar .ics
+              </button>
+            </div>
+
+            {/* 2. Informe Editorial PDF */}
+            <div 
+              style={{
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-lg)',
+                padding: 18,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                gap: 14
+              }}
+            >
+              <div>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255, 149, 0, 0.12)', color: '#ff9500', display: 'grid', placeItems: 'center', marginBottom: 12 }}>
+                  <Printer size={18} />
+                </div>
+                <h4 style={{ margin: '0 0 4px 0', fontSize: '0.98rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Informe Editorial (PDF)
+                </h4>
+                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                  Documento maquetado con diseño Apple para imprimir o guardar como PDF vectorial.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleExportPdfReport}
+                className="modal-btn-secondary"
+                style={{ width: '100%', gap: 6, fontSize: '0.86rem' }}
+              >
+                <Printer size={14} /> Imprimir / PDF
+              </button>
+            </div>
+
+            {/* 3. CSV Tabular */}
+            <div 
+              style={{
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-lg)',
+                padding: 18,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                gap: 14
+              }}
+            >
+              <div>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(52, 199, 89, 0.12)', color: 'var(--accent-green)', display: 'grid', placeItems: 'center', marginBottom: 12 }}>
+                  <FileText size={18} />
+                </div>
+                <h4 style={{ margin: '0 0 4px 0', fontSize: '0.98rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Hoja de Cálculo (CSV)
+                </h4>
+                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                  Abre tus datos en Excel, Numbers o Google Sheets con columnas de costes y fechas.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleExportCsv}
+                className="modal-btn-secondary"
+                style={{ width: '100%', gap: 6, fontSize: '0.86rem' }}
+              >
+                <Download size={14} /> Descargar .csv
+              </button>
+            </div>
+
+            {/* 4. Backup JSON */}
+            <div 
+              style={{
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-lg)',
+                padding: 18,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                gap: 14
+              }}
+            >
+              <div>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(175, 82, 222, 0.12)', color: 'var(--accent-purple)', display: 'grid', placeItems: 'center', marginBottom: 12 }}>
+                  <Database size={18} />
+                </div>
+                <h4 style={{ margin: '0 0 4px 0', fontSize: '0.98rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Copia de Seguridad (JSON)
+                </h4>
+                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                  Respaldo técnico integral de listas, ciclos temporales, secciones y recordatorios.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleExport}
+                className="modal-btn-secondary"
+                style={{ width: '100%', gap: 6, fontSize: '0.86rem' }}
+              >
+                <Download size={14} /> Descargar .json
+              </button>
+            </div>
+          </div>
         </motion.div>
       </div>
     </div>
