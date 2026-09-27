@@ -19,9 +19,26 @@ export interface ProposedTask {
   selected: boolean;
 }
 
+export interface ProposedChildTask {
+  id: string;
+  title: string;
+  isExisting: boolean;
+  selected: boolean;
+  price?: number;
+}
+
+export interface ProposedGroupAction {
+  type: 'group_tasks';
+  parentTitle: string;
+  listId?: string;
+  listName?: string;
+  children: ProposedChildTask[];
+}
+
 export interface ProposedBatch {
   reply: string;
   tasks: ProposedTask[];
+  action?: ProposedGroupAction;
   suggestedList?: {
     name: string;
     color?: string;
@@ -54,7 +71,8 @@ export class AIService {
   public static async processPrompt(
     userMessage: string,
     existingLists: CustomList[],
-    conversationHistory: { role: 'user' | 'assistant'; text: string }[] = []
+    conversationHistory: { role: 'user' | 'assistant'; text: string }[] = [],
+    existingTasks?: Record<string, TaskItem> | TaskItem[]
   ): Promise<ProposedBatch> {
     const config = this.getConfig();
 
@@ -77,22 +95,172 @@ export class AIService {
     }
 
     // 3. Fallback: Intelligent Local Semantic Extractor (Zero-Config)
-    return this.localSemanticExtract(userMessage, existingLists);
+    return this.localSemanticExtract(userMessage, existingLists, existingTasks);
   }
 
   /**
    * Local Semantic Extractor (Zero-Config, runs 100% locally and offline)
    */
-  /**
-   * Local Semantic Extractor (Zero-Config, runs 100% locally and offline)
-   */
-  public static localSemanticExtract(text: string, existingLists: CustomList[]): ProposedBatch {
+  public static localSemanticExtract(
+    text: string, 
+    existingLists: CustomList[], 
+    existingTasks?: Record<string, TaskItem> | TaskItem[]
+  ): ProposedBatch {
     const trimmed = text.trim();
     if (!trimmed) {
       return {
         reply: 'Hola, ¿en qué puedo ayudarte hoy? Puedes contarme cómo ha ido tu día, pedirme que organice tus recordatorios o planificar la semana.',
         tasks: []
       };
+    }
+
+    const tasksArray: TaskItem[] = existingTasks
+      ? (Array.isArray(existingTasks) ? existingTasks : Object.values(existingTasks))
+      : [];
+
+    // 1. Intent: Unificar o agrupar recordatorios en una tarea madre
+    const isUnifyIntent = /\b(unifica|unificar|agrupa|agrupar|junta|juntar|tarea madre|subtareas)\b/i.test(trimmed);
+    if (isUnifyIntent) {
+      let targetList = existingLists.find(l => {
+        const pattern = new RegExp(`\\b(?:en\\s+(?:la\\s+)?lista\\s+(?:de\\s+)?|en\\s+)${l.name}\\b`, 'i');
+        return pattern.test(trimmed) || new RegExp(`\\b${l.name}\\b`, 'i').test(trimmed);
+      });
+
+      let parentTitle = 'Productos agrupados';
+      const motherMatch = trimmed.match(/(?:en una tarea madre|en la tarea madre|en una tarea principal|en la tarea principal|como subtareas de|bajo la tarea madre|bajo la tarea)\s+(?:que sea\s+|llamada\s+|de\s+)?["']?([^"'.\n]+)["']?/i)
+        || trimmed.match(/(?:tarea madre|tarea principal)\s+(?:que sea\s+|llamada\s+|de\s+)?["']?([^"'.\n]+)["']?/i);
+      if (motherMatch && motherMatch[1]) {
+        parentTitle = motherMatch[1].trim().replace(/[.,;]$/, '');
+      }
+
+      const candidateItems: string[] = [];
+      const itemsMatch = trimmed.match(/(?:donde pone|los productos donde pone|las tareas donde pone|los recordatorios donde pone|los productos|las tareas|los recordatorios)\s+([\s\S]+?)(?:,\s*unif[íi]calos|,\s*agrup|,\s*j[úu]ntalos|\s+unif[íi]calos|\s+agrup|\s+j[úu]ntalos|\s+en una tarea|\s+en la tarea|\.|$)/i);
+      if (itemsMatch && itemsMatch[1]) {
+        const rawList = itemsMatch[1];
+        rawList.split(/(?:,\s*|\s+y\s+)/i).forEach(item => {
+          const cleaned = item.trim().replace(/^(?:el|la|los|las|un|una|donde pone)\s+/i, '').trim();
+          if (cleaned && cleaned.length >= 2 && !/^(unifica|unifícalos|agrupa|todos|productos)$/i.test(cleaned)) {
+            candidateItems.push(cleaned);
+          }
+        });
+      }
+
+      if (candidateItems.length === 0) {
+        const parts = trimmed.split(/,/);
+        if (parts.length > 1) {
+          parts.forEach(p => {
+            const c = p.trim().replace(/^(?:el|la|los|las|un|una|donde pone)\s+/i, '').trim();
+            if (c && c.length >= 2 && !/^(unifica|unifícalos|agrupa|todos|en la lista)$/i.test(c)) {
+              candidateItems.push(c);
+            }
+          });
+        }
+      }
+
+      const listTasks = targetList
+        ? tasksArray.filter(t => t.categoryId === targetList.id && !t.deleted_at)
+        : tasksArray.filter(t => !t.deleted_at);
+
+      const children: ProposedChildTask[] = [];
+      candidateItems.forEach(cand => {
+        const candLower = cand.toLowerCase();
+        const matched = listTasks.find(t =>
+          (t.title || '').toLowerCase().includes(candLower) ||
+          candLower.includes((t.title || '').toLowerCase())
+        );
+
+        if (matched) {
+          if (!children.some(c => c.id === matched.id)) {
+            children.push({
+              id: matched.id,
+              title: matched.title,
+              isExisting: true,
+              selected: true,
+              price: matched.price
+            });
+          }
+        } else {
+          children.push({
+            id: `ai_child_${Date.now()}_${children.length}`,
+            title: cand.charAt(0).toUpperCase() + cand.slice(1),
+            isExisting: false,
+            selected: true
+          });
+        }
+      });
+
+      if (children.length > 0) {
+        const parentTitleFormatted = parentTitle.charAt(0).toUpperCase() + parentTitle.slice(1);
+        const listNameStr = targetList ? targetList.name : 'tu lista';
+        return {
+          reply: `He encontrado y preparado ${children.length} productos en la lista **${listNameStr}** para unificarlos bajo la nueva tarea madre **"${parentTitleFormatted}"**. Puedes revisar la selección y confirmar abajo:`,
+          tasks: [],
+          action: {
+            type: 'group_tasks',
+            parentTitle: parentTitleFormatted,
+            listId: targetList ? targetList.id : undefined,
+            listName: targetList ? targetList.name : undefined,
+            children
+          }
+        };
+      }
+    }
+
+    // 2. Intent: Consulta sobre tareas de hoy
+    const normalized = trimmed.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const isQueryToday = (normalized.includes('que') || normalized.includes('cuales')) &&
+                         (normalized.includes('tarea') || normalized.includes('tengo') || normalized.includes('hay') || normalized.includes('queda')) &&
+                         normalized.includes('hoy');
+    if (isQueryToday && tasksArray.length > 0) {
+      const today = new Date().toDateString();
+      const todayPending = tasksArray.filter(t => {
+        if (t.deleted_at || t.status === 'completed') return false;
+        if (t.cycle_id === 'cycle_day' || t.cycle_id === 'day') return true;
+        if (t.dueDate) {
+          return new Date(t.dueDate).toDateString() === today;
+        }
+        return false;
+      });
+
+      if (todayPending.length === 0) {
+        return {
+          reply: '🎉 ¡Enhorabuena! No tienes tareas pendientes programadas para hoy. Todo está al día.',
+          tasks: []
+        };
+      }
+
+      const listBullets = todayPending.map(t => `- **${t.title}**${t.duration ? ` (~${t.duration} min)` : ''}${t.price ? ` · ${t.price} €` : ''}`).join('\n');
+      return {
+        reply: `Para hoy tienes **${todayPending.length} recordatorio${todayPending.length === 1 ? '' : 's'} pendiente${todayPending.length === 1 ? '' : 's'}**:\n\n${listBullets}\n\n¿Quieres que organice algo más o empecemos por alguno?`,
+        tasks: []
+      };
+    }
+
+    // 3. Intent: Consulta sobre una lista concreta (ej. Compra)
+    const isQueryList = trimmed.match(/\b(?:qué\s+(?:tengo|hay|queda)|cuánto\s+(?:cuesta|queda))\s+(?:en\s+(?:la\s+)?lista\s+(?:de\s+)?|en\s+)([\w\s]+)/i);
+    if (isQueryList && tasksArray.length > 0) {
+      const queryListName = isQueryList[1].trim();
+      const matchedList = existingLists.find(l => l.name.toLowerCase().includes(queryListName.toLowerCase()));
+      if (matchedList) {
+        const pendingInList = tasksArray.filter(t => t.categoryId === matchedList.id && !t.deleted_at && t.status !== 'completed');
+        const completedInList = tasksArray.filter(t => t.categoryId === matchedList.id && !t.deleted_at && t.status === 'completed');
+        const pendingTotal = pendingInList.reduce((sum, t) => sum + (t.price ? Number(t.price) * (t.quantity || 1) : 0), 0);
+        const completedTotal = completedInList.reduce((sum, t) => sum + (t.price ? Number(t.price) * (t.quantity || 1) : 0), 0);
+
+        if (pendingInList.length === 0) {
+          return {
+            reply: `En la lista **${matchedList.name}** no tienes recordatorios pendientes actualmente.`,
+            tasks: []
+          };
+        }
+
+        const itemsPreview = pendingInList.slice(0, 10).map(t => `- ${t.title}${t.price ? ` (${t.price} €)` : ''}`).join('\n');
+        const priceInfo = pendingTotal > 0 ? ` con un importe pendiente de **${pendingTotal.toFixed(2)} €**${completedTotal > 0 ? ` (ya completados ${completedTotal.toFixed(2)} €)` : ''}` : '';
+        return {
+          reply: `En la lista **${matchedList.name}** tienes **${pendingInList.length} recordatorios pendientes**${priceInfo}:\n\n${itemsPreview}${pendingInList.length > 10 ? `\n...y ${pendingInList.length - 10} más.` : ''}`,
+          tasks: []
+        };
+      }
     }
 
     // Check if the user is narrating their day or sharing personal experiences
@@ -295,6 +463,9 @@ export class AIService {
         .trim();
 
       if (cleanTitle.length >= 2) {
+        if (/^(?:en\s+(?:la\s+)?lista|unifica|unifícalos|agrupa|agrupalos|ponlos todos|haz una tarea|crea una tarea|donde pone)\b/i.test(cleanTitle)) {
+          continue;
+        }
         cleanTitle = cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
         
         let finalDueDateString: string | undefined;

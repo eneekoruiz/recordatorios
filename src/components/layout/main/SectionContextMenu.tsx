@@ -149,10 +149,14 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
   const targetX = Math.min(Math.max(12, sectionMenu.x), window.innerWidth - menuWidth - 12);
   let targetY = sectionMenu.y;
 
-  // Si colocarlo abajo sobrepasa la pantalla pero hay espacio arriba, lo colocamos arriba para no tapar la cabecera
+  // Si colocarlo abajo sobrepasa la pantalla pero hay espacio arriba, lo colocamos arriba para no tapar nunca la cabecera
   if (trigger && !isMobile) {
-    if (targetY + menuHeight > window.innerHeight - 12 && trigger.top - menuHeight - 6 >= 12) {
-      targetY = Math.max(12, trigger.top - menuHeight - 6);
+    const spaceBelow = Math.max(0, window.innerHeight - (trigger.top + trigger.height + 6) - 12);
+    const spaceAbove = Math.max(0, trigger.top - 6 - 12);
+    if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
+      targetY = Math.max(12, trigger.top - Math.min(menuHeight, spaceAbove) - 6);
+    } else {
+      targetY = trigger.top + trigger.height + 6;
     }
   }
 

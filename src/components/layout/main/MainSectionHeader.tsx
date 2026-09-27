@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { MoreHorizontal, ChevronDown, Check, Plus } from 'lucide-react';
 import { HapticService } from '../../../services/HapticService';
 import type { SectionMenuState } from './SectionContextMenu';
-import type { TasksDurationSummary } from '../../../utils/taskDuration';
+import { formatDuration, type TasksDurationSummary } from '../../../utils/taskDuration';
 import { isShoppingList } from '../../../utils/specialLists';
 import { useAppStore } from '../../../store/useAppStore';
 import { formatEuro } from '../../../utils/format';
@@ -46,7 +46,9 @@ interface MainSectionHeaderProps {
   startEditingSection: (e: any, id: string, name: string) => void;
   setSelectedPersonForProfile: (person: string) => void;
   sectionTotal: number;
+  sectionCompletedTotal?: number;
   durationSummary?: TasksDurationSummary;
+  completedDurationSummary?: TasksDurationSummary;
   onOpenNewTask?: (sectionId?: string) => void;
   onAddSection?: (parentId?: string) => void;
   deleteListSection?: (id: string) => void;
@@ -89,7 +91,9 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   startEditingSection,
   setSelectedPersonForProfile,
   sectionTotal,
+  sectionCompletedTotal,
   durationSummary,
+  completedDurationSummary,
   onOpenNewTask: _onOpenNewTask,
   onAddSection: _onAddSection,
   deleteListSection: _deleteListSection,
@@ -113,15 +117,41 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   const isShopping = isShoppingList(data.category);
   // Con «+ Diarias» activo, routineDurations.full ya incluye las mezcladas (mismo nivel, sin subcabecera).
   const isFullRoutine = currentSectionRoutineMode === 'full_routine';
+  const hasRoutineDurationBreakdown = isFullRoutine && Boolean(data.routineDurations && data.routineDurations.full.activeMinutes > data.routineDurations.only.activeMinutes);
   const durSummary = !isShopping ? (data.routineDurations ? (isFullRoutine ? data.routineDurations.full : data.routineDurations.only) : durationSummary) : null;
   const sectionDurationLabel = durSummary && durSummary.activeMinutes > 0 ? durSummary.formattedActive : null;
-  // Bajo el nombre, en gris y sin iconos: «~30 min · 6,20 €».
-  const sectionMeta = [
-    sectionDurationLabel ? `~${sectionDurationLabel}` : null,
-    sectionTotal > 0 ? formatEuro(sectionTotal) : null,
-  ].filter(Boolean).join(' · ');
+
   // Corto para caber en el móvil: «+ Diarias» en las semanales, «+ Acumuladas» en mensuales y anuales.
   const includeLabel = data.periodicity === 'week' ? 'Diarias' : 'Acumuladas';
+
+  let durationText: string | null = null;
+  if (sectionDurationLabel) {
+    if (hasRoutineDurationBreakdown && data.routineDurations) {
+      const ownFormatted = data.routineDurations.only.formattedActive;
+      const extraMinutes = Math.max(0, data.routineDurations.full.activeMinutes - data.routineDurations.only.activeMinutes);
+      const extraFormatted = formatDuration(extraMinutes);
+      durationText = `~${sectionDurationLabel} (~${ownFormatted} + ~${extraFormatted})`;
+    } else if (completedDurationSummary && completedDurationSummary.activeMinutes > 0) {
+      durationText = `~${sectionDurationLabel} restante (↓ ~${completedDurationSummary.formattedActive} hechos)`;
+    } else {
+      durationText = `~${sectionDurationLabel}`;
+    }
+  }
+
+  let priceText: string | null = null;
+  if (sectionTotal > 0 || (sectionCompletedTotal && sectionCompletedTotal > 0)) {
+    if (sectionCompletedTotal && sectionCompletedTotal > 0) {
+      priceText = `${formatEuro(sectionTotal)} (↓ ${formatEuro(sectionCompletedTotal)} pagados)`;
+    } else {
+      priceText = formatEuro(sectionTotal);
+    }
+  }
+
+  // Bajo el nombre, en gris y sin iconos: «~30 min · 6,20 €».
+  const sectionMeta = [
+    durationText,
+    priceText,
+  ].filter(Boolean).join(' · ');
   const [isPressed, setIsPressed] = useState(false);
   const [sectionDragOverPos, setSectionDragOverPos] = useState<'top' | 'bottom' | 'inside' | null>(null);
   const didSectionLongPressRef = useRef(false);
@@ -160,21 +190,22 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
 
     // Anchor: bajo el botón '...' o el título
     let anchorLeft: number;
-    let anchorTop: number;
 
     if (moreBtnRef.current) {
       const btnRect = moreBtnRef.current.getBoundingClientRect();
       anchorLeft = btnRect.left;
-      anchorTop = btnRect.bottom + 6;
     } else {
       anchorLeft = rowRect.left + 28 + (data.depth * 24);
-      anchorTop = rowRect.top + rowRect.height + 6;
     }
+    // Siempre anclado por debajo de la fila completa de la cabecera
+    const anchorTop = rowRect.top + rowRect.height + 6;
 
-    // Posición vertical: abajo si cabe; si no, arriba para no tapar la cabecera
+    // Posición vertical: abajo si cabe; si no, arriba para no tapar nunca la cabecera
+    const spaceBelow = Math.max(0, viewportH - anchorTop - padding);
+    const spaceAbove = Math.max(0, rowRect.top - 6 - padding);
     let y = anchorTop;
-    if (y + menuHeight > viewportH - padding && rowRect.top - menuHeight - 6 >= padding) {
-      y = Math.max(padding, rowRect.top - menuHeight - 6);
+    if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
+      y = Math.max(padding, rowRect.top - Math.min(menuHeight, spaceAbove) - 6);
     }
 
     // Posición horizontal segura: alineado con el ancla y dentro de la pantalla
@@ -517,7 +548,18 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                 <div
                   className="section-duration section-meta"
                   style={{ fontSize: data.depth === 0 ? '0.8rem' : '0.74rem' }}
-                  title={[sectionDurationLabel && `Duración estimada: ${sectionDurationLabel}`, sectionTotal > 0 && `Subtotal: ${formatEuro(sectionTotal)}`].filter(Boolean).join(' · ')}
+                  title={[
+                    hasRoutineDurationBreakdown && data.routineDurations
+                      ? `Duración total: ~${sectionDurationLabel} (~${data.routineDurations.only.formattedActive} de esta sección + ~${formatDuration(data.routineDurations.full.activeMinutes - data.routineDurations.only.activeMinutes)} ${includeLabel.toLowerCase()})`
+                      : (sectionDurationLabel && (completedDurationSummary && completedDurationSummary.activeMinutes > 0
+                          ? `Te queda ~${sectionDurationLabel} en esta sección porque ya has completado ~${completedDurationSummary.formattedActive} (de ~${formatDuration(durSummary!.activeMinutes + completedDurationSummary.activeMinutes)})`
+                          : `Duración estimada: ${sectionDurationLabel}`)),
+                    (sectionTotal > 0 || (sectionCompletedTotal && sectionCompletedTotal > 0)) && (
+                      sectionCompletedTotal && sectionCompletedTotal > 0
+                        ? `Pendiente: ${formatEuro(sectionTotal)} · Ya pagado: ${formatEuro(sectionCompletedTotal)} · Total original: ${formatEuro(sectionTotal + sectionCompletedTotal)}`
+                        : `Subtotal: ${formatEuro(sectionTotal)}`
+                    )
+                  ].filter(Boolean).join(' · ')}
                 >
                   {sectionMeta}
                 </div>
@@ -589,10 +631,20 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               <span>{includeLabel}</span>
             </button>
           )}
-          {/* Conteo numérico sutil estilo Apple: lo que hay bajo la cabecera (con las incluidas ya mezcladas) */}
+          {/* Conteo numérico sutil estilo Apple: total y desglose (propias + incluidas) si «+ Diarias» está activo */}
           {(() => {
             const count = data.pendingCount ?? pendingTaskCount ?? data.sectionTaskIds?.length ?? 0;
-            return count > 0 ? (
+            if (count <= 0) return null;
+
+            const hasRoutineBreakdown = isFullRoutine && Boolean(data.routineCounts && data.routineCounts.full > data.routineCounts.only);
+            const onlyCount = data.routineCounts?.only ?? count;
+            const extraCount = hasRoutineBreakdown ? (data.routineCounts!.full - data.routineCounts!.only) : 0;
+
+            const tooltipText = hasRoutineBreakdown
+              ? `${count} tareas totales (${onlyCount} propias + ${extraCount} ${includeLabel.toLowerCase()})`
+              : `${count} tareas pendientes`;
+
+            return (
               <span 
                 className="section-total-count"
                 style={{ 
@@ -601,14 +653,29 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                   color: 'var(--text-tertiary)', 
                   fontVariantNumeric: 'tabular-nums',
                   display: 'inline-flex',
-                  alignItems: 'center',
+                  alignItems: 'baseline',
+                  gap: 4,
                   paddingRight: 2
                 }}
-                title={`${count} tareas pendientes`}
+                title={tooltipText}
               >
-                {count}
+                <span className="section-main-count">{count}</span>
+                {hasRoutineBreakdown && (
+                  <span 
+                    className="section-routine-breakdown"
+                    style={{ 
+                      fontSize: '0.78rem', 
+                      fontWeight: 400,
+                      opacity: 0.72,
+                      letterSpacing: '-0.01em',
+                      fontVariantNumeric: 'tabular-nums'
+                    }}
+                  >
+                    ({onlyCount} + {extraCount})
+                  </span>
+                )}
               </span>
-            ) : null;
+            );
           })()}
 
           <button

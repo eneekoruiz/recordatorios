@@ -190,10 +190,33 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
           >
             <ChevronUp size={18} />
           </button>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
-            <span style={{ fontSize: '1.45rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: 'var(--text-primary)' }}>
-              {hours}
-            </span>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={hours}
+              onChange={(e) => {
+                const val = parseInt(e.target.value.replace(/\D/g, ''), 10);
+                const h = isNaN(val) ? 0 : Math.min(23, Math.max(0, val));
+                setHours(h);
+                commitChanges(h, minutes, seconds);
+              }}
+              aria-label="Horas"
+              style={{
+                width: '38px',
+                textAlign: 'center',
+                fontSize: '1.45rem',
+                fontWeight: 700,
+                fontVariantNumeric: 'tabular-nums',
+                color: 'var(--text-primary)',
+                background: 'transparent',
+                border: 'none',
+                outline: 'none',
+                padding: 0,
+                cursor: 'text'
+              }}
+            />
             <span style={{ fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
               horas
             </span>
@@ -223,7 +246,7 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, borderLeft: '1px solid var(--border-subtle)', borderRight: '1px solid var(--border-subtle)' }}>
           <button
             type="button"
-            onClick={() => updateMinutes(5)}
+            onClick={() => updateMinutes(1)}
             aria-label="Aumentar minutos"
             style={{
               background: 'transparent',
@@ -239,17 +262,40 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
           >
             <ChevronUp size={18} />
           </button>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
-            <span style={{ fontSize: '1.45rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: 'var(--text-primary)' }}>
-              {minutes.toString().padStart(2, '0')}
-            </span>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={minutes.toString().padStart(2, '0')}
+              onChange={(e) => {
+                const val = parseInt(e.target.value.replace(/\D/g, ''), 10);
+                const m = isNaN(val) ? 0 : Math.min(59, Math.max(0, val));
+                setMinutes(m);
+                commitChanges(hours, m, seconds);
+              }}
+              aria-label="Minutos"
+              style={{
+                width: '38px',
+                textAlign: 'center',
+                fontSize: '1.45rem',
+                fontWeight: 700,
+                fontVariantNumeric: 'tabular-nums',
+                color: 'var(--text-primary)',
+                background: 'transparent',
+                border: 'none',
+                outline: 'none',
+                padding: 0,
+                cursor: 'text'
+              }}
+            />
             <span style={{ fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
               min
             </span>
           </div>
           <button
             type="button"
-            onClick={() => updateMinutes(-5)}
+            onClick={() => updateMinutes(-1)}
             disabled={hours === 0 && minutes <= 0}
             aria-label="Disminuir minutos"
             style={{
@@ -272,7 +318,7 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
           <button
             type="button"
-            onClick={() => updateSeconds(15)}
+            onClick={() => updateSeconds(1)}
             aria-label="Aumentar segundos"
             style={{
               background: 'transparent',
@@ -288,17 +334,40 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
           >
             <ChevronUp size={18} />
           </button>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
-            <span style={{ fontSize: '1.45rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: 'var(--text-primary)' }}>
-              {seconds.toString().padStart(2, '0')}
-            </span>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={seconds.toString().padStart(2, '0')}
+              onChange={(e) => {
+                const val = parseInt(e.target.value.replace(/\D/g, ''), 10);
+                const s = isNaN(val) ? 0 : Math.min(59, Math.max(0, val));
+                setSeconds(s);
+                commitChanges(hours, minutes, s);
+              }}
+              aria-label="Segundos"
+              style={{
+                width: '38px',
+                textAlign: 'center',
+                fontSize: '1.45rem',
+                fontWeight: 700,
+                fontVariantNumeric: 'tabular-nums',
+                color: 'var(--text-primary)',
+                background: 'transparent',
+                border: 'none',
+                outline: 'none',
+                padding: 0,
+                cursor: 'text'
+              }}
+            />
             <span style={{ fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
               seg
             </span>
           </div>
           <button
             type="button"
-            onClick={() => updateSeconds(-15)}
+            onClick={() => updateSeconds(-1)}
             disabled={hours === 0 && minutes === 0 && seconds <= 0}
             aria-label="Disminuir segundos"
             style={{

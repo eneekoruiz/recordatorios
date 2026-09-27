@@ -294,3 +294,57 @@ export function calculateTasksDuration(
     formattedTotal
   };
 }
+
+/**
+ * Aggregates estimated durations for completed tasks in a set of tasks.
+ */
+export function calculateCompletedTasksDuration(
+  tasks: TaskItem[],
+  sections?: ListSection[],
+  lists?: CustomList[]
+): TasksDurationSummary {
+  if (!tasks || tasks.length === 0) {
+    return {
+      activeMinutes: 0,
+      parallelMinutes: 0,
+      parallelTasksCount: 0,
+      formattedActive: '0 min',
+      formattedParallel: '0 min',
+      formattedTotal: '0 min'
+    };
+  }
+
+  let totalActive = 0;
+  let maxParallel = 0;
+  let parallelCount = 0;
+
+  for (const t of tasks) {
+    // Only count completed tasks
+    if (t.status !== 'completed' || t.deleted_at) continue;
+
+    const info = getTaskDuration(t, sections, lists);
+    totalActive += info.activeMinutes;
+    if (info.isParallel) {
+      parallelCount++;
+      if (info.parallelMinutes > maxParallel) {
+        maxParallel = info.parallelMinutes;
+      }
+    }
+  }
+
+  const formattedActive = formatDuration(totalActive);
+  const formattedParallel = formatDuration(maxParallel);
+  const formattedTotal = parallelCount > 0
+    ? `${formattedActive} (+ ${formattedParallel} paralelo)`
+    : formattedActive;
+
+  return {
+    activeMinutes: totalActive,
+    parallelMinutes: maxParallel,
+    parallelTasksCount: parallelCount,
+    formattedActive,
+    formattedParallel,
+    formattedTotal
+  };
+}
+

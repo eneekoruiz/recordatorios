@@ -56,7 +56,8 @@ test.describe('Arrastrar para reordenar o anidar', () => {
     await expect(rowA).toBeVisible();
     await expect(rowB).toBeVisible();
 
-    await rowB.dragTo(rowA, { targetPosition: { x: 60, y: 4 } });
+    const handleB = (await rowB.locator('.task-drag-handle').count()) > 0 ? rowB.locator('.task-drag-handle') : rowB;
+    await handleB.dragTo(rowA, { targetPosition: { x: 60, y: 4 } });
     await page.waitForTimeout(300);
 
     const order = await page.evaluate(() =>
@@ -73,7 +74,8 @@ test.describe('Arrastrar para reordenar o anidar', () => {
     await ensureAppUnlocked(page);
     const { rowA, rowB } = await seedTasks(page);
     const boxA = await rowA.boundingBox();
-    await rowB.dragTo(rowA, { targetPosition: { x: 60, y: (boxA?.height ?? 52) / 2 } });
+    const handleB = (await rowB.locator('.task-drag-handle').count()) > 0 ? rowB.locator('.task-drag-handle') : rowB;
+    await handleB.dragTo(rowA, { targetPosition: { x: 60, y: (boxA?.height ?? 52) / 2 } });
     await page.waitForTimeout(300);
 
     const parent = await page.evaluate(() => (window as any).useAppStore.getState().tasks['dnd_b']?.parentId);

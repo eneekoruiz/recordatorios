@@ -5,7 +5,7 @@ import {
   Lock, MoreHorizontal,
   ChevronDown, X, Info, RotateCcw, Flag,
   ShieldAlert, Clock, CheckCircle2, CreditCard,
-  Flame, User, MapPin, Link2, Check
+  Flame, User, MapPin, Link2, Check, GripVertical
 } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -14,6 +14,7 @@ import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
 import { ConfettiService } from '../../services/ConfettiService';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { DeleteParentModal } from './DeleteParentModal';
 import type { SpotlightRect } from '../ui/SpotlightBackdrop';
 import { isCaducidadesList, isQueHeHechoList } from '../../utils/specialLists';
 import { TaskContextMenu } from './card/TaskContextMenu';
@@ -53,6 +54,9 @@ interface TaskCardProps {
   onReorderTasks?: (sourceId: string, targetId: string, position: 'before' | 'after') => void;
   /** Solo si la lista admite duración (rutinas): empezar esta tarea sola, como una sección o una lista. */
   onStartTask?: (task: TaskItem) => void;
+  isSelected?: boolean;
+  onToggleSelect?: (taskId: string) => void;
+  isSelectionMode?: boolean;
 }
 
 // Recorrido del dedo (px) a partir del cual deslizar completa (→) o pide borrar (←).
@@ -61,10 +65,13 @@ const SWIPE_DELETE_THRESHOLD = -65;
 
 export const TaskCard = React.memo(function TaskCard({
   task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, showListName = true, hideDueDate = false, isFirstInSection, isLastInSection, previousTaskId, hasChildren, isExpanded, onToggleExpand, indent = 0, onNavigateView, onPersonClick, isGracePeriod,
-  onMoveUp, onMoveDown, canMoveUp, canMoveDown, onReorderTasks, onStartTask
+  onMoveUp, onMoveDown, canMoveUp, canMoveDown, onReorderTasks, onStartTask,
+  isSelected, onToggleSelect, isSelectionMode
 }: TaskCardProps) {
   const cycles = useAppStore(state => state.cycles);
   const tasks = useAppStore(state => state.tasks);
+  const directChildren = React.useMemo(() => Object.values(tasks).filter(t => t.parentId === task.id && !t.deleted_at), [tasks, task.id]);
+  const hasSubtasks = directChildren.length > 0;
   const nestTask = useAppStore(state => state.nestTask);
   const lists = useAppStore(state => state.lists);
   const listSections = useAppStore(state => state.listSections);
@@ -268,13 +275,19 @@ export const TaskCard = React.memo(function TaskCard({
       const padding = 12;
 
       // Colocación inteligente: si hay espacio abajo, abajo; si no, arriba para NO tapar nunca la tarjeta
+      const spaceBelow = Math.max(0, viewportH - (rect.bottom + 6) - padding);
+      const spaceAbove = Math.max(0, rect.top - 6 - padding);
+
       let top: number;
-      if (viewportH - rect.bottom >= 220 || rect.bottom < viewportH / 2) {
+      let maxH: number;
+      if (spaceBelow >= estimatedMenuHeight || spaceBelow >= spaceAbove) {
         top = rect.bottom + 6;
+        maxH = Math.max(120, spaceBelow);
       } else {
-        top = Math.max(padding, rect.top - estimatedMenuHeight - 6);
+        maxH = Math.max(120, spaceAbove);
+        const actualH = Math.min(estimatedMenuHeight, maxH);
+        top = rect.top - 6 - actualH;
       }
-      const maxH = top > rect.top ? Math.max(160, viewportH - top - padding) : Math.max(160, rect.top - padding - 6);
 
       let left = rect.right - menuWidth;
       if (viewportW <= 640) {
@@ -463,6 +476,9 @@ export const TaskCard = React.memo(function TaskCard({
     e.dataTransfer.setData('text/task-id', task.id);
     e.dataTransfer.setData('text/plain', task.id);
     e.dataTransfer.effectAllowed = 'move';
+    if (cardRef.current && e.dataTransfer.setDragImage) {
+      e.dataTransfer.setDragImage(cardRef.current, 20, 20);
+    }
   };
 
   // ── Touch drag helpers ─────────────────────────────────────────────────────
@@ -591,8 +607,6 @@ export const TaskCard = React.memo(function TaskCard({
     <div
       className="task-item-wrapper"
       data-task-id={task.id}
-      draggable={!isMobile && !isBlocked && !isEditingTitle && !isEditingNote && !contextMenuOpen && Boolean(onReorderTasks)}
-      onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -613,6 +627,12 @@ export const TaskCard = React.memo(function TaskCard({
       onPointerDown={(e) => {
         if (isEditingTitle || isEditingNote) return;
         if (e.pointerType === 'mouse' && e.button !== 0) return;
+        if (onToggleSelect && (isSelectionMode || e.ctrlKey || e.metaKey)) {
+          e.stopPropagation();
+          onToggleSelect(task.id);
+          HapticService.selection();
+          return;
+        }
         didLongPressRef.current = false;
         touchStartX.current = e.clientX;
         touchStartY.current = e.clientY;
@@ -770,7 +790,8 @@ export const TaskCard = React.memo(function TaskCard({
           width: '100%',
           boxSizing: 'border-box',
           // Opaca (tapa el fondo del deslizamiento) y del mismo color que la vista en claro y oscuro.
-          background: 'var(--list-row-bg)',
+          background: isSelected ? 'var(--accent-glow, rgba(0, 122, 255, 0.12))' : 'var(--list-row-bg)',
+          boxShadow: isSelected ? 'inset 0 0 0 1.5px var(--accent-primary, #007aff)' : 'none',
           borderRadius: `${isFirstInSection ? 10 : 0}px ${isFirstInSection ? 10 : 0}px ${isLastInSection ? 10 : 0}px ${isLastInSection ? 10 : 0}px`,
           borderBottom: 'none',
           opacity: isBlocked ? 0.5 : 1,
@@ -783,6 +804,26 @@ export const TaskCard = React.memo(function TaskCard({
             ninguna fila vecina lo tape por redondeo de subpíxeles. */}
         {!isFirstInSection && !contextMenuOpen && (
           <div aria-hidden="true" className="task-row-separator" style={{ left: `${40 + indent}px` }} />
+        )}
+
+        {/* Conector visual jerárquico para subtareas (estilo árbol / guía de anidación) */}
+        {indent > 0 && (
+          <div
+            aria-hidden="true"
+            className="subtask-tree-guide"
+            style={{
+              position: 'absolute',
+              left: `${Math.max(12, indent - 10)}px`,
+              top: 0,
+              height: '26px',
+              width: '14px',
+              borderLeft: '2px solid var(--border-subtle, rgba(0, 0, 0, 0.2))',
+              borderBottom: '2px solid var(--border-subtle, rgba(0, 0, 0, 0.2))',
+              borderBottomLeftRadius: '8px',
+              pointerEvents: 'none',
+              opacity: 0.65
+            }}
+          />
         )}
 
         {/* Checkbox o Botón Restaurar en Papelera */}
@@ -1535,9 +1576,8 @@ export const TaskCard = React.memo(function TaskCard({
             aria-label={isExpanded ? "Contraer" : "Expandir"}
           >
             {(() => {
-              if (isExpanded) return null;
               const count = tasks ? Object.values(tasks).filter(t => t && t.parentId === task.id && !t.deleted_at).length : 0;
-              return count > 0 ? <span>{count}</span> : null;
+              return count > 0 ? <span style={{ fontVariantNumeric: 'tabular-nums' }}>{count}</span> : null;
             })()}
             <motion.div style={{ display: 'flex', alignItems: 'center' }} animate={{ rotate: isExpanded ? 0 : -90 }} transition={{ type: 'spring', damping: 20, stiffness: 300 }}>
               <ChevronDown size={18} />
@@ -1602,6 +1642,31 @@ export const TaskCard = React.memo(function TaskCard({
             >
               <MoreHorizontal size={17} color="var(--text-tertiary)" />
             </button>
+
+            {!isMobile && Boolean(onReorderTasks) && (
+              <div
+                className="task-drag-handle"
+                draggable={!isBlocked && !isEditingTitle && !isEditingNote && !contextMenuOpen}
+                onDragStart={handleDragStart}
+                onPointerDown={(e) => e.stopPropagation()}
+                title="Arrastrar para reordenar o anidar"
+                aria-label="Arrastrar para reordenar o anidar"
+                style={{
+                  width: 24,
+                  height: 30,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'grab',
+                  opacity: isHovered || contextMenuOpen ? 0.75 : 0,
+                  transition: 'opacity 0.2s ease, color 0.15s ease',
+                  color: 'var(--text-tertiary)',
+                  flexShrink: 0
+                }}
+              >
+                <GripVertical size={16} />
+              </div>
+            )}
           </div>
         )}
 
@@ -1627,6 +1692,7 @@ export const TaskCard = React.memo(function TaskCard({
         canMoveUp={canMoveUp}
         canMoveDown={canMoveDown}
         onStartTask={onStartTask ? () => onStartTask(task) : undefined}
+        onToggleSelect={onToggleSelect ? () => onToggleSelect(task.id) : undefined}
       />
 
       {/* ── Priority Quick Picker Popover ── */}
@@ -1718,23 +1784,55 @@ export const TaskCard = React.memo(function TaskCard({
         document.body
       )}
 
-      <ConfirmModal
-        isOpen={isDeleteConfirmOpen}
-        title={task.deleted_at ? "Eliminar definitivamente" : "Eliminar recordatorio"}
-        message={task.deleted_at ? `"${task.title}" se eliminará permanentemente. Esta acción no se puede deshacer.` : `"${task.title}" se moverá a la papelera.`}
-        confirmText="Eliminar"
-        onCancel={() => setIsDeleteConfirmOpen(false)}
-        onConfirm={() => {
-          setIsDeleteConfirmOpen(false);
-          SoundService.playDelete();
-          if (task.deleted_at) {
-            useAppStore.getState().permanentDeleteTask(task.id);
-            HapticService.notification('warning');
-          } else {
-            onDelete(task.id);
-          }
-        }}
-      />
+      {hasSubtasks ? (
+        <DeleteParentModal
+          isOpen={isDeleteConfirmOpen}
+          parentTitle={task.title}
+          childCount={directChildren.length}
+          isPermanent={Boolean(task.deleted_at)}
+          onDeleteAll={() => {
+            setIsDeleteConfirmOpen(false);
+            SoundService.playDelete();
+            if (task.deleted_at) {
+              useAppStore.getState().deleteTaskWithOptions(task.id, { keepSubtasks: false, permanent: true });
+              HapticService.notification('warning');
+            } else {
+              useAppStore.getState().deleteTaskWithOptions(task.id, { keepSubtasks: false });
+              HapticService.notification('success');
+            }
+          }}
+          onKeepSubtasks={() => {
+            setIsDeleteConfirmOpen(false);
+            SoundService.playDelete();
+            if (task.deleted_at) {
+              useAppStore.getState().deleteTaskWithOptions(task.id, { keepSubtasks: true, permanent: true });
+              HapticService.notification('warning');
+            } else {
+              useAppStore.getState().deleteTaskWithOptions(task.id, { keepSubtasks: true });
+              HapticService.notification('success');
+            }
+          }}
+          onCancel={() => setIsDeleteConfirmOpen(false)}
+        />
+      ) : (
+        <ConfirmModal
+          isOpen={isDeleteConfirmOpen}
+          title={task.deleted_at ? "Eliminar definitivamente" : "Eliminar recordatorio"}
+          message={task.deleted_at ? `"${task.title}" se eliminará permanentemente. Esta acción no se puede deshacer.` : `"${task.title}" se moverá a la papelera.`}
+          confirmText="Eliminar"
+          onCancel={() => setIsDeleteConfirmOpen(false)}
+          onConfirm={() => {
+            setIsDeleteConfirmOpen(false);
+            SoundService.playDelete();
+            if (task.deleted_at) {
+              useAppStore.getState().permanentDeleteTask(task.id);
+              HapticService.notification('warning');
+            } else {
+              onDelete(task.id);
+            }
+          }}
+        />
+      )}
 
       {feedback && createPortal(
         <motion.div

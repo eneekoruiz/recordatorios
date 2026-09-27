@@ -5,7 +5,8 @@ import {
   CheckCircle, Info, IndentIncrease, IndentDecrease, Calendar, 
   AlertCircle, Flag, FolderInput, LayoutList, Copy, Play, Trash2, 
   ChevronRight, ArrowLeft, Sun, CalendarDays, Clock, CalendarX, Edit3,
-  ArrowUp, ArrowDown, ChevronDown, SlidersHorizontal, Coins, RotateCcw
+  ArrowUp, ArrowDown, ChevronDown, SlidersHorizontal, Coins, RotateCcw,
+  CheckSquare
 } from 'lucide-react';
 import type { TaskItem } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
@@ -37,6 +38,7 @@ export interface TaskContextMenuProps {
   canMoveDown?: boolean;
   /** Solo si la lista admite duración (rutinas): empezar esta tarea sola, como una sección o una lista. */
   onStartTask?: () => void;
+  onToggleSelect?: () => void;
 }
 
 export function TaskContextMenu({
@@ -57,7 +59,8 @@ export function TaskContextMenu({
   onMoveDown,
   canMoveUp,
   canMoveDown,
-  onStartTask
+  onStartTask,
+  onToggleSelect
 }: TaskContextMenuProps) {
   const updateTask = useAppStore(state => state.updateTask);
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
@@ -172,6 +175,7 @@ export function TaskContextMenu({
               canMoveUp={canMoveUp}
               canMoveDown={canMoveDown}
               onStartTask={onStartTask}
+              onToggleSelect={onToggleSelect}
             />
           </motion.div>
         </>
@@ -197,6 +201,7 @@ interface MenuActionsProps {
   canMoveUp?: boolean;
   canMoveDown?: boolean;
   onStartTask?: () => void;
+  onToggleSelect?: () => void;
 }
 
 function MenuActions({
@@ -214,7 +219,8 @@ function MenuActions({
   onMoveDown,
   canMoveUp,
   canMoveDown,
-  onStartTask
+  onStartTask,
+  onToggleSelect
 }: MenuActionsProps) {
   const addTask = useAppStore(state => state.addTask);
   const restoreTask = useAppStore(state => state.restoreTask);
@@ -626,6 +632,18 @@ function MenuActions({
         />
       )}
 
+      {/* Seleccionar recordatorios */}
+      {onToggleSelect && (
+        <ActionRow
+          icon={<CheckSquare size={16} color="var(--accent-primary)" />}
+          label="Seleccionar..."
+          onClick={() => {
+            setContextMenuOpen(false);
+            onToggleSelect();
+          }}
+        />
+      )}
+
       <div className="ios-dropdown-divider" />
 
       {/* 3. Fecha límite */}
@@ -665,6 +683,20 @@ function MenuActions({
           updateTask(task.id, { flagged: !task.flagged }); 
         }} 
       />
+
+      {/* Anular sangrado (acción principal en tareas anidadas) */}
+      {task.parentId && (
+        <ActionRow 
+          icon={<IndentDecrease size={16} color="var(--accent-primary)" />} 
+          label="Anular sangrado" 
+          sublabel="Convertir en principal"
+          onClick={() => { 
+            setContextMenuOpen(false); 
+            nestTask(task.id, undefined); 
+            HapticService.selection();
+          }} 
+        />
+      )}
 
       <div className="ios-dropdown-divider" />
 

@@ -48,6 +48,9 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
   );
 
   const lists = useAppStore(state => state.lists);
+  const tasks = useAppStore(state => state.tasks);
+  const addTask = useAppStore(state => state.addTask);
+  const nestTask = useAppStore(state => state.nestTask);
   const addTasksBatch = useAppStore(state => state.addTasksBatch);
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -158,7 +161,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
         text: m.text
       }));
 
-      const batch = await AIService.processPrompt(text, lists, history);
+      const batch = await AIService.processPrompt(text, lists, history, tasks);
 
       const aiMsg: ChatMessage = {
         id: `msg_ai_${Date.now()}`,
@@ -305,6 +308,104 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
       onSelectView(`list_${targetListToCreate.id}`);
     } else if (tasksPayload[0]?.categoryId === 'que_he_hecho' && onSelectView) {
       onSelectView('list_que_he_hecho');
+    }
+
+    onClose();
+  };
+
+  const handleUpdateActionParentTitle = (messageId: string, title: string) => {
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId || !m.batch?.action) return m;
+      return {
+        ...m,
+        batch: {
+          ...m.batch,
+          action: {
+            ...m.batch.action,
+            parentTitle: title
+          }
+        }
+      };
+    }));
+  };
+
+  const handleToggleActionChild = (messageId: string, childId: string) => {
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId || !m.batch?.action) return m;
+      return {
+        ...m,
+        batch: {
+          ...m.batch,
+          action: {
+            ...m.batch.action,
+            children: m.batch.action.children.map(c => c.id === childId ? { ...c, selected: !c.selected } : c)
+          }
+        }
+      };
+    }));
+  };
+
+  const handleExecuteGroupAction = (messageId: string) => {
+    const msg = messages.find(m => m.id === messageId);
+    if (!msg || !msg.batch?.action) return;
+
+    const { parentTitle, listId, listName, children } = msg.batch.action;
+    const selectedChildren = children.filter(c => c.selected);
+    if (selectedChildren.length === 0) return;
+
+    let finalCatId = listId;
+    if (!finalCatId) {
+      const foundList = lists.find(l => (l.name || '').toLowerCase() === (listName || '').toLowerCase());
+      finalCatId = foundList?.id || lists[0]?.id || 'inbox';
+    }
+
+    const parentTaskId = crypto.randomUUID();
+    addTask({
+      id: parentTaskId,
+      title: parentTitle.trim(),
+      categoryId: finalCatId,
+      status: 'pending',
+      created_at: new Date().toISOString()
+    });
+
+    selectedChildren.forEach(child => {
+      if (child.isExisting) {
+        nestTask(child.id, parentTaskId);
+      } else {
+        addTask({
+          id: child.id.startsWith('ai_child_') ? crypto.randomUUID() : child.id,
+          title: child.title,
+          parentId: parentTaskId,
+          categoryId: finalCatId,
+          status: 'pending',
+          price: child.price,
+          created_at: new Date().toISOString()
+        });
+      }
+    });
+
+    SoundService.playComplete();
+    HapticService.notification('success');
+
+    const targetListName = lists.find(l => l.id === finalCatId)?.name || listName || 'tu lista';
+    window.dispatchEvent(new CustomEvent('show-toast', {
+      detail: `Tarea madre "${parentTitle}" creada con ${selectedChildren.length} subtareas en ${targetListName}`
+    }));
+
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId || !m.batch) return m;
+      return {
+        ...m,
+        batch: {
+          ...m.batch,
+          action: undefined
+        },
+        text: `${m.text}\n\n✨ ¡Acción completada con éxito! He unificado los ${selectedChildren.length} productos dentro de "${parentTitle}" en la lista ${targetListName}.`
+      };
+    }));
+
+    if (onSelectView) {
+      onSelectView(`list_${finalCatId}`);
     }
 
     onClose();
@@ -753,6 +854,139 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                       {msg.batch.tasks[0]?.listId === 'que_he_hecho' || msg.batch.tasks[0]?.listName?.toLowerCase().includes('qué he hecho')
                         ? `Sí, apuntar e importar todo a Qué he hecho (${msg.batch.tasks.filter(t => t.selected).length})`
                         : `Sí, importar todo (${msg.batch.tasks.filter(t => t.selected).length})`}
+                    </button>
+                  </motion.div>
+                )}
+
+                {/* Interactive Grouping Action Card */}
+                {msg.batch?.action?.type === 'group_tasks' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{
+                      width: '100%',
+                      maxWidth: '90%',
+                      marginLeft: msg.sender === 'user' ? 0 : 36,
+                      background: 'var(--bg-card)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: 16,
+                      padding: '16px',
+                      boxShadow: '0 4px 18px rgba(0,0,0,0.06)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 12
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--accent-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Sparkles size={16} color="var(--accent-primary)" />
+                        </div>
+                        <span style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                          Unificar en tarea madre
+                        </span>
+                      </div>
+                      {msg.batch.action.listName && (
+                        <span style={{ fontSize: '0.76rem', background: 'var(--bg-hover)', color: 'var(--text-secondary)', padding: '3px 9px', borderRadius: 999, fontWeight: 600 }}>
+                          Lista: {msg.batch.action.listName}
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', display: 'block', marginBottom: 5, fontWeight: 600 }}>
+                        Título de la tarea madre:
+                      </label>
+                      <input
+                        type="text"
+                        value={msg.batch.action.parentTitle}
+                        onChange={(e) => handleUpdateActionParentTitle(msg.id, e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '9px 12px',
+                          borderRadius: 10,
+                          border: '1px solid var(--border-subtle)',
+                          background: 'var(--bg-surface)',
+                          color: 'var(--text-primary)',
+                          fontSize: '0.92rem',
+                          fontWeight: 600,
+                          boxSizing: 'border-box',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>
+                        Subtareas seleccionadas ({msg.batch.action.children.filter(c => c.selected).length} de {msg.batch.action.children.length}):
+                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
+                        {msg.batch.action.children.map(child => (
+                          <div
+                            key={child.id}
+                            onClick={() => handleToggleActionChild(msg.id, child.id)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 10,
+                              padding: '8px 10px',
+                              borderRadius: 8,
+                              background: child.selected ? 'var(--bg-hover, rgba(0,0,0,0.04))' : 'transparent',
+                              border: '1px solid var(--border-subtle)',
+                              cursor: 'pointer',
+                              opacity: child.selected ? 1 : 0.6,
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <div style={{
+                              width: 18, height: 18, borderRadius: 5,
+                              border: `1.5px solid ${child.selected ? 'var(--accent-primary)' : 'var(--text-tertiary)'}`,
+                              background: child.selected ? 'var(--accent-primary)' : 'transparent',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}>
+                              {child.selected && <Check size={12} color="#fff" strokeWidth={3} />}
+                            </div>
+                            <span style={{ flex: 1, fontSize: '0.88rem', color: 'var(--text-primary)', fontWeight: child.selected ? 600 : 400 }}>
+                              {child.title}
+                            </span>
+                            {child.isExisting ? (
+                              <span style={{ fontSize: '0.70rem', color: 'var(--accent-primary)', background: 'var(--accent-glow)', padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>
+                                Existente
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '0.70rem', color: 'var(--text-tertiary)', background: 'var(--bg-surface)', padding: '2px 6px', borderRadius: 4 }}>
+                                Nuevo
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleExecuteGroupAction(msg.id)}
+                      disabled={msg.batch.action.children.filter(c => c.selected).length === 0}
+                      style={{
+                        width: '100%',
+                        padding: '11px 16px',
+                        borderRadius: 12,
+                        background: 'var(--accent-primary)',
+                        color: '#ffffff',
+                        border: 'none',
+                        fontWeight: 600,
+                        fontSize: '0.92rem',
+                        cursor: msg.batch.action.children.filter(c => c.selected).length === 0 ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        boxShadow: '0 4px 14px rgba(0, 122, 255, 0.3)',
+                        opacity: msg.batch.action.children.filter(c => c.selected).length === 0 ? 0.5 : 1,
+                        transition: 'opacity 0.2s'
+                      }}
+                    >
+                      <Sparkles size={16} />
+                      <span>Confirmar y unificar ({msg.batch.action.children.filter(c => c.selected).length} subtareas)</span>
                     </button>
                   </motion.div>
                 )}

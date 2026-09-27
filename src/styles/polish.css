@@ -1057,6 +1057,17 @@ body.dark .cad-summary-cost strong {
   outline-offset: 2px;
 }
 
+/* Desglose de tareas periódicas propias e incluidas (ej. 22 (7 + 15)) */
+.section-routine-breakdown {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  opacity: 0.78;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  margin-left: 2px;
+}
+
 /* Vistas de frecuencia: «Incluir diarias» como una fila de Ajustes bajo el título */
 .routine-include-row {
   display: flex;

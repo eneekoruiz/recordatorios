@@ -12,11 +12,11 @@ import {
   Trash2
 } from 'lucide-react';
 import { HapticService } from '../../../services/HapticService';
-import { isCaducidadesList, isQueHeHechoList } from '../../../utils/specialLists';
+import { isCaducidadesList, isQueHeHechoList, getListBadgeInfo, isShoppingList } from '../../../utils/specialLists';
 import { confirmDialog } from '../../ui/confirmDialog';
 import { useAppStore } from '../../../store/useAppStore';
 import type { TaskItem, CustomCycle, CustomList } from '../../../models/Task';
-import type { TasksDurationSummary } from '../../../utils/taskDuration';
+import { formatDuration, type TasksDurationSummary } from '../../../utils/taskDuration';
 import { formatEuro } from '../../../utils/format';
 
 interface MainPageHeaderProps {
@@ -38,7 +38,9 @@ interface MainPageHeaderProps {
   getTitle: () => string;
   currentView: string;
   totalCost: number;
+  completedCost?: number;
   totalDuration?: TasksDurationSummary;
+  completedDuration?: TasksDurationSummary;
   activeVisibleCount: number;
   completedVisibleCount: number;
   setConfirmProps: (props: any) => void;
@@ -80,7 +82,9 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   getTitle,
   currentView,
   totalCost,
-  totalDuration: _totalDuration,
+  completedCost,
+  totalDuration,
+  completedDuration,
   activeVisibleCount,
   completedVisibleCount: _completedVisibleCount,
   setConfirmProps,
@@ -236,6 +240,28 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                 </span>
               )}
             </h1>
+            {currentList && !currentList.isFolder && (() => {
+              const badge = getListBadgeInfo(currentList, currentView);
+              return (
+                <span 
+                  className="apple-list-type-pill" 
+                  style={{ 
+                    fontSize: '0.74rem', 
+                    fontWeight: 600, 
+                    color: badge.color, 
+                    background: `${badge.color}15`, 
+                    border: `1px solid ${badge.color}30`, 
+                    padding: '2px 8px', 
+                    borderRadius: 999,
+                    letterSpacing: '-0.01em',
+                    display: 'inline-flex',
+                    alignItems: 'center'
+                  }}
+                >
+                  {badge.label}
+                </span>
+              );
+            })()}
 
 
 
@@ -244,26 +270,90 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
           {/* Gran Contador Apple Reminders en el color de la lista */}
           {currentView !== 'TRASH' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-              {totalCost > 0 && !currentCycle && !isCaducidadesList(currentView, currentList) && (
-                <span 
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    padding: '3px 10px',
-                    borderRadius: 8,
-                    background: 'var(--bg-card, rgba(255,255,255,0.7))',
-                    border: '1px solid var(--border-subtle)',
-                    color: 'var(--text-secondary)',
-                    fontWeight: 600,
-                    fontSize: '0.88rem',
-                    fontVariantNumeric: 'tabular-nums',
-                    letterSpacing: '-0.2px'
-                  }}
-                  title="Presupuesto total pendiente"
-                >
-                  {formatEuro(totalCost)}
-                </span>
+              {/* Duración pendiente y completada */}
+              {totalDuration && totalDuration.activeMinutes > 0 && !currentCycle && !isShoppingList(currentView, currentList) && !isCaducidadesList(currentView, currentList) && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                  <span 
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: '3px 10px',
+                      borderRadius: 8,
+                      background: 'var(--bg-card, rgba(255,255,255,0.7))',
+                      border: '1px solid var(--border-subtle)',
+                      color: 'var(--text-primary)',
+                      fontWeight: 600,
+                      fontSize: '0.88rem',
+                      fontVariantNumeric: 'tabular-nums',
+                      letterSpacing: '-0.2px'
+                    }}
+                    title={completedDuration && completedDuration.activeMinutes > 0
+                      ? `Te queda solo ~${totalDuration.formattedActive} en la lista porque ya has completado ~${completedDuration.formattedActive} (de ~${formatDuration(totalDuration.activeMinutes + completedDuration.activeMinutes)} en total)`
+                      : `Duración total estimada: ~${totalDuration.formattedActive}`}
+                  >
+                    ~{totalDuration.formattedActive}
+                  </span>
+                  {completedDuration && completedDuration.activeMinutes > 0 && (
+                    <span 
+                      style={{
+                        fontSize: '0.72rem',
+                        fontWeight: 600,
+                        color: 'var(--text-tertiary)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 2,
+                        letterSpacing: '-0.1px',
+                        paddingRight: 2
+                      }}
+                      title={`Completados ~${completedDuration.formattedActive}`}
+                    >
+                      <span>↓</span> ~{completedDuration.formattedActive} hechos
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Presupuesto pendiente y pagado */}
+              {((totalCost > 0 || (completedCost && completedCost > 0)) && !currentCycle && !isCaducidadesList(currentView, currentList)) && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                  <span 
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: '3px 10px',
+                      borderRadius: 8,
+                      background: 'var(--bg-card, rgba(255,255,255,0.7))',
+                      border: '1px solid var(--border-subtle)',
+                      color: 'var(--text-primary)',
+                      fontWeight: 600,
+                      fontSize: '0.88rem',
+                      fontVariantNumeric: 'tabular-nums',
+                      letterSpacing: '-0.2px'
+                    }}
+                    title={`Pendiente: ${formatEuro(totalCost)}${completedCost ? ` · Ya pagado: ${formatEuro(completedCost)} · Total original: ${formatEuro(totalCost + completedCost)}` : ''}`}
+                  >
+                    {formatEuro(totalCost)}
+                  </span>
+                  {completedCost && completedCost > 0 && (
+                    <span 
+                      style={{
+                        fontSize: '0.72rem',
+                        fontWeight: 600,
+                        color: 'var(--accent-red, #ff453a)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 2,
+                        letterSpacing: '-0.1px',
+                        paddingRight: 2
+                      }}
+                      title={`Se han completado ${formatEuro(completedCost)} del total original de ${formatEuro(totalCost + completedCost)}`}
+                    >
+                      <span>↓</span> {formatEuro(completedCost)} pagados
+                    </span>
+                  )}
+                </div>
               )}
               {currentView !== 'smart_calendar' && (
                 <span className="apple-large-counter" style={{ color: viewColor }}>

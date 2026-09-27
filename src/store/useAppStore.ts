@@ -102,6 +102,7 @@ interface AppState {
   updateTaskRaw: (task: TaskItem) => void; // Para uso interno y SyncProvider
   toggleTask: (id: string, forceReverse?: boolean) => void;
   deleteTask: (id: string) => void;
+  deleteTaskWithOptions: (id: string, options?: { keepSubtasks?: boolean; permanent?: boolean }) => void;
   updateTask: (id: string, updates: Partial<TaskItem>) => void;
   reorderTasks: (orderedTaskIds: string[]) => void;
   
@@ -530,10 +531,49 @@ export const useAppStore = create<AppState>()(
           }
         }
 
+        // Lógica de cascada: si se tacha un recordatorio padre, se completan también todas sus subtareas recursivamente
+        const childUpdates: Record<string, TaskItem> = {};
+        if (!shouldReverse && (updatedTask.status === 'completed' || isDone)) {
+          const queue = [id];
+          const nowTs = Date.now();
+          while (queue.length > 0) {
+            const curParentId = queue.shift()!;
+            for (const t of Object.values(state.tasks)) {
+              if (t.parentId === curParentId && !t.deleted_at && !childUpdates[t.id]) {
+                queue.push(t.id);
+                const childEffCycle = getEffectiveCycleId(t, state.listSections, state.lists);
+                const childIsOneOff = !childEffCycle;
+                const childHistory = [...(t.completionHistory || []), nowTs];
+                const childTargetUpdate = t.targetCount ? { currentCount: t.targetCount } : {};
+                const childAlerts = t.alerts || [];
+                const childCompletedAlerts = childAlerts.map(a => a.id).filter(Boolean) as string[];
+
+                if (!childIsOneOff) {
+                  childUpdates[t.id] = TaskRepository.update(t, {
+                    cycle_id: t.cycle_id || childEffCycle || undefined,
+                    completedAlerts: childCompletedAlerts,
+                    completionHistory: childHistory,
+                    status: 'pending',
+                    ...childTargetUpdate
+                  });
+                } else {
+                  childUpdates[t.id] = TaskRepository.update(t, {
+                    status: 'completed',
+                    completedAlerts: childCompletedAlerts,
+                    completionHistory: childHistory,
+                    ...childTargetUpdate
+                  });
+                }
+              }
+            }
+          }
+        }
+
         return {
           tasks: {
             ...state.tasks,
-            [id]: updatedTask
+            [id]: updatedTask,
+            ...childUpdates
           }
         };
       }),
@@ -548,6 +588,93 @@ export const useAppStore = create<AppState>()(
             [id]: deletedTask
           } 
         };
+      }),
+
+      deleteTaskWithOptions: (id, options) => optimisticUpdate(get, set, (state) => {
+        const task = state.tasks[id];
+        if (!task) return state;
+
+        const keepSubtasks = options?.keepSubtasks ?? false;
+        const permanent = options?.permanent ?? false;
+        const now = new Date().toISOString();
+        const updatedTasks = { ...state.tasks };
+
+        // Subtareas directas
+        const directChildren = Object.values(state.tasks)
+          .filter(t => t.parentId === id && !t.deleted_at)
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+        if (keepSubtasks && directChildren.length > 0) {
+          // Desangrar subtareas: colocarlas como tareas raíz inmediatamente donde estaba el padre
+          const siblingRoots = Object.values(state.tasks)
+            .filter(t => !t.deleted_at && !t.parentId && t.categoryId === task.categoryId && (t.sectionId || undefined) === (task.sectionId || undefined))
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+          const parentIdx = siblingRoots.findIndex(t => t.id === id);
+
+          // Des-anidar los hijos directos
+          directChildren.forEach((child) => {
+            updatedTasks[child.id] = TaskRepository.update(child, {
+              parentId: undefined,
+            });
+          });
+
+          // Insertar en la lista de raíces ordenadas
+          const reordered = siblingRoots.filter(t => t.id !== id);
+          const insertIdx = parentIdx !== -1 ? parentIdx : reordered.length;
+          reordered.splice(insertIdx, 0, ...directChildren);
+          reordered.forEach((t, idx) => {
+            if (updatedTasks[t.id]) {
+              updatedTasks[t.id] = TaskRepository.update(updatedTasks[t.id], { order: idx });
+            }
+          });
+
+          // Eliminar la tarea padre
+          if (permanent) {
+            delete updatedTasks[id];
+          } else {
+            updatedTasks[id] = TaskRepository.markAsDeleted(task);
+          }
+        } else {
+          // Eliminar la tarea padre Y todos sus descendientes recursivamente
+          const doomedIds = new Set<string>([id]);
+          let grew = true;
+          while (grew) {
+            grew = false;
+            for (const t of Object.values(updatedTasks)) {
+              if (t.parentId && doomedIds.has(t.parentId) && !doomedIds.has(t.id)) {
+                doomedIds.add(t.id);
+                grew = true;
+              }
+            }
+          }
+
+          if (permanent) {
+            const doomedTasks: any[] = [];
+            doomedIds.forEach(did => {
+              const doomed = updatedTasks[did];
+              if (doomed) {
+                doomedTasks.push({ ...doomed, _hard_delete: true, _is_dirty: true, updated_at: now });
+                delete updatedTasks[did];
+              }
+            });
+            return {
+              tasks: updatedTasks,
+              tombstones: {
+                ...state.tombstones,
+                tasks: [...(state.tombstones.tasks || []).filter((t: any) => !doomedIds.has(t.id)), ...doomedTasks]
+              }
+            };
+          } else {
+            doomedIds.forEach(did => {
+              if (updatedTasks[did]) {
+                updatedTasks[did] = TaskRepository.markAsDeleted(updatedTasks[did]);
+              }
+            });
+          }
+        }
+
+        return { tasks: updatedTasks };
       }),
 
       restoreTask: (id) => optimisticUpdate(get, set, (state) => {
@@ -1220,17 +1347,55 @@ export const useAppStore = create<AppState>()(
         const task = state.tasks[taskId];
         if (!task) return state;
 
-        return {
-          tasks: {
-            ...state.tasks,
-            [taskId]: {
-              ...task,
-              parentId: parentId,
-              _is_dirty: true,
-              updated_at: new Date().toISOString()
+        const updatedTasks = { ...state.tasks };
+        const now = new Date().toISOString();
+
+        if (!parentId) {
+          // Des-anidar (anular sangrado): mantener la posición visual justo después de su tarea padre
+          const oldParentId = task.parentId;
+          const oldParent = oldParentId ? state.tasks[oldParentId] : undefined;
+
+          // Scope de tareas al mismo nivel (raíz en la misma lista y sección)
+          const siblingRoots = Object.values(state.tasks)
+            .filter(t => !t.deleted_at && !t.parentId && t.id !== taskId && t.categoryId === task.categoryId && (t.sectionId || undefined) === (task.sectionId || undefined))
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+          let insertIdx = siblingRoots.length;
+          if (oldParent) {
+            const pIdx = siblingRoots.findIndex(t => t.id === oldParent.id);
+            if (pIdx !== -1) {
+              insertIdx = pIdx + 1;
             }
           }
-        };
+
+          const reordered = [...siblingRoots];
+          reordered.splice(insertIdx, 0, { ...task, parentId: undefined });
+          reordered.forEach((t, idx) => {
+            updatedTasks[t.id] = {
+              ...state.tasks[t.id],
+              ...t,
+              parentId: undefined,
+              order: idx,
+              _is_dirty: true,
+              updated_at: now
+            };
+          });
+        } else {
+          // Anidar dentro de parentId: colocar al final de las subtareas del padre
+          const existingChildren = Object.values(state.tasks)
+            .filter(t => !t.deleted_at && t.parentId === parentId && t.id !== taskId);
+          const maxChildOrder = existingChildren.reduce((max, c) => Math.max(max, c.order ?? 0), -1);
+
+          updatedTasks[taskId] = {
+            ...task,
+            parentId: parentId,
+            order: maxChildOrder + 1,
+            _is_dirty: true,
+            updated_at: now
+          };
+        }
+
+        return { tasks: updatedTasks };
       }),
 
       cleanupDataHygiene: () => optimisticUpdate(get, set, (state) => {

@@ -40,8 +40,9 @@ import { smartSortTasks } from '../../utils/smartSort';
 import { WeeklyStreakWidget } from './main/WeeklyStreakWidget';
 import { confirmDialog } from '../ui/confirmDialog';
 import { deduplicateTaskList } from '../../utils/taskDeduplication';
-import { calculateTasksDuration, type TasksDurationSummary } from '../../utils/taskDuration';
+import { calculateTasksDuration, calculateCompletedTasksDuration, type TasksDurationSummary } from '../../utils/taskDuration';
 import { getReservedFrequencyColor } from '../../constants/colors';
+import { BatchTaskActionsBar } from '../tasks/BatchTaskActionsBar';
 
 interface MainContentProps {
   currentView: string;
@@ -321,6 +322,28 @@ const CORE_CYCLES = [
       setShowCompleted(!showCompleted);
     }
   };
+
+  // Selección múltiple de recordatorios para acciones en lote (mover sección, anidar, etc.)
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+  const [prevView, setPrevView] = useState(currentView);
+  if (prevView !== currentView) {
+    setPrevView(currentView);
+    if (selectedTaskIds.size > 0) {
+      setSelectedTaskIds(new Set());
+    }
+  }
+
+  const handleToggleSelectTask = useCallback((taskId: string) => {
+    setSelectedTaskIds(prev => {
+      const next = new Set(prev);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+      return next;
+    });
+  }, []);
 
   // Conteo de tareas para el conmutador nativo [Solo (X) | Todas (Y)] por sección en vistas de ciclos/frecuencias
   const cycleRoutineCounts = useMemo(() => {
@@ -680,6 +703,10 @@ const CORE_CYCLES = [
     return calculateTasksDuration(visibleTasks, listSections, lists);
   }, [visibleTasks, listSections, lists]);
 
+  const viewCompletedTasksDuration = useMemo(() => {
+    return calculateCompletedTasksDuration(visibleTasks, listSections, lists);
+  }, [visibleTasks, listSections, lists]);
+
   // Índices precalculados: evitan recorrer todas las tareas por cada fila renderizada (O(n²)).
   const parentIdsWithChildren = useMemo(() => {
     const ids = new Set<string>();
@@ -772,6 +799,16 @@ const CORE_CYCLES = [
     let sum = 0;
     visibleTasks.forEach(t => {
       if (t.price && !isTaskCompleted(t)) {
+        sum += (Number(t.price) || 0) * (t.quantity || 1);
+      }
+    });
+    return sum;
+  }, [visibleTasks]);
+
+  const completedCost = useMemo(() => {
+    let sum = 0;
+    visibleTasks.forEach(t => {
+      if (t.price && isTaskCompleted(t)) {
         sum += (Number(t.price) || 0) * (t.quantity || 1);
       }
     });
@@ -2155,7 +2192,7 @@ const CORE_CYCLES = [
           <TaskCard 
             task={task}
             virtualStyle={{ margin: 0, padding: 0, boxSizing: 'border-box' }}
-            indent={depth * 16}
+            indent={depth * (isMobile ? 28 : 32)}
             onToggle={handleToggleTask}
             onDelete={handleDeleteTask}
             onOpenZenMode={onOpenZenMode}
@@ -2176,6 +2213,9 @@ const CORE_CYCLES = [
             canMoveDown={canMoveDown}
             onReorderTasks={handleReorderTasks}
             onStartTask={canStartIndividualTasks ? handleStartTask : undefined}
+            isSelected={selectedTaskIds.has(task.id)}
+            onToggleSelect={handleToggleSelectTask}
+            isSelectionMode={selectedTaskIds.size > 0}
             {...({
               hasChildren,
               isExpanded,
@@ -2185,7 +2225,7 @@ const CORE_CYCLES = [
         </div>
       </div>
     );
-  }, [parentIdsWithChildren, visibleIndexById, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, onSelectView, currentView, setSelectedPersonForProfile, recentlyCompletedIds, visibleTasks, handleMoveTaskUp, handleMoveTaskDown, handleReorderTasks, canStartIndividualTasks, handleStartTask]);
+  }, [parentIdsWithChildren, visibleIndexById, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, onSelectView, currentView, setSelectedPersonForProfile, recentlyCompletedIds, visibleTasks, handleMoveTaskUp, handleMoveTaskDown, handleReorderTasks, canStartIndividualTasks, handleStartTask, selectedTaskIds, handleToggleSelectTask, isMobile]);
 
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
   const smartListInfo = isSmartView ? SMART_LISTS.find(l => l.id === currentView) : null;
@@ -2314,7 +2354,9 @@ const CORE_CYCLES = [
                           getTitle={getTitle}
                           currentView={currentView}
                           totalCost={totalCost}
+                          completedCost={completedCost}
                           totalDuration={!isShoppingList(currentView, currentList) ? viewTasksDuration : undefined}
+                          completedDuration={!isShoppingList(currentView, currentList) ? viewCompletedTasksDuration : undefined}
                           activeVisibleCount={titleCount}
                           completedVisibleCount={completedVisibleCount}
                           setConfirmProps={setConfirmProps}
@@ -2360,6 +2402,7 @@ const CORE_CYCLES = [
                     const showDivider = index > 0 && flattenedData[index - 1]?.type !== 'page-header';
                     const sectionTasks = (data.category ? renderedSectionTasks[data.category] : null) || groupedTasks[data.category] || [];
                     const sectionTotal = sectionTasks.reduce((sum, t) => sum + (t.price && !isTaskCompleted(t) ? (Number(t.price) || 0) * (t.quantity || 1) : 0), 0);
+                    const sectionCompletedTotal = sectionTasks.reduce((sum, t) => sum + (t.price && isTaskCompleted(t) ? (Number(t.price) || 0) * (t.quantity || 1) : 0), 0);
                     const sectionPendingTaskIds = data.sectionTaskIds || sectionTasks.filter(t => !isTaskCompleted(t)).map(t => t.id);
                     const tasksForSection = data.sectionTaskIds && data.sectionTaskIds.length > 0
                       ? data.sectionTaskIds.map((id: string) => tasks[id]).filter(Boolean)
@@ -2368,6 +2411,9 @@ const CORE_CYCLES = [
                     const sectionDurationSummary = !isShoppingList(currentView, currentList) ? (data.routineDurations
                       ? (activeMode === 'full_routine' ? data.routineDurations.full : data.routineDurations.only)
                       : calculateTasksDuration(tasksForSection, listSections, lists)) : undefined;
+                    const sectionCompletedDurationSummary = !isShoppingList(currentView, currentList)
+                      ? calculateCompletedTasksDuration(tasksForSection, listSections, lists)
+                      : undefined;
                     return (
                       <MainSectionHeader
                         key={itemKey}
@@ -2393,7 +2439,9 @@ const CORE_CYCLES = [
                         startEditingSection={startEditingSection}
                         setSelectedPersonForProfile={setSelectedPersonForProfile}
                         sectionTotal={sectionTotal}
+                        sectionCompletedTotal={sectionCompletedTotal}
                         durationSummary={sectionDurationSummary}
+                        completedDurationSummary={sectionCompletedDurationSummary}
                         onOpenNewTask={onOpenNewTask}
                         onAddSection={handleAddSection}
                         deleteListSection={deleteListSection}
@@ -2781,6 +2829,14 @@ const CORE_CYCLES = [
           if (deletedToast?.timeoutId) window.clearTimeout(deletedToast.timeoutId);
           setDeletedToast(null);
         }}
+      />
+
+      <BatchTaskActionsBar
+        selectedTaskIds={selectedTaskIds}
+        onClearSelection={() => setSelectedTaskIds(new Set())}
+        listSections={listSections || []}
+        tasks={tasks}
+        currentListId={currentList?.id}
       />
     </main>
   );

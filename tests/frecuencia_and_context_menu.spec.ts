@@ -169,8 +169,8 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     // Encendida: la diaria se mezcla con la semanal, al mismo nivel (sin subcabecera aparte),
     // y el número de la cabecera pasa a contar las dos.
     await chip.click();
-    await expect(chip).toHaveAttribute('aria-pressed', 'true');
-    await expect(semanalHeader.locator('.section-total-count')).toHaveText('2');
+    await expect(semanalHeader.locator('.section-main-count')).toHaveText('2');
+    await expect(semanalHeader.locator('.section-routine-breakdown')).toHaveText('(1 + 1)');
     // Un único nodo (Playwright falla en modo estricto si hubiera dos): no se duplica bajo su
     // sección «Diarias» (que sigue plegada) y, además, mezclada bajo «Semanales».
     await expect(page.locator('.task-item-wrapper[data-task-id="task_daily_1"]')).toBeVisible();
@@ -253,7 +253,7 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     await page.waitForTimeout(300);
 
     // Click on Diario in sidebar
-    const diarioItem = page.locator('.ios-list-item:has-text("Diario")');
+    const diarioItem = page.locator('[data-cycle-id="cycle_day"]').or(page.locator('.ios-list-item:has-text("Diario")'));
     await expect(diarioItem.first()).toBeVisible({ timeout: 5000 });
     await diarioItem.first().click();
 

@@ -515,3 +515,31 @@ export function getGroceryCategory(title?: string | null): string | null {
   return null;
 }
 
+/**
+ * Obtiene la información distintiva del tipo de lista (Duraciones, Financiera, Anotar, etc.)
+ * para mostrar un distintivo claro y visible junto al nombre.
+ */
+export function getListBadgeInfo(list?: CustomList | null, listIdOrView?: string | null): { label: string; color: string } {
+  if (!list && !listIdOrView) return { label: 'Anotar', color: 'var(--text-tertiary)' };
+  if (list?.isFinancial || isShoppingList(listIdOrView, list)) {
+    return { label: 'Financiera', color: '#30d158' };
+  }
+  const type = getListType(list, listIdOrView);
+  if (type === 'routines') {
+    return { label: 'Duraciones', color: '#0a84ff' };
+  }
+  if (type === 'caducidades') {
+    return { label: 'Caducidades', color: '#ff9500' };
+  }
+  if (type === 'que_he_hecho') {
+    return { label: 'Bitácora', color: '#af52de' };
+  }
+  if (type === 'events') {
+    return { label: 'Eventos', color: '#ff2d55' };
+  }
+  if (type === 'goals') {
+    return { label: 'Propósitos', color: '#af52de' };
+  }
+  return { label: 'Anotar', color: 'var(--text-tertiary)' };
+}
+

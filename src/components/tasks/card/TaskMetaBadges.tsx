@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, useMemo, type ReactNode } from 'react';
 import { Calendar, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen, Zap, Tag } from 'lucide-react';
 import type { TaskItem, CustomList } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
@@ -34,9 +34,56 @@ export function TaskMetaBadges({
   lists
 }: TaskMetaBadgesProps) {
   const updateTask = useAppStore(state => state.updateTask);
+  const tasks = useAppStore(state => state.tasks);
   const listSections = useAppStore(state => state.listSections);
   const showDuration = useAppStore(state => state.showDuration);
   const durationInfo = getTaskDuration(task, listSections, lists);
+
+  // Subtareas directas e indirectas para acumulación de precio y duración en tarea padre
+  const childTasks = useMemo(() => {
+    if (!tasks || !task.id) return [];
+    const result: TaskItem[] = [];
+    const queue = [task.id];
+    const allList = Object.values(tasks);
+    while (queue.length > 0) {
+      const parent = queue.shift()!;
+      for (const t of allList) {
+        if (t && t.parentId === parent && !t.deleted_at) {
+          result.push(t);
+          queue.push(t.id);
+        }
+      }
+    }
+    return result;
+  }, [tasks, task.id]);
+
+  // Cálculo acumulado de precio: propio + subtareas
+  const ownPrice = (task.price !== undefined && task.price > 0) ? (task.price * (task.quantity || 1)) : 0;
+  const subtasksPrice = childTasks.reduce((sum: number, c: TaskItem) => {
+    if (c.price !== undefined && c.price > 0) {
+      return sum + (c.price * (c.quantity || 1));
+    }
+    return sum;
+  }, 0);
+  const totalPrice = ownPrice + subtasksPrice;
+  const hasPrice = totalPrice > 0;
+
+  // Cálculo acumulado de duración: propia + subtareas
+  const subtasksDuration = useMemo(() => {
+    if (childTasks.length === 0) return { activeMinutes: 0, parallelMinutes: 0, hasSubtasksDuration: false };
+    let act = 0;
+    let par = 0;
+    for (const c of childTasks) {
+      const d = getTaskDuration(c, listSections, lists);
+      if (d.activeMinutes > 0) act += d.activeMinutes;
+      if (d.parallelMinutes > 0) par += d.parallelMinutes;
+    }
+    return { activeMinutes: act, parallelMinutes: par, hasSubtasksDuration: act > 0 || par > 0 };
+  }, [childTasks, listSections, lists]);
+
+  const totalActiveMinutes = (durationInfo?.activeMinutes || 0) + subtasksDuration.activeMinutes;
+  const totalParallelMinutes = (durationInfo?.parallelMinutes || 0) + subtasksDuration.parallelMinutes;
+  const isParallel = durationInfo?.isParallel || subtasksDuration.parallelMinutes > 0;
 
   const inAppListTarget = (() => {
     const url = task.url || '';
@@ -53,8 +100,8 @@ export function TaskMetaBadges({
 
   const showDueDate = !!task.dueDate && !hideDueDate;
   const isShopping = isShoppingList(task.categoryId, taskList);
-  const hasDuration = !isShopping && showDuration && Boolean(durationInfo && durationInfo.activeMinutes > 0);
-  const hasMeta = showListName || showDueDate || Boolean(cycleBadge) || timeOfDayInfo || Boolean(inAppListTarget) || hasDuration || (task.price !== undefined && task.price > 0);
+  const hasDuration = !isShopping && showDuration && (totalActiveMinutes > 0 || totalParallelMinutes > 0);
+  const hasMeta = showListName || showDueDate || Boolean(cycleBadge) || timeOfDayInfo || Boolean(inAppListTarget) || hasDuration || hasPrice;
 
 
   return (
@@ -150,7 +197,16 @@ export function TaskMetaBadges({
               );
             }
 
-            if (hasDuration && durationInfo) {
+            if (hasDuration) {
+              const ownActive = durationInfo?.activeMinutes || 0;
+              const subActive = subtasksDuration.activeMinutes;
+              const hasSubtasksDur = subtasksDuration.hasSubtasksDuration;
+              const durTooltip = hasSubtasksDur && ownActive > 0
+                ? `Duración total: ${formatDuration(totalActiveMinutes)} (${formatDuration(ownActive)} propia + ${formatDuration(subActive)} en subtareas)${isParallel ? ` (+${formatDuration(totalParallelMinutes)} en paralelo)` : ''}. Pulsa para editar.`
+                : hasSubtasksDur
+                ? `Duración total subtareas: ${formatDuration(totalActiveMinutes)}${isParallel ? ` (+${formatDuration(totalParallelMinutes)} en paralelo)` : ''}. Pulsa para editar.`
+                : `Duración estimada: ${formatDuration(totalActiveMinutes)}${isParallel ? ` (+${formatDuration(totalParallelMinutes)} en paralelo)` : ''}. Pulsa para editar.`;
+
               items.push(
                 <span
                   key="duration"
@@ -169,22 +225,28 @@ export function TaskMetaBadges({
                     userSelect: 'none',
                     transition: 'opacity 0.15s ease'
                   }}
-                  title={`Duración estimada: ${formatDuration(durationInfo.activeMinutes)}${durationInfo.isParallel ? ` (+${formatDuration(durationInfo.parallelMinutes)} en paralelo)` : ''}. Pulsa para editar.`}
+                  title={durTooltip}
                 >
-                  {durationInfo.isParallel ? (
+                  {isParallel ? (
                     <Zap size={11} strokeWidth={2.4} style={{ flexShrink: 0, color: '#ff9500' }} />
                   ) : (
                     <Clock size={11} strokeWidth={2.2} style={{ flexShrink: 0, color: 'var(--accent-primary)', opacity: 0.85 }} />
                   )}
-                  <span>{formatDuration(durationInfo.activeMinutes)}</span>
-                  {durationInfo.isParallel && (
-                    <span style={{ fontSize: '0.67rem', color: 'var(--text-tertiary)', fontWeight: 500 }}>(+{formatDuration(durationInfo.parallelMinutes)})</span>
+                  <span>{formatDuration(totalActiveMinutes)}</span>
+                  {isParallel && (
+                    <span style={{ fontSize: '0.67rem', color: 'var(--text-tertiary)', fontWeight: 500 }}>(+{formatDuration(totalParallelMinutes)})</span>
                   )}
                 </span>
               );
             }
 
-            if (task.price !== undefined && task.price > 0) {
+            if (hasPrice) {
+              const priceTooltip = (subtasksPrice > 0 && ownPrice > 0)
+                ? `Precio total: ${formatEuro(totalPrice)} (${formatEuro(ownPrice)} propio + ${formatEuro(subtasksPrice)} en subtareas). Toca para editar.`
+                : (subtasksPrice > 0)
+                ? `Precio total subtareas: ${formatEuro(totalPrice)}. Toca para editar.`
+                : `Precio: ${task.price} €${task.quantity && task.quantity > 1 ? ` (${task.quantity} uds)` : ''}. Toca para editar.`;
+
               items.push(
                 <span
                   key="price"
@@ -203,13 +265,13 @@ export function TaskMetaBadges({
                     userSelect: 'none',
                     transition: 'opacity 0.15s ease'
                   }}
-                  title={`Precio: ${task.price} €${task.quantity && task.quantity > 1 ? ` (${task.quantity} uds)` : ''} (Toca para editar)`}
+                  title={priceTooltip}
                 >
                   <Tag size={11} strokeWidth={2.4} style={{ color: '#30d158', flexShrink: 0 }} />
-                  {task.quantity && task.quantity > 1 && (
+                  {task.quantity && task.quantity > 1 && subtasksPrice === 0 && (
                     <span style={{ color: 'var(--text-tertiary)', fontSize: '0.72rem', fontWeight: 500 }}>{task.quantity}×</span>
                   )}
-                  <span>{formatEuro(task.price)}</span>
+                  <span>{formatEuro(totalPrice)}</span>
                 </span>
               );
             }

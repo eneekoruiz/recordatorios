@@ -21,6 +21,7 @@ import type { CustomList } from '../../../models/Task';
 import { confirmDialog } from '../../ui/confirmDialog';
 import { shareList, unshareList } from '../../../services/ShareService';
 import { getListIcon, getSuggestedListIconAndColor } from '../../../constants/icons';
+import { getListBadgeInfo } from '../../../utils/specialLists';
 
 // Menú contextual de escritorio: ancho suficiente para las etiquetas largas y
 // posición que nunca se sale por abajo de la ventana.
@@ -330,6 +331,27 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                   >
                     {list.name}
                   </span>
+                  {!list.isFolder && (() => {
+                    const badge = getListBadgeInfo(list, list.id);
+                    return (
+                      <span 
+                        className="apple-sidebar-list-badge"
+                        style={{
+                          fontSize: '0.66rem',
+                          fontWeight: 600,
+                          padding: '1px 5px',
+                          borderRadius: 4,
+                          background: `${badge.color}15`,
+                          color: badge.color,
+                          flexShrink: 0,
+                          lineHeight: 1.2,
+                          letterSpacing: '-0.01em'
+                        }}
+                      >
+                        {badge.label}
+                      </span>
+                    );
+                  })()}
                 </div>
                 {list.isShared && <span className="subtitle">Esta lista es compartida.</span>}
               </div>
