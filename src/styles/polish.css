@@ -688,15 +688,13 @@ body.dark .sidebar-container {
   -webkit-backdrop-filter: none !important;
 }
 .ios-smart-card {
-  background: var(--bg-grouped-card) !important;
-  border: none !important;
-  box-shadow: none !important;
+  position: relative;
+  overflow: hidden;
 }
 @media (hover: hover) {
   .ios-smart-card:hover {
-    transform: none !important;
-    box-shadow: none !important;
-    filter: brightness(0.97);
+    transform: translateY(-2px);
+    filter: brightness(1.03);
   }
 }
 /* Selección (iPad/Mac): la tarjeta activa se rellena con su color */

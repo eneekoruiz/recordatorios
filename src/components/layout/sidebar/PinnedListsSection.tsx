@@ -175,20 +175,23 @@ export const PinnedListsSection: React.FC<PinnedListsSectionProps> = ({
                 </span>
                 {!list.isFolder && (() => {
                   const badge = getListBadgeInfo(list, list.id);
+                  if (!badge || badge.label === 'Anotar') return null;
                   return (
                     <span 
                       className="apple-sidebar-list-badge"
                       style={{
-                        fontSize: '0.64rem',
-                        fontWeight: 600,
+                        fontSize: '0.58rem',
+                        fontWeight: 500,
                         padding: '1px 5px',
                         borderRadius: 4,
-                        background: `${badge.color}15`,
+                        background: `${badge.color}14`,
                         color: badge.color,
+                        opacity: 0.8,
                         flexShrink: 0,
-                        lineHeight: 1.2,
+                        lineHeight: 1.1,
                         letterSpacing: '-0.01em'
                       }}
+                      title={`Tipo de lista: ${badge.label}`}
                     >
                       {badge.label}
                     </span>

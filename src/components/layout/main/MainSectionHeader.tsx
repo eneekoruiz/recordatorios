@@ -130,7 +130,9 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       const ownFormatted = data.routineDurations.only.formattedActive;
       const extraMinutes = Math.max(0, data.routineDurations.full.activeMinutes - data.routineDurations.only.activeMinutes);
       const extraFormatted = formatDuration(extraMinutes);
-      durationText = `~${sectionDurationLabel} (~${ownFormatted} + ~${extraFormatted})`;
+      const ownLabel = data.periodicity === 'week' ? 'semanales' : data.periodicity === 'month' ? 'mensuales' : data.periodicity === 'year' ? 'anuales' : 'propias';
+      const extraLabel = data.periodicity === 'week' ? 'diarias' : 'acumuladas';
+      durationText = `~${sectionDurationLabel} (~${ownFormatted} ${ownLabel} + ~${extraFormatted} ${extraLabel})`;
     } else if (completedDurationSummary && completedDurationSummary.activeMinutes > 0) {
       durationText = `~${sectionDurationLabel} restante (↓ ~${completedDurationSummary.formattedActive} hechos)`;
     } else {
@@ -550,7 +552,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                   style={{ fontSize: data.depth === 0 ? '0.8rem' : '0.74rem' }}
                   title={[
                     hasRoutineDurationBreakdown && data.routineDurations
-                      ? `Duración total: ~${sectionDurationLabel} (~${data.routineDurations.only.formattedActive} de esta sección + ~${formatDuration(data.routineDurations.full.activeMinutes - data.routineDurations.only.activeMinutes)} ${includeLabel.toLowerCase()})`
+                      ? `Duración total: ~${sectionDurationLabel} (~${data.routineDurations.only.formattedActive} ${data.periodicity === 'week' ? 'semanales' : 'de esta sección'} + ~${formatDuration(data.routineDurations.full.activeMinutes - data.routineDurations.only.activeMinutes)} ${data.periodicity === 'week' ? 'diarias' : includeLabel.toLowerCase()})`
                       : (sectionDurationLabel && (completedDurationSummary && completedDurationSummary.activeMinutes > 0
                           ? `Te queda ~${sectionDurationLabel} en esta sección porque ya has completado ~${completedDurationSummary.formattedActive} (de ~${formatDuration(durSummary!.activeMinutes + completedDurationSummary.activeMinutes)})`
                           : `Duración estimada: ${sectionDurationLabel}`)),
@@ -640,8 +642,13 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
             const onlyCount = data.routineCounts?.only ?? count;
             const extraCount = hasRoutineBreakdown ? (data.routineCounts!.full - data.routineCounts!.only) : 0;
 
+            const ownLabel = data.periodicity === 'week' ? 'semanales' : data.periodicity === 'month' ? 'mensuales' : data.periodicity === 'year' ? 'anuales' : 'propias';
+            const extraLabel = data.periodicity === 'week' ? 'diarias' : 'acumuladas';
+            const ownShort = data.periodicity === 'week' ? (isMobile ? 'sem.' : 'semanales') : data.periodicity === 'month' ? (isMobile ? 'mens.' : 'mensuales') : data.periodicity === 'year' ? (isMobile ? 'anual.' : 'anuales') : 'propias';
+            const extraShort = data.periodicity === 'week' ? (isMobile ? 'diar.' : 'diarias') : 'acum.';
+
             const tooltipText = hasRoutineBreakdown
-              ? `${count} tareas totales (${onlyCount} propias + ${extraCount} ${includeLabel.toLowerCase()})`
+              ? `${count} tareas totales (${onlyCount} ${ownLabel} + ${extraCount} ${extraLabel})`
               : `${count} tareas pendientes`;
 
             return (
@@ -671,7 +678,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                       fontVariantNumeric: 'tabular-nums'
                     }}
                   >
-                    ({onlyCount} + {extraCount})
+                    ({onlyCount} {ownShort} + {extraCount} {extraShort})
                   </span>
                 )}
               </span>

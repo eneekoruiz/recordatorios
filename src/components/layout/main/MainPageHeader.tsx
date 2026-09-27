@@ -352,7 +352,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
               )}
 
               {/* Presupuesto pendiente y pagado */}
-              {((totalCost > 0 || (completedCost && completedCost > 0)) && !currentCycle && !isCaducidadesList(currentView, currentList)) && (
+              {((totalCost > 0 || (completedCost !== undefined && completedCost > 0)) && !currentCycle && !isCaducidadesList(currentView, currentList)) && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
                   <span 
                     style={{
@@ -369,11 +369,11 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                       fontVariantNumeric: 'tabular-nums',
                       letterSpacing: '-0.2px'
                     }}
-                    title={`Pendiente: ${formatEuro(totalCost)}${completedCost ? ` · Ya pagado: ${formatEuro(completedCost)} · Total original: ${formatEuro(totalCost + completedCost)}` : ''}`}
+                    title={`Pendiente: ${formatEuro(totalCost)}${completedCost && completedCost > 0 ? ` · Ya pagado: ${formatEuro(completedCost)} · Total original: ${formatEuro(totalCost + completedCost)}` : ''}`}
                   >
                     {formatEuro(totalCost)}
                   </span>
-                  {completedCost && completedCost > 0 && (
+                  {completedCost !== undefined && completedCost > 0 ? (
                     <span 
                       style={{
                         fontSize: '0.72rem',
@@ -389,7 +389,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                     >
                       <span>↓</span> {formatEuro(completedCost)} pagados
                     </span>
-                  )}
+                  ) : null}
                 </div>
               )}
               {currentView !== 'smart_calendar' && (

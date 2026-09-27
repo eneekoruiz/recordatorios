@@ -175,8 +175,8 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         {!isSearchExpanded ? (
           <>
             {/* Header Title / Logo */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-              <span style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+              <span style={{ fontSize: '1.28rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
                 Recordatorios
               </span>
             </div>
@@ -194,7 +194,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                   padding: '6px 4px',
                   minHeight: 44,
                   color: 'var(--accent-primary)',
-                  fontSize: '1.0625rem',
+                  fontSize: '1rem',
                   fontWeight: isEditMode ? 600 : 400,
                   cursor: 'pointer'
                 }}
@@ -226,32 +226,6 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 aria-label="Buscar"
               >
                 <Search size={16} style={{ flexShrink: 0 }} />
-              </button>
-
-              {/* Asistente: crear recordatorios hablando o escribiendo con naturalidad */}
-              <button
-                type="button"
-                onClick={() => {
-                  HapticService.selection();
-                  window.dispatchEvent(new CustomEvent('open-ai-assistant'));
-                }}
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: '50%',
-                  background: 'var(--bg-elevated)',
-                  border: '1px solid var(--border-subtle)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  color: 'var(--accent-primary)',
-                  flexShrink: 0
-                }}
-                title="Asistente IA (Ctrl+J)"
-                aria-label="Asistente IA"
-              >
-                <Sparkles size={16} />
               </button>
 
               <div 
