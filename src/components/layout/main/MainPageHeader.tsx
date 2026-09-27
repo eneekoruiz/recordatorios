@@ -328,10 +328,9 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                       {cycleBreakdown.details.map((d, i) => {
                         const freqColor = d.color || getReservedFrequencyColor(d.cycleId);
                         return (
-                          <span key={d.cycleId || d.cycleName} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: freqColor }}>
-                            {i > 0 && <span style={{ opacity: 0.4, color: 'var(--text-tertiary)' }}>·</span>}
-                            <span style={{ width: 5.5, height: 5.5, borderRadius: '50%', background: freqColor, flexShrink: 0 }} />
-                            <span>{formatDuration(d.durationMinutes)} {d.cycleName.toLowerCase()}</span>
+                          <span key={d.cycleId || d.cycleName} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, color: freqColor }}>
+                            {i > 0 && <span style={{ opacity: 0.35, color: 'var(--text-tertiary)', margin: '0 1px' }}>+</span>}
+                            <span>{formatDuration(d.durationMinutes)}</span>
                           </span>
                         );
                       })}
@@ -419,10 +418,9 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                       {cycleBreakdown.details.map((d, i) => {
                         const freqColor = d.color || getReservedFrequencyColor(d.cycleId);
                         return (
-                          <span key={d.cycleId || d.cycleName} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: freqColor }}>
-                            {i > 0 && <span style={{ opacity: 0.4, color: 'var(--text-tertiary)' }}>·</span>}
-                            <span style={{ width: 5.5, height: 5.5, borderRadius: '50%', background: freqColor, flexShrink: 0 }} />
-                            <span>{d.count} {d.cycleName.toLowerCase()}</span>
+                          <span key={d.cycleId || d.cycleName} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, color: freqColor }}>
+                            {i > 0 && <span style={{ opacity: 0.35, color: 'var(--text-tertiary)', margin: '0 1px' }}>+</span>}
+                            <span>{d.count}</span>
                           </span>
                         );
                       })}

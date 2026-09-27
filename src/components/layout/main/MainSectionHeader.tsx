@@ -127,8 +127,6 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
 
   const ownColor = getReservedFrequencyColor(data.periodicity || 'week');
   const extraColor = getReservedFrequencyColor('day');
-  const ownShort = data.periodicity === 'week' ? 'sem.' : data.periodicity === 'month' ? 'mens.' : data.periodicity === 'year' ? 'anual.' : 'propias';
-  const extraShort = data.periodicity === 'week' ? 'diar.' : 'acum.';
 
   let durationNode: React.ReactNode = null;
   if (sectionDurationLabel) {
@@ -137,18 +135,17 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       const extraMinutes = Math.max(0, data.routineDurations.full.activeMinutes - data.routineDurations.only.activeMinutes);
       const extraFormatted = formatDuration(extraMinutes);
       durationNode = (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-          <span>~{sectionDurationLabel} (</span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: ownColor, fontWeight: 600 }}>
-            <span style={{ width: 5.5, height: 5.5, borderRadius: '50%', background: ownColor, flexShrink: 0 }} />
-            <span>~{ownFormatted} {ownShort}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+          <span>~{sectionDurationLabel}</span>
+          <span style={{ opacity: 0.4 }}>(</span>
+          <span style={{ color: ownColor, fontWeight: 500 }}>
+            {ownFormatted}
           </span>
-          <span style={{ opacity: 0.4 }}>+</span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: extraColor, fontWeight: 600 }}>
-            <span style={{ width: 5.5, height: 5.5, borderRadius: '50%', background: extraColor, flexShrink: 0 }} />
-            <span>~{extraFormatted} {extraShort}</span>
+          <span style={{ opacity: 0.35 }}>+</span>
+          <span style={{ color: extraColor, fontWeight: 500 }}>
+            {extraFormatted}
           </span>
-          <span>)</span>
+          <span style={{ opacity: 0.4 }}>)</span>
         </span>
       );
     } else if (completedDurationSummary && completedDurationSummary.activeMinutes > 0) {
@@ -658,8 +655,6 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
 
             const ownLabel = data.periodicity === 'week' ? 'semanales' : data.periodicity === 'month' ? 'mensuales' : data.periodicity === 'year' ? 'anuales' : 'propias';
             const extraLabel = data.periodicity === 'week' ? 'diarias' : 'acumuladas';
-            const ownShort = data.periodicity === 'week' ? (isMobile ? 'sem.' : 'semanales') : data.periodicity === 'month' ? (isMobile ? 'mens.' : 'mensuales') : data.periodicity === 'year' ? (isMobile ? 'anual.' : 'anuales') : 'propias';
-            const extraShort = data.periodicity === 'week' ? (isMobile ? 'diar.' : 'diarias') : 'acum.';
 
             const tooltipText = hasRoutineBreakdown
               ? `${count} tareas totales (${onlyCount} ${ownLabel} + ${extraCount} ${extraLabel})`
@@ -685,28 +680,21 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                   <span 
                     className="section-routine-breakdown"
                     style={{ 
-                      fontSize: '0.78rem', 
+                      fontSize: '0.80rem', 
                       fontWeight: 600,
                       display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
+                      alignItems: 'baseline',
+                      gap: 2,
                       letterSpacing: '-0.01em',
                       fontVariantNumeric: 'tabular-nums',
-                      padding: '1px 6px',
-                      borderRadius: 6,
-                      background: 'var(--bg-elevated)',
-                      border: '1px solid var(--border-subtle)'
+                      opacity: 0.95
                     }}
                   >
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: ownColor }}>
-                      <span style={{ width: 5.5, height: 5.5, borderRadius: '50%', background: ownColor, flexShrink: 0 }} />
-                      <span>{onlyCount} {ownShort}</span>
-                    </span>
-                    <span style={{ opacity: 0.4, fontSize: '0.72rem' }}>+</span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: extraColor }}>
-                      <span style={{ width: 5.5, height: 5.5, borderRadius: '50%', background: extraColor, flexShrink: 0 }} />
-                      <span>{extraCount} {extraShort}</span>
-                    </span>
+                    <span style={{ opacity: 0.35 }}>(</span>
+                    <span style={{ color: ownColor }}>{onlyCount}</span>
+                    <span style={{ opacity: 0.3, margin: '0 1px' }}>+</span>
+                    <span style={{ color: extraColor }}>{extraCount}</span>
+                    <span style={{ opacity: 0.35 }}>)</span>
                   </span>
                 )}
               </span>
