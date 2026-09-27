@@ -13,7 +13,7 @@ import { Share2, Link2Off,
   IndentIncrease, 
   IndentDecrease, 
   MoreHorizontal,
-
+  GripVertical
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../../../store/useAppStore';
@@ -61,8 +61,10 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
 }) => {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [draggingListId, setDraggingListId] = useState<string | null>(null);
+  const [dropFeedback, setDropFeedback] = useState<{ targetId: string; position: 'before' | 'after' | 'inside' } | null>(null);
   const removeList = useAppStore((state) => state.removeList);
   const updateList = useAppStore((state) => state.updateList);
+  const reorderLists = useAppStore((state) => state.reorderLists);
   
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -118,7 +120,9 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
     }
   }
   const uniqueLists = Array.from(seenNameParent.values());
-  const currentLevelLists = uniqueLists.filter((l: any) => l.parentId === parentId && l.id !== 'user_preferences_smart_lists' && l.id !== 'primeros_pasos' && !l.isPinned);
+  const currentLevelLists = uniqueLists
+    .filter((l: any) => (parentId ? l.parentId === parentId : !l.parentId) && l.id !== 'user_preferences_smart_lists' && l.id !== 'primeros_pasos' && !l.isPinned)
+    .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
   if (currentLevelLists.length === 0) return null;
 
   return (
@@ -168,52 +172,118 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
 
         return (
           <div key={list.id} style={{ position: 'relative' }}>
+            {/* Indicadores visuales de arrastrar y soltar para reordenar o anidar */}
+            {dropFeedback?.targetId === list.id && dropFeedback?.position === 'before' && (
+              <div 
+                style={{
+                  position: 'absolute',
+                  top: -2,
+                  left: 6,
+                  right: 6,
+                  height: 3,
+                  borderRadius: 2,
+                  background: 'var(--accent-primary, #007aff)',
+                  boxShadow: '0 0 8px var(--accent-primary, #007aff)',
+                  zIndex: 100,
+                  pointerEvents: 'none'
+                }} 
+              />
+            )}
+            {dropFeedback?.targetId === list.id && dropFeedback?.position === 'after' && (
+              <div 
+                style={{
+                  position: 'absolute',
+                  bottom: -2,
+                  left: 6,
+                  right: 6,
+                  height: 3,
+                  borderRadius: 2,
+                  background: 'var(--accent-primary, #007aff)',
+                  boxShadow: '0 0 8px var(--accent-primary, #007aff)',
+                  zIndex: 100,
+                  pointerEvents: 'none'
+                }} 
+              />
+            )}
+
             <motion.div 
               data-list-id={list.id}
               data-list-name={list.name}
               className={`ios-list-item ${isActive ? 'active' : ''}`}
-              drag={draggingListId === list.id || isEditMode}
+              drag={!isMobile || isEditMode}
               dragSnapToOrigin={true}
-              whileDrag={{ scale: 1.02, zIndex: 100, boxShadow: '0 8px 24px rgba(0,0,0,0.3)', backgroundColor: 'var(--bg-elevated, #2c2c2e)' }}
+              whileDrag={{ scale: 1.02, zIndex: 999, boxShadow: '0 8px 24px rgba(0,0,0,0.3)', backgroundColor: 'var(--bg-elevated, #2c2c2e)', cursor: 'grabbing' }}
               animate={{
                 scale: activeMenuId === list.id ? 0.96 : 1,
-                zIndex: activeMenuId === list.id ? 99999 : 'auto',
+                zIndex: activeMenuId === list.id ? 99999 : (draggingListId === list.id ? 999 : 'auto'),
                 boxShadow: activeMenuId === list.id ? '0 16px 40px rgba(0,0,0,0.2)' : 'none',
-                borderRadius: 12,
               }}
               transition={{ type: 'spring', damping: 25, stiffness: 450 }}
               onDragStart={() => {
+                setDraggingListId(list.id);
                 if (longPressTimerRef.current) {
                   clearTimeout(longPressTimerRef.current);
                   longPressTimerRef.current = null;
                 }
               }}
-              onDragEnd={(e, info) => {
+              onDrag={(_e, info) => {
+                const targetEl = document.elementFromPoint(info.point.x, info.point.y);
+                const row = targetEl?.closest('[data-list-id]') as HTMLElement | null;
+                if (row) {
+                  const targetId = row.getAttribute('data-list-id');
+                  if (targetId && targetId !== list.id) {
+                    const rect = row.getBoundingClientRect();
+                    const relY = (info.point.y - rect.top) / rect.height;
+                    if (relY < 0.28) {
+                      setDropFeedback({ targetId, position: 'before' });
+                    } else if (relY > 0.72) {
+                      setDropFeedback({ targetId, position: 'after' });
+                    } else {
+                      setDropFeedback({ targetId, position: 'inside' });
+                    }
+                    return;
+                  }
+                }
+                setDropFeedback(null);
+              }}
+              onDragEnd={(_e, info) => {
                 setDraggingListId(null);
-                const targetEl = e.currentTarget as HTMLElement;
-                const oldVisibility = targetEl.style.visibility;
-                targetEl.style.visibility = 'hidden';
-                const dropTarget = document.elementFromPoint(info.point.x, info.point.y);
-                targetEl.style.visibility = oldVisibility;
+                const feedback = dropFeedback;
+                setDropFeedback(null);
 
-                if (dropTarget) {
-                  const targetRow = dropTarget.closest('[data-list-id]') as HTMLElement;
-                  if (targetRow) {
-                    const targetId = targetRow.getAttribute('data-list-id');
-                    if (targetId && targetId !== list.id) {
-                      let isDescendant = false;
-                      let curr = lists.find((l: any) => l.id === targetId);
-                      while (curr && curr.parentId) {
-                        if (curr.parentId === list.id) {
-                          isDescendant = true;
-                          break;
-                        }
-                        curr = lists.find((l: any) => l.id === curr!.parentId);
+                if (feedback) {
+                  const targetList = lists.find((l: any) => l.id === feedback.targetId);
+                  if (targetList) {
+                    let isDescendant = false;
+                    let curr: any = targetList;
+                    while (curr && curr.parentId) {
+                      if (curr.parentId === list.id) {
+                        isDescendant = true;
+                        break;
                       }
-                      if (!isDescendant) {
-                        updateList(list.id, { parentId: targetId });
-                        setExpanded(prev => ({ ...prev, [targetId]: true }));
-                        window.dispatchEvent(new CustomEvent('show-toast', { detail: `Anidado en "${targetRow.getAttribute('data-list-name') || targetId}"` }));
+                      curr = lists.find((l: any) => l.id === curr!.parentId);
+                    }
+
+                    if (!isDescendant) {
+                      if (feedback.position === 'inside') {
+                        updateList(list.id, { parentId: targetList.id });
+                        setExpanded(prev => ({ ...prev, [targetList.id]: true }));
+                        window.dispatchEvent(new CustomEvent('show-toast', { detail: `Anidado en "${targetList.name}"` }));
+                        return;
+                      } else {
+                        const targetParentId = targetList.parentId;
+                        const siblings = lists
+                          .filter((l: any) => (targetParentId ? l.parentId === targetParentId : !l.parentId) && l.id !== 'user_preferences_smart_lists' && l.id !== 'primeros_pasos' && !l.isPinned)
+                          .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
+                        
+                        const filteredSiblings = siblings.filter((l: any) => l.id !== list.id);
+                        const targetIdx = filteredSiblings.findIndex((l: any) => l.id === targetList.id);
+                        const insertIdx = feedback.position === 'before' ? Math.max(0, targetIdx) : targetIdx + 1;
+                        
+                        filteredSiblings.splice(insertIdx, 0, list);
+                        const newOrderedIds = filteredSiblings.map((l: any) => l.id);
+                        reorderLists(newOrderedIds, targetParentId);
+                        window.dispatchEvent(new CustomEvent('show-toast', { detail: `Lista "${list.name}" reordenada` }));
                         return;
                       }
                     }
@@ -229,7 +299,7 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                   } else if (info.offset.x < -40 && list.parentId) {
                     const parentList = lists.find((l: any) => l.id === list.parentId);
                     updateList(list.id, { parentId: parentList?.parentId });
-                    window.dispatchEvent(new CustomEvent('show-toast', { detail: `Lista movida de nivel` }));
+                    window.dispatchEvent(new CustomEvent('show-toast', { detail: `Lista movida al nivel superior` }));
                   }
                 }
               }}
@@ -298,7 +368,13 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                 wasLongPressedRef.current = true;
                 triggerListMenu(e.currentTarget as HTMLElement);
               }}
-              style={{ position: 'relative', transition: 'background-color 150ms ease', cursor: 'grab' }}
+              style={{ 
+                position: 'relative', 
+                transition: 'background-color 150ms ease', 
+                cursor: draggingListId === list.id ? 'grabbing' : 'grab',
+                outline: dropFeedback?.targetId === list.id && dropFeedback?.position === 'inside' ? '2px solid var(--accent-primary, #007aff)' : 'none',
+                outlineOffset: -1
+              }}
             >
               {list.isFolder ? (
                 isExpanded ? <FolderOpen size={depth > 0 ? 14 : 18} color={list.color} style={{ marginRight: depth > 0 ? 8 : 10, flexShrink: 0 }} /> : <Folder size={depth > 0 ? 14 : 18} color={list.color} style={{ marginRight: depth > 0 ? 8 : 10, flexShrink: 0 }} />
@@ -394,7 +470,16 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                 </button>
               )}
               
-              {!isMobile && (
+              {isEditMode && (
+                <div 
+                  style={{ display: 'flex', alignItems: 'center', marginLeft: 4, color: 'var(--text-tertiary)', cursor: 'grab', flexShrink: 0 }}
+                  title="Arrastrar para reordenar o anidar"
+                >
+                  <GripVertical size={16} />
+                </div>
+              )}
+
+              {!isMobile && !isEditMode && (
                 <button 
                   type="button"
                   className="list-action-btn desktop-only-action"

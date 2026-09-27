@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar as CalendarIcon, Clock, PlusCircle, X, Zap, CreditCard, Bell } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, PlusCircle, X, Zap, CreditCard, Bell, Sparkles, Minus, Plus } from 'lucide-react';
 import { SectionTrailing } from './SectionTrailing';
 import { formatRelativeDay, formatTime } from '../../../utils/format';
 import type { AlertDef } from '../../../models/Task';
@@ -271,6 +271,9 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                   duration={duration}
                   onChange={(mins) => setDuration?.(mins)}
                   isRoutineCategory={isRoutineList}
+                  label={isParallel ? 'Tiempo activo (tu dedicación)' : 'Duración estimada'}
+                  sublabel={isParallel ? 'El tiempo que estás ocupado realizándola (ej: 20 seg para ponértela, 2 min para cargarla)' : undefined}
+                  isParallel={Boolean(isParallel)}
                 />
 
                 {/* Opción Tarea en Paralelo / Segundo plano (ej: lavadora, mascarilla, secadora) */}
@@ -286,17 +289,17 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                         <div style={{
-                          width: 30, height: 30, borderRadius: 8,
+                          width: 32, height: 32, borderRadius: 8,
                           background: isParallel ? 'rgba(255, 149, 0, 0.18)' : 'var(--bg-material, rgba(0,0,0,0.04))',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                         }}>
-                          <Zap size={16} strokeWidth={2.4} color={isParallel ? '#ff9500' : 'var(--text-tertiary)'} />
+                          <Zap size={17} strokeWidth={2.4} color={isParallel ? '#ff9500' : 'var(--text-tertiary)'} />
                         </div>
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: '0.84rem', fontWeight: 650, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                          <div style={{ fontSize: '0.86rem', fontWeight: 650, color: 'var(--text-primary)', lineHeight: 1.2 }}>
                             Tarea en segundo plano
                           </div>
-                          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.2, marginTop: 2 }}>
+                          <div style={{ fontSize: '0.73rem', color: 'var(--text-secondary)', lineHeight: 1.25, marginTop: 2 }}>
                             Lavadora, mascarilla, secadora... se ejecuta sola mientras haces otras tareas
                           </div>
                         </div>
@@ -308,7 +311,7 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                           onChange={(e) => {
                             setIsParallel(e.target.checked);
                             if (e.target.checked && (!parallelDuration || parallelDuration <= 0)) {
-                              setParallelDuration?.(30);
+                              setParallelDuration?.(5);
                             }
                           }}
                         />
@@ -317,13 +320,34 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                     </div>
 
                     {isParallel && (
-                      <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255, 149, 0, 0.15)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                          Tiempo de espera pasivo:
-                        </span>
+                      <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255, 149, 0, 0.18)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                          <div>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-primary)', fontWeight: 650 }}>
+                              Tiempo de espera pasivo (actúa sola):
+                            </span>
+                            <div style={{ fontSize: '0.71rem', color: 'var(--text-secondary)', marginTop: 1 }}>
+                              No te quita tiempo de tu jornada activa.
+                            </div>
+                          </div>
+                          <span style={{
+                            fontSize: '0.84rem',
+                            fontWeight: 700,
+                            fontVariantNumeric: 'tabular-nums',
+                            color: '#ff9500',
+                            background: 'rgba(255, 149, 0, 0.14)',
+                            padding: '2px 8px',
+                            borderRadius: 6,
+                            flexShrink: 0
+                          }}>
+                            {formatDuration(parallelDuration || 5)}
+                          </span>
+                        </div>
+
+                        {/* Presets rápidos con 5m, 10m, 15m, 20m, 30m... */}
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          {[15, 20, 30, 45, 60, 90, 120, 150].map((mins) => {
-                            const isSelected = (parallelDuration || 30) === mins;
+                          {[5, 10, 15, 20, 30, 45, 60, 90, 120, 180].map((mins) => {
+                            const isSelected = (parallelDuration || 5) === mins;
                             return (
                               <button
                                 key={mins}
@@ -345,6 +369,99 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                               </button>
                             );
                           })}
+                        </div>
+
+                        {/* Stepper manual para regular minutos exactos */}
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          background: 'var(--bg-card, rgba(0,0,0,0.03))',
+                          padding: '6px 12px',
+                          borderRadius: 10,
+                          border: '1px solid var(--border-subtle)'
+                        }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                            Ajustar minutos exactos:
+                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <button
+                              type="button"
+                              onClick={() => setParallelDuration?.(Math.max(1, (parallelDuration || 5) - 5))}
+                              style={{
+                                width: 26, height: 26, borderRadius: 6,
+                                border: '1px solid var(--border-subtle)',
+                                background: 'transparent',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: 'pointer', color: 'var(--text-primary)'
+                              }}
+                              title="-5 min"
+                            >
+                              <Minus size={13} />
+                            </button>
+                            <input
+                              type="number"
+                              min={1}
+                              max={1440}
+                              value={parallelDuration || 5}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                if (!isNaN(val) && val > 0) setParallelDuration?.(val);
+                              }}
+                              style={{
+                                width: 44,
+                                textAlign: 'center',
+                                fontSize: '0.86rem',
+                                fontWeight: 700,
+                                border: 'none',
+                                background: 'transparent',
+                                color: 'var(--text-primary)',
+                                outline: 'none'
+                              }}
+                            />
+                            <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>min</span>
+                            <button
+                              type="button"
+                              onClick={() => setParallelDuration?.((parallelDuration || 5) + 5)}
+                              style={{
+                                width: 26, height: 26, borderRadius: 6,
+                                border: '1px solid var(--border-subtle)',
+                                background: 'transparent',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: 'pointer', color: 'var(--text-primary)'
+                              }}
+                              title="+5 min"
+                            >
+                              <Plus size={13} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Píldora de resumen educativo */}
+                        <div style={{
+                          padding: '8px 12px',
+                          borderRadius: 10,
+                          background: 'rgba(255, 149, 0, 0.12)',
+                          border: '1px solid rgba(255, 149, 0, 0.25)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          fontSize: '0.76rem',
+                          color: 'var(--text-primary)',
+                          lineHeight: 1.3
+                        }}>
+                          <Sparkles size={14} color="#ff9500" style={{ flexShrink: 0 }} />
+                          <span>
+                            <strong>Planificación:</strong> {(() => {
+                              if (typeof duration !== 'number' || duration <= 0) return '0 min';
+                              const totalSec = Math.round(duration * 60);
+                              const m = Math.floor(totalSec / 60);
+                              const s = totalSec % 60;
+                              if (m === 0) return `${s} seg`;
+                              if (s === 0) return `${m} min`;
+                              return `${m} min ${s} seg`;
+                            })()} de dedicación activa + {formatDuration(parallelDuration || 5)} de espera pasiva
+                          </span>
                         </div>
                       </div>
                     )}

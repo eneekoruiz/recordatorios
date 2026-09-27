@@ -113,6 +113,7 @@ interface AppState {
 
   addList: (list: CustomList) => void;
   updateList: (id: string, data: Partial<CustomList>) => void;
+  reorderLists: (orderedListIds: string[], targetParentId?: string) => void;
   deleteList: (id: string) => { lists: number; tasks: number; undo: () => void };
   removeList: (id: string) => { lists: number; tasks: number; undo: () => void };
 
@@ -836,6 +837,28 @@ export const useAppStore = create<AppState>()(
           updated_at: new Date().toISOString() 
         } : l)
       })),
+
+      reorderLists: (orderedListIds, targetParentId) => optimisticUpdate(get, set, (state) => {
+        const idSet = new Set(orderedListIds);
+        const remaining = state.lists.filter(l => !idSet.has(l.id));
+        const updatedOrdered = orderedListIds
+          .map((id, index) => {
+            const item = state.lists.find(l => l.id === id);
+            if (!item) return null;
+            return {
+              ...item,
+              order: index,
+              parentId: targetParentId !== undefined ? targetParentId : item.parentId,
+              _is_dirty: true,
+              updated_at: new Date().toISOString()
+            };
+          })
+          .filter(Boolean) as CustomList[];
+
+        return {
+          lists: [...updatedOrdered, ...remaining]
+        };
+      }),
 
       removeList: (id) => {
         const state: AppState = get();

@@ -6,12 +6,18 @@ interface AppleTimerPickerProps {
   duration: number | '' | undefined;
   onChange: (minutes: number | '') => void;
   isRoutineCategory?: boolean;
+  label?: string;
+  sublabel?: string;
+  isParallel?: boolean;
 }
 
 export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
   duration,
   onChange,
-  isRoutineCategory = false
+  isRoutineCategory = false,
+  label,
+  sublabel,
+  isParallel = false
 }) => {
   // Convert incoming duration (minutes) to hours, minutes, seconds
   const initialTotalSeconds = typeof duration === 'number' && duration > 0 ? Math.round(duration * 60) : 0;
@@ -89,14 +95,19 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
     commitChanges(nextH, nextM, next);
   };
 
-  const applyPreset = (mins: number) => {
+  const applyPreset = (mins: number, secs: number = 0) => {
     HapticService.selection();
     const h = Math.floor(mins / 60);
     const m = mins % 60;
     setHours(h);
     setMinutes(m);
-    setSeconds(0);
-    onChange(mins);
+    setSeconds(secs);
+    const totalSec = h * 3600 + m * 60 + secs;
+    if (totalSec <= 0) {
+      onChange('');
+    } else {
+      onChange(totalSec / 60);
+    }
   };
 
   const clearDuration = () => {
@@ -135,26 +146,33 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
       }}
     >
       {/* Header con resumen de tiempo */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Clock size={16} color="var(--accent-primary, #007aff)" />
-          <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-            Duración estimada
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Clock size={16} color="var(--accent-primary, #007aff)" />
+            <span style={{ fontSize: '0.88rem', fontWeight: 650, color: 'var(--text-primary)' }}>
+              {label || 'Duración estimada'}
+            </span>
+          </div>
+          <span 
+            style={{
+              fontSize: '0.86rem',
+              fontWeight: 700,
+              fontVariantNumeric: 'tabular-nums',
+              color: isConfigured ? 'var(--accent-primary, #007aff)' : 'var(--text-tertiary)',
+              background: isConfigured ? 'rgba(0, 122, 255, 0.12)' : 'transparent',
+              padding: isConfigured ? '2px 8px' : 0,
+              borderRadius: 6
+            }}
+          >
+            {formattedDisplay}
           </span>
         </div>
-        <span 
-          style={{
-            fontSize: '0.86rem',
-            fontWeight: 700,
-            fontVariantNumeric: 'tabular-nums',
-            color: isConfigured ? 'var(--accent-primary, #007aff)' : 'var(--text-tertiary)',
-            background: isConfigured ? 'rgba(0, 122, 255, 0.12)' : 'transparent',
-            padding: isConfigured ? '2px 8px' : 0,
-            borderRadius: 6
-          }}
-        >
-          {formattedDisplay}
-        </span>
+        {sublabel && (
+          <div style={{ fontSize: '0.73rem', color: 'var(--text-secondary)', paddingLeft: 22, lineHeight: 1.25 }}>
+            {sublabel}
+          </div>
+        )}
       </div>
 
       {/* Ruedas/Columnas estilo Temporizador de Apple */}
@@ -389,22 +407,32 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
 
       {/* Botones rápidos de preajuste estilo iOS */}
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-        {[
-          { label: '5m', mins: 5 },
-          { label: '15m', mins: 15 },
-          { label: '25m', mins: 25 },
-          { label: '30m', mins: 30 },
-          { label: '45m', mins: 45 },
-          { label: '1h', mins: 60 },
-          { label: '1h 30m', mins: 90 },
-          { label: '2h', mins: 120 }
-        ].map(p => {
-          const isSelected = typeof duration === 'number' && duration === p.mins;
+        {(isParallel ? [
+          { label: '20s', mins: 0, secs: 20 },
+          { label: '30s', mins: 0, secs: 30 },
+          { label: '1m', mins: 1, secs: 0 },
+          { label: '2m', mins: 2, secs: 0 },
+          { label: '5m', mins: 5, secs: 0 },
+          { label: '10m', mins: 10, secs: 0 },
+          { label: '15m', mins: 15, secs: 0 },
+          { label: '30m', mins: 30, secs: 0 }
+        ] : [
+          { label: '5m', mins: 5, secs: 0 },
+          { label: '15m', mins: 15, secs: 0 },
+          { label: '25m', mins: 25, secs: 0 },
+          { label: '30m', mins: 30, secs: 0 },
+          { label: '45m', mins: 45, secs: 0 },
+          { label: '1h', mins: 60, secs: 0 },
+          { label: '1h 30m', mins: 90, secs: 0 },
+          { label: '2h', mins: 120, secs: 0 }
+        ]).map(p => {
+          const targetMin = p.mins + (p.secs || 0) / 60;
+          const isSelected = typeof duration === 'number' && Math.abs(duration - targetMin) < 0.005;
           return (
             <button
-              key={p.mins}
+              key={p.label}
               type="button"
-              onClick={() => applyPreset(p.mins)}
+              onClick={() => applyPreset(p.mins, p.secs)}
               style={{
                 padding: '4px 10px',
                 borderRadius: 999,

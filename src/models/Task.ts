@@ -30,6 +30,7 @@ export interface CustomList {
   autoEstimateDuration?: boolean; // Permite activar o desactivar la estimación automática de duración de tareas para esta lista
   specialType?: 'caducidades' | 'que_he_hecho'; // Tipo especial para comportamiento enriquecido (retrocompatibilidad)
   isShared?: boolean; // True si la lista tiene un enlace público de solo lectura activo
+  order?: number; // Orden de la lista para reordenación por drag & drop
   updated_at?: string;
   deleted_at?: string;
   version?: number;

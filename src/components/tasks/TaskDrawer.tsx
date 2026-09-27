@@ -756,19 +756,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
 
             <div className="drawer-header" role="banner">
               <button className="cancel-btn" onClick={onClose} aria-label={taskId ? 'Cancelar edición' : 'Cancelar creación de tarea'}>Cancelar</button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {taskId && (
-                  <motion.div
-                    layoutId={taskId ? "task-status-" + taskId : undefined}
-                    style={{
-                      width: 14, height: 14, borderRadius: '50%',
-                      background: task?.status === 'completed' ? 'var(--accent-primary)' : 'transparent',
-                      border: '2px solid ' + (task?.status === 'completed' ? 'var(--accent-primary)' : 'var(--border-color)')
-                    }}
-                  />
-                )}
-                <h3 id="drawer-title">{taskId ? 'Detalles' : 'Nuevo recordatorio'}</h3>
-              </div>
+              <h3 id="drawer-title">{taskId ? 'Detalles' : 'Nuevo recordatorio'}</h3>
               <button className="save-btn" onClick={handleSave} disabled={!title.trim()} aria-label={taskId ? 'Guardar cambios' : 'Guardar nueva tarea'}>
                 {taskId ? 'Listo' : 'Añadir'}
               </button>
