@@ -1,0 +1,78 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import { useAppStore } from '../../src/store/useAppStore';
+import type { TaskItem } from '../../src/models/Task';
+
+describe('Gestión de Ciclos Temporales y Frecuencias', () => {
+  beforeEach(() => {
+    useAppStore.setState({
+      cycles: [
+        { id: 'cycle_day', name: 'Diario', daysValue: 1, isPinned: true, icon: 'sun' },
+        { id: 'cycle_week', name: 'Semanal', daysValue: 7, isPinned: true, icon: 'calendar' },
+        { id: 'cycle_month', name: 'Mensual', daysValue: 30, isPinned: true, icon: 'moon' },
+        { id: 'cycle_year', name: 'Anual', daysValue: 365, isPinned: true, icon: 'globe' },
+      ],
+      tasks: {},
+      tombstones: { lists: [], tasks: [], tags: [], sections: [], cycles: [], habits: [] },
+    });
+  });
+
+  it('permite añadir un nuevo ciclo temporal personalizado con color e icono y se ordena por días', () => {
+    const store = useAppStore.getState();
+
+    store.addCycle({
+      id: 'cycle_trimestral',
+      name: 'Trimestral',
+      daysValue: 90,
+      isPinned: true,
+      icon: 'sparkles',
+      color: '#AF52DE',
+    });
+
+    const updatedCycles = useAppStore.getState().cycles;
+    const added = updatedCycles.find(c => c.id === 'cycle_trimestral');
+    expect(added).toBeDefined();
+    expect(added?.name).toBe('Trimestral');
+    expect(added?.daysValue).toBe(90);
+    expect(added?.color).toBe('#AF52DE');
+    expect(added?.icon).toBe('sparkles');
+
+    // Comprobar ordenación: Diario (1) < Semanal (7) < Mensual (30) < Trimestral (90) < Anual (365)
+    const daysArray = updatedCycles.map(c => c.daysValue);
+    expect(daysArray).toEqual([1, 7, 30, 90, 365]);
+  });
+
+  it('al eliminar un ciclo personalizado, se eliminan sus asignaciones en tareas y se registra en tombstones', () => {
+    const store = useAppStore.getState();
+
+    store.addCycle({
+      id: 'cycle_custom_test',
+      name: 'Custom Test',
+      daysValue: 45,
+      isPinned: true,
+      icon: 'star',
+      color: '#FF9500',
+    });
+
+    const taskWithCycle: TaskItem = {
+      id: 'task_c1',
+      title: 'Tarea en ciclo custom',
+      categoryId: 'default_inbox',
+      status: 'pending',
+      cycle_id: 'cycle_custom_test',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      version: 1,
+    };
+    store.addTask(taskWithCycle);
+
+    expect(useAppStore.getState().tasks['task_c1']?.cycle_id).toBe('cycle_custom_test');
+
+    // Eliminar ciclo
+    store.deleteCycle('cycle_custom_test');
+
+    const stateAfter = useAppStore.getState();
+    expect(stateAfter.cycles.some(c => c.id === 'cycle_custom_test')).toBe(false);
+    expect(stateAfter.tasks['task_c1']?.cycle_id).toBeUndefined();
+    expect(stateAfter.tombstones.cycles.some(c => c.id === 'cycle_custom_test')).toBe(true);
+  });
+});

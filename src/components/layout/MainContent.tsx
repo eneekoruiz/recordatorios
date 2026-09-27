@@ -310,6 +310,17 @@ const CORE_CYCLES = [
     });
   }, [currentCycle]);
 
+  // Si estamos en un ciclo que ya no existe (por ejemplo, eliminado recientemente), redirigir
+  useEffect(() => {
+    if (currentView.startsWith('cycle_')) {
+      const coreIds = ['cycle_day', 'cycle_week', 'cycle_month', 'cycle_year'];
+      const exists = coreIds.includes(currentView) || (cycles || []).some(c => c.id === currentView && !c.deleted_at);
+      if (!exists) {
+        onSelectView?.('smart_today');
+      }
+    }
+  }, [currentView, cycles, onSelectView]);
+
   // Manejo de mostrar completados por lista
   const [showCompleted, setShowCompleted] = useState<boolean>(false);
   const resolvedShowCompleted = currentList?.showCompleted ?? showCompleted;
@@ -2230,7 +2241,7 @@ const CORE_CYCLES = [
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
   const smartListInfo = isSmartView ? SMART_LISTS.find(l => l.id === currentView) : null;
   const SmartIcon = smartListInfo ? smartListInfo.icon : null;
-  const viewColor = currentView === 'TRASH' ? '#8e8e93' : isSmartView ? (smartListInfo?.color || SMART_COLORS[currentView] || 'var(--accent-primary)') : (isListView && currentList) ? (currentList.color || 'var(--accent-primary)') : isFolderView ? (lists?.find(l => l.id === currentView.replace('folder_', ''))?.color || 'var(--accent-primary)') : currentCycle ? getReservedFrequencyColor(currentCycle.id) : 'var(--accent-primary)';
+  const viewColor = currentView === 'TRASH' ? '#8e8e93' : isSmartView ? (smartListInfo?.color || SMART_COLORS[currentView] || 'var(--accent-primary)') : (isListView && currentList) ? (currentList.color || 'var(--accent-primary)') : isFolderView ? (lists?.find(l => l.id === currentView.replace('folder_', ''))?.color || 'var(--accent-primary)') : currentCycle ? (currentCycle.color || getReservedFrequencyColor(currentCycle.id)) : 'var(--accent-primary)';
 
   const getTitle = () => {
     if (currentView === 'TRASH') return 'Papelera';
@@ -2241,7 +2252,7 @@ const CORE_CYCLES = [
       // La Bandeja de entrada es una lista virtual: no tiene objeto propio en `lists`.
       return currentView === 'list_inbox' ? 'Bandeja de entrada' : 'Lista';
     }
-    return currentCycle?.name || 'Ciclos';
+    return currentCycle?.name || 'Frecuencia';
   };
 
   const canStartSequence = isRoutine || (!currentList && viewTasksDuration.activeMinutes > 0);
@@ -2339,6 +2350,7 @@ const CORE_CYCLES = [
                           scrollTop={scrollTop}
                           isMobile={isMobile}
                           onBackToSidebar={onBackToSidebar}
+                          onNavigateView={onSelectView}
                           currentList={currentList}
                           setIsListConfigOpen={setIsListConfigOpen}
                           viewColor={viewColor}

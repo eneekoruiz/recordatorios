@@ -5,6 +5,7 @@ export interface CustomCycle {
   daysValue: number;
   isPinned: boolean;
   icon: string;
+  color?: string;
   recurrence_rule?: string; // RRULE format
   created_at?: string; // ISO String
   updated_at?: string;

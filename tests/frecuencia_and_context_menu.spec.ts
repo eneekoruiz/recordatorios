@@ -387,6 +387,59 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     // Sequence overlay should be closed
     await expect(page.locator('button:has-text("Poner en marcha y seguir")')).not.toBeVisible();
   });
+
+  test('5. Creación de ciclo temporal con presets y eliminación segura sin vista fantasma «Ciclos»', async ({ page }) => {
+    await ensureAppUnlocked(page);
+
+    // 1. Abrir modal de nueva frecuencia desde el botón + en la sección Frecuencia
+    const addCycleBtn = page.locator('button[title="Nueva Frecuencia"]').first();
+    await expect(addCycleBtn).toBeVisible({ timeout: 5000 });
+    await addCycleBtn.click();
+
+    // 2. Verificar que el modal se abre centrado con el título correcto
+    const modal = page.locator('.cycle-config-modal');
+    await expect(modal).toBeVisible({ timeout: 5000 });
+    await expect(modal.locator('h3')).toHaveText('Nuevo Ciclo Temporal');
+
+    // 3. Seleccionar preset Trimestral (90d)
+    const presetTrimestral = modal.locator('button:has-text("Trimestral")');
+    await expect(presetTrimestral).toBeVisible();
+    await presetTrimestral.click();
+
+    // Verificar que el input de nombre se auto-rellena
+    const nameInput = modal.locator('input[placeholder*="Trimestral"]');
+    await expect(nameInput).toHaveValue('Trimestral');
+
+    // 4. Crear el ciclo
+    const submitBtn = modal.locator('button:has-text("Crear Ciclo")');
+    await expect(submitBtn).toBeEnabled();
+    await submitBtn.click();
+
+    await page.waitForTimeout(500);
+
+    // 5. Verificar que se ha cerrado el modal y aparece en el sidebar
+    await expect(modal).not.toBeVisible();
+    const cycleItem = page.locator('.ios-list-item:has-text("Trimestral")');
+    await expect(cycleItem.first()).toBeVisible({ timeout: 5000 });
+
+    // 6. Eliminar el ciclo desde la cabecera
+    const deleteBtn = page.locator('button:has-text("Eliminar Frecuencia")');
+    await expect(deleteBtn).toBeVisible({ timeout: 5000 });
+    await deleteBtn.click();
+
+    // Confirmar en el modal de confirmación
+    const confirmDeleteBtn = page.locator('.premium-sheet-actions button.danger, .premium-sheet-actions button:not(.secondary)').first();
+    await expect(confirmDeleteBtn).toBeVisible({ timeout: 5000 });
+    await confirmDeleteBtn.click();
+
+    await page.waitForTimeout(500);
+
+    // 7. Verificar que NO aparece la vista fantasma "Ciclos" con count 0, sino que redirige a una vista válida
+    const mainTitle = page.locator('h1').first();
+    await expect(mainTitle).not.toHaveText('Ciclos');
+    await expect(page.locator('.ios-list-item:has-text("Trimestral")')).not.toBeVisible();
+  });
 });
+
 
 

@@ -1275,6 +1275,12 @@ button:disabled {
 
 /* Modernize legacy prompt-based configuration surfaces without changing data logic. */
 .prompt-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 100000 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   padding: 24px !important;
   background: rgba(11,14,22,.48) !important;
   backdrop-filter: blur(18px) saturate(1.08) !important;

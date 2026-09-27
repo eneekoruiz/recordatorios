@@ -39,18 +39,18 @@ export class TaskRepository {
   }
 
   public static update(existingTask: TaskItem, updates: Partial<TaskItem>): TaskItem {
-    let title = updates.title !== undefined ? updates.title : existingTask.title;
-    let cycle_id = updates.cycle_id !== undefined ? updates.cycle_id : existingTask.cycle_id;
+    let title = 'title' in updates ? (updates.title ?? '') : existingTask.title;
+    let cycle_id = 'cycle_id' in updates ? updates.cycle_id : existingTask.cycle_id;
 
     if (updates.title && hasPeriodicityPrefix(updates.title)) {
       const p = getPeriodicityFromPrefix(updates.title);
-      if (p && updates.cycle_id === undefined) {
+      if (p && !('cycle_id' in updates)) {
         cycle_id = p === 'day' ? 'cycle_day' : p === 'week' ? 'cycle_week' : p === 'month' ? 'cycle_month' : 'cycle_year';
       }
       title = stripPeriodicityPrefix(updates.title);
     }
 
-    return {
+    const result: TaskItem = {
       ...existingTask,
       ...updates,
       title,
@@ -59,6 +59,12 @@ export class TaskRepository {
       updated_at: new Date().toISOString(),
       _is_dirty: true 
     };
+
+    if (cycle_id === undefined) {
+      delete (result as any).cycle_id;
+    }
+
+    return result;
   }
 
   public static markAsDeleted(existingTask: TaskItem): TaskItem {

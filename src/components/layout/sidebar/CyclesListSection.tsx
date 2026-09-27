@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Check } from 'lucide-react';
+import { Plus, Check, Trash2 } from 'lucide-react';
 import { useAppStore, isTaskCompleted } from '../../../store/useAppStore';
+import { confirmDialog } from '../../ui/confirmDialog';
 import { isCompletedInCurrentPeriod } from '../../../services/TaskService';
 import { getCycleIcon } from '../../../constants/icons';
 import { getEffectiveCycleId } from '../../../utils/sectionRoutine';
@@ -60,6 +61,7 @@ export const CyclesListSection: React.FC<CyclesListSectionProps> = ({
   const allCycles = Array.from(cyclesMap.values()).sort((a, b) => (a.daysValue || 0) - (b.daysValue || 0));
   const listSections = useAppStore(state => state.listSections);
   const lists = useAppStore(state => state.lists);
+  const deleteCycle = useAppStore(state => state.deleteCycle);
 
   const isCycleVisible = (c: CustomCycle) => {
     if (cycleVisibility[c.id] === false) return false;
@@ -169,14 +171,53 @@ export const CyclesListSection: React.FC<CyclesListSectionProps> = ({
                 {!isEditCyclesMode && <span className="count">{taskCount}</span>}
               </div>
               {isEditCyclesMode && (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); toggleCycleVisibility(cycle.id); }}
-                  title={isVisible ? 'Desactivar frecuencia' : 'Activar frecuencia'}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: isVisible ? 'var(--accent-primary)' : 'var(--text-tertiary)', padding: 4, marginLeft: 4 }}
-                >
-                  {isVisible ? <Check size={14} /> : <Plus size={14} />}
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); toggleCycleVisibility(cycle.id); }}
+                    title={isVisible ? 'Desactivar frecuencia' : 'Activar frecuencia'}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: isVisible ? 'var(--accent-primary)' : 'var(--text-tertiary)', padding: 4 }}
+                  >
+                    {isVisible ? <Check size={14} /> : <Plus size={14} />}
+                  </button>
+                  {!['cycle_day', 'cycle_week', 'cycle_month', 'cycle_year'].includes(cycle.id) && (
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        const ok = await confirmDialog({
+                          title: 'Eliminar Frecuencia',
+                          message: `¿Estás seguro de eliminar la frecuencia "${cycle.name}"? Esta acción no se puede deshacer.`,
+                          confirmText: 'Eliminar',
+                          tone: 'danger',
+                        });
+                        if (ok) {
+                          deleteCycle(cycle.id);
+                          if (currentView === cycle.id) {
+                            onSelectView('smart_today');
+                          }
+                          window.dispatchEvent(
+                            new CustomEvent('show-toast', {
+                              detail: `Frecuencia "${cycle.name}" eliminada`,
+                            })
+                          );
+                        }
+                      }}
+                      title="Eliminar frecuencia personalizada"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--accent-danger, #ff3b30)',
+                        padding: 4,
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
               )}
             </motion.div>
           );

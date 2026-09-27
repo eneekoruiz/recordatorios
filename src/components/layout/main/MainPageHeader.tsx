@@ -61,12 +61,14 @@ interface MainPageHeaderProps {
   onStartSequence?: () => void;
   cycleRoutineMode?: 'only_section' | 'full_routine';
   onToggleCycleRoutineMode?: (mode: 'only_section' | 'full_routine') => void;
+  onNavigateView?: (view: string) => void;
 }
 
 export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   scrollTop,
   isMobile: _isMobile,
   onBackToSidebar: _onBackToSidebar,
+  onNavigateView,
   currentList,
   setIsListConfigOpen: _setIsListConfigOpen,
   viewColor,
@@ -422,12 +424,32 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
             <button 
               type="button"
               onClick={async () => {
-                setConfirmProps({ title: 'Eliminar Ciclo', message: `¿Estás seguro de eliminar el ciclo ${currentCycle.name}? Esta acción no se puede deshacer.`, onConfirm: () => deleteCycle(currentCycle.id) }); setIsConfirmOpen(true);
+                const cycleName = currentCycle.name;
+                const cycleId = currentCycle.id;
+                setConfirmProps({ 
+                  title: 'Eliminar Frecuencia', 
+                  message: `¿Estás seguro de eliminar la frecuencia "${cycleName}"? Esta acción no se puede deshacer.`, 
+                  onConfirm: () => {
+                    deleteCycle(cycleId);
+                    if (onNavigateView) {
+                      onNavigateView('smart_today');
+                    }
+                    if (_onBackToSidebar) {
+                      _onBackToSidebar();
+                    }
+                    window.dispatchEvent(
+                      new CustomEvent('show-toast', {
+                        detail: `Frecuencia "${cycleName}" eliminada`,
+                      })
+                    );
+                  }
+                }); 
+                setIsConfirmOpen(true);
               }}
               className="time-pill"
               style={{ cursor: 'pointer', background: 'rgba(255, 69, 58, 0.1)', color: 'var(--accent-red)', border: 'none' }}
             >
-              Eliminar Ciclo
+              Eliminar Frecuencia
             </button>
           </div>
         )}

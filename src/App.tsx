@@ -129,6 +129,15 @@ function App() {
     if (['list_limpieza_diaria', 'list_limpieza_semanal', 'list_limpieza_mensual', 'list_limpieza_anual'].includes(currentView)) {
       setCurrentView('list_limpieza');
     }
+
+    if (currentView.startsWith('cycle_')) {
+      const coreCycles = ['cycle_day', 'cycle_week', 'cycle_month', 'cycle_year'];
+      const allCycles = useAppStore.getState().cycles || [];
+      const exists = coreCycles.includes(currentView) || allCycles.some((c: any) => c.id === currentView && !c.deleted_at);
+      if (!exists) {
+        setCurrentView('smart_today');
+      }
+    }
   }, [currentView, tasks]);
 
   const navStack = useNavigation((state) => state.stack);
