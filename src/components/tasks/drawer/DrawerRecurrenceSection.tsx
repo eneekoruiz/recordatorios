@@ -68,7 +68,11 @@ export const DrawerRecurrenceSection: React.FC<DrawerRecurrenceSectionProps> = (
                   onChange={val => setCycleId(val || undefined)}
                   options={[
                     { value: '', label: 'Nunca' },
-                    ...cycles.map(c => ({ value: c.id, label: c.name }))
+                    ...cycles.map(c => ({
+                      value: c.id,
+                      label: c.name,
+                      color: c.color || (c.id === 'cycle_day' ? '#ff9500' : c.id === 'cycle_week' ? '#007aff' : c.id === 'cycle_month' ? '#af52de' : c.id === 'cycle_year' ? '#34c759' : undefined)
+                    }))
                   ]}
                 />
               </div>

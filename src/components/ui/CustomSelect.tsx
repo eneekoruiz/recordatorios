@@ -6,6 +6,7 @@ import { ChevronDown, Check } from 'lucide-react';
 interface Option {
   value: string;
   label: string;
+  color?: string;
 }
 
 interface CustomSelectProps {
@@ -88,7 +89,12 @@ export function CustomSelect({ id, value, onChange, options, placeholder = 'Sele
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
-        <span>{selectedOption?.label || placeholder}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+          {selectedOption?.color && (
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: selectedOption.color, flexShrink: 0 }} />
+          )}
+          <span>{selectedOption?.label || placeholder}</span>
+        </span>
         <ChevronDown size={15} aria-hidden="true" className={isOpen ? 'is-open' : ''} />
       </button>
 
@@ -134,7 +140,12 @@ export function CustomSelect({ id, value, onChange, options, placeholder = 'Sele
                       onMouseEnter={() => setHighlightedIndex(idx)}
                       style={{ background: highlighted ? 'var(--bg-hover)' : 'transparent' }}
                     >
-                      <span>{option.label}</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                        {option.color && (
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: option.color, flexShrink: 0 }} />
+                        )}
+                        <span>{option.label}</span>
+                      </span>
                       {selected && <Check size={16} className="check-icon" aria-hidden="true" />}
                     </button>
                   );

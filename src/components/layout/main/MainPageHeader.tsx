@@ -19,6 +19,14 @@ import type { TaskItem, CustomCycle, CustomList } from '../../../models/Task';
 import { formatDuration, type TasksDurationSummary } from '../../../utils/taskDuration';
 import { formatEuro } from '../../../utils/format';
 
+export interface CycleBreakdownInfo {
+  ownCount: number;
+  accumulatedCount: number;
+  ownDurationMinutes: number;
+  accumulatedDurationMinutes: number;
+  details?: { cycleId: string; cycleName: string; count: number; durationMinutes: number; color?: string }[];
+}
+
 interface MainPageHeaderProps {
   scrollTop?: number;
   isMobile?: boolean;
@@ -43,6 +51,7 @@ interface MainPageHeaderProps {
   completedDuration?: TasksDurationSummary;
   activeVisibleCount: number;
   completedVisibleCount: number;
+  cycleBreakdown?: CycleBreakdownInfo;
   setConfirmProps: (props: any) => void;
   setIsConfirmOpen: (open: boolean) => void;
   deleteCycle: (id: string) => void;
@@ -89,6 +98,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   completedDuration,
   activeVisibleCount,
   completedVisibleCount: _completedVisibleCount,
+  cycleBreakdown,
   setConfirmProps,
   setIsConfirmOpen,
   deleteCycle,
@@ -273,7 +283,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
           {currentView !== 'TRASH' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
               {/* Duración pendiente y completada */}
-              {totalDuration && totalDuration.activeMinutes > 0 && !currentCycle && !isShoppingList(currentView, currentList) && !isCaducidadesList(currentView, currentList) && (
+              {totalDuration && totalDuration.activeMinutes > 0 && !isShoppingList(currentView, currentList) && !isCaducidadesList(currentView, currentList) && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
                   <span 
                     style={{
@@ -290,13 +300,38 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                       fontVariantNumeric: 'tabular-nums',
                       letterSpacing: '-0.2px'
                     }}
-                    title={completedDuration && completedDuration.activeMinutes > 0
-                      ? `Te queda solo ~${totalDuration.formattedActive} en la lista porque ya has completado ~${completedDuration.formattedActive} (de ~${formatDuration(totalDuration.activeMinutes + completedDuration.activeMinutes)} en total)`
-                      : `Duración total estimada: ~${totalDuration.formattedActive}`}
+                    title={
+                      cycleBreakdown && cycleBreakdown.details && cycleBreakdown.details.length > 1
+                        ? `Duración total estimada: ~${totalDuration.formattedActive} (${cycleBreakdown.details.map(d => `${formatDuration(d.durationMinutes)} ${d.cycleName.toLowerCase()}`).join(' + ')})`
+                        : completedDuration && completedDuration.activeMinutes > 0
+                        ? `Te queda solo ~${totalDuration.formattedActive} en la lista porque ya has completado ~${completedDuration.formattedActive} (de ~${formatDuration(totalDuration.activeMinutes + completedDuration.activeMinutes)} en total)`
+                        : `Duración total estimada: ~${totalDuration.formattedActive}`
+                    }
                   >
                     ~{totalDuration.formattedActive}
                   </span>
-                  {completedDuration && completedDuration.activeMinutes > 0 && (
+                  {cycleBreakdown && cycleBreakdown.details && cycleBreakdown.details.length > 1 ? (
+                    <div
+                      className="cycle-duration-breakdown"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        fontSize: '0.70rem',
+                        fontWeight: 600,
+                        color: 'var(--text-tertiary)',
+                        letterSpacing: '-0.1px',
+                        paddingRight: 2
+                      }}
+                    >
+                      {cycleBreakdown.details.map((d, i) => (
+                        <span key={d.cycleId || d.cycleName} style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                          {i > 0 && <span style={{ opacity: 0.4 }}>·</span>}
+                          <span>{formatDuration(d.durationMinutes)} {d.cycleName.toLowerCase()}</span>
+                        </span>
+                      ))}
+                    </div>
+                  ) : completedDuration && completedDuration.activeMinutes > 0 ? (
                     <span 
                       style={{
                         fontSize: '0.72rem',
@@ -312,7 +347,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                     >
                       <span>↓</span> ~{completedDuration.formattedActive} hechos
                     </span>
-                  )}
+                  ) : null}
                 </div>
               )}
 
@@ -358,9 +393,34 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                 </div>
               )}
               {currentView !== 'smart_calendar' && (
-                <span className="apple-large-counter" style={{ color: viewColor }}>
-                  {activeVisibleCount}
-                </span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                  <span className="apple-large-counter" style={{ color: viewColor }}>
+                    {activeVisibleCount}
+                  </span>
+                  {cycleBreakdown && cycleBreakdown.details && cycleBreakdown.details.length > 1 && (
+                    <div
+                      className="cycle-counter-breakdown"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        fontSize: '0.72rem',
+                        fontWeight: 600,
+                        color: 'var(--text-tertiary)',
+                        letterSpacing: '-0.1px'
+                      }}
+                      title={`${activeVisibleCount} recordatorios en total: ${cycleBreakdown.details.map(d => `${d.count} ${d.cycleName.toLowerCase()}`).join(' + ')}`}
+                    >
+                      {cycleBreakdown.details.map((d, i) => (
+                        <span key={d.cycleId || d.cycleName} style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                          {i > 0 && <span style={{ opacity: 0.4 }}>·</span>}
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: d.color || 'var(--text-tertiary)' }} />
+                          <span>{d.count} {d.cycleName.toLowerCase()}</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )}

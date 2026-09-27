@@ -75,4 +75,32 @@ describe('Gestión de Ciclos Temporales y Frecuencias', () => {
     expect(stateAfter.tasks['task_c1']?.cycle_id).toBeUndefined();
     expect(stateAfter.tombstones.cycles.some(c => c.id === 'cycle_custom_test')).toBe(true);
   });
+
+  it('getListBadgeInfo devuelve el distintivo adecuado para listas de duraciones, financieras y normales', async () => {
+    const { getListBadgeInfo } = await import('../../src/utils/specialLists');
+
+    // Lista de rutinas -> Duraciones
+    expect(getListBadgeInfo({ id: 'l1', name: 'Limpieza', color: '#007aff', listType: 'routines' })).toEqual({
+      label: 'Duraciones',
+      color: '#0a84ff'
+    });
+
+    // Lista financiera -> Financiera
+    expect(getListBadgeInfo({ id: 'l2', name: 'Presupuesto', color: '#30d158', isFinancial: true })).toEqual({
+      label: 'Financiera',
+      color: '#30d158'
+    });
+
+    // Lista de compras -> Financiera
+    expect(getListBadgeInfo({ id: 'l3', name: 'Supermercado', color: '#30d158' })).toEqual({
+      label: 'Financiera',
+      color: '#30d158'
+    });
+
+    // Lista simple/checklist -> Anotar
+    expect(getListBadgeInfo({ id: 'l4', name: 'Ideas sueltas', color: '#ff9500', listType: 'simple' })).toEqual({
+      label: 'Anotar',
+      color: 'var(--text-tertiary)'
+    });
+  });
 });

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { PinOff } from 'lucide-react';
 import { SMART_LISTS, SMART_LISTS_WITHOUT_COUNT } from '../../../constants/smartLists';
 import type { CustomList } from '../../../models/Task';
+import { getListBadgeInfo } from '../../../utils/specialLists';
 
 interface PinnedListsSectionProps {
   pinnedSmartLists: string[];
@@ -164,13 +165,36 @@ export const PinnedListsSection: React.FC<PinnedListsSectionProps> = ({
               }}>
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'white' }} />
               </div>
-              <span style={{
-                flex: 1, fontWeight: 600, fontSize: '0.98rem',
-                color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
-              }}>
-                {list.name}
-              </span>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, overflow: 'hidden' }}>
+                <span style={{
+                  fontWeight: 600, fontSize: '0.98rem',
+                  color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                }}>
+                  {list.name}
+                </span>
+                {!list.isFolder && (() => {
+                  const badge = getListBadgeInfo(list, list.id);
+                  return (
+                    <span 
+                      className="apple-sidebar-list-badge"
+                      style={{
+                        fontSize: '0.64rem',
+                        fontWeight: 600,
+                        padding: '1px 5px',
+                        borderRadius: 4,
+                        background: `${badge.color}15`,
+                        color: badge.color,
+                        flexShrink: 0,
+                        lineHeight: 1.2,
+                        letterSpacing: '-0.01em'
+                      }}
+                    >
+                      {badge.label}
+                    </span>
+                  );
+                })()}
+              </div>
               <span style={{
                 fontSize: '0.9rem', fontWeight: 600,
                 color: 'var(--text-tertiary)',

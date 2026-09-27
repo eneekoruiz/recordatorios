@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, MoreHorizontal, Check, Settings, FolderPlus, Play } from 'lucide-react';
 import type { CustomList } from '../../../models/Task';
 import { HapticService } from '../../../services/HapticService';
-import { getListType, LIST_TYPE_CONFIG } from '../../../utils/specialLists';
+import { getListType, LIST_TYPE_CONFIG, getListBadgeInfo } from '../../../utils/specialLists';
 
 const SMART_COLORS: Record<string, string> = {
   'smart_today': 'var(--accent-blue)',
@@ -156,9 +156,35 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
-        padding: '0 8px'
+        padding: '0 8px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6
       }}>
-        {title}
+        <span>{title}</span>
+        {currentList && !currentList.isFolder && (() => {
+          const badge = getListBadgeInfo(currentList, currentView);
+          return (
+            <span 
+              className="apple-list-type-pill" 
+              style={{ 
+                fontSize: '0.66rem', 
+                fontWeight: 600, 
+                color: badge.color, 
+                background: `${badge.color}15`, 
+                border: `1px solid ${badge.color}30`, 
+                padding: '1px 6px', 
+                borderRadius: 999,
+                letterSpacing: '-0.01em',
+                display: 'inline-flex',
+                alignItems: 'center'
+              }}
+            >
+              {badge.label}
+            </span>
+          );
+        })()}
       </div>
 
       {/* Right: Actions unified in the top line */}

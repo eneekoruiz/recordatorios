@@ -40,7 +40,7 @@ import { smartSortTasks } from '../../utils/smartSort';
 import { WeeklyStreakWidget } from './main/WeeklyStreakWidget';
 import { confirmDialog } from '../ui/confirmDialog';
 import { deduplicateTaskList } from '../../utils/taskDeduplication';
-import { calculateTasksDuration, calculateCompletedTasksDuration, type TasksDurationSummary } from '../../utils/taskDuration';
+import { calculateTasksDuration, calculateCompletedTasksDuration, getTaskDuration, type TasksDurationSummary } from '../../utils/taskDuration';
 import { getReservedFrequencyColor } from '../../constants/colors';
 import { BatchTaskActionsBar } from '../tasks/BatchTaskActionsBar';
 
@@ -828,13 +828,55 @@ const CORE_CYCLES = [
 
   // Por tareas distintas: en «Por personas» una entrada con dos personas aparece dos veces.
   const activeVisibleCount = useMemo(() => new Set(visibleTasks.filter(t => !isTaskCompleted(t)).map(t => t.id)).size, [visibleTasks]);
-  // Número del título: como en la barra lateral (lo hecho en su periodo no cuenta) y, en las vistas
-  // de frecuencia, solo las suyas aunque se vean también las incluidas.
+  // Número del título: como en la barra lateral (lo hecho en su periodo no cuenta)
   const titleCount = useMemo(() => new Set(visibleTasks.filter(t =>
-    !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists) &&
-    (!currentCycle || cycleViewMode !== 'full_routine' || getEffectiveCycleId(t, listSections, lists) === currentCycle.id)
-  ).map(t => t.id)).size, [visibleTasks, cycles, listSections, lists, currentCycle, cycleViewMode]);
+    !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists)
+  ).map(t => t.id)).size, [visibleTasks, cycles, listSections, lists]);
   const completedVisibleCount = useMemo(() => new Set(visibleTasks.filter(t => isTaskCompleted(t)).map(t => t.id)).size, [visibleTasks]);
+
+  const cycleBreakdown = useMemo(() => {
+    if (!currentCycle || cycleViewMode !== 'full_routine') return undefined;
+
+    const pending = visibleTasks.filter(t => !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists));
+    const groups = new Map<string, { cycleId: string; cycleName: string; color?: string; count: number; durationMinutes: number; daysValue: number }>();
+
+    for (const t of pending) {
+      const effId = getEffectiveCycleId(t, listSections, lists) || t.cycle_id || currentCycle.id;
+      const cycleObj = cycles.find(c => c.id === effId);
+      const cycleName = cycleObj?.name || (effId === 'cycle_day' ? 'Diarias' : effId === 'cycle_week' ? 'Semanales' : effId === 'cycle_month' ? 'Mensuales' : effId === 'cycle_year' ? 'Anuales' : 'Otras');
+      const color = cycleObj?.color || (effId === 'cycle_day' ? '#ff9500' : effId === 'cycle_week' ? '#007aff' : effId === 'cycle_month' ? '#af52de' : effId === 'cycle_year' ? '#34c759' : undefined);
+      const daysVal = cycleObj?.daysValue || (effId === 'cycle_day' ? 1 : effId === 'cycle_week' ? 7 : effId === 'cycle_month' ? 30 : effId === 'cycle_year' ? 365 : 999);
+
+      const dur = getTaskDuration(t, listSections, lists).activeMinutes;
+      const current = groups.get(effId) || { cycleId: effId, cycleName, color, count: 0, durationMinutes: 0, daysValue: daysVal };
+      current.count += 1;
+      current.durationMinutes += dur;
+      groups.set(effId, current);
+    }
+
+    const own = groups.get(currentCycle.id) || { cycleId: currentCycle.id, cycleName: currentCycle.name, color: currentCycle.color, count: 0, durationMinutes: 0, daysValue: currentCycle.daysValue };
+    let accumulatedCount = 0;
+    let accumulatedDurationMinutes = 0;
+
+    const sortedGroups = Array.from(groups.values()).sort((a, b) => b.daysValue - a.daysValue);
+
+    for (const grp of sortedGroups) {
+      if (grp.cycleId !== currentCycle.id) {
+        accumulatedCount += grp.count;
+        accumulatedDurationMinutes += grp.durationMinutes;
+      }
+    }
+
+    if (accumulatedCount === 0) return undefined;
+
+    return {
+      ownCount: own.count,
+      accumulatedCount,
+      ownDurationMinutes: own.durationMinutes,
+      accumulatedDurationMinutes,
+      details: sortedGroups
+    };
+  }, [currentCycle, cycleViewMode, visibleTasks, cycles, listSections, lists]);
 
   const flashbackMemories = useMemo(() => 
     isQueHeHechoList(currentView, currentList) ? findFlashbackMemories(allTasksArray) : [], 
@@ -2371,6 +2413,7 @@ const CORE_CYCLES = [
                           completedDuration={!isShoppingList(currentView, currentList) ? viewCompletedTasksDuration : undefined}
                           activeVisibleCount={titleCount}
                           completedVisibleCount={completedVisibleCount}
+                          cycleBreakdown={cycleBreakdown}
                           setConfirmProps={setConfirmProps}
                           setIsConfirmOpen={setIsConfirmOpen}
                           deleteCycle={deleteCycle}

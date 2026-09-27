@@ -126,7 +126,7 @@ export const TaskCard = React.memo(function TaskCard({
       if (cycleId === 'cycle_month' || cycleId === 'month') return { type: 'month' as const, label: 'Mensual' };
       if (cycleId === 'cycle_year' || cycleId === 'year') return { type: 'year' as const, label: 'Anual' };
       const custom = cycles.find(c => c.id === cycleId);
-      return { type: 'custom' as const, label: custom?.name || cycleId };
+      return { type: 'custom' as const, label: custom?.name || cycleId, color: custom?.color, icon: custom?.icon };
     }
 
     return null;

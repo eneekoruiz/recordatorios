@@ -14,7 +14,7 @@ export interface TaskMetaBadgesProps {
   hideDueDate?: boolean;
   taskList?: CustomList;
   dueDateColor: string;
-  cycleBadge?: { type?: 'day' | 'week' | 'month' | 'year' | 'custom'; label: string } | null;
+  cycleBadge?: { type?: 'day' | 'week' | 'month' | 'year' | 'custom'; label: string; color?: string; icon?: string } | null;
   timeOfDayInfo?: { tag: 'morning' | 'afternoon' | 'night'; label: string; next: 'morning' | 'afternoon' | 'night' } | null;
   onEdit: (id: string, initialFocus?: string) => void;
   onNavigateView?: (viewId: string) => void;
@@ -168,9 +168,9 @@ export function TaskMetaBadges({
                 week: '#007aff',
                 month: '#af52de',
                 year: '#34c759',
-                custom: 'var(--text-tertiary)'
+                custom: cycleBadge.color || 'var(--text-tertiary)'
               };
-              const freqColor = freqColors[cycleBadge.type || 'custom'] || 'var(--accent-primary)';
+              const freqColor = cycleBadge.color || freqColors[cycleBadge.type || 'custom'] || 'var(--accent-primary)';
 
               items.push(
                 <span 
