@@ -7,6 +7,7 @@ import { isShoppingList } from '../../../utils/specialLists';
 import { useAppStore } from '../../../store/useAppStore';
 import { formatEuro } from '../../../utils/format';
 import { classifyDropZone, DRAG_MOVE_THRESHOLD_PX } from '../../../utils/dragDrop';
+import { getReservedFrequencyColor } from '../../../constants/colors';
 
 interface SectionData {
   title: string;
@@ -124,19 +125,36 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   // Corto para caber en el móvil: «+ Diarias» en las semanales, «+ Acumuladas» en mensuales y anuales.
   const includeLabel = data.periodicity === 'week' ? 'Diarias' : 'Acumuladas';
 
-  let durationText: string | null = null;
+  const ownColor = getReservedFrequencyColor(data.periodicity || 'week');
+  const extraColor = getReservedFrequencyColor('day');
+  const ownShort = data.periodicity === 'week' ? 'sem.' : data.periodicity === 'month' ? 'mens.' : data.periodicity === 'year' ? 'anual.' : 'propias';
+  const extraShort = data.periodicity === 'week' ? 'diar.' : 'acum.';
+
+  let durationNode: React.ReactNode = null;
   if (sectionDurationLabel) {
     if (hasRoutineDurationBreakdown && data.routineDurations) {
       const ownFormatted = data.routineDurations.only.formattedActive;
       const extraMinutes = Math.max(0, data.routineDurations.full.activeMinutes - data.routineDurations.only.activeMinutes);
       const extraFormatted = formatDuration(extraMinutes);
-      const ownLabel = data.periodicity === 'week' ? 'semanales' : data.periodicity === 'month' ? 'mensuales' : data.periodicity === 'year' ? 'anuales' : 'propias';
-      const extraLabel = data.periodicity === 'week' ? 'diarias' : 'acumuladas';
-      durationText = `~${sectionDurationLabel} (~${ownFormatted} ${ownLabel} + ~${extraFormatted} ${extraLabel})`;
+      durationNode = (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+          <span>~{sectionDurationLabel} (</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: ownColor, fontWeight: 600 }}>
+            <span style={{ width: 5.5, height: 5.5, borderRadius: '50%', background: ownColor, flexShrink: 0 }} />
+            <span>~{ownFormatted} {ownShort}</span>
+          </span>
+          <span style={{ opacity: 0.4 }}>+</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: extraColor, fontWeight: 600 }}>
+            <span style={{ width: 5.5, height: 5.5, borderRadius: '50%', background: extraColor, flexShrink: 0 }} />
+            <span>~{extraFormatted} {extraShort}</span>
+          </span>
+          <span>)</span>
+        </span>
+      );
     } else if (completedDurationSummary && completedDurationSummary.activeMinutes > 0) {
-      durationText = `~${sectionDurationLabel} restante (↓ ~${completedDurationSummary.formattedActive} hechos)`;
+      durationNode = <span>~{sectionDurationLabel} restante (↓ ~{completedDurationSummary.formattedActive} hechos)</span>;
     } else {
-      durationText = `~${sectionDurationLabel}`;
+      durationNode = <span>~{sectionDurationLabel}</span>;
     }
   }
 
@@ -148,12 +166,6 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       priceText = formatEuro(sectionTotal);
     }
   }
-
-  // Bajo el nombre, en gris y sin iconos: «~30 min · 6,20 €».
-  const sectionMeta = [
-    durationText,
-    priceText,
-  ].filter(Boolean).join(' · ');
   const [isPressed, setIsPressed] = useState(false);
   const [sectionDragOverPos, setSectionDragOverPos] = useState<'top' | 'bottom' | 'inside' | null>(null);
   const didSectionLongPressRef = useRef(false);
@@ -546,10 +558,10 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                   {data.title}
                 </h3>
               </div>
-              {sectionMeta && (
+              {(durationNode || priceText) && (
                 <div
                   className="section-duration section-meta"
-                  style={{ fontSize: data.depth === 0 ? '0.8rem' : '0.74rem' }}
+                  style={{ fontSize: data.depth === 0 ? '0.8rem' : '0.74rem', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}
                   title={[
                     hasRoutineDurationBreakdown && data.routineDurations
                       ? `Duración total: ~${sectionDurationLabel} (~${data.routineDurations.only.formattedActive} ${data.periodicity === 'week' ? 'semanales' : 'de esta sección'} + ~${formatDuration(data.routineDurations.full.activeMinutes - data.routineDurations.only.activeMinutes)} ${data.periodicity === 'week' ? 'diarias' : includeLabel.toLowerCase()})`
@@ -563,7 +575,9 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                     )
                   ].filter(Boolean).join(' · ')}
                 >
-                  {sectionMeta}
+                  {durationNode}
+                  {durationNode && priceText && <span style={{ opacity: 0.4 }}>·</span>}
+                  {priceText && <span>{priceText}</span>}
                 </div>
               )}
             </div>
@@ -672,13 +686,27 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                     className="section-routine-breakdown"
                     style={{ 
                       fontSize: '0.78rem', 
-                      fontWeight: 400,
-                      opacity: 0.72,
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
                       letterSpacing: '-0.01em',
-                      fontVariantNumeric: 'tabular-nums'
+                      fontVariantNumeric: 'tabular-nums',
+                      padding: '1px 6px',
+                      borderRadius: 6,
+                      background: 'var(--bg-elevated)',
+                      border: '1px solid var(--border-subtle)'
                     }}
                   >
-                    ({onlyCount} {ownShort} + {extraCount} {extraShort})
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: ownColor }}>
+                      <span style={{ width: 5.5, height: 5.5, borderRadius: '50%', background: ownColor, flexShrink: 0 }} />
+                      <span>{onlyCount} {ownShort}</span>
+                    </span>
+                    <span style={{ opacity: 0.4, fontSize: '0.72rem' }}>+</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: extraColor }}>
+                      <span style={{ width: 5.5, height: 5.5, borderRadius: '50%', background: extraColor, flexShrink: 0 }} />
+                      <span>{extraCount} {extraShort}</span>
+                    </span>
                   </span>
                 )}
               </span>

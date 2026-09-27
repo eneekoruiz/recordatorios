@@ -18,6 +18,7 @@ import { useAppStore } from '../../../store/useAppStore';
 import type { TaskItem, CustomCycle, CustomList } from '../../../models/Task';
 import { formatDuration, type TasksDurationSummary } from '../../../utils/taskDuration';
 import { formatEuro } from '../../../utils/format';
+import { getReservedFrequencyColor } from '../../../constants/colors';
 
 export interface CycleBreakdownInfo {
   ownCount: number;
@@ -324,12 +325,16 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                         paddingRight: 2
                       }}
                     >
-                      {cycleBreakdown.details.map((d, i) => (
-                        <span key={d.cycleId || d.cycleName} style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                          {i > 0 && <span style={{ opacity: 0.4 }}>·</span>}
-                          <span>{formatDuration(d.durationMinutes)} {d.cycleName.toLowerCase()}</span>
-                        </span>
-                      ))}
+                      {cycleBreakdown.details.map((d, i) => {
+                        const freqColor = d.color || getReservedFrequencyColor(d.cycleId);
+                        return (
+                          <span key={d.cycleId || d.cycleName} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: freqColor }}>
+                            {i > 0 && <span style={{ opacity: 0.4, color: 'var(--text-tertiary)' }}>·</span>}
+                            <span style={{ width: 5.5, height: 5.5, borderRadius: '50%', background: freqColor, flexShrink: 0 }} />
+                            <span>{formatDuration(d.durationMinutes)} {d.cycleName.toLowerCase()}</span>
+                          </span>
+                        );
+                      })}
                     </div>
                   ) : completedDuration && completedDuration.activeMinutes > 0 ? (
                     <span 
@@ -411,13 +416,16 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                       }}
                       title={`${activeVisibleCount} recordatorios en total: ${cycleBreakdown.details.map(d => `${d.count} ${d.cycleName.toLowerCase()}`).join(' + ')}`}
                     >
-                      {cycleBreakdown.details.map((d, i) => (
-                        <span key={d.cycleId || d.cycleName} style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                          {i > 0 && <span style={{ opacity: 0.4 }}>·</span>}
-                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: d.color || 'var(--text-tertiary)' }} />
-                          <span>{d.count} {d.cycleName.toLowerCase()}</span>
-                        </span>
-                      ))}
+                      {cycleBreakdown.details.map((d, i) => {
+                        const freqColor = d.color || getReservedFrequencyColor(d.cycleId);
+                        return (
+                          <span key={d.cycleId || d.cycleName} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: freqColor }}>
+                            {i > 0 && <span style={{ opacity: 0.4, color: 'var(--text-tertiary)' }}>·</span>}
+                            <span style={{ width: 5.5, height: 5.5, borderRadius: '50%', background: freqColor, flexShrink: 0 }} />
+                            <span>{d.count} {d.cycleName.toLowerCase()}</span>
+                          </span>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
