@@ -79,9 +79,10 @@ export const stripPeriodicityPrefix = (title?: string | null): string => {
 
 /**
  * Retorna el conjunto de periodicidades que corresponden a la rutina de una sección.
- * - Mensual: Mensuales + Anuales + Semanales + Diarias (el día de limpieza mensual toca hacer todo eso).
- * - Semanal: Semanales + Diarias (el día semanal también se hace lo diario).
+ * Solo se acumulan las frecuencias más cortas: el día de la ronda también toca lo de cada día.
  * - Anual: Anuales + Mensuales + Semanales + Diarias (limpieza a fondo anual).
+ * - Mensual: Mensuales + Semanales + Diarias (las anuales no: son más largas).
+ * - Semanal: Semanales + Diarias.
  * - Diaria: Diarias.
  */
 export const getRoutineAllowedPeriodicities = (
@@ -89,7 +90,7 @@ export const getRoutineAllowedPeriodicities = (
 ): Set<PeriodicityType> => {
   switch (periodicity) {
     case 'month':
-      return new Set<PeriodicityType>(['month', 'year', 'week', 'day']);
+      return new Set<PeriodicityType>(['month', 'week', 'day']);
     case 'week':
       return new Set<PeriodicityType>(['week', 'day']);
     case 'year':

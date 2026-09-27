@@ -918,3 +918,108 @@ body.dark .cad-summary-cost strong {
     display: none !important;
   }
 }
+
+/* Cabecera de sección: línea gris bajo el nombre (duración · precio), sin iconos */
+.section-meta {
+  margin-top: 1px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* «+ Diarias»: una sola cápsula que se enciende con el color de la lista */
+.routine-chip {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 10px 0 8px;
+  margin-right: 4px;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--text-primary) 7%, transparent);
+  transition: background-color 0.18s ease, color 0.18s ease, transform 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+}
+.routine-chip::before {
+  content: '';
+  position: absolute;
+  inset: -9px -2px;
+}
+.routine-chip.is-on {
+  color: color-mix(in srgb, var(--chip-color, var(--accent-primary)) 82%, var(--text-primary));
+  background: color-mix(in srgb, var(--chip-color, var(--accent-primary)) 16%, transparent);
+}
+.routine-chip:active {
+  transform: scale(0.96);
+}
+.routine-chip:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Vistas de frecuencia: «Incluir diarias» como una fila de Ajustes bajo el título */
+.routine-include-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  align-self: stretch;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 6px 0;
+  margin-top: 2px;
+  border-top: 0.5px solid var(--separator);
+  border-bottom: 0.5px solid var(--separator);
+}
+.routine-include-text {
+  font-size: 17px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+/* Subcabecera de las incluidas («Diarias» dentro de «Semanales»): un punto con el color de su frecuencia */
+.included-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-right: 1px;
+}
+.routine-include-sub {
+  display: block;
+  margin-top: 1px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+/* «···» de la sección en el escritorio: aparece al pasar el ratón (o con el teclado), como en macOS */
+.section-more-btn {
+  opacity: 0;
+  border-radius: 6px;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+.group-header:hover .section-more-btn,
+.section-more-btn:focus-visible,
+.section-more-btn[aria-expanded="true"] {
+  opacity: 0.6;
+}
+.section-more-btn:hover {
+  opacity: 1 !important;
+  background-color: color-mix(in srgb, var(--text-primary) 7%, transparent) !important;
+}
+@media (hover: none) {
+  .section-more-btn { opacity: 0.5; }
+}

@@ -5,6 +5,7 @@ import { SectionTrailing } from './SectionTrailing';
 import { formatRelativeDay, formatTime } from '../../../utils/format';
 import type { AlertDef } from '../../../models/Task';
 import { isCaducidadesList, getListType, doesListSupportDuration } from '../../../utils/specialLists';
+import { formatDuration } from '../../../utils/taskDuration';
 import { Sunrise, Sun, Moon } from 'lucide-react';
 import { AppleTimerPicker } from '../../ui/AppleTimerPicker';
 import { useAppStore } from '../../../store/useAppStore';
@@ -211,7 +212,7 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                             className="alert-chip"
                           >
                             <Clock size={14} />
-                            <span>{alert.label || alert.time || `-${alert.offsetMinutes}m`}</span>
+                            <span>{alert.label || alert.time || `${formatDuration(alert.offsetMinutes || 0)} antes`}</span>
                             <button className="chip-remove" onClick={() => removeAlert(alert.id)}>
                               <X size={14} />
                             </button>
@@ -340,7 +341,7 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                                   transition: 'all 0.15s ease'
                                 }}
                               >
-                                {mins >= 60 ? (mins % 60 === 0 ? `${mins / 60}h` : `${Math.floor(mins / 60)}h ${mins % 60}m`) : `${mins}m`}
+                                {formatDuration(mins)}
                               </button>
                             );
                           })}

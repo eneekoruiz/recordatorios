@@ -63,7 +63,7 @@ interface MainPageHeaderProps {
 
 export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   scrollTop,
-  isMobile,
+  isMobile: _isMobile,
   onBackToSidebar: _onBackToSidebar,
   currentList,
   setIsListConfigOpen: _setIsListConfigOpen,
@@ -106,6 +106,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   const [isEditingListName, setIsEditingListName] = React.useState(false);
   const [listEditName, setListEditName] = React.useState('');
 
+  const includeSwitchId = React.useId();
   const scrollOffset = Math.min(60, Math.max(0, scrollTop || 0));
   const titleProgress = Math.min(1, Math.max(0, (scrollOffset - 24) / 32));
   const titleOpacity = Math.max(0, 1 - titleProgress);
@@ -299,71 +300,30 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
           </div>
         )}
 
-        {/* Conmutador general de frecuencia (Apple Segmented Control) */}
+        {/* Incluir las frecuencias anteriores en esta vista: una fila con interruptor, como en Ajustes */}
         {currentCycle && currentCycle.id !== 'cycle_day' && onToggleCycleRoutineMode && (
-          <div style={{
-            display: 'inline-flex',
-            padding: '2px',
-            borderRadius: '10px',
-            background: 'var(--bg-elevated, rgba(120, 120, 128, 0.12))',
-            border: '1px solid var(--border-subtle, rgba(0,0,0,0.06))',
-            maxWidth: '100%',
-            width: isMobile ? '100%' : 'fit-content',
-            boxSizing: 'border-box',
-            marginTop: 4
-          }}>
-            <button
-              type="button"
-              onClick={() => {
-                HapticService.selection();
-                onToggleCycleRoutineMode('only_section');
-              }}
-              style={{
-                flex: isMobile ? 1 : 'none',
-                padding: '6px 14px',
-                borderRadius: '8px',
-                border: 'none',
-                background: cycleRoutineMode === 'only_section' ? 'var(--bg-card, #ffffff)' : 'transparent',
-                color: cycleRoutineMode === 'only_section' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                fontWeight: cycleRoutineMode === 'only_section' ? 650 : 500,
-                fontSize: '0.82rem',
-                cursor: 'pointer',
-                boxShadow: cycleRoutineMode === 'only_section' ? '0 1px 4px rgba(0,0,0,0.12)' : 'none',
-                transition: 'all 0.15s ease',
-                whiteSpace: 'nowrap',
-                textAlign: 'center'
-              }}
-            >
-              {currentCycle.id === 'cycle_week' ? 'Solo semanales' :
-               currentCycle.id === 'cycle_month' ? 'Solo mensuales' :
-               currentCycle.id === 'cycle_year' ? 'Solo anuales' : `Solo ${currentCycle.name.toLowerCase()}`}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                HapticService.selection();
-                onToggleCycleRoutineMode('full_routine');
-              }}
-              style={{
-                flex: isMobile ? 1 : 'none',
-                padding: '6px 14px',
-                borderRadius: '8px',
-                border: 'none',
-                background: cycleRoutineMode === 'full_routine' ? 'var(--bg-card, #ffffff)' : 'transparent',
-                color: cycleRoutineMode === 'full_routine' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                fontWeight: cycleRoutineMode === 'full_routine' ? 650 : 500,
-                fontSize: '0.82rem',
-                cursor: 'pointer',
-                boxShadow: cycleRoutineMode === 'full_routine' ? '0 1px 4px rgba(0,0,0,0.12)' : 'none',
-                transition: 'all 0.15s ease',
-                whiteSpace: 'nowrap',
-                textAlign: 'center'
-              }}
-            >
-              {currentCycle.id === 'cycle_week' ? 'Semanales + Diarias' :
-               currentCycle.id === 'cycle_month' ? 'Mensuales + Acumuladas' :
-               currentCycle.id === 'cycle_year' ? 'Todas acumuladas' : 'Acumuladas'}
-            </button>
+          <div className="routine-include-row" style={{ opacity: titleOpacity }}>
+            <label htmlFor={includeSwitchId} className="routine-include-text">
+              {currentCycle.id === 'cycle_week' ? 'Incluir diarias' : 'Incluir acumuladas'}
+              {currentCycle.id !== 'cycle_week' && (
+                <span className="routine-include-sub">
+                  {currentCycle.id === 'cycle_month' ? 'Semanales y diarias' : currentCycle.id === 'cycle_year' ? 'Mensuales, semanales y diarias' : 'Las de frecuencia más corta'}
+                </span>
+              )}
+            </label>
+            <label className="switch">
+              <input
+                id={includeSwitchId}
+                type="checkbox"
+                role="switch"
+                checked={cycleRoutineMode === 'full_routine'}
+                onChange={(e) => {
+                  HapticService.selection();
+                  onToggleCycleRoutineMode(e.target.checked ? 'full_routine' : 'only_section');
+                }}
+              />
+              <span className="slider round" />
+            </label>
           </div>
         )}
 

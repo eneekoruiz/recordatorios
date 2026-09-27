@@ -87,7 +87,7 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     await page.keyboard.press('Escape');
   });
 
-  test('2. Routine toggle [Solo | + Diarias] works on Semanales and spacing is clean', async ({ page }) => {
+  test('2. «+ Diarias» en Semanales: las diarias van aparte y el número de la sección no cambia', async ({ page }) => {
     await ensureAppUnlocked(page);
 
     // Set up a list with a Diarias section and a Semanales section
@@ -155,36 +155,33 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     }
     await page.waitForTimeout(400);
 
-    // Verify Semanales header is visible and expand it (starts collapsed by default)
-    const semanalHeader = page.locator('.group-header:has-text("Semanales")');
+    // Semanales empieza plegada: al desplegarla aparece la cápsula «+ Diarias»
+    const semanalHeader = page.locator('.group-header', { hasText: 'Semanales' });
     await expect(semanalHeader).toBeVisible({ timeout: 5000 });
     await semanalHeader.click();
-    await page.waitForTimeout(300);
 
-    const soloBtn = semanalHeader.locator('button:has-text("Solo")');
-    const withDailyBtn = semanalHeader.locator('button:has-text("+ Diarias")');
+    const chip = semanalHeader.getByRole('button', { name: 'Incluir diarias' });
+    await expect(chip).toBeVisible({ timeout: 5000 });
+    await expect(chip).toHaveAttribute('aria-pressed', 'false');
+    await expect(semanalHeader.locator('.section-total-count')).toHaveText('1');
 
-    await expect(soloBtn).toBeVisible({ timeout: 5000 });
-    await expect(withDailyBtn).toBeVisible({ timeout: 5000 });
+    // Encendida: las diarias salen en su propia subcabecera, con su número; Semanales sigue en 1
+    await chip.click();
+    await expect(chip).toHaveAttribute('aria-pressed', 'true');
+    const included = page.locator('.group-header', { has: page.locator('.included-dot') });
+    await expect(included).toHaveCount(1);
+    await expect(included).toContainText('Diarias');
+    await expect(included.locator('.section-total-count')).toHaveText('1');
+    await expect(semanalHeader.locator('.section-total-count')).toHaveText('1');
+    await expect(page.locator('.task-item-wrapper[data-task-id="task_daily_1"]')).toBeVisible();
 
-    // By default, Solo is active and only weekly task is in Semanales
-    await expect(soloBtn).toHaveAttribute('aria-pressed', 'true');
-    await expect(withDailyBtn).toHaveAttribute('aria-pressed', 'false');
+    // Apagada: la subcabecera desaparece
+    await chip.click();
+    await expect(chip).toHaveAttribute('aria-pressed', 'false');
+    await expect(included).toHaveCount(0);
 
-    // Click "+ Diarias"
-    await withDailyBtn.click();
-    await page.waitForTimeout(300);
-    await expect(withDailyBtn).toHaveAttribute('aria-pressed', 'true');
-    await expect(soloBtn).toHaveAttribute('aria-pressed', 'false');
-
-    // Click "Solo" back
-    await soloBtn.click();
-    await page.waitForTimeout(300);
-    await expect(soloBtn).toHaveAttribute('aria-pressed', 'true');
-
-    // Verify there is no redundant .ios-section-divider inside the group headers
-    const redundantDividers = page.locator('.group-header .ios-section-divider');
-    expect(await redundantDividers.count()).toBe(0);
+    // Sin divisores redundantes dentro de las cabeceras
+    expect(await page.locator('.group-header .ios-section-divider').count()).toBe(0);
   });
 
   test('3. Frequency view preserves room/subgroup headers within cyclic sections and toggles on first click', async ({ page }) => {

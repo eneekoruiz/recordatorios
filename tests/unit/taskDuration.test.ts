@@ -35,15 +35,15 @@ describe('TaskDuration & Parallel Tasks Engine', () => {
     });
 
     it('formats exact hours', () => {
-      expect(formatDuration(60)).toBe('1h');
-      expect(formatDuration(120)).toBe('2h');
-      expect(formatDuration(180)).toBe('3h');
+      expect(formatDuration(60)).toBe('1 h');
+      expect(formatDuration(120)).toBe('2 h');
+      expect(formatDuration(180)).toBe('3 h');
     });
 
     it('formats hours and minutes', () => {
-      expect(formatDuration(75)).toBe('1h 15m');
-      expect(formatDuration(150)).toBe('2h 30m');
-      expect(formatDuration(195)).toBe('3h 15m');
+      expect(formatDuration(75)).toBe('1 h 15 min');
+      expect(formatDuration(150)).toBe('2 h 30 min');
+      expect(formatDuration(195)).toBe('3 h 15 min');
     });
   });
 
@@ -61,8 +61,8 @@ describe('TaskDuration & Parallel Tasks Engine', () => {
       expect(summary.parallelMinutes).toBe(150); // 2h 30m
       expect(summary.parallelTasksCount).toBe(1);
       expect(summary.formattedActive).toBe('25 min');
-      expect(summary.formattedParallel).toBe('2h 30m');
-      expect(summary.formattedTotal).toBe('25 min (+ 2h 30m paralelo)');
+      expect(summary.formattedParallel).toBe('2 h 30 min');
+      expect(summary.formattedTotal).toBe('25 min (+ 2 h 30 min paralelo)');
     });
 
     it('calculates weekly routine cleaning to around 3 hours', () => {
@@ -78,7 +78,7 @@ describe('TaskDuration & Parallel Tasks Engine', () => {
 
       const summary = calculateTasksDuration(weeklyTasks);
       expect(summary.activeMinutes).toBe(175); // ~2h 55m (aprox. 3 horas)
-      expect(summary.formattedActive).toBe('2h 55m');
+      expect(summary.formattedActive).toBe('2 h 55 min');
     });
 
     it('differentiates duration between solo annual tasks and full accumulated routine', () => {
@@ -114,11 +114,11 @@ describe('TaskDuration & Parallel Tasks Engine', () => {
 
       // Solo anuales: 120 mins = 2h
       expect(soloDuration.activeMinutes).toBe(120);
-      expect(soloDuration.formattedActive).toBe('2h');
+      expect(soloDuration.formattedActive).toBe('2 h');
 
       // Rutina acumulada: 120 + 90 + 60 + 30 = 300 mins = 5h
       expect(fullDuration.activeMinutes).toBe(300);
-      expect(fullDuration.formattedActive).toBe('5h');
+      expect(fullDuration.formattedActive).toBe('5 h');
       expect(fullDuration.activeMinutes).toBeGreaterThan(soloDuration.activeMinutes);
     });
   });

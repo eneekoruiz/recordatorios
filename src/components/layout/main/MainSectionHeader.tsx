@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { MoreHorizontal, ChevronDown, Repeat } from 'lucide-react';
+import { MoreHorizontal, ChevronDown, Check, Plus } from 'lucide-react';
 import { HapticService } from '../../../services/HapticService';
 import type { SectionMenuState } from './SectionContextMenu';
 import type { TasksDurationSummary } from '../../../utils/taskDuration';
@@ -19,6 +19,10 @@ interface SectionData {
   routineDurations?: { only: TasksDurationSummary; full: TasksDurationSummary } | null;
   routineMode?: 'full_routine' | 'only_section';
   sectionTaskIds?: string[];
+  /** Pendientes propias, sin las incluidas de otras frecuencias. */
+  pendingCount?: number;
+  /** Subcabecera de las tareas incluidas de otra frecuencia («Diarias» dentro de «Semanales»). */
+  accumulated?: boolean;
 }
 
 interface MainSectionHeaderProps {
@@ -108,10 +112,18 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
 }) => {
   const currentSectionRoutineMode = sectionRoutineModes[data.category] || data.routineMode || 'only_section';
   const isShopping = isShoppingList(data.category);
-  const durSummary = !isShopping ? (data.routineDurations
-    ? (currentSectionRoutineMode === 'full_routine' ? data.routineDurations.full : data.routineDurations.only)
-    : durationSummary) : null;
+  // La cabecera describe solo lo suyo: las incluidas tienen su propia subcabecera.
+  const durSummary = !isShopping ? (data.routineDurations ? data.routineDurations.only : durationSummary) : null;
+  const isAccumulated = Boolean(data.accumulated);
   const sectionDurationLabel = durSummary && durSummary.activeMinutes > 0 ? durSummary.formattedActive : null;
+  // Bajo el nombre, en gris y sin iconos: «~30 min · 6,20 €».
+  const sectionMeta = [
+    sectionDurationLabel ? `~${sectionDurationLabel}` : null,
+    sectionTotal > 0 ? formatEuro(sectionTotal) : null,
+  ].filter(Boolean).join(' · ');
+  const isFullRoutine = currentSectionRoutineMode === 'full_routine';
+  // Corto para caber en el móvil: «+ Diarias» en las semanales, «+ Acumuladas» en mensuales y anuales.
+  const includeLabel = data.periodicity === 'week' ? 'Diarias' : 'Acumuladas';
   const [isPressed, setIsPressed] = useState(false);
   const [sectionDragOverPos, setSectionDragOverPos] = useState<'top' | 'bottom' | 'inside' | null>(null);
   const didSectionLongPressRef = useRef(false);
@@ -133,6 +145,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   );
 
   const openSectionMenu = useCallback(() => {
+    // Las subcabeceras de incluidas no son secciones: no tienen menú.
+    if (isAccumulated) return;
     HapticService.selection();
 
     const rowRect = getRowRect();
@@ -177,7 +191,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       category: data.category,
       triggerRect: rowRect
     });
-  }, [data.sectionId, data.title, data.color, data.category, data.depth, pendingTaskCount, setSectionMenu, getRowRect]);
+  }, [isAccumulated, data.sectionId, data.title, data.color, data.category, data.depth, pendingTaskCount, setSectionMenu, getRowRect]);
 
   return (
     <div
@@ -289,7 +303,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         if ((e.target as HTMLElement).closest('button, input')) return;
         setIsPressed(true);
         didSectionLongPressRef.current = false;
-        if (e.pointerType !== 'touch') return;
+        if (e.pointerType !== 'touch' || isAccumulated) return;
         touchStartPos.current = { x: e.clientX, y: e.clientY };
         if (sectionTouchTimer.current) clearTimeout(sectionTouchTimer.current);
         sectionTouchTimer.current = setTimeout(() => {
@@ -351,7 +365,10 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, justifyContent: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                {data.titleIcon && !sectionDurationLabel && (
+                {isAccumulated && (
+                  <span aria-hidden="true" className="included-dot" style={{ background: data.color }} />
+                )}
+                {data.titleIcon && (
                   <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 2, opacity: 0.85, flexShrink: 0 }}>
                     {data.titleIcon}
                   </span>
@@ -378,24 +395,13 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                   {data.title}
                 </h3>
               </div>
-              {sectionDurationLabel && (
-                <div 
-                  className="section-duration"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    color: 'var(--text-tertiary)',
-                    fontSize: data.depth === 0 ? '0.78rem' : '0.72rem',
-                    fontWeight: 500,
-                    fontVariantNumeric: 'tabular-nums',
-                    marginTop: 1,
-                    opacity: 0.9
-                  }}
-                  title={`Duración estimada de ${data.title}: ${sectionDurationLabel}`}
+              {sectionMeta && (
+                <div
+                  className="section-duration section-meta"
+                  style={{ fontSize: data.depth === 0 ? '0.8rem' : '0.74rem' }}
+                  title={[sectionDurationLabel && `Duración estimada: ${sectionDurationLabel}`, sectionTotal > 0 && `Subtotal: ${formatEuro(sectionTotal)}`].filter(Boolean).join(' · ')}
                 >
-                  {data.titleIcon || <Repeat size={12} />}
-                  <span>~{sectionDurationLabel}</span>
+                  {sectionMeta}
                 </div>
               )}
             </div>
@@ -426,115 +432,49 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               <span>Ficha</span>
             </button>
           )}
-          {sectionTotal > 0 && (
-            <span 
-              style={{
-                fontSize: '0.76rem',
-                fontWeight: 500,
-                fontVariantNumeric: 'tabular-nums',
-                color: 'var(--text-secondary)',
-                background: 'var(--bg-hover, rgba(0,0,0,0.04))',
-                border: '1px solid var(--border-subtle)',
-                padding: '1.5px 7px',
-                borderRadius: '6px',
-                marginLeft: '2px',
-                flexShrink: 0
-              }}
-              title="Subtotal de la sección"
-            >
-              {formatEuro(sectionTotal)}
-            </span>
-          )}
-          {isCustomSection && !isMobile && (
+          {isCustomSection && !isMobile && !isAccumulated && (
             <button 
               ref={moreBtnRef}
               type="button"
-              className="desktop-only-action"
+              className="desktop-only-action section-more-btn"
               onClick={(e) => {
                 e.stopPropagation();
                 openSectionMenu();
               }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5, padding: 4 }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
               title="Opciones de sección"
               aria-label="Opciones de sección"
+              aria-haspopup="menu"
+              aria-expanded={isMenuOpenForThisSection}
             >
               <MoreHorizontal size={16} color="var(--text-primary)" />
             </button>
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, justifyContent: 'flex-end' }}>
-          {/* Conmutador sutil: Solo vs + Diarias (estilo Apple Segmented - solo si la sección está desplegada) */}
+          {/* Incluir las frecuencias anteriores: una cápsula que se enciende (con la sección desplegada) */}
           {!isCatCollapsed(data.category) && data.routineCounts && data.routineCounts.full > data.routineCounts.only && (
-            <div 
-              style={{
-                display: 'inline-flex',
-                padding: '2px',
-                borderRadius: '8px',
-                background: 'var(--bg-elevated, rgba(120, 120, 128, 0.12))',
-                border: '1px solid var(--border-subtle, rgba(0,0,0,0.06))',
-                alignItems: 'center',
-                marginRight: 4,
-                flexShrink: 0
+            <button
+              type="button"
+              className={`routine-chip${isFullRoutine ? ' is-on' : ''}`}
+              aria-pressed={isFullRoutine}
+              aria-label={`Incluir ${includeLabel.toLowerCase()}`}
+              style={{ ['--chip-color' as string]: data.color }}
+              onClick={(e) => {
+                e.stopPropagation();
+                HapticService.selection();
+                toggleSectionRoutineMode?.(data.category, isFullRoutine ? 'only_section' : 'full_routine');
               }}
-              onClick={(e) => e.stopPropagation()}
+              title={isFullRoutine ? `Mostrando también ${includeLabel.toLowerCase()}` : `Incluir ${includeLabel.toLowerCase()}`}
             >
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  HapticService.selection();
-                  toggleSectionRoutineMode?.(data.category, 'only_section');
-                }}
-                aria-pressed={currentSectionRoutineMode === 'only_section'}
-                style={{
-                  border: 'none',
-                  background: currentSectionRoutineMode === 'only_section' ? 'var(--bg-card, #ffffff)' : 'transparent',
-                  color: currentSectionRoutineMode === 'only_section' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  fontWeight: currentSectionRoutineMode === 'only_section' ? 650 : 500,
-                  fontSize: '0.72rem',
-                  padding: '2px 7px',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  boxShadow: currentSectionRoutineMode === 'only_section' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                  transition: 'all 0.12s ease',
-                  whiteSpace: 'nowrap'
-                }}
-                title={`Ver solo tareas de ${data.title} (${data.routineCounts.only})`}
-              >
-                Solo ({data.routineCounts.only})
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  HapticService.selection();
-                  toggleSectionRoutineMode?.(data.category, 'full_routine');
-                }}
-                aria-pressed={currentSectionRoutineMode === 'full_routine'}
-                style={{
-                  border: 'none',
-                  background: currentSectionRoutineMode === 'full_routine' ? 'var(--bg-card, #ffffff)' : 'transparent',
-                  color: currentSectionRoutineMode === 'full_routine' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  fontWeight: currentSectionRoutineMode === 'full_routine' ? 650 : 500,
-                  fontSize: '0.72rem',
-                  padding: '2px 7px',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  boxShadow: currentSectionRoutineMode === 'full_routine' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                  transition: 'all 0.12s ease',
-                  whiteSpace: 'nowrap'
-                }}
-                title={`Incluir tareas de frecuencias anteriores (${data.routineCounts.full})`}
-              >
-                + Diarias ({data.routineCounts.full})
-              </button>
-            </div>
+              {isFullRoutine ? <Check size={12} strokeWidth={3} aria-hidden="true" /> : <Plus size={12} strokeWidth={2.6} aria-hidden="true" />}
+              <span>{includeLabel}</span>
+            </button>
           )}
           {/* Conteo numérico sutil estilo Apple */}
           {(() => {
-            const count = data.routineCounts 
-              ? (currentSectionRoutineMode === 'full_routine' ? data.routineCounts.full : data.routineCounts.only) 
-              : (pendingTaskCount ?? data.sectionTaskIds?.length ?? 0);
+            // Solo las propias: las incluidas llevan su número en su subcabecera, así la suma cuadra.
+            const count = data.pendingCount ?? pendingTaskCount ?? data.sectionTaskIds?.length ?? 0;
             return count > 0 ? (
               <span 
                 className="section-total-count"

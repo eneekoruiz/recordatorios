@@ -220,7 +220,7 @@ export function getTaskDuration(
 
 /**
  * Formats a duration in minutes into a clean human-readable string.
- * Examples: 5 -> "5 min", 45 -> "45 min", 60 -> "1h", 90 -> "1h 30m", 150 -> "2h 30m"
+ * Examples: 5 -> "5 min", 45 -> "45 min", 60 -> "1 h", 90 -> "1 h 30 min", 150 -> "2 h 30 min"
  */
 export function formatDuration(minutes: number): string {
   if (!minutes || minutes <= 0) return '0 min';
@@ -236,8 +236,9 @@ export function formatDuration(minutes: number): string {
 
   const hours = Math.floor(mins / 60);
   const remainingMins = mins % 60;
-  if (remainingMins === 0) return `${hours}h`;
-  return `${hours}h ${remainingMins}m`;
+  // Como en iOS: «1 h 15 min», igual que «32 min 45 s» por debajo de la hora.
+  if (remainingMins === 0) return `${hours} h`;
+  return `${hours} h ${remainingMins} min`;
 }
 
 /**
