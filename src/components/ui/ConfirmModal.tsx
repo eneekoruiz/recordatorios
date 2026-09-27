@@ -69,27 +69,36 @@ export function ConfirmModal({
       <motion.div className="premium-overlay" role="presentation"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         transition={{ duration: 0.18 }} onClick={onCancel}
-        style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      >
         <motion.section className="premium-sheet confirm-sheet" role="alertdialog"
           ref={modalRef}
           aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-description"
-          initial={{ opacity: 0, y: 34, scale: 0.96 }}
+          initial={{ opacity: 0, y: 26, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 22, scale: 0.97 }}
+          exit={{ opacity: 0, y: 16, scale: 0.97 }}
           transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
           onClick={(event) => event.stopPropagation()}
-          style={{ position: 'relative', width: '100%', maxWidth: '440px', margin: '16px', background: 'var(--bg-surface)', borderRadius: '24px', padding: '24px', paddingBottom: 'calc(16px + env(safe-area-inset-bottom))', boxShadow: '0 24px 48px rgba(0,0,0,0.2)' }}>
-          <div className={`premium-sheet-icon ${tone}`} aria-hidden="true" style={{ marginBottom: '16px' }}>
-            <AlertTriangle size={24} strokeWidth={2} color={tone === 'danger' ? 'var(--accent-red)' : 'var(--accent-primary)'} />
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
+            <div className={`modal-hero-badge`} aria-hidden="true" style={{
+              background: tone === 'danger' ? 'rgba(239, 68, 68, 0.12)' : 'var(--accent-glow)',
+              marginBottom: 0
+            }}>
+              <AlertTriangle size={24} strokeWidth={2.2} color={tone === 'danger' ? 'var(--accent-red)' : 'var(--accent-primary)'} />
+            </div>
+            <button className="modal-close-btn" onClick={onCancel} aria-label="Cerrar">
+              <X size={16} strokeWidth={2.4} />
+            </button>
           </div>
-          <button className="premium-sheet-close" onClick={onCancel} aria-label="Cerrar" style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)' }}><X size={20} /></button>
+          
           <div className="premium-sheet-copy">
-            <h2 id="confirm-title" style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '8px', color: 'var(--text-primary)' }}>{title}</h2>
-            <p id="confirm-description" style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>{message}</p>
+            <h2 id="confirm-title" style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>{title}</h2>
+            <p id="confirm-description" style={{ fontSize: '0.94rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>{message}</p>
           </div>
-          <div className="premium-sheet-actions" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '24px' }}>
-            <button ref={cancelRef} className="premium-button secondary" onClick={onCancel} style={{ padding: '12px', borderRadius: '12px', background: 'var(--bg-elevated)', border: 'none', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer' }}>{cancelText}</button>
-            <button className={`premium-button ${tone}`} onClick={onConfirm} style={{ padding: '12px', borderRadius: '12px', background: tone === 'danger' ? 'var(--accent-red)' : 'var(--accent-primary)', border: 'none', color: 'white', fontWeight: 600, cursor: 'pointer' }}>{confirmText}</button>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 24 }}>
+            <button ref={cancelRef} type="button" className="modal-btn-secondary" onClick={onCancel}>{cancelText}</button>
+            <button type="button" className={tone === 'danger' ? 'modal-btn-danger' : 'modal-btn-primary'} onClick={onConfirm}>{confirmText}</button>
           </div>
         </motion.section>
       </motion.div>

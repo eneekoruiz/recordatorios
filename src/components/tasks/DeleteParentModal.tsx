@@ -80,17 +80,6 @@ export function DeleteParentModal({
         exit={{ opacity: 0 }}
         transition={{ duration: 0.18 }}
         onClick={onCancel}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 99999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'rgba(0, 0, 0, 0.45)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)'
-        }}
       >
         <motion.section
           className="premium-sheet"
@@ -99,60 +88,32 @@ export function DeleteParentModal({
           aria-modal="true"
           aria-labelledby="delete-parent-title"
           aria-describedby="delete-parent-description"
-          initial={{ opacity: 0, y: 28, scale: 0.96 }}
+          initial={{ opacity: 0, y: 26, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 20, scale: 0.97 }}
-          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+          exit={{ opacity: 0, y: 16, scale: 0.97 }}
+          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
           onClick={(e) => e.stopPropagation()}
-          style={{
-            position: 'relative',
-            width: '100%',
-            maxWidth: '460px',
-            margin: '16px',
-            background: 'var(--bg-surface, #ffffff)',
-            borderRadius: '24px',
-            padding: '24px',
-            paddingBottom: 'calc(20px + env(safe-area-inset-bottom))',
-            boxShadow: '0 24px 48px rgba(0,0,0,0.22)',
-            border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
-            color: 'var(--text-primary)'
-          }}
         >
-          <div
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 14,
-              background: 'rgba(255, 69, 58, 0.12)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: 16
-            }}
-            aria-hidden="true"
-          >
-            <AlertTriangle size={24} strokeWidth={2.2} color="var(--accent-red, #ff453a)" />
-          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div
+              className="modal-hero-badge"
+              style={{
+                background: 'rgba(239, 68, 68, 0.12)',
+                marginBottom: 0
+              }}
+              aria-hidden="true"
+            >
+              <AlertTriangle size={24} strokeWidth={2.2} color="var(--accent-red)" />
+            </div>
 
-          <button
-            onClick={onCancel}
-            aria-label="Cerrar"
-            style={{
-              position: 'absolute',
-              top: 18,
-              right: 18,
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              color: 'var(--text-tertiary)',
-              padding: 4,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            <X size={20} />
-          </button>
+            <button
+              className="modal-close-btn"
+              onClick={onCancel}
+              aria-label="Cerrar"
+            >
+              <X size={16} strokeWidth={2.4} />
+            </button>
+          </div>
 
           <h2
             id="delete-parent-title"
@@ -160,7 +121,7 @@ export function DeleteParentModal({
               fontSize: '1.25rem',
               fontWeight: 700,
               margin: '0 0 8px 0',
-              letterSpacing: '-0.3px',
+              letterSpacing: '-0.02em',
               color: 'var(--text-primary)'
             }}
           >
@@ -248,18 +209,9 @@ export function DeleteParentModal({
             <button
               ref={cancelRef}
               type="button"
+              className="modal-btn-secondary"
               onClick={onCancel}
-              style={{
-                padding: '12px',
-                borderRadius: 14,
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--text-secondary)',
-                fontSize: '0.92rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                marginTop: 4
-              }}
+              style={{ marginTop: 6, width: '100%' }}
             >
               Cancelar
             </button>

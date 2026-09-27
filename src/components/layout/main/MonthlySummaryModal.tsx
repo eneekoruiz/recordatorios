@@ -16,6 +16,7 @@ export const MonthlySummaryModal: React.FC<MonthlySummaryModalProps> = ({
   return createPortal(
     <div
       data-testid="monthly-summary-modal"
+      className="premium-overlay"
       style={{
         position: 'fixed',
         inset: 0,
@@ -30,63 +31,43 @@ export const MonthlySummaryModal: React.FC<MonthlySummaryModalProps> = ({
         onClick={onClose}
         style={{
           position: 'absolute',
-          inset: 0,
-          background: 'rgba(0, 0, 0, 0.45)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)'
+          inset: 0
         }}
       />
       <div
         onClick={e => e.stopPropagation()}
+        className="premium-sheet monthly-summary-sheet"
         style={{
-          position: 'relative',
-          width: '100%',
           maxWidth: 520,
-          background: 'var(--bg-elevated)',
-          borderRadius: 20,
-          border: '1px solid var(--border-subtle)',
-          padding: '24px 20px',
-          boxShadow: '0 24px 60px rgba(0,0,0,0.3)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 14,
-          zIndex: 100000
+          gap: 16
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ display: 'flex', width: 32, height: 32, borderRadius: '50%', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'rgba(255, 149, 0, 0.14)' }}>
-              <Wand2 size={16} color="#ff9500" strokeWidth={2} />
-            </span>
-            <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-              {modal.title}
-            </h3>
+        <div className="modal-header-row" style={{ marginBottom: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div className="modal-hero-badge" style={{ background: 'rgba(255, 149, 0, 0.14)', marginBottom: 0, width: 40, height: 40 }}>
+              <Wand2 size={18} color="#ff9500" strokeWidth={2.2} />
+            </div>
+            <div>
+              <h3 className="modal-title" style={{ fontSize: '1.2rem' }}>
+                {modal.title}
+              </h3>
+              <p className="modal-subtitle">Resumen inteligente de hábitos y tareas</p>
+            </div>
           </div>
           <button
             type="button"
+            className="modal-close-btn"
             onClick={onClose}
             title="Cerrar"
             aria-label="Cerrar"
-            style={{
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: '50%',
-              width: 30,
-              height: 30,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              color: 'var(--text-secondary)'
-            }}
           >
-            <X size={16} />
+            <X size={16} strokeWidth={2.4} />
           </button>
         </div>
 
         {modal.loading ? (
-          <div style={{ padding: '30px 10px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-            <Sparkles size={20} className="animate-spin" style={{ margin: '0 auto 10px', color: '#ff9500' }} />
+          <div style={{ padding: '36px 10px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+            <Sparkles size={22} className="animate-spin" style={{ margin: '0 auto 12px', color: '#ff9500' }} />
             <span>Tejiendo tu memoria mensual con IA...</span>
           </div>
         ) : (
@@ -97,11 +78,11 @@ export const MonthlySummaryModal: React.FC<MonthlySummaryModalProps> = ({
               lineHeight: '1.6',
               color: 'var(--text-primary)',
               whiteSpace: 'pre-wrap',
-              background: 'var(--bg-surface)',
+              background: 'var(--bg-elevated)',
               padding: '16px',
-              borderRadius: 14,
+              borderRadius: 16,
               border: '1px solid var(--border-subtle)',
-              maxHeight: '60vh',
+              maxHeight: '55vh',
               overflowY: 'auto'
             }}
           >
@@ -109,9 +90,17 @@ export const MonthlySummaryModal: React.FC<MonthlySummaryModalProps> = ({
           </div>
         )}
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 6 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 4 }}>
           <button
             type="button"
+            className="modal-btn-secondary"
+            onClick={onClose}
+          >
+            Cerrar
+          </button>
+          <button
+            type="button"
+            className="modal-btn-primary"
             onClick={async () => {
               if (typeof navigator !== 'undefined' && navigator.clipboard) {
                 await navigator.clipboard.writeText(modal.text);
@@ -119,14 +108,8 @@ export const MonthlySummaryModal: React.FC<MonthlySummaryModalProps> = ({
               }
             }}
             style={{
-              padding: '8px 16px',
-              borderRadius: 10,
               background: '#ff9500',
-              color: 'white',
-              border: 'none',
-              fontSize: '0.84rem',
-              fontWeight: 650,
-              cursor: 'pointer'
+              boxShadow: '0 4px 14px rgba(255, 149, 0, 0.35)'
             }}
           >
             Copiar memoria

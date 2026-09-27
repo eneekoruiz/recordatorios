@@ -45,6 +45,31 @@ export function getReservedFrequencyColor(cycleIdOrPeriod?: string | null): stri
 }
 
 /**
+ * Curated palette with rich personality for custom lists, frequencies, and modals.
+ * Harmonious, Apple-inspired jewel-tones with warmth and distinction.
+ */
+export const CURATED_MODAL_PALETTE = [
+  '#FF375F', // Rosa Coral Radiante
+  '#E63946', // Rojo Carmesí Imperial
+  '#FF6F00', // Ámbar Solar
+  '#F59E0B', // Miel Dorado
+  '#E9C46A', // Oro Arena
+  '#2A9D8F', // Verde Azulado Laguna
+  '#00875A', // Esmeralda Bosque
+  '#10B981', // Menta Viva
+  '#0284C7', // Azul Océano
+  '#0052FF', // Azul Cobalto Eléctrico
+  '#5E5CE6', // Índigo Real
+  '#6366F1', // Lavanda Índigo
+  '#7928CA', // Violeta Cósmico
+  '#B5838D', // Cuarzo Rosa
+  '#F4A261', // Terracota Atardecer
+  '#8D6E63', // Bronce Cálido
+  '#64748B', // Pizarra Titanio
+  '#264653', // Azul Noche Abisal
+] as const;
+
+/**
  * Curated palette for regular custom lists.
  * Strictly excludes all reserved frequency colors to prevent any visual confusion.
  */

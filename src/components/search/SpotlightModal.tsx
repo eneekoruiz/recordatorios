@@ -319,16 +319,10 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
   return createPortal(
     <AnimatePresence>
       <div 
+        className="premium-overlay"
         style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 999999,
-          display: 'flex',
           alignItems: 'flex-start',
-          justifyContent: 'center',
-          paddingTop: '12vh',
-          paddingLeft: 16,
-          paddingRight: 16,
+          paddingTop: '12vh'
         }}
       >
         {/* Backdrop */}
@@ -340,7 +334,7 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'var(--scrim)'
+            background: 'transparent'
           }}
         />
 
@@ -350,17 +344,11 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: -12 }}
           transition={{ type: 'spring', damping: 28, stiffness: 450 }}
+          className="premium-sheet spotlight-sheet"
           style={{
-            position: 'relative',
-            width: '100%',
             maxWidth: 620,
-            background: 'var(--bg-elevated)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 18,
-            boxShadow: '0 24px 70px rgba(0, 0, 0, 0.32), 0 4px 18px rgba(0, 0, 0, 0.1)',
+            padding: 0,
             overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
             maxHeight: '72vh'
           }}
           onClick={e => e.stopPropagation()}

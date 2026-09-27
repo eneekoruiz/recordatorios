@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, Plus, Minus, Sparkles, Circle } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { CYCLE_ICON_MAP } from '../../constants/icons';
+import { CURATED_MODAL_PALETTE } from '../../constants/colors';
 import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
 
@@ -21,16 +22,7 @@ const PRESET_CADENCES = [
   { name: 'Bienal', days: 730, label: '2 años' },
 ];
 
-const AVAILABLE_COLORS = [
-  '#FF9500', // Ámbar
-  '#007AFF', // Azul Royal
-  '#AF52DE', // Púrpura
-  '#34C759', // Verde
-  '#FF2D55', // Rosa
-  '#30B0C7', // Cyan
-  '#5856D6', // Índigo
-  '#FF3B30', // Rojo Coral
-];
+const AVAILABLE_COLORS = CURATED_MODAL_PALETTE;
 
 const SELECTABLE_ICONS = [
   'star',
@@ -157,34 +149,20 @@ function CycleConfigModalContent({
         }}
       >
         {/* Top Bar with Title and Close Button */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="modal-header-row">
           <div>
-            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.015em' }}>
+            <h3 className="modal-title">
               Nuevo Ciclo Temporal
             </h3>
-            <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+            <p className="modal-subtitle">
               Frecuencia personalizada para tareas periódicas
             </p>
           </div>
           <button
             type="button"
+            className="modal-close-btn"
             onClick={onClose}
             aria-label="Cerrar"
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              background: 'var(--bg-surface-glass, rgba(142, 142, 147, 0.15))',
-              border: 'none',
-              color: 'var(--text-secondary)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              transition: 'background 0.15s ease',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(142, 142, 147, 0.25)')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--bg-surface-glass, rgba(142, 142, 147, 0.15))')}
           >
             <X size={16} strokeWidth={2.4} />
           </button>
@@ -229,6 +207,7 @@ function CycleConfigModalContent({
           </label>
           <input
             type="text"
+            className="modal-title-input"
             value={name}
             onChange={(e) => setName(e.target.value)}
             onFocus={() => setIsFocused(true)}
@@ -242,18 +221,8 @@ function CycleConfigModalContent({
               }
             }}
             style={{
-              width: '100%',
-              padding: '12px 16px',
-              borderRadius: 14,
-              background: isFocused ? 'var(--bg-base)' : 'var(--bg-hover, rgba(142, 142, 147, 0.08))',
-              border: isFocused ? `1.5px solid ${selectedColor}` : '1px solid var(--border-subtle)',
-              color: 'var(--text-primary)',
-              fontSize: '1.05rem',
-              fontWeight: 600,
-              outline: 'none',
-              boxShadow: isFocused ? `0 0 0 3px ${selectedColor}22` : 'none',
-              transition: 'all 0.15s ease',
-              boxSizing: 'border-box',
+              borderColor: isFocused ? selectedColor : undefined,
+              boxShadow: isFocused ? `0 0 0 3px ${selectedColor}25` : undefined,
             }}
           />
         </div>
@@ -505,39 +474,22 @@ function CycleConfigModalContent({
         </div>
 
         {/* Footer Action Buttons */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 6 }}>
           <button
             type="button"
+            className="modal-btn-secondary"
             onClick={onClose}
-            style={{
-              padding: '10px 18px',
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-secondary)',
-              fontWeight: 600,
-              fontSize: '0.94rem',
-              cursor: 'pointer',
-              borderRadius: 12,
-            }}
           >
             Cancelar
           </button>
           <button
             type="button"
+            className="modal-btn-primary"
             onClick={handleSave}
             disabled={!isValid}
             style={{
-              padding: '10px 22px',
-              background: selectedColor,
-              border: 'none',
-              borderRadius: 12,
-              color: 'white',
-              fontWeight: 700,
-              fontSize: '0.94rem',
-              cursor: !isValid ? 'not-allowed' : 'pointer',
-              opacity: !isValid ? 0.45 : 1,
+              background: isValid ? selectedColor : undefined,
               boxShadow: isValid ? `0 6px 18px ${selectedColor}44` : 'none',
-              transition: 'all 0.15s ease',
             }}
           >
             Crear Ciclo

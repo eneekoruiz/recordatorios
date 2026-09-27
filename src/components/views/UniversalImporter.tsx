@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Download, Upload, Info, CheckCircle2, ChevronLeft, Sparkles, Target } from 'lucide-react';
+import { Download, Upload, Info, CheckCircle2, ChevronLeft, Sparkles, Target, FileText, Clipboard, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 import { detectFormatAndParse } from '../../utils/importerParser';
 import type { ParseResult } from '../../utils/importerParser';
+import { extractTextFromPdf } from '../../utils/pdfExtractor';
 import { useNavigation } from '../../hooks/useNavigation';
 import { notify } from '../ui/confirmDialog';
 
@@ -26,6 +27,8 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
   const [preview, setPreview] = useState<ParseResult | null>(null);
   const [targetListId, setTargetListId] = useState<string>(lists[0]?.id || 'inbox');
   const [forceAllToList, setForceAllToList] = useState<boolean>(true); // Por defecto true para que todos los recordatorios vayan a la lista seleccionada por el usuario
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleExport = () => {
     const data = exportData();
@@ -48,23 +51,62 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
     }
   };
 
+  const processFile = async (file: File) => {
+    setIsExtracting(true);
+    try {
+      let text = '';
+      if (file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf') {
+        text = await extractTextFromPdf(file);
+      } else {
+        text = await file.text();
+      }
+
+      if (!text.trim()) {
+        notify('No se pudo extraer texto del archivo.');
+        return;
+      }
+
+      setInputText(text);
+      const result = detectFormatAndParse(text, { cycles });
+      setPreview(result);
+      window.dispatchEvent(new CustomEvent('show-toast', {
+        detail: `Procesado "${file.name}" (${result.tasks.length} recordatorios detectados)`
+      }));
+    } catch (err: any) {
+      console.error(err);
+      notify(err.message || 'Error al procesar el archivo.');
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const text = evt.target?.result as string;
-      if (text) {
-        setInputText(text);
-        try {
-          const result = detectFormatAndParse(text, { cycles });
-          setPreview(result);
-        } catch (err: any) {
-          notify(err.message || 'Error al procesar el archivo.');
-        }
+    if (file) {
+      processFile(file);
+    }
+  };
+
+  const handlePasteClipboard = async () => {
+    try {
+      if (!navigator.clipboard?.readText) {
+        notify('El portapapeles no está disponible.');
+        return;
       }
-    };
-    reader.readAsText(file);
+      const text = await navigator.clipboard.readText();
+      if (!text.trim()) {
+        notify('El portapapeles está vacío.');
+        return;
+      }
+      setInputText(text);
+      const result = detectFormatAndParse(text, { cycles });
+      setPreview(result);
+      window.dispatchEvent(new CustomEvent('show-toast', {
+        detail: `Pegado y procesado: ${result.tasks.length} recordatorios detectados`
+      }));
+    } catch (err: any) {
+      notify('No se pudo leer el portapapeles: ' + (err?.message || ''));
+    }
   };
 
   const handleConfirmImport = () => {
@@ -267,56 +309,108 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
               >
-                <textarea 
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  placeholder="Ej: Comprar pintura @Hogar #MiSemana..."
-                  style={{ 
-                    width: '100%', minHeight: 250, background: 'var(--bg-base)', 
-                    border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', 
-                    padding: 'var(--space-16)', color: 'var(--text-primary)', 
-                    fontFamily: 'monospace', fontSize: '0.95rem', resize: 'vertical', 
-                    marginBottom: 'var(--space-24)', transition: 'border-color 0.2s',
-                    outline: 'none'
+                <div 
+                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) processFile(file);
                   }}
-                  onFocus={e => e.currentTarget.style.borderColor = 'var(--accent-primary)'}
-                  onBlur={e => e.currentTarget.style.borderColor = 'var(--border-subtle)'}
-                />
-                  <div style={{ display: 'flex', gap: 'var(--space-12)' }}>
-                    <button 
-                      onClick={handleProcessText}
-                      disabled={!inputText.trim()}
-                      style={{ 
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-8)', 
-                        flex: 1, background: inputText.trim() ? 'var(--text-primary)' : 'var(--bg-elevated)', 
-                        color: inputText.trim() ? 'var(--bg-base)' : 'var(--text-tertiary)', border: 'none', 
-                        padding: 'var(--space-16)', borderRadius: 'var(--radius-md)', fontWeight: 600, 
-                        cursor: inputText.trim() ? 'pointer' : 'not-allowed', transition: 'all 0.2s' 
-                      }}
-                    >
-                      <Upload size={20} /> Procesar Datos
-                    </button>
-                    <label 
-                      style={{ 
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-8)', 
-                        flex: 1, background: 'var(--bg-elevated)', 
-                        color: 'var(--text-primary)', border: '1px solid var(--border-subtle)', 
-                        padding: 'var(--space-16)', borderRadius: 'var(--radius-md)', fontWeight: 600, 
-                        cursor: 'pointer', transition: 'all 0.2s' 
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-elevated)'}
-                    >
-                      <Upload size={20} /> Subir Archivo JSON
-                      <input 
-                        type="file" 
-                        accept=".json,.txt,.csv" 
-                        style={{ display: 'none' }} 
-                        onChange={handleFileUpload} 
-                      />
-                    </label>
-                  </div>
-                </motion.div>
+                  style={{
+                    position: 'relative',
+                    border: isDragging ? '2px dashed var(--accent-primary)' : '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-md)',
+                    background: isDragging ? 'color-mix(in srgb, var(--accent-primary) 8%, var(--bg-base))' : 'var(--bg-base)',
+                    marginBottom: 'var(--space-24)',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <textarea 
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    placeholder="Arrastra aquí tu PDF o pega texto: Ej: Comprar pintura @Hogar #MiSemana..."
+                    style={{ 
+                      width: '100%', minHeight: 250, background: 'transparent', 
+                      border: 'none',
+                      padding: 'var(--space-16)', color: 'var(--text-primary)', 
+                      fontFamily: 'monospace', fontSize: '0.95rem', resize: 'vertical', 
+                      outline: 'none', boxSizing: 'border-box'
+                    }}
+                  />
+                  {isExtracting && (
+                    <div style={{
+                      position: 'absolute', inset: 0, background: 'rgba(0, 0, 0, 0.5)',
+                      backdropFilter: 'blur(4px)', display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', justifyContent: 'center', gap: 12, borderRadius: 'var(--radius-md)',
+                      color: 'white', zIndex: 10
+                    }}>
+                      <Loader2 size={32} className="animate-spin" />
+                      <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Extrayendo contenido del documento...</span>
+                    </div>
+                  )}
+                  {isDragging && (
+                    <div style={{
+                      position: 'absolute', inset: 0,
+                      display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', justifyContent: 'center', gap: 8,
+                      pointerEvents: 'none', color: 'var(--accent-primary)', fontWeight: 600
+                    }}>
+                      <FileText size={36} />
+                      <span>Suelta aquí tu PDF, CSV o archivo de texto</span>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: 'var(--space-12)', flexWrap: 'wrap' }}>
+                  <button 
+                    onClick={handleProcessText}
+                    disabled={!inputText.trim() || isExtracting}
+                    style={{ 
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-8)', 
+                      flex: 1, minWidth: 160, background: inputText.trim() ? 'var(--text-primary)' : 'var(--bg-elevated)', 
+                      color: inputText.trim() ? 'var(--bg-base)' : 'var(--text-tertiary)', border: 'none', 
+                      padding: 'var(--space-16)', borderRadius: 'var(--radius-md)', fontWeight: 600, 
+                      cursor: inputText.trim() ? 'pointer' : 'not-allowed', transition: 'all 0.2s' 
+                    }}
+                  >
+                    <Upload size={20} /> Procesar Datos
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handlePasteClipboard}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-8)',
+                      background: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--border-subtle)',
+                      padding: 'var(--space-16)', borderRadius: 'var(--radius-md)', fontWeight: 600,
+                      cursor: 'pointer', transition: 'all 0.2s'
+                    }}
+                    title="Pegar texto copiado del portapapeles"
+                  >
+                    <Clipboard size={18} /> Pegar portapapeles
+                  </button>
+                  <label 
+                    style={{ 
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-8)', 
+                      flex: 1, minWidth: 180, background: 'var(--bg-elevated)', 
+                      color: 'var(--text-primary)', border: '1px solid var(--border-subtle)', 
+                      padding: 'var(--space-16)', borderRadius: 'var(--radius-md)', fontWeight: 600, 
+                      cursor: 'pointer', transition: 'all 0.2s' 
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-elevated)'}
+                  >
+                    <FileText size={20} color="var(--accent-primary)" /> Subir PDF, CSV o JSON
+                    <input 
+                      type="file" 
+                      accept=".pdf,.csv,.json,.txt,.md" 
+                      style={{ display: 'none' }} 
+                      onChange={handleFileUpload} 
+                    />
+                  </label>
+                </div>
+              </motion.div>
             ) : (
               <motion.div
                 key="preview"

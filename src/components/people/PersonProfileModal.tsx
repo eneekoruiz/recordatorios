@@ -75,7 +75,7 @@ export const PersonProfileModal: React.FC<PersonProfileModalProps> = ({
   return createPortal(
     <AnimatePresence>
       <div
-        className="person-profile-overlay"
+        className="premium-overlay"
         data-testid="person-profile-modal"
         style={{
           position: 'fixed',
@@ -95,32 +95,21 @@ export const PersonProfileModal: React.FC<PersonProfileModalProps> = ({
           onClick={onClose}
           style={{
             position: 'absolute',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.45)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)'
+            inset: 0
           }}
         />
 
         {/* Modal Window */}
         <motion.div
+          className="premium-sheet person-profile-sheet"
           initial={{ opacity: 0, scale: 0.95, y: 16 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 12 }}
           transition={{ type: 'spring', damping: 28, stiffness: 400 }}
           style={{
-            position: 'relative',
-            width: '100%',
             maxWidth: 520,
-            maxHeight: '85vh',
-            background: 'var(--bg-elevated)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 22,
-            boxShadow: '0 24px 60px rgba(0, 0, 0, 0.25), 0 4px 16px rgba(0, 0, 0, 0.1)',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            zIndex: 100000
+            padding: 0,
+            overflow: 'hidden'
           }}
           onClick={e => e.stopPropagation()}
         >
@@ -150,10 +139,10 @@ export const PersonProfileModal: React.FC<PersonProfileModalProps> = ({
                 {initial}
               </div>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+                <h3 className="modal-title" style={{ fontSize: '1.15rem' }}>
                   {personName}
                 </h3>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                <span className="modal-subtitle">
                   Bitácora de momentos compartidos
                 </span>
               </div>
@@ -162,44 +151,22 @@ export const PersonProfileModal: React.FC<PersonProfileModalProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <button
                 type="button"
+                className="modal-close-btn"
                 onClick={handleShare}
                 title="Compartir vivencias"
                 aria-label="Compartir vivencias"
-                style={{
-                  background: 'var(--bg-elevated)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: '50%',
-                  width: 30,
-                  height: 30,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  color: 'var(--text-secondary)'
-                }}
               >
                 <Share2 size={15} />
               </button>
 
               <button
                 type="button"
+                className="modal-close-btn"
                 onClick={onClose}
                 title="Cerrar"
                 aria-label="Cerrar"
-                style={{
-                  background: 'var(--bg-elevated)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: '50%',
-                  width: 30,
-                  height: 30,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  color: 'var(--text-secondary)'
-                }}
               >
-                <X size={16} />
+                <X size={16} strokeWidth={2.4} />
               </button>
             </div>
           </div>
@@ -383,7 +350,7 @@ export const PersonProfileModal: React.FC<PersonProfileModalProps> = ({
 
           {/* Footer Action */}
           <div style={{
-            padding: '12px 20px',
+            padding: '14px 20px',
             borderTop: '1px solid var(--border-subtle)',
             background: 'var(--bg-surface)',
             display: 'flex',
@@ -392,23 +359,10 @@ export const PersonProfileModal: React.FC<PersonProfileModalProps> = ({
           }}>
             <button
               type="button"
+              className="modal-btn-primary"
               onClick={handleAddClick}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '8px 16px',
-                borderRadius: 10,
-                background: 'var(--accent-primary)',
-                color: 'white',
-                border: 'none',
-                fontSize: '0.86rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(0, 122, 255, 0.25)'
-              }}
             >
-              <Plus size={15} />
+              <Plus size={16} strokeWidth={2.4} />
               <span>Añadir recuerdo con {personName}</span>
             </button>
           </div>

@@ -56,57 +56,47 @@ export const ShortcutsModal: FC<ShortcutsModalProps> = ({ isOpen, onClose }) => 
   return (
     <AnimatePresence>
       {isOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'var(--space-16)' }}>
+        <div className="premium-overlay" style={{ position: 'fixed', inset: 0, zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
             onClick={onClose}
-            style={{ position: 'absolute', inset: 0, background: 'var(--scrim)' }}
+            style={{ position: 'absolute', inset: 0 }}
           />
           <motion.div
             role="dialog"
             aria-modal="true"
             aria-labelledby="shortcuts-title"
+            className="premium-sheet shortcuts-sheet"
             initial={{ opacity: 0, scale: 0.96, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 8 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
             onClick={(e) => e.stopPropagation()}
             style={{
-              position: 'relative',
-              width: '100%',
               maxWidth: 620,
-              maxHeight: '86vh',
-              overflowY: 'auto',
-              background: 'var(--bg-surface)',
-              borderRadius: 24,
-              padding: 28,
-              border: '1px solid var(--border-subtle)',
-              boxShadow: '0 24px 48px rgba(0,0,0,0.3)',
-              color: 'var(--text-primary)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 24
+              gap: 22
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div className="modal-header-row">
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 44, height: 44, borderRadius: 14, background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className="modal-hero-badge" style={{ background: 'var(--accent-glow)', marginBottom: 0 }}>
                   <Keyboard size={24} color="var(--accent-primary)" />
                 </div>
                 <div>
-                  <h2 id="shortcuts-title" style={{ margin: 0, fontSize: '1.3rem', fontWeight: 700 }}>Atajos de Teclado</h2>
-                  <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Navegación de alta velocidad sin tocar el ratón</p>
+                  <h2 id="shortcuts-title" className="modal-title">Atajos de Teclado</h2>
+                  <p className="modal-subtitle">Navegación de alta velocidad sin tocar el ratón</p>
                 </div>
               </div>
               <button
+                type="button"
+                className="modal-close-btn"
                 onClick={onClose}
                 aria-label="Cerrar panel de atajos"
-                style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--bg-elevated)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', cursor: 'pointer', transition: 'background-color 0.15s ease' }}
               >
-                <X size={18} />
+                <X size={16} strokeWidth={2.4} />
               </button>
             </div>
 

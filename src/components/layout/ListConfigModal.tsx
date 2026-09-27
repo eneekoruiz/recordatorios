@@ -169,35 +169,30 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
           transition={{ type: 'spring', damping: 28, stiffness: 380 }}
           onClick={e => e.stopPropagation()}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+          <div className="modal-header-row">
+            <h3 className="modal-title">
               {existingList ? (existingList.isFolder ? 'Editar carpeta' : 'Editar lista') : (isFolder ? 'Nueva carpeta' : (parentId ? 'Nueva lista anidada' : 'Nueva lista'))}
             </h3>
             <button 
+              type="button"
+              className="modal-close-btn"
               onClick={onClose}
-              style={{
-                width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.08)',
-                border: 'none', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', cursor: 'pointer', transition: 'background 0.15s ease'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.16)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
               aria-label="Cerrar modal"
             >
               <X size={16} strokeWidth={2.4} />
             </button>
           </div>
           
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             
             {/* Header Preview */}
-            <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0 8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', margin: '2px 0 6px' }}>
               <motion.div 
                 animate={{ backgroundColor: color, boxShadow: `0 12px 32px ${color}55, inset 0 2px 4px rgba(255,255,255,0.4)` }}
                 transition={{ duration: 0.2 }}
                 style={{
-                  width: 76, 
-                  height: 76, 
+                  width: 72, 
+                  height: 72, 
                   borderRadius: '50%', 
                   background: color,
                   display: 'flex', 
@@ -208,7 +203,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
               >
                 {(() => {
                   const IconComp = ICONS[icon] || CheckSquare;
-                  return <IconComp size={36} color="white" />;
+                  return <IconComp size={34} color="white" />;
                 })()}
               </motion.div>
             </div>
@@ -217,6 +212,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
             <div style={{ width: '100%' }}>
               <input 
                 type="text" 
+                className="modal-title-input"
                 value={name} 
                 onChange={e => handleNameChange(e.target.value)}
                 onFocus={() => setIsFocused(true)}
@@ -224,18 +220,9 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                 placeholder={isFolder ? "Nombre de la carpeta" : "Nombre de la lista"} 
                 autoFocus
                 style={{
-                  background: isFocused ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.06)',
-                  border: isFocused ? `1px solid ${color}` : '1px solid rgba(255,255,255,0.12)',
-                  borderRadius: 16,
-                  padding: '14px 18px',
-                  fontSize: '1.2rem',
-                  fontWeight: 600,
-                  color: 'var(--text-primary)',
                   textAlign: 'center',
-                  width: '100%',
-                  outline: 'none',
-                  boxShadow: isFocused ? `0 0 0 4px ${color}33, 0 8px 20px rgba(0,0,0,0.2)` : 'none',
-                  transition: 'all 0.2s ease'
+                  borderColor: isFocused ? color : undefined,
+                  boxShadow: isFocused ? `0 0 0 3px ${color}33, 0 8px 20px rgba(0,0,0,0.08)` : undefined
                 }}
               />
             </div>
@@ -470,8 +457,8 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                   type="button"
                   onClick={() => setShowAllColors(!showAllColors)}
                   style={{
-                    background: 'transparent',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    background: 'var(--bg-hover)',
+                    border: '1px solid var(--border-subtle)',
                     color: 'var(--accent-primary)',
                     fontSize: '0.8rem',
                     fontWeight: 600,
@@ -484,12 +471,10 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                     gap: '6px'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(10, 132, 255, 0.1)';
-                    e.currentTarget.style.borderColor = 'rgba(10, 132, 255, 0.3)';
+                    e.currentTarget.style.background = 'var(--border-subtle)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+                    e.currentTarget.style.background = 'var(--bg-hover)';
                   }}
                 >
                   {showAllColors ? 'Ver menos' : `Ver ${COLORS.length - COLOR_PREVIEW_COUNT} más`}
@@ -499,12 +484,12 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
 
             {/* Icons */}
             <div>
-              <span style={{ display: 'block', marginBottom: 10, fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.02em', textTransform: 'uppercase' }}>Icono</span>
+              <span style={{ display: 'block', marginBottom: 10, fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Icono</span>
               <div style={{ 
-                background: 'rgba(255,255,255,0.03)', 
-                border: '1px solid rgba(255,255,255,0.08)', 
-                borderRadius: 20, 
-                padding: 16, 
+                background: 'var(--bg-elevated)', 
+                border: '1px solid var(--border-subtle)', 
+                borderRadius: 18, 
+                padding: 14, 
                 display: 'grid', 
                 gridTemplateColumns: 'repeat(auto-fill, minmax(44px, 1fr))', 
                 gap: 10, 
@@ -525,8 +510,8 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                         width: 44, 
                         height: 44, 
                         borderRadius: '50%',
-                        background: isActive ? color : 'rgba(255,255,255,0.05)',
-                        border: isActive ? `1px solid rgba(255,255,255,0.3)` : '1px solid transparent', 
+                        background: isActive ? color : 'var(--bg-hover)',
+                        border: isActive ? `none` : '1px solid var(--border-subtle)', 
                         cursor: 'pointer',
                         display: 'flex', 
                         alignItems: 'center', 
@@ -536,10 +521,10 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                         transform: isActive ? 'scale(1.05)' : 'scale(1)'
                       }}
                       onMouseEnter={(e) => {
-                        if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                        if (!isActive) e.currentTarget.style.background = 'var(--border-subtle)';
                       }}
                       onMouseLeave={(e) => {
-                        if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                        if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)';
                       }}
                     >
                       <IconComp size={22} color={isActive ? 'white' : 'var(--text-secondary)'} />
@@ -552,27 +537,18 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                   type="button"
                   onClick={() => setShowAllIcons(!showAllIcons)}
                   style={{
-                    background: 'transparent',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    background: 'var(--bg-hover)',
+                    border: '1px solid var(--border-subtle)',
                     color: 'var(--accent-primary)',
                     fontSize: '0.8rem',
                     fontWeight: 600,
                     cursor: 'pointer',
                     padding: '6px 14px',
                     borderRadius: '16px',
-                    transition: 'all 0.15s ease',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px'
+                    transition: 'all 0.15s ease'
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(10, 132, 255, 0.1)';
-                    e.currentTarget.style.borderColor = 'rgba(10, 132, 255, 0.3)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
-                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--border-subtle)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
                 >
                   {showAllIcons ? 'Ver menos' : `Ver ${Object.keys(ICONS).length - 12} más`}
                 </button>
@@ -581,49 +557,22 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
 
           </div>
           
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 'auto', paddingTop: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 'auto', paddingTop: 8 }}>
             <button 
+              type="button"
+              className="modal-btn-secondary"
               onClick={onClose} 
-              style={{ 
-                padding: '12px 20px', 
-                background: 'rgba(255,255,255,0.08)', 
-                border: '1px solid rgba(255,255,255,0.12)', 
-                borderRadius: 14,
-                color: 'var(--text-primary)', 
-                fontWeight: 600, 
-                fontSize: '0.95rem',
-                cursor: 'pointer', 
-                transition: 'all 0.15s ease',
-                margin: 0
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.14)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
             >
               Cancelar
             </button>
             <button 
+              type="button"
+              className="modal-btn-primary"
               onClick={handleSave} 
               disabled={!name.trim()} 
               style={{ 
-                padding: '12px 28px', 
-                background: name.trim() ? color : 'rgba(255,255,255,0.1)', 
-                border: 'none', 
-                borderRadius: 14, 
-                color: name.trim() ? 'white' : 'var(--text-tertiary)', 
-                fontWeight: 650, 
-                fontSize: '0.95rem',
-                cursor: (!name.trim()) ? 'not-allowed' : 'pointer', 
-                opacity: (!name.trim()) ? 0.5 : 1, 
-                boxShadow: name.trim() ? `0 4px 16px ${color}50` : 'none',
-                transition: 'all 0.2s ease',
-                transform: name.trim() ? 'scale(1)' : 'none',
-                margin: 0
-              }}
-              onMouseEnter={(e) => {
-                if (name.trim()) e.currentTarget.style.transform = 'translateY(-1px)';
-              }}
-              onMouseLeave={(e) => {
-                if (name.trim()) e.currentTarget.style.transform = 'translateY(0)';
+                background: name.trim() ? color : undefined,
+                boxShadow: name.trim() ? `0 4px 16px ${color}50` : undefined
               }}
             >
               {existingList ? 'Guardar' : 'Crear'}

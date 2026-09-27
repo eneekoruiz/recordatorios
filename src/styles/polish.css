@@ -848,8 +848,7 @@ body.dark .sidebar-container {
 
 /* Velos: oscurecen poco y no desenfocan (como las hojas de iOS) */
 .drawer-overlay,
-.drawer-backdrop,
-.premium-overlay {
+.drawer-backdrop {
   background: var(--scrim) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;

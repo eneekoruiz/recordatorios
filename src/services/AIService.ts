@@ -1,5 +1,6 @@
 import type { CustomList, TaskItem } from '../models/Task';
 import { extractPrice } from '../utils/priceExtractor';
+import { detectFormatAndParse } from '../utils/importerParser';
 
 export interface ProposedTask {
   id: string;
@@ -280,6 +281,37 @@ export class AIService {
       }
     }
 
+    // Check if the input contains structured CSV data
+    const nonHeaderLines = trimmed.split(/\r?\n/).filter(l => !l.startsWith('[Documento adjunto:') && !l.startsWith('Por favor, extrae')).join('\n');
+    if (nonHeaderLines.split(/\r?\n/).length > 1 && (nonHeaderLines.includes(',') || nonHeaderLines.includes(';') || nonHeaderLines.includes('\t'))) {
+      try {
+        const parsedCsv = detectFormatAndParse(nonHeaderLines, { cycles: [] });
+        if (parsedCsv.tasks.length > 0 && parsedCsv.tasks.some(t => t.dueDate || t.price || t.priority || t.categoryId !== 'inbox')) {
+          const mappedCsvTasks: ProposedTask[] = parsedCsv.tasks.map((t, idx) => {
+            const matchedList = existingLists.find(l => l.id === t.categoryId || (l.name || '').toLowerCase() === (t.categoryId || '').toLowerCase());
+            return {
+              id: `ai_csv_${Date.now()}_${idx}`,
+              title: t.title,
+              description: t.description,
+              listId: matchedList ? matchedList.id : (existingLists[0]?.id || 'inbox'),
+              listName: matchedList ? matchedList.name : 'Bandeja de entrada',
+              dueDate: t.dueDate,
+              price: t.price,
+              priority: t.priority,
+              selected: true
+            };
+          });
+
+          return {
+            reply: `He procesado el documento CSV y extraído **${mappedCsvTasks.length} recordatorios** estructurados listos para guardar:`,
+            tasks: mappedCsvTasks
+          };
+        }
+      } catch {
+        // Fall back to standard parsing
+      }
+    }
+
     // Split into individual task candidates:
     let rawSegments: string[] = [];
     if (trimmed.includes('\n')) {
@@ -313,7 +345,18 @@ export class AIService {
     }
 
     for (let segment of rawSegments) {
-      segment = segment.trim().replace(/^[-*•\d.)]+\s*/, '');
+      segment = segment.trim();
+      // Ignore document headers, instruction wrappers, or page markers
+      if (/^(\[documento adjunto|\[archivo|por favor,?\s*extrae|extrae,?\s*organiza|p[áa]gina\s*\d+|page\s*\d+)/i.test(segment)) {
+        continue;
+      }
+      if (/^[-=_*]{3,}$/.test(segment)) {
+        continue;
+      }
+
+      // Strip markdown checkboxes and bullets
+      segment = segment.replace(/^[-*•]\s+\[[ xX]\]\s+/, '');
+      segment = segment.replace(/^[-*•+–—\d.)]+\s*/, '').trim();
       if (!segment || segment.length < 3) continue;
 
       // Ignore greeting-only or filler-only segments

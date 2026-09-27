@@ -5,12 +5,14 @@ import {
   Sparkles, X, ArrowUp, Check, Bot, User, Settings, Mic, MicOff,
   Calendar, CheckCircle2, Volume2, VolumeX,
   Sunrise, Sun, Moon, Repeat, MapPin,
-  CalendarRange, Luggage, ShoppingCart, SprayCan
+  CalendarRange, Luggage, ShoppingCart, SprayCan,
+  Paperclip, FileText, Loader2
 } from 'lucide-react';
 import { AIService, type ProposedBatch, type AIConfig } from '../../services/AIService';
 import { useAppStore } from '../../store/useAppStore';
 import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
+import { extractTextFromPdf } from '../../utils/pdfExtractor';
 
 interface AIAssistantModalProps {
   isOpen: boolean;
@@ -22,6 +24,7 @@ interface ChatMessage {
   id: string;
   sender: 'user' | 'assistant';
   text: string;
+  fileName?: string;
   batch?: ProposedBatch;
   timestamp: string;
 }
@@ -29,7 +32,7 @@ interface ChatMessage {
 const WELCOME_MESSAGE: ChatMessage = {
   id: 'welcome_1',
   sender: 'assistant',
-  text: '¡Hola! Soy tu asistente de Recordatorios con IA. Puedes hablarme o escribirme tus tareas en lenguaje natural (con fechas, horas, listas y precios en euros) y prepararé todos los recordatorios para importarlos al instante.',
+  text: '¡Hola! Soy tu asistente de Recordatorios con IA. Puedes hablarme, escribirme o adjuntar cualquier documento (PDF, CSV, TXT) en lenguaje natural y prepararé todos los recordatorios para importarlos al instante.',
   timestamp: '',
 };
 
@@ -46,6 +49,16 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
   const [speechSupported] = useState(() =>
     typeof window !== 'undefined' && Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
   );
+
+  const [attachedFile, setAttachedFile] = useState<{
+    name: string;
+    size: number;
+    text: string;
+    type: string;
+  } | null>(null);
+  const [isExtractingFile, setIsExtractingFile] = useState(false);
+  const [isDraggingChat, setIsDraggingChat] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const lists = useAppStore(state => state.lists);
   const tasks = useAppStore(state => state.tasks);
@@ -139,19 +152,65 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
+  const processAttachedFile = async (file: File) => {
+    setIsExtractingFile(true);
+    try {
+      let text = '';
+      if (file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf') {
+        text = await extractTextFromPdf(file);
+      } else {
+        text = await file.text();
+      }
+
+      if (!text.trim()) {
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: 'El archivo está vacío o no contiene texto legible.' }));
+        return;
+      }
+
+      setAttachedFile({
+        name: file.name,
+        size: file.size,
+        text,
+        type: file.type || 'text/plain'
+      });
+      HapticService.selection();
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: `Documento "${file.name}" adjuntado.` }));
+    } catch (err: any) {
+      console.error('Error al procesar archivo:', err);
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: `Error al leer archivo: ${err.message || 'Desconocido'}` }));
+    } finally {
+      setIsExtractingFile(false);
+    }
+  };
+
   const handleSend = async (textToSend?: string) => {
-    const text = (textToSend || input).trim();
-    if (!text || loading) return;
+    const rawText = (textToSend || input).trim();
+    if ((!rawText && !attachedFile) || loading || isExtractingFile) return;
+
+    const userDisplayTitle = rawText || `Analizar y estructurar recordatorios de "${attachedFile?.name}"`;
+    const fileName = attachedFile?.name;
+
+    // Construct prompt for AI
+    let fullPrompt = rawText;
+    if (attachedFile) {
+      if (fullPrompt) {
+        fullPrompt = `${fullPrompt}\n\n[Documento adjunto: ${attachedFile.name}]\n${attachedFile.text}`;
+      } else {
+        fullPrompt = `Por favor, extrae, organiza y estructura todos los recordatorios y tareas detectadas en este documento adjunto (${attachedFile.name}):\n\n${attachedFile.text}`;
+      }
+    }
 
     const userMsg: ChatMessage = {
       id: `msg_user_${Date.now()}`,
       sender: 'user',
-      text,
+      text: userDisplayTitle,
+      fileName,
       timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
     };
 
     setMessages(prev => [...(prev.length > 0 ? prev : [WELCOME_MESSAGE]), userMsg]);
     setInput('');
+    setAttachedFile(null);
     setLoading(true);
     HapticService.impact('light');
 
@@ -161,7 +220,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
         text: m.text
       }));
 
-      const batch = await AIService.processPrompt(text, lists, history, tasks);
+      const batch = await AIService.processPrompt(fullPrompt, lists, history, tasks);
 
       const aiMsg: ChatMessage = {
         id: `msg_ai_${Date.now()}`,
@@ -458,7 +517,61 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
           exit={{ opacity: 0, scale: 0.95, y: 12 }}
           transition={{ type: 'spring', damping: 28, stiffness: 420 }}
           onClick={e => e.stopPropagation()}
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (!isDraggingChat) setIsDraggingChat(true);
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+              setIsDraggingChat(false);
+            }
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDraggingChat(false);
+            const file = e.dataTransfer.files?.[0];
+            if (file) {
+              processAttachedFile(file);
+            }
+          }}
+          style={{ position: 'relative' }}
         >
+          {/* Visual Drag Overlay */}
+          {isDraggingChat && (
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'rgba(0, 122, 255, 0.1)',
+              border: '2px dashed var(--accent-primary)',
+              borderRadius: 20,
+              zIndex: 60,
+              pointerEvents: 'none',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 12,
+              backdropFilter: 'blur(4px)'
+            }}>
+              <div style={{
+                width: 52, height: 52, borderRadius: '50%',
+                background: 'var(--accent-primary)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff',
+                boxShadow: '0 4px 16px rgba(0, 122, 255, 0.4)'
+              }}>
+                <FileText size={26} />
+              </div>
+              <span style={{ fontSize: '0.96rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                Suelta el documento aquí para extraer los recordatorios
+              </span>
+              <span style={{ fontSize: '0.80rem', color: 'var(--text-tertiary)' }}>
+                Compatible con PDF, CSV, TXT, MD y JSON
+              </span>
+            </div>
+          )}
+
           {/* iOS sheet grab handle (visible en móvil) */}
           <div className="mobile-sheet-handle" style={{ display: 'none', justifyContent: 'center', paddingTop: 8, paddingBottom: 4, background: 'var(--bg-surface)' }}>
             <div style={{ width: 36, height: 4.5, borderRadius: 3, background: 'var(--text-tertiary)', opacity: 0.35 }} />
@@ -668,7 +781,24 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                       wordBreak: 'break-word',
                       border: msg.sender === 'user' ? 'none' : '1px solid var(--border-subtle)'
                     }}>
-                      {msg.text}
+                      {msg.fileName && (
+                        <div style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '3px 8px',
+                          borderRadius: 6,
+                          background: 'rgba(255, 255, 255, 0.22)',
+                          marginBottom: 6,
+                          fontSize: '0.78rem',
+                          fontWeight: 600,
+                          color: '#ffffff'
+                        }}>
+                          <FileText size={12} />
+                          <span>{msg.fileName}</span>
+                        </div>
+                      )}
+                      <div>{msg.text}</div>
                     </div>
 
                     {msg.sender === 'assistant' && (
@@ -1015,14 +1145,21 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
               flexShrink: 0
             }}>
               {[
-                { label: 'Planificar mi semana', Icon: CalendarRange },
-                { label: 'Hacer la maleta de viaje', Icon: Luggage },
-                { label: 'Compra semanal con precios', Icon: ShoppingCart },
-                { label: 'Tareas de limpieza profunda', Icon: SprayCan }
+                { label: 'Importar PDF o documento', Icon: FileText, action: 'file' },
+                { label: 'Planificar mi semana', Icon: CalendarRange, action: 'send' },
+                { label: 'Hacer la maleta de viaje', Icon: Luggage, action: 'send' },
+                { label: 'Compra semanal con precios', Icon: ShoppingCart, action: 'send' },
+                { label: 'Tareas de limpieza profunda', Icon: SprayCan, action: 'send' }
               ].map(chip => (
                 <button
                   key={chip.label}
-                  onClick={() => handleSend(chip.label)}
+                  onClick={() => {
+                    if (chip.action === 'file') {
+                      fileInputRef.current?.click();
+                    } else {
+                      handleSend(chip.label);
+                    }
+                  }}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -1044,6 +1181,76 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
             </div>
           )}
 
+          {/* Attached File Preview Bar */}
+          {isExtractingFile && (
+            <div style={{
+              padding: '8px 18px',
+              background: 'var(--bg-elevated)',
+              borderTop: '1px solid var(--border-subtle)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              fontSize: '0.82rem',
+              color: 'var(--text-secondary)'
+            }}>
+              <Loader2 size={15} className="animate-spin" color="var(--accent-primary)" />
+              <span>Extrayendo y procesando documento...</span>
+            </div>
+          )}
+
+          {attachedFile && !isExtractingFile && (
+            <div style={{
+              padding: '8px 18px',
+              background: 'var(--bg-elevated)',
+              borderTop: '1px solid var(--border-subtle)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 10
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                <div style={{
+                  width: 26, height: 26, borderRadius: 6,
+                  background: 'rgba(0, 122, 255, 0.12)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  <FileText size={15} color="var(--accent-primary)" />
+                </div>
+                <span style={{
+                  fontSize: '0.84rem',
+                  fontWeight: 600,
+                  color: 'var(--text-primary)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {attachedFile.name}
+                </span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', flexShrink: 0 }}>
+                  ({Math.round(attachedFile.size / 1024) || 1} KB)
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAttachedFile(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-tertiary)',
+                  cursor: 'pointer',
+                  padding: 4,
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                title="Eliminar adjunto"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          )}
+
           {/* Input Area */}
           <div style={{
             padding: '12px 18px',
@@ -1053,6 +1260,40 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
             alignItems: 'center',
             gap: 10
           }}>
+            {/* Hidden File Input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.csv,.json,.txt,.md"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  processAttachedFile(file);
+                  e.target.value = '';
+                }
+              }}
+            />
+
+            {/* Paperclip File Attachment Button */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isExtractingFile}
+              style={{
+                width: 36, height: 36, borderRadius: '50%',
+                background: attachedFile ? 'var(--accent-primary)' : 'var(--bg-elevated)',
+                border: attachedFile ? 'none' : '1px solid var(--border-subtle)',
+                color: attachedFile ? '#ffffff' : 'var(--text-secondary)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', flexShrink: 0,
+                transition: 'all 0.15s ease'
+              }}
+              title="Adjuntar PDF, CSV o documento"
+            >
+              <Paperclip size={17} />
+            </button>
+
             {speechSupported && (
               <button
                 type="button"
@@ -1082,7 +1323,20 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                   handleSend();
                 }
               }}
-              placeholder={isListening ? 'Escuchando... di lo que necesitas apuntar' : 'Habla o escribe tus recordatorios...'}
+              onPaste={e => {
+                const file = e.clipboardData?.files?.[0];
+                if (file) {
+                  e.preventDefault();
+                  processAttachedFile(file);
+                }
+              }}
+              placeholder={
+                isListening
+                  ? 'Escuchando... di lo que necesitas apuntar'
+                  : attachedFile
+                    ? 'Añade una instrucción o pulsa la flecha para procesar...'
+                    : 'Habla, escribe o adjunta tus documentos...'
+              }
               style={{
                 flex: 1,
                 padding: '10px 14px',
@@ -1097,17 +1351,18 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
 
             <button
               onClick={() => handleSend()}
-              disabled={!input.trim() || loading}
+              disabled={(!input.trim() && !attachedFile) || loading || isExtractingFile}
               style={{
                 width: 36, height: 36, borderRadius: '50%',
-                background: input.trim() ? 'var(--accent-primary)' : 'var(--bg-hover)',
+                background: (input.trim() || attachedFile) ? 'var(--accent-primary)' : 'var(--bg-hover)',
                 border: 'none',
-                color: input.trim() ? '#ffffff' : 'var(--text-tertiary)',
+                color: (input.trim() || attachedFile) ? '#ffffff' : 'var(--text-tertiary)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: input.trim() ? 'pointer' : 'default',
+                cursor: (input.trim() || attachedFile) ? 'pointer' : 'default',
                 flexShrink: 0,
                 transition: 'all 0.15s ease'
               }}
+              title="Enviar"
             >
               <ArrowUp size={18} />
             </button>
