@@ -410,6 +410,16 @@ input:focus, input:focus-visible, textarea:focus, textarea:focus-visible {
   transform: translateY(0) scale(0.97);
   filter: brightness(0.95);
 }
+@media (max-width: 640px) {
+  .apple-nav-start-btn {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    justify-content: center !important;
+  }
+}
 
 /* ═══════════════════════════════════════════════════════════
    TOAST — premium improvements
@@ -758,14 +768,81 @@ body.dark .sidebar-container {
   }
 }
 
-/* Barra inferior de la barra lateral: en escritorio solo «Añadir lista»
-   (los recordatorios se añaden desde la barra de la lista) */
-@media (min-width: 769px) {
-  .sidebar-bottom-toolbar .apple-sidebar-bottom-btn:not(.right-btn) {
-    display: none !important;
+/* Barra inferior de la barra lateral: acceso unificado a hablar con la IA */
+.apple-sidebar-ai-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--accent-primary, #0a84ff);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 7px 18px;
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 100%;
+  max-width: 260px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .apple-sidebar-ai-btn:hover {
+    transform: translateY(-0.5px);
+    box-shadow: 0 4px 14px rgba(10, 132, 255, 0.18);
+    border-color: var(--accent-primary, #0a84ff);
   }
-  .sidebar-bottom-toolbar {
-    justify-content: flex-start !important;
+}
+.apple-sidebar-ai-btn:active {
+  transform: scale(0.98);
+}
+.ai-icon-sparkle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0a84ff, #af52de);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(10, 132, 255, 0.35);
+  flex-shrink: 0;
+}
+
+/* Hoja del asistente IA: ventana centrada en escritorio, hoja inferior en móvil */
+.ai-assistant-modal {
+  position: relative;
+  width: 100%;
+  max-width: 680px;
+  height: 84vh;
+  max-height: 740px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 22px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25), 0 4px 16px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 100000;
+}
+
+@media (max-width: 640px) {
+  .ai-assistant-overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+  .ai-assistant-modal {
+    max-width: 100% !important;
+    height: 92dvh !important;
+    max-height: 92dvh !important;
+    border-radius: 20px 20px 0 0 !important;
+    border-bottom: none !important;
+    border-left: none !important;
+    border-right: none !important;
+  }
+  .ai-assistant-modal .mobile-sheet-handle {
+    display: flex !important;
   }
 }
 

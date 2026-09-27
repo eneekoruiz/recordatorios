@@ -429,6 +429,32 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         <div className="categories-section" style={{ flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0 8px 0' }}>
             <span style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Mis listas</span>
+            <button
+              type="button"
+              onClick={() => {
+                HapticService.selection();
+                handleAddList();
+              }}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--accent-primary)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                cursor: 'pointer',
+                padding: '4px 8px',
+                borderRadius: 8,
+                fontSize: '0.88rem',
+                fontWeight: 600,
+                transition: 'opacity 0.15s ease'
+              }}
+              title="Crear nueva lista"
+              aria-label="Añadir lista"
+            >
+              <Plus size={16} strokeWidth={2.4} />
+              <span>Añadir lista</span>
+            </button>
           </div>
           <div className="ios-list-block">
             {/* 🚀 Primeros Pasos (Banner distinguido en la parte superior) */}
@@ -627,33 +653,22 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         </div>
       </div>
 
-      {/* 4. APPLE REMINDERS BOTTOM ACTION TOOLBAR */}
-      <div className="sidebar-bottom-toolbar">
+      {/* 4. BARRA INFERIOR: ACCESO DIRECTO A HABLAR CON LA IA */}
+      <div className="sidebar-bottom-toolbar" style={{ justifyContent: 'center' }}>
         <button
           type="button"
-          className="apple-sidebar-bottom-btn"
+          className="apple-sidebar-ai-btn"
           onClick={() => {
             HapticService.selection();
-            window.dispatchEvent(new CustomEvent('open-new-task-drawer'));
+            window.dispatchEvent(new CustomEvent('open-ai-assistant'));
           }}
-          title="Crear nuevo recordatorio"
+          title="Hablar con el Asistente IA (dictado y lenguaje natural)"
+          aria-label="Hablar con el Asistente IA"
         >
-          <div className="apple-plus-circle">
-            <Plus size={16} strokeWidth={2.8} />
+          <div className="ai-icon-sparkle">
+            <Sparkles size={16} strokeWidth={2.4} />
           </div>
-          <span>Nuevo recordatorio</span>
-        </button>
-
-        <button
-          type="button"
-          className="apple-sidebar-bottom-btn right-btn"
-          onClick={() => {
-            HapticService.selection();
-            handleAddList();
-          }}
-          title="Crear nueva lista"
-        >
-          <span>Añadir lista</span>
+          <span>Hablar con la IA</span>
         </button>
       </div>
       

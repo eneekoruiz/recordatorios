@@ -477,9 +477,8 @@ const CORE_CYCLES = [
     } else if (isListView) {
       if (currentView === 'list_que_he_hecho') {
         const allTasks = Object.values(tasks).filter((t: any) => !t.deleted_at && (t.categoryId === 'que_he_hecho' || (t as any).category_id === 'que_he_hecho'));
-        const validTasks = resolvedShowCompleted 
-          ? allTasks 
-          : allTasks.filter((t: any) => !isTaskCompleted(t) || recentlyCompletedIds.includes(t.id));
+        // En «Qué he hecho» todas las vivencias y recuerdos están siempre visibles (es una bitácora, no una lista de pendientes).
+        const validTasks = allTasks;
 
         const grouped: Record<string, TaskItem[]> = {};
 

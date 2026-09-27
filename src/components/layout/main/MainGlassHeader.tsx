@@ -196,9 +196,9 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
               transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
           >
-            <Play size={11} fill="currentColor" style={{ flexShrink: 0 }} />
-            <span>Empezar</span>
-            {startDuration && startDuration !== '0 min' && !isStartDisabled && (
+            <Play size={12} fill="currentColor" style={{ flexShrink: 0 }} />
+            {!isMobile && <span>Empezar</span>}
+            {!isMobile && startDuration && startDuration !== '0 min' && !isStartDisabled && (
               <span style={{ opacity: 0.85, fontSize: '0.72rem', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
                 ({startDuration})
               </span>

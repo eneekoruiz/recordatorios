@@ -1042,18 +1042,14 @@ function App() {
     return <SharedListView token={shareToken} onExit={() => { clearUrlParam('share'); setShareToken(null); }} />;
   }
 
-  if (resetToken) {
+  if (resetToken || !token) {
     return (
       <AuthScreen
-        resetToken={resetToken}
+        resetToken={resetToken || undefined}
         onSuccess={() => {}}
         onResetFinished={() => { clearUrlParam('reset'); setResetToken(null); }}
       />
     );
-  }
-
-  if (!token) {
-    return <AuthScreen onSuccess={() => {}} />;
   }
 
   const urlParams = new URLSearchParams(window.location.search);

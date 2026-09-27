@@ -109,20 +109,23 @@ export const DrawerHeaderSection: React.FC<DrawerHeaderSectionProps> = ({
           />
         </div>
         
-        <div className="divider"></div>
-        
-        <div className="detail-row" style={{ padding: '12px 0' }}>
-          <span className="detail-label">Tipo</span>
-          <CustomSelect 
-            className="detail-select"
-            value={type}
-            onChange={val => setType(val as 'task' | 'log')}
-            options={[
-              { value: 'task', label: 'Tarea por hacer' },
-              { value: 'log', label: 'Algo que ya hice' }
-            ]}
-          />
-        </div>
+        {(category === 'que_he_hecho' || type === 'log') && (
+          <>
+            <div className="divider"></div>
+            <div className="detail-row" style={{ padding: '12px 0' }}>
+              <span className="detail-label">Tipo</span>
+              <CustomSelect 
+                className="detail-select"
+                value={type}
+                onChange={val => setType(val as 'task' | 'log')}
+                options={[
+                  { value: 'task', label: 'Tarea por hacer' },
+                  { value: 'log', label: 'Algo que ya hice' }
+                ]}
+              />
+            </div>
+          </>
+        )}
       </div>
     </>
   );

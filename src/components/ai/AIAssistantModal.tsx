@@ -351,27 +351,18 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
 
         {/* Modal Window */}
         <motion.div
+          className="ai-assistant-modal"
           initial={{ opacity: 0, scale: 0.95, y: 16 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 12 }}
           transition={{ type: 'spring', damping: 28, stiffness: 420 }}
-          style={{
-            position: 'relative',
-            width: '100%',
-            maxWidth: 680,
-            height: '84vh',
-            maxHeight: 740,
-            background: 'var(--bg-elevated)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 22,
-            boxShadow: '0 24px 60px rgba(0, 0, 0, 0.25), 0 4px 16px rgba(0, 0, 0, 0.1)',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            zIndex: 100000
-          }}
           onClick={e => e.stopPropagation()}
         >
+          {/* iOS sheet grab handle (visible en móvil) */}
+          <div className="mobile-sheet-handle" style={{ display: 'none', justifyContent: 'center', paddingTop: 8, paddingBottom: 4, background: 'var(--bg-surface)' }}>
+            <div style={{ width: 36, height: 4.5, borderRadius: 3, background: 'var(--text-tertiary)', opacity: 0.35 }} />
+          </div>
+
           {/* Header */}
           <div style={{
             display: 'flex',

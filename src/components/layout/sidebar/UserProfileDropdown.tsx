@@ -322,6 +322,8 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           onClick={async (e) => {
             e.stopPropagation();
             onClose();
+            // Desactivar avisos push en este navegador antes de cerrar sesión para que no sigan llegando recordatorios privados
+            await PushService.disable().catch(() => undefined);
             // Subir lo pendiente antes de cerrar sesión (cerrar sesión borra los datos de este dispositivo).
             await syncManager.syncNow();
             if (syncManager.hasPendingChanges()) {
