@@ -7,6 +7,7 @@ import { isShoppingList } from '../../../utils/specialLists';
 import { useAppStore } from '../../../store/useAppStore';
 import { formatEuro } from '../../../utils/format';
 import { classifyDropZone, DRAG_MOVE_THRESHOLD_PX } from '../../../utils/dragDrop';
+import { getReservedFrequencyColor } from '../../../constants/colors';
 
 interface SectionData {
   title: string;
@@ -127,9 +128,29 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   let durationNode: React.ReactNode = null;
   if (sectionDurationLabel) {
     if (hasRoutineDurationBreakdown && data.routineDurations) {
-      // El desglose (propias vs. incluidas) ya está en el "title" del contenedor (más abajo):
-      // aquí solo el total, para que la cabecera no compita en espacio con la propia lista.
-      durationNode = <span>~{sectionDurationLabel}</span>;
+      const ownFormatted = data.routineDurations.only.formattedActive;
+      const ownColor = getReservedFrequencyColor(data.periodicity);
+      const extraColor = data.periodicity === 'week' ? getReservedFrequencyColor('day') : 'var(--text-tertiary)';
+      const extraMinutes = Math.max(0, data.routineDurations.full.activeMinutes - data.routineDurations.only.activeMinutes);
+      const extraFormatted = formatDuration(extraMinutes);
+      durationNode = isMobile ? (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+          <span>~{sectionDurationLabel}</span>
+        </span>
+      ) : (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+          <span>~{sectionDurationLabel}</span>
+          <span style={{ opacity: 0.4 }}>(</span>
+          <span style={{ color: ownColor, fontWeight: 500 }}>
+            {ownFormatted}
+          </span>
+          <span style={{ opacity: 0.35 }}>+</span>
+          <span style={{ color: extraColor, fontWeight: 500 }}>
+            {extraFormatted}
+          </span>
+          <span style={{ opacity: 0.4 }}>)</span>
+        </span>
+      );
     } else if (completedDurationSummary && completedDurationSummary.activeMinutes > 0) {
       durationNode = <span>~{sectionDurationLabel} restante (↓ ~{completedDurationSummary.formattedActive} hechos)</span>;
     } else {
@@ -649,6 +670,9 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               ? `${count} tareas totales (${onlyCount} ${ownLabel} + ${extraCount} ${extraLabel})`
               : `${count} tareas pendientes`;
 
+            const ownColor = getReservedFrequencyColor(data.periodicity);
+            const extraColor = data.periodicity === 'week' ? getReservedFrequencyColor('day') : 'var(--text-tertiary)';
+
             return (
               <span 
                 className="section-total-count"
@@ -664,9 +688,28 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                 }}
                 title={tooltipText}
               >
-                {/* Solo el total: el desglose (propias vs. incluidas) va en el title, no ocupa
-                    sitio en la cabecera — igual que la duración, justo encima. */}
                 <span className="section-main-count">{count}</span>
+                {hasRoutineBreakdown && (
+                  <span 
+                    className="section-routine-breakdown"
+                    style={{ 
+                      fontSize: '0.80rem', 
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'baseline',
+                      gap: 2,
+                      letterSpacing: '-0.01em',
+                      fontVariantNumeric: 'tabular-nums',
+                      opacity: 0.95
+                    }}
+                  >
+                    <span style={{ opacity: 0.35 }}>(</span>
+                    <span style={{ color: ownColor }}>{onlyCount}</span>
+                    <span style={{ opacity: 0.3, margin: '0 1px' }}> + </span>
+                    <span style={{ color: extraColor }}>{extraCount}</span>
+                    <span style={{ opacity: 0.35 }}>)</span>
+                  </span>
+                )}
               </span>
             );
           })()}

@@ -278,119 +278,122 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
               })()}
             </div>
 
-            {/* Duración debajo del nombre de la lista, unificado con cabeceras de sección */}
-            {totalDuration && totalDuration.activeMinutes > 0 && !isShoppingList(currentView, currentList) && !isCaducidadesList(currentView, currentList) && (
-              <div 
-                className="list-duration-meta"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  fontSize: '0.86rem',
-                  color: 'var(--text-secondary)',
-                  fontWeight: 500,
-                  letterSpacing: '-0.01em',
-                  flexWrap: 'wrap',
-                  paddingLeft: 2
-                }}
-                title={
-                  cycleBreakdown && cycleBreakdown.details && cycleBreakdown.details.length > 1
-                    ? `Duración total estimada: ~${totalDuration.formattedActive} (${cycleBreakdown.details.map(d => `${formatDuration(d.durationMinutes)} ${d.cycleName.toLowerCase()}`).join(' + ')})`
-                    : completedDuration && completedDuration.activeMinutes > 0
-                    ? `Te queda solo ~${totalDuration.formattedActive} en la lista porque ya has completado ~${completedDuration.formattedActive} (de ~${formatDuration(totalDuration.activeMinutes + completedDuration.activeMinutes)} en total)`
-                    : `Duración total estimada: ~${totalDuration.formattedActive}`
-                }
-              >
-                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                  ~{totalDuration.formattedActive}
-                </span>
-                {cycleBreakdown && cycleBreakdown.details && cycleBreakdown.details.length > 1 ? (
-                  <div
-                    className="cycle-duration-breakdown"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      fontSize: '0.76rem',
-                      fontWeight: 500,
-                      color: 'var(--text-tertiary)'
-                    }}
-                  >
-                    <span>(</span>
-                    {cycleBreakdown.details.map((d, i) => {
-                      const freqColor = d.color || getReservedFrequencyColor(d.cycleId);
-                      return (
-                        <span key={d.cycleId || d.cycleName} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, color: freqColor }}>
-                          {i > 0 && <span style={{ opacity: 0.35, color: 'var(--text-tertiary)', margin: '0 1px' }}>+</span>}
-                          <span>{formatDuration(d.durationMinutes)}</span>
+            {/* Metadatos (Duración y Presupuesto) debajo del nombre de la lista, unificado con cabeceras de sección */}
+            {(() => {
+              const hasValidDuration = Boolean(totalDuration && totalDuration.activeMinutes > 0 && !isShoppingList(currentView, currentList) && !isCaducidadesList(currentView, currentList));
+              const hasValidPrice = Boolean((totalCost > 0 || (completedCost !== undefined && completedCost > 0)) && !currentCycle && !isCaducidadesList(currentView, currentList));
+
+              if (!hasValidDuration && !hasValidPrice) return null;
+
+              return (
+                <div 
+                  className="list-duration-meta"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontSize: '0.86rem',
+                    color: 'var(--text-secondary)',
+                    fontWeight: 500,
+                    letterSpacing: '-0.01em',
+                    flexWrap: 'wrap',
+                    paddingLeft: 2,
+                    marginTop: 3
+                  }}
+                >
+                  {hasValidDuration && (
+                    <span
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                      title={
+                        cycleBreakdown && cycleBreakdown.details && cycleBreakdown.details.length > 1
+                          ? `Duración total estimada: ~${totalDuration!.formattedActive} (${cycleBreakdown.details.map(d => `${formatDuration(d.durationMinutes)} ${d.cycleName.toLowerCase()}`).join(' + ')})`
+                          : completedDuration && completedDuration.activeMinutes > 0
+                          ? `Te queda solo ~${totalDuration!.formattedActive} en la lista porque ya has completado ~${completedDuration!.formattedActive} (de ~${formatDuration(totalDuration!.activeMinutes + completedDuration.activeMinutes)} en total)`
+                          : `Duración total estimada: ~${totalDuration!.formattedActive}`
+                      }
+                    >
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                        ~{totalDuration!.formattedActive}
+                      </span>
+                      {cycleBreakdown && cycleBreakdown.details && cycleBreakdown.details.length > 1 ? (
+                        <span
+                          className="cycle-duration-breakdown"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            fontSize: '0.76rem',
+                            fontWeight: 500,
+                            color: 'var(--text-tertiary)'
+                          }}
+                        >
+                          <span>(</span>
+                          {cycleBreakdown.details.map((d, i) => {
+                            const freqColor = d.color || getReservedFrequencyColor(d.cycleId);
+                            return (
+                              <span key={d.cycleId || d.cycleName} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, color: freqColor }}>
+                                {i > 0 && <span style={{ opacity: 0.35, color: 'var(--text-tertiary)', margin: '0 1px' }}>+</span>}
+                                <span>{formatDuration(d.durationMinutes)}</span>
+                              </span>
+                            );
+                          })}
+                          <span>)</span>
                         </span>
-                      );
-                    })}
-                    <span>)</span>
-                  </div>
-                ) : completedDuration && completedDuration.activeMinutes > 0 ? (
-                  <span 
-                    style={{
-                      fontSize: '0.76rem',
-                      color: 'var(--text-tertiary)',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 2
-                    }}
-                  >
-                    <span>·</span>
-                    <span>↓ ~{completedDuration.formattedActive} hechos</span>
-                  </span>
-                ) : null}
-              </div>
-            )}
+                      ) : completedDuration && completedDuration.activeMinutes > 0 ? (
+                        <span 
+                          style={{
+                            fontSize: '0.76rem',
+                            color: 'var(--text-tertiary)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 2
+                          }}
+                        >
+                          <span>·</span>
+                          <span>↓ ~{completedDuration.formattedActive} hechos</span>
+                        </span>
+                      ) : null}
+                    </span>
+                  )}
+
+                  {hasValidDuration && hasValidPrice && (
+                    <span style={{ opacity: 0.4 }}>·</span>
+                  )}
+
+                  {hasValidPrice && (
+                    <span
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                      title={`Pendiente: ${formatEuro(totalCost)}${completedCost && completedCost > 0 ? ` · Ya pagado: ${formatEuro(completedCost)} · Total original: ${formatEuro(totalCost + completedCost)}` : ''}`}
+                    >
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                        {formatEuro(totalCost)}
+                      </span>
+                      {completedCost !== undefined && completedCost > 0 && (
+                        <span 
+                          style={{
+                            fontSize: '0.76rem',
+                            fontWeight: 500,
+                            color: 'var(--accent-red, #ff453a)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 2,
+                            letterSpacing: '-0.1px'
+                          }}
+                          title={`Se han completado ${formatEuro(completedCost)} del total original de ${formatEuro(totalCost + completedCost)}`}
+                        >
+                          <span>(↓ {formatEuro(completedCost)} pagados)</span>
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Gran Contador Apple Reminders en el color de la lista */}
           {currentView !== 'TRASH' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-
-              {/* Presupuesto pendiente y pagado */}
-              {((totalCost > 0 || (completedCost !== undefined && completedCost > 0)) && !currentCycle && !isCaducidadesList(currentView, currentList)) && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-                  <span 
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      padding: '3px 10px',
-                      borderRadius: 8,
-                      background: 'var(--bg-card, rgba(255,255,255,0.7))',
-                      border: '1px solid var(--border-subtle)',
-                      color: 'var(--text-primary)',
-                      fontWeight: 600,
-                      fontSize: '0.88rem',
-                      fontVariantNumeric: 'tabular-nums',
-                      letterSpacing: '-0.2px'
-                    }}
-                    title={`Pendiente: ${formatEuro(totalCost)}${completedCost && completedCost > 0 ? ` · Ya pagado: ${formatEuro(completedCost)} · Total original: ${formatEuro(totalCost + completedCost)}` : ''}`}
-                  >
-                    {formatEuro(totalCost)}
-                  </span>
-                  {completedCost !== undefined && completedCost > 0 ? (
-                    <span 
-                      style={{
-                        fontSize: '0.72rem',
-                        fontWeight: 600,
-                        color: 'var(--accent-red, #ff453a)',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 2,
-                        letterSpacing: '-0.1px',
-                        paddingRight: 2
-                      }}
-                      title={`Se han completado ${formatEuro(completedCost)} del total original de ${formatEuro(totalCost + completedCost)}`}
-                    >
-                      <span>↓</span> {formatEuro(completedCost)} pagados
-                    </span>
-                  ) : null}
-                </div>
-              )}
               {currentView !== 'smart_calendar' && (activeVisibleCount > 0 || currentView.startsWith('cycle_')) && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
                   <span className="apple-large-counter" style={{ color: viewColor }}>

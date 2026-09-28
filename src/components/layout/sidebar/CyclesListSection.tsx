@@ -159,10 +159,24 @@ export const CyclesListSection: React.FC<CyclesListSectionProps> = ({
           })()}
           <button 
             type="button"
+            className={isEditCyclesMode ? "btn-icon" : undefined}
             onClick={() => setIsEditCyclesMode(!isEditCyclesMode)}
-            style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', fontSize: '0.94rem', fontWeight: isEditCyclesMode ? 600 : 400, cursor: 'pointer', padding: '6px 2px' }}
+            aria-label={isEditCyclesMode ? 'Hecho' : 'Editar frecuencias'}
+            title={isEditCyclesMode ? 'Hecho' : 'Editar frecuencias'}
+            style={{ 
+              background: 'transparent', 
+              border: 'none', 
+              color: 'var(--accent-primary)', 
+              fontSize: '0.94rem', 
+              fontWeight: isEditCyclesMode ? 600 : 400, 
+              cursor: 'pointer', 
+              padding: isEditCyclesMode ? 4 : '6px 2px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
           >
-            {isEditCyclesMode ? 'Hecho' : 'Editar'}
+            {isEditCyclesMode ? <Check size={16} strokeWidth={2.8} /> : 'Editar'}
           </button>
           <button 
             type="button"
