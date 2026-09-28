@@ -37,6 +37,35 @@ const WELCOME_MESSAGE: ChatMessage = {
   timestamp: '',
 };
 
+// El "reply" que se muestra en el chat suele ser una frase genérica ("He preparado 1
+// recordatorio listo para importar"): lo que de verdad se propuso vive aparte, en
+// "batch.tasks"/"batch.taskUpdates" (la tarjeta con título, fecha, precio...). Si solo se
+// manda ese "reply" como historial, ni el extractor local ni un LLM real saben qué se
+// propuso en el turno anterior, y una corrección ("¿y si mejor a las 11?") no tiene nada
+// que corregir. Esto reconstruye un resumen con los detalles reales para el historial.
+function summarizeBatchForHistory(batch?: ProposedBatch): string {
+  if (!batch) return '';
+  const lines: string[] = [];
+  for (const t of batch.tasks || []) {
+    const parts = [t.title];
+    if (t.dueDate) parts.push(`fecha: ${t.dueDate.slice(0, 10)}`);
+    if (t.timeOfDay) parts.push(`momento: ${t.timeOfDay}`);
+    if (t.price !== undefined) parts.push(`precio: ${t.price}€`);
+    if (t.listName) parts.push(`lista: ${t.listName}`);
+    lines.push(`- Propuesto: ${parts.join(', ')}`);
+  }
+  for (const u of batch.taskUpdates || []) {
+    const parts = [u.originalTitle];
+    if (u.newTitle) parts.push(`nuevo título: ${u.newTitle}`);
+    if (u.dueDate) parts.push(`nueva fecha: ${u.dueDate.slice(0, 10)}`);
+    if (u.price !== undefined) parts.push(`nuevo precio: ${u.price}€`);
+    if (u.status) parts.push(`estado: ${u.status}`);
+    if (u.deleted) parts.push('eliminar');
+    lines.push(`- Modificación: ${parts.join(', ')}`);
+  }
+  return lines.join('\n');
+}
+
 export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantModalProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -260,12 +289,19 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
     HapticService.impact('light');
 
     try {
-      const history = shownMessages.map(m => ({
-        role: m.sender,
-        text: m.text
-      }));
+      const history = shownMessages.map(m => {
+        const batchSummary = m.sender === 'assistant' ? summarizeBatchForHistory(m.batch) : '';
+        return {
+          role: m.sender,
+          text: batchSummary ? `${m.text}\n${batchSummary}` : m.text
+        };
+      });
+      // Lo último que se propuso y sigue sin confirmar (al importar, "batch.tasks" se vacía):
+      // así un mensaje corto tipo "¿y si mejor a las 11?" puede corregirlo en vez de perderse.
+      const lastPending = [...shownMessages].reverse().find(m => m.sender === 'assistant' && m.batch && m.batch.tasks.length > 0);
+      const lastProposedTasks = lastPending?.batch?.tasks;
 
-      const batch = await AIService.processPrompt(fullPrompt, lists, history, tasks);
+      const batch = await AIService.processPrompt(fullPrompt, lists, history, tasks, lastProposedTasks);
 
       const aiMsg: ChatMessage = {
         id: `msg_ai_${Date.now()}`,
@@ -608,6 +644,15 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
   };
 
   const handleSaveSettings = () => {
+    // Antes se podía guardar "Gemini"/"OpenAI" sin clave: cada mensaje lo respondía el
+    // extractor local en silencio, mientras la cabecera del chat seguía diciendo "Google
+    // Gemini LLM" — mejor avisar aquí, al guardar, que descubrirlo mensaje a mensaje.
+    if (tempProvider !== 'auto' && !tempApiKey.trim()) {
+      window.dispatchEvent(new CustomEvent('show-toast', {
+        detail: `Falta la clave de API de ${tempProvider === 'gemini' ? 'Gemini' : 'OpenAI'}, o elige "Extractor local" si no tienes una.`
+      }));
+      return;
+    }
     const updated: AIConfig = {
       provider: tempProvider,
       apiKey: tempApiKey.trim() || undefined
@@ -737,7 +782,12 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                   Asistente IA
                 </h3>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                  {config.provider === 'auto' ? 'Extractor Inteligente Local (MCP Ready)' : config.provider === 'gemini' ? 'Google Gemini LLM' : 'OpenAI GPT'}
+                  {/* Antes solo miraba el proveedor elegido: con Gemini/OpenAI seleccionado pero
+                      sin clave guardada, seguía diciendo "Google Gemini LLM" aunque cada mensaje
+                      lo respondiera en realidad el extractor local (ver AIService.processPrompt). */}
+                  {config.provider !== 'auto' && config.apiKey
+                    ? (config.provider === 'gemini' ? 'Google Gemini LLM' : 'OpenAI GPT')
+                    : 'Extractor Inteligente Local'}
                 </span>
               </div>
             </div>
@@ -803,7 +853,6 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontWeight: 650, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Configurar Motor de IA</span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>MCP Server activo en /api/mcp</span>
                 </div>
 
                 <div style={{ display: 'flex', gap: 8 }}>

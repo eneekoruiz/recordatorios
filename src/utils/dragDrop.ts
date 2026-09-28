@@ -16,3 +16,7 @@ export function classifyDropZone(relY: number): 'top' | 'bottom' | 'inside' {
 /** Movimiento (en píxeles) a partir del cual un toque mantenido pasa a ser un arrastre. Por
  * debajo, se trata como pulsación quieta (tiembla la mano, pero la intención es abrir el menú). */
 export const DRAG_MOVE_THRESHOLD_PX = 10;
+
+/** Alto del hueco que se abre en la lista para reordenar (tareas y secciones): en vez de una
+ * línea o recuadro superpuestos, el propio espacio "se abre camino" hasta el punto de soltar. */
+export const DROP_GAP_PX = 14;

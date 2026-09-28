@@ -112,11 +112,14 @@ export class AIService {
     let lastError = '';
 
     for (const model of candidateModels) {
+      const timeoutController = new AbortController();
+      const timeoutId = setTimeout(() => timeoutController.abort(), 10000);
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(trimmedKey)}`;
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: timeoutController.signal,
           body: JSON.stringify({
             contents: [{ parts: [{ text: 'Responde estrictamente: OK' }] }]
           })
@@ -134,7 +137,9 @@ export class AIService {
           return { ok: false, error: `Clave no válida o sin permisos (${message})` };
         }
       } catch (err: any) {
-        lastError = err?.message || 'Error de conexión de red';
+        lastError = err?.name === 'AbortError' ? `Tiempo de espera agotado con ${model} (10s)` : (err?.message || 'Error de conexión de red');
+      } finally {
+        clearTimeout(timeoutId);
       }
     }
 
@@ -148,19 +153,23 @@ export class AIService {
     userMessage: string,
     existingLists: CustomList[],
     conversationHistory: { role: 'user' | 'assistant'; text: string }[] = [],
-    existingTasks?: Record<string, TaskItem> | TaskItem[]
+    existingTasks?: Record<string, TaskItem> | TaskItem[],
+    lastProposedTasks?: ProposedTask[]
   ): Promise<ProposedBatch> {
     const config = this.getConfig();
     const apiKey = config.apiKey?.trim();
 
     // 1. External LLM via Gemini API if key is present or provider is gemini
-    const isGemini = config.provider === 'gemini' || (Boolean(apiKey) && (apiKey!.startsWith('AIza') || apiKey!.length > 20));
+    // OJO: un "provider" explícito (elegido en Ajustes) manda siempre — antes, cualquier clave
+    // de más de 20 caracteres (o sea, casi cualquier clave real, también las de OpenAI que
+    // empiezan por "sk-" y son más largas) se trataba como Gemini y "openai" nunca se alcanzaba.
+    const isGemini = config.provider === 'gemini' || (config.provider === 'auto' && Boolean(apiKey) && apiKey!.startsWith('AIza'));
     if (isGemini && apiKey) {
       try {
         return await this.callGemini(userMessage, existingLists, conversationHistory, apiKey, existingTasks);
       } catch (err: any) {
         console.error('Gemini API call failed:', err);
-        const localBatch = this.localSemanticExtract(userMessage, existingLists, existingTasks);
+        const localBatch = this.localSemanticExtract(userMessage, existingLists, existingTasks, lastProposedTasks);
         return {
           ...localBatch,
           reply: `⚠️ *[Aviso: No se pudo conectar con Gemini (${err.message || 'error de conexión'}). He procesado tu solicitud con el extractor local inteligente]:*\n\n${localBatch.reply}`,
@@ -178,24 +187,169 @@ export class AIService {
         return await this.callOpenAI(userMessage, existingLists, conversationHistory, apiKey, existingTasks);
       } catch (err: any) {
         console.error('OpenAI API call failed:', err);
+        const localBatch = this.localSemanticExtract(userMessage, existingLists, existingTasks, lastProposedTasks);
         return {
-          reply: `⚠️ **Error de conexión con OpenAI:** ${err.message || 'Error de autenticación'}. Revisa tu clave en Ajustes ⚙️.`,
-          tasks: []
+          ...localBatch,
+          reply: `⚠️ *[Aviso: No se pudo conectar con OpenAI (${err.message || 'error de conexión'}). He procesado tu solicitud con el extractor local inteligente]:*\n\n${localBatch.reply}`,
+          suggestedReplies: [
+            ...(localBatch.suggestedReplies || []),
+            'Abrir Ajustes de IA ⚙️'
+          ]
         };
       }
     }
 
-    // 3. Fallback: Intelligent Local Semantic Extractor (Zero-Config)
-    return this.localSemanticExtract(userMessage, existingLists, existingTasks);
+    // 3. El proveedor elegido en Ajustes es Gemini/OpenAI pero no hay clave guardada: antes esto
+    // caía en el extractor local en silencio, con la cabecera del chat mostrando igualmente
+    // "Google Gemini LLM" / "OpenAI GPT" — parecía que se estaba hablando con el LLM real
+    // cuando en realidad cada mensaje lo respondía el extractor de reglas.
+    if ((config.provider === 'gemini' || config.provider === 'openai') && !apiKey) {
+      const localBatch = this.localSemanticExtract(userMessage, existingLists, existingTasks, lastProposedTasks);
+      return {
+        ...localBatch,
+        reply: `⚠️ *[Tienes ${config.provider === 'gemini' ? 'Gemini' : 'OpenAI'} elegido en Ajustes pero sin clave de API guardada, así que esto lo ha respondido el extractor local, no un LLM real]:*\n\n${localBatch.reply}`,
+        suggestedReplies: [
+          ...(localBatch.suggestedReplies || []),
+          'Abrir Ajustes de IA ⚙️'
+        ]
+      };
+    }
+
+    // 4. Fallback: Intelligent Local Semantic Extractor (Zero-Config)
+    return this.localSemanticExtract(userMessage, existingLists, existingTasks, lastProposedTasks);
+  }
+
+  /**
+   * Aplica una corrección de última hora ("¿y si mejor a las 11?", "mejor el jueves",
+   * "ponle 5€", "cámbialo a la lista Compra") sobre lo que se acaba de proponer (todavía sin
+   * confirmar), en vez de tratarla como una tarea nueva. Reconoce hora, fecha (relativa o día
+   * de la semana), precio, lista y título; si no reconoce ningún cambio, devuelve null y el
+   * llamador decide qué hacer (normalmente, pedir que se reformule).
+   */
+  private static tryApplyCorrection(
+    text: string,
+    lastProposedTasks: ProposedTask[],
+    existingLists: CustomList[]
+  ): ProposedBatch | null {
+    let newTimeString: string | undefined;
+    let newTimeOfDay: 'morning' | 'afternoon' | 'night' | undefined;
+    let newDueDate: Date | undefined;
+    let newPrice: number | undefined;
+    let newTitle: string | undefined;
+    let newListId: string | undefined;
+    let newListName: string | undefined;
+    const changeDescriptions: string[] = [];
+
+    const timeMatch = text.match(/\b(?:a\s+las?|a\s+la)\s+([0-1]?[0-9]|2[0-3])(?::([0-5][0-9]))?\s*(am|pm|h)?/i);
+    if (timeMatch) {
+      let hour = parseInt(timeMatch[1], 10);
+      const min = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+      const meridian = timeMatch[3]?.toLowerCase();
+      if (meridian === 'pm' && hour < 12) hour += 12;
+      if (meridian === 'am' && hour === 12) hour = 0;
+      newTimeString = `${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
+      newTimeOfDay = hour >= 6 && hour < 14 ? 'morning' : hour >= 14 && hour < 20 ? 'afternoon' : 'night';
+      changeDescriptions.push(`hora: ${newTimeString}`);
+    }
+
+    const now = new Date();
+    // Sin acentos e indexados como Date.getDay() (0 = domingo ... 6 = sábado).
+    const weekdayNamesNorm = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+    const weekdayMatch = text.match(/\b(domingo|lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado)\b/i);
+    if (/\bpasado\s+mañana\b/i.test(text)) {
+      newDueDate = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
+      changeDescriptions.push('fecha: pasado mañana');
+    } else if (/\bmañana\b/i.test(text) && !/\bpor\s+la\s+mañana\b/i.test(text)) {
+      newDueDate = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      changeDescriptions.push('fecha: mañana');
+    } else if (/\bhoy\b/i.test(text)) {
+      newDueDate = new Date(now);
+      changeDescriptions.push('fecha: hoy');
+    } else if (/\b(este\s+)?fin\s+de\s+semana\b/i.test(text)) {
+      const day = now.getDay();
+      const diff = day === 6 ? 7 : (6 - day);
+      newDueDate = new Date(now.getTime() + diff * 24 * 60 * 60 * 1000);
+      changeDescriptions.push('fecha: fin de semana');
+    } else if (weekdayMatch) {
+      const normalizedWeekday = weekdayMatch[1].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+      const targetDow = weekdayNamesNorm.indexOf(normalizedWeekday);
+      if (targetDow >= 0) {
+        const currentDow = now.getDay();
+        let diff = targetDow - currentDow;
+        if (diff <= 0) diff += 7;
+        newDueDate = new Date(now.getTime() + diff * 24 * 60 * 60 * 1000);
+        changeDescriptions.push(`fecha: ${weekdayMatch[1]}`);
+      }
+    }
+
+    const priceMatch = extractPrice(text, false);
+    if (priceMatch && priceMatch.price > 0) {
+      newPrice = priceMatch.price;
+      changeDescriptions.push(`precio: ${newPrice}€`);
+    }
+
+    const listMatch = text.match(/(?:en\s+la\s+lista\s+(?:de\s+)?|muével[oa]\s+a\s+|pásal[oa]\s+a\s+|c[áa]mbial[oa]\s+a\s+(?:la\s+lista\s+)?)["']?([^"'.,\n]+)["']?/i);
+    if (listMatch && listMatch[1]) {
+      const candidate = listMatch[1].trim();
+      const matchedList = existingLists.find(l => l.name.toLowerCase() === candidate.toLowerCase() || candidate.toLowerCase().includes(l.name.toLowerCase()));
+      if (matchedList) {
+        newListId = matchedList.id;
+        newListName = matchedList.name;
+        changeDescriptions.push(`lista: ${matchedList.name}`);
+      }
+    }
+
+    const titleMatch = text.match(/(?:que\s+se\s+llame|c[áa]mbiale\s+el\s+(?:nombre|t[íi]tulo)\s+a|renómbral[oa]\s+a|mejor\s+(?:que\s+)?ponle)\s+["']?([^"'.\n]+)["']?/i);
+    if (titleMatch && titleMatch[1]) {
+      newTitle = titleMatch[1].trim();
+      changeDescriptions.push(`título: ${newTitle}`);
+    }
+
+    if (changeDescriptions.length === 0) return null;
+
+    const updatedTasks: ProposedTask[] = lastProposedTasks.map((t, i) => {
+      const clone: ProposedTask = { ...t, id: `ai_task_${Date.now()}_${i}` };
+      if (newTimeString) {
+        const base = clone.dueDate ? new Date(clone.dueDate) : new Date();
+        const [h, m] = newTimeString.split(':').map(Number);
+        base.setHours(h, m, 0, 0);
+        clone.dueDate = base.toISOString();
+        clone.timeOfDay = newTimeOfDay;
+      }
+      if (newDueDate) {
+        const combined = new Date(newDueDate);
+        if (clone.dueDate) {
+          const prevTime = new Date(clone.dueDate);
+          combined.setHours(prevTime.getHours(), prevTime.getMinutes(), 0, 0);
+        } else {
+          combined.setHours(12, 0, 0, 0);
+        }
+        clone.dueDate = combined.toISOString();
+      }
+      if (newPrice !== undefined) clone.price = newPrice;
+      if (newTitle) clone.title = newTitle;
+      if (newListId) {
+        clone.listId = newListId;
+        clone.listName = newListName;
+      }
+      return clone;
+    });
+
+    const subject = updatedTasks.length === 1 ? `"${updatedTasks[0].title}"` : `los ${updatedTasks.length} recordatorios`;
+    return {
+      reply: `He actualizado ${subject} (${changeDescriptions.join(', ')}). Revisa y confirma:`,
+      tasks: updatedTasks
+    };
   }
 
   /**
    * Local Semantic Extractor (Zero-Config, runs 100% locally and offline)
    */
   public static localSemanticExtract(
-    text: string, 
-    existingLists: CustomList[], 
-    existingTasks?: Record<string, TaskItem> | TaskItem[]
+    text: string,
+    existingLists: CustomList[],
+    existingTasks?: Record<string, TaskItem> | TaskItem[],
+    lastProposedTasks?: ProposedTask[]
   ): ProposedBatch {
     const trimmed = text.trim();
     if (!trimmed) {
@@ -208,6 +362,20 @@ export class AIService {
     const tasksArray: TaskItem[] = existingTasks
       ? (Array.isArray(existingTasks) ? existingTasks : Object.values(existingTasks))
       : [];
+
+    // 0.-1 Intent: Corregir lo que se acaba de proponer (aún sin confirmar/guardar), no una
+    // tarea existente ni una tarea nueva — "¿y si mejor a las 11?", "mejor el jueves",
+    // "ponle 5€", "cámbialo a la lista Compra". Va antes que cualquier otra cosa: si hay una
+    // propuesta reciente y el mensaje trae un cambio reconocible, se aplica sobre esa.
+    // Solo si el mensaje realmente "suena" a corrección (frase corta u opener típico) — si no,
+    // "recuérdame ir al médico mañana a las 5" tras una propuesta sin confirmar se trataría por
+    // error como una corrección de esa propuesta en vez de como la tarea nueva que es.
+    const soundsLikeCorrection = /^¿?(?:y\s+si|qu[ée]\s+tal\s+si|mejor\s+(?:si|a\s+las?|que)|y\s+mejor|no,?\s+mejor|c[áa]mbia(?:lo|la)?\s+a|c[áa]mbiale)\b/i.test(trimmed) ||
+      (trimmed.split(/\s+/).length <= 6 && !/\b(recu[ée]rdame|apunta|a[ñn]ade|agrega|crea|pon\s+un\s+recordatorio|tengo\s+que|hay\s+que|debo|comprar|llamar|hacer)\b/i.test(trimmed));
+    if (soundsLikeCorrection && lastProposedTasks && lastProposedTasks.length > 0) {
+      const correctionBatch = this.tryApplyCorrection(trimmed, lastProposedTasks, existingLists);
+      if (correctionBatch) return correctionBatch;
+    }
 
     // 0. Intent: Saludo general o pregunta sobre capacidades (NO añadir recordatorios ciegamente)
     const normalizedGreeting = trimmed.replace(/^[¡¿\s]+/, '');
@@ -512,6 +680,10 @@ export class AIService {
     }
 
     const tasks: ProposedTask[] = [];
+    // El extractor local no recuerda lo que acaba de proponer (no recibe el historial de la
+    // conversación): "¿Y si mejor a las 11?" no tiene nada que corregir aquí y, sin este aviso,
+    // se colaba como una tarea nueva sin sentido ("¿Y si mejor?"). Mejor pedir que lo reformule.
+    let hadCorrectionLikeSegment = false;
 
     // Global people mentioned in prompt
     const globalMentionedPeople: string[] = [];
@@ -533,6 +705,12 @@ export class AIService {
         continue;
       }
       if (/^[-=_*]{3,}$/.test(segment)) {
+        continue;
+      }
+      // "¿Y si...?", "¿Qué tal si...?", "Mejor a las..." — una corrección al turno anterior,
+      // no una tarea nueva. Sin memoria de conversación aquí, mejor preguntar que inventar.
+      if (/^¿?(?:y\s+si|qu[ée]\s+tal\s+si|mejor\s+(?:si|a\s+las?|que)|y\s+mejor)\b/i.test(segment)) {
+        hadCorrectionLikeSegment = true;
         continue;
       }
 
@@ -738,6 +916,8 @@ export class AIService {
         : '';
 
       reply = `¡Vaya día más activo! Con todo lo que me cuentas, veo que has hecho ${activitiesOverview || 'varias actividades'}${peoplePart}. ¿Quieres que lo apunte todo a tu lista «Qué he hecho»?`;
+    } else if (hadCorrectionLikeSegment) {
+      reply = 'El extractor local no tiene memoria de lo que acabo de proponer, así que no puedo aplicar ese cambio directamente. Escribe el recordatorio completo de nuevo (p. ej. "Comprar leche mañana a las 11") o configura una clave de Gemini/OpenAI en Ajustes ⚙️ para poder conversar con contexto.';
     } else if (tasks.length === 0) {
       reply = 'No he podido detectar tareas claras en el texto. Puedes contarme cómo ha ido tu día o darme una lista como: "Comprar pan por 1€, llamar al dentista mañana a las 10:00 y hacer ejercicio por la tarde".';
     }
@@ -750,19 +930,15 @@ export class AIService {
   }
 
   /**
-   * Gemini API LLM Integration with Multi-Model Fallback & Rich Intent Recognition
+   * Prompt de sistema compartido por Gemini y OpenAI: antes OpenAI tenía uno mucho más pobre
+   * (sin las reglas de nueva-tarea-vs-modificación, sin pedir aclaraciones, sin las reglas de
+   * precio/frecuencia...), así que su calidad dependía de qué proveedor tuviera configurado
+   * el usuario. Con el mismo prompt, ambos entienden las mismas formulaciones igual de bien.
    */
-  private static async callGemini(
-    prompt: string,
-    existingLists: CustomList[],
-    history: { role: string; text: string }[] = [],
-    apiKey: string,
-    existingTasks?: Record<string, TaskItem> | TaskItem[]
-  ): Promise<ProposedBatch> {
+  private static buildSystemInstruction(existingLists: CustomList[], tasksArr: TaskItem[]): string {
     const listNames = existingLists.map(l => `"${l.name}" (id: "${l.id}")`).join(', ');
-    const tasksArr = existingTasks ? (Array.isArray(existingTasks) ? existingTasks : Object.values(existingTasks)) : [];
-    
-    // Format up to 60 active non-deleted tasks so Gemini can cross-reference them accurately
+
+    // Format up to 60 active non-deleted tasks so the model can cross-reference them accurately
     const activeTasksFormatted = tasksArr
       .filter(t => !t.deleted_at && t.status !== 'completed')
       .slice(0, 60)
@@ -772,7 +948,7 @@ export class AIService {
       })
       .join('\n');
 
-    const systemInstruction = `Eres el Asistente IA de Recordatorios Élite (Apple Reminders & Journal companion), sumamente inteligente, analítico, meticuloso y empático.
+    return `Eres el Asistente IA de Recordatorios Élite (Apple Reminders & Journal companion), sumamente inteligente, analítico, meticuloso y empático.
 Tu objetivo es comprender incluso los mensajes más densos, caóticos o enrevesados del usuario, desglosando cada instrucción sin omitir ningún detalle.
 
 Listas existentes del usuario: [${listNames}].
@@ -845,6 +1021,20 @@ DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
     }
   ]
 }`;
+  }
+
+  /**
+   * Gemini API LLM Integration with Multi-Model Fallback & Rich Intent Recognition
+   */
+  private static async callGemini(
+    prompt: string,
+    existingLists: CustomList[],
+    history: { role: string; text: string }[] = [],
+    apiKey: string,
+    existingTasks?: Record<string, TaskItem> | TaskItem[]
+  ): Promise<ProposedBatch> {
+    const tasksArr = existingTasks ? (Array.isArray(existingTasks) ? existingTasks : Object.values(existingTasks)) : [];
+    const systemInstruction = this.buildSystemInstruction(existingLists, tasksArr);
 
     // Prepare conversational history payload (ensuring alternating user/model sequence)
     const contents: any[] = [];
@@ -880,11 +1070,14 @@ DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
     let lastError: Error | null = null;
 
     for (const model of candidateModels) {
+      const timeoutController = new AbortController();
+      const timeoutId = setTimeout(() => timeoutController.abort(), 15000);
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: timeoutController.signal,
           body: JSON.stringify({
             contents,
             systemInstruction: {
@@ -900,12 +1093,13 @@ DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
           const errData = await res.json().catch(() => ({}));
           const errMsg = errData?.error?.message || `HTTP ${res.status} ${res.statusText}`;
           console.warn(`Gemini model ${model} failed (HTTP ${res.status}): ${errMsg}`);
-          lastError = new Error(errMsg);
 
           if (res.status === 401 || res.status === 403) {
-            throw new Error(`Clave de API no válida o sin permisos: ${errMsg}`);
+            // Una clave inválida falla igual con cualquier modelo: no tiene sentido reintentar 6 veces.
+            throw Object.assign(new Error(`Clave de API no válida o sin permisos: ${errMsg}`), { fatal: true });
           }
 
+          lastError = new Error(errMsg);
           // Para 404 (modelo no encontrado en la versión), 429 (cuota excedida) o 500/503 (error temporal), intentar el siguiente modelo
           continue;
         }
@@ -931,8 +1125,11 @@ DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
           }))
         };
       } catch (err: any) {
-        lastError = err;
-        console.warn(`Error attempting Gemini with ${model}:`, err.message);
+        if (err.fatal) throw err;
+        lastError = err.name === 'AbortError' ? new Error(`Tiempo de espera agotado con ${model} (15s)`) : err;
+        console.warn(`Error attempting Gemini with ${model}:`, lastError?.message);
+      } finally {
+        clearTimeout(timeoutId);
       }
     }
 
@@ -945,72 +1142,59 @@ DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
   private static async callOpenAI(
     prompt: string,
     existingLists: CustomList[],
-    _history: { role: string; text: string }[],
+    history: { role: string; text: string }[],
     apiKey: string,
     existingTasks?: Record<string, TaskItem> | TaskItem[]
   ): Promise<ProposedBatch> {
-    const listNames = existingLists.map(l => `${l.name} (id: ${l.id})`).join(', ');
     const tasksArr = existingTasks ? (Array.isArray(existingTasks) ? existingTasks : Object.values(existingTasks)) : [];
-    const activeTasksSummary = tasksArr
-      .filter(t => !t.deleted_at && t.status !== 'completed')
-      .slice(0, 50)
-      .map(t => `- [ID: "${t.id}"] "${t.title}" (${t.categoryId || 'inbox'})`)
-      .join('\n');
+    const systemPrompt = this.buildSystemInstruction(existingLists, tasksArr);
 
-    const systemPrompt = `Eres el Asistente IA de Recordatorios Élite.
-Listas del usuario: [${listNames}].
-Recordatorios activos:
-${activeTasksSummary}
+    // OpenAI ya usa 'user'/'assistant' tal cual, a diferencia de Gemini — no hace falta
+    // traducir el rol. Antes este historial se recibía pero nunca se usaba: cada turno se
+    // mandaba sin memoria de los anteriores, así que una corrección ("¿y si a las 11?") no
+    // tenía nada a lo que referirse.
+    const historyMessages = history.slice(-8).map(h => ({
+      role: h.role === 'assistant' ? 'assistant' as const : 'user' as const,
+      content: h.text
+    }));
 
-Analiza la petición del usuario y responde en JSON con:
-{
-  "reply": "Respuesta clara y conversacional",
-  "clarificationQuestions": ["Preguntas si falta información"],
-  "suggestedReplies": ["Opciones para pulsar"],
-  "taskUpdates": [
-    {
-      "taskId": "ID_DE_TAREA_EXISTENTE",
-      "originalTitle": "Título",
-      "status": "completed",
-      "deleted": false,
-      "price": null,
-      "reason": "Motivo"
+    const timeoutController = new AbortController();
+    const timeoutId = setTimeout(() => timeoutController.abort(), 15000);
+    let res: Response;
+    try {
+      res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        signal: timeoutController.signal,
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            ...historyMessages,
+            { role: 'user', content: prompt }
+          ],
+          response_format: { type: 'json_object' }
+        })
+      });
+    } catch (err: any) {
+      if (err.name === 'AbortError') throw new Error('Tiempo de espera agotado con OpenAI (15s)');
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
     }
-  ],
-  "tasks": [
-    {
-      "title": "Título",
-      "description": "Notas",
-      "listName": "NombreLista",
-      "dueDate": "ISO o null",
-      "price": null,
-      "cycle": null
-    }
-  ]
-}`;
-
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt }
-        ],
-        response_format: { type: 'json_object' }
-      })
-    });
 
     if (!res.ok) {
-      throw new Error(`OpenAI API error: ${res.status}`);
+      const errData = await res.json().catch(() => ({}));
+      const errMsg = errData?.error?.message || `HTTP ${res.status} ${res.statusText}`;
+      throw new Error(errMsg);
     }
 
     const data = await res.json();
     const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error('Respuesta vacía de OpenAI');
     const parsed = JSON.parse(content);
     return {
       reply: parsed.reply || 'Aquí tienes tus recordatorios preparados:',

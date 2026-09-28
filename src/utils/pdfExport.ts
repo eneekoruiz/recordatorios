@@ -279,14 +279,6 @@ export function exportReportToPdf(options: PdfReportOptions): void {
         <span>Documento generado con Recordatorios Soberano</span>
         <span>Página 1</span>
       </div>
-
-      <script>
-        window.onload = function() {
-          setTimeout(function() {
-            window.print();
-          }, 300);
-        };
-      </script>
     </body>
     </html>
   `;
@@ -294,4 +286,10 @@ export function exportReportToPdf(options: PdfReportOptions): void {
   printWindow.document.open();
   printWindow.document.write(htmlContent);
   printWindow.document.close();
+
+  // Se dispara desde la ventana abridora (en vez de un <script> inyectado en el
+  // documento impreso) para que funcione igual bajo una Content-Security-Policy estricta.
+  printWindow.onload = () => {
+    setTimeout(() => printWindow.print(), 300);
+  };
 }

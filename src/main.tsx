@@ -8,6 +8,12 @@ import './styles/polish.css'
 
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 
+// En iOS, maximum-scale evita el zoom automático al enfocar un campo y el
+// usuario conserva el zoom con los dedos. En Android bloquearía el zoom, así que solo se aplica en iOS.
+if (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+  document.querySelector('meta[name=viewport]')?.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover');
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>

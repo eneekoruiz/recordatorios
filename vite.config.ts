@@ -11,7 +11,10 @@ export default defineConfig({
   },
   preview: {
     host: true,
-    port: 5173
+    port: 5173,
+    headers: {
+      'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self'; style-src-elem 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://nominatim.openstreetmap.org https://api.openai.com https://generativelanguage.googleapis.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+    }
   },
   test: {
     include: ['tests/unit/**/*.test.{js,ts}'],
@@ -26,6 +29,9 @@ export default defineConfig({
             if (id.includes('framer-motion')) return 'vendor-motion';
             if (id.includes('lucide-react')) return 'vendor-icons';
             if (id.includes('react/') || id.includes('react-dom/')) return 'vendor-react';
+            // pdfjs-dist solo se importa dinámicamente (ver pdfExtractor.ts); en su propio
+            // chunk no viaja con el resto del vendor eager y solo se descarga bajo demanda.
+            if (id.includes('pdfjs-dist')) return 'vendor-pdf';
             return 'vendor';
           }
         }

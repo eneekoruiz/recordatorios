@@ -7,7 +7,6 @@ import { isShoppingList } from '../../../utils/specialLists';
 import { useAppStore } from '../../../store/useAppStore';
 import { formatEuro } from '../../../utils/format';
 import { classifyDropZone, DRAG_MOVE_THRESHOLD_PX } from '../../../utils/dragDrop';
-import { getReservedFrequencyColor } from '../../../constants/colors';
 
 interface SectionData {
   title: string;
@@ -125,33 +124,12 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   // Corto para caber en el móvil: «+ Diarias» en las semanales, «+ Acumuladas» en mensuales y anuales.
   const includeLabel = data.periodicity === 'week' ? 'Diarias' : 'Acumuladas';
 
-  const ownColor = getReservedFrequencyColor(data.periodicity || 'week');
-  const extraColor = getReservedFrequencyColor('day');
-
   let durationNode: React.ReactNode = null;
   if (sectionDurationLabel) {
     if (hasRoutineDurationBreakdown && data.routineDurations) {
-      const ownFormatted = data.routineDurations.only.formattedActive;
-      const extraMinutes = Math.max(0, data.routineDurations.full.activeMinutes - data.routineDurations.only.activeMinutes);
-      const extraFormatted = formatDuration(extraMinutes);
-      durationNode = isMobile ? (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-          <span>~{sectionDurationLabel}</span>
-        </span>
-      ) : (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-          <span>~{sectionDurationLabel}</span>
-          <span style={{ opacity: 0.4 }}>(</span>
-          <span style={{ color: ownColor, fontWeight: 500 }}>
-            {ownFormatted}
-          </span>
-          <span style={{ opacity: 0.35 }}>+</span>
-          <span style={{ color: extraColor, fontWeight: 500 }}>
-            {extraFormatted}
-          </span>
-          <span style={{ opacity: 0.4 }}>)</span>
-        </span>
-      );
+      // El desglose (propias vs. incluidas) ya está en el "title" del contenedor (más abajo):
+      // aquí solo el total, para que la cabecera no compita en espacio con la propia lista.
+      durationNode = <span>~{sectionDurationLabel}</span>;
     } else if (completedDurationSummary && completedDurationSummary.activeMinutes > 0) {
       durationNode = <span>~{sectionDurationLabel} restante (↓ ~{completedDurationSummary.formattedActive} hechos)</span>;
     } else {
@@ -169,6 +147,9 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   }
   const [isPressed, setIsPressed] = useState(false);
   const [sectionDragOverPos, setSectionDragOverPos] = useState<'top' | 'bottom' | 'inside' | null>(null);
+  // Congela el alto de la fila al entrar: si no, el propio hueco que se abre (DROP_GAP_PX)
+  // cambiaría el rect en cada evento y podría oscilar entre zonas.
+  const sectionDragOverRectRef = useRef<DOMRect | null>(null);
   const didSectionLongPressRef = useRef(false);
   const sectionTouchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -361,6 +342,9 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       className="group-header"
       draggable={!isMobile && isCustomSection && !editingSectionId}
       data-section-drag-key={data.sectionId}
+      // Solo reordenar (no anidar) necesita abrir hueco por CSS — "inside" ya lo resuelve el
+      // anillo de abajo (con el color de la sección), así que no se refleja aquí para no duplicarlo.
+      data-section-drag-over={sectionDragOverPos === 'top' || sectionDragOverPos === 'bottom' ? sectionDragOverPos : undefined}
       onDragStart={(e) => {
         if (!isCustomSection || !data.sectionId) return;
         e.stopPropagation();
@@ -405,7 +389,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           : '4px solid transparent',
         opacity: isDraggingTouchSection ? 0.35 : 1,
         touchAction: isDraggingTouchSection ? 'none' : undefined,
-        transition: 'background 0.15s ease, border-color 0.15s ease, border-radius 0.15s ease, opacity 0.15s ease'
+        transition: 'background 0.15s ease, border-color 0.15s ease, border-radius 0.15s ease, opacity 0.15s ease, margin-top 0.18s cubic-bezier(0.22,1,0.36,1), margin-bottom 0.18s cubic-bezier(0.22,1,0.36,1)'
       }}
       onClick={() => toggleCategory(data.category)}
       onClickCapture={(e) => {
@@ -420,7 +404,10 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           e.preventDefault();
           e.stopPropagation();
           e.dataTransfer.dropEffect = 'move';
-          const rect = e.currentTarget.getBoundingClientRect();
+          if (!sectionDragOverRectRef.current) {
+            sectionDragOverRectRef.current = e.currentTarget.getBoundingClientRect();
+          }
+          const rect = sectionDragOverRectRef.current;
           const relY = (e.clientY - rect.top) / rect.height;
           setSectionDragOverPos(classifyDropZone(relY));
         } else if (isCustomSection) {
@@ -429,6 +416,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         }
       }}
       onDragLeave={() => {
+        sectionDragOverRectRef.current = null;
         setSectionDragOverPos(null);
         if (isCustomSection) setDragOverSectionId(null);
       }}
@@ -436,6 +424,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         e.preventDefault();
         e.stopPropagation();
         const curDragPos = sectionDragOverPos;
+        sectionDragOverRectRef.current = null;
         setSectionDragOverPos(null);
         setDragOverSectionId(null);
 
@@ -499,16 +488,12 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         }
       }}
     >
-      {/* Drop Target Indicators for sections */}
-      {sectionDragOverPos === 'top' && (
-        <div style={{ position: 'absolute', top: -1, left: 16, right: 16, height: 2, background: 'var(--accent-primary, #007aff)', zIndex: 9999, pointerEvents: 'none' }} />
-      )}
-      {sectionDragOverPos === 'bottom' && (
-        <div style={{ position: 'absolute', bottom: -1, left: 16, right: 16, height: 2, background: 'var(--accent-primary, #007aff)', zIndex: 9999, pointerEvents: 'none' }} />
-      )}
+      {/* El hueco y la línea de "top"/"bottom" los pinta el CSS (.group-header[data-section-drag-over])
+          en polish.css, compartido con el arrastre táctil. Anidar no reordena (no hay hueco),
+          así que aquí solo un anillo fino (nunca un recuadro relleno) con el color de la sección. */}
       {sectionDragOverPos === 'inside' && (
-        <div style={{ position: 'absolute', inset: 3, borderRadius: 8, border: '2px dashed var(--accent-primary, #007aff)', background: 'rgba(0, 122, 255, 0.08)', zIndex: 9999, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 16 }}>
-          <span style={{ fontSize: '0.74rem', fontWeight: 600, color: 'var(--accent-primary)', background: 'var(--bg-elevated)', padding: '2px 8px', borderRadius: 6, boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }}>
+        <div style={{ position: 'absolute', inset: 3, borderRadius: 8, boxShadow: `inset 0 0 0 2px ${data.color || 'var(--accent-primary, #007aff)'}`, zIndex: 9999, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 16 }}>
+          <span style={{ fontSize: '0.74rem', fontWeight: 600, color: '#fff', background: data.color || 'var(--accent-primary, #007aff)', padding: '2px 8px', borderRadius: 6, boxShadow: '0 1px 4px rgba(0,0,0,0.18)' }}>
             Anidar como subsección
           </span>
         </div>
@@ -679,28 +664,9 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                 }}
                 title={tooltipText}
               >
+                {/* Solo el total: el desglose (propias vs. incluidas) va en el title, no ocupa
+                    sitio en la cabecera — igual que la duración, justo encima. */}
                 <span className="section-main-count">{count}</span>
-                {hasRoutineBreakdown && (
-                  <span 
-                    className="section-routine-breakdown"
-                    style={{ 
-                      fontSize: '0.80rem', 
-                      fontWeight: 600,
-                      display: 'inline-flex',
-                      alignItems: 'baseline',
-                      gap: 2,
-                      letterSpacing: '-0.01em',
-                      fontVariantNumeric: 'tabular-nums',
-                      opacity: 0.95
-                    }}
-                  >
-                    <span style={{ opacity: 0.35 }}>(</span>
-                    <span style={{ color: ownColor }}>{onlyCount}</span>
-                    <span style={{ opacity: 0.3, margin: '0 1px' }}> + </span>
-                    <span style={{ color: extraColor }}>{extraCount}</span>
-                    <span style={{ opacity: 0.35 }}>)</span>
-                  </span>
-                )}
               </span>
             );
           })()}

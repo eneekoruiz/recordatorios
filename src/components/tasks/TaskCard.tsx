@@ -24,7 +24,7 @@ import { TaskHabitCounter } from './card/TaskHabitCounter';
 import { TaskNoteEditor } from './card/TaskNoteEditor';
 import { getTaskPeriodicity, getSectionPeriodicity, stripPeriodicityPrefix } from '../../utils/sectionRoutine';
 import { extractPrice } from '../../utils/priceExtractor';
-import { classifyDropZone } from '../../utils/dragDrop';
+import { classifyDropZone, DROP_GAP_PX } from '../../utils/dragDrop';
 
 interface TaskCardProps {
   task: TaskItem;
@@ -513,6 +513,9 @@ export const TaskCard = React.memo(function TaskCard({
   const expirationStatus = isCaducidad ? calculateExpirationStatus(task.dueDate) : null;
 
   const [dragOverPosition, setDragOverPosition] = useState<'top' | 'bottom' | 'inside' | null>(null);
+  // Congela el alto de la fila al entrar: si se recalculase en cada evento, el propio hueco que
+  // se abre (ver DROP_GAP_PX) cambiaría el rect y podría oscilar entre zonas.
+  const dragOverRectRef = useRef<DOMRect | null>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
     if (!onReorderTasks) return;
@@ -520,7 +523,10 @@ export const TaskCard = React.memo(function TaskCard({
       e.preventDefault();
       e.stopPropagation();
       e.dataTransfer.dropEffect = 'move';
-      const rect = e.currentTarget.getBoundingClientRect();
+      if (!dragOverRectRef.current) {
+        dragOverRectRef.current = e.currentTarget.getBoundingClientRect();
+      }
+      const rect = dragOverRectRef.current;
       const relY = (e.clientY - rect.top) / rect.height;
       setDragOverPosition(classifyDropZone(relY));
     }
@@ -529,6 +535,7 @@ export const TaskCard = React.memo(function TaskCard({
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    dragOverRectRef.current = null;
     setDragOverPosition(null);
   };
 
@@ -539,6 +546,7 @@ export const TaskCard = React.memo(function TaskCard({
     const sourceId = e.dataTransfer.getData('text/task-id') || e.dataTransfer.getData('text/plain');
     const pos = dragOverPosition;
     setDragOverPosition(null);
+    dragOverRectRef.current = null;
     if (sourceId && sourceId !== task.id) {
       if (pos === 'inside') {
         nestTask(sourceId, task.id);
@@ -681,6 +689,10 @@ export const TaskCard = React.memo(function TaskCard({
     <div
       className="task-item-wrapper"
       data-task-id={task.id}
+      // Refleja el estado de arrastre de escritorio como atributo: el propio CSS (con
+      // !important, ya que ".task-item-wrapper" fuerza margin-bottom:0 en otro sitio) abre
+      // el hueco igual para ratón y para dedo — ver TOUCH DRAG-TO-REORDER en polish.css.
+      data-drag-over-pos={dragOverPosition || undefined}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -696,7 +708,11 @@ export const TaskCard = React.memo(function TaskCard({
         userSelect: 'none',
         WebkitUserSelect: 'none',
         opacity: isDraggingTouch ? 0.35 : 1,
-        transition: isDraggingTouch ? 'opacity 0.15s' : undefined,
+        transition: [
+          isDraggingTouch ? 'opacity 0.15s' : '',
+          'margin-top 0.18s cubic-bezier(0.22,1,0.36,1)',
+          'margin-bottom 0.18s cubic-bezier(0.22,1,0.36,1)'
+        ].filter(Boolean).join(', '),
       }}
       onPointerDown={(e) => {
         if (isEditingTitle || isEditingNote) return;
@@ -767,47 +783,55 @@ export const TaskCard = React.memo(function TaskCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Drop Target Indicator Line for manual reordering (Apple Reminders iOS style) */}
+      {/* El hueco (marginTop/marginBottom, arriba) ya "abre camino"; esta línea solo marca
+          el punto exacto de inserción dentro de ese hueco, con el color de la propia lista. */}
       {dragOverPosition === 'top' && (
-        <div 
+        <div
           style={{
-            position: 'absolute', top: -1.5, left: 16, right: 16, height: 3,
+            position: 'absolute', top: -DROP_GAP_PX / 2 - 1.5, left: 16, right: 16, height: 3,
             borderRadius: 999,
-            background: 'var(--accent-primary, #007aff)',
-            boxShadow: '0 0 10px rgba(0, 122, 255, 0.45)',
+            background: taskColor,
             zIndex: 9999,
             pointerEvents: 'none'
-          }} 
+          }}
         >
-          <div style={{ position: 'absolute', left: -3, top: -2, width: 7, height: 7, borderRadius: '50%', background: 'var(--accent-primary, #007aff)', boxShadow: '0 0 8px rgba(0, 122, 255, 0.6)' }} />
+          <div style={{ position: 'absolute', left: -3, top: -2, width: 7, height: 7, borderRadius: '50%', background: taskColor }} />
         </div>
       )}
       {dragOverPosition === 'bottom' && (
-        <div 
+        <div
           style={{
-            position: 'absolute', bottom: -1.5, left: 16, right: 16, height: 3,
+            position: 'absolute', bottom: -DROP_GAP_PX / 2 - 1.5, left: 16, right: 16, height: 3,
             borderRadius: 999,
-            background: 'var(--accent-primary, #007aff)',
-            boxShadow: '0 0 10px rgba(0, 122, 255, 0.45)',
+            background: taskColor,
             zIndex: 9999,
             pointerEvents: 'none'
-          }} 
+          }}
         >
-          <div style={{ position: 'absolute', left: -3, top: -2, width: 7, height: 7, borderRadius: '50%', background: 'var(--accent-primary, #007aff)', boxShadow: '0 0 8px rgba(0, 122, 255, 0.6)' }} />
+          <div style={{ position: 'absolute', left: -3, top: -2, width: 7, height: 7, borderRadius: '50%', background: taskColor }} />
         </div>
       )}
+      {/* Anidar no reordena, así que no abre hueco: solo un anillo fino sobre la propia
+          tarjeta destino (nunca un recuadro relleno) y una etiqueta que confirma el gesto. */}
       {dragOverPosition === 'inside' && (
-        <div 
+        <div
           style={{
             position: 'absolute',
             inset: 2,
             borderRadius: 12,
-            background: 'rgba(0, 122, 255, 0.10)',
-            boxShadow: 'inset 0 0 0 1.5px rgba(0, 122, 255, 0.4)',
+            boxShadow: `inset 0 0 0 2px ${taskColor}`,
             zIndex: 9999,
-            pointerEvents: 'none'
+            pointerEvents: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            paddingRight: 10
           }}
-        />
+        >
+          <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#fff', background: taskColor, padding: '2px 7px', borderRadius: 6, boxShadow: '0 1px 4px rgba(0,0,0,0.18)' }}>
+            Anidar
+          </span>
+        </div>
       )}
 
       {/* Fixed swipe action backgrounds - hidden during context menu or drag to prevent bleed-through */}

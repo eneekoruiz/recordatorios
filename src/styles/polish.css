@@ -659,8 +659,25 @@ input:focus, input:focus-visible, textarea:focus, textarea:focus-visible {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   TOUCH DRAG-TO-REORDER — Drop target indicator (iOS Apple Reminders)
+   DRAG-TO-REORDER (ratón y dedo) — el hueco "abre camino" hasta el
+   punto de soltar, en vez de superponer una línea o un recuadro sobre
+   el contenido. ".task-item-wrapper" fuerza margin-bottom:0 más abajo
+   en este mismo archivo, así que el hueco necesita !important aquí.
+   La línea/anillo de color (con el color de la lista) los pinta el
+   propio TaskCard.tsx; este bloque solo abre el espacio para ambos.
    ═══════════════════════════════════════════════════════════ */
+.task-item-wrapper[data-drag-over-pos='top'] {
+  margin-top: 14px !important;
+}
+.task-item-wrapper[data-drag-over-pos='bottom'] {
+  margin-bottom: 14px !important;
+}
+.task-item-wrapper[data-touch-drag-over='top'] {
+  margin-top: 14px !important;
+}
+.task-item-wrapper[data-touch-drag-over='bottom'] {
+  margin-bottom: 14px !important;
+}
 .task-item-wrapper[data-touch-drag-over='top']::before,
 .task-item-wrapper[data-touch-drag-over='bottom']::after {
   content: '';
@@ -670,45 +687,100 @@ input:focus, input:focus-visible, textarea:focus, textarea:focus-visible {
   height: 3px;
   border-radius: 999px;
   background: var(--accent-primary, #007aff);
-  box-shadow: 0 0 10px rgba(0, 122, 255, 0.45);
   z-index: 9999;
   pointer-events: none;
 }
-.task-item-wrapper[data-touch-drag-over='top']::before  { top: -1.5px; }
-.task-item-wrapper[data-touch-drag-over='bottom']::after { bottom: -1.5px; }
+.task-item-wrapper[data-touch-drag-over='top']::before  { top: -8.5px; }
+.task-item-wrapper[data-touch-drag-over='bottom']::after { bottom: -8.5px; }
 
 /* Bullet Apple circular en el extremo izquierdo */
 .task-item-wrapper[data-touch-drag-over='top']::after {
   content: '';
   position: absolute;
-  top: -3.5px;
+  top: -10.5px;
   left: 17px;
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: var(--accent-primary, #007aff);
-  box-shadow: 0 0 8px rgba(0, 122, 255, 0.6);
   z-index: 10000;
   pointer-events: none;
 }
 .task-item-wrapper[data-touch-drag-over='bottom']::before {
   content: '';
   position: absolute;
-  bottom: -3.5px;
+  bottom: -10.5px;
   left: 17px;
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: var(--accent-primary, #007aff);
-  box-shadow: 0 0 8px rgba(0, 122, 255, 0.6);
   z-index: 10000;
   pointer-events: none;
 }
+/* Anidar no reordena (no hay hueco): solo un anillo fino, nunca un recuadro relleno */
 .task-item-wrapper[data-touch-drag-over='inside'] {
   outline: 2px solid var(--accent-primary, #007aff) !important;
   outline-offset: -2px;
-  background: rgba(0, 122, 255, 0.12) !important;
   border-radius: 12px;
+}
+.task-item-wrapper[data-touch-drag-over='inside']::after {
+  content: 'Anidar';
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent-primary, #007aff);
+  padding: 2px 7px;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+  z-index: 10000;
+  pointer-events: none;
+}
+
+/* Mismo gesto para secciones arrastradas con el dedo (antes no tenía ningún indicador). */
+.group-header[data-section-drag-over='top'] {
+  margin-top: 24px !important;
+}
+.group-header[data-section-drag-over='bottom'] {
+  margin-bottom: 24px !important;
+}
+.group-header[data-section-drag-over='top']::before,
+.group-header[data-section-drag-over='bottom']::after {
+  content: '';
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--accent-primary, #007aff);
+  z-index: 9999;
+  pointer-events: none;
+}
+.group-header[data-section-drag-over='top']::before  { top: -13px; }
+.group-header[data-section-drag-over='bottom']::after { bottom: -13px; }
+.group-header[data-section-drag-over='inside'] {
+  box-shadow: inset 0 0 0 2px var(--accent-primary, #007aff) !important;
+  border-radius: 8px;
+}
+.group-header[data-section-drag-over='inside']::after {
+  content: 'Anidar como subsección';
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent-primary, #007aff);
+  padding: 2px 8px;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+  z-index: 10000;
+  pointer-events: none;
 }
 
 /* ==========================================================================
