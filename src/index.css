@@ -1700,6 +1700,31 @@ button:disabled {
   .app-container.mobile-sidebar .main-container {
     display: none;
   }
+
+  /* Transición de pantalla (push/pop de iOS): la lista entra desde la derecha; al volver, las listas
+     entran desde la izquierda. Tras deslizar con el dedo no se repite (la animación ya la hizo el gesto). */
+  .app-container.mobile-content .main-container {
+    animation: nav-push-in 0.26s cubic-bezier(0.25, 1, 0.5, 1) both;
+  }
+  body:not(.nav-swiped-back) .app-container.mobile-sidebar .sidebar-container {
+    animation: nav-pop-in 0.24s cubic-bezier(0.25, 1, 0.5, 1) both;
+  }
+
+  /* Deslizar desde el borde para volver: el sidebar asoma detrás de la página (efecto paralaje de iOS). */
+  body.nav-swiping .app-container.mobile-content .sidebar-container {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    transform: translateX(calc(-28% * (1 - var(--swipe-p, 0))));
+    filter: brightness(calc(0.92 + 0.08 * var(--swipe-p, 0)));
+  }
+  body.nav-swiping .app-container.mobile-content .main-container {
+    position: relative;
+    z-index: 1;
+    background: transparent;
+  }
 }
 
 /* Enforce strict layout boundaries & prevent horizontal overscroll / bounce */
@@ -1923,4 +1948,13 @@ html, body {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+@keyframes nav-push-in {
+  from { transform: translateX(34%); opacity: 0.4; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes nav-pop-in {
+  from { transform: translateX(-22%); opacity: 0.7; }
+  to { transform: none; opacity: 1; }
 }

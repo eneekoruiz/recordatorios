@@ -97,10 +97,11 @@ describe('Gestión de Ciclos Temporales y Frecuencias', () => {
       color: '#30d158'
     });
 
-    // Lista simple/checklist -> Anotar
+    // Lista simple/checklist -> Anotar, marcada como genérica (las cabeceras no pintan distintivo)
     expect(getListBadgeInfo({ id: 'l4', name: 'Ideas sueltas', color: '#ff9500', listType: 'simple' })).toEqual({
       label: 'Anotar',
-      color: 'var(--text-tertiary)'
+      color: 'var(--text-tertiary)',
+      generic: true
     });
   });
 });

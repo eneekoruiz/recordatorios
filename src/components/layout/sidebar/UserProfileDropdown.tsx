@@ -11,7 +11,9 @@ import {
   Settings, 
   BarChart, 
   LogOut,
-  Bell
+  Bell,
+  UserPlus,
+  Trash2
 } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { SoundService } from '../../../services/SoundService';
@@ -56,6 +58,8 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
   onSelectView
 }) => {
   const isSystemTheme = useAppStore((state) => state.useSystemTheme);
+  // Modo sin cuenta: no hay nada que sincronizar y «cerrar sesión» significa borrar los datos del dispositivo.
+  const isGuest = useAppStore((state) => !state.token || state.token.startsWith('local_offline'));
   const displayName = useAppStore((state) => state.displayName);
   const setDisplayName = useAppStore((state) => state.setDisplayName);
   const editName = async () => {
@@ -149,23 +153,44 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</div>
         </button>
 
+        {isGuest ? (
+          <div
+            className="ios-dropdown-item"
+            onClick={(e) => {
+              e.stopPropagation();
+              HapticService.selection();
+              onClose();
+              // Se abre la pantalla de acceso sin tocar los datos: al crear la cuenta (o entrar en una),
+              // lo que ya hay en este dispositivo se sube a ella (setToken no vacía el estado de un invitado).
+              useAppStore.setState({ token: null });
+            }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <UserPlus size={16} />
+              Crear cuenta o iniciar sesión
+            </span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>Conserva tus datos</span>
+          </div>
+        ) : (
         <div 
-          className="ios-dropdown-item"
-          onClick={(e) => { 
-            e.stopPropagation(); 
-            HapticService.selection();
-            syncManager.syncNow(true);
-          }}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
-        >
-          <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <RefreshCw size={16} style={{ animation: syncStatus === 'syncing' ? 'spin-anim 1s linear infinite' : 'none' }} /> 
-            Sincronizar ahora
-          </span>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>
-            {lastSyncedAt ? new Date(lastSyncedAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : 'Pendiente'}
-          </span>
-        </div>
+            className="ios-dropdown-item"
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              HapticService.selection();
+              syncManager.syncNow(true);
+            }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <RefreshCw size={16} style={{ animation: syncStatus === 'syncing' ? 'spin-anim 1s linear infinite' : 'none' }} /> 
+              Sincronizar ahora
+            </span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>
+              {lastSyncedAt ? new Date(lastSyncedAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : 'Pendiente'}
+            </span>
+          </div>
+        )}
         <div 
           className="ios-dropdown-item"
           onClick={(e) => { 
@@ -322,6 +347,20 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           onClick={async (e) => {
             e.stopPropagation();
             onClose();
+            if (isGuest) {
+              // Sin cuenta no hay nube: salir borra definitivamente lo de este dispositivo.
+              const ok = await confirmDialog({
+                title: '¿Borrar los datos de este dispositivo?',
+                message: 'Sin cuenta, tus recordatorios solo están aquí. Si sales, se borrarán y no se podrán recuperar. Para conservarlos, crea una cuenta.',
+                confirmText: 'Borrar y salir',
+                tone: 'danger',
+              });
+              if (!ok) return;
+              await PushService.disable().catch(() => undefined);
+              syncManager.stop();
+              useAppStore.getState().logout();
+              return;
+            }
             // Desactivar avisos push en este navegador antes de cerrar sesión para que no sigan llegando recordatorios privados
             await PushService.disable().catch(() => undefined);
             // Subir lo pendiente antes de cerrar sesión (cerrar sesión borra los datos de este dispositivo).
@@ -339,7 +378,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           }}
           style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', cursor: 'pointer' }}
         >
-          <LogOut size={16} /> Cerrar sesión
+          {isGuest ? <><Trash2 size={16} /> Borrar datos y salir</> : <><LogOut size={16} /> Cerrar sesión</>}
         </div>
       </motion.div>
     </AnimatePresence>,

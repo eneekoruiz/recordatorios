@@ -1950,14 +1950,30 @@ const CORE_CYCLES = [
     return Object.values(groupedTasks).flat();
   }, [flattenedData, isolatedSectionKey, groupedTasks]);
 
-  // Duración estimada agregada de todas las tareas visibles
+  // Todas las tareas de la vista, estén desplegadas o no. Los totales de la cabecera (número,
+  // duración, precio), la secuencia y las exportaciones se calculan sobre esto: antes usaban solo
+  // lo desplegado y cambiaban al plegar una sección (o si había alguna tarea suelta a la vista).
+  const viewTasks = useMemo(() => {
+    const source = isolatedSectionKey ? (groupedTasks[isolatedSectionKey] || []) : Object.values(groupedTasks).flat();
+    const seen = new Set<string>();
+    const out: TaskItem[] = [];
+    for (const t of source) {
+      if (t && !seen.has(t.id)) {
+        seen.add(t.id);
+        out.push(t);
+      }
+    }
+    return out.length > 0 ? out : visibleTasks;
+  }, [groupedTasks, isolatedSectionKey, visibleTasks]);
+
+  // Duración estimada agregada de todas las tareas de la vista
   const viewTasksDuration = useMemo(() => {
-    return calculateTasksDuration(visibleTasks, listSections, lists);
-  }, [visibleTasks, listSections, lists]);
+    return calculateTasksDuration(viewTasks, listSections, lists);
+  }, [viewTasks, listSections, lists]);
 
   const viewCompletedTasksDuration = useMemo(() => {
-    return calculateCompletedTasksDuration(visibleTasks, listSections, lists);
-  }, [visibleTasks, listSections, lists]);
+    return calculateCompletedTasksDuration(viewTasks, listSections, lists);
+  }, [viewTasks, listSections, lists]);
 
   const visibleIndexById = useMemo(() => new Map(visibleTasks.map((t, i) => [t.id, i])), [visibleTasks]);
 
@@ -2175,39 +2191,39 @@ const CORE_CYCLES = [
     let sum = 0;
     const taskSet = isListView && currentList
       ? Object.values(tasks).filter(t => !t.deleted_at && (t.categoryId === currentList.id || (t as any).category_id === currentList.id))
-      : visibleTasks;
+      : viewTasks;
     taskSet.forEach(t => {
       if (t.price && !isTaskCompleted(t)) {
         sum += parseTaskPrice(t.price) * (t.quantity || 1);
       }
     });
     return sum;
-  }, [visibleTasks, isListView, currentList, tasks]);
+  }, [viewTasks, isListView, currentList, tasks]);
 
   const completedCost = useMemo(() => {
     let sum = 0;
     const taskSet = isListView && currentList
       ? Object.values(tasks).filter(t => !t.deleted_at && (t.categoryId === currentList.id || (t as any).category_id === currentList.id))
-      : visibleTasks;
+      : viewTasks;
     taskSet.forEach(t => {
       if (t.price && isTaskCompleted(t)) {
         sum += parseTaskPrice(t.price) * (t.quantity || 1);
       }
     });
     return sum;
-  }, [visibleTasks, isListView, currentList, tasks]);
+  }, [viewTasks, isListView, currentList, tasks]);
 
 
   // Número del título: como en la barra lateral (lo hecho en su periodo no cuenta)
-  const titleCount = useMemo(() => new Set(visibleTasks.filter(t =>
+  const titleCount = useMemo(() => new Set(viewTasks.filter(t =>
     !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists)
-  ).map(t => t.id)).size, [visibleTasks, cycles, listSections, lists]);
-  const completedVisibleCount = useMemo(() => new Set(visibleTasks.filter(t => isTaskCompleted(t)).map(t => t.id)).size, [visibleTasks]);
+  ).map(t => t.id)).size, [viewTasks, cycles, listSections, lists]);
+  const completedVisibleCount = useMemo(() => new Set(viewTasks.filter(t => isTaskCompleted(t)).map(t => t.id)).size, [viewTasks]);
 
   const cycleBreakdown = useMemo(() => {
     if (!currentCycle || cycleViewMode !== 'full_routine') return undefined;
 
-    const pending = visibleTasks.filter(t => !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists));
+    const pending = viewTasks.filter(t => !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists));
     const groups = new Map<string, { cycleId: string; cycleName: string; color?: string; count: number; durationMinutes: number; daysValue: number }>();
 
     for (const t of pending) {
@@ -2246,7 +2262,7 @@ const CORE_CYCLES = [
       accumulatedDurationMinutes,
       details: sortedGroups
     };
-  }, [currentCycle, cycleViewMode, visibleTasks, cycles, listSections, lists]);
+  }, [currentCycle, cycleViewMode, viewTasks, cycles, listSections, lists]);
 
   // Group flattenedData into sections to enable native multi-tier CSS sticky push effect between sections
   const sectionGroups = useMemo(() => {
@@ -2345,6 +2361,22 @@ const CORE_CYCLES = [
   const parentRef = useRef<HTMLDivElement>(null);
   const scrollContentRef = useRef<HTMLDivElement>(null);
   const [needsBottomPadding, setNeedsBottomPadding] = useState(false);
+
+  // Al cambiar de lista, el contenido entra con un fundido corto (sin remontar nada: solo una
+  // animación del contenedor) y el scroll vuelve arriba, como al abrir otra lista en Recordatorios.
+  const lastViewRef = useRef(currentView);
+  useEffect(() => {
+    if (lastViewRef.current === currentView) return;
+    lastViewRef.current = currentView;
+    parentRef.current?.scrollTo({ top: 0 });
+    const el = scrollContentRef.current;
+    const reduce = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (!el || reduce || typeof el.animate !== 'function') return;
+    el.animate(
+      [{ opacity: 0 }, { opacity: 1 }],
+      { duration: 180, easing: 'cubic-bezier(0.25, 1, 0.5, 1)' }
+    );
+  }, [currentView]);
 
   // Dynamic clearance for floating dock: only add bottom padding when content naturally exceeds or approaches the viewport
   useEffect(() => {
@@ -2494,22 +2526,22 @@ const CORE_CYCLES = [
         completedCount={totalCompletedInCurrentView || completedVisibleCount}
         showProminentStartButton={isRoutine && !isShoppingList(currentView, currentList)}
         startDuration={!isShoppingList(currentView, currentList) ? viewTasksDuration?.formattedActive : undefined}
-        isStartDisabled={!visibleTasks.some(t => !isTaskCompleted(t))}
+        isStartDisabled={!viewTasks.some(t => !isTaskCompleted(t))}
         onStartSequence={onStartSequence && isRoutine && !isShoppingList(currentView, currentList) ? () => {
-          const pendingTasks = visibleTasks.filter(t => !isTaskCompleted(t));
+          const pendingTasks = viewTasks.filter(t => !isTaskCompleted(t));
           if (pendingTasks.length > 0) {
             onStartSequence(pendingTasks.map(t => t.id), getTitle(), viewColor);
           }
         } : undefined}
         onExportIcs={() => {
-          downloadIcsFile(visibleTasks, `${getTitle().toLowerCase().replace(/\s+/g, '_')}.ics`, getTitle());
+          downloadIcsFile(viewTasks, `${getTitle().toLowerCase().replace(/\s+/g, '_')}.ics`, getTitle());
           window.dispatchEvent(new CustomEvent('show-toast', { detail: `Calendario "${getTitle()}" (.ics) descargado` }));
         }}
         onExportPdf={() => {
-          const total = visibleTasks.length;
-          const completed = visibleTasks.filter(t => isTaskCompleted(t)).length;
+          const total = viewTasks.length;
+          const completed = viewTasks.filter(t => isTaskCompleted(t)).length;
           const pending = total - completed;
-          const totalCost = visibleTasks.reduce((acc, t) => acc + (t.price ? parseTaskPrice(t.price) * (t.quantity || 1) : 0), 0);
+          const totalCost = viewTasks.reduce((acc, t) => acc + (t.price ? parseTaskPrice(t.price) * (t.quantity || 1) : 0), 0);
 
           exportReportToPdf({
             title: getTitle(),
@@ -2520,7 +2552,7 @@ const CORE_CYCLES = [
               { label: 'Pendientes', value: pending },
               ...(totalCost > 0 ? [{ label: 'Coste Total', value: `${totalCost.toFixed(2)} €` }] : [])
             ],
-            items: visibleTasks.map(t => ({
+            items: viewTasks.map(t => ({
               title: t.title,
               status: t.status,
               dueDate: t.dueDate ? new Date(t.dueDate).toLocaleDateString('es-ES') : undefined,

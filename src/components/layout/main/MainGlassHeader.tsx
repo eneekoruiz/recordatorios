@@ -169,6 +169,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
         <span>{title}</span>
         {currentList && !currentList.isFolder && (() => {
           const badge = getListBadgeInfo(currentList, currentView);
+                if (badge.generic) return null;
           return (
             <span 
               className="apple-list-type-pill" 
@@ -176,8 +177,8 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                 fontSize: '0.66rem', 
                 fontWeight: 600, 
                 color: badge.color, 
-                background: `${badge.color}15`, 
-                border: `1px solid ${badge.color}30`, 
+                background: `color-mix(in srgb, ${badge.color} 9%, transparent)`, 
+                border: `1px solid color-mix(in srgb, ${badge.color} 20%, transparent)`, 
                 padding: '1px 6px', 
                 borderRadius: 999,
                 letterSpacing: '-0.01em',
