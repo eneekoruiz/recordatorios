@@ -21,7 +21,6 @@ import type { CustomList } from '../../../models/Task';
 import { confirmDialog } from '../../ui/confirmDialog';
 import { shareList, unshareList } from '../../../services/ShareService';
 import { getListIcon, getSuggestedListIconAndColor } from '../../../constants/icons';
-import { getListBadgeInfo } from '../../../utils/specialLists';
 
 // Menú contextual de escritorio: ancho suficiente para las etiquetas largas y
 // posición que nunca se sale por abajo de la ventana.
@@ -422,45 +421,20 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                 })()
               )}
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                  <span 
-                    className="title" 
-                    style={{ 
-                      color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)', 
-                      fontSize: depth > 0 ? '0.9rem' : undefined,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
-                    }}
-                    title={list.name}
-                  >
-                    {list.name}
-                  </span>
-                  {!list.isFolder && (() => {
-                    const badge = getListBadgeInfo(list, list.id);
-                    if (!badge || badge.label === 'Anotar') return null;
-                    return (
-                      <span 
-                        className="apple-sidebar-list-badge"
-                        style={{
-                          fontSize: '0.58rem',
-                          fontWeight: 500,
-                          padding: '1px 5px',
-                          borderRadius: 4,
-                          background: `${badge.color}14`,
-                          color: badge.color,
-                          opacity: 0.8,
-                          flexShrink: 0,
-                          lineHeight: 1.1,
-                          letterSpacing: '-0.01em'
-                        }}
-                        title={`Tipo de lista: ${badge.label}`}
-                      >
-                        {badge.label}
-                      </span>
-                    );
-                  })()}
-                </div>
+                <span 
+                  className="title" 
+                  style={{ 
+                    color: isActive ? 'var(--accent-primary)' : 'var(--text-primary)', 
+                    fontSize: depth > 0 ? '0.88rem' : '0.94rem',
+                    fontWeight: isActive ? 650 : 500,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}
+                  title={list.name}
+                >
+                  {list.name}
+                </span>
                 {list.isShared && <span className="subtitle">Esta lista es compartida.</span>}
               </div>
               
