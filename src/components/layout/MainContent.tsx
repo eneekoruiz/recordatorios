@@ -45,6 +45,7 @@ import { getReservedFrequencyColor } from '../../constants/colors';
 import { BatchTaskActionsBar } from '../tasks/BatchTaskActionsBar';
 import { downloadIcsFile } from '../../utils/icsExporter';
 import { exportReportToPdf } from '../../utils/pdfExport';
+import { parseTaskPrice } from '../../utils/format';
 
 interface MainContentProps {
   currentView: string;
@@ -693,192 +694,13 @@ const CORE_CYCLES = [
     [currentView, tasks, cycles, recentlyCompletedIds]
   );
 
-  // Tareas visibles en pantalla respetando el aislamiento y rutinas
-  const visibleTasks = useMemo(() => {
-    if (isolatedSectionKey) {
-      const allTasksInScope = Object.values(groupedTasks).flat();
-      const sectionPeriodicity = getSectionPeriodicity(isolatedSectionKey, undefined, listSections, lists);
-      if (sectionPeriodicity && isolatedRoutineMode === 'full_routine') {
-        const allowed = getRoutineAllowedPeriodicities(sectionPeriodicity);
-        const routineTasks = allTasksInScope.filter(t => {
-          const p = getTaskPeriodicity(t, listSections, lists);
-          return p && allowed.has(p);
-        });
-        return sortTasksByUserPreference(routineTasks, sortBy);
-      }
-      return groupedTasks[isolatedSectionKey] || [];
-    }
-    return Object.values(groupedTasks).flat();
-  }, [groupedTasks, isolatedSectionKey, isolatedRoutineMode, listSections, lists, sortBy]);
-
-  // Duración estimada agregada de todas las tareas visibles
-  const viewTasksDuration = useMemo(() => {
-    return calculateTasksDuration(visibleTasks, listSections, lists);
-  }, [visibleTasks, listSections, lists]);
-
-  const viewCompletedTasksDuration = useMemo(() => {
-    return calculateCompletedTasksDuration(visibleTasks, listSections, lists);
-  }, [visibleTasks, listSections, lists]);
-
   // Índices precalculados: evitan recorrer todas las tareas por cada fila renderizada (O(n²)).
   const parentIdsWithChildren = useMemo(() => {
     const ids = new Set<string>();
     for (const t of Object.values(tasks)) if (t.parentId && !t.deleted_at) ids.add(t.parentId);
     return ids;
   }, [tasks]);
-  const visibleIndexById = useMemo(() => new Map(visibleTasks.map((t, i) => [t.id, i])), [visibleTasks]);
 
-  // Reordenación manual de tareas
-  const handleMoveTaskUp = useCallback((taskId: string) => {
-    const idx = visibleTasks.findIndex(t => t.id === taskId);
-    if (idx <= 0) return;
-
-    if (sortBy !== 'manual') {
-      setSortBy('manual');
-    }
-
-    const reordered = [...visibleTasks];
-    const temp = reordered[idx];
-    reordered[idx] = reordered[idx - 1];
-    reordered[idx - 1] = temp;
-
-    reorderTasks(reordered.map(t => t.id));
-    HapticService.selection();
-  }, [visibleTasks, reorderTasks, sortBy]);
-
-  const handleMoveTaskDown = useCallback((taskId: string) => {
-    const idx = visibleTasks.findIndex(t => t.id === taskId);
-    if (idx < 0 || idx >= visibleTasks.length - 1) return;
-
-    if (sortBy !== 'manual') {
-      setSortBy('manual');
-    }
-
-    const reordered = [...visibleTasks];
-    const temp = reordered[idx];
-    reordered[idx] = reordered[idx + 1];
-    reordered[idx + 1] = temp;
-
-    reorderTasks(reordered.map(t => t.id));
-    HapticService.selection();
-  }, [visibleTasks, reorderTasks, sortBy]);
-
-  const handleReorderTasks = useCallback((sourceTaskId: string, targetTaskId: string, position: 'before' | 'after' = 'before') => {
-    if (sourceTaskId === targetTaskId) return;
-    const sourceIdx = visibleTasks.findIndex(t => t.id === sourceTaskId);
-    const targetIdx = visibleTasks.findIndex(t => t.id === targetTaskId);
-    if (sourceIdx === -1 || targetIdx === -1) return;
-
-    if (sortBy !== 'manual') {
-      setSortBy('manual');
-    }
-
-    const reordered = [...visibleTasks];
-    const [removed] = reordered.splice(sourceIdx, 1);
-    const newTargetIdx = reordered.findIndex(t => t.id === targetTaskId);
-    const insertIdx = position === 'after' ? newTargetIdx + 1 : newTargetIdx;
-    reordered.splice(insertIdx, 0, removed);
-
-    reorderTasks(reordered.map(t => t.id));
-    HapticService.selection();
-  }, [visibleTasks, reorderTasks, sortBy]);
-
-  const handleReorderSections = useCallback((sourceSectionId: string, targetSectionId: string, position: 'before' | 'after' = 'before') => {
-    if (sourceSectionId === targetSectionId) return;
-    const currentListSections = (listSections || []).filter(s => s.listId === currentList?.id && !s.deleted_at);
-    const sourceIdx = currentListSections.findIndex(s => s.id === sourceSectionId);
-    const targetIdx = currentListSections.findIndex(s => s.id === targetSectionId);
-    if (sourceIdx === -1 || targetIdx === -1) return;
-
-    const sourceSec = currentListSections[sourceIdx];
-    const targetSec = currentListSections[targetIdx];
-
-    const reordered = [...currentListSections];
-    const [removed] = reordered.splice(sourceIdx, 1);
-    const newTargetIdx = reordered.findIndex(s => s.id === targetSectionId);
-    const insertIdx = position === 'after' ? newTargetIdx + 1 : newTargetIdx;
-    reordered.splice(insertIdx, 0, { ...removed, parentId: targetSec.parentId });
-
-    const updates = reordered.map((s, idx) => ({ id: s.id, order: idx }));
-    reorderListSections(updates);
-    if (sourceSec.parentId !== targetSec.parentId) {
-      updateListSection(sourceSec.id, { parentId: targetSec.parentId });
-    }
-    HapticService.selection();
-  }, [listSections, currentList?.id, reorderListSections, updateListSection]);
-
-  // Calcular Resumen Financiero Total
-  const totalCost = useMemo(() => {
-    let sum = 0;
-    visibleTasks.forEach(t => {
-      if (t.price && !isTaskCompleted(t)) {
-        sum += (Number(t.price) || 0) * (t.quantity || 1);
-      }
-    });
-    return sum;
-  }, [visibleTasks]);
-
-  const completedCost = useMemo(() => {
-    let sum = 0;
-    visibleTasks.forEach(t => {
-      if (t.price && isTaskCompleted(t)) {
-        sum += (Number(t.price) || 0) * (t.quantity || 1);
-      }
-    });
-    return sum;
-  }, [visibleTasks]);
-
-  // Por tareas distintas: en «Por personas» una entrada con dos personas aparece dos veces.
-  const activeVisibleCount = useMemo(() => new Set(visibleTasks.filter(t => !isTaskCompleted(t)).map(t => t.id)).size, [visibleTasks]);
-  // Número del título: como en la barra lateral (lo hecho en su periodo no cuenta)
-  const titleCount = useMemo(() => new Set(visibleTasks.filter(t =>
-    !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists)
-  ).map(t => t.id)).size, [visibleTasks, cycles, listSections, lists]);
-  const completedVisibleCount = useMemo(() => new Set(visibleTasks.filter(t => isTaskCompleted(t)).map(t => t.id)).size, [visibleTasks]);
-
-  const cycleBreakdown = useMemo(() => {
-    if (!currentCycle || cycleViewMode !== 'full_routine') return undefined;
-
-    const pending = visibleTasks.filter(t => !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists));
-    const groups = new Map<string, { cycleId: string; cycleName: string; color?: string; count: number; durationMinutes: number; daysValue: number }>();
-
-    for (const t of pending) {
-      const effId = getEffectiveCycleId(t, listSections, lists) || t.cycle_id || currentCycle.id;
-      const cycleObj = cycles.find(c => c.id === effId);
-      const cycleName = cycleObj?.name || (effId === 'cycle_day' ? 'Diarias' : effId === 'cycle_week' ? 'Semanales' : effId === 'cycle_month' ? 'Mensuales' : effId === 'cycle_year' ? 'Anuales' : 'Otras');
-      const color = cycleObj?.color || (effId === 'cycle_day' ? '#ff9500' : effId === 'cycle_week' ? '#007aff' : effId === 'cycle_month' ? '#af52de' : effId === 'cycle_year' ? '#34c759' : undefined);
-      const daysVal = cycleObj?.daysValue || (effId === 'cycle_day' ? 1 : effId === 'cycle_week' ? 7 : effId === 'cycle_month' ? 30 : effId === 'cycle_year' ? 365 : 999);
-
-      const dur = getTaskDuration(t, listSections, lists).activeMinutes;
-      const current = groups.get(effId) || { cycleId: effId, cycleName, color, count: 0, durationMinutes: 0, daysValue: daysVal };
-      current.count += 1;
-      current.durationMinutes += dur;
-      groups.set(effId, current);
-    }
-
-    const own = groups.get(currentCycle.id) || { cycleId: currentCycle.id, cycleName: currentCycle.name, color: currentCycle.color, count: 0, durationMinutes: 0, daysValue: currentCycle.daysValue };
-    let accumulatedCount = 0;
-    let accumulatedDurationMinutes = 0;
-
-    const sortedGroups = Array.from(groups.values()).sort((a, b) => b.daysValue - a.daysValue);
-
-    for (const grp of sortedGroups) {
-      if (grp.cycleId !== currentCycle.id) {
-        accumulatedCount += grp.count;
-        accumulatedDurationMinutes += grp.durationMinutes;
-      }
-    }
-
-    if (accumulatedCount === 0) return undefined;
-
-    return {
-      ownCount: own.count,
-      accumulatedCount,
-      ownDurationMinutes: own.durationMinutes,
-      accumulatedDurationMinutes,
-      details: sortedGroups
-    };
-  }, [currentCycle, cycleViewMode, visibleTasks, cycles, listSections, lists]);
 
   const flashbackMemories = useMemo(() => 
     isQueHeHechoList(currentView, currentList) ? findFlashbackMemories(allTasksArray) : [], 
@@ -996,7 +818,8 @@ const CORE_CYCLES = [
           setRecentlyCompletedIds(prev => prev.filter(x => x !== taskId));
         }, 3000);
 
-        if (activeVisibleCount === 1) {
+        const remainingActive = Object.values(tasks).filter((t: any) => !t.deleted_at && !isTaskCompleted(t)).length;
+        if (remainingActive === 1) {
           setShowCelebration(true);
           SoundService.playComplete();
           HapticService.notification('success');
@@ -1012,7 +835,7 @@ const CORE_CYCLES = [
       }
     }
     toggleTask(taskId, forceReverse);
-  }, [tasks, cycles, lists, listSections, toggleTask, activeVisibleCount]);
+  }, [tasks, cycles, lists, listSections, toggleTask]);
 
   const handleDeleteTask = useCallback((taskId: string) => {
     const task = tasks[taskId];
@@ -2081,6 +1904,194 @@ const CORE_CYCLES = [
     return { flattenedData: flat, renderedSectionTasks: sectionTasksByKey };
   }, [groupedTasks, currentView, currentCycle, cycleViewMode, collapsed, isListView, lists, listSections, cycles, currentList, listSectionFilter, sortBy, isCatCollapsed, isolatedSectionKey, sectionRoutineModes, cycleRoutineCounts]);
 
+  // Tareas visibles en pantalla respetando el orden visual exacto de renderizado
+  const visibleTasks = useMemo(() => {
+    const fromFlat: TaskItem[] = [];
+    const seen = new Set<string>();
+    for (const item of flattenedData) {
+      if (item.type === 'task' && !seen.has(item.task.id)) {
+        seen.add(item.task.id);
+        fromFlat.push(item.task);
+      }
+    }
+    if (fromFlat.length > 0) return fromFlat;
+    if (isolatedSectionKey) {
+      return groupedTasks[isolatedSectionKey] || [];
+    }
+    return Object.values(groupedTasks).flat();
+  }, [flattenedData, isolatedSectionKey, groupedTasks]);
+
+  // Duración estimada agregada de todas las tareas visibles
+  const viewTasksDuration = useMemo(() => {
+    return calculateTasksDuration(visibleTasks, listSections, lists);
+  }, [visibleTasks, listSections, lists]);
+
+  const viewCompletedTasksDuration = useMemo(() => {
+    return calculateCompletedTasksDuration(visibleTasks, listSections, lists);
+  }, [visibleTasks, listSections, lists]);
+
+  const visibleIndexById = useMemo(() => new Map(visibleTasks.map((t, i) => [t.id, i])), [visibleTasks]);
+
+  // Reordenación manual de tareas
+  const handleMoveTaskUp = useCallback((taskId: string) => {
+    const idx = visibleTasks.findIndex(t => t.id === taskId);
+    if (idx <= 0) return;
+
+    if (sortBy !== 'manual') {
+      setSortBy('manual');
+    }
+
+    const reordered = [...visibleTasks];
+    const temp = reordered[idx];
+    reordered[idx] = reordered[idx - 1];
+    reordered[idx - 1] = temp;
+
+    reorderTasks(reordered.map(t => t.id));
+    HapticService.selection();
+  }, [visibleTasks, reorderTasks, sortBy]);
+
+  const handleMoveTaskDown = useCallback((taskId: string) => {
+    const idx = visibleTasks.findIndex(t => t.id === taskId);
+    if (idx < 0 || idx >= visibleTasks.length - 1) return;
+
+    if (sortBy !== 'manual') {
+      setSortBy('manual');
+    }
+
+    const reordered = [...visibleTasks];
+    const temp = reordered[idx];
+    reordered[idx] = reordered[idx + 1];
+    reordered[idx + 1] = temp;
+
+    reorderTasks(reordered.map(t => t.id));
+    HapticService.selection();
+  }, [visibleTasks, reorderTasks, sortBy]);
+
+  const handleReorderTasks = useCallback((sourceTaskId: string, targetTaskId: string, position: 'before' | 'after' = 'before') => {
+    if (sourceTaskId === targetTaskId) return;
+    const sourceIdx = visibleTasks.findIndex(t => t.id === sourceTaskId);
+    const targetIdx = visibleTasks.findIndex(t => t.id === targetTaskId);
+    if (sourceIdx === -1 || targetIdx === -1) return;
+
+    if (sortBy !== 'manual') {
+      setSortBy('manual');
+    }
+
+    const reordered = [...visibleTasks];
+    const [removed] = reordered.splice(sourceIdx, 1);
+    const newTargetIdx = reordered.findIndex(t => t.id === targetTaskId);
+    const insertIdx = position === 'after' ? newTargetIdx + 1 : newTargetIdx;
+    reordered.splice(insertIdx, 0, removed);
+
+    reorderTasks(reordered.map(t => t.id));
+    HapticService.selection();
+  }, [visibleTasks, reorderTasks, sortBy]);
+
+  const handleReorderSections = useCallback((sourceSectionId: string, targetSectionId: string, position: 'before' | 'after' = 'before') => {
+    if (sourceSectionId === targetSectionId) return;
+    const currentListSections = (listSections || [])
+      .filter(s => s.listId === currentList?.id && !s.deleted_at)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+    const sourceIdx = currentListSections.findIndex(s => s.id === sourceSectionId);
+    const targetIdx = currentListSections.findIndex(s => s.id === targetSectionId);
+    if (sourceIdx === -1 || targetIdx === -1) return;
+
+    const sourceSec = currentListSections[sourceIdx];
+    const targetSec = currentListSections[targetIdx];
+
+    const reordered = [...currentListSections];
+    const [removed] = reordered.splice(sourceIdx, 1);
+    const newTargetIdx = reordered.findIndex(s => s.id === targetSectionId);
+    const insertIdx = position === 'after' ? newTargetIdx + 1 : newTargetIdx;
+    reordered.splice(insertIdx, 0, { ...removed, parentId: targetSec.parentId });
+
+    const updates = reordered.map((s, idx) => ({ id: s.id, order: idx }));
+    reorderListSections(updates);
+    if (sourceSec.parentId !== targetSec.parentId) {
+      updateListSection(sourceSec.id, { parentId: targetSec.parentId });
+    }
+    HapticService.selection();
+  }, [listSections, currentList?.id, reorderListSections, updateListSection]);
+
+  // Calcular Resumen Financiero Total
+  const totalCost = useMemo(() => {
+    let sum = 0;
+    const taskSet = isListView && currentList
+      ? Object.values(tasks).filter(t => !t.deleted_at && (t.categoryId === currentList.id || (t as any).category_id === currentList.id))
+      : visibleTasks;
+    taskSet.forEach(t => {
+      if (t.price && !isTaskCompleted(t)) {
+        sum += parseTaskPrice(t.price) * (t.quantity || 1);
+      }
+    });
+    return sum;
+  }, [visibleTasks, isListView, currentList, tasks]);
+
+  const completedCost = useMemo(() => {
+    let sum = 0;
+    const taskSet = isListView && currentList
+      ? Object.values(tasks).filter(t => !t.deleted_at && (t.categoryId === currentList.id || (t as any).category_id === currentList.id))
+      : visibleTasks;
+    taskSet.forEach(t => {
+      if (t.price && isTaskCompleted(t)) {
+        sum += parseTaskPrice(t.price) * (t.quantity || 1);
+      }
+    });
+    return sum;
+  }, [visibleTasks, isListView, currentList, tasks]);
+
+
+  // Número del título: como en la barra lateral (lo hecho en su periodo no cuenta)
+  const titleCount = useMemo(() => new Set(visibleTasks.filter(t =>
+    !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists)
+  ).map(t => t.id)).size, [visibleTasks, cycles, listSections, lists]);
+  const completedVisibleCount = useMemo(() => new Set(visibleTasks.filter(t => isTaskCompleted(t)).map(t => t.id)).size, [visibleTasks]);
+
+  const cycleBreakdown = useMemo(() => {
+    if (!currentCycle || cycleViewMode !== 'full_routine') return undefined;
+
+    const pending = visibleTasks.filter(t => !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists));
+    const groups = new Map<string, { cycleId: string; cycleName: string; color?: string; count: number; durationMinutes: number; daysValue: number }>();
+
+    for (const t of pending) {
+      const effId = getEffectiveCycleId(t, listSections, lists) || t.cycle_id || currentCycle.id;
+      const cycleObj = cycles.find(c => c.id === effId);
+      const cycleName = cycleObj?.name || (effId === 'cycle_day' ? 'Diarias' : effId === 'cycle_week' ? 'Semanales' : effId === 'cycle_month' ? 'Mensuales' : effId === 'cycle_year' ? 'Anuales' : 'Otras');
+      const color = cycleObj?.color || (effId === 'cycle_day' ? '#ff9500' : effId === 'cycle_week' ? '#007aff' : effId === 'cycle_month' ? '#af52de' : effId === 'cycle_year' ? '#34c759' : undefined);
+      const daysVal = cycleObj?.daysValue || (effId === 'cycle_day' ? 1 : effId === 'cycle_week' ? 7 : effId === 'cycle_month' ? 30 : effId === 'cycle_year' ? 365 : 999);
+
+      const dur = getTaskDuration(t, listSections, lists).activeMinutes;
+      const current = groups.get(effId) || { cycleId: effId, cycleName, color, count: 0, durationMinutes: 0, daysValue: daysVal };
+      current.count += 1;
+      current.durationMinutes += dur;
+      groups.set(effId, current);
+    }
+
+    const own = groups.get(currentCycle.id) || { cycleId: currentCycle.id, cycleName: currentCycle.name, color: currentCycle.color, count: 0, durationMinutes: 0, daysValue: currentCycle.daysValue };
+    let accumulatedCount = 0;
+    let accumulatedDurationMinutes = 0;
+
+    const sortedGroups = Array.from(groups.values()).sort((a, b) => b.daysValue - a.daysValue);
+
+    for (const grp of sortedGroups) {
+      if (grp.cycleId !== currentCycle.id) {
+        accumulatedCount += grp.count;
+        accumulatedDurationMinutes += grp.durationMinutes;
+      }
+    }
+
+    if (accumulatedCount === 0) return undefined;
+
+    return {
+      ownCount: own.count,
+      accumulatedCount,
+      ownDurationMinutes: own.durationMinutes,
+      accumulatedDurationMinutes,
+      details: sortedGroups
+    };
+  }, [currentCycle, cycleViewMode, visibleTasks, cycles, listSections, lists]);
+
   // Group flattenedData into sections to enable native multi-tier CSS sticky push effect between sections
   const sectionGroups = useMemo(() => {
     interface SubSectionGroup {
@@ -2342,7 +2353,7 @@ const CORE_CYCLES = [
           const total = visibleTasks.length;
           const completed = visibleTasks.filter(t => isTaskCompleted(t)).length;
           const pending = total - completed;
-          const totalCost = visibleTasks.reduce((acc, t) => acc + (t.price || 0), 0);
+          const totalCost = visibleTasks.reduce((acc, t) => acc + (t.price ? parseTaskPrice(t.price) * (t.quantity || 1) : 0), 0);
 
           exportReportToPdf({
             title: getTitle(),
@@ -2487,8 +2498,8 @@ const CORE_CYCLES = [
 
                     const showDivider = index > 0 && flattenedData[index - 1]?.type !== 'page-header';
                     const sectionTasks = (data.category ? renderedSectionTasks[data.category] : null) || groupedTasks[data.category] || [];
-                    const sectionTotal = sectionTasks.reduce((sum, t) => sum + (t.price && !isTaskCompleted(t) ? (Number(t.price) || 0) * (t.quantity || 1) : 0), 0);
-                    const sectionCompletedTotal = sectionTasks.reduce((sum, t) => sum + (t.price && isTaskCompleted(t) ? (Number(t.price) || 0) * (t.quantity || 1) : 0), 0);
+                    const sectionTotal = sectionTasks.reduce((sum, t) => sum + (t.price && !isTaskCompleted(t) ? parseTaskPrice(t.price) * (t.quantity || 1) : 0), 0);
+                    const sectionCompletedTotal = sectionTasks.reduce((sum, t) => sum + (t.price && isTaskCompleted(t) ? parseTaskPrice(t.price) * (t.quantity || 1) : 0), 0);
                     const sectionPendingTaskIds = data.sectionTaskIds || sectionTasks.filter(t => !isTaskCompleted(t)).map(t => t.id);
                     const tasksForSection = data.sectionTaskIds && data.sectionTaskIds.length > 0
                       ? data.sectionTaskIds.map((id: string) => tasks[id]).filter(Boolean)

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Play, Pause, CheckCircle, SkipForward, Clock, ArrowRight,
   Sparkles, CloudRain, Waves, Volume2, VolumeX, ListChecks,
-  Zap, Share, Headphones
+  Zap, Share, Headphones, Plus
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { SoundService } from '../../services/SoundService';
@@ -815,19 +815,106 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                 </div>
               )}
 
-              {/* Adjust duration trigger */}
-              <button
-                onClick={() => setShowDurationPicker(true)}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 5,
-                  background: 'transparent', border: 'none',
-                  color: isDark ? 'rgba(255,255,255,0.45)' : 'var(--text-tertiary, #8e8e93)',
-                  fontSize: '0.76rem', fontWeight: 500, cursor: 'pointer',
-                  marginBottom: 10
-                }}
-              >
-                <Clock size={12} /> Ajustar tiempo ({formatDuration(initialDuration / 60)})
-              </button>
+              {/* Controles para alargar / dar más tiempo */}
+              {initialDuration > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      HapticService.selection();
+                      setTimeLeft(prev => prev + 60);
+                      setInitialDuration(prev => Math.max(prev, (timeLeft || 0) + 60));
+                    }}
+                    style={{
+                      padding: '4px 12px',
+                      borderRadius: 999,
+                      background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                      border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
+                      color: primaryText,
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      transition: 'all 0.15s ease'
+                    }}
+                    title="Añadir 1 minuto más a esta tarea"
+                  >
+                    <Plus size={12} strokeWidth={2.6} /> 1 min
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      HapticService.selection();
+                      setTimeLeft(prev => prev + 300);
+                      setInitialDuration(prev => Math.max(prev, (timeLeft || 0) + 300));
+                    }}
+                    style={{
+                      padding: '4px 12px',
+                      borderRadius: 999,
+                      background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                      border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
+                      color: primaryText,
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      transition: 'all 0.15s ease'
+                    }}
+                    title="Añadir 5 minutos más a esta tarea"
+                  >
+                    <Plus size={12} strokeWidth={2.6} /> 5 min
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      HapticService.selection();
+                      setTimeLeft(prev => prev + 600);
+                      setInitialDuration(prev => Math.max(prev, (timeLeft || 0) + 600));
+                      if (!isActive) setIsActive(true);
+                    }}
+                    style={{
+                      padding: '4px 12px',
+                      borderRadius: 999,
+                      background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                      border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
+                      color: primaryText,
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      transition: 'all 0.15s ease'
+                    }}
+                    title="Añadir 10 minutos más a esta tarea"
+                  >
+                    <Plus size={12} strokeWidth={2.6} /> 10 min
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowDurationPicker(true)}
+                    style={{
+                      padding: '4px 12px',
+                      borderRadius: 999,
+                      background: 'transparent',
+                      border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.06)',
+                      color: isDark ? 'rgba(255,255,255,0.5)' : 'var(--text-tertiary, #8e8e93)',
+                      fontSize: '0.76rem',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4
+                    }}
+                  >
+                    <Clock size={12} /> Ajustar ({formatDuration(initialDuration / 60)})
+                  </button>
+                </div>
+              )}
 
               {/* Ambient sound dock */}
               <div style={{

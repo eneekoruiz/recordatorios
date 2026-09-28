@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Play, Pause, CheckCircle, X, Sparkles, CloudRain, Waves, 
-  Headphones, Volume2, VolumeX, Clock, ArrowRight 
+  Headphones, Volume2, VolumeX, Clock, ArrowRight, Plus 
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { SoundService } from '../../services/SoundService';
+import { HapticService } from '../../services/HapticService';
 
 interface ZenModeProps {
   taskId: string | null;
@@ -400,6 +401,107 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   {isActive ? <><Pause size={12} fill={isDark ? "white" : "currentColor"} /> EN PROGRESO</> : <><Play size={12} fill="white" style={{ marginLeft: 2 }} /> REANUDAR</>}
                 </div>
               </div>
+            </div>
+
+            {/* Botones para alargar tiempo durante la tarea */}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', marginBottom: 18 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  HapticService.selection();
+                  setTimeLeft(prev => prev + 60);
+                  setInitialDuration(prev => Math.max(prev, (timeLeft || 0) + 60));
+                  if (!isActive) setIsActive(true);
+                }}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: 999,
+                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
+                  color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  transition: 'all 0.15s ease'
+                }}
+                title="Añadir 1 minuto más a esta tarea"
+              >
+                <Plus size={12} strokeWidth={2.6} /> 1 min
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  HapticService.selection();
+                  setTimeLeft(prev => prev + 300);
+                  setInitialDuration(prev => Math.max(prev, (timeLeft || 0) + 300));
+                  if (!isActive) setIsActive(true);
+                }}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: 999,
+                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
+                  color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  transition: 'all 0.15s ease'
+                }}
+                title="Añadir 5 minutos más a esta tarea"
+              >
+                <Plus size={12} strokeWidth={2.6} /> 5 min
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  HapticService.selection();
+                  setTimeLeft(prev => prev + 600);
+                  setInitialDuration(prev => Math.max(prev, (timeLeft || 0) + 600));
+                  if (!isActive) setIsActive(true);
+                }}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: 999,
+                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
+                  color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  transition: 'all 0.15s ease'
+                }}
+                title="Añadir 10 minutos más a esta tarea"
+              >
+                <Plus size={12} strokeWidth={2.6} /> 10 min
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowDurationPrompt(true)}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: 999,
+                  background: 'transparent',
+                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
+                  color: mutedText,
+                  fontSize: '0.78rem',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4
+                }}
+              >
+                <Clock size={12} /> Ajustar
+              </button>
             </div>
 
             {/* --- SECCIÓN DE SONIDO AMBIENTAL VISIBLE Y MEJORADA --- */}

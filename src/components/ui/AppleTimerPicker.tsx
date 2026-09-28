@@ -14,7 +14,7 @@ interface AppleTimerPickerProps {
 export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
   duration,
   onChange,
-  isRoutineCategory = false,
+  isRoutineCategory: _isRoutineCategory = false,
   label,
   sublabel,
   isParallel = false
@@ -45,55 +45,101 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
   const commitChanges = useCallback((newH: number, newM: number, newS: number) => {
     const totalSec = newH * 3600 + newM * 60 + newS;
     if (totalSec <= 0) {
-      onChange('');
+      onChange(0);
     } else {
       // Minutos exactos (1 min 7 s = 67/60): redondear a décimas perdía segundos al volver.
       onChange(totalSec / 60);
     }
   }, [onChange]);
 
-  const updateHours = (delta: number) => {
+  const updateHours = useCallback((delta: number) => {
     HapticService.selection();
-    const next = Math.max(0, Math.min(23, hours + delta));
-    setHours(next);
-    commitChanges(next, minutes, seconds);
-  };
+    setHours(prev => {
+      const next = Math.max(0, Math.min(23, prev + delta));
+      commitChanges(next, minutes, seconds);
+      return next;
+    });
+  }, [commitChanges, minutes, seconds]);
 
-  const updateMinutes = (delta: number) => {
+  const updateMinutes = useCallback((delta: number) => {
     HapticService.selection();
-    let next = minutes + delta;
-    let nextH = hours;
-    if (next >= 60) {
-      next = 0;
-      if (nextH < 23) nextH += 1;
-    } else if (next < 0) {
-      next = 59;
-      if (nextH > 0) nextH -= 1;
-    }
-    setHours(nextH);
-    setMinutes(next);
-    commitChanges(nextH, next, seconds);
-  };
+    setMinutes(prev => {
+      let next = prev + delta;
+      let nextH = hours;
+      while (next >= 60) {
+        next -= 60;
+        if (nextH < 23) nextH += 1;
+      }
+      while (next < 0) {
+        next += 60;
+        if (nextH > 0) nextH -= 1;
+      }
+      setHours(nextH);
+      commitChanges(nextH, next, seconds);
+      return next;
+    });
+  }, [commitChanges, hours, seconds]);
 
-  const updateSeconds = (delta: number) => {
+  const updateSeconds = useCallback((delta: number) => {
     HapticService.selection();
-    let next = seconds + delta;
-    let nextM = minutes;
-    let nextH = hours;
-    if (next >= 60) {
-      next = 0;
-      if (nextM < 59) nextM += 1;
-      else if (nextH < 23) { nextM = 0; nextH += 1; }
-    } else if (next < 0) {
-      next = 59;
-      if (nextM > 0) nextM -= 1;
-      else if (nextH > 0) { nextM = 59; nextH -= 1; }
-    }
-    setHours(nextH);
-    setMinutes(nextM);
-    setSeconds(next);
-    commitChanges(nextH, nextM, next);
-  };
+    setSeconds(prev => {
+      let next = prev + delta;
+      let nextM = minutes;
+      let nextH = hours;
+      while (next >= 60) {
+        next -= 60;
+        if (nextM < 59) nextM += 1;
+        else if (nextH < 23) { nextM = 0; nextH += 1; }
+      }
+      while (next < 0) {
+        next += 60;
+        if (nextM > 0) nextM -= 1;
+        else if (nextH > 0) { nextM = 59; nextH -= 1; }
+      }
+      setHours(nextH);
+      setMinutes(nextM);
+      commitChanges(nextH, nextM, next);
+      return next;
+    });
+  }, [commitChanges, hours, minutes]);
+
+  // Accelerating stepper for rapid clicks and hold down
+  const holdIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const holdTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const holdTicksRef = React.useRef(0);
+
+  const stopHold = useCallback(() => {
+    if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current);
+    if (holdIntervalRef.current) clearInterval(holdIntervalRef.current);
+    holdTimeoutRef.current = null;
+    holdIntervalRef.current = null;
+    holdTicksRef.current = 0;
+  }, []);
+
+  const startHold = useCallback((type: 'hours' | 'minutes' | 'seconds', direction: 1 | -1) => {
+    stopHold();
+    if (type === 'hours') updateHours(direction);
+    else if (type === 'minutes') updateMinutes(direction);
+    else updateSeconds(direction);
+
+    holdTicksRef.current = 0;
+    holdTimeoutRef.current = setTimeout(() => {
+      holdIntervalRef.current = setInterval(() => {
+        holdTicksRef.current += 1;
+        const ticks = holdTicksRef.current;
+        let step = 1;
+        if (type !== 'hours') {
+          if (ticks > 24) step = 10;
+          else if (ticks > 12) step = 5;
+          else if (ticks > 5) step = 2;
+        }
+        const delta = direction * step;
+        if (type === 'hours') updateHours(delta);
+        else if (type === 'minutes') updateMinutes(delta);
+        else updateSeconds(delta);
+      }, 75);
+    }, 300);
+  }, [updateHours, updateMinutes, updateSeconds, stopHold]);
 
   const applyPreset = (mins: number, secs: number = 0) => {
     HapticService.selection();
@@ -104,7 +150,7 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
     setSeconds(secs);
     const totalSec = h * 3600 + m * 60 + secs;
     if (totalSec <= 0) {
-      onChange('');
+      onChange(0);
     } else {
       onChange(totalSec / 60);
     }
@@ -115,14 +161,14 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
     setHours(0);
     setMinutes(0);
     setSeconds(0);
-    onChange('');
+    onChange(0);
   };
 
-  const isConfigured = (hours > 0 || minutes > 0 || seconds > 0);
+  const isConfigured = (hours > 0 || minutes > 0 || seconds > 0) && duration !== 0;
 
   // Formatted string: e.g. "1 h 30 min"
   const formattedDisplay = (() => {
-    if (!isConfigured) return isRoutineCategory ? 'Automático' : 'Sin duración';
+    if (!isConfigured || duration === 0) return 'Sin duración';
     const parts: string[] = [];
     if (hours > 0) parts.push(`${hours} h`);
     if (minutes > 0 || (hours === 0 && seconds === 0)) parts.push(`${minutes} min`);
@@ -192,7 +238,10 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
           <button
             type="button"
-            onClick={() => updateHours(1)}
+            onPointerDown={() => startHold('hours', 1)}
+            onPointerUp={stopHold}
+            onPointerLeave={stopHold}
+            onPointerCancel={stopHold}
             aria-label="Aumentar horas"
             style={{
               background: 'transparent',
@@ -241,7 +290,10 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
           </div>
           <button
             type="button"
-            onClick={() => updateHours(-1)}
+            onPointerDown={() => hours > 0 && startHold('hours', -1)}
+            onPointerUp={stopHold}
+            onPointerLeave={stopHold}
+            onPointerCancel={stopHold}
             disabled={hours <= 0}
             aria-label="Disminuir horas"
             style={{
@@ -264,7 +316,10 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, borderLeft: '1px solid var(--border-subtle)', borderRight: '1px solid var(--border-subtle)' }}>
           <button
             type="button"
-            onClick={() => updateMinutes(1)}
+            onPointerDown={() => startHold('minutes', 1)}
+            onPointerUp={stopHold}
+            onPointerLeave={stopHold}
+            onPointerCancel={stopHold}
             aria-label="Aumentar minutos"
             style={{
               background: 'transparent',
@@ -313,7 +368,10 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
           </div>
           <button
             type="button"
-            onClick={() => updateMinutes(-1)}
+            onPointerDown={() => (hours > 0 || minutes > 0) && startHold('minutes', -1)}
+            onPointerUp={stopHold}
+            onPointerLeave={stopHold}
+            onPointerCancel={stopHold}
             disabled={hours === 0 && minutes <= 0}
             aria-label="Disminuir minutos"
             style={{
@@ -336,7 +394,10 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
           <button
             type="button"
-            onClick={() => updateSeconds(1)}
+            onPointerDown={() => startHold('seconds', 1)}
+            onPointerUp={stopHold}
+            onPointerLeave={stopHold}
+            onPointerCancel={stopHold}
             aria-label="Aumentar segundos"
             style={{
               background: 'transparent',
@@ -385,7 +446,10 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
           </div>
           <button
             type="button"
-            onClick={() => updateSeconds(-1)}
+            onPointerDown={() => (hours > 0 || minutes > 0 || seconds > 0) && startHold('seconds', -1)}
+            onPointerUp={stopHold}
+            onPointerLeave={stopHold}
+            onPointerCancel={stopHold}
             disabled={hours === 0 && minutes === 0 && seconds <= 0}
             aria-label="Disminuir segundos"
             style={{
@@ -407,6 +471,23 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
 
       {/* Botones rápidos de preajuste estilo iOS */}
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+        <button
+          type="button"
+          onClick={clearDuration}
+          style={{
+            padding: '4px 10px',
+            borderRadius: 999,
+            fontSize: '0.76rem',
+            fontWeight: duration === 0 ? 700 : 500,
+            border: duration === 0 ? '1px solid var(--accent-red, #ff3b30)' : '1px solid var(--border-subtle)',
+            background: duration === 0 ? 'rgba(255, 59, 48, 0.14)' : 'var(--bg-card, rgba(0,0,0,0.03))',
+            color: duration === 0 ? 'var(--accent-red, #ff3b30)' : 'var(--text-secondary)',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease'
+          }}
+        >
+          Sin duración
+        </button>
         {(isParallel ? [
           { label: '20s', mins: 0, secs: 20 },
           { label: '30s', mins: 0, secs: 30 },

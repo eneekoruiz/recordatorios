@@ -171,18 +171,18 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   return (
     <aside className="sidebar" onScroll={() => window.dispatchEvent(new Event('close-list-menus'))}>
       {/* 1 & 2. STICKY HEADER: COLLAPSIBLE CIRCULAR SEARCH + USER PROFILE */}
-      <div className="sidebar-header" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '14px 18px 10px', width: '100%', boxSizing: 'border-box' }}>
+      <div className="sidebar-header" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'space-between', gap: 6, padding: '14px 14px 10px', width: '100%', boxSizing: 'border-box' }}>
         {!isSearchExpanded ? (
           <>
             {/* Header Title / Logo */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-              <span style={{ fontSize: '1.28rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', minWidth: 0, flex: 1, overflow: 'hidden' }}>
+              <span style={{ fontSize: '1.20rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 Recordatorios
               </span>
             </div>
 
             {/* Actions: Editar + Circular Search Button + Profile Button */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
               <button
                 type="button"
                 className="apple-nav-text-btn"
@@ -191,10 +191,10 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 style={{
                   background: 'transparent',
                   border: 'none',
-                  padding: '6px 4px',
-                  minHeight: 44,
+                  padding: '4px 4px',
+                  minHeight: 32,
                   color: 'var(--accent-primary)',
-                  fontSize: '1rem',
+                  fontSize: '0.96rem',
                   fontWeight: isEditMode ? 600 : 400,
                   cursor: 'pointer'
                 }}
@@ -209,8 +209,8 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                   setIsSearchExpanded(true);
                 }}
                 style={{
-                  width: 34,
-                  height: 34,
+                  width: 32,
+                  height: 32,
                   borderRadius: '50%',
                   background: 'var(--bg-elevated)',
                   border: '1px solid var(--border-subtle)',
@@ -225,7 +225,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 title="Buscar (⌘K)"
                 aria-label="Buscar"
               >
-                <Search size={16} style={{ flexShrink: 0 }} />
+                <Search size={15} style={{ flexShrink: 0 }} />
               </button>
 
               <div 
@@ -248,8 +248,8 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               >
                 <div style={{ position: 'relative' }}>
                   <div className="avatar" style={{
-                    width: 34,
-                    height: 34,
+                    width: 32,
+                    height: 32,
                     borderRadius: '50%',
                     background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-purple))',
                     color: 'white',
@@ -257,7 +257,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontWeight: 700,
-                    fontSize: '0.84rem',
+                    fontSize: '0.82rem',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.12)'
                   }}>
                     {avatarInitial}
@@ -267,8 +267,8 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                     position: 'absolute',
                     bottom: -1,
                     right: -1,
-                    width: 9,
-                    height: 9,
+                    width: 8,
+                    height: 8,
                     borderRadius: '50%',
                     background: syncStatus === 'synced' ? '#34c759' : syncStatus === 'syncing' ? '#0a84ff' : syncStatus === 'error' ? '#ff3b30' : '#8e8e93',
                     border: '2px solid var(--bg-base)'

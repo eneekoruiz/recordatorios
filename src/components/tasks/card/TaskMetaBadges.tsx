@@ -19,6 +19,7 @@ export interface TaskMetaBadgesProps {
   onEdit: (id: string, initialFocus?: string) => void;
   onNavigateView?: (viewId: string) => void;
   lists?: CustomList[];
+  onOpenFrequencyPicker?: (e: React.MouseEvent) => void;
 }
 
 export function TaskMetaBadges({
@@ -31,7 +32,8 @@ export function TaskMetaBadges({
   timeOfDayInfo,
   onEdit,
   onNavigateView,
-  lists
+  lists,
+  onOpenFrequencyPicker
 }: TaskMetaBadgesProps) {
   const updateTask = useAppStore(state => state.updateTask);
   const tasks = useAppStore(state => state.tasks);
@@ -177,7 +179,11 @@ export function TaskMetaBadges({
                   key="frequency"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onEdit(task.id, 'frequency');
+                    if (onOpenFrequencyPicker) {
+                      onOpenFrequencyPicker(e);
+                    } else {
+                      onEdit(task.id, 'frequency');
+                    }
                   }}
                   style={{ 
                     display: 'inline-flex', 

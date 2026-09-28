@@ -316,6 +316,19 @@ function App() {
       }
     });
 
+    // Hygiene: eliminar duración por completo de "¿Te aburres?" y micro-hábitos recurrentes (agua, dientes, manos)
+    activeTasks.forEach((t: any) => {
+      const secId = t.sectionId || (t as any).section_id;
+      const secObj = secId ? (state.listSections || []).find(s => s.id === secId) : null;
+      const secName = (secObj?.name || '').toLowerCase();
+      const clean = (t.title || '').toLowerCase();
+      const isBoredom = clean.includes('aburr') || secName.includes('aburr');
+      const isHabit = /\b(beber agua|vaso de agua|lavarse los dientes|lavar los dientes|cepillarse los dientes|lavarse las manos|lavar las manos)\b/i.test(clean) || secName.includes('recurrent');
+      if ((isBoredom || isHabit) && (t.duration || t.parallelDuration)) {
+        state.updateTask(t.id, { duration: undefined, parallelDuration: undefined });
+      }
+    });
+
     const targetCategories = ['care', 'limpieza', 'compra', 'quehaceres'];
     for (const cat of targetCategories) {
       // Re-filter active tasks after pruning known redundant items
@@ -478,7 +491,7 @@ function App() {
           { id: `sec_${quehaceresList.id}_anuales`, name: 'Anuales', order: 3, root: 'anual' },
         ];
         qSections.forEach(qSec => {
-          if (!sections.some(s => s.listId === quehaceresList.id && ((s.name || '').toLowerCase().includes(qSec.root) || (qSec.root === 'diari' && (s.name || '').toLowerCase().includes('recurrent'))))) {
+          if (!sections.some(s => s.listId === quehaceresList.id && (s.name || '').toLowerCase().includes(qSec.root))) {
             state.addListSection({
               id: qSec.id,
               listId: quehaceresList.id,
@@ -512,7 +525,7 @@ function App() {
         { id: `sec_${careListId}_anuales`, name: 'Anuales', order: 3, root: 'anual' },
       ];
       careSections.forEach(cSec => {
-        if (!sections.some(s => s.listId === careListId && ((s.name || '').toLowerCase().includes(cSec.root) || (cSec.root === 'diari' && (s.name || '').toLowerCase().includes('recurrent'))))) {
+        if (!sections.some(s => s.listId === careListId && (s.name || '').toLowerCase().includes(cSec.root))) {
           state.addListSection({
             id: cSec.id,
             listId: careListId,
@@ -534,7 +547,7 @@ function App() {
           { id: `sec_${compraListId}_anuales`, name: 'Anuales', order: 3, root: 'anual' },
         ];
         compraSections.forEach(cSec => {
-          if (!sections.some(s => s.listId === compraListId && ((s.name || '').toLowerCase().includes(cSec.root) || (cSec.root === 'diari' && (s.name || '').toLowerCase().includes('recurrent'))))) {
+          if (!sections.some(s => s.listId === compraListId && (s.name || '').toLowerCase().includes(cSec.root))) {
             state.addListSection({
               id: cSec.id,
               listId: compraListId,

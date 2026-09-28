@@ -49,10 +49,48 @@ export function getTaskDuration(
   sectionsOrList?: ListSection[] | CustomList,
   lists?: CustomList[]
 ): TaskDurationInfo {
-  if (!task) return { activeMinutes: 5, parallelMinutes: 0, isParallel: false };
+  if (!task) return { activeMinutes: 0, parallelMinutes: 0, isParallel: false };
+
+  const currentPassedList = sectionsOrList && !Array.isArray(sectionsOrList) ? (sectionsOrList as CustomList) : undefined;
+  const sections = Array.isArray(sectionsOrList) ? sectionsOrList : undefined;
+  const taskCat = task.categoryId || (task as any).category_id;
+  const secId = task.sectionId || (task as any).section_id;
+
+  let sectionName = '';
+  if (secId && sections) {
+    const sObj = sections.find(s => s.id === secId || s.id === `sec_${secId}` || s.id === `section_${secId}`);
+    if (sObj) sectionName = (sObj.name || '').toLowerCase();
+  }
+  if (!sectionName && secId) {
+    try {
+      const allSecs = useAppStore.getState()?.listSections;
+      const sObj = allSecs?.find(s => s.id === secId || s.id === `sec_${secId}` || s.id === `section_${secId}`);
+      if (sObj) sectionName = (sObj.name || '').toLowerCase();
+    } catch {}
+  }
+
+  const title = (task.title || '').toLowerCase();
+
+  // 0a. Sección "¿Te aburres?" o lista de entretenimiento/ocio: NUNCA sumar duración
+  const isBoredom = sectionName.includes('aburr') || title.includes('aburr') || (taskCat && String(taskCat).toLowerCase().includes('aburr'));
+  if (isBoredom) {
+    return { activeMinutes: 0, parallelMinutes: 0, isParallel: false };
+  }
+
+  // 0b. Sección "Recurrentes" o micro-hábitos recurrentes (beber agua, lavarse las manos/dientes):
+  // No inflan la rutina diaria de quehaceres con horas artificiales.
+  const isRecurrentSection = sectionName.includes('recurrent');
+  const isExcludedMicroHabit = /\b(beber agua|vaso de agua|lavarse los dientes|lavar los dientes|cepillarse los dientes|lavarse las manos|lavar las manos)\b/i.test(title);
+  if (isRecurrentSection || isExcludedMicroHabit) {
+    return { activeMinutes: 0, parallelMinutes: 0, isParallel: false };
+  }
+
+  // 0c. Explicit duration set to 0 means the user intentionally disabled duration for this task
+  if (task.duration === 0) {
+    return { activeMinutes: 0, parallelMinutes: 0, isParallel: false };
+  }
 
   const parallel = isParallelTask(task);
-  const title = (task.title || '').toLowerCase();
 
   // 1. Explicit duration set on the task
   if (typeof task.duration === 'number' && task.duration > 0) {
@@ -89,9 +127,6 @@ export function getTaskDuration(
   }
 
   // 1c. Comprobar si la lista a la que pertenece la tarea admite estimación de duración
-  const currentPassedList = sectionsOrList && !Array.isArray(sectionsOrList) ? (sectionsOrList as CustomList) : undefined;
-  const sections = Array.isArray(sectionsOrList) ? sectionsOrList : undefined;
-  const taskCat = task.categoryId || (task as any).category_id;
   let allLists = lists || (currentPassedList ? [currentPassedList] : undefined);
   if (!allLists) {
     try {

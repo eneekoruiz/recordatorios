@@ -31,6 +31,15 @@ export function formatEuro(amount: number): string {
   return EURO_FORMAT.format(amount);
 }
 
+/** Convierte cualquier representación de precio ('3,50', '3.50', 3.5, '3,50 €') a número válido */
+export function parseTaskPrice(price: any): number {
+  if (price === null || price === undefined || price === '') return 0;
+  if (typeof price === 'number') return isNaN(price) ? 0 : price;
+  const cleaned = String(price).replace(/[^\d.,-]/g, '').replace(',', '.').trim();
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : num;
+}
+
 export function capitalize(text: string): string {
   return text ? text.charAt(0).toUpperCase() + text.slice(1) : text;
 }

@@ -722,25 +722,23 @@ body.dark .sidebar-container {
     filter: brightness(1.03);
   }
 }
-/* Selección (iPad/Mac): la tarjeta activa se rellena con su color */
-@media (min-width: 769px) {
-  .ios-smart-card.is-active {
-    background: var(--card-color) !important;
-  }
-  .ios-smart-card.is-active h3,
-  .ios-smart-card.is-active .count {
-    color: #ffffff !important;
-  }
-  .ios-smart-card.is-active .icon-circle {
-    background: #ffffff !important;
-  }
-  .ios-smart-card.is-active .icon-circle,
-  .ios-smart-card.is-active .icon-circle * {
-    color: var(--card-color) !important;
-  }
-  .ios-smart-card.is-active .icon-circle svg {
-    stroke: var(--card-color) !important;
-  }
+/* Selección: la tarjeta inteligente activa se rellena completamente con su color característico */
+.ios-smart-card.is-active {
+  background: var(--card-color) !important;
+}
+.ios-smart-card.is-active h3,
+.ios-smart-card.is-active .count {
+  color: #ffffff !important;
+}
+.ios-smart-card.is-active .icon-circle {
+  background: #ffffff !important;
+}
+.ios-smart-card.is-active .icon-circle,
+.ios-smart-card.is-active .icon-circle * {
+  color: var(--card-color) !important;
+}
+.ios-smart-card.is-active .icon-circle svg {
+  stroke: var(--card-color) !important;
 }
 /* «···» de cada lista: solo al pasar el ratón (como en el Mac) */
 @media (hover: hover) {

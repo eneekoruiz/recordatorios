@@ -196,9 +196,15 @@ export const useAppStore = create<AppState>()(
       })(),
       setUseSystemTheme: (useSystemTheme) => set({ useSystemTheme }),
       learnedDurations: {},
-      setLearnedDuration: (taskId, minutes) => set((state: AppState) => ({
-        learnedDurations: { ...state.learnedDurations, [taskId]: minutes }
-      })),
+      setLearnedDuration: (taskId, minutes) => set((state: AppState) => {
+        const next = { ...state.learnedDurations };
+        if (typeof minutes === 'number' && minutes > 0) {
+          next[taskId] = minutes;
+        } else {
+          delete next[taskId];
+        }
+        return { learnedDurations: next };
+      }),
       smartListVisibility: { ...DEFAULT_SMART_LIST_VISIBILITY },
       pinnedSmartLists: [],
       cycleVisibility: { cycle_day: true, cycle_week: true, cycle_month: true, cycle_year: true },
@@ -1218,7 +1224,20 @@ export const useAppStore = create<AppState>()(
           let groupKey = '';
           const taskSecId = task.sectionId || (task as any).section_id;
           
-          if (taskSecId && activeSectionIds.has(taskSecId)) {
+          if (task.cycle_id) {
+            const purePeriod = task.cycle_id.replace('cycle_', '');
+            if (taskSecId && activeSectionIds.has(taskSecId)) {
+              const sec = sectionsForList.find((s: any) => s.id === taskSecId);
+              const purePeriodicity = sec ? getPureCyclicPeriodicity(sec.name) : null;
+              if (purePeriodicity) {
+                groupKey = `cycle_cycle_${purePeriod}`;
+              } else {
+                groupKey = `section_${taskSecId}`;
+              }
+            } else {
+              groupKey = `cycle_cycle_${purePeriod}`;
+            }
+          } else if (taskSecId && activeSectionIds.has(taskSecId)) {
             const sec = sectionsForList.find((s: any) => s.id === taskSecId);
             const purePeriodicity = sec ? getPureCyclicPeriodicity(sec.name) : null;
             groupKey = purePeriodicity ? `cycle_cycle_${purePeriodicity}` : `section_${taskSecId}`;
@@ -1236,12 +1255,7 @@ export const useAppStore = create<AppState>()(
           }
 
           if (!groupKey) {
-            if (task.cycle_id) {
-              const purePeriod = task.cycle_id.replace('cycle_', '');
-              groupKey = `cycle_cycle_${purePeriod}`;
-            } else {
-              groupKey = 'no_section';
-            }
+            groupKey = 'no_section';
           }
 
           if (!grouped[groupKey]) grouped[groupKey] = [];

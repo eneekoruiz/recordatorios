@@ -224,8 +224,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setIsDetailed(!!task.isDetailed);
         setPrice(task.price !== undefined ? task.price : undefined);
         setQuantity(task.quantity !== undefined ? task.quantity : 1);
-        setBrand(task.brand || '');
-        setDuration(task.duration || '');
+        setDuration(typeof task.duration === 'number' ? task.duration : '');
         setIsParallel(Boolean(task.isParallel));
         setParallelDuration(task.parallelDuration);
         setTargetCount(task.targetCount);

@@ -396,7 +396,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                   ) : null}
                 </div>
               )}
-              {currentView !== 'smart_calendar' && (
+              {currentView !== 'smart_calendar' && (activeVisibleCount > 0 || currentView.startsWith('cycle_')) && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
                   <span className="apple-large-counter" style={{ color: viewColor }}>
                     {activeVisibleCount}

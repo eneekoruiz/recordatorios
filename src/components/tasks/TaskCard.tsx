@@ -2,12 +2,12 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useMotionValue, useTransform, AnimatePresence, useMotionValueEvent } from 'framer-motion';
 import {
-  Lock, MoreHorizontal,
+  Lock,
   ChevronDown, X, Info, RotateCcw, Flag,
   ShieldAlert, Clock, CheckCircle2, CreditCard,
   Flame, User, MapPin, Link2, Check, GripVertical
 } from 'lucide-react';
-import type { TaskItem } from '../../models/Task';
+import type { TaskItem, ListSection } from '../../models/Task';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { isCompletedInCurrentPeriod, calculateHabitStreak, calculateExpirationStatus } from '../../services/TaskService';
 import { SoundService } from '../../services/SoundService';
@@ -22,7 +22,7 @@ import { TaskSwipeBackground } from './card/TaskSwipeBackground';
 import { TaskMetaBadges } from './card/TaskMetaBadges';
 import { TaskHabitCounter } from './card/TaskHabitCounter';
 import { TaskNoteEditor } from './card/TaskNoteEditor';
-import { getTaskPeriodicity, stripPeriodicityPrefix } from '../../utils/sectionRoutine';
+import { getTaskPeriodicity, getSectionPeriodicity, stripPeriodicityPrefix } from '../../utils/sectionRoutine';
 import { extractPrice } from '../../utils/priceExtractor';
 import { classifyDropZone, DRAG_MOVE_THRESHOLD_PX } from '../../utils/dragDrop';
 
@@ -255,6 +255,87 @@ export const TaskCard = React.memo(function TaskCard({
       window.removeEventListener('scroll', handleScroll, true);
     };
   }, [isPriorityPopoverOpen]);
+
+  const [isFrequencyPopoverOpen, setIsFrequencyPopoverOpen] = useState(false);
+  const [frequencyPopoverPos, setFrequencyPopoverPos] = useState<{ x: number; y: number } | null>(null);
+
+  const handleFrequencyBadgeClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    HapticService.selection();
+    if (isFrequencyPopoverOpen) {
+      setIsFrequencyPopoverOpen(false);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const menuWidth = 180;
+    const menuHeight = 220;
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+
+    let x = rect.left;
+    if (x + menuWidth > viewportW - 12) {
+      x = viewportW - menuWidth - 12;
+    }
+    x = Math.max(12, x);
+
+    let y = rect.bottom + 6;
+    if (y + menuHeight > viewportH - 12) {
+      y = Math.max(12, rect.top - menuHeight - 6);
+    }
+
+    setFrequencyPopoverPos({ x, y });
+    setIsFrequencyPopoverOpen(true);
+  }, [isFrequencyPopoverOpen]);
+
+  useEffect(() => {
+    if (!isFrequencyPopoverOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsFrequencyPopoverOpen(false);
+    };
+    const handleScroll = (e: Event) => {
+      if ((e.target as HTMLElement)?.closest?.('.frequency-picker-popover')) return;
+      setIsFrequencyPopoverOpen(false);
+    };
+    window.addEventListener('keydown', handleKey);
+    window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [isFrequencyPopoverOpen]);
+
+  const handleSelectFrequency = useCallback((freq: 'day' | 'week' | 'month' | 'year' | 'none') => {
+    HapticService.impact('medium');
+    setIsFrequencyPopoverOpen(false);
+
+    const cleanTitle = stripPeriodicityPrefix(task.title);
+    const cycleId = freq === 'none' ? undefined : `cycle_${freq}`;
+
+    const listSecs: ListSection[] = task.categoryId && listSections ? listSections.filter((s: ListSection) => s.listId === task.categoryId) : [];
+    let newSectionId = task.sectionId;
+
+    if (freq === 'none') {
+      if (task.sectionId) {
+        const currentSecPeriodicity = getSectionPeriodicity(task.sectionId, undefined, listSecs, lists);
+        if (currentSecPeriodicity) {
+          const nonPeriodicSec = listSecs.find((s: ListSection) => !getSectionPeriodicity(s.id, s.name, listSecs, lists));
+          newSectionId = nonPeriodicSec ? nonPeriodicSec.id : undefined;
+        }
+      }
+    } else {
+      const matchingSec = listSecs.find((s: ListSection) => getSectionPeriodicity(s.id, s.name, listSecs, lists) === freq);
+      if (matchingSec) {
+        newSectionId = matchingSec.id;
+      }
+    }
+
+    updateTask(task.id, {
+      title: cleanTitle,
+      cycle_id: cycleId,
+      sectionId: newSectionId,
+    });
+  }, [task.id, task.title, task.categoryId, task.sectionId, listSections, lists, updateTask]);
 
 
   // --- SWIPE (iOS-style: card physically moves) ---
@@ -693,27 +774,33 @@ export const TaskCard = React.memo(function TaskCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Drop Target Indicator Line for manual reordering (Apple Native Style) */}
+      {/* Drop Target Indicator Line for manual reordering (Apple Reminders iOS style) */}
       {dragOverPosition === 'top' && (
         <div 
           style={{
-            position: 'absolute', top: -1, left: 12, right: 12, height: 2,
-            background: 'var(--accent-primary, #007aff)', zIndex: 9999,
+            position: 'absolute', top: -1.5, left: 16, right: 16, height: 3,
+            borderRadius: 999,
+            background: 'var(--accent-primary, #007aff)',
+            boxShadow: '0 0 10px rgba(0, 122, 255, 0.45)',
+            zIndex: 9999,
             pointerEvents: 'none'
           }} 
         >
-          <div style={{ position: 'absolute', left: -4, top: -3, width: 8, height: 8, borderRadius: '50%', border: '2px solid var(--accent-primary, #007aff)', background: 'var(--bg-elevated)', boxSizing: 'border-box' }} />
+          <div style={{ position: 'absolute', left: -3, top: -2, width: 7, height: 7, borderRadius: '50%', background: 'var(--accent-primary, #007aff)', boxShadow: '0 0 8px rgba(0, 122, 255, 0.6)' }} />
         </div>
       )}
       {dragOverPosition === 'bottom' && (
         <div 
           style={{
-            position: 'absolute', bottom: -1, left: 12, right: 12, height: 2,
-            background: 'var(--accent-primary, #007aff)', zIndex: 9999,
+            position: 'absolute', bottom: -1.5, left: 16, right: 16, height: 3,
+            borderRadius: 999,
+            background: 'var(--accent-primary, #007aff)',
+            boxShadow: '0 0 10px rgba(0, 122, 255, 0.45)',
+            zIndex: 9999,
             pointerEvents: 'none'
           }} 
         >
-          <div style={{ position: 'absolute', left: -4, top: -3, width: 8, height: 8, borderRadius: '50%', border: '2px solid var(--accent-primary, #007aff)', background: 'var(--bg-elevated)', boxSizing: 'border-box' }} />
+          <div style={{ position: 'absolute', left: -3, top: -2, width: 7, height: 7, borderRadius: '50%', background: 'var(--accent-primary, #007aff)', boxShadow: '0 0 8px rgba(0, 122, 255, 0.6)' }} />
         </div>
       )}
       {dragOverPosition === 'inside' && (
@@ -721,21 +808,13 @@ export const TaskCard = React.memo(function TaskCard({
           style={{
             position: 'absolute',
             inset: 2,
-            borderRadius: 10,
-            border: '2px dashed var(--accent-primary, #007aff)',
-            background: 'rgba(0, 122, 255, 0.08)',
+            borderRadius: 12,
+            background: 'rgba(0, 122, 255, 0.10)',
+            boxShadow: 'inset 0 0 0 1.5px rgba(0, 122, 255, 0.4)',
             zIndex: 9999,
-            pointerEvents: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            paddingRight: 16
+            pointerEvents: 'none'
           }}
-        >
-          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--accent-primary)', background: 'var(--bg-elevated)', padding: '2px 8px', borderRadius: 6, boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }}>
-            Anidar como subtarea
-          </span>
-        </div>
+        />
       )}
 
       {/* Fixed swipe action backgrounds - hidden during context menu to prevent bleed-through */}
@@ -1545,6 +1624,7 @@ export const TaskCard = React.memo(function TaskCard({
             onEdit={onEdit}
             onNavigateView={onNavigateView}
             lists={lists}
+            onOpenFrequencyPicker={handleFrequencyBadgeClick}
           />
         </div>
 
@@ -1585,7 +1665,7 @@ export const TaskCard = React.memo(function TaskCard({
           </button>
         )}
 
-        {/* Apple Reminders Info (i) button & subtle more options */}
+        {/* Apple Reminders Info (i) button & clean drag handle */}
         {!isBlocked && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: `calc(2px + ((1.05rem * 1.4) - 32px) / 2)` }}>
             <button
@@ -1608,39 +1688,14 @@ export const TaskCard = React.memo(function TaskCard({
                 border: 'none',
                 cursor: 'pointer',
                 color: taskColor || 'var(--accent-primary)',
-                opacity: isMobile ? (isEditingTitle || isEditingNote || contextMenuOpen ? 0.85 : 0) : (isHovered || contextMenuOpen ? 0.95 : 0.4),
+                opacity: isMobile ? (isEditingTitle || isEditingNote || contextMenuOpen ? 0.85 : 0) : (isHovered || contextMenuOpen ? 0.85 : 0),
                 pointerEvents: isMobile && !(isEditingTitle || isEditingNote || contextMenuOpen) ? 'none' : 'auto',
-                transition: 'opacity 0.2s ease, background-color 0.15s ease, transform 0.12s ease',
+                transition: 'opacity 0.15s ease, background-color 0.15s ease, transform 0.12s ease',
                 WebkitTapHighlightColor: 'transparent',
                 flexShrink: 0
               }}
             >
               <Info size={17} strokeWidth={2.2} />
-            </button>
-
-            <button
-              className="task-more-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                openContextMenu();
-              }}
-              aria-label="Más opciones"
-              title="Más opciones"
-              style={{
-                width: 30, height: 30,
-                display: isMobile ? 'none' : 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                opacity: isHovered || contextMenuOpen ? 0.75 : 0,
-                transition: 'opacity 0.2s ease',
-                WebkitTapHighlightColor: 'transparent',
-                flexShrink: 0
-              }}
-            >
-              <MoreHorizontal size={17} color="var(--text-tertiary)" />
             </button>
 
             {!isMobile && Boolean(onReorderTasks) && (
@@ -1658,13 +1713,13 @@ export const TaskCard = React.memo(function TaskCard({
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'grab',
-                  opacity: isHovered || contextMenuOpen ? 0.75 : 0,
-                  transition: 'opacity 0.2s ease, color 0.15s ease',
+                  opacity: isHovered || contextMenuOpen ? 0.5 : 0,
+                  transition: 'opacity 0.15s ease, color 0.15s ease',
                   color: 'var(--text-tertiary)',
                   flexShrink: 0
                 }}
               >
-                <GripVertical size={16} />
+                <GripVertical size={15} />
               </div>
             )}
           </div>
@@ -1774,6 +1829,92 @@ export const TaskCard = React.memo(function TaskCard({
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontWeight: 800, color: p.color, width: 20, textAlign: 'center' }}>{p.marks}</span>
                     <span>{p.label}</span>
+                  </div>
+                  {isCurrent && <Check size={14} color="var(--accent-primary)" />}
+                </button>
+              );
+            })}
+          </motion.div>
+        </>,
+        document.body
+      )}
+
+      {/* ── Native Frequency Picker Popover ── */}
+      {isFrequencyPopoverOpen && frequencyPopoverPos && createPortal(
+        <>
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 999998, background: 'transparent' }}
+            onClick={(e) => { e.stopPropagation(); setIsFrequencyPopoverOpen(false); }}
+            onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setIsFrequencyPopoverOpen(false); }}
+          />
+          <motion.div
+            className="frequency-picker-popover"
+            initial={{ opacity: 0, scale: 0.94, y: -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.94, y: -4 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 450 }}
+            style={{
+              position: 'fixed',
+              top: frequencyPopoverPos.y,
+              left: frequencyPopoverPos.x,
+              zIndex: 999999,
+              minWidth: 175,
+              background: 'var(--bg-material, rgba(255, 255, 255, 0.92))',
+              backdropFilter: 'blur(30px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(30px) saturate(180%)',
+              borderRadius: 14,
+              padding: 6,
+              boxShadow: '0 10px 32px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.06)',
+              border: '1px solid var(--border-subtle, rgba(0, 0, 0, 0.08))',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              userSelect: 'none',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: '4px 8px 2px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+              Frecuencia
+            </div>
+            {[
+              { value: 'day' as const, label: 'Diaria', color: '#ff9500' },
+              { value: 'week' as const, label: 'Semanal', color: '#007aff' },
+              { value: 'month' as const, label: 'Mensual', color: '#af52de' },
+              { value: 'year' as const, label: 'Anual', color: '#34c759' },
+              { value: 'none' as const, label: 'Sin repetición', color: 'var(--text-tertiary)' },
+            ].map((f) => {
+              const currentPeriodicity = getTaskPeriodicity(task, listSections, lists);
+              const isCurrent = f.value === 'none' ? !currentPeriodicity : currentPeriodicity === f.value;
+              return (
+                <button
+                  key={f.value}
+                  type="button"
+                  className="ios-dropdown-item"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSelectFrequency(f.value);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    width: '100%',
+                    padding: '6px 8px',
+                    borderRadius: 8,
+                    border: 'none',
+                    background: isCurrent ? 'var(--bg-hover, rgba(0,0,0,0.05))' : 'transparent',
+                    color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem',
+                    fontWeight: isCurrent ? 600 : 500,
+                    textAlign: 'left',
+                    transition: 'background 0.12s ease'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: f.color, flexShrink: 0 }} />
+                    <span>{f.label}</span>
                   </div>
                   {isCurrent && <Check size={14} color="var(--accent-primary)" />}
                 </button>

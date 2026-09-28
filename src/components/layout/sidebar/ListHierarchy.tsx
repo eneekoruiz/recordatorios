@@ -227,7 +227,20 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                 }
               }}
               onDrag={(_e, info) => {
-                const targetEl = document.elementFromPoint(info.point.x, info.point.y);
+                // Auto-scroll sidebar container when dragging near top or bottom edges
+                const scrollContainer = document.querySelector('.sidebar-scroll-area, .sidebar-content, .sidebar') as HTMLElement | null;
+                if (scrollContainer) {
+                  const sRect = scrollContainer.getBoundingClientRect();
+                  if (info.point.y < sRect.top + 60) {
+                    scrollContainer.scrollTop -= 10;
+                  } else if (info.point.y > sRect.bottom - 60) {
+                    scrollContainer.scrollTop += 10;
+                  }
+                }
+
+                // Use elementsFromPoint to find the element underneath the dragged item
+                const elements = document.elementsFromPoint(info.point.x, info.point.y);
+                const targetEl = elements.find(el => !el.closest(`[data-list-id="${list.id}"]`));
                 const row = targetEl?.closest('[data-list-id]') as HTMLElement | null;
                 if (row) {
                   const targetId = row.getAttribute('data-list-id');
@@ -244,6 +257,22 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                     return;
                   }
                 }
+
+                // If pointer is below the last item in the list, set position after the last item
+                const allListRows = Array.from(document.querySelectorAll<HTMLElement>('.categories-section [data-list-id]'));
+                const otherRows = allListRows.filter(r => r.getAttribute('data-list-id') !== list.id);
+                if (otherRows.length > 0) {
+                  const lastRow = otherRows[otherRows.length - 1];
+                  const lastRect = lastRow.getBoundingClientRect();
+                  if (info.point.y > lastRect.bottom) {
+                    const lastId = lastRow.getAttribute('data-list-id');
+                    if (lastId) {
+                      setDropFeedback({ targetId: lastId, position: 'after' });
+                      return;
+                    }
+                  }
+                }
+
                 setDropFeedback(null);
               }}
               onDragEnd={(_e, info) => {
