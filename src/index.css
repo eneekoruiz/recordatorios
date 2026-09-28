@@ -905,7 +905,7 @@ input:checked + .slider::before {
 ======================================================== */
 :root {
   --bg-base: #ffffff;
-  --bg-surface: rgba(255, 255, 255, 0.85);
+  --bg-surface: #ffffff;
   --bg-surface-glass: rgba(255, 255, 255, 0.75);
   --bg-elevated: #ffffff;
   --bg-card: #ffffff;
@@ -1115,7 +1115,9 @@ button:disabled {
   filter: saturate(.65);
 }
 
-.premium-overlay {
+.premium-overlay,
+.prompt-overlay,
+.list-config-overlay {
   position: fixed;
   inset: 0;
   z-index: 100000;
@@ -1123,9 +1125,9 @@ button:disabled {
   align-items: center !important;
   justify-content: center !important;
   padding: 16px;
-  background: rgba(0, 0, 0, 0.42);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(0, 0, 0, 0.48) !important;
+  backdrop-filter: blur(16px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
   overscroll-behavior: contain;
   box-sizing: border-box;
 }
@@ -1145,10 +1147,10 @@ button:disabled {
   color: var(--text-primary);
   border: 1px solid var(--border-subtle) !important;
   border-radius: 24px !important;
-  background: var(--bg-surface) !important;
-  box-shadow: 0 24px 64px -12px rgba(0, 0, 0, 0.22), 0 8px 24px -4px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
-  backdrop-filter: blur(30px) saturate(1.22);
-  -webkit-backdrop-filter: blur(30px) saturate(1.22);
+  background: #ffffff !important;
+  box-shadow: 0 24px 64px -8px rgba(0, 0, 0, 0.28), 0 8px 24px -4px rgba(0, 0, 0, 0.1) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -1164,10 +1166,40 @@ button:disabled {
 [data-theme="dark"] .monthly-summary-sheet,
 .dark .premium-sheet,
 .dark .list-config-modal,
-.dark .cycle-config-modal {
+.dark .cycle-config-modal,
+.dark .confirm-sheet {
   border-color: rgba(255, 255, 255, 0.12) !important;
   background: #1C1C1E !important;
-  box-shadow: 0 32px 80px -16px rgba(0, 0, 0, 0.72), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 32px 80px -16px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+.modal-header-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  margin-bottom: 6px !important;
+}
+
+.modal-header-row .modal-title,
+.modal-title {
+  margin: 0 !important;
+  font-size: 1.25rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+  color: var(--text-primary) !important;
+}
+
+.modal-hero-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease;
 }
 
 .premium-sheet-icon {
@@ -1353,8 +1385,8 @@ button:disabled {
   border-radius: 24px !important;
   background: #ffffff !important;
   box-shadow: 0 32px 90px rgba(15,23,42,.24), inset 0 1px 0 rgba(255,255,255,.82) !important;
-  backdrop-filter: blur(30px) saturate(1.2);
-  -webkit-backdrop-filter: blur(30px) saturate(1.2);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   scrollbar-width: thin;
 }
 .prompt-modal :where(input[type="text"], input[type="number"], textarea) {

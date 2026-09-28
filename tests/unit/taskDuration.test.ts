@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isParallelTask, formatDuration, calculateTasksDuration } from '../../src/utils/taskDuration';
+import { isParallelTask, formatDuration, calculateTasksDuration, getTaskDuration, isTaskDurationDisabled } from '../../src/utils/taskDuration';
 import type { TaskItem } from '../../src/models/Task';
 
 describe('TaskDuration & Parallel Tasks Engine', () => {
@@ -120,6 +120,60 @@ describe('TaskDuration & Parallel Tasks Engine', () => {
       expect(fullDuration.activeMinutes).toBe(300);
       expect(fullDuration.formattedActive).toBe('5 h');
       expect(fullDuration.activeMinutes).toBeGreaterThan(soloDuration.activeMinutes);
+    });
+  });
+
+  describe('disableDuration (Desactivar duración por tarea)', () => {
+    it('isTaskDurationDisabled detects disableDuration true or duration 0', () => {
+      expect(isTaskDurationDisabled(null)).toBe(false);
+      expect(isTaskDurationDisabled({ id: '1', title: 'Tarea normal', status: 'pending', created_at: '', version: 1, user_id: 'u1', type: 'task' })).toBe(false);
+      expect(isTaskDurationDisabled({ id: '2', title: 'Tarea con 15m', status: 'pending', created_at: '', version: 1, user_id: 'u1', type: 'task', duration: 15 })).toBe(false);
+      expect(isTaskDurationDisabled({ id: '3', title: 'Tarea desactivada flag', status: 'pending', created_at: '', version: 1, user_id: 'u1', type: 'task', disableDuration: true })).toBe(true);
+      expect(isTaskDurationDisabled({ id: '4', title: 'Tarea con duracion 0', status: 'pending', created_at: '', version: 1, user_id: 'u1', type: 'task', duration: 0 })).toBe(true);
+    });
+
+    it('getTaskDuration returns 0 when disableDuration is true even for heuristic or parallel tasks', () => {
+      const taskWithHeuristic: TaskItem = {
+        id: 'h1',
+        title: 'Limpiar baño a fondo', // Usually heuristic ~25m
+        status: 'pending',
+        created_at: '',
+        version: 1,
+        user_id: 'u1',
+        type: 'task',
+        disableDuration: true
+      };
+      const result = getTaskDuration(taskWithHeuristic);
+      expect(result.activeMinutes).toBe(0);
+      expect(result.parallelMinutes).toBe(0);
+      expect(result.isParallel).toBe(false);
+
+      const parallelTaskDisabled: TaskItem = {
+        id: 'p1',
+        title: 'Poner la lavadora con ropa blanca',
+        status: 'pending',
+        created_at: '',
+        version: 1,
+        user_id: 'u1',
+        type: 'task',
+        disableDuration: true
+      };
+      const resultParallel = getTaskDuration(parallelTaskDisabled);
+      expect(resultParallel.activeMinutes).toBe(0);
+      expect(resultParallel.parallelMinutes).toBe(0);
+      expect(resultParallel.isParallel).toBe(false);
+    });
+
+    it('calculateTasksDuration ignores tasks with disableDuration true or duration 0', () => {
+      const tasks: TaskItem[] = [
+        { id: '1', title: 'Fregar platos', status: 'pending', created_at: '', version: 1, user_id: 'u1', type: 'task', duration: 15 },
+        { id: '2', title: 'Aspirar alfombra', status: 'pending', created_at: '', version: 1, user_id: 'u1', type: 'task', duration: 25, disableDuration: true },
+        { id: '3', title: 'Sacar basura', status: 'pending', created_at: '', version: 1, user_id: 'u1', type: 'task', duration: 0 }
+      ];
+
+      const summary = calculateTasksDuration(tasks);
+      expect(summary.activeMinutes).toBe(15);
+      expect(summary.formattedActive).toBe('15 min');
     });
   });
 });

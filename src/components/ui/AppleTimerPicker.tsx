@@ -35,7 +35,7 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
       setHours(Math.floor(totalSec / 3600));
       setMinutes(Math.floor((totalSec % 3600) / 60));
       setSeconds(totalSec % 60);
-    } else if (duration === '' || duration === undefined) {
+    } else if (duration === '' || duration === undefined || duration === 0) {
       setHours(0);
       setMinutes(0);
       setSeconds(0);

@@ -80,10 +80,21 @@ export function ConfirmModal({
           onClick={(event) => event.stopPropagation()}
         >
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
-            <div className={`modal-hero-badge`} aria-hidden="true" style={{
-              background: tone === 'danger' ? 'rgba(239, 68, 68, 0.12)' : 'var(--accent-glow)',
-              marginBottom: 0
-            }}>
+            <div
+              className="modal-hero-badge"
+              aria-hidden="true"
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 16,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: tone === 'danger' ? 'rgba(255, 59, 48, 0.12)' : 'var(--accent-glow)',
+                border: tone === 'danger' ? '1px solid rgba(255, 59, 48, 0.2)' : '1px solid var(--border-subtle)',
+                marginBottom: 0
+              }}
+            >
               <AlertTriangle size={24} strokeWidth={2.2} color={tone === 'danger' ? 'var(--accent-red)' : 'var(--accent-primary)'} />
             </div>
             <button className="modal-close-btn" onClick={onCancel} aria-label="Cerrar">
@@ -92,8 +103,8 @@ export function ConfirmModal({
           </div>
           
           <div className="premium-sheet-copy">
-            <h2 id="confirm-title" style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>{title}</h2>
-            <p id="confirm-description" style={{ fontSize: '0.94rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>{message}</p>
+            <h2 id="confirm-title" style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 8px 0', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>{title}</h2>
+            <p id="confirm-description" style={{ fontSize: '0.94rem', color: 'var(--text-secondary)', lineHeight: '1.5', margin: 0 }}>{message}</p>
           </div>
 
           <div className="premium-sheet-actions" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 24 }}>

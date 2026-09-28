@@ -25,7 +25,7 @@ export interface TaskContextMenuProps {
   triggerRect?: SpotlightRect | null;
   /** La tarjeta en sí: el hueco nítido la sigue si la lista se desplaza. */
   getTriggerElement?: () => HTMLElement | null;
-  onEdit: (id: string) => void;
+  onEdit: (id: string, initialFocus?: string) => void;
   nestTask: (taskId: string, parentId?: string) => void;
   previousTaskId?: string;
   setIsDeleteConfirmOpen: (open: boolean) => void;
@@ -188,7 +188,7 @@ export function TaskContextMenu({
 interface MenuActionsProps {
   task: TaskItem;
   setContextMenuOpen: (open: boolean) => void;
-  onEdit: (id: string) => void;
+  onEdit: (id: string, initialFocus?: string) => void;
   nestTask: (taskId: string, parentId?: string) => void;
   previousTaskId?: string;
   setIsDeleteConfirmOpen: (open: boolean) => void;
@@ -227,7 +227,7 @@ function MenuActions({
   const lists = useAppStore(state => state.lists);
   const listSections = useAppStore(state => state.listSections);
 
-  const [currentSubmenu, setCurrentSubmenu] = useState<'main' | 'move_list' | 'move_section' | 'due_date' | 'priority' | 'price'>('main');
+  const [currentSubmenu, setCurrentSubmenu] = useState<'main' | 'move_list' | 'move_section' | 'due_date' | 'priority' | 'price' | 'duration'>('main');
   const [showMoreActions, setShowMoreActions] = useState(false);
 
   const availableSections = (listSections || []).filter(
@@ -596,6 +596,68 @@ function MenuActions({
     );
   }
 
+  // Submenu: Duración
+  if (currentSubmenu === 'duration') {
+    const isDurationDisabled = task.disableDuration === true || task.duration === 0;
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <SubmenuHeader title="Duración" onBack={() => setCurrentSubmenu('main')} />
+        <div className="ios-dropdown-divider" />
+        <div style={{ padding: '4px 0' }}>
+          {/* Opción rápida: Desactivar o Activar duración */}
+          <ActionRow 
+            icon={<Clock size={16} color={isDurationDisabled ? 'var(--text-tertiary)' : '#ff3b30'} />} 
+            label={isDurationDisabled ? "Activar duración" : "Desactivar duración"}
+            subtitle={isDurationDisabled ? "Permitir estimar o asignar minutos" : "No estimar ni sumar tiempo"}
+            onClick={() => {
+              setContextMenuOpen(false);
+              if (isDurationDisabled) {
+                updateTask(task.id, { disableDuration: false, duration: undefined });
+              } else {
+                updateTask(task.id, { disableDuration: true, duration: 0 });
+              }
+              HapticService.selection();
+            }} 
+          />
+
+          <div className="ios-dropdown-divider" />
+
+          <div style={{ padding: '6px 12px 2px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+            Preajustes rápidos
+          </div>
+
+          {[5, 10, 15, 25, 30, 45, 60].map(mins => {
+            const isSelected = !isDurationDisabled && task.duration === mins;
+            return (
+              <ActionRow
+                key={mins}
+                icon={<Clock size={16} color={isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)'} />}
+                label={`${mins} minutos`}
+                trailing={isSelected ? <CheckCircle size={15} color="var(--accent-primary)" /> : undefined}
+                onClick={() => {
+                  setContextMenuOpen(false);
+                  updateTask(task.id, { disableDuration: false, duration: mins });
+                  HapticService.selection();
+                }}
+              />
+            );
+          })}
+
+          <div className="ios-dropdown-divider" />
+          <ActionRow 
+            icon={<Edit3 size={16} color="var(--accent-primary)" />} 
+            label="Personalizar temporizador..." 
+            onClick={() => {
+              setContextMenuOpen(false);
+              onEdit(task.id, 'duration');
+            }} 
+          />
+        </div>
+      </div>
+    );
+  }
+
   const isUrgent = task.priority === 'high';
 
   return (
@@ -682,6 +744,15 @@ function MenuActions({
           setContextMenuOpen(false); 
           updateTask(task.id, { flagged: !task.flagged }); 
         }} 
+      />
+
+      {/* 7. Duración */}
+      <ActionRow 
+        icon={<Clock size={16} color={task.disableDuration || task.duration === 0 ? 'var(--text-tertiary)' : 'var(--accent-primary)'} />} 
+        label="Duración"
+        sublabel={task.disableDuration || task.duration === 0 ? "Desactivada" : (typeof task.duration === 'number' && task.duration > 0 ? `${task.duration} min` : "Auto")}
+        trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
+        onClick={() => setCurrentSubmenu('duration')} 
       />
 
       {/* Anular sangrado (acción principal en tareas anidadas) */}

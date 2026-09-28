@@ -42,6 +42,14 @@ export function isParallelTask(task?: TaskItem | null): boolean {
 }
 
 /**
+ * Checks whether a task has its duration explicitly disabled.
+ */
+export function isTaskDurationDisabled(task?: TaskItem | null): boolean {
+  if (!task) return false;
+  return task.disableDuration === true || task.duration === 0;
+}
+
+/**
  * Calculates estimated active and parallel duration in minutes for a single task.
  */
 export function getTaskDuration(
@@ -85,8 +93,8 @@ export function getTaskDuration(
     return { activeMinutes: 0, parallelMinutes: 0, isParallel: false };
   }
 
-  // 0c. Explicit duration set to 0 means the user intentionally disabled duration for this task
-  if (task.duration === 0) {
+  // 0c. Explicit duration set to 0 or disableDuration flag means the user intentionally disabled duration for this task
+  if (task.duration === 0 || task.disableDuration === true) {
     return { activeMinutes: 0, parallelMinutes: 0, isParallel: false };
   }
 

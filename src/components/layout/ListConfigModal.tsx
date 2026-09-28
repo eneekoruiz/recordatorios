@@ -221,8 +221,8 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                 autoFocus
                 style={{
                   textAlign: 'center',
-                  borderColor: isFocused ? color : undefined,
-                  boxShadow: isFocused ? `0 0 0 3px ${color}33, 0 8px 20px rgba(0,0,0,0.08)` : undefined
+                  borderColor: isFocused ? color : 'var(--border-subtle)',
+                  boxShadow: isFocused ? `0 0 0 3px ${color}26, 0 8px 20px rgba(0,0,0,0.06)` : 'none'
                 }}
               />
             </div>

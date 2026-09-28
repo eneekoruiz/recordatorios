@@ -94,11 +94,18 @@ export function DeleteParentModal({
           transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
             <div
               className="modal-hero-badge"
               style={{
-                background: 'rgba(239, 68, 68, 0.12)',
+                width: 48,
+                height: 48,
+                borderRadius: 16,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'rgba(255, 59, 48, 0.12)',
+                border: '1px solid rgba(255, 59, 48, 0.2)',
                 marginBottom: 0
               }}
               aria-hidden="true"
@@ -132,7 +139,7 @@ export function DeleteParentModal({
             id="delete-parent-description"
             style={{
               fontSize: '0.94rem',
-              lineHeight: '1.45',
+              lineHeight: '1.5',
               color: 'var(--text-secondary)',
               margin: '0 0 20px 0'
             }}
@@ -153,22 +160,30 @@ export function DeleteParentModal({
                 display: 'flex',
                 alignItems: 'center',
                 gap: 12,
-                padding: '12px 16px',
-                borderRadius: 14,
-                background: 'rgba(255, 69, 58, 0.12)',
-                border: '1px solid rgba(255, 69, 58, 0.25)',
+                padding: '14px 16px',
+                borderRadius: 16,
+                background: 'rgba(255, 59, 48, 0.1)',
+                border: '1px solid rgba(255, 59, 48, 0.22)',
                 color: 'var(--accent-red, #ff453a)',
                 fontSize: '0.94rem',
-                fontWeight: 600,
+                fontWeight: 650,
                 cursor: 'pointer',
                 textAlign: 'left',
-                transition: 'background 0.15s ease'
+                transition: 'all 0.18s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 59, 48, 0.16)';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 59, 48, 0.1)';
+                e.currentTarget.style.transform = 'none';
               }}
             >
               <Trash2 size={18} style={{ flexShrink: 0 }} />
               <div style={{ flex: 1 }}>
                 <div>Eliminar todo</div>
-                <div style={{ fontSize: '0.78rem', fontWeight: 400, opacity: 0.85 }}>
+                <div style={{ fontSize: '0.78rem', fontWeight: 400, opacity: 0.85, marginTop: 2 }}>
                   {isPermanent
                     ? 'Borrará permanentemente el recordatorio y sus subtareas'
                     : 'Moverá el recordatorio y todas sus subtareas a la papelera'}
@@ -184,22 +199,30 @@ export function DeleteParentModal({
                 display: 'flex',
                 alignItems: 'center',
                 gap: 12,
-                padding: '12px 16px',
-                borderRadius: 14,
-                background: 'var(--bg-elevated, rgba(0, 0, 0, 0.04))',
-                border: '1px solid var(--border-subtle, rgba(0, 0, 0, 0.12))',
+                padding: '14px 16px',
+                borderRadius: 16,
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
                 color: 'var(--text-primary)',
                 fontSize: '0.94rem',
-                fontWeight: 600,
+                fontWeight: 650,
                 cursor: 'pointer',
                 textAlign: 'left',
-                transition: 'background 0.15s ease'
+                transition: 'all 0.18s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--bg-hover)';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--bg-elevated)';
+                e.currentTarget.style.transform = 'none';
               }}
             >
               <CornerDownRight size={18} style={{ flexShrink: 0, color: 'var(--accent-primary, #0a84ff)' }} />
               <div style={{ flex: 1 }}>
                 <div>Conservar subtareas</div>
-                <div style={{ fontSize: '0.78rem', fontWeight: 400, color: 'var(--text-secondary)' }}>
+                <div style={{ fontSize: '0.78rem', fontWeight: 400, color: 'var(--text-secondary)', marginTop: 2 }}>
                   Anula el sangrado en su misma posición y elimina solo la tarea principal
                 </div>
               </div>

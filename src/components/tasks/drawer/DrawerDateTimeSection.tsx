@@ -27,6 +27,8 @@ interface DrawerDateTimeSectionProps {
   expirationType?: 'card' | 'subscription' | 'other';
   duration?: number | '';
   setDuration?: (duration: number | '') => void;
+  disableDuration?: boolean;
+  setDisableDuration?: (disabled: boolean) => void;
   isParallel?: boolean;
   setIsParallel?: (parallel: boolean) => void;
   parallelDuration?: number;
@@ -52,6 +54,8 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
   expirationType,
   duration,
   setDuration,
+  disableDuration = false,
+  setDisableDuration,
   isParallel,
   setIsParallel,
   parallelDuration,
@@ -267,14 +271,109 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
 
               {/* Selector de Duración Nativo estilo Temporizador Apple */}
               <div id="drawer-duration-row" style={{ padding: '4px 0 2px' }}>
-                <AppleTimerPicker
-                  duration={duration}
-                  onChange={(mins) => setDuration?.(mins)}
-                  isRoutineCategory={isRoutineList}
-                  label={isParallel ? 'Tiempo activo (tu dedicación)' : 'Duración estimada'}
-                  sublabel={isParallel ? 'El tiempo que estás ocupado realizándola (ej: 20 seg para ponértela, 2 min para cargarla)' : undefined}
-                  isParallel={Boolean(isParallel)}
-                />
+                {/* Cabecera con switch para activar/desactivar duración explícitamente */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 10,
+                  marginBottom: 10,
+                  padding: '4px 2px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                    <div style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      background: disableDuration ? 'var(--bg-material, rgba(0,0,0,0.04))' : 'rgba(0, 122, 255, 0.12)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <Clock size={17} strokeWidth={2.4} color={disableDuration ? 'var(--text-tertiary)' : 'var(--accent-primary, #007aff)'} />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: '0.86rem', fontWeight: 650, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                        Duración
+                      </div>
+                      <div style={{ fontSize: '0.73rem', color: 'var(--text-secondary)', lineHeight: 1.25, marginTop: 2 }}>
+                        {disableDuration ? 'Desactivada para esta tarea' : (isParallel ? 'Dedicación activa y espera en paralelo' : 'Tiempo estimado o asignado')}
+                      </div>
+                    </div>
+                  </div>
+                  <label className="switch switch--blue" style={{ flexShrink: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={!disableDuration}
+                      onChange={(e) => {
+                        const enabled = e.target.checked;
+                        setDisableDuration?.(!enabled);
+                        if (!enabled) {
+                          setDuration?.(0);
+                        } else {
+                          setDuration?.(typeof duration === 'number' && duration > 0 ? duration : 15);
+                        }
+                      }}
+                    />
+                    <span className="slider round"></span>
+                  </label>
+                </div>
+
+                {disableDuration ? (
+                  <div style={{
+                    padding: '10px 14px',
+                    borderRadius: 12,
+                    background: 'var(--bg-card, rgba(0,0,0,0.02))',
+                    border: '1px solid var(--border-subtle)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 10,
+                    marginBottom: 4
+                  }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                      Duración desactivada. No sumará minutos a tu rutina ni mostrará estimaciones.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDisableDuration?.(false);
+                        setDuration?.(typeof duration === 'number' && duration > 0 ? duration : 15);
+                      }}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: 8,
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        border: '1px solid var(--accent-primary, #007aff)',
+                        background: 'rgba(0, 122, 255, 0.08)',
+                        color: 'var(--accent-primary, #007aff)',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      Activar
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <AppleTimerPicker
+                      duration={duration}
+                      onChange={(mins) => {
+                        if (mins === 0) {
+                          setDisableDuration?.(true);
+                          setDuration?.(0);
+                        } else {
+                          setDisableDuration?.(false);
+                          setDuration?.(mins);
+                        }
+                      }}
+                      isRoutineCategory={isRoutineList}
+                      label={isParallel ? 'Tiempo activo (tu dedicación)' : 'Duración estimada'}
+                      sublabel={isParallel ? 'El tiempo que estás ocupado realizándola (ej: 20 seg para ponértela, 2 min para cargarla)' : undefined}
+                      isParallel={Boolean(isParallel)}
+                    />
 
                 {/* Opción Tarea en Paralelo / Segundo plano (ej: lavadora, mascarilla, secadora) */}
                 {setIsParallel && (isRoutineList || isParallel) && (
@@ -467,7 +566,9 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                     )}
                   </div>
                 )}
-              </div>
+              </>
+            )}
+          </div>
             </div>
           </motion.div>
         )}

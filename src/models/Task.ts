@@ -105,6 +105,7 @@ export interface TaskItem {
   timeOfDay?: 'morning' | 'afternoon' | 'night';
 
   duration?: number;
+  disableDuration?: boolean; // Permite desactivar explícitamente la duración para esta tarea
   isParallel?: boolean; // Tarea que corre en segundo plano/paralelo (ej: lavadora, mascarilla)
   parallelDuration?: number; // Minutos pasivos de espera en segundo plano
 

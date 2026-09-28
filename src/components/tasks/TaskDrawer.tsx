@@ -126,6 +126,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   const [quantity, setQuantity] = useState<number>(1);
   const [brand, setBrand] = useState('');
   const [duration, setDuration] = useState<number | ''>('');
+  const [disableDuration, setDisableDuration] = useState<boolean>(false);
   const [isParallel, setIsParallel] = useState<boolean>(false);
   const [parallelDuration, setParallelDuration] = useState<number | undefined>(undefined);
   const [targetCount, setTargetCount] = useState<number | undefined>(undefined);
@@ -224,7 +225,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setIsDetailed(!!task.isDetailed);
         setPrice(task.price !== undefined ? task.price : undefined);
         setQuantity(task.quantity !== undefined ? task.quantity : 1);
-        setDuration(typeof task.duration === 'number' ? task.duration : '');
+        const isDurDisabled = task.disableDuration === true || task.duration === 0;
+        setDisableDuration(isDurDisabled);
+        setDuration(isDurDisabled ? 0 : (typeof task.duration === 'number' ? task.duration : ''));
         setIsParallel(Boolean(task.isParallel));
         setParallelDuration(task.parallelDuration);
         setTargetCount(task.targetCount);
@@ -293,6 +296,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setQuantity(1);
         setBrand('');
         setDuration('');
+        setDisableDuration(false);
         setIsParallel(false);
         setParallelDuration(undefined);
         const isCad = isCaducidadesList(defaultCategoryId);
@@ -593,7 +597,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
       price: price !== undefined && price !== null && !isNaN(Number(price)) && Number(price) > 0 ? Number(price) : undefined,
       quantity: quantity !== undefined ? Number(quantity) : 1,
       brand: brand.trim() || undefined,
-      duration: duration !== '' ? Number(duration) : undefined,
+      duration: disableDuration ? 0 : (duration !== '' && Number(duration) > 0 ? Number(duration) : undefined),
+      disableDuration: disableDuration ? true : undefined,
       isParallel: isParallel ? true : undefined,
       parallelDuration: isParallel && parallelDuration ? Number(parallelDuration) : undefined,
       targetCount: targetCount && targetCount > 1 ? Number(targetCount) : undefined,
@@ -609,7 +614,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
 
     if (taskId) {
       updateTask(taskId, payload);
-      if (duration !== '' && duration !== task?.duration) {
+      if (!disableDuration && duration !== '' && duration !== task?.duration && Number(duration) > 0) {
         useAppStore.getState().setLearnedDuration(taskId, Number(duration));
       }
     } else {
@@ -642,6 +647,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
     setQuantity(1);
     setBrand('');
     setDuration('');
+    setDisableDuration(false);
     setTargetCount(undefined);
     setCurrentCount(undefined);
     setPeople([]);
@@ -799,6 +805,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                 expirationType={expirationType}
                 duration={duration}
                 setDuration={setDuration}
+                disableDuration={disableDuration}
+                setDisableDuration={setDisableDuration}
                 isParallel={isParallel}
                 setIsParallel={setIsParallel}
                 parallelDuration={parallelDuration}

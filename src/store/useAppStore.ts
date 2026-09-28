@@ -54,6 +54,74 @@ export const isTaskCompleted = (t: any) => {
   return t.status === 'completed' || !!t.completed_at;
 };
 
+export function sanitizeTaskHierarchy(tasks: Record<string, TaskItem>): Record<string, TaskItem> {
+  const result = { ...tasks };
+  let changed = false;
+
+  for (const id in result) {
+    const task = result[id];
+    if (!task || !task.parentId) continue;
+
+    // 1. Auto-referencia
+    if (task.parentId === id) {
+      result[id] = { ...task, parentId: undefined, _is_dirty: true };
+      changed = true;
+      continue;
+    }
+
+    // 2. Padre inexistente o borrado
+    const parent = result[task.parentId];
+    if (!parent || parent.deleted_at) {
+      result[id] = { ...task, parentId: undefined, _is_dirty: true };
+      changed = true;
+      continue;
+    }
+
+    // 3. Detección de ciclos
+    let curr: TaskItem | undefined = parent;
+    const visited = new Set<string>([id]);
+    let hasCycle = false;
+    while (curr && curr.parentId) {
+      if (visited.has(curr.parentId)) {
+        hasCycle = true;
+        break;
+      }
+      visited.add(curr.parentId);
+      curr = result[curr.parentId];
+    }
+
+    if (hasCycle) {
+      result[id] = { ...task, parentId: undefined, _is_dirty: true };
+      changed = true;
+    }
+  }
+
+  return changed ? result : tasks;
+}
+
+export function sanitizeSectionHierarchy(sections: ListSection[]): ListSection[] {
+  const secMap = new Map(sections.map(s => [s.id, s]));
+  return sections.map(s => {
+    if (!s.parentId) return s;
+    if (s.parentId === s.id) return { ...s, parentId: undefined, _is_dirty: true };
+    const parent = secMap.get(s.parentId);
+    if (!parent || parent.deleted_at || parent.listId !== s.listId) {
+      return { ...s, parentId: undefined, _is_dirty: true };
+    }
+    // Detección de ciclos
+    let curr: ListSection | undefined = parent;
+    const visited = new Set<string>([s.id]);
+    while (curr && curr.parentId) {
+      if (visited.has(curr.parentId)) {
+        return { ...s, parentId: undefined, _is_dirty: true };
+      }
+      visited.add(curr.parentId);
+      curr = secMap.get(curr.parentId);
+    }
+    return s;
+  });
+}
+
 const INITIAL_LISTS: CustomList[] = [];
 
 const INITIAL_CYCLES: CustomCycle[] = [
@@ -736,7 +804,27 @@ export const useAppStore = create<AppState>()(
       updateTask: (id, updates) => optimisticUpdate(get, set, (state) => {
         const task = state.tasks[id];
         if (!task) return state;
-        const updated = TaskRepository.update(task, updates);
+
+        const safeUpdates = { ...updates };
+        if (safeUpdates.parentId !== undefined) {
+          if (safeUpdates.parentId === id) {
+            safeUpdates.parentId = undefined;
+          } else if (safeUpdates.parentId) {
+            let curr = state.tasks[safeUpdates.parentId];
+            const visited = new Set<string>();
+            while (curr && curr.parentId) {
+              if (curr.parentId === id) {
+                safeUpdates.parentId = undefined;
+                break;
+              }
+              if (visited.has(curr.parentId)) break;
+              visited.add(curr.parentId);
+              curr = state.tasks[curr.parentId];
+            }
+          }
+        }
+
+        const updated = TaskRepository.update(task, safeUpdates);
         const updatedTasks = {
           ...state.tasks,
           [id]: updated
@@ -765,7 +853,7 @@ export const useAppStore = create<AppState>()(
         }
 
         return {
-          tasks: updatedTasks
+          tasks: sanitizeTaskHierarchy(updatedTasks)
         };
       }),
 
@@ -777,7 +865,11 @@ export const useAppStore = create<AppState>()(
           Object.entries(taskUpdates).forEach(([id, upd]) => {
             const t = newTasks[id];
             if (t) {
-              newTasks[id] = TaskRepository.update(t, upd);
+              const safeUpd = { ...upd };
+              if (safeUpd.parentId === id) {
+                safeUpd.parentId = undefined;
+              }
+              newTasks[id] = TaskRepository.update(t, safeUpd);
               changed = true;
             }
           });
@@ -790,7 +882,8 @@ export const useAppStore = create<AppState>()(
             changed = true;
           }
         });
-        return changed ? { tasks: newTasks } : state;
+        const sanitized = sanitizeTaskHierarchy(newTasks);
+        return changed ? { tasks: sanitized } : state;
       }),
 
       addCycle: (cycle) => optimisticUpdate(get, set, (state) => {
@@ -982,16 +1075,39 @@ export const useAppStore = create<AppState>()(
         ]
       })),
 
-      updateListSection: (id, updatesOrName) => set((state: any) => ({
-        listSections: (state.listSections || []).map((s: any) => s.id === id ? {
-          ...s,
-          ...(typeof updatesOrName === 'string'
-            ? { name: updatesOrName.trim() || s.name || 'Nueva sección' }
-            : updatesOrName),
-          _is_dirty: true,
-          updated_at: new Date().toISOString()
-        } : s)
-      })),
+      updateListSection: (id, updatesOrName) => set((state: any) => {
+        const updates: Partial<ListSection> = typeof updatesOrName === 'string'
+          ? { name: updatesOrName.trim() || 'Nueva sección' }
+          : { ...(updatesOrName as Partial<ListSection>) };
+
+        if (updates.parentId !== undefined) {
+          if (updates.parentId === id) {
+            updates.parentId = undefined;
+          } else if (updates.parentId) {
+            const secMap = new Map<string, ListSection>((state.listSections || []).map((s: ListSection) => [s.id, s]));
+            let curr = secMap.get(updates.parentId);
+            const visited = new Set<string>();
+            while (curr && curr.parentId) {
+              if (curr.parentId === id) {
+                updates.parentId = undefined;
+                break;
+              }
+              if (visited.has(curr.parentId)) break;
+              visited.add(curr.parentId);
+              curr = secMap.get(curr.parentId);
+            }
+          }
+        }
+
+        return {
+          listSections: (state.listSections || []).map((s: any) => s.id === id ? {
+            ...s,
+            ...updates,
+            _is_dirty: true,
+            updated_at: new Date().toISOString()
+          } : s)
+        };
+      }),
 
       deleteListSection: (id) => optimisticUpdate(get, set, (state) => {
         const updatedTasks = { ...state.tasks };
@@ -1002,8 +1118,20 @@ export const useAppStore = create<AppState>()(
             changed = true;
           }
         }
+
+        const now = new Date().toISOString();
+        const updatedSections = (state.listSections || []).map((s: any) => {
+          if (s.id === id) {
+            return { ...s, deleted_at: now, _is_dirty: true, updated_at: now };
+          }
+          if (s.parentId === id) {
+            return { ...s, parentId: undefined, _is_dirty: true, updated_at: now };
+          }
+          return s;
+        });
+
         return {
-          listSections: (state.listSections || []).map(s => s.id === id ? { ...s, deleted_at: new Date().toISOString(), _is_dirty: true, updated_at: new Date().toISOString() } : s),
+          listSections: sanitizeSectionHierarchy(updatedSections),
           tasks: changed ? updatedTasks : state.tasks
         };
       }),
@@ -1456,7 +1584,7 @@ export const useAppStore = create<AppState>()(
       }),
 
       nestTask: (taskId: string, parentId: string | undefined) => optimisticUpdate(get, set, (state) => {
-        if (taskId === parentId) return state; // Evitar auto-anidación circular básica
+        if (!taskId || taskId === parentId) return state; // Evitar auto-anidación circular básica
         
         const task = state.tasks[taskId];
         if (!task) return state;
@@ -1495,10 +1623,22 @@ export const useAppStore = create<AppState>()(
         } else {
           // Anidar dentro de parentId
           const parent = state.tasks[parentId];
-          if (!parent) return state;
+          if (!parent || parent.deleted_at) return state;
 
           // Si parentId ya es subtarea de otra tarea, anidar bajo el padre raíz (máximo 1 nivel de sangría estilo Apple)
           const effectiveParentId = parent.parentId ? parent.parentId : parentId;
+          if (effectiveParentId === taskId) return state;
+
+          // Verificar que taskId no sea ancestro de parentId (evitar ciclos)
+          let ancestorCheck: TaskItem | undefined = parent;
+          const visitedAncestors = new Set<string>();
+          while (ancestorCheck) {
+            if (ancestorCheck.id === taskId) return state;
+            if (!ancestorCheck.parentId || visitedAncestors.has(ancestorCheck.parentId)) break;
+            visitedAncestors.add(ancestorCheck.parentId);
+            ancestorCheck = state.tasks[ancestorCheck.parentId];
+          }
+
           const effectiveParent = state.tasks[effectiveParentId] || parent;
 
           const existingChildren = Object.values(state.tasks)
@@ -1524,7 +1664,7 @@ export const useAppStore = create<AppState>()(
           });
         }
 
-        return { tasks: updatedTasks };
+        return { tasks: sanitizeTaskHierarchy(updatedTasks) };
       }),
 
       cleanupDataHygiene: () => optimisticUpdate(get, set, (state) => {
@@ -1679,13 +1819,13 @@ export const useAppStore = create<AppState>()(
         return {
           ...currentState,
           ...persistedState,
-          tasks: cleanTasks,
+          tasks: sanitizeTaskHierarchy(cleanTasks),
           globalCyclesEnabled: true,
           _preferences_dirty: false,
           theme: resolvedTheme,
           lists: uniqueLists,
           cycles: uniqueCycles,
-          listSections: uniqueSections,
+          listSections: sanitizeSectionHierarchy(uniqueSections),
           smartListVisibility: mergedSmartListVisibility,
           cycleVisibility: mergedCycleVisibility,
           pinnedSmartLists: mergedPinnedSmartLists

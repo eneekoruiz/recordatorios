@@ -1451,9 +1451,13 @@ const CORE_CYCLES = [
         });
         const presentCycleKeys = Array.from(cycleKeys);
 
+        const visitedSectionIds = new Set<string>();
         const processSection = (secId: string, depth: number) => {
+          if (visitedSectionIds.has(secId)) return;
+          visitedSectionIds.add(secId);
+
           const sec = sectionsForList.find(s => s.id === secId);
-          if (!sec) return;
+          if (!sec || sec.deleted_at) return;
 
           // Las secciones manuales que son literalmente "Diaria/Semanal/Mensual/Anual" son un
           // duplicado de la sección de ciclo equivalente (ya renderizada con sus tareas e hijas en presentCycleKeys).
@@ -1546,8 +1550,11 @@ const CORE_CYCLES = [
             } else {
               if (tasksToRender.length > 0) {
                 const inScope = new Set(tasksToRender.map(t => t.id));
-                const roots = tasksToRender.filter(t => !t.parentId || !inScope.has(t.parentId));
+                const roots = tasksToRender.filter(t => !t.parentId || !inScope.has(t.parentId) || t.parentId === t.id);
+                const visitedTaskIds = new Set<string>();
                 const processNode = (task: TaskItem, depthLevel: number) => {
+                  if (visitedTaskIds.has(task.id)) return;
+                  visitedTaskIds.add(task.id);
                   flat.push({ type: 'task', task, depth: depthLevel });
                   if (!isCatCollapsed(`task_${task.id}`)) {
                     const children = tasksToRender.filter(t => t.parentId === task.id);
@@ -1555,6 +1562,12 @@ const CORE_CYCLES = [
                   }
                 };
                 roots.forEach(r => processNode(r, 0));
+                // Rescate de seguridad: si alguna tarea no fue visitada por incoherencia de parentId, mostrarla a nivel 0
+                tasksToRender.forEach(t => {
+                  if (!visitedTaskIds.has(t.id)) {
+                    processNode(t, 0);
+                  }
+                });
               }
 
               if (childSections.length > 0) {
@@ -1858,28 +1871,37 @@ const CORE_CYCLES = [
               if (!isCatCollapsed(catKey)) {
                 if (tasksToRender.length > 0) {
                   const inScope = new Set(tasksToRender.map(t => t.id));
-                    const roots = tasksToRender.filter(t => !t.parentId || !inScope.has(t.parentId));
-                    const processNode = (task: TaskItem, depthLevel: number) => {
-                      flat.push({ type: 'task', task, depth: depthLevel });
-                      if (!isCatCollapsed(`task_${task.id}`)) {
-                        const children = tasksToRender.filter(t => t.parentId === task.id);
-                        children.forEach(c => processNode(c, depthLevel + 1));
-                      }
-                    };
-                    roots.forEach(r => processNode(r, 0));
-                  }
+                  const roots = tasksToRender.filter(t => !t.parentId || !inScope.has(t.parentId) || t.parentId === t.id);
+                  const visitedCycleTaskIds = new Set<string>();
+                  const processNode = (task: TaskItem, depthLevel: number) => {
+                    if (visitedCycleTaskIds.has(task.id)) return;
+                    visitedCycleTaskIds.add(task.id);
+                    flat.push({ type: 'task', task, depth: depthLevel });
+                    if (!isCatCollapsed(`task_${task.id}`)) {
+                      const children = tasksToRender.filter(t => t.parentId === task.id);
+                      children.forEach(c => processNode(c, depthLevel + 1));
+                    }
+                  };
+                  roots.forEach(r => processNode(r, 0));
+                  tasksToRender.forEach(t => {
+                    if (!visitedCycleTaskIds.has(t.id)) {
+                      processNode(t, 0);
+                    }
+                  });
+                }
 
-                  if (childSections.length > 0) {
-                    childSections.forEach(child => processSection(child.id, 1));
-                  }
+                if (childSections.length > 0) {
+                  childSections.forEach(child => processSection(child.id, 1));
+                }
               }
             });
           }
 
           // Start with root sections
           const seenRootNames = new Set<string>();
+          const allSectionIds = new Set(sectionsForList.map(s => s.id));
           const rootSections = sectionsForList
-            .filter(s => !s.parentId)
+            .filter(s => !s.parentId || !allSectionIds.has(s.parentId) || s.parentId === s.id)
             .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
             .filter(s => {
               const norm = (s?.name || '').trim().toLowerCase();
@@ -1889,6 +1911,13 @@ const CORE_CYCLES = [
               return true;
             });
           rootSections.forEach(rs => processSection(rs.id, 0));
+
+          // Rescate de seguridad: asegurar que cualquier sección huérfana o omitida se procesa a nivel 0
+          sectionsForList.forEach(s => {
+            if (!visitedSectionIds.has(s.id) && !getPureCyclicPeriodicity(s.name)) {
+              processSection(s.id, 0);
+            }
+          });
         }
       }
     }
@@ -1973,57 +2002,97 @@ const CORE_CYCLES = [
     const targetIdx = visibleTasks.findIndex(t => t.id === targetTaskId);
     if (sourceIdx === -1 || targetIdx === -1) return;
 
+    // Verificar si el objetivo es descendiente de la tarea arrastrada (evitar ciclos)
+    const isDescendant = (candidateId: string, rootId: string): boolean => {
+      let curr = tasks[candidateId];
+      const visited = new Set<string>();
+      while (curr && curr.parentId) {
+        if (curr.parentId === rootId) return true;
+        if (visited.has(curr.parentId)) break;
+        visited.add(curr.parentId);
+        curr = tasks[curr.parentId];
+      }
+      return false;
+    };
+
+    if (isDescendant(targetTaskId, sourceTaskId)) {
+      return; // No se puede soltar una tarea padre dentro de una de sus subtareas
+    }
+
     if (sortBy !== 'manual') {
       setSortBy('manual');
     }
 
-    const reordered = [...visibleTasks];
-    const [removed] = reordered.splice(sourceIdx, 1);
-    const newTargetIdx = reordered.findIndex(t => t.id === targetTaskId);
-    const insertIdx = position === 'after' ? newTargetIdx + 1 : newTargetIdx;
-    reordered.splice(insertIdx, 0, removed);
-
     const sourceTask = tasks[sourceTaskId] || visibleTasks[sourceIdx];
     const targetTask = tasks[targetTaskId] || visibleTasks[targetIdx];
+
+    const hasChildren = Object.values(tasks).some(t => !t.deleted_at && t.parentId === sourceTaskId);
+
+    // Mover la tarea fuente y todos sus descendientes visibles juntos como un bloque
+    const clusterIds = new Set<string>([sourceTaskId]);
+    Object.values(tasks).forEach(t => {
+      if (!t.deleted_at && isDescendant(t.id, sourceTaskId)) {
+        clusterIds.add(t.id);
+      }
+    });
+
+    const clusterTasks = visibleTasks.filter(t => clusterIds.has(t.id));
+    const reordered = visibleTasks.filter(t => !clusterIds.has(t.id));
+
+    const newTargetIdx = reordered.findIndex(t => t.id === targetTaskId);
+    if (newTargetIdx === -1) return;
+    const insertIdx = position === 'after' ? newTargetIdx + 1 : newTargetIdx;
+    reordered.splice(insertIdx, 0, ...clusterTasks);
 
     const taskUpdates: Record<string, Partial<TaskItem>> = {};
 
     if (sourceTask && targetTask) {
       const prevTask = insertIdx > 0 ? reordered[insertIdx - 1] : undefined;
-      const nextTask = insertIdx < reordered.length - 1 ? reordered[insertIdx + 1] : undefined;
+      const nextTask = (insertIdx + clusterTasks.length < reordered.length) ? reordered[insertIdx + clusterTasks.length] : undefined;
 
       let newParentId: string | undefined = undefined;
 
-      // Escenario 1: Soltado entre una tarea principal y su primera subtarea
-      // (prevTask es el padre y nextTask es subtarea de prevTask)
-      if (prevTask && nextTask && nextTask.parentId && nextTask.parentId === prevTask.id) {
-        newParentId = prevTask.id;
+      if (!hasChildren) {
+        // Escenario 1: Soltado entre una tarea principal y su primera subtarea
+        if (prevTask && nextTask && nextTask.parentId && nextTask.parentId === prevTask.id) {
+          newParentId = prevTask.id;
+        }
+        // Escenario 2: Soltado entre dos subtareas del mismo padre
+        else if (prevTask && nextTask && prevTask.parentId && nextTask.parentId && prevTask.parentId === nextTask.parentId) {
+          newParentId = prevTask.parentId;
+        }
+        // Escenario 3: Soltado después de una subtarea
+        else if (position === 'after' && targetTask.parentId) {
+          newParentId = targetTask.parentId;
+        }
+        // Escenario 4: Soltado antes de una subtarea, cuando el elemento anterior es el padre o un hermano
+        else if (position === 'before' && targetTask.parentId && prevTask && (prevTask.id === targetTask.parentId || prevTask.parentId === targetTask.parentId)) {
+          newParentId = targetTask.parentId;
+        }
+        // Escenario 5: Soltado después de un padre cuya subtarea sigue a continuación
+        else if (position === 'after' && !targetTask.parentId && nextTask && nextTask.parentId === targetTask.id) {
+          newParentId = targetTask.id;
+        }
+        // Escenario 6: Soltado como tarea raíz ordinaria
+        else {
+          newParentId = undefined;
+        }
       }
-      // Escenario 2: Soltado entre dos subtareas del mismo padre
-      else if (prevTask && nextTask && prevTask.parentId && nextTask.parentId && prevTask.parentId === nextTask.parentId) {
-        newParentId = prevTask.parentId;
-      }
-      // Escenario 3: Soltado después de una subtarea
-      else if (position === 'after' && targetTask.parentId) {
-        newParentId = targetTask.parentId;
-      }
-      // Escenario 4: Soltado antes de una subtarea, cuando el elemento anterior es el padre o un hermano
-      else if (position === 'before' && targetTask.parentId && prevTask && (prevTask.id === targetTask.parentId || prevTask.parentId === targetTask.parentId)) {
-        newParentId = targetTask.parentId;
-      }
-      // Escenario 5: Soltado después de un padre cuya subtarea sigue a continuación
-      else if (position === 'after' && !targetTask.parentId && nextTask && nextTask.parentId === targetTask.id) {
-        newParentId = targetTask.id;
-      }
-      // Escenario 6: Soltado como tarea raíz ordinaria
-      else {
+
+      // Seguridad total: newParentId nunca puede ser sourceTaskId ni ninguno de sus descendientes
+      if (newParentId === sourceTaskId || (newParentId && clusterIds.has(newParentId))) {
         newParentId = undefined;
       }
 
       // Sincronizar sección y lista
       const effectiveParent = newParentId ? (tasks[newParentId] || visibleTasks.find(t => t.id === newParentId)) : undefined;
-      const newCategoryId = effectiveParent?.categoryId || targetTask.categoryId || sourceTask.categoryId;
-      const newSectionId = effectiveParent ? effectiveParent.sectionId : targetTask.sectionId;
+      // En vistas inteligentes (Hoy, Programados...), no reasignar lista ni sección de origen
+      const newCategoryId = isSmartView
+        ? sourceTask.categoryId
+        : (effectiveParent?.categoryId || (isListView && currentList ? currentList.id : targetTask.categoryId || sourceTask.categoryId));
+      const newSectionId = isSmartView
+        ? sourceTask.sectionId
+        : (effectiveParent ? effectiveParent.sectionId : targetTask.sectionId);
 
       if (
         sourceTask.parentId !== newParentId ||
@@ -2036,22 +2105,13 @@ const CORE_CYCLES = [
           sectionId: newSectionId
         };
 
-        // Mantener consistentes las subtareas de la tarea movida
+        // Mantener consistentes las subtareas de la tarea movida sin cambiarles el parentId
         Object.values(tasks).forEach(c => {
           if (!c.deleted_at && c.parentId === sourceTaskId) {
-            if (newParentId) {
-              // Evitar 2 niveles de anidación: aplanar bajo el mismo padre
-              taskUpdates[c.id] = {
-                parentId: newParentId,
-                categoryId: newCategoryId,
-                sectionId: newSectionId
-              };
-            } else {
-              taskUpdates[c.id] = {
-                categoryId: newCategoryId,
-                sectionId: newSectionId
-              };
-            }
+            taskUpdates[c.id] = {
+              categoryId: newCategoryId,
+              sectionId: newSectionId
+            };
           }
         });
       }
@@ -2059,7 +2119,7 @@ const CORE_CYCLES = [
 
     reorderTasks(reordered.map(t => t.id), Object.keys(taskUpdates).length > 0 ? taskUpdates : undefined);
     HapticService.selection();
-  }, [visibleTasks, tasks, reorderTasks, sortBy]);
+  }, [visibleTasks, tasks, reorderTasks, sortBy, isSmartView, isListView, currentList]);
 
   const handleReorderSections = useCallback((sourceSectionId: string, targetSectionId: string, position: 'before' | 'after' = 'before') => {
     if (sourceSectionId === targetSectionId) return;
@@ -2074,16 +2134,38 @@ const CORE_CYCLES = [
     const sourceSec = currentListSections[sourceIdx];
     const targetSec = currentListSections[targetIdx];
 
+    // Verificar que targetSec no sea descendiente de sourceSec (evitar ciclos)
+    const secMap = new Map(currentListSections.map(s => [s.id, s]));
+    let isTargetDescendant = false;
+    let curr = targetSec;
+    const visited = new Set<string>();
+    while (curr && curr.parentId) {
+      if (curr.parentId === sourceSectionId) {
+        isTargetDescendant = true;
+        break;
+      }
+      if (visited.has(curr.parentId)) break;
+      visited.add(curr.parentId);
+      curr = secMap.get(curr.parentId)!;
+    }
+    if (isTargetDescendant) return;
+
     const reordered = [...currentListSections];
     const [removed] = reordered.splice(sourceIdx, 1);
     const newTargetIdx = reordered.findIndex(s => s.id === targetSectionId);
     const insertIdx = position === 'after' ? newTargetIdx + 1 : newTargetIdx;
-    reordered.splice(insertIdx, 0, { ...removed, parentId: targetSec.parentId });
+
+    // Solo adoptar targetSec.parentId si es seguro y no apunta a sourceSec
+    const safeParentId = (targetSec.parentId && targetSec.parentId !== sourceSectionId)
+      ? targetSec.parentId
+      : undefined;
+
+    reordered.splice(insertIdx, 0, { ...removed, parentId: safeParentId });
 
     const updates = reordered.map((s, idx) => ({ id: s.id, order: idx }));
     reorderListSections(updates);
-    if (sourceSec.parentId !== targetSec.parentId) {
-      updateListSection(sourceSec.id, { parentId: targetSec.parentId });
+    if (sourceSec.parentId !== safeParentId) {
+      updateListSection(sourceSec.id, { parentId: safeParentId });
     }
     HapticService.selection();
   }, [listSections, currentList?.id, reorderListSections, updateListSection]);
