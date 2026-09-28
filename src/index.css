@@ -1313,7 +1313,9 @@ button:disabled {
   margin-top: 24px;
 }
 .premium-button,
-.modal-btn-primary {
+.modal-btn-primary,
+.modal-btn-secondary,
+.modal-btn-danger {
   min-height: 46px;
   padding: 11px 18px;
   border: 0;

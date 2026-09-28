@@ -24,6 +24,7 @@ const SESSION_TTL = '30d';
 const SESSION_REFRESH_AFTER_MS = 7 * DAY_MS;
 const RESET_TTL = '30m';
 const MAX_ITEMS_PER_COLLECTION = 2000;
+const CRON_CONCURRENCY = 8;
 const DEV_FALLBACK_SECRET = 'dev-only-insecure-secret-change-me';
 
 const isProduction = () => process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL);
@@ -631,15 +632,26 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
   // Tiempo real por SSE. En Vercel (funciones efímeras) no es viable mantener conexiones
   // abiertas ni compartir memoria entre instancias: respondemos 204 y el cliente se queda
   // con el sondeo periódico + sincronización al volver a la pestaña.
+  // El EventSource no puede mandar cabeceras, y poner el token de sesión (30 días) en la URL lo
+  // dejaría en logs y proxies. En su lugar, el cliente pide un ticket de 60 s y un solo propósito.
+  app.post(['/api/sync/live-ticket', '/sync/live-ticket'], authenticateToken, (req, res) => {
+    const secret = requireSecret(res);
+    if (!secret) return;
+    const ticket = jwt.sign({ sub: req.user.id, purpose: 'live' }, secret, { expiresIn: '60s', algorithm: 'HS256' });
+    res.json({ ticket });
+  });
+
   app.get(['/api/sync/live', '/sync/live'], async (req, res) => {
     if (process.env.VERCEL) return res.status(204).end();
     const secret = getJwtSecret();
-    const token = typeof req.query.token === 'string' ? req.query.token : null;
-    if (!token || !secret) return res.sendStatus(401);
+    const ticket = typeof req.query.ticket === 'string' ? req.query.ticket : null;
+    if (!ticket || !secret) return res.sendStatus(401);
 
     let userId;
     try {
-      const user = await sessionUser(verifySession(token, secret));
+      const payload = jwt.verify(ticket, secret, { algorithms: ['HS256'] });
+      if (payload?.purpose !== 'live' || !payload.sub) return res.sendStatus(401);
+      const user = await prisma.user.findUnique({ where: { id: String(payload.sub) }, select: { id: true } });
       if (!user) return res.sendStatus(401);
       userId = user.id;
     } catch {
@@ -735,21 +747,20 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
         prisma.task.findMany({ where: { userId: ownerId, deletedAt: null } }),
         prisma.listSection.findMany({ where: { userId: ownerId, deletedAt: null } }),
       ]);
-      const strip = (p) => {
-        const clean = { ...p };
-        delete clean.user_id;
-        delete clean.location;
-        return clean;
-      };
+      // Lista blanca: la vista pública solo recibe lo que necesita pintar. Notas privadas, personas,
+      // ubicaciones, enlaces de gestión o datos de tarjetas nunca salen por un enlace compartido.
+      const pick = (p, keys) => Object.fromEntries(keys.filter((k) => p[k] !== undefined).map((k) => [k, p[k]]));
+      const TASK_KEYS = ['id', 'title', 'description', 'status', 'dueDate', 'sectionId', 'price', 'quantity', 'order', 'created_at'];
       const tasks = allTasks
         .map((t) => toClientPayload(ownerId, t))
         .filter((p) => (p.categoryId || p.category_id || p.listId) === clientListId && !p.deleted_at)
-        .map(strip);
+        .map((p) => pick(p, TASK_KEYS));
       const sections = allSections
         .map((s) => toClientPayload(ownerId, s))
-        .filter((p) => p.listId === clientListId && !p.deleted_at);
+        .filter((p) => p.listId === clientListId && !p.deleted_at)
+        .map((p) => pick(p, ['id', 'name', 'order', 'parentId']));
 
-      res.json({ list: strip(toClientPayload(ownerId, link.list)), tasks, sections });
+      res.json({ list: pick(toClientPayload(ownerId, link.list), ['id', 'name', 'color', 'icon']), tasks, sections });
     } catch (err) {
       console.error('Share read error:', err);
       res.status(500).json({ error: 'No se pudo cargar la lista compartida' });
@@ -815,50 +826,70 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
     try {
       const subscriptions = await prisma.pushSubscription.findMany({});
       // Tareas, listas y secciones de cada usuario (la frecuencia sale también de la sección).
-      const dataByUser = new Map();
-      for (const sub of subscriptions) {
-        if (!dataByUser.has(sub.userId)) {
-          const where = { userId: sub.userId, deletedAt: null };
-          const [tasks, lists, sections, user] = await Promise.all([
-            prisma.task.findMany({ where }),
-            prisma.list.findMany({ where }),
-            prisma.listSection.findMany({ where }),
-            prisma.user.findUnique({ where: { id: sub.userId }, select: { preferences: true } }),
-          ]);
-          const toClient = (rows) => rows.map((r) => toClientPayload(sub.userId, r));
-          // El día semanal elegido en la app (sincronizado) manda sobre el de la suscripción.
-          const weeklyDay = user?.preferences?.weeklyTasksDay;
-          dataByUser.set(sub.userId, {
-            data: { tasks: toClient(tasks), lists: toClient(lists), sections: toClient(sections) },
-            weeklyDay: Number.isInteger(weeklyDay) && weeklyDay >= 0 && weeklyDay <= 6 ? weeklyDay : undefined,
+      // Una sola carga por usuario, compartida por todas sus suscripciones.
+      const userData = new Map();
+      const loadUser = (userId) => {
+        if (!userData.has(userId)) {
+          userData.set(userId, (async () => {
+            const where = { userId, deletedAt: null };
+            const [tasks, lists, sections, user] = await Promise.all([
+              prisma.task.findMany({ where }),
+              prisma.list.findMany({ where }),
+              prisma.listSection.findMany({ where }),
+              prisma.user.findUnique({ where: { id: userId }, select: { preferences: true } }),
+            ]);
+            const toClient = (rows) => rows.map((r) => toClientPayload(userId, r));
+            // El día semanal elegido en la app (sincronizado) manda sobre el de la suscripción.
+            const weeklyDay = user?.preferences?.weeklyTasksDay;
+            return {
+              data: { tasks: toClient(tasks), lists: toClient(lists), sections: toClient(sections) },
+              weeklyDay: Number.isInteger(weeklyDay) && weeklyDay >= 0 && weeklyDay <= 6 ? weeklyDay : undefined,
+            };
+          })());
+        }
+        return userData.get(userId);
+      };
+
+      const processSubscription = async (sub) => {
+        try {
+          const { data, weeklyDay } = await loadUser(sub.userId);
+          const { messages, sentLog } = planNotifications({
+            ...data,
+            prefs: { timeZone: sub.timeZone, digestHour: sub.digestHour, weeklyDay: weeklyDay ?? sub.weeklyDay },
+            now,
+            since: sub.lastCheckedAt,
+            sentLog: sub.sentLog || {},
           });
-        }
-        const { data, weeklyDay } = dataByUser.get(sub.userId);
-        const { messages, sentLog } = planNotifications({
-          ...data,
-          prefs: { timeZone: sub.timeZone, digestHour: sub.digestHour, weeklyDay: weeklyDay ?? sub.weeklyDay },
-          now,
-          since: sub.lastCheckedAt,
-          sentLog: sub.sentLog || {},
-        });
-        let gone = false;
-        for (const message of messages) {
-          try {
-            await pushSender({ endpoint: sub.endpoint, keys: sub.keys }, message);
-            sent++;
-          } catch (error) {
-            // 404/410: el navegador anuló la suscripción; se borra para no reintentar.
-            if (error?.statusCode === 404 || error?.statusCode === 410) { gone = true; break; }
-            console.error('Push send error:', error?.statusCode || error);
+          let gone = false;
+          for (const message of messages) {
+            try {
+              await pushSender({ endpoint: sub.endpoint, keys: sub.keys }, message);
+              sent++;
+            } catch (error) {
+              // 404/410: el navegador anuló la suscripción; se borra para no reintentar.
+              if (error?.statusCode === 404 || error?.statusCode === 410) { gone = true; break; }
+              console.error('Push send error:', error?.statusCode || error);
+            }
           }
+          if (gone) {
+            await prisma.pushSubscription.delete({ where: { id: sub.id } });
+            removed++;
+          } else {
+            await prisma.pushSubscription.update({ where: { id: sub.id }, data: { lastCheckedAt: now, sentLog } });
+          }
+        } catch (error) {
+          // Un fallo con una suscripción no debe impedir avisar a las demás.
+          console.error('Cron notify subscription error:', error);
         }
-        if (gone) {
-          await prisma.pushSubscription.delete({ where: { id: sub.id } });
-          removed++;
-        } else {
-          await prisma.pushSubscription.update({ where: { id: sub.id }, data: { lastCheckedAt: now, sentLog } });
-        }
-      }
+      };
+
+      // Concurrencia acotada: en serverless el tiempo total de la función es limitado.
+      const queue = [...subscriptions];
+      await Promise.all(
+        Array.from({ length: Math.min(CRON_CONCURRENCY, queue.length) }, async () => {
+          for (let sub = queue.shift(); sub; sub = queue.shift()) await processSubscription(sub);
+        })
+      );
       res.json({ subscriptions: subscriptions.length, sent, removed });
     } catch (error) {
       console.error('Cron notify error:', error);

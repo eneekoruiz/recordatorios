@@ -20,13 +20,22 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = (event.notification.data && event.notification.data.url) || '/';
+  // Solo rutas de esta misma app: el payload viene del servidor, pero nunca se abre otro origen.
+  let target = '/';
+  try {
+    const url = new URL((event.notification.data && event.notification.data.url) || '/', self.location.origin);
+    if (url.origin === self.location.origin) target = url.pathname + url.search + url.hash;
+  } catch {
+    /* URL no válida: se abre la raíz */
+  }
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
       for (const win of windows) {
-        if ('focus' in win) return win.focus();
+        if ('focus' in win) {
+          return win.focus().then((focused) => (target !== '/' && focused && 'navigate' in focused ? focused.navigate(target) : focused));
+        }
       }
-      return self.clients.openWindow(url);
+      return self.clients.openWindow(target);
     })
   );
 });

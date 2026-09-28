@@ -44,6 +44,7 @@ class SyncManager {
   private eventSource: EventSource | null = null;
   private realtimeUnsupported = false;
   private realtimeFailures = 0;
+  private connectingRealtime = false;
   private debounceTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
@@ -103,11 +104,29 @@ class SyncManager {
     }
   }
 
-  private setupRealtime(token: string) {
-    if (this.realtimeUnsupported || isOfflineToken(token) || typeof EventSource === 'undefined') return;
+  private async setupRealtime(token: string) {
+    if (this.realtimeUnsupported || isOfflineToken(token) || typeof EventSource === 'undefined' || this.connectingRealtime) return;
     this.eventSource?.close();
+    this.connectingRealtime = true;
 
-    const source = new EventSource(`${apiUrl('/api/sync/live')}?token=${encodeURIComponent(token)}`);
+    // El token de sesión nunca va en la URL: se canjea por un ticket de 60 s de un solo uso.
+    let ticket = '';
+    try {
+      const res = await fetch(apiUrl('/api/sync/live-ticket'), { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      this.handleAuth(res);
+      if (res.ok) ticket = (await res.json())?.ticket || '';
+    } catch {
+      /* sin red o sesión caducada: se reintenta más abajo */
+    } finally {
+      this.connectingRealtime = false;
+    }
+    if (!ticket) {
+      this.realtimeFailures += 1;
+      if (this.realtimeFailures >= 2) this.realtimeUnsupported = true;
+      return;
+    }
+
+    const source = new EventSource(`${apiUrl('/api/sync/live')}?ticket=${encodeURIComponent(ticket)}`);
     this.eventSource = source;
     let opened = false;
 
