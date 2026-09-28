@@ -182,4 +182,53 @@ describe('AIService Semantic Grouping & Queries', () => {
     expect(result.reply).toContain('Pasear al perro');
     expect(result.tasks.length).toBe(0);
   });
+
+  it('handles general greetings with helpful advice and suggestions without creating fake tasks', () => {
+    const result = AIService.localSemanticExtract('¡Hola buenas! ¿Qué tal?', lists, {});
+    expect(result.tasks.length).toBe(0);
+    expect(result.reply).toContain('Asistente Inteligente de Recordatorios');
+    expect(result.suggestedReplies && result.suggestedReplies.length > 0).toBe(true);
+  });
+
+  it('correctly recognizes intent to complete an existing task into taskUpdates', () => {
+    const tasks = {
+      t_leche: { id: 't_leche', title: 'Comprar leche entera', status: 'pending' as const, created_at: new Date().toISOString() }
+    };
+    const result = AIService.localSemanticExtract('Marca como hecha comprar leche entera', lists, tasks);
+    expect(result.tasks.length).toBe(0);
+    expect(result.taskUpdates).toBeDefined();
+    expect(result.taskUpdates?.length).toBe(1);
+    expect(result.taskUpdates?.[0].taskId).toBe('t_leche');
+    expect(result.taskUpdates?.[0].status).toBe('completed');
+  });
+
+  it('correctly recognizes intent to delete an existing task into taskUpdates', () => {
+    const tasks = {
+      t_dent: { id: 't_dent', title: 'Cita con el dentista', status: 'pending' as const, created_at: new Date().toISOString() }
+    };
+    const result = AIService.localSemanticExtract('Elimina la cita con el dentista', lists, tasks);
+    expect(result.tasks.length).toBe(0);
+    expect(result.taskUpdates).toBeDefined();
+    expect(result.taskUpdates?.length).toBe(1);
+    expect(result.taskUpdates?.[0].taskId).toBe('t_dent');
+    expect(result.taskUpdates?.[0].deleted).toBe(true);
+  });
+
+  it('correctly recognizes intent to update task price into taskUpdates', () => {
+    const tasks = {
+      t_pan: { id: 't_pan', title: 'Pan de masa madre', status: 'pending' as const, created_at: new Date().toISOString() }
+    };
+    const result = AIService.localSemanticExtract('Cambia el precio de Pan de masa madre a 2.50€', lists, tasks);
+    expect(result.tasks.length).toBe(0);
+    expect(result.taskUpdates).toBeDefined();
+    expect(result.taskUpdates?.length).toBe(1);
+    expect(result.taskUpdates?.[0].taskId).toBe('t_pan');
+    expect(result.taskUpdates?.[0].price).toBe(2.5);
+  });
+
+  it('validates empty api key in testGeminiConnection', async () => {
+    const res = await AIService.testGeminiConnection('   ');
+    expect(res.ok).toBe(false);
+    expect(res.error).toContain('vacía');
+  });
 });

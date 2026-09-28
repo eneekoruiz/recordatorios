@@ -6,7 +6,8 @@ import {
   Calendar, CheckCircle2, Volume2, VolumeX,
   Sunrise, Sun, Moon, Repeat, MapPin,
   CalendarRange, Luggage, ShoppingCart, SprayCan,
-  Paperclip, FileText, Loader2
+  Paperclip, FileText, Loader2, AlertCircle, HelpCircle, CheckCircle,
+  Edit3, Trash2
 } from 'lucide-react';
 import { AIService, type ProposedBatch, type AIConfig } from '../../services/AIService';
 import { useAppStore } from '../../store/useAppStore';
@@ -45,6 +46,8 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
   const [config, setConfig] = useState<AIConfig>(() => AIService.getConfig());
   const [tempApiKey, setTempApiKey] = useState(config.apiKey || '');
   const [tempProvider, setTempProvider] = useState(config.provider);
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   // El dictado depende del navegador: se sabe desde el primer render.
   const [speechSupported] = useState(() =>
     typeof window !== 'undefined' && Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
@@ -63,6 +66,8 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
   const lists = useAppStore(state => state.lists);
   const tasks = useAppStore(state => state.tasks);
   const addTask = useAppStore(state => state.addTask);
+  const updateTask = useAppStore(state => state.updateTask);
+  const deleteTask = useAppStore(state => state.deleteTask);
   const nestTask = useAppStore(state => state.nestTask);
   const addTasksBatch = useAppStore(state => state.addTasksBatch);
   const chatBottomRef = useRef<HTMLDivElement>(null);
@@ -480,6 +485,98 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
     onClose();
   };
 
+  const handleToggleTaskUpdateSelected = (messageId: string, taskId: string) => {
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId || !m.batch?.taskUpdates) return m;
+      return {
+        ...m,
+        batch: {
+          ...m.batch,
+          taskUpdates: m.batch.taskUpdates.map(u => u.taskId === taskId ? { ...u, selected: !u.selected } : u)
+        }
+      };
+    }));
+  };
+
+  const handleToggleAllTaskUpdates = (messageId: string) => {
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId || !m.batch?.taskUpdates) return m;
+      const allSelected = m.batch.taskUpdates.every(u => u.selected);
+      return {
+        ...m,
+        batch: {
+          ...m.batch,
+          taskUpdates: m.batch.taskUpdates.map(u => ({ ...u, selected: !allSelected }))
+        }
+      };
+    }));
+  };
+
+  const handleApplyTaskUpdates = (messageId: string) => {
+    const msg = messages.find(m => m.id === messageId);
+    if (!msg || !msg.batch?.taskUpdates) return;
+
+    const selectedUpdates = msg.batch.taskUpdates.filter(u => u.selected);
+    if (selectedUpdates.length === 0) return;
+
+    selectedUpdates.forEach(update => {
+      if (update.deleted) {
+        deleteTask(update.taskId);
+      } else {
+        const patch: any = {};
+        if (update.status) patch.status = update.status;
+        if (update.newTitle) patch.title = update.newTitle;
+        if (update.description !== undefined) patch.description = update.description;
+        if (update.price !== undefined) patch.price = update.price;
+        if (update.dueDate !== undefined) patch.dueDate = update.dueDate;
+        if (update.timeOfDay) patch.timeOfDay = update.timeOfDay;
+        if (update.priority) patch.priority = update.priority;
+        if (update.listId) patch.categoryId = update.listId;
+        if (update.cycle) patch.cycle_id = update.cycle;
+        updateTask(update.taskId, patch);
+      }
+    });
+
+    SoundService.playComplete();
+    HapticService.notification('success');
+    window.dispatchEvent(new CustomEvent('show-toast', {
+      detail: `✓ ${selectedUpdates.length} modificación(es) aplicada(s) correctamente.`
+    }));
+
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId || !m.batch) return m;
+      return {
+        ...m,
+        batch: {
+          ...m.batch,
+          taskUpdates: []
+        },
+        text: `${m.text}\n\n✅ ¡${selectedUpdates.length} modificación(es) aplicada(s) con éxito!`
+      };
+    }));
+  };
+
+  const handleTestConnection = async () => {
+    if (!tempApiKey.trim()) {
+      setTestResult({ ok: false, message: 'Introduce una clave de API primero' });
+      return;
+    }
+    setTestingConnection(true);
+    setTestResult(null);
+    try {
+      const res = await AIService.testGeminiConnection(tempApiKey);
+      if (res.ok) {
+        setTestResult({ ok: true, message: `Conexión exitosa con ${res.model || 'Gemini'}` });
+      } else {
+        setTestResult({ ok: false, message: res.error || 'Error de conexión' });
+      }
+    } catch (e: any) {
+      setTestResult({ ok: false, message: e.message || 'Error de red' });
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
   const handleSaveSettings = () => {
     const updated: AIConfig = {
       provider: tempProvider,
@@ -703,13 +800,52 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
 
                 {tempProvider !== 'auto' && (
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 4 }}>
-                      Clave API ({tempProvider === 'gemini' ? 'Gemini API Key' : 'OpenAI API Key'}):
-                    </label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                        Clave API ({tempProvider === 'gemini' ? 'Gemini API Key' : 'OpenAI API Key'}):
+                      </label>
+                      {tempProvider === 'gemini' && (
+                        <button
+                          type="button"
+                          onClick={handleTestConnection}
+                          disabled={testingConnection || !tempApiKey.trim()}
+                          style={{
+                            background: 'var(--accent-glow)',
+                            color: 'var(--accent-primary)',
+                            border: '1px solid var(--accent-primary)',
+                            borderRadius: 6,
+                            padding: '2px 8px',
+                            fontSize: '0.74rem',
+                            fontWeight: 600,
+                            cursor: (!tempApiKey.trim() || testingConnection) ? 'not-allowed' : 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            opacity: (!tempApiKey.trim() || testingConnection) ? 0.6 : 1
+                          }}
+                        >
+                          {testingConnection ? (
+                            <>
+                              <Loader2 size={11} className="animate-spin" />
+                              <span>Probando...</span>
+                            </>
+                          ) : (
+                            <span>Probar conexión</span>
+                          )}
+                        </button>
+                      )}
+                    </div>
                     <input
                       type="password"
                       value={tempApiKey}
-                      onChange={e => setTempApiKey(e.target.value)}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setTempApiKey(val);
+                        setTestResult(null);
+                        if (val.startsWith('AIza') && tempProvider !== 'gemini') {
+                          setTempProvider('gemini');
+                        }
+                      }}
                       placeholder={tempProvider === 'gemini' ? 'AIzaSy...' : 'sk-...'}
                       style={{
                         width: '100%',
@@ -721,6 +857,23 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                         fontSize: '0.85rem'
                       }}
                     />
+                    {testResult && (
+                      <div style={{
+                        marginTop: 6,
+                        padding: '6px 10px',
+                        borderRadius: 6,
+                        fontSize: '0.78rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        background: testResult.ok ? 'rgba(52, 199, 89, 0.12)' : 'rgba(255, 59, 48, 0.12)',
+                        color: testResult.ok ? '#34c759' : '#ff3b30',
+                        border: `1px solid ${testResult.ok ? 'rgba(52, 199, 89, 0.3)' : 'rgba(255, 59, 48, 0.3)'}`
+                      }}>
+                        {testResult.ok ? <CheckCircle size={13} /> : <AlertCircle size={13} />}
+                        <span>{testResult.message}</span>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -838,6 +991,209 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                     )}
                   </div>
                 </div>
+
+                {/* Clarification Questions Box */}
+                {msg.batch?.clarificationQuestions && msg.batch.clarificationQuestions.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{
+                      maxWidth: '88%',
+                      marginLeft: msg.sender === 'user' ? 0 : 36,
+                      background: 'rgba(0, 122, 255, 0.07)',
+                      border: '1px solid rgba(0, 122, 255, 0.22)',
+                      borderRadius: 14,
+                      padding: '10px 14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 6
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--accent-primary)', fontSize: '0.80rem', fontWeight: 700 }}>
+                      <HelpCircle size={15} />
+                      <span>Para asegurarme y hacerlo exacto:</span>
+                    </div>
+                    {msg.batch.clarificationQuestions.map((q, qIdx) => (
+                      <div key={qIdx} style={{ fontSize: '0.86rem', color: 'var(--text-primary)', paddingLeft: 4 }}>
+                        • {q}
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
+
+                {/* Suggested Quick Replies Chips */}
+                {msg.batch?.suggestedReplies && msg.batch.suggestedReplies.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 7,
+                      maxWidth: '88%',
+                      marginLeft: msg.sender === 'user' ? 0 : 36,
+                      marginTop: 2
+                    }}
+                  >
+                    {msg.batch.suggestedReplies.map((replyText, rIdx) => (
+                      <button
+                        key={rIdx}
+                        type="button"
+                        onClick={() => handleSend(replyText)}
+                        style={{
+                          background: 'var(--bg-surface)',
+                          border: '1px solid var(--accent-primary)',
+                          borderRadius: 999,
+                          padding: '6px 13px',
+                          fontSize: '0.82rem',
+                          fontWeight: 600,
+                          color: 'var(--accent-primary)',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          boxShadow: '0 2px 6px rgba(0, 122, 255, 0.08)',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <span>{replyText}</span>
+                        <ArrowUp size={12} style={{ transform: 'rotate(45deg)' }} />
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+
+                {/* Proposed Task Updates Card (Modify / Complete / Delete / Reschedule) */}
+                {msg.batch?.taskUpdates && msg.batch.taskUpdates.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{
+                      width: '100%',
+                      maxWidth: '88%',
+                      marginLeft: msg.sender === 'user' ? 0 : 36,
+                      background: 'var(--bg-card)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: 16,
+                      padding: '14px 16px',
+                      boxShadow: '0 4px 18px rgba(0,0,0,0.06)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 12
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ width: 24, height: 24, borderRadius: 6, background: 'var(--accent-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Edit3 size={14} color="var(--accent-primary)" />
+                        </div>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                          {msg.batch.taskUpdates.filter(u => u.selected).length} de {msg.batch.taskUpdates.length} modificaciones propuestas
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleToggleAllTaskUpdates(msg.id)}
+                        style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600 }}
+                      >
+                        {msg.batch.taskUpdates.every(u => u.selected) ? 'Deseleccionar todos' : 'Seleccionar todos'}
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 280, overflowY: 'auto' }}>
+                      {msg.batch.taskUpdates.map(u => (
+                        <div
+                          key={u.taskId}
+                          onClick={() => handleToggleTaskUpdateSelected(msg.id, u.taskId)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: 10,
+                            padding: '8px 10px',
+                            borderRadius: 10,
+                            background: u.selected ? 'var(--bg-hover)' : 'transparent',
+                            border: u.selected ? '1px solid var(--border-subtle)' : '1px solid transparent',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <div style={{
+                            width: 18, height: 18, borderRadius: 6,
+                            border: u.selected ? '1.5px solid var(--accent-primary)' : '1.5px solid var(--text-tertiary)',
+                            background: u.selected ? 'var(--accent-primary)' : 'transparent',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            flexShrink: 0,
+                            marginTop: 2
+                          }}>
+                            {u.selected && <Check size={12} color="white" />}
+                          </div>
+
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                {u.originalTitle}
+                              </span>
+                              {u.deleted && (
+                                <span style={{ fontSize: '0.70rem', color: '#ff3b30', background: 'rgba(255, 59, 48, 0.12)', padding: '1px 6px', borderRadius: 4, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                                  <Trash2 size={10} /> Eliminar
+                                </span>
+                              )}
+                              {u.status === 'completed' && (
+                                <span style={{ fontSize: '0.70rem', color: '#34c759', background: 'rgba(52, 199, 89, 0.12)', padding: '1px 6px', borderRadius: 4, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                                  <CheckCircle2 size={10} /> Completar
+                                </span>
+                              )}
+                              {u.price !== undefined && (
+                                <span className="apple-price-pill" style={{ padding: '0 5px', fontSize: '0.70rem' }}>
+                                  {u.price} €
+                                </span>
+                              )}
+                              {u.newTitle && (
+                                <span style={{ fontSize: '0.70rem', color: 'var(--accent-primary)', background: 'var(--accent-glow)', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>
+                                  → {u.newTitle}
+                                </span>
+                              )}
+                              {u.listName && (
+                                <span style={{ fontSize: '0.70rem', color: 'var(--text-secondary)', background: 'var(--bg-surface)', padding: '1px 6px', borderRadius: 4 }}>
+                                  Mover a: {u.listName}
+                                </span>
+                              )}
+                            </div>
+                            {u.reason && (
+                              <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: 2 }}>
+                                {u.reason}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={() => handleApplyTaskUpdates(msg.id)}
+                      disabled={msg.batch.taskUpdates.filter(u => u.selected).length === 0}
+                      style={{
+                        width: '100%',
+                        padding: '10px 16px',
+                        borderRadius: 12,
+                        background: 'var(--accent-primary)',
+                        border: 'none',
+                        color: 'white',
+                        fontWeight: 650,
+                        fontSize: '0.9rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        cursor: msg.batch.taskUpdates.filter(u => u.selected).length === 0 ? 'not-allowed' : 'pointer',
+                        boxShadow: '0 4px 14px rgba(0, 122, 255, 0.3)',
+                        opacity: msg.batch.taskUpdates.filter(u => u.selected).length === 0 ? 0.5 : 1
+                      }}
+                    >
+                      <CheckCircle2 size={17} />
+                      <span>Aplicar modificaciones ({msg.batch.taskUpdates.filter(u => u.selected).length})</span>
+                    </button>
+                  </motion.div>
+                )}
 
                 {/* Proposed Tasks Card Grid if batch exists */}
                 {msg.batch && msg.batch.tasks && msg.batch.tasks.length > 0 && (

@@ -36,15 +36,36 @@ export interface ProposedGroupAction {
   children: ProposedChildTask[];
 }
 
+export interface ProposedTaskUpdate {
+  taskId: string;
+  originalTitle: string;
+  newTitle?: string;
+  description?: string;
+  dueDate?: string;
+  timeOfDay?: 'morning' | 'afternoon' | 'night';
+  price?: number;
+  listId?: string;
+  listName?: string;
+  priority?: 'none' | 'low' | 'medium' | 'high';
+  cycle?: 'cycle_day' | 'cycle_week' | 'cycle_month' | 'cycle_year';
+  status?: 'pending' | 'completed';
+  deleted?: boolean;
+  selected: boolean;
+  reason?: string;
+}
+
 export interface ProposedBatch {
   reply: string;
   tasks: ProposedTask[];
+  taskUpdates?: ProposedTaskUpdate[];
   action?: ProposedGroupAction;
   suggestedList?: {
     name: string;
     color?: string;
     icon?: string;
   };
+  clarificationQuestions?: string[];
+  suggestedReplies?: string[];
 }
 
 export interface AIConfig {
@@ -57,13 +78,67 @@ export class AIService {
   public static getConfig(): AIConfig {
     try {
       const saved = localStorage.getItem('ai_assistant_config');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed: AIConfig = JSON.parse(saved);
+        if (parsed.apiKey && (!parsed.provider || parsed.provider === 'auto') && parsed.apiKey.startsWith('AIza')) {
+          parsed.provider = 'gemini';
+        }
+        return parsed;
+      }
     } catch {}
+
+    const envKey = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_GEMINI_API_KEY) || '';
+    if (envKey) {
+      return { provider: 'gemini', apiKey: envKey };
+    }
+
     return { provider: 'auto' };
   }
 
   public static saveConfig(config: AIConfig) {
+    if (config.apiKey && config.apiKey.startsWith('AIza') && config.provider === 'auto') {
+      config.provider = 'gemini';
+    }
     localStorage.setItem('ai_assistant_config', JSON.stringify(config));
+  }
+
+  public static async testGeminiConnection(apiKey: string): Promise<{ ok: boolean; model?: string; error?: string }> {
+    const trimmedKey = apiKey.trim();
+    if (!trimmedKey) {
+      return { ok: false, error: 'La clave de API no puede estar vacía' };
+    }
+
+    const candidateModels = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
+    let lastError = '';
+
+    for (const model of candidateModels) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(trimmedKey)}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: 'Responde estrictamente: OK' }] }]
+          })
+        });
+
+        if (res.ok) {
+          return { ok: true, model };
+        }
+
+        const errData = await res.json().catch(() => ({}));
+        const message = errData?.error?.message || `HTTP ${res.status} ${res.statusText}`;
+        lastError = message;
+
+        if (res.status === 400 || res.status === 403) {
+          return { ok: false, error: `Clave no válida o sin permisos (${message})` };
+        }
+      } catch (err: any) {
+        lastError = err?.message || 'Error de conexión de red';
+      }
+    }
+
+    return { ok: false, error: lastError || 'No se pudo conectar con ningún modelo de Gemini' };
   }
 
   /**
@@ -76,22 +151,34 @@ export class AIService {
     existingTasks?: Record<string, TaskItem> | TaskItem[]
   ): Promise<ProposedBatch> {
     const config = this.getConfig();
+    const apiKey = config.apiKey?.trim();
 
-    // 1. External LLM via Gemini API if key is present
-    if (config.provider === 'gemini' && config.apiKey) {
+    // 1. External LLM via Gemini API if key is present or provider is gemini
+    const isGemini = config.provider === 'gemini' || (Boolean(apiKey) && (apiKey!.startsWith('AIza') || apiKey!.length > 20));
+    if (isGemini && apiKey) {
       try {
-        return await this.callGemini(userMessage, existingLists, conversationHistory, config.apiKey, existingTasks);
-      } catch (err) {
-        console.warn('Gemini API call failed, falling back to local extractor:', err);
+        return await this.callGemini(userMessage, existingLists, conversationHistory, apiKey, existingTasks);
+      } catch (err: any) {
+        console.error('Gemini API call failed:', err);
+        return {
+          reply: `⚠️ **Error de conexión con Google Gemini:** ${err.message || 'No se pudo comunicar con el modelo'}.\n\nPor favor, verifica tu clave API en **Ajustes de IA ⚙️** (icono de rueda arriba a la derecha). Mientras tanto, puedes usar el extractor inteligente local.`,
+          tasks: [],
+          clarificationQuestions: ['¿Quieres verificar la clave de Gemini en Ajustes?', '¿O prefieres que use el extractor local?'],
+          suggestedReplies: ['Abrir Ajustes de IA ⚙️', 'Usar extractor local']
+        };
       }
     }
 
     // 2. External LLM via OpenAI API if key is present
-    if (config.provider === 'openai' && config.apiKey) {
+    if (config.provider === 'openai' && apiKey) {
       try {
-        return await this.callOpenAI(userMessage, existingLists, conversationHistory, config.apiKey, existingTasks);
-      } catch (err) {
-        console.warn('OpenAI API call failed, falling back to local extractor:', err);
+        return await this.callOpenAI(userMessage, existingLists, conversationHistory, apiKey, existingTasks);
+      } catch (err: any) {
+        console.error('OpenAI API call failed:', err);
+        return {
+          reply: `⚠️ **Error de conexión con OpenAI:** ${err.message || 'Error de autenticación'}. Revisa tu clave en Ajustes ⚙️.`,
+          tasks: []
+        };
       }
     }
 
@@ -118,6 +205,98 @@ export class AIService {
     const tasksArray: TaskItem[] = existingTasks
       ? (Array.isArray(existingTasks) ? existingTasks : Object.values(existingTasks))
       : [];
+
+    // 0. Intent: Saludo general o pregunta sobre capacidades (NO añadir recordatorios ciegamente)
+    const normalizedGreeting = trimmed.replace(/^[¡¿\s]+/, '');
+    const isGreetingOrHelp = /^(hola|buenas|buenos\s+d[íi]as|buenas\s+tardes|buenas\s+noches|qu[ée]\s+tal|c[óo]mo\s+est[áa]s|qu[ée]\s+puedes\s+hacer|qui[ée]n\s+eres|ayuda|ay[úu]dame|help)\b/i.test(normalizedGreeting) &&
+      !/(?:apunta|crea|a[ñn]ade|recu[ée]rdame|compra|marca|borra|elimina|pon|haz)\b/i.test(trimmed);
+    if (isGreetingOrHelp) {
+      return {
+        reply: `¡Hola! Soy tu **Asistente Inteligente de Recordatorios**. Estoy aquí para facilitarte el día a día. Puedes pedirme:
+
+- 📋 **Crear recordatorios desglosados:** Pega listas largas, audios transcritos o notas enrevesadas.
+- ✏️ **Modificar o completar:** *"Marca hecha la leche"*, *"Pon precio de 3,50€ al pan"* o *"Elimina la reunión"*.
+- 🔍 **Consultar tus tareas:** *"¿Qué tengo para hoy?"* o *"¿Cuánto llevo gastado en la compra?"*.
+- 📂 **Unificar y organizar:** *"Unifica los productos de limpieza en una tarea madre"*.
+- 📄 **Importar documentos:** Arrastra cualquier archivo PDF o CSV.
+
+¿Qué te gustaría organizar hoy?`,
+        tasks: [],
+        suggestedReplies: [
+          '¿Qué tareas tengo para hoy?',
+          'Planificar mi semana',
+          'Compra semanal con precios'
+        ]
+      };
+    }
+
+    // 0.1 Intent: Modificar / Completar / Eliminar tarea existente de forma inteligente
+    const isCompleteIntent = trimmed.match(/(?:marca(?:r)?\s+(?:como\s+)?(?:hech[ao]|completad[ao]|terminad[ao])|completa(?:r)?|termina(?:r)?|ya\s+(?:hice|termin[ée]))\s+(?:el|la|los|las|mi)?\s*(.+)/i);
+    const isDeleteIntent = trimmed.match(/(?:borra(?:r)?|elimina(?:r)?|quita(?:r)?)\s+(?:el|la|los|las|recordatorio|tarea)?\s*(.+)/i);
+    const isPriceUpdateIntent = trimmed.match(/(?:cambia(?:r)?|pon(?:le)?|actualiza(?:r)?)\s+(?:el\s+precio\s+de\s+|precio\s+a\s+)?(.+?)\s+(?:a|por)\s+(\d+(?:[.,]\d+)?\s*€?)/i);
+
+    if ((isCompleteIntent || isDeleteIntent || isPriceUpdateIntent) && tasksArray.length > 0) {
+      if (isCompleteIntent && isCompleteIntent[1]) {
+        const query = isCompleteIntent[1].trim().toLowerCase().replace(/[.,;]$/, '');
+        const matched = tasksArray.find(t => !t.deleted_at && t.status !== 'completed' && (
+          t.title.toLowerCase().includes(query) || query.includes(t.title.toLowerCase())
+        ));
+        if (matched) {
+          return {
+            reply: `He preparado la modificación para marcar como completada la tarea **"${matched.title}"**. Puedes confirmarla abajo:`,
+            tasks: [],
+            taskUpdates: [{
+              taskId: matched.id,
+              originalTitle: matched.title,
+              status: 'completed',
+              selected: true,
+              reason: 'Marcar como completada'
+            }]
+          };
+        }
+      }
+
+      if (isDeleteIntent && isDeleteIntent[1]) {
+        const query = isDeleteIntent[1].trim().toLowerCase().replace(/[.,;]$/, '');
+        const matched = tasksArray.find(t => !t.deleted_at && (
+          t.title.toLowerCase().includes(query) || query.includes(t.title.toLowerCase())
+        ));
+        if (matched) {
+          return {
+            reply: `He preparado la acción para eliminar el recordatorio **"${matched.title}"**. Confirma la modificación abajo:`,
+            tasks: [],
+            taskUpdates: [{
+              taskId: matched.id,
+              originalTitle: matched.title,
+              deleted: true,
+              selected: true,
+              reason: 'Eliminar recordatorio'
+            }]
+          };
+        }
+      }
+
+      if (isPriceUpdateIntent && isPriceUpdateIntent[1] && isPriceUpdateIntent[2]) {
+        const query = isPriceUpdateIntent[1].trim().toLowerCase();
+        const priceVal = parseFloat(isPriceUpdateIntent[2].replace(',', '.').replace('€', '').trim());
+        const matched = tasksArray.find(t => !t.deleted_at && (
+          t.title.toLowerCase().includes(query) || query.includes(t.title.toLowerCase())
+        ));
+        if (matched && !isNaN(priceVal)) {
+          return {
+            reply: `He preparado la actualización de precio para **"${matched.title}"** a **${priceVal.toFixed(2)} €**:`,
+            tasks: [],
+            taskUpdates: [{
+              taskId: matched.id,
+              originalTitle: matched.title,
+              price: priceVal,
+              selected: true,
+              reason: `Actualizar precio a ${priceVal.toFixed(2)} €`
+            }]
+          };
+        }
+      }
+    }
 
     // 1. Intent: Unificar o agrupar recordatorios en una tarea madre
     const isUnifyIntent = /\b(unifica|unificar|agrupa|agrupar|junta|juntar|tarea madre|subtareas)\b/i.test(trimmed);
@@ -568,38 +747,61 @@ export class AIService {
   }
 
   /**
-   * Gemini API LLM Integration
+   * Gemini API LLM Integration with Multi-Model Fallback & Rich Intent Recognition
    */
   private static async callGemini(
     prompt: string,
     existingLists: CustomList[],
-    _history: { role: string; text: string }[],
+    history: { role: string; text: string }[] = [],
     apiKey: string,
     existingTasks?: Record<string, TaskItem> | TaskItem[]
   ): Promise<ProposedBatch> {
-    const listNames = existingLists.map(l => `${l.name} (id: ${l.id})`).join(', ');
+    const listNames = existingLists.map(l => `"${l.name}" (id: "${l.id}")`).join(', ');
     const tasksArr = existingTasks ? (Array.isArray(existingTasks) ? existingTasks : Object.values(existingTasks)) : [];
-    const activeTasksSummary = tasksArr
+    
+    // Format up to 60 active non-deleted tasks so Gemini can cross-reference them accurately
+    const activeTasksFormatted = tasksArr
       .filter(t => !t.deleted_at && t.status !== 'completed')
-      .slice(0, 40)
-      .map(t => `"${t.title}" (lista: ${t.categoryId || 'inbox'})`)
-      .join(', ');
+      .slice(0, 60)
+      .map(t => {
+        const listName = existingLists.find(l => l.id === t.categoryId)?.name || t.categoryId || 'inbox';
+        return `- [ID: "${t.id}"] "${t.title}" (Lista: "${listName}", ID Lista: "${t.categoryId || 'inbox'}"${t.price !== undefined ? `, Precio: ${t.price}€` : ''}${t.dueDate ? `, Fecha: ${t.dueDate.slice(0, 10)}` : ''}${t.cycle_id ? `, Ciclo: ${t.cycle_id}` : ''})`;
+      })
+      .join('\n');
 
-    const systemInstruction = `Eres el Asistente IA de Recordatorios Élite (Apple Reminders & Journal companion), sumamente inteligente, analítico y meticuloso.
+    const systemInstruction = `Eres el Asistente IA de Recordatorios Élite (Apple Reminders & Journal companion), sumamente inteligente, analítico, meticuloso y empático.
 Tu objetivo es comprender incluso los mensajes más densos, caóticos o enrevesados del usuario, desglosando cada instrucción sin omitir ningún detalle.
-Listas existentes del usuario: [${listNames}].
-Recordatorios activos existentes: [${activeTasksSummary}].
 
-REGLAS CRÍTICAS DE COMPRENSIÓN Y PRECISIÓN:
-1. DESGLOSE METICULOSO: Si el usuario escribe un mensaje largo o enrevesado con muchas cosas mezcladas (recordatorios, listas de compra con precios, duraciones, fechas/horas, hábitos recurrentes), desglosa cada uno como un recordatorio independiente en el array "tasks".
-2. PRECIOS: Si se menciona un precio (ej. "leche 1,20 €", "50 euros"), extrae el número en "price" (ej. 1.2 o 50).
-3. FRECUENCIAS (CICLOS): Si la tarea es recurrente/periódica, asigna EXCLUSIVAMENTE uno de estos 4 identificadores en "cycle":
-   - "cycle_day" (si es diario / cada día)
-   - "cycle_week" (si es semanal / cada semana)
-   - "cycle_month" (si es mensual / cada mes)
-   - "cycle_year" (si es anual / cada año)
-   ¡ESTÁ ESTRICTAMENTE PROHIBIDO inventar nuevos ciclos o sugerir crear listas llamadas "Semanal", "Mensual", "Diario" o "Anual"!
-4. PREVENCIÓN DE DUPLICADOS: Si una tarea que el usuario menciona ya está en sus recordatorios activos para la misma lista, no crees un duplicado idéntico.
+Listas existentes del usuario: [${listNames}].
+
+Recordatorios activos actuales del usuario:
+${activeTasksFormatted || '(No hay recordatorios activos)'}
+
+REGLAS CRÍTICAS DE COMPRENSIÓN, MODIFICACIÓN Y PREGUNTAS:
+1. DISTINCIÓN ENTRE TAREAS NUEVAS vs MODIFICACIÓN / COMPLETAR / BORRAR DE TAREAS EXISTENTES:
+   - Si el usuario pide marcar como hecha/completada ("hecha la leche", "completa el informe", "ya pagué el recibo"), borrar/eliminar ("borra la cita del dentista", "elimina la tarea de compras"), cambiar precio ("ponle 2€ a los tomates"), cambiar fecha ("pasa la reunión a mañana") o cambiar de lista una tarea YA EXISTENTE:
+     ¡NUNCA crees un recordatorio nuevo en "tasks"!
+     Debes incluir la modificación en el array "taskUpdates" con el "taskId" exacto de la lista de tareas activas.
+   - Si el usuario pide crear recordatorios nuevos, agrégalos a "tasks".
+   - PREVENCIÓN DE DUPLICADOS: Si el usuario menciona crear una tarea pero ya existe en activos para esa misma lista, no crees un duplicado idéntico. En su lugar, avísale en "reply" o propón modificarla.
+
+2. PREGUNTAS Y ACLARACIONES (¡NO DEDUZCAS SIN SABER!):
+   - Si el mensaje del usuario es ambiguo, le falta información clave o no está claro a qué lista corresponde (por ejemplo: hay varias listas posibles y no especificó cuál, o pide "cambia la cita" y hay más de una cita, o la fecha es confusa):
+     ¡NO deduzcas a ciegas ni te inventes datos!
+     Haz preguntas concretas al usuario en "clarificationQuestions" (y redáctalas amablemente en "reply").
+     Proporciona opciones directas y clicables en "suggestedReplies" (ej: ["En la lista Compra", "En la lista Casa", "Para hoy a las 18:00"]).
+     En este caso, deja "tasks" y "taskUpdates" vacíos mientras esperas la respuesta del usuario.
+
+3. CONSULTAS GENERALES Y CONVERSACIÓN:
+   - Si el usuario saluda, da las gracias, pregunta por sus tareas ("¿qué tengo para hoy?", "¿cuánto cuesta la lista de la compra?"), o comparte cómo le ha ido el día:
+     Responde cálidamente en "reply". No intentes forzar la creación de tareas vacías.
+
+4. PRECIOS Y FRECUENCIAS:
+   - Si se menciona un precio (ej. "leche 1,20 €", "50 euros"), extrae el número en "price" (ej. 1.2 o 50).
+   - Para frecuencias, usa EXCLUSIVAMENTE uno de estos 4 identificadores en "cycle":
+     "cycle_day", "cycle_week", "cycle_month", "cycle_year".
+     ¡ESTÁ PROHIBIDO inventar nuevos ciclos o crear listas llamadas "Semanal", "Mensual", etc.!
+
 5. SI EL USUARIO CUENTA SU DÍA O VIVENCIAS ("Hoy estuve con...", "fui a..."):
    - Sé empático, cercano y cálido.
    - Asigna a la lista "Qué he hecho" (id: "que_he_hecho").
@@ -607,11 +809,26 @@ REGLAS CRÍTICAS DE COMPRENSIÓN Y PRECISIÓN:
 
 DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
 {
-  "reply": "Respuesta conversacional empática y clara",
+  "reply": "Respuesta conversacional empática, inteligente y clara",
   "suggestedList": { "name": "NombreSiRecomiendasCrearLista", "color": "#007aff", "icon": "list" }, // opcional
-  "tasks": [
+  "clarificationQuestions": ["¿Pregunta de aclaración 1?"], // opcional si falta info o hay ambigüedad
+  "suggestedReplies": ["Opción 1 para pulsar", "Opción 2"], // botones sugeridos para responder con un toque
+  "taskUpdates": [ // Si el usuario pide editar, completar, cambiar precio o borrar tareas existentes
     {
-      "title": "Título de la tarea o vivencia",
+      "taskId": "ID_EXACTO_DE_LA_TAREA_EXISTENTE",
+      "originalTitle": "Título original",
+      "newTitle": "Nuevo título si cambia",
+      "price": 3.5,
+      "status": "completed", // o "pending"
+      "deleted": false, // true si pidió eliminarla
+      "listId": "id_nueva_lista",
+      "dueDate": "ISO 8601 o null",
+      "reason": "Explicación de la modificación"
+    }
+  ],
+  "tasks": [ // Solo para tareas NUEVAS
+    {
+      "title": "Título de la nueva tarea",
       "description": "Notas adicionales (opcional)",
       "listName": "Nombre de la lista recomendada",
       "listId": "id de la lista si coincide con una existente",
@@ -626,38 +843,88 @@ DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
   ]
 }`;
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          { role: 'user', parts: [{ text: `${systemInstruction}\n\nInstrucción del usuario:\n${prompt}` }] }
-        ],
-        generationConfig: {
-          responseMimeType: 'application/json'
-        }
-      })
-    });
-
-    if (!res.ok) {
-      throw new Error(`Gemini API error: ${res.status} ${res.statusText}`);
+    // Prepare conversational history payload (ensuring alternating user/model sequence)
+    const contents: any[] = [];
+    const recentHistory = history.slice(-8);
+    for (const h of recentHistory) {
+      const role = h.role === 'assistant' ? 'model' : 'user';
+      if (contents.length > 0 && contents[contents.length - 1].role === role) {
+        contents[contents.length - 1].parts[0].text += `\n${h.text}`;
+      } else {
+        contents.push({ role, parts: [{ text: h.text }] });
+      }
     }
 
-    const data = await res.json();
-    const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!candidateText) throw new Error('Respuesta vacía de Gemini');
+    const currentTurnText = contents.length === 0 
+      ? `${systemInstruction}\n\nInstrucción del usuario:\n${prompt}`
+      : prompt;
 
-    const parsed = JSON.parse(candidateText);
-    return {
-      reply: parsed.reply || 'Aquí tienes tus recordatorios preparados:',
-      suggestedList: parsed.suggestedList,
-      tasks: (parsed.tasks || []).map((t: any, idx: number) => ({
-        ...t,
-        id: `gemini_task_${Date.now()}_${idx}`,
-        selected: true
-      }))
-    };
+    if (contents.length === 0 || contents[contents.length - 1].role !== 'user') {
+      contents.push({ role: 'user', parts: [{ text: currentTurnText }] });
+    } else {
+      contents[contents.length - 1].parts[0].text += `\n\n${currentTurnText}`;
+    }
+
+    // Multi-model fallback list in order of performance and availability
+    const candidateModels = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
+    let lastError: Error | null = null;
+
+    for (const model of candidateModels) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents,
+            systemInstruction: {
+              parts: [{ text: systemInstruction }]
+            },
+            generationConfig: {
+              responseMimeType: 'application/json'
+            }
+          })
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          const errMsg = errData?.error?.message || `HTTP ${res.status} ${res.statusText}`;
+          // If model not found (404), try next model in list
+          if (res.status === 404) {
+            console.warn(`Gemini model ${model} returned 404, falling back to next model.`);
+            lastError = new Error(errMsg);
+            continue;
+          }
+          throw new Error(errMsg);
+        }
+
+        const data = await res.json();
+        const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!candidateText) throw new Error('Respuesta vacía de Gemini');
+
+        const parsed = JSON.parse(candidateText);
+        return {
+          reply: parsed.reply || 'Aquí tienes la respuesta:',
+          suggestedList: parsed.suggestedList,
+          clarificationQuestions: parsed.clarificationQuestions,
+          suggestedReplies: parsed.suggestedReplies,
+          taskUpdates: (parsed.taskUpdates || []).map((u: any) => ({
+            ...u,
+            selected: true
+          })),
+          tasks: (parsed.tasks || []).map((t: any, idx: number) => ({
+            ...t,
+            id: `gemini_task_${Date.now()}_${idx}`,
+            selected: true
+          }))
+        };
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`Error attempting Gemini with ${model}:`, err.message);
+      }
+    }
+
+    throw lastError || new Error('No se pudo comunicar con Google Gemini');
   }
 
   /**
@@ -674,38 +941,38 @@ DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
     const tasksArr = existingTasks ? (Array.isArray(existingTasks) ? existingTasks : Object.values(existingTasks)) : [];
     const activeTasksSummary = tasksArr
       .filter(t => !t.deleted_at && t.status !== 'completed')
-      .slice(0, 40)
-      .map(t => `"${t.title}" (lista: ${t.categoryId || 'inbox'})`)
-      .join(', ');
+      .slice(0, 50)
+      .map(t => `- [ID: "${t.id}"] "${t.title}" (${t.categoryId || 'inbox'})`)
+      .join('\n');
 
-    const systemPrompt = `Eres el Asistente IA de Recordatorios Élite (Apple Reminders & Journal companion), sumamente inteligente, analítico y meticuloso.
-Tu objetivo es comprender incluso los mensajes más densos, caóticos o enrevesados del usuario, desglosando cada instrucción sin omitir ningún detalle.
-Listas existentes del usuario: [${listNames}].
-Recordatorios activos existentes: [${activeTasksSummary}].
+    const systemPrompt = `Eres el Asistente IA de Recordatorios Élite.
+Listas del usuario: [${listNames}].
+Recordatorios activos:
+${activeTasksSummary}
 
-REGLAS CRÍTICAS:
-1. DESGLOSE: Extrae cada elemento individual con precisión extrema.
-2. PRECIOS: En "price" como número flotante (ej: 4.5).
-3. FRECUENCIAS: Usa EXCLUSIVAMENTE 'cycle_day', 'cycle_week', 'cycle_month' o 'cycle_year'. ¡No inventes otros!
-4. SIN DUPLICADOS: Si la tarea ya existe en activos, no la dupliques.
-
-Analiza la solicitud y devuelve un JSON con:
+Analiza la petición del usuario y responde en JSON con:
 {
-  "reply": "Respuesta conversacional empática y clara",
-  "suggestedList": { "name": "NombreLista", "color": "#007aff", "icon": "list" }, // opcional
+  "reply": "Respuesta clara y conversacional",
+  "clarificationQuestions": ["Preguntas si falta información"],
+  "suggestedReplies": ["Opciones para pulsar"],
+  "taskUpdates": [
+    {
+      "taskId": "ID_DE_TAREA_EXISTENTE",
+      "originalTitle": "Título",
+      "status": "completed",
+      "deleted": false,
+      "price": null,
+      "reason": "Motivo"
+    }
+  ],
   "tasks": [
     {
-      "title": "string",
-      "description": "string",
-      "listName": "string",
-      "listId": "string",
-      "dueDate": "ISO 8601 o null",
-      "timeOfDay": "morning"|"afternoon"|"night"|null,
-      "price": number|null,
-      "priority": "none"|"low"|"medium"|"high",
-      "cycle": "cycle_day"|"cycle_week"|"cycle_month"|"cycle_year"|null,
-      "people": ["string"],
-      "vibe": "string"
+      "title": "Título",
+      "description": "Notas",
+      "listName": "NombreLista",
+      "dueDate": "ISO o null",
+      "price": null,
+      "cycle": null
     }
   ]
 }`;
@@ -736,6 +1003,12 @@ Analiza la solicitud y devuelve un JSON con:
     return {
       reply: parsed.reply || 'Aquí tienes tus recordatorios preparados:',
       suggestedList: parsed.suggestedList,
+      clarificationQuestions: parsed.clarificationQuestions,
+      suggestedReplies: parsed.suggestedReplies,
+      taskUpdates: (parsed.taskUpdates || []).map((u: any) => ({
+        ...u,
+        selected: true
+      })),
       tasks: (parsed.tasks || []).map((t: any, idx: number) => ({
         ...t,
         id: `openai_task_${Date.now()}_${idx}`,
