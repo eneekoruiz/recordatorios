@@ -25,6 +25,8 @@ npx prisma db push            # crea las tablas
 npm run dev                   # frontend (Vite, :5173) + API (Express, :3001)
 ```
 
+Las claves de IA (Gemini/OpenAI) se guardan solo en el navegador de cada usuario; no las pongas en variables `VITE_*`, que acabarían en el bundle público.
+
 ¿Sin PostgreSQL a mano? `node tests/support/memory-server.js` levanta la API con datos en memoria.
 
 ## Despliegue en Vercel
@@ -32,6 +34,8 @@ npm run dev                   # frontend (Vite, :5173) + API (Express, :3001)
 1. Conecta el repositorio en Vercel (detecta Vite automáticamente; `/api` se sirve como función).
 2. Añade las variables de entorno: `DATABASE_URL`, `JWT_SECRET` (obligatoria), `APP_URL` y, para recuperar contraseñas por email, `RESEND_API_KEY` y `MAIL_FROM`. Ver `.env.example`.
 3. Tras cambios en `prisma/schema.prisma`, ejecuta `npx prisma db push` contra la base de datos de producción.
+
+> Los límites de peticiones (login, registro, cambio de contraseña) viven en memoria de cada instancia: en serverless son best-effort; para un límite estricto usa el firewall de Vercel. `TRUST_PROXY_HOPS` (por defecto 1) indica cuántos proxies hay delante.
 
 > En Vercel no hay tiempo real por SSE (las funciones son efímeras); la app sincroniza cada 30 s, al volver a la pestaña y tras cada cambio.
 

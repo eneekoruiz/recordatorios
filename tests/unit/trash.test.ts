@@ -69,4 +69,43 @@ describe('useAppStore — Papelera y gestión de borrados', () => {
     expect(state.tombstones.tasks.length).toBe(2);
     expect(state.tombstones.tasks.every((t: any) => (t as any)._hard_delete === true)).toBe(true);
   });
+
+  describe('jerarquía en la papelera', () => {
+    const at = (ms: number) => new Date(Date.UTC(2026, 0, 1, 12, 0, 0, ms)).toISOString();
+
+    it('restaurar un padre restaura las subtareas borradas en cascada con él', () => {
+      useAppStore.setState({
+        tasks: {
+          p: baseTask({ id: 'p', deleted_at: at(0) }),
+          c: baseTask({ id: 'c', parentId: 'p', deleted_at: at(3) }),
+          g: baseTask({ id: 'g', parentId: 'c', deleted_at: at(6) }),
+          viejo: baseTask({ id: 'viejo', parentId: 'p', deleted_at: '2025-01-01T00:00:00.000Z' }),
+        },
+      } as any);
+      useAppStore.getState().restoreTask('p');
+      const { tasks } = useAppStore.getState();
+      expect(tasks.p.deleted_at).toBeUndefined();
+      expect(tasks.c.deleted_at).toBeUndefined();
+      expect(tasks.g.deleted_at).toBeUndefined();
+      expect(tasks.c.parentId).toBe('p');
+      expect(tasks.c._is_dirty).toBe(true);
+      // Borrada por separado mucho antes: sigue en la papelera.
+      expect(tasks.viejo.deleted_at).toBeDefined();
+    });
+
+    it('restaurar una subtarea cuyo padre sigue en la papelera la deja como raíz, con versión nueva', () => {
+      useAppStore.setState({
+        tasks: {
+          p: baseTask({ id: 'p', deleted_at: at(0) }),
+          c: baseTask({ id: 'c', parentId: 'p', deleted_at: at(2), version: 4 }),
+        },
+      } as any);
+      useAppStore.getState().restoreTask('c');
+      const { tasks } = useAppStore.getState();
+      expect(tasks.c.deleted_at).toBeUndefined();
+      expect(tasks.c.parentId).toBeUndefined();
+      expect(tasks.c.version).toBe(5);
+      expect(tasks.p.deleted_at).toBeDefined();
+    });
+  });
 });

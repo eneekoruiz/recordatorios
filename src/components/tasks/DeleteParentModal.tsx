@@ -155,6 +155,7 @@ export function DeleteParentModal({
             {/* Opción 1: Eliminar todo */}
             <button
               type="button"
+              className="parent-modal-option parent-modal-option--danger"
               onClick={onDeleteAll}
               style={{
                 display: 'flex',
@@ -162,22 +163,11 @@ export function DeleteParentModal({
                 gap: 12,
                 padding: '14px 16px',
                 borderRadius: 16,
-                background: 'rgba(255, 59, 48, 0.1)',
-                border: '1px solid rgba(255, 59, 48, 0.22)',
                 color: 'var(--accent-red, #ff453a)',
                 fontSize: '0.94rem',
                 fontWeight: 650,
                 cursor: 'pointer',
                 textAlign: 'left',
-                transition: 'all 0.18s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 59, 48, 0.16)';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 59, 48, 0.1)';
-                e.currentTarget.style.transform = 'none';
               }}
             >
               <Trash2 size={18} style={{ flexShrink: 0 }} />
@@ -194,6 +184,7 @@ export function DeleteParentModal({
             {/* Opción 2: Conservar subtareas (anular sangrado) */}
             <button
               type="button"
+              className="parent-modal-option"
               onClick={onKeepSubtasks}
               style={{
                 display: 'flex',
@@ -201,22 +192,11 @@ export function DeleteParentModal({
                 gap: 12,
                 padding: '14px 16px',
                 borderRadius: 16,
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border-subtle)',
                 color: 'var(--text-primary)',
                 fontSize: '0.94rem',
                 fontWeight: 650,
                 cursor: 'pointer',
                 textAlign: 'left',
-                transition: 'all 0.18s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--bg-hover)';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--bg-elevated)';
-                e.currentTarget.style.transform = 'none';
               }}
             >
               <CornerDownRight size={18} style={{ flexShrink: 0, color: 'var(--accent-primary, #0a84ff)' }} />

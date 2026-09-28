@@ -94,7 +94,7 @@ export function getTaskDuration(
   }
 
   // 0c. Explicit duration set to 0 or disableDuration flag means the user intentionally disabled duration for this task
-  if (task.duration === 0 || task.disableDuration === true) {
+  if (isTaskDurationDisabled(task)) {
     return { activeMinutes: 0, parallelMinutes: 0, isParallel: false };
   }
 

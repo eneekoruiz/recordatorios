@@ -1,5 +1,6 @@
 import express from 'express';
 import crypto from 'node:crypto';
+import net from 'node:net';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
@@ -57,6 +58,38 @@ export function passwordFingerprint(passwordHash) {
   return crypto.createHash('sha256').update(String(passwordHash || '')).digest('base64url').slice(0, 16);
 }
 
+// Servicios de push de los navegadores. El servidor hace POST al endpoint que envía el cliente,
+// así que solo se aceptan estos dominios (más los de PUSH_ALLOWED_HOSTS): de lo contrario,
+// cualquier usuario podría usar el cron para lanzar peticiones a hosts arbitrarios (SSRF).
+const PUSH_HOST_SUFFIXES = [
+  'fcm.googleapis.com',
+  'android.googleapis.com',
+  'push.services.mozilla.com',
+  'push.apple.com',
+  'notify.windows.com',
+];
+
+export function isAllowedPushEndpoint(endpoint, extraSuffixes = (process.env.PUSH_ALLOWED_HOSTS || '').split(',')) {
+  if (typeof endpoint !== 'string' || endpoint.length > 1000) return false;
+  let url;
+  try {
+    url = new URL(endpoint);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== 'https:' || url.username || url.password || (url.port && url.port !== '443')) return false;
+  const host = url.hostname.toLowerCase().replace(/\.$/, '');
+  if (net.isIP(host) || host === 'localhost') return false;
+  return [...PUSH_HOST_SUFFIXES, ...extraSuffixes.map((h) => h.trim().toLowerCase()).filter(Boolean)]
+    .some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
+}
+
+const safeEqual = (a, b) => {
+  const ha = crypto.createHash('sha256').update(String(a)).digest();
+  const hb = crypto.createHash('sha256').update(String(b)).digest();
+  return crypto.timingSafeEqual(ha, hb);
+};
+
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const normalizeEmail = (email) => (typeof email === 'string' ? email.toLowerCase().trim() : '');
 
@@ -83,10 +116,9 @@ function createRateLimiter({ windowMs, max, keyFn, message }) {
   };
 }
 
-const clientIp = (req) => {
-  const forwarded = req.headers['x-forwarded-for'];
-  return (typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : null) || req.socket?.remoteAddress || 'unknown';
-};
+// Con `trust proxy` activo, `req.ip` ya resuelve la IP real a partir de X-Forwarded-For de forma
+// segura (sin fiarse ciegamente de la primera entrada, que el cliente puede fijar a su gusto).
+const clientIp = (req) => req.ip || req.socket?.remoteAddress || 'unknown';
 
 /** Envío real con Web Push si hay claves VAPID; null si el servidor no está configurado. */
 function defaultPushSender() {
@@ -103,7 +135,8 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
   const clients = new Map(); // userId -> Set<Response> (SSE, solo en servidores persistentes)
 
   app.disable('x-powered-by');
-  app.set('trust proxy', true);
+  // Un salto de proxy (Vercel / balanceador). Con `true` se confiaría en toda la cadena de X-Forwarded-For.
+  app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS) || 1);
 
   // --- CORS: abierto en desarrollo; en producción solo mismo origen o ALLOWED_ORIGINS ---
   const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
@@ -234,6 +267,12 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
     max: 60,
     keyFn: (req) => `auth:${clientIp(req)}`,
     message: 'Demasiadas peticiones. Espera unos minutos.',
+  });
+  const changePasswordLimiter = createRateLimiter({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    keyFn: (req) => `change:${clientIp(req)}`,
+    message: 'Demasiados intentos. Espera unos minutos.',
   });
   const forgotLimiter = createRateLimiter({
     windowMs: 60 * 60 * 1000,
@@ -410,7 +449,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
     }
   });
 
-  app.post(['/api/auth/change-password', '/auth/change-password'], authenticateToken, async (req, res) => {
+  app.post(['/api/auth/change-password', '/auth/change-password'], changePasswordLimiter, authenticateToken, async (req, res) => {
     const secret = requireSecret(res);
     if (!secret) return;
     try {
@@ -525,6 +564,10 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
             ...(existing?.preferences && typeof existing.preferences === 'object' ? existing.preferences : {}),
             ...preferences,
           };
+          // Cada push trae ≤50 kB, pero la fusión acumula claves: se acota también el resultado.
+          if (JSON.stringify(merged).length > 50_000) {
+            return res.status(413).json({ error: 'Preferencias demasiado grandes' });
+          }
           transaction.push(prisma.user.update({ where: { id: userId }, data: { preferences: merged } }));
         }
       }
@@ -724,7 +767,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
     const { subscription, timeZone, digestHour, weeklyDay } = req.body || {};
     const endpoint = subscription?.endpoint;
     const keys = subscription?.keys;
-    if (typeof endpoint !== 'string' || !endpoint.startsWith('https://') || endpoint.length > 1000
+    if (!isAllowedPushEndpoint(endpoint)
       || typeof keys?.p256dh !== 'string' || typeof keys?.auth !== 'string') {
       return res.status(400).json({ error: 'Suscripción no válida' });
     }
@@ -762,7 +805,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
   // Se protege con CRON_SECRET (Vercel Cron manda «Authorization: Bearer <CRON_SECRET>»).
   app.all(['/api/cron/notify', '/cron/notify'], async (req, res) => {
     const cronSecret = process.env.CRON_SECRET;
-    if (!cronSecret || req.headers['authorization'] !== `Bearer ${cronSecret}`) {
+    if (!cronSecret || !safeEqual(req.headers['authorization'] || '', `Bearer ${cronSecret}`)) {
       return res.status(401).json({ error: 'No autorizado' });
     }
     if (!pushSender) return res.status(503).json({ error: 'Faltan las claves VAPID' });

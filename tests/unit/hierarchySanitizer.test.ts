@@ -122,4 +122,46 @@ describe('Hierarchy Sanitization and Cycle Protection', () => {
     expect(childSec?.parentId).toBeUndefined();
     expect(childSec?.deleted_at).toBeUndefined();
   });
+
+  describe('las reparaciones se propagan con la sincronización', () => {
+    const task = (over: Partial<TaskItem>) => ({
+      id: 'x', title: 't', type: 'task', status: 'pending', version: 3, updated_at: '2026-01-01T00:00:00.000Z', created_at: '2026-01-01T00:00:00.000Z', ...over,
+    }) as TaskItem;
+
+    it('sube version y updated_at al reparar una tarea', () => {
+      const tasks = { a: task({ id: 'a', parentId: 'ausente' }) };
+      const fixed = sanitizeTaskHierarchy(tasks).a;
+      expect(fixed.parentId).toBeUndefined();
+      expect(fixed.version).toBe(4);
+      expect(fixed.updated_at! > '2026-01-01T00:00:00.000Z').toBe(true);
+      expect(fixed._is_dirty).toBe(true);
+    });
+
+    it('un pull con la versión anterior no deshace la reparación', async () => {
+      const { mergeServerTasks } = await import('../../src/sync/merge');
+      const original = task({ id: 'a', parentId: 'ausente' });
+      const fixed = sanitizeTaskHierarchy({ a: original }).a;
+      const { tasks } = mergeServerTasks({ a: fixed }, [original]);
+      expect(tasks.a.parentId).toBeUndefined();
+    });
+
+    it('devuelve el mismo objeto si no hay nada que reparar', () => {
+      const tasks = { p: task({ id: 'p' }), c: task({ id: 'c', parentId: 'p' }) };
+      expect(sanitizeTaskHierarchy(tasks)).toBe(tasks);
+    });
+
+    it('con `only` solo revisa las tareas indicadas', () => {
+      const tasks = { a: task({ id: 'a', parentId: 'ausente' }), b: task({ id: 'b', parentId: 'ausente' }) };
+      const out = sanitizeTaskHierarchy(tasks, ['a']);
+      expect(out.a.parentId).toBeUndefined();
+      expect(out.b.parentId).toBe('ausente');
+    });
+
+    it('las secciones reparadas actualizan updated_at', () => {
+      const sections: ListSection[] = [{ id: 's1', listId: 'l', name: 'A', parentId: 's1', updated_at: '2026-01-01T00:00:00.000Z' } as ListSection];
+      const out = sanitizeSectionHierarchy(sections)[0];
+      expect(out.parentId).toBeUndefined();
+      expect(out.updated_at! > '2026-01-01T00:00:00.000Z').toBe(true);
+    });
+  });
 });

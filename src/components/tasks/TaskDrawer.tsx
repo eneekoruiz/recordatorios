@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { isTaskDurationDisabled } from '../../utils/taskDuration';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -225,7 +226,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setIsDetailed(!!task.isDetailed);
         setPrice(task.price !== undefined ? task.price : undefined);
         setQuantity(task.quantity !== undefined ? task.quantity : 1);
-        const isDurDisabled = task.disableDuration === true || task.duration === 0;
+        const isDurDisabled = isTaskDurationDisabled(task);
         setDisableDuration(isDurDisabled);
         setDuration(isDurDisabled ? 0 : (typeof task.duration === 'number' ? task.duration : ''));
         setIsParallel(Boolean(task.isParallel));
@@ -598,7 +599,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
       quantity: quantity !== undefined ? Number(quantity) : 1,
       brand: brand.trim() || undefined,
       duration: disableDuration ? 0 : (duration !== '' && Number(duration) > 0 ? Number(duration) : undefined),
-      disableDuration: disableDuration ? true : undefined,
+      disableDuration: undefined, // legado: «sin duración» se guarda solo como duration = 0
       isParallel: isParallel ? true : undefined,
       parallelDuration: isParallel && parallelDuration ? Number(parallelDuration) : undefined,
       targetCount: targetCount && targetCount > 1 ? Number(targetCount) : undefined,

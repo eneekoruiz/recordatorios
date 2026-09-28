@@ -16,6 +16,15 @@ describe('merge de sincronización', () => {
     expect(tasks.a.title).toBe('local');
   });
 
+  it('con versión y fecha iguales, lo local pendiente de subir prevalece', () => {
+    const local = { a: t({ id: 'a', title: 'local', version: 2, _is_dirty: true }) } as any;
+    const { tasks, changed } = mergeServerTasks(local, [t({ id: 'a', title: 'server', version: 2 })]);
+    expect(tasks.a.title).toBe('local');
+    expect(changed).toBe(false);
+    const newer = mergeServerTasks(local, [t({ id: 'a', title: 'server', version: 3 })]).tasks;
+    expect(newer.a.title).toBe('server');
+  });
+
   it('normaliza campos snake_case del servidor', () => {
     const { tasks } = mergeServerTasks({}, [t({ id: 'b', category_id: 'compras' })]);
     expect(tasks.b.categoryId).toBe('compras');

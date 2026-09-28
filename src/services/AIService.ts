@@ -69,10 +69,22 @@ export interface ProposedBatch {
 }
 
 export interface AIConfig {
-  provider: 'auto' | 'gemini' | 'openai' | 'mcp';
+  provider: 'auto' | 'gemini' | 'openai';
   apiKey?: string;
-  mcpServerUrl?: string;
 }
+
+const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
+/** Modelos por orden de preferencia (los 1.5 ya están retirados: solo añadían intentos fallidos). */
+const GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-2.5-flash-lite'];
+
+/** La clave viaja en cabecera, no en la URL (las URLs acaban en logs y en historiales de proxy). */
+const geminiRequest = (model: string, apiKey: string, body: unknown, signal: AbortSignal) =>
+  fetch(`${GEMINI_ENDPOINT}/${model}:generateContent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+    signal,
+    body: JSON.stringify(body),
+  });
 
 export class AIService {
   public static getConfig(): AIConfig {
@@ -87,11 +99,7 @@ export class AIService {
       }
     } catch {}
 
-    const envKey = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_GEMINI_API_KEY) || '';
-    if (envKey) {
-      return { provider: 'gemini', apiKey: envKey };
-    }
-
+    // Sin VITE_GEMINI_API_KEY: cualquier variable VITE_* acaba en el bundle público.
     return { provider: 'auto' };
   }
 
@@ -108,22 +116,16 @@ export class AIService {
       return { ok: false, error: 'La clave de API no puede estar vacía' };
     }
 
-    const candidateModels = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash-latest', 'gemini-1.5-flash'];
+    const candidateModels = GEMINI_MODELS;
     let lastError = '';
 
     for (const model of candidateModels) {
       const timeoutController = new AbortController();
       const timeoutId = setTimeout(() => timeoutController.abort(), 10000);
       try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(trimmedKey)}`;
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: timeoutController.signal,
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: 'Responde estrictamente: OK' }] }]
-          })
-        });
+        const res = await geminiRequest(model, trimmedKey, {
+          contents: [{ parts: [{ text: 'Responde estrictamente: OK' }] }]
+        }, timeoutController.signal);
 
         if (res.ok) {
           return { ok: true, model };
@@ -1059,35 +1061,22 @@ DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
     }
 
     // Multi-model fallback list in order of performance and availability
-    const candidateModels = [
-      'gemini-2.0-flash',
-      'gemini-2.5-flash',
-      'gemini-2.0-flash-lite',
-      'gemini-1.5-flash-latest',
-      'gemini-1.5-flash',
-      'gemini-1.5-pro'
-    ];
+    const candidateModels = GEMINI_MODELS;
     let lastError: Error | null = null;
 
     for (const model of candidateModels) {
       const timeoutController = new AbortController();
       const timeoutId = setTimeout(() => timeoutController.abort(), 15000);
       try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: timeoutController.signal,
-          body: JSON.stringify({
-            contents,
-            systemInstruction: {
-              parts: [{ text: systemInstruction }]
-            },
-            generationConfig: {
-              responseMimeType: 'application/json'
-            }
-          })
-        });
+        const res = await geminiRequest(model, apiKey, {
+          contents,
+          systemInstruction: {
+            parts: [{ text: systemInstruction }]
+          },
+          generationConfig: {
+            responseMimeType: 'application/json'
+          }
+        }, timeoutController.signal);
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
@@ -1235,15 +1224,19 @@ Vivencias destacadas:
 ${tasks.slice(0, 10).map(t => `- ${t.title} ${t.people?.length ? '(con ' + t.people.join(', ') + ')' : ''} ${t.locationName ? 'en ' + t.locationName : ''}`).join('\n')}
 Redacta 2 o 3 párrafos de lectura agradable con emojis sutiles.`;
 
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${config.apiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) return text.trim();
+        for (const model of GEMINI_MODELS) {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000);
+          try {
+            const res = await geminiRequest(model, config.apiKey, { contents: [{ parts: [{ text: prompt }] }] }, controller.signal);
+            if (res.status === 401 || res.status === 403) break; // clave inválida: no insistir con otros modelos
+            if (!res.ok) continue;
+            const data = await res.json();
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) return text.trim();
+          } finally {
+            clearTimeout(timeoutId);
+          }
         }
       } catch (err) {
         console.warn('Gemini monthly summary error:', err);

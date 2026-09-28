@@ -54,26 +54,34 @@ export const isTaskCompleted = (t: any) => {
   return t.status === 'completed' || !!t.completed_at;
 };
 
-export function sanitizeTaskHierarchy(tasks: Record<string, TaskItem>): Record<string, TaskItem> {
-  const result = { ...tasks };
-  let changed = false;
+/**
+ * Repara la jerarquía de tareas (auto-referencia, padre inexistente o borrado, ciclos).
+ * Cada reparación pasa por TaskRepository.update para subir `version` y `updated_at`: si no,
+ * el servidor la vería idéntica a la tarea que ya tiene y un pull podría deshacerla.
+ * `only` limita la comprobación a las tareas que han cambiado (evita recorrer todo el mapa
+ * en cada edición); sin él se revisan todas. Devuelve el mismo objeto si no hay nada que reparar.
+ */
+export function sanitizeTaskHierarchy(tasks: Record<string, TaskItem>, only?: Iterable<string>): Record<string, TaskItem> {
+  let result = tasks;
+  const detach = (id: string, task: TaskItem) => {
+    if (result === tasks) result = { ...tasks };
+    result[id] = TaskRepository.update(task, { parentId: undefined });
+  };
 
-  for (const id in result) {
+  for (const id of only ?? Object.keys(tasks)) {
     const task = result[id];
     if (!task || !task.parentId) continue;
 
     // 1. Auto-referencia
     if (task.parentId === id) {
-      result[id] = { ...task, parentId: undefined, _is_dirty: true };
-      changed = true;
+      detach(id, task);
       continue;
     }
 
     // 2. Padre inexistente o borrado
     const parent = result[task.parentId];
     if (!parent || parent.deleted_at) {
-      result[id] = { ...task, parentId: undefined, _is_dirty: true };
-      changed = true;
+      detach(id, task);
       continue;
     }
 
@@ -90,37 +98,41 @@ export function sanitizeTaskHierarchy(tasks: Record<string, TaskItem>): Record<s
       curr = result[curr.parentId];
     }
 
-    if (hasCycle) {
-      result[id] = { ...task, parentId: undefined, _is_dirty: true };
-      changed = true;
-    }
+    if (hasCycle) detach(id, task);
   }
 
-  return changed ? result : tasks;
+  return result;
 }
+
+/** Ids de las tareas cuya referencia difiere entre dos mapas (para sanear solo lo modificado). */
+const changedTaskIds = (prev: Record<string, TaskItem>, next: Record<string, TaskItem>): string[] => {
+  const ids: string[] = [];
+  for (const id in next) if (next[id] !== prev[id]) ids.push(id);
+  return ids;
+};
 
 export function sanitizeSectionHierarchy(sections: ListSection[]): ListSection[] {
   const secMap = new Map(sections.map(s => [s.id, s]));
+  const detach = (s: ListSection): ListSection => ({ ...s, parentId: undefined, _is_dirty: true, updated_at: new Date().toISOString() });
   return sections.map(s => {
     if (!s.parentId) return s;
-    if (s.parentId === s.id) return { ...s, parentId: undefined, _is_dirty: true };
+    if (s.parentId === s.id) return detach(s);
     const parent = secMap.get(s.parentId);
-    if (!parent || parent.deleted_at || parent.listId !== s.listId) {
-      return { ...s, parentId: undefined, _is_dirty: true };
-    }
+    if (!parent || parent.deleted_at || parent.listId !== s.listId) return detach(s);
     // Detección de ciclos
     let curr: ListSection | undefined = parent;
     const visited = new Set<string>([s.id]);
     while (curr && curr.parentId) {
-      if (visited.has(curr.parentId)) {
-        return { ...s, parentId: undefined, _is_dirty: true };
-      }
+      if (visited.has(curr.parentId)) return detach(s);
       visited.add(curr.parentId);
       curr = secMap.get(curr.parentId);
     }
     return s;
   });
 }
+
+/** Margen para considerar que varias tareas se borraron en el mismo borrado en cascada. */
+const CASCADE_DELETE_WINDOW_MS = 5000;
 
 const INITIAL_LISTS: CustomList[] = [];
 
@@ -756,13 +768,35 @@ export const useAppStore = create<AppState>()(
       restoreTask: (id) => optimisticUpdate(get, set, (state) => {
         const existingTask = state.tasks[id];
         if (!existingTask) return state;
-        const restoredTask = TaskRepository.update(existingTask, { deleted_at: undefined });
-        return {
-          tasks: {
-            ...state.tasks,
-            [id]: restoredTask
+        const updatedTasks = { ...state.tasks };
+        const parent = existingTask.parentId ? state.tasks[existingTask.parentId] : undefined;
+        // Si su padre sigue en la papelera, vuelve como tarea raíz (decisión explícita, no la
+        // toma en silencio el sanitizador en la siguiente hidratación).
+        const detach = !!existingTask.parentId && (!parent || !!parent.deleted_at);
+        updatedTasks[id] = TaskRepository.update(existingTask, {
+          deleted_at: undefined,
+          ...(detach ? { parentId: undefined } : {}),
+        });
+
+        // Restauración en cascada: las subtareas que se borraron junto con el padre (mismo
+        // borrado en cascada, marcas de tiempo casi idénticas) vuelven con él. Las que se
+        // borraron por separado, antes o después, siguen en la papelera.
+        const deletedAt = existingTask.deleted_at ? new Date(existingTask.deleted_at).getTime() : NaN;
+        if (Number.isFinite(deletedAt)) {
+          const restoredIds = new Set<string>([id]);
+          let grew = true;
+          while (grew) {
+            grew = false;
+            for (const t of Object.values(state.tasks)) {
+              if (!t.deleted_at || !t.parentId || !restoredIds.has(t.parentId) || restoredIds.has(t.id)) continue;
+              if (Math.abs(new Date(t.deleted_at).getTime() - deletedAt) > CASCADE_DELETE_WINDOW_MS) continue;
+              restoredIds.add(t.id);
+              updatedTasks[t.id] = TaskRepository.update(t, { deleted_at: undefined });
+              grew = true;
+            }
           }
-        };
+        }
+        return { tasks: updatedTasks };
       }),
 
       permanentDeleteTask: (id) => optimisticUpdate(get, set, (state) => {
@@ -853,7 +887,7 @@ export const useAppStore = create<AppState>()(
         }
 
         return {
-          tasks: sanitizeTaskHierarchy(updatedTasks)
+          tasks: sanitizeTaskHierarchy(updatedTasks, changedTaskIds(state.tasks, updatedTasks))
         };
       }),
 
@@ -882,7 +916,7 @@ export const useAppStore = create<AppState>()(
             changed = true;
           }
         });
-        const sanitized = sanitizeTaskHierarchy(newTasks);
+        const sanitized = sanitizeTaskHierarchy(newTasks, changedTaskIds(state.tasks, newTasks));
         return changed ? { tasks: sanitized } : state;
       }),
 
@@ -1664,7 +1698,7 @@ export const useAppStore = create<AppState>()(
           });
         }
 
-        return { tasks: sanitizeTaskHierarchy(updatedTasks) };
+        return { tasks: sanitizeTaskHierarchy(updatedTasks, changedTaskIds(state.tasks, updatedTasks)) };
       }),
 
       cleanupDataHygiene: () => optimisticUpdate(get, set, (state) => {
