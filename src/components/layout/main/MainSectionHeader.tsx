@@ -134,7 +134,11 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       const ownFormatted = data.routineDurations.only.formattedActive;
       const extraMinutes = Math.max(0, data.routineDurations.full.activeMinutes - data.routineDurations.only.activeMinutes);
       const extraFormatted = formatDuration(extraMinutes);
-      durationNode = (
+      durationNode = isMobile ? (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+          <span>~{sectionDurationLabel}</span>
+        </span>
+      ) : (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
           <span>~{sectionDurationLabel}</span>
           <span style={{ opacity: 0.4 }}>(</span>

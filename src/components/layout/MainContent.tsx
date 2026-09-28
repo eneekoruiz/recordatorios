@@ -1326,7 +1326,7 @@ const CORE_CYCLES = [
                       children.forEach(c => processNode(c, d + 1));
                     }
                   };
-                  roots.forEach(r => processNode(r, depthLevel + 1));
+                  roots.forEach(r => processNode(r, 0));
                 }
 
                 // Child sections
@@ -1554,7 +1554,7 @@ const CORE_CYCLES = [
                     children.forEach(c => processNode(c, depthLevel + 1));
                   }
                 };
-                roots.forEach(r => processNode(r, depth + 1));
+                roots.forEach(r => processNode(r, 0));
               }
 
               if (childSections.length > 0) {

@@ -153,207 +153,202 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
           willChange: 'opacity, transform, filter',
           transition: 'opacity 0.08s ease-out, transform 0.08s ease-out, filter 0.08s ease-out'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: '1 1 auto', flexWrap: 'wrap' }}>
-            <h1 className="text-display" style={{ 
-              fontSize: '34px', 
-              fontWeight: 700,
-              lineHeight: '1.2',
-              wordBreak: 'break-word',
-              letterSpacing: '-0.5px',
-              color: viewColor,
-              display: 'flex', alignItems: 'center', margin: 0,
-              padding: 0,
-              boxSizing: 'border-box',
-              minWidth: 0
-            }}>
-              {CycleIcon && <CycleIcon size={32} color={viewColor} style={{ marginRight: 12 }} />}
-              {SmartIcon && smartListInfo && (
-                <div style={{
-                  marginRight: 12,
-                  width: 38, height: 38, borderRadius: '50%',
-                  backgroundColor: smartListInfo.color,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: `0 4px 12px ${smartListInfo.color}40`,
-                  flexShrink: 0
-                }}>
-                  <SmartIcon size={22} color="white" />
-                </div>
-              )}
-              {currentView === 'TRASH' && (
-                <div style={{
-                  marginRight: 12,
-                  width: 38, height: 38, borderRadius: '50%',
-                  backgroundColor: '#8e8e93',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 4px 12px rgba(142, 142, 147, 0.4)',
-                  flexShrink: 0
-                }}>
-                  <Trash2 size={22} color="white" />
-                </div>
-              )}
-              
-              {isEditingCycle && currentCycle ? (
-                <input 
-                  type="text" 
-                  value={cycleEditName}
-                  onChange={e => setCycleEditName(e.target.value)}
-                  onBlur={() => {
-                    if (cycleEditName.trim()) {
-                      updateCycle(currentCycle.id, { name: cycleEditName.trim() });
-                    }
-                    setIsEditingCycle(false);
-                  }}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') e.currentTarget.blur();
-                  }}
-                  autoFocus
-                  style={{ background: 'transparent', border: 'none', borderBottom: '2px solid var(--accent-primary)', color: 'inherit', fontSize: 'inherit', fontFamily: 'inherit', outline: 'none', width: 'auto' }}
-                />
-              ) : isEditingListName && currentList && !currentList.isFolder ? (
-                <input 
-                  type="text" 
-                  value={listEditName}
-                  onChange={e => setListEditName(e.target.value)}
-                  onBlur={() => {
-                    if (listEditName.trim() && listEditName.trim() !== currentList.name) {
-                      updateList(currentList.id, { name: listEditName.trim() });
-                    }
-                    setIsEditingListName(false);
-                  }}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') e.currentTarget.blur();
-                    if (e.key === 'Escape') setIsEditingListName(false);
-                  }}
-                  autoFocus
-                  style={{ background: 'transparent', border: 'none', borderBottom: `2px solid ${viewColor}`, color: 'inherit', fontSize: 'inherit', fontFamily: 'inherit', fontWeight: 'inherit', outline: 'none', width: 'auto', minWidth: 120 }}
-                />
-              ) : (
-                <span 
-                  onClick={() => {
-                    if (currentList && !currentList.isFolder) {
-                      HapticService.selection();
-                      setListEditName(currentList.name);
-                      setIsEditingListName(true);
-                    }
-                  }}
-                  onDoubleClick={() => {
-                    if (currentCycle) {
-                      setCycleEditName(currentCycle.name);
-                      setIsEditingCycle(true);
-                    } else if (currentList && !currentList.isFolder) {
-                      HapticService.selection();
-                      setListEditName(currentList.name);
-                      setIsEditingListName(true);
-                    }
-                  }}
-                  style={{ cursor: (currentCycle || (currentList && !currentList.isFolder)) ? 'text' : 'default', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                  title={currentCycle ? "Doble click para editar nombre" : (currentList && !currentList.isFolder) ? "Toca para cambiar nombre" : undefined}
-                >
-                  {getTitle()}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, flex: '1 1 auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flexWrap: 'wrap' }}>
+              <h1 className="text-display" style={{ 
+                fontSize: '34px', 
+                fontWeight: 700,
+                lineHeight: '1.2',
+                wordBreak: 'break-word',
+                letterSpacing: '-0.5px',
+                color: viewColor,
+                display: 'flex', alignItems: 'center', margin: 0,
+                padding: 0,
+                boxSizing: 'border-box',
+                minWidth: 0
+              }}>
+                {CycleIcon && <CycleIcon size={32} color={viewColor} style={{ marginRight: 12 }} />}
+                {SmartIcon && smartListInfo && (
+                  <div style={{
+                    marginRight: 12,
+                    width: 38, height: 38, borderRadius: '50%',
+                    backgroundColor: smartListInfo.color,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: `0 4px 12px ${smartListInfo.color}40`,
+                    flexShrink: 0
+                  }}>
+                    <SmartIcon size={22} color="white" />
+                  </div>
+                )}
+                {currentView === 'TRASH' && (
+                  <div style={{
+                    marginRight: 12,
+                    width: 38, height: 38, borderRadius: '50%',
+                    backgroundColor: '#8e8e93',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 4px 12px rgba(142, 142, 147, 0.4)',
+                    flexShrink: 0
+                  }}>
+                    <Trash2 size={22} color="white" />
+                  </div>
+                )}
+                
+                {isEditingCycle && currentCycle ? (
+                  <input 
+                    type="text" 
+                    value={cycleEditName}
+                    onChange={e => setCycleEditName(e.target.value)}
+                    onBlur={() => {
+                      if (cycleEditName.trim()) {
+                        updateCycle(currentCycle.id, { name: cycleEditName.trim() });
+                      }
+                      setIsEditingCycle(false);
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') e.currentTarget.blur();
+                    }}
+                    autoFocus
+                    style={{ background: 'transparent', border: 'none', borderBottom: '2px solid var(--accent-primary)', color: 'inherit', fontSize: 'inherit', fontFamily: 'inherit', outline: 'none', width: 'auto' }}
+                  />
+                ) : isEditingListName && currentList && !currentList.isFolder ? (
+                  <input 
+                    type="text" 
+                    value={listEditName}
+                    onChange={e => setListEditName(e.target.value)}
+                    onBlur={() => {
+                      if (listEditName.trim() && listEditName.trim() !== currentList.name) {
+                        updateList(currentList.id, { name: listEditName.trim() });
+                      }
+                      setIsEditingListName(false);
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') e.currentTarget.blur();
+                      if (e.key === 'Escape') setIsEditingListName(false);
+                    }}
+                    autoFocus
+                    style={{ background: 'transparent', border: 'none', borderBottom: `2px solid ${viewColor}`, color: 'inherit', fontSize: 'inherit', fontFamily: 'inherit', fontWeight: 'inherit', outline: 'none', width: 'auto', minWidth: 120 }}
+                  />
+                ) : (
+                  <span 
+                    onClick={() => {
+                      if (currentList && !currentList.isFolder) {
+                        HapticService.selection();
+                        setListEditName(currentList.name);
+                        setIsEditingListName(true);
+                      }
+                    }}
+                    onDoubleClick={() => {
+                      if (currentCycle) {
+                        setCycleEditName(currentCycle.name);
+                        setIsEditingCycle(true);
+                      } else if (currentList && !currentList.isFolder) {
+                        HapticService.selection();
+                        setListEditName(currentList.name);
+                        setIsEditingListName(true);
+                      }
+                    }}
+                    style={{ cursor: (currentCycle || (currentList && !currentList.isFolder)) ? 'text' : 'default', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                    title={currentCycle ? "Doble click para editar nombre" : (currentList && !currentList.isFolder) ? "Toca para cambiar nombre" : undefined}
+                  >
+                    {getTitle()}
+                  </span>
+                )}
+              </h1>
+              {currentList && !currentList.isFolder && (() => {
+                const badge = getListBadgeInfo(currentList, currentView);
+                return (
+                  <span 
+                    className="apple-list-type-pill" 
+                    style={{ 
+                      fontSize: '0.74rem', 
+                      fontWeight: 600, 
+                      color: badge.color, 
+                      background: `${badge.color}15`, 
+                      border: `1px solid ${badge.color}30`, 
+                      padding: '2px 8px', 
+                      borderRadius: 999,
+                      letterSpacing: '-0.01em',
+                      display: 'inline-flex',
+                      alignItems: 'center'
+                    }}
+                  >
+                    {badge.label}
+                  </span>
+                );
+              })()}
+            </div>
+
+            {/* Duración debajo del nombre de la lista, unificado con cabeceras de sección */}
+            {totalDuration && totalDuration.activeMinutes > 0 && !isShoppingList(currentView, currentList) && !isCaducidadesList(currentView, currentList) && (
+              <div 
+                className="list-duration-meta"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  fontSize: '0.86rem',
+                  color: 'var(--text-secondary)',
+                  fontWeight: 500,
+                  letterSpacing: '-0.01em',
+                  flexWrap: 'wrap',
+                  paddingLeft: 2
+                }}
+                title={
+                  cycleBreakdown && cycleBreakdown.details && cycleBreakdown.details.length > 1
+                    ? `Duración total estimada: ~${totalDuration.formattedActive} (${cycleBreakdown.details.map(d => `${formatDuration(d.durationMinutes)} ${d.cycleName.toLowerCase()}`).join(' + ')})`
+                    : completedDuration && completedDuration.activeMinutes > 0
+                    ? `Te queda solo ~${totalDuration.formattedActive} en la lista porque ya has completado ~${completedDuration.formattedActive} (de ~${formatDuration(totalDuration.activeMinutes + completedDuration.activeMinutes)} en total)`
+                    : `Duración total estimada: ~${totalDuration.formattedActive}`
+                }
+              >
+                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                  ~{totalDuration.formattedActive}
                 </span>
-              )}
-            </h1>
-            {currentList && !currentList.isFolder && (() => {
-              const badge = getListBadgeInfo(currentList, currentView);
-              return (
-                <span 
-                  className="apple-list-type-pill" 
-                  style={{ 
-                    fontSize: '0.74rem', 
-                    fontWeight: 600, 
-                    color: badge.color, 
-                    background: `${badge.color}15`, 
-                    border: `1px solid ${badge.color}30`, 
-                    padding: '2px 8px', 
-                    borderRadius: 999,
-                    letterSpacing: '-0.01em',
-                    display: 'inline-flex',
-                    alignItems: 'center'
-                  }}
-                >
-                  {badge.label}
-                </span>
-              );
-            })()}
-
-
-
+                {cycleBreakdown && cycleBreakdown.details && cycleBreakdown.details.length > 1 ? (
+                  <div
+                    className="cycle-duration-breakdown"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      fontSize: '0.76rem',
+                      fontWeight: 500,
+                      color: 'var(--text-tertiary)'
+                    }}
+                  >
+                    <span>(</span>
+                    {cycleBreakdown.details.map((d, i) => {
+                      const freqColor = d.color || getReservedFrequencyColor(d.cycleId);
+                      return (
+                        <span key={d.cycleId || d.cycleName} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, color: freqColor }}>
+                          {i > 0 && <span style={{ opacity: 0.35, color: 'var(--text-tertiary)', margin: '0 1px' }}>+</span>}
+                          <span>{formatDuration(d.durationMinutes)}</span>
+                        </span>
+                      );
+                    })}
+                    <span>)</span>
+                  </div>
+                ) : completedDuration && completedDuration.activeMinutes > 0 ? (
+                  <span 
+                    style={{
+                      fontSize: '0.76rem',
+                      color: 'var(--text-tertiary)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 2
+                    }}
+                  >
+                    <span>·</span>
+                    <span>↓ ~{completedDuration.formattedActive} hechos</span>
+                  </span>
+                ) : null}
+              </div>
+            )}
           </div>
 
           {/* Gran Contador Apple Reminders en el color de la lista */}
           {currentView !== 'TRASH' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-              {/* Duración pendiente y completada */}
-              {totalDuration && totalDuration.activeMinutes > 0 && !isShoppingList(currentView, currentList) && !isCaducidadesList(currentView, currentList) && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-                  <span 
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      padding: '3px 10px',
-                      borderRadius: 8,
-                      background: 'var(--bg-card, rgba(255,255,255,0.7))',
-                      border: '1px solid var(--border-subtle)',
-                      color: 'var(--text-primary)',
-                      fontWeight: 600,
-                      fontSize: '0.88rem',
-                      fontVariantNumeric: 'tabular-nums',
-                      letterSpacing: '-0.2px'
-                    }}
-                    title={
-                      cycleBreakdown && cycleBreakdown.details && cycleBreakdown.details.length > 1
-                        ? `Duración total estimada: ~${totalDuration.formattedActive} (${cycleBreakdown.details.map(d => `${formatDuration(d.durationMinutes)} ${d.cycleName.toLowerCase()}`).join(' + ')})`
-                        : completedDuration && completedDuration.activeMinutes > 0
-                        ? `Te queda solo ~${totalDuration.formattedActive} en la lista porque ya has completado ~${completedDuration.formattedActive} (de ~${formatDuration(totalDuration.activeMinutes + completedDuration.activeMinutes)} en total)`
-                        : `Duración total estimada: ~${totalDuration.formattedActive}`
-                    }
-                  >
-                    ~{totalDuration.formattedActive}
-                  </span>
-                  {cycleBreakdown && cycleBreakdown.details && cycleBreakdown.details.length > 1 ? (
-                    <div
-                      className="cycle-duration-breakdown"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        fontSize: '0.70rem',
-                        fontWeight: 600,
-                        color: 'var(--text-tertiary)',
-                        letterSpacing: '-0.1px',
-                        paddingRight: 2
-                      }}
-                    >
-                      {cycleBreakdown.details.map((d, i) => {
-                        const freqColor = d.color || getReservedFrequencyColor(d.cycleId);
-                        return (
-                          <span key={d.cycleId || d.cycleName} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, color: freqColor }}>
-                            {i > 0 && <span style={{ opacity: 0.35, color: 'var(--text-tertiary)', margin: '0 1px' }}>+</span>}
-                            <span>{formatDuration(d.durationMinutes)}</span>
-                          </span>
-                        );
-                      })}
-                    </div>
-                  ) : completedDuration && completedDuration.activeMinutes > 0 ? (
-                    <span 
-                      style={{
-                        fontSize: '0.72rem',
-                        fontWeight: 600,
-                        color: 'var(--text-tertiary)',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 2,
-                        letterSpacing: '-0.1px',
-                        paddingRight: 2
-                      }}
-                      title={`Completados ~${completedDuration.formattedActive}`}
-                    >
-                      <span>↓</span> ~{completedDuration.formattedActive} hechos
-                    </span>
-                  ) : null}
-                </div>
-              )}
 
               {/* Presupuesto pendiente y pagado */}
               {((totalCost > 0 || (completedCost !== undefined && completedCost > 0)) && !currentCycle && !isCaducidadesList(currentView, currentList)) && (

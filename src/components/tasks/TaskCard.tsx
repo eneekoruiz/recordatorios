@@ -24,7 +24,7 @@ import { TaskHabitCounter } from './card/TaskHabitCounter';
 import { TaskNoteEditor } from './card/TaskNoteEditor';
 import { getTaskPeriodicity, getSectionPeriodicity, stripPeriodicityPrefix } from '../../utils/sectionRoutine';
 import { extractPrice } from '../../utils/priceExtractor';
-import { classifyDropZone, DRAG_MOVE_THRESHOLD_PX } from '../../utils/dragDrop';
+import { classifyDropZone } from '../../utils/dragDrop';
 
 interface TaskCardProps {
   task: TaskItem;
@@ -563,54 +563,53 @@ export const TaskCard = React.memo(function TaskCard({
   };
 
   // ── Touch drag helpers ─────────────────────────────────────────────────────
-  const startTouchDrag = useCallback((startY: number, startX: number) => {
+  const startTouchDrag = useCallback((startY: number, _startX: number) => {
     if (!onReorderTasks || !wrapperRef.current) return;
+    x.set(0); // Cancel any horizontal swipe translation
     touchDragLiftedRef.current = true;
-    touchDragActiveRef.current = false;
+    touchDragActiveRef.current = true;
 
-    // El fondo (rect) se mide ya, pero el «fantasma» solo se crea si de verdad hay arrastre
-    // (ver más abajo): así, mantener quieto para abrir el menú se queda limpio, sin ninguna
-    // animación de «se está levantando» que sugiera que se está arrastrando algo.
     const rect = wrapperRef.current.getBoundingClientRect();
-    const createGhost = () => {
-      const cloned = wrapperRef.current!.cloneNode(true) as HTMLDivElement;
-      cloned.removeAttribute('data-touch-drag-over');
-      cloned.querySelectorAll('[data-touch-drag-ghost]').forEach(el => el.remove());
-      const ghost = document.createElement('div');
-      ghost.setAttribute('data-touch-drag-ghost', 'true');
-      ghost.style.cssText = `
-        position:fixed;
-        left:${rect.left}px;
-        top:${startY - rect.height / 2}px;
-        width:${rect.width}px;
-        height:${rect.height}px;
-        pointer-events:none;
-        z-index:999999;
-        border-radius:12px;
-        box-shadow:0 10px 36px rgba(0,0,0,0.28),0 0 0 2px var(--accent-primary,#007aff);
-        opacity:0.95;
-        transform:scale(1.03);
-        overflow:hidden;
-      `;
-      ghost.appendChild(cloned);
-      document.body.appendChild(ghost);
-      touchDragGhostRef.current = ghost;
-      setIsDraggingTouch(true);
-      HapticService.impact('medium');
-    };
+    const cloned = wrapperRef.current.cloneNode(true) as HTMLDivElement;
+    cloned.removeAttribute('data-touch-drag-over');
+    cloned.querySelectorAll('[data-touch-drag-ghost]').forEach(el => el.remove());
+    const ghost = document.createElement('div');
+    ghost.setAttribute('data-touch-drag-ghost', 'true');
+    ghost.style.cssText = `
+      position:fixed;
+      left:${rect.left}px;
+      top:${startY - rect.height / 2}px;
+      width:${rect.width}px;
+      height:${rect.height}px;
+      pointer-events:none;
+      z-index:999999;
+      border-radius:12px;
+      box-shadow:0 14px 40px rgba(0,0,0,0.32), 0 0 0 2px var(--accent-primary,#007aff);
+      opacity:0.96;
+      transform:scale(1.03);
+      overflow:hidden;
+      background: var(--bg-surface, #ffffff);
+    `;
+    ghost.appendChild(cloned);
+    document.body.appendChild(ghost);
+    touchDragGhostRef.current = ghost;
+    setIsDraggingTouch(true);
+    HapticService.impact('medium');
 
     const onMove = (ev: TouchEvent) => {
       const t = ev.touches[0];
       ev.preventDefault();
-      // Por debajo del umbral no cuenta como arrastre: el pulso de la mano al mantener pulsado
-      // no debe convertir en un intento de arrastre fallido lo que solo quería abrir el menú.
-      const moved = Math.abs(t.clientY - startY) > DRAG_MOVE_THRESHOLD_PX || Math.abs(t.clientX - startX) > DRAG_MOVE_THRESHOLD_PX;
-      if (!moved && !touchDragActiveRef.current) return;
-      if (!touchDragActiveRef.current) createGhost(); // primer movimiento real: ahora sí se «levanta»
-      touchDragActiveRef.current = true;
       if (touchDragGhostRef.current) {
         touchDragGhostRef.current.style.top = `${t.clientY - rect.height / 2}px`;
       }
+
+      // Autodesplazamiento suave cerca de los bordes superior/inferior de pantalla
+      if (t.clientY > window.innerHeight - 80) {
+        window.scrollBy({ top: 9, behavior: 'auto' });
+      } else if (t.clientY < 80) {
+        window.scrollBy({ top: -9, behavior: 'auto' });
+      }
+
       // Highlight drop target
       document.querySelectorAll<HTMLElement>('.task-item-wrapper[data-task-id]').forEach((el) => {
         const elRect = el.getBoundingClientRect();
@@ -623,7 +622,7 @@ export const TaskCard = React.memo(function TaskCard({
       });
     };
 
-    const onEnd = (ev: TouchEvent) => {
+    const onEnd = (_ev: TouchEvent) => {
       document.removeEventListener('touchmove', onMove);
       if (touchDragGhostRef.current) {
         document.body.removeChild(touchDragGhostRef.current);
@@ -631,39 +630,32 @@ export const TaskCard = React.memo(function TaskCard({
       }
       setIsDraggingTouch(false);
       touchDragLiftedRef.current = false;
-
-      if (touchDragActiveRef.current) {
-        // Drag happened → find target and reorder or nest
-        const t = ev.changedTouches[0];
-        let targetId: string | null = null;
-        let dropAction: 'before' | 'after' | 'inside' = 'before';
-        const wrappers = Array.from(document.querySelectorAll<HTMLElement>('.task-item-wrapper[data-task-id]'));
-        for (const el of wrappers) {
-          const attr = el.getAttribute('data-touch-drag-over');
-          if (attr) {
-            targetId = el.getAttribute('data-task-id');
-            if (attr === 'inside') dropAction = 'inside';
-            else if (attr === 'bottom') dropAction = 'after';
-            else dropAction = 'before';
-          }
-          el.removeAttribute('data-touch-drag-over');
-        }
-        if (targetId && targetId !== task.id) {
-          if (dropAction === 'inside') {
-            nestTask(task.id, targetId);
-            HapticService.notification('success');
-          } else if (onReorderTasks) {
-            onReorderTasks(task.id, targetId, dropAction);
-            HapticService.impact('medium');
-          }
-        }
-        void t;
-      } else {
-        // No drag → open context menu
-        didLongPressRef.current = true;
-        openContextMenu();
-      }
       document.body.style.overflow = '';
+      x.set(0);
+
+      // Encontrar objetivo sobre el que se soltó
+      let targetId: string | null = null;
+      let dropAction: 'before' | 'after' | 'inside' = 'before';
+      const wrappers = Array.from(document.querySelectorAll<HTMLElement>('.task-item-wrapper[data-task-id]'));
+      for (const el of wrappers) {
+        const attr = el.getAttribute('data-touch-drag-over');
+        if (attr) {
+          targetId = el.getAttribute('data-task-id');
+          if (attr === 'inside') dropAction = 'inside';
+          else if (attr === 'bottom') dropAction = 'after';
+          else dropAction = 'before';
+        }
+        el.removeAttribute('data-touch-drag-over');
+      }
+      if (targetId && targetId !== task.id) {
+        if (dropAction === 'inside') {
+          nestTask(task.id, targetId);
+          HapticService.notification('success');
+        } else if (onReorderTasks) {
+          onReorderTasks(task.id, targetId, dropAction);
+          HapticService.impact('medium');
+        }
+      }
       touchDragActiveRef.current = false;
     };
 
@@ -681,8 +673,9 @@ export const TaskCard = React.memo(function TaskCard({
       touchDragLiftedRef.current = false;
       touchDragActiveRef.current = false;
       document.body.style.overflow = '';
+      x.set(0);
     }, { once: true });
-  }, [onReorderTasks, task.id, openContextMenu, nestTask]);
+  }, [onReorderTasks, task.id, nestTask, x]);
 
   return (
     <div
@@ -726,7 +719,7 @@ export const TaskCard = React.memo(function TaskCard({
             longPressTimer.current = null;
             didLongPressRef.current = true;
             startTouchDrag(sy, sx);
-          }, 380);
+          }, 280);
         } else {
           // Desktop / mouse: long press → context menu as before
           longPressTimer.current = window.setTimeout(() => {
@@ -817,8 +810,8 @@ export const TaskCard = React.memo(function TaskCard({
         />
       )}
 
-      {/* Fixed swipe action backgrounds - hidden during context menu to prevent bleed-through */}
-      {!contextMenuOpen && (
+      {/* Fixed swipe action backgrounds - hidden during context menu or drag to prevent bleed-through */}
+      {!contextMenuOpen && !isDraggingTouch && (
         <TaskSwipeBackground
           isEffectivelyDone={isEffectivelyDone}
           leftBgOpacity={leftBgOpacity}
@@ -834,7 +827,7 @@ export const TaskCard = React.memo(function TaskCard({
       <motion.div
         ref={cardRef}
         className={contextMenuOpen ? 'selected-card' : undefined}
-        drag={contextMenuOpen ? false : "x"}
+        drag={contextMenuOpen || isDraggingTouch ? false : "x"}
         dragSnapToOrigin
         dragConstraints={{ left: -140, right: 140 }}
         dragElastic={0.25}
@@ -886,7 +879,7 @@ export const TaskCard = React.memo(function TaskCard({
         )}
 
         {/* Conector visual jerárquico para subtareas (estilo árbol / guía de anidación) */}
-        {indent > 0 && (
+        {Boolean(task.parentId) && indent > 0 && (
           <div
             aria-hidden="true"
             className="subtask-tree-guide"

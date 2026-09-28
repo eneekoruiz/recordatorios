@@ -659,27 +659,56 @@ input:focus, input:focus-visible, textarea:focus, textarea:focus-visible {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   TOUCH DRAG-TO-REORDER — Drop target indicator (mobile)
+   TOUCH DRAG-TO-REORDER — Drop target indicator (iOS Apple Reminders)
    ═══════════════════════════════════════════════════════════ */
 .task-item-wrapper[data-touch-drag-over='top']::before,
 .task-item-wrapper[data-touch-drag-over='bottom']::after {
   content: '';
   position: absolute;
-  left: 12px;
-  right: 12px;
-  height: 2px;
+  left: 20px;
+  right: 16px;
+  height: 3px;
+  border-radius: 999px;
   background: var(--accent-primary, #007aff);
+  box-shadow: 0 0 10px rgba(0, 122, 255, 0.45);
   z-index: 9999;
   pointer-events: none;
-  border-radius: 2px;
 }
-.task-item-wrapper[data-touch-drag-over='top']::before  { top: -1px; }
-.task-item-wrapper[data-touch-drag-over='bottom']::after { bottom: -1px; }
+.task-item-wrapper[data-touch-drag-over='top']::before  { top: -1.5px; }
+.task-item-wrapper[data-touch-drag-over='bottom']::after { bottom: -1.5px; }
+
+/* Bullet Apple circular en el extremo izquierdo */
+.task-item-wrapper[data-touch-drag-over='top']::after {
+  content: '';
+  position: absolute;
+  top: -3.5px;
+  left: 17px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-primary, #007aff);
+  box-shadow: 0 0 8px rgba(0, 122, 255, 0.6);
+  z-index: 10000;
+  pointer-events: none;
+}
+.task-item-wrapper[data-touch-drag-over='bottom']::before {
+  content: '';
+  position: absolute;
+  bottom: -3.5px;
+  left: 17px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-primary, #007aff);
+  box-shadow: 0 0 8px rgba(0, 122, 255, 0.6);
+  z-index: 10000;
+  pointer-events: none;
+}
 .task-item-wrapper[data-touch-drag-over='inside'] {
-  outline: 2px dashed var(--accent-primary, #007aff) !important;
+  outline: 2px solid var(--accent-primary, #007aff) !important;
   outline-offset: -2px;
-  background: rgba(0, 122, 255, 0.08) !important;
-  border-radius: 10px;
+  background: rgba(0, 122, 255, 0.12) !important;
+  border-radius: 12px;
 }
 
 /* ==========================================================================
