@@ -1,17 +1,17 @@
-import { useState, useEffect, useEffectEvent, useRef } from 'react';
+import { useState, useEffect, useEffectEvent, useRef, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { Sidebar } from './components/layout/Sidebar';
 import { MainContent } from './components/layout/MainContent';
 import { WidgetDashboard } from './components/layout/WidgetDashboard';
-import { AnalyticsView } from './components/analytics/AnalyticsView';
+
 import { TaskDrawer } from './components/tasks/TaskDrawer';
 import { PromptModal } from './components/layout/PromptModal';
-import { UniversalImporter } from './components/views/UniversalImporter';
+
 import { SpotlightModal } from './components/search/SpotlightModal';
-import { ZenMode } from './components/tasks/ZenMode';
-import { ListSequenceMode } from './components/tasks/ListSequenceMode';
+
+
 import { GeolocationService } from './services/GeolocationService';
 import { useAppStore, isTaskCompleted } from './store/useAppStore';
 import { useNavigation } from './hooks/useNavigation';
@@ -22,9 +22,9 @@ import { ShortcutsModal } from './components/layout/ShortcutsModal';
 import { DailyGreetingModal } from './components/layout/DailyGreetingModal';
 import { syncManager } from './sync/syncManager';
 import { TaskSkeletonLoader } from './components/ui/TaskSkeletonLoader';
-import { AIAssistantModal } from './components/ai/AIAssistantModal';
+
 import { ConfirmHost } from './components/ui/ConfirmHost';
-import { SharedListView } from './components/share/SharedListView';
+
 import { syncSharedStatus } from './services/ShareService';
 import { 
   formatSectionTitle, 
@@ -38,6 +38,17 @@ import { ensureLimpiezaSections, getRoomForCleaningTask } from './utils/specialL
 import { isKnownRedundantTask, semanticKey, normalizeTitle } from './utils/taskDeduplication';
 import type { TaskItem } from './models/Task';
 import { useSystemTheme } from './hooks/useSystemTheme';
+
+
+// Piezas pesadas o de uso ocasional: se descargan cuando hacen falta, no al abrir la app.
+const lazyNamed = <T extends Record<string, any>>(load: () => Promise<T>, name: keyof T) =>
+  lazy(() => load().then((m) => ({ default: m[name] })));
+const UniversalImporter = lazyNamed(() => import('./components/views/UniversalImporter'), 'UniversalImporter');
+const AnalyticsView = lazyNamed(() => import('./components/analytics/AnalyticsView'), 'AnalyticsView');
+const ZenMode = lazyNamed(() => import('./components/tasks/ZenMode'), 'ZenMode');
+const ListSequenceMode = lazyNamed(() => import('./components/tasks/ListSequenceMode'), 'ListSequenceMode');
+const AIAssistantModal = lazyNamed(() => import('./components/ai/AIAssistantModal'), 'AIAssistantModal');
+const SharedListView = lazyNamed(() => import('./components/share/SharedListView'), 'SharedListView');
 
 function App() {
   useSystemTheme();
@@ -61,6 +72,8 @@ function App() {
   const [sequenceMode, setSequenceMode] = useState<{ taskIds: string[]; listName: string; listColor?: string } | null>(null);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+  const [aiAssistantEverOpened, setAiAssistantEverOpened] = useState(false);
+  if (isAIAssistantOpen && !aiAssistantEverOpened) setAiAssistantEverOpened(true);
   const hasHydrated = useAppStore((state) => state.hasHydrated);
   // Enlaces especiales: recuperación de contraseña (?reset=) y lista compartida (?share=)
   const [resetToken, setResetToken] = useState(() => new URLSearchParams(window.location.search).get('reset'));
@@ -1061,7 +1074,7 @@ function App() {
   }
 
   if (shareToken) {
-    return <SharedListView token={shareToken} onExit={() => { clearUrlParam('share'); setShareToken(null); }} />;
+    return <Suspense fallback={null}><SharedListView token={shareToken} onExit={() => { clearUrlParam('share'); setShareToken(null); }} /></Suspense>;
   }
 
   if (resetToken || !token) {
@@ -1114,8 +1127,8 @@ function App() {
               }}
             />
           )}
-          {navView === 'UNIVERSAL_IMPORTER' && <UniversalImporter onBack={handleBack} />}
-          {navView === 'ANALYTICS' && <AnalyticsView onBack={handleBack} />}
+          {navView === 'UNIVERSAL_IMPORTER' && <Suspense fallback={null}><UniversalImporter onBack={handleBack} /></Suspense>}
+          {navView === 'ANALYTICS' && <Suspense fallback={null}><AnalyticsView onBack={handleBack} /></Suspense>}
         </NavigationFrame>
       </div>
 
@@ -1131,25 +1144,32 @@ function App() {
         initialTitle={drawerInitialTitle}
       />
 
-      <AIAssistantModal
-        isOpen={isAIAssistantOpen}
-        onClose={() => setIsAIAssistantOpen(false)}
-        onSelectView={(view) => handleSelectView(view)}
-      />
+      {/* Se monta al abrirlo por primera vez (así su código no pesa en la carga inicial) y se queda montado para animar el cierre. */}
+      {aiAssistantEverOpened && (
+        <Suspense fallback={null}>
+          <AIAssistantModal
+            isOpen={isAIAssistantOpen}
+            onClose={() => setIsAIAssistantOpen(false)}
+            onSelectView={(view) => handleSelectView(view)}
+          />
+        </Suspense>
+      )}
 
       <PromptModal />
 
       {zenModeTaskId && (
-        <ZenMode taskId={zenModeTaskId} onClose={() => setZenModeTaskId(null)} />
+        <Suspense fallback={null}><ZenMode taskId={zenModeTaskId} onClose={() => setZenModeTaskId(null)} /></Suspense>
       )}
 
       {sequenceMode && (
+        <Suspense fallback={null}>
         <ListSequenceMode
           taskIds={sequenceMode.taskIds}
           listName={sequenceMode.listName}
           listColor={sequenceMode.listColor}
           onClose={() => setSequenceMode(null)}
         />
+        </Suspense>
       )}
 
       <SpotlightModal

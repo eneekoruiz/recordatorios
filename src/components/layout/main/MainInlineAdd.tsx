@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Calendar, Clock, Flag, Sparkles } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
-import { extractPrice } from '../../../utils/priceExtractor';
-import { parseNaturalLanguage } from '../../../utils/nlpParser';
+import { draftFromText } from '../../../utils/taskDraft';
 import { getGroceryCategory } from '../../../utils/specialLists';
 
 interface MainInlineAddProps {
@@ -36,22 +35,17 @@ export const MainInlineAdd: React.FC<MainInlineAddProps> = ({
     if (inlineTitle.trim()) {
       const rawText = inlineTitle.trim();
       setInlineTitle('');
-      const priceResult = extractPrice(rawText, false);
-      const newTaskTitle = (priceResult && priceResult.cleanText) ? priceResult.cleanText : rawText;
-      const extractedPrice = (priceResult && priceResult.price > 0) ? priceResult.price : undefined;
+      const draft = draftFromText(rawText);
+      const newTaskTitle = draft.title;
 
       const defaultCategoryId = currentView.startsWith('list_') ? currentView.replace('list_', '') : undefined;
-      
-      let dueDate: string | undefined = selectedDueDate;
-      if (!dueDate) {
-        const nlp = parseNaturalLanguage(rawText);
-        if (nlp.dueDate) {
-          dueDate = nlp.dueDate;
-        } else if (currentView === 'smart_today') {
-          const today = new Date();
-          today.setHours(12, 0, 0, 0);
-          dueDate = today.toISOString();
-        }
+
+      // Manda la fecha elegida con el selector; si no, la escrita («mañana», «el viernes»…); si no, Hoy.
+      let dueDate: string | undefined = selectedDueDate || draft.dueDate;
+      if (!dueDate && currentView === 'smart_today') {
+        const today = new Date();
+        today.setHours(12, 0, 0, 0);
+        dueDate = today.toISOString();
       }
 
       // Auto-categorización en listas de la compra (Apple iOS 17 Grocery feature)
@@ -88,9 +82,11 @@ export const MainInlineAdd: React.FC<MainInlineAddProps> = ({
         categoryId: defaultCategoryId,
         sectionId,
         dueDate,
-        priority: selectedPriority !== 'none' ? selectedPriority : undefined,
-        flagged: selectedPriority === 'high',
-        price: extractedPrice,
+        priority: selectedPriority !== 'none' ? selectedPriority : draft.priority,
+        flagged: (selectedPriority !== 'none' ? selectedPriority : draft.priority) === 'high',
+        price: draft.price,
+        cycle_id: currentView.startsWith('cycle_') ? currentView : draft.cycle_id,
+        alerts: draft.alerts,
         completed: false,
         created_at: new Date().toISOString()
       } as any);
