@@ -9,6 +9,7 @@ function matches(row, where = {}) {
     const value = row[key];
     if (cond && typeof cond === 'object' && !(cond instanceof Date)) {
       if ('in' in cond && !cond.in.includes(value)) return false;
+      if ('lt' in cond && !(value instanceof Date && value.getTime() < new Date(cond.lt).getTime())) return false;
       if ('gt' in cond && !(value instanceof Date && value.getTime() > new Date(cond.gt).getTime())) return false;
     } else if (cond === null) {
       if (value !== null && value !== undefined) return false;
@@ -61,9 +62,21 @@ function createDelegate(store, { hasUpdatedAt = true, defaults = {} } = {}) {
     async update({ where, data }) {
       const row = rows.find((r) => matches(r, where));
       if (!row) throw new Error('Record to update not found');
-      Object.assign(row, clone(data));
+      for (const [k, v] of Object.entries(clone(data))) {
+        row[k] = v && typeof v === 'object' && 'increment' in v ? (row[k] || 0) + v.increment : v;
+      }
       touch(row);
       return clone(row);
+    },
+    async updateMany({ where, data }) {
+      let count = 0;
+      for (const row of rows) {
+        if (!matches(row, where)) continue;
+        Object.assign(row, clone(data));
+        touch(row);
+        count++;
+      }
+      return { count };
     },
     async upsert({ where, create, update }) {
       const row = rows.find((r) => matches(r, where));
@@ -93,6 +106,7 @@ export function createMemoryPrisma() {
     sections: { rows: [] },
     links: { rows: [] },
     push: { rows: [] },
+    limits: { rows: [] },
   };
   stores.links.lists = stores.lists;
   return {
@@ -104,6 +118,7 @@ export function createMemoryPrisma() {
     listSection: createDelegate(stores.sections),
     sharedLink: createDelegate(stores.links, { hasUpdatedAt: false }),
     pushSubscription: createDelegate(stores.push, { hasUpdatedAt: false }),
+    rateLimit: createDelegate(stores.limits, { hasUpdatedAt: false }),
     async $transaction(ops) {
       return Promise.all(ops);
     },

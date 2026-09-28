@@ -436,6 +436,45 @@ describe('tiempo real (SSE)', () => {
   });
 });
 
+describe('límites de peticiones compartidos', () => {
+  it('el contador vive en la base de datos: dos instancias suman sus intentos', async () => {
+    const shared = createMemoryPrisma();
+    const open = () => new Promise((resolve) => {
+      const srv = createApp({ prisma: shared }).listen(0, () => resolve(srv));
+    });
+    const [a, b] = await Promise.all([open(), open()]);
+    const call = (srv) => fetch(`http://127.0.0.1:${srv.address().port}/api/auth/login`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'nadie@example.com', password: 'incorrecta!!' }),
+    });
+    try {
+      for (let i = 0; i < 10; i++) expect((await call(i % 2 ? a : b)).status).toBe(401);
+      const blocked = await call(a);
+      expect(blocked.status).toBe(429);
+      expect(Number(blocked.headers.get('retry-after'))).toBeGreaterThan(0);
+      expect((await call(b)).status).toBe(429); // la otra instancia ve el mismo contador
+      expect(shared._stores.limits.rows.length).toBeGreaterThan(0);
+    } finally {
+      a.close();
+      b.close();
+    }
+  });
+
+  it('si la base de datos falla, limita en memoria en lugar de dejar de proteger', async () => {
+    const broken = createMemoryPrisma();
+    broken.rateLimit.updateMany = async () => { throw new Error('db caída'); };
+    const srv = await new Promise((resolve) => { const s = createApp({ prisma: broken }).listen(0, () => resolve(s)); });
+    try {
+      const url = `http://127.0.0.1:${srv.address().port}/api/auth/login`;
+      const call = () => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'x@example.com', password: 'incorrecta!!' }) });
+      for (let i = 0; i < 10; i++) expect((await call()).status).toBe(401);
+      expect((await call()).status).toBe(429);
+    } finally {
+      srv.close();
+    }
+  });
+});
+
 describe('robustez', () => {
   it('devuelve JSON en rutas inexistentes y cuerpos inválidos', async () => {
     const r404 = await get('/api/no-existe');

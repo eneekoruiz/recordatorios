@@ -35,7 +35,7 @@ Las claves de IA (Gemini/OpenAI) se guardan solo en el navegador de cada usuario
 2. Añade las variables de entorno: `DATABASE_URL`, `JWT_SECRET` (obligatoria), `APP_URL` y, para recuperar contraseñas por email, `RESEND_API_KEY` y `MAIL_FROM`. Ver `.env.example`.
 3. Tras cambios en `prisma/schema.prisma`, ejecuta `npx prisma db push` contra la base de datos de producción.
 
-> Los límites de peticiones (login, registro, cambio de contraseña) viven en memoria de cada instancia: en serverless son best-effort; para un límite estricto usa el firewall de Vercel. `TRUST_PROXY_HOPS` (por defecto 1) indica cuántos proxies hay delante.
+> Los límites de peticiones (login, registro, cambio de contraseña, recuperación) se cuentan en la tabla `RateLimit` de la base de datos, así que valen para todas las instancias serverless (ejecuta `npx prisma db push` para crearla; mientras no exista, se limita en memoria por instancia). `TRUST_PROXY_HOPS` (por defecto 1) indica cuántos proxies hay delante.
 
 > En Vercel no hay tiempo real por SSE (las funciones son efímeras); la app sincroniza cada 30 s, al volver a la pestaña y tras cada cambio.
 
@@ -48,7 +48,7 @@ Para ponerlo en marcha:
 1. `npx web-push generate-vapid-keys` y guarda `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `VAPID_SUBJECT` en Vercel.
 2. Define `CRON_SECRET` en Vercel. `vercel.json` ya programa una llamada diaria a `/api/cron/notify` (vale para el resumen, también en el plan gratuito).
 3. Para que las alertas con hora lleguen puntuales, añade en GitHub los secretos `APP_URL` y `CRON_SECRET`: el flujo `.github/workflows/notify.yml` llama cada 10 minutos.
-4. `npx prisma db push` contra producción para crear la tabla de suscripciones (y los índices).
+4. `npx prisma db push` contra producción para crear la tabla de suscripciones, la de límites de peticiones (y los índices).
 
 ## Scripts
 

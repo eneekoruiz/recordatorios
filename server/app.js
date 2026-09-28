@@ -94,24 +94,58 @@ const safeEqual = (a, b) => {
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const normalizeEmail = (email) => (typeof email === 'string' ? email.toLowerCase().trim() : '');
 
-// --- Rate limiting en memoria (best-effort: en serverless cada instancia tiene el suyo) ---
-function createRateLimiter({ windowMs, max, keyFn, message }) {
+// --- Límites de peticiones ---
+// Con base de datos, los contadores viven en la tabla RateLimit y valen para todas las instancias
+// (en serverless, cada instancia tiene su propia memoria). Si la BD falla, se limita en memoria:
+// preferimos un límite por instancia a dejar el login sin ninguna protección.
+function createMemoryHitStore() {
   const hits = new Map();
-  return (req, res, next) => {
-    const key = keyFn(req);
+  return async (key, windowMs) => {
     const now = Date.now();
     const record = hits.get(key);
     if (!record || now > record.resetAt) {
       hits.set(key, { count: 1, resetAt: now + windowMs });
     } else {
       record.count += 1;
-      if (record.count > max) {
-        res.setHeader('Retry-After', Math.ceil((record.resetAt - now) / 1000));
-        return res.status(429).json({ error: message });
-      }
     }
     if (hits.size > 10_000) {
       for (const [k, v] of hits) if (now > v.resetAt) hits.delete(k);
+    }
+    return hits.get(key);
+  };
+}
+
+function createDbHitStore(prisma) {
+  const fallback = createMemoryHitStore();
+  const table = prisma.rateLimit;
+  return async (key, windowMs) => {
+    try {
+      const now = new Date();
+      const resetAt = new Date(now.getTime() + windowMs);
+      // Ventana caducada: se reinicia. Después, el incremento es atómico en la BD.
+      await table.updateMany({ where: { key, resetAt: { lt: now } }, data: { count: 0, resetAt } });
+      let row;
+      try {
+        row = await table.upsert({ where: { key }, create: { key, count: 1, resetAt }, update: { count: { increment: 1 } } });
+      } catch {
+        // Dos peticiones crearon la fila a la vez: la segunda ya puede incrementarla.
+        row = await table.update({ where: { key }, data: { count: { increment: 1 } } });
+      }
+      if (Math.random() < 0.01) table.deleteMany({ where: { resetAt: { lt: now } } }).catch(() => {});
+      return { count: row.count, resetAt: new Date(row.resetAt).getTime() };
+    } catch (error) {
+      console.error('Rate limit store error (se limita en memoria):', error?.message || error);
+      return fallback(key, windowMs);
+    }
+  };
+}
+
+function createRateLimiter({ windowMs, max, keyFn, message, hit }) {
+  return async (req, res, next) => {
+    const { count, resetAt } = await hit(keyFn(req), windowMs);
+    if (count > max) {
+      res.setHeader('Retry-After', Math.max(1, Math.ceil((resetAt - Date.now()) / 1000)));
+      return res.status(429).json({ error: message });
     }
     next();
   };
@@ -133,6 +167,7 @@ function defaultPushSender() {
 
 export function createApp({ prisma, pushSender = defaultPushSender() }) {
   const app = express();
+  const hit = prisma?.rateLimit ? createDbHitStore(prisma) : createMemoryHitStore();
   const clients = new Map(); // userId -> Set<Response> (SSE, solo en servidores persistentes)
 
   app.disable('x-powered-by');
@@ -262,24 +297,28 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
     max: 10,
     keyFn: (req) => `login:${clientIp(req)}:${normalizeEmail(req.body?.email)}`,
     message: 'Demasiados intentos. Espera unos minutos antes de volver a probar.',
+    hit,
   });
   const authIpLimiter = createRateLimiter({
     windowMs: 15 * 60 * 1000,
     max: 60,
     keyFn: (req) => `auth:${clientIp(req)}`,
     message: 'Demasiadas peticiones. Espera unos minutos.',
+    hit,
   });
   const changePasswordLimiter = createRateLimiter({
     windowMs: 15 * 60 * 1000,
     max: 10,
     keyFn: (req) => `change:${clientIp(req)}`,
     message: 'Demasiados intentos. Espera unos minutos.',
+    hit,
   });
   const forgotLimiter = createRateLimiter({
     windowMs: 60 * 60 * 1000,
     max: 5,
     keyFn: (req) => `forgot:${clientIp(req)}`,
     message: 'Has solicitado demasiados enlaces. Inténtalo dentro de una hora.',
+    hit,
   });
 
   const validatePassword = (password) => {

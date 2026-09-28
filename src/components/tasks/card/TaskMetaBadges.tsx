@@ -6,6 +6,7 @@ import { HapticService } from '../../../services/HapticService';
 import { getTaskDuration, formatDuration } from '../../../utils/taskDuration';
 import { isShoppingList } from '../../../utils/specialLists';
 import { formatEuro } from '../../../utils/format';
+import { MetaSplit, MONEY_COLOR } from '../../ui/MetaSplit';
 
 export interface TaskMetaBadgesProps {
   task: TaskItem;
@@ -238,7 +239,19 @@ export function TaskMetaBadges({
                   ) : (
                     <Clock size={11} strokeWidth={2.2} style={{ flexShrink: 0, color: 'var(--accent-primary)', opacity: 0.85 }} />
                   )}
-                  <span>{formatDuration(totalActiveMinutes)}</span>
+                  {hasSubtasksDur && ownActive > 0 ? (
+                    // Sólido = duración propia; rayado = la de sus subtareas.
+                    <MetaSplit
+                      label={formatDuration(totalActiveMinutes)}
+                      description={durTooltip}
+                      parts={[
+                        { id: 'own', value: ownActive, text: `${formatDuration(ownActive)} propia`, color: 'var(--accent-primary)', tone: 'solid' },
+                        { id: 'subs', value: subActive, text: `${formatDuration(subActive)} subtareas`, color: 'var(--accent-primary)', tone: 'striped' },
+                      ]}
+                    />
+                  ) : (
+                    <span>{formatDuration(totalActiveMinutes)}</span>
+                  )}
                   {isParallel && (
                     <span style={{ fontSize: '0.67rem', color: 'var(--text-tertiary)', fontWeight: 500 }}>(+{formatDuration(totalParallelMinutes)})</span>
                   )}
@@ -279,7 +292,18 @@ export function TaskMetaBadges({
                       {task.quantity} × {formatEuro(task.price || 0)} =
                     </span>
                   )}
-                  <span>{formatEuro(totalPrice)}</span>
+                  {subtasksPrice > 0 && ownPrice > 0 ? (
+                    <MetaSplit
+                      label={formatEuro(totalPrice)}
+                      description={priceTooltip}
+                      parts={[
+                        { id: 'own', value: ownPrice, text: `${formatEuro(ownPrice)} propio`, color: MONEY_COLOR, tone: 'solid' },
+                        { id: 'subs', value: subtasksPrice, text: `${formatEuro(subtasksPrice)} subtareas`, color: MONEY_COLOR, tone: 'striped' },
+                      ]}
+                    />
+                  ) : (
+                    <span>{formatEuro(totalPrice)}</span>
+                  )}
                 </span>
               );
             }

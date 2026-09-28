@@ -8,6 +8,7 @@ import { useAppStore } from '../../../store/useAppStore';
 import { formatEuro } from '../../../utils/format';
 import { classifyDropZone, DRAG_MOVE_THRESHOLD_PX } from '../../../utils/dragDrop';
 import { getReservedFrequencyColor } from '../../../constants/colors';
+import { MetaSplit, type MetaPart, MONEY_COLOR } from '../../ui/MetaSplit';
 
 interface SectionData {
   title: string;
@@ -126,45 +127,43 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   const includeLabel = data.periodicity === 'week' ? 'Diarias' : 'Acumuladas';
 
   let durationNode: React.ReactNode = null;
-  if (sectionDurationLabel) {
+  if (sectionDurationLabel && durSummary) {
+    let parts: MetaPart[] = [];
+    let description = `Duración estimada: ~${sectionDurationLabel}`;
     if (hasRoutineDurationBreakdown && data.routineDurations) {
-      const ownFormatted = data.routineDurations.only.formattedActive;
+      // Sólido = tareas de esta sección; rayado = acumuladas desde las frecuencias más cortas.
       const ownColor = getReservedFrequencyColor(data.periodicity);
       const extraColor = data.periodicity === 'week' ? getReservedFrequencyColor('day') : 'var(--text-tertiary)';
-      const extraMinutes = Math.max(0, data.routineDurations.full.activeMinutes - data.routineDurations.only.activeMinutes);
-      const extraFormatted = formatDuration(extraMinutes);
-      durationNode = isMobile ? (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-          <span>~{sectionDurationLabel}</span>
-        </span>
-      ) : (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-          <span>~{sectionDurationLabel}</span>
-          <span style={{ opacity: 0.4 }}>(</span>
-          <span style={{ color: ownColor, fontWeight: 500 }}>
-            {ownFormatted}
-          </span>
-          <span style={{ opacity: 0.35 }}>+</span>
-          <span style={{ color: extraColor, fontWeight: 500 }}>
-            {extraFormatted}
-          </span>
-          <span style={{ opacity: 0.4 }}>)</span>
-        </span>
-      );
+      const ownMinutes = data.routineDurations.only.activeMinutes;
+      const extraMinutes = Math.max(0, data.routineDurations.full.activeMinutes - ownMinutes);
+      parts = [
+        { id: 'own', value: ownMinutes, text: data.routineDurations.only.formattedActive, color: ownColor, tone: 'solid' },
+        { id: 'extra', value: extraMinutes, text: formatDuration(extraMinutes), color: extraColor, tone: 'striped' },
+      ];
+      description = `Duración total ~${sectionDurationLabel}: ${data.routineDurations.only.formattedActive} ${data.periodicity === 'week' ? 'semanales' : 'de esta sección'} (barra sólida) + ${formatDuration(extraMinutes)} ${data.periodicity === 'week' ? 'diarias' : includeLabel.toLowerCase()} (barra rayada)`;
     } else if (completedDurationSummary && completedDurationSummary.activeMinutes > 0) {
-      durationNode = <span>~{sectionDurationLabel} restante (↓ ~{completedDurationSummary.formattedActive} hechos)</span>;
-    } else {
-      durationNode = <span>~{sectionDurationLabel}</span>;
+      parts = [
+        { id: 'left', value: durSummary.activeMinutes, text: `${sectionDurationLabel} restantes`, color: 'var(--accent-primary)', tone: 'solid' },
+        { id: 'done', value: completedDurationSummary.activeMinutes, text: `${completedDurationSummary.formattedActive} hechos`, color: 'var(--accent-primary)', tone: 'done' },
+      ];
+      description = `Te queda ~${sectionDurationLabel} porque ya has completado ~${completedDurationSummary.formattedActive} (de ~${formatDuration(durSummary.activeMinutes + completedDurationSummary.activeMinutes)})`;
     }
+    durationNode = <MetaSplit label={`~${sectionDurationLabel}`} parts={parts} description={description} />;
   }
 
-  let priceText: string | null = null;
+  let priceNode: React.ReactNode = null;
   if (sectionTotal > 0 || (sectionCompletedTotal && sectionCompletedTotal > 0)) {
-    if (sectionCompletedTotal && sectionCompletedTotal > 0) {
-      priceText = `${formatEuro(sectionTotal)} (↓ ${formatEuro(sectionCompletedTotal)} pagados)`;
-    } else {
-      priceText = formatEuro(sectionTotal);
-    }
+    const paid = sectionCompletedTotal && sectionCompletedTotal > 0 ? sectionCompletedTotal : 0;
+    priceNode = (
+      <MetaSplit
+        label={formatEuro(sectionTotal)}
+        parts={paid > 0 ? [
+          { id: 'pending', value: sectionTotal, text: `${formatEuro(sectionTotal)} pendientes`, color: MONEY_COLOR, tone: 'solid' },
+          { id: 'paid', value: paid, text: `${formatEuro(paid)} pagados`, color: MONEY_COLOR, tone: 'done' },
+        ] : []}
+        description={paid > 0 ? `Pendiente: ${formatEuro(sectionTotal)} · Ya pagado: ${formatEuro(paid)} · Total original: ${formatEuro(sectionTotal + paid)}` : `Subtotal: ${formatEuro(sectionTotal)}`}
+      />
+    );
   }
   const [isPressed, setIsPressed] = useState(false);
   const [sectionDragOverPos, setSectionDragOverPos] = useState<'top' | 'bottom' | 'inside' | null>(null);
@@ -565,7 +564,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                   {data.title}
                 </h3>
               </div>
-              {(durationNode || priceText) && (
+              {(durationNode || priceNode) && (
                 <div
                   className="section-duration section-meta"
                   style={{ fontSize: data.depth === 0 ? '0.8rem' : '0.74rem', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}
@@ -583,8 +582,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                   ].filter(Boolean).join(' · ')}
                 >
                   {durationNode}
-                  {durationNode && priceText && <span style={{ opacity: 0.4 }}>·</span>}
-                  {priceText && <span>{priceText}</span>}
+                  {durationNode && priceNode && <span style={{ opacity: 0.4 }}>·</span>}
+                  {priceNode}
                 </div>
               )}
             </div>

@@ -96,3 +96,13 @@ model PushSubscription {
 
   @@index([userId])
 }
+
+// Contadores de los límites de peticiones (login, registro, recuperación…). Compartidos entre
+// instancias serverless; las filas caducadas se purgan de forma oportunista.
+model RateLimit {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+
+  @@index([resetAt])
+}
