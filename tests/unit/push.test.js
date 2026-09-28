@@ -33,7 +33,7 @@ async function user() {
   const res = await call('POST', '/api/auth/register', { email: `push${Date.now()}${Math.random()}@example.com`, password: 'Password123!' });
   return res.json();
 }
-const subscription = (n) => ({ endpoint: `https://push.example.com/${n}`, keys: { p256dh: 'p', auth: 'a' } });
+const subscription = (n) => ({ endpoint: `https://fcm.googleapis.com/fcm/send/${n}`, keys: { p256dh: 'p', auth: 'a' } });
 
 describe('avisos push', () => {
   it('publica la clave pública', async () => {
@@ -44,6 +44,10 @@ describe('avisos push', () => {
     expect((await call('POST', '/api/push/subscribe', { subscription: subscription(1) })).status).toBe(401);
     const { token } = await user();
     expect((await call('POST', '/api/push/subscribe', { subscription: { endpoint: 'http://inseguro' } }, token)).status).toBe(400);
+    for (const endpoint of ['https://169.254.169.254/latest', 'https://localhost/x', 'https://evil.example.com/push', 'https://fcm.googleapis.com.evil.com/x', 'https://user:pw@fcm.googleapis.com/x', 'https://fcm.googleapis.com:8443/x']) {
+      const bad = await call('POST', '/api/push/subscribe', { subscription: { ...subscription(1), endpoint } }, token);
+      expect(bad.status, endpoint).toBe(400);
+    }
     const ok = await call('POST', '/api/push/subscribe', { subscription: subscription(1), timeZone: 'Europe/Madrid', digestHour: 8, weeklyDay: 0 }, token);
     expect(await ok.json()).toEqual({ success: true, timeZone: 'Europe/Madrid', digestHour: 8, weeklyDay: 0 });
   });
@@ -94,14 +98,14 @@ describe('avisos push', () => {
     failWith = 410;
     await call('POST', '/api/cron/notify', null, 'cron-de-prueba');
     failWith = null;
-    const left = await prisma.pushSubscription.findMany({ where: { endpoint: 'https://push.example.com/anulada' } });
+    const left = await prisma.pushSubscription.findMany({ where: { endpoint: 'https://fcm.googleapis.com/fcm/send/anulada' } });
     expect(left).toHaveLength(0);
   });
 
   it('darse de baja borra la suscripción', async () => {
     const { token } = await user();
     await call('POST', '/api/push/subscribe', { subscription: subscription('baja') }, token);
-    expect((await call('POST', '/api/push/unsubscribe', { endpoint: 'https://push.example.com/baja' }, token)).status).toBe(200);
-    expect(await prisma.pushSubscription.findMany({ where: { endpoint: 'https://push.example.com/baja' } })).toHaveLength(0);
+    expect((await call('POST', '/api/push/unsubscribe', { endpoint: 'https://fcm.googleapis.com/fcm/send/baja' }, token)).status).toBe(200);
+    expect(await prisma.pushSubscription.findMany({ where: { endpoint: 'https://fcm.googleapis.com/fcm/send/baja' } })).toHaveLength(0);
   });
 });

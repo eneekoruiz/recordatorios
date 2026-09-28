@@ -936,6 +936,10 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                         fontSize: '0.85rem'
                       }}
                     />
+                    <p style={{ margin: '6px 0 0', fontSize: '0.72rem', lineHeight: 1.4, color: 'var(--text-tertiary)' }}>
+                      La clave se guarda solo en este navegador (sin cifrar) y no se sincroniza. Tus mensajes y los datos que
+                      menciones se envían directamente a {tempProvider === 'gemini' ? 'Google' : 'OpenAI'}.
+                    </p>
                     {testResult && (
                       <div style={{
                         marginTop: 6,

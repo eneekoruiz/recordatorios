@@ -146,6 +146,17 @@ const VALID_TIMES = new Set(['morning', 'afternoon', 'night']);
 const VALID_CYCLES = new Set(['cycle_day', 'cycle_week', 'cycle_month', 'cycle_year']);
 const cleanString = (v, max = 500) => (typeof v === 'string' ? v.trim().slice(0, max) : undefined);
 const cleanNumber = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
+/** ¿Anidar `childId` bajo `parentId` crearía un ciclo (o una auto-referencia)? */
+const wouldCycle = (tasks, childId, parentId) => {
+  const byId = new Map(tasks.map((t) => [t.id, t]));
+  const seen = new Set();
+  for (let cur = parentId; cur && !seen.has(cur); cur = byId.get(cur)?.parentId) {
+    if (cur === childId) return true;
+    seen.add(cur);
+  }
+  return false;
+};
+const hasTitle = (t) => typeof t?.title === 'string' && t.title.trim() !== '';
 const isSettingsList = (l) => typeof l?.id === 'string' && l.id.startsWith('user_preferences_');
 
 export async function handleMcpRequest(reqBody, prisma, userId) {
@@ -238,7 +249,7 @@ export async function handleMcpRequest(reqBody, prisma, userId) {
 
         // Evitar duplicados: si ya existe una tarea idéntica pendiente en la misma lista, actualizar en vez de duplicar
         const existingTask = existingTasks.find(
-          (t) => t.status !== 'completed' &&
+          (t) => t.status !== 'completed' && hasTitle(t) &&
                  String(t.categoryId || 'inbox') === String(catId) &&
                  String(t.title || '').toLowerCase().trim() === normTitle
         );
@@ -336,7 +347,7 @@ export async function handleMcpRequest(reqBody, prisma, userId) {
       }
       if (!parentTask) {
         const normParent = parentTitle.toLowerCase().trim();
-        parentTask = existingTasks.find((t) => String(t.title || '').toLowerCase().trim() === normParent && !t.parentId);
+        parentTask = existingTasks.find((t) => hasTitle(t) && String(t.title || '').toLowerCase().trim() === normParent && !t.parentId);
       }
 
       const cycle = VALID_CYCLES.has(args.cycle) ? args.cycle : undefined;
@@ -381,7 +392,7 @@ export async function handleMcpRequest(reqBody, prisma, userId) {
       const childIds = Array.isArray(args.childTaskIds) ? args.childTaskIds : [];
       for (const cid of childIds) {
         const existingChild = existingTasks.find((t) => t.id === cid || t._rowId === cid || scopedId(userId, t.id) === cid);
-        if (existingChild && existingChild.id !== parentTask.id) {
+        if (existingChild && existingChild.id !== parentTask.id && !wouldCycle(existingTasks, existingChild.id, parentTask.id)) {
           const rowId = existingChild._rowId || scopedId(userId, existingChild.id);
           const updatedChild = {
             ...existingChild,
@@ -414,22 +425,13 @@ export async function handleMcpRequest(reqBody, prisma, userId) {
         );
         if (!existing) {
           existing = existingTasks.find((t) =>
+            hasTitle(t) &&
             String(t.categoryId || '') === String(parentTask.categoryId || '') &&
             String(t.title || '').toLowerCase().trim() === norm
           );
         }
-        if (!existing) {
-          existing = existingTasks.find((t) =>
-            String(t.title || '').toLowerCase().trim() === norm
-          );
-        }
-        if (!existing) {
-          existing = existingTasks.find((t) =>
-            String(t.categoryId || '') === String(parentTask.categoryId || '') &&
-            (String(t.title || '').toLowerCase().trim().startsWith(norm) ||
-             norm.startsWith(String(t.title || '').toLowerCase().trim()))
-          );
-        }
+        // Sin coincidencias difusas (global ni por prefijo): reasignar una tarea ajena por parecido
+        // de título corrompe datos. Si no hay ID ni título exacto en la lista, se crea una nueva.
 
         const price = cleanNumber(item.price);
         const quantity = cleanNumber(item.quantity) || 1;
@@ -513,7 +515,16 @@ export async function handleMcpRequest(reqBody, prisma, userId) {
         if (u.title !== undefined) updatedPayload.title = cleanString(u.title, 300) || task.title;
         if (u.price !== undefined) updatedPayload.price = cleanNumber(u.price);
         if (u.quantity !== undefined) updatedPayload.quantity = cleanNumber(u.quantity);
-        if (u.parentId !== undefined) updatedPayload.parentId = cleanString(u.parentId, 200) || undefined;
+        if (u.parentId !== undefined) {
+          const wanted = cleanString(u.parentId, 200);
+          if (!wanted) {
+            updatedPayload.parentId = undefined;
+          } else {
+            // Solo se acepta un padre existente que no cree una auto-referencia ni un ciclo.
+            const parent = existingTasks.find((t) => t.id === wanted || t._rowId === wanted || scopedId(userId, t.id) === wanted);
+            if (parent && !wouldCycle(existingTasks, task.id, parent.id)) updatedPayload.parentId = parent.id;
+          }
+        }
         if (u.sectionId !== undefined) updatedPayload.sectionId = cleanString(u.sectionId, 100) || undefined;
         if (u.listId !== undefined) updatedPayload.categoryId = cleanString(u.listId, 200) || task.categoryId;
         if (u.cycle !== undefined && VALID_CYCLES.has(u.cycle)) updatedPayload.cycle_id = u.cycle;

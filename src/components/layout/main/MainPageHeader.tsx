@@ -18,6 +18,7 @@ import { useAppStore } from '../../../store/useAppStore';
 import type { TaskItem, CustomCycle, CustomList } from '../../../models/Task';
 import { formatDuration, type TasksDurationSummary } from '../../../utils/taskDuration';
 import { formatEuro } from '../../../utils/format';
+import { MetaSplit, type MetaPart, MONEY_COLOR } from '../../ui/MetaSplit';
 import { getReservedFrequencyColor } from '../../../constants/colors';
 
 export interface CycleBreakdownInfo {
@@ -301,90 +302,49 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                     marginTop: 3
                   }}
                 >
-                  {hasValidDuration && (
-                    <span
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                      title={
-                        cycleBreakdown && cycleBreakdown.details && cycleBreakdown.details.length > 1
-                          ? `Duración total estimada: ~${totalDuration!.formattedActive} (${cycleBreakdown.details.map(d => `${formatDuration(d.durationMinutes)} ${d.cycleName.toLowerCase()}`).join(' + ')})`
-                          : completedDuration && completedDuration.activeMinutes > 0
-                          ? `Te queda solo ~${totalDuration!.formattedActive} en la lista porque ya has completado ~${completedDuration!.formattedActive} (de ~${formatDuration(totalDuration!.activeMinutes + completedDuration.activeMinutes)} en total)`
-                          : `Duración total estimada: ~${totalDuration!.formattedActive}`
-                      }
-                    >
-                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                        ~{totalDuration!.formattedActive}
-                      </span>
-                      {cycleBreakdown && cycleBreakdown.details && cycleBreakdown.details.length > 1 ? (
-                        <span
-                          className="cycle-duration-breakdown"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                            fontSize: '0.76rem',
-                            fontWeight: 500,
-                            color: 'var(--text-tertiary)'
-                          }}
-                        >
-                          <span>(</span>
-                          {cycleBreakdown.details.map((d, i) => {
-                            const freqColor = d.color || getReservedFrequencyColor(d.cycleId);
-                            return (
-                              <span key={d.cycleId || d.cycleName} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, color: freqColor }}>
-                                {i > 0 && <span style={{ opacity: 0.35, color: 'var(--text-tertiary)', margin: '0 1px' }}>+</span>}
-                                <span>{formatDuration(d.durationMinutes)}</span>
-                              </span>
-                            );
-                          })}
-                          <span>)</span>
-                        </span>
-                      ) : completedDuration && completedDuration.activeMinutes > 0 ? (
-                        <span 
-                          style={{
-                            fontSize: '0.76rem',
-                            color: 'var(--text-tertiary)',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 2
-                          }}
-                        >
-                          <span>·</span>
-                          <span>↓ ~{completedDuration.formattedActive} hechos</span>
-                        </span>
-                      ) : null}
-                    </span>
-                  )}
+                  {hasValidDuration && (() => {
+                    const total = totalDuration!;
+                    const doneMinutes = completedDuration?.activeMinutes ?? 0;
+                    const details = cycleBreakdown?.details;
+                    const hasBreakdown = Boolean(details && details.length > 1);
+                    const ownName = (currentCycle?.name || 'la lista').toLowerCase();
+                    let parts: MetaPart[] = [];
+                    let description = `Duración estimada: ~${total.formattedActive}`;
+                    if (hasBreakdown && details) {
+                      // Sólido = tareas de esta frecuencia; rayado = acumuladas desde las demás.
+                      parts = details.map(d => ({
+                        id: d.cycleId || d.cycleName,
+                        value: d.durationMinutes,
+                        text: formatDuration(d.durationMinutes),
+                        color: d.color || getReservedFrequencyColor(d.cycleId),
+                        tone: d.cycleId === currentCycle?.id ? 'solid' : 'striped',
+                      }));
+                      const own = cycleBreakdown!.ownDurationMinutes;
+                      const acc = cycleBreakdown!.accumulatedDurationMinutes;
+                      description = `Duración total ~${total.formattedActive}: ${formatDuration(own)} propias de ${ownName} (barra sólida) + ${formatDuration(acc)} acumuladas de otras frecuencias (barra rayada)`;
+                    } else if (doneMinutes > 0) {
+                      parts = [
+                        { id: 'left', value: total.activeMinutes, text: `${total.formattedActive} restantes`, color: viewColor, tone: 'solid' },
+                        { id: 'done', value: doneMinutes, text: `${completedDuration!.formattedActive} hechos`, color: viewColor, tone: 'done' },
+                      ];
+                      description = `Te quedan ~${total.formattedActive} porque ya has completado ~${completedDuration!.formattedActive} (de ~${formatDuration(total.activeMinutes + doneMinutes)})`;
+                    }
+                    return <MetaSplit label={<span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>~{total.formattedActive}</span>} parts={parts} description={description} />;
+                  })()}
 
                   {hasValidDuration && hasValidPrice && (
                     <span style={{ opacity: 0.4 }}>·</span>
                   )}
 
                   {hasValidPrice && (
-                    <span
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                      title={`Pendiente: ${formatEuro(totalCost)}${completedCost && completedCost > 0 ? ` · Ya pagado: ${formatEuro(completedCost)} · Total original: ${formatEuro(totalCost + completedCost)}` : ''}`}
-                    >
-                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                        {formatEuro(totalCost)}
-                      </span>
-                      {completedCost !== undefined && completedCost > 0 && (
-                        <span 
-                          style={{
-                            fontSize: '0.76rem',
-                            fontWeight: 500,
-                            color: 'var(--accent-red, #ff453a)',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 2,
-                            letterSpacing: '-0.1px'
-                          }}
-                          title={`Se han completado ${formatEuro(completedCost)} del total original de ${formatEuro(totalCost + completedCost)}`}
-                        >
-                          <span>(↓ {formatEuro(completedCost)} pagados)</span>
-                        </span>
-                      )}
-                    </span>
+                    <MetaSplit
+                      label={<span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{formatEuro(totalCost)}</span>}
+                      parts={completedCost && completedCost > 0 ? [
+                        { id: 'pending', value: totalCost, text: `${formatEuro(totalCost)} pendientes`, color: MONEY_COLOR, tone: 'solid' },
+                        { id: 'paid', value: completedCost, text: `${formatEuro(completedCost)} pagados`, color: MONEY_COLOR, tone: 'done' },
+                      ] : []}
+                      description={`Pendiente: ${formatEuro(totalCost)}${completedCost && completedCost > 0 ? ` · Ya pagado: ${formatEuro(completedCost)} · Total original: ${formatEuro(totalCost + completedCost)}` : ''}`}
+                    />
                   )}
                 </div>
               );

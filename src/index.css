@@ -1313,7 +1313,9 @@ button:disabled {
   margin-top: 24px;
 }
 .premium-button,
-.modal-btn-primary {
+.modal-btn-primary,
+.modal-btn-secondary,
+.modal-btn-danger {
   min-height: 46px;
   padding: 11px 18px;
   border: 0;
@@ -1895,4 +1897,30 @@ html, body {
 /* Prevent -webkit-tap-highlight from showing a blue box on long-press */
 * {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Opciones del modal «Eliminar tarea con subtareas»: el hover se resuelve en CSS (sin estados pegados en táctil). */
+.parent-modal-option {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+.parent-modal-option--danger {
+  background: rgba(255, 59, 48, 0.1);
+  border-color: rgba(255, 59, 48, 0.22);
+}
+@media (hover: hover) {
+  .parent-modal-option:hover { background: var(--bg-hover); transform: translateY(-1px); }
+  .parent-modal-option--danger:hover { background: rgba(255, 59, 48, 0.16); }
+}
+
+/* Movimiento reducido: quien lo pide en el sistema no ve transiciones ni animaciones largas
+   (framer-motion ya lo respeta con MotionConfig; esto cubre las de CSS). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

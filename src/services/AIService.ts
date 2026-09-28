@@ -1,6 +1,7 @@
 import type { CustomList, TaskItem } from '../models/Task';
 import { extractPrice } from '../utils/priceExtractor';
 import { detectFormatAndParse } from '../utils/importerParser';
+import { normalizeSpokenPrompt, stripRequestFrames, isFillerOnly, asPriorityModifier, parseWeekdayPhrase, parseClockTime, timeOfDayForHour, tidyTitle, leadingInfinitive, isBareNounPhrase } from '../utils/aiPhrasing';
 
 export interface ProposedTask {
   id: string;
@@ -69,10 +70,22 @@ export interface ProposedBatch {
 }
 
 export interface AIConfig {
-  provider: 'auto' | 'gemini' | 'openai' | 'mcp';
+  provider: 'auto' | 'gemini' | 'openai';
   apiKey?: string;
-  mcpServerUrl?: string;
 }
+
+const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
+/** Modelos por orden de preferencia (los 1.5 ya están retirados: solo añadían intentos fallidos). */
+const GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-2.5-flash-lite'];
+
+/** La clave viaja en cabecera, no en la URL (las URLs acaban en logs y en historiales de proxy). */
+const geminiRequest = (model: string, apiKey: string, body: unknown, signal: AbortSignal) =>
+  fetch(`${GEMINI_ENDPOINT}/${model}:generateContent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+    signal,
+    body: JSON.stringify(body),
+  });
 
 export class AIService {
   public static getConfig(): AIConfig {
@@ -87,11 +100,7 @@ export class AIService {
       }
     } catch {}
 
-    const envKey = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_GEMINI_API_KEY) || '';
-    if (envKey) {
-      return { provider: 'gemini', apiKey: envKey };
-    }
-
+    // Sin VITE_GEMINI_API_KEY: cualquier variable VITE_* acaba en el bundle público.
     return { provider: 'auto' };
   }
 
@@ -108,22 +117,16 @@ export class AIService {
       return { ok: false, error: 'La clave de API no puede estar vacía' };
     }
 
-    const candidateModels = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash-latest', 'gemini-1.5-flash'];
+    const candidateModels = GEMINI_MODELS;
     let lastError = '';
 
     for (const model of candidateModels) {
       const timeoutController = new AbortController();
       const timeoutId = setTimeout(() => timeoutController.abort(), 10000);
       try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(trimmedKey)}`;
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: timeoutController.signal,
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: 'Responde estrictamente: OK' }] }]
-          })
-        });
+        const res = await geminiRequest(model, trimmedKey, {
+          contents: [{ parts: [{ text: 'Responde estrictamente: OK' }] }]
+        }, timeoutController.signal);
 
         if (res.ok) {
           return { ok: true, model };
@@ -663,21 +666,29 @@ export class AIService {
     }
 
     // Split into individual task candidates:
+    // Lenguaje hablado: «lunes y miércoles» no son dos tareas, «3 euros cada uno» es un precio,
+    // «ah y también» es solo un separador… (ver utils/aiPhrasing).
+    const spoken = normalizeSpokenPrompt(trimmed);
     let rawSegments: string[] = [];
-    if (trimmed.includes('\n')) {
-      rawSegments = trimmed.split('\n');
+    if (spoken.includes('\n')) {
+      rawSegments = spoken.split('\n');
     } else {
       // Split by bullet points or sequences
-      rawSegments = trimmed.split(/(?:;\s*|\.\s+(?=[A-Z0-9¿¡])|\s+-\s+|\s*\n\s*)/);
+      rawSegments = spoken.split(/(?:;\s*|\.\s+(?=[A-Z0-9¿¡])|\s+-\s+|\s*\n\s*)/);
     }
 
     // If only one segment and it contains multiple actions joined by " y también ", " y luego ", " y ", commas
-    if (rawSegments.length === 1 && (trimmed.includes(',') || /\s+y\s+(?:también\s+|luego\s+)?/i.test(trimmed))) {
-      const parts = trimmed.split(/(?:,\s*(?:y\s+)?|\s+y\s+(?:también\s+|luego\s+)?)/i);
+    let splitByConjunction = false;
+    if (rawSegments.length === 1 && (spoken.includes(',') || /\s+y\s+(?:también\s+|luego\s+)?/i.test(spoken))) {
+      const parts = spoken.split(/(?:,\s*(?:y\s+)?|\s+y\s+(?:también\s+|luego\s+)?)/i);
       if (parts.length > 1) {
         rawSegments = parts;
+        splitByConjunction = true;
       }
     }
+    // Contexto de la frase anterior: «comprar pan y leche» → «Comprar leche» (mismo verbo, fecha y hora).
+    let lastVerb: string | null = null;
+    let lastCtx: { dueDate?: Date; timeString?: string; timeOfDay?: 'morning' | 'afternoon' | 'night' } = {};
 
     const tasks: ProposedTask[] = [];
     // El extractor local no recuerda lo que acaba de proponer (no recibe el historial de la
@@ -719,6 +730,23 @@ export class AIService {
       segment = segment.replace(/^[-*•+–—\d.)]+\s*/, '').trim();
       if (!segment || segment.length < 3) continue;
 
+      // «oye, cuando puedas, recuérdame que tengo que…»: fuera el marco, se queda lo que hay que hacer.
+      // Si el usuario cuenta su día («fui a…», «he hecho…») no se toca.
+      if (!isNarrative) segment = stripRequestFrames(segment);
+      if (isFillerOnly(segment)) continue;
+      // «es urgente» detrás de una tarea no es otra tarea: es su prioridad.
+      const priorityModifier = asPriorityModifier(segment);
+      if (priorityModifier && tasks.length > 0) {
+        tasks[tasks.length - 1].priority = priorityModifier;
+        continue;
+      }
+      // Frase nominal suelta tras un verbo compartido («comprar pan y leche»): hereda verbo y contexto.
+      let inheritsContext = false;
+      if (splitByConjunction && !isNarrative && lastVerb && isBareNounPhrase(segment)) {
+        segment = `${lastVerb} ${segment.charAt(0).toLowerCase()}${segment.slice(1)}`;
+        inheritsContext = true;
+      }
+
       // Ignore greeting-only or filler-only segments
       if (/^(hola|buenas|por favor|organízame|ayúdame|apúntame|quiero que|gracias|buah|pues)\.?$/i.test(segment)) {
         continue;
@@ -750,23 +778,17 @@ export class AIService {
       // Extract time
       let timeString: string | undefined;
       let timeOfDay: 'morning' | 'afternoon' | 'night' | undefined;
-      const timeMatch = segment.match(/(?:a\s+las?|a\s+la)\s+([0-1]?[0-9]|2[0-3])(?::([0-5][0-9]))?\s*(am|pm|h)?/i);
-      if (timeMatch) {
-        let hour = parseInt(timeMatch[1], 10);
-        const min = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
-        const meridian = timeMatch[3]?.toLowerCase();
-        if (meridian === 'pm' && hour < 12) hour += 12;
-        if (meridian === 'am' && hour === 12) hour = 0;
-        timeString = `${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
-        segment = segment.replace(timeMatch[0], '').trim();
-
-        if (hour >= 6 && hour < 14) timeOfDay = 'morning';
-        else if (hour >= 14 && hour < 20) timeOfDay = 'afternoon';
-        else timeOfDay = 'night';
+      const clock = parseClockTime(segment);
+      if (clock) {
+        timeString = `${clock.hour.toString().padStart(2, '0')}:${clock.minute.toString().padStart(2, '0')}`;
+        segment = segment.replace(clock.matched, '').trim();
+        timeOfDay = timeOfDayForHour(clock.hour);
       }
 
       // Extract date
       let dueDate: Date | undefined;
+      let weekdayCycle: ProposedTask['cycle'];
+      let weekdayDescription: string | undefined;
       const now = new Date();
       if (/\bayer\b/i.test(segment) || /\bayer\b/i.test(trimmed)) {
         dueDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -785,6 +807,23 @@ export class AIService {
         const diff = day === 6 ? 7 : (6 - day);
         dueDate = new Date(now.getTime() + diff * 24 * 60 * 60 * 1000);
         segment = segment.replace(/\b(este\s+)?fin\s+de\s+semana\b/i, '').trim();
+      } else {
+        // «el jueves», «el jueves que viene», «antes del viernes», «todos los lunes y miércoles»
+        const weekday = parseWeekdayPhrase(segment, now);
+        if (weekday) {
+          dueDate = weekday.date;
+          segment = segment.replace(weekday.matched, '').trim();
+          if (weekday.recurring) {
+            weekdayCycle = 'cycle_week';
+            if (weekday.days.length > 1) weekdayDescription = `Días: ${weekday.days.join(', ').replace(/, ([^,]*)$/, ' y $1')}`;
+          }
+        }
+      }
+      // Sin fecha propia, «Comprar leche» comparte la de «Comprar pan».
+      if (inheritsContext) {
+        if (!dueDate && lastCtx.dueDate) dueDate = new Date(lastCtx.dueDate);
+        if (!timeString && lastCtx.timeString) timeString = lastCtx.timeString;
+        if (!timeOfDay && lastCtx.timeOfDay) timeOfDay = lastCtx.timeOfDay;
       }
 
       // Time of day keywords if not set
@@ -832,6 +871,7 @@ export class AIService {
       else if (/\b(semanal|cada\s+semana)\b/i.test(segment)) cycle = 'cycle_week';
       else if (/\b(mensual|cada\s+mes)\b/i.test(segment)) cycle = 'cycle_month';
       else if (/\b(anual|cada\s+año)\b/i.test(segment)) cycle = 'cycle_year';
+      cycle = weekdayCycle ?? cycle;
 
       // Match target list
       let listId = suggestedList ? undefined : 'inbox';
@@ -848,7 +888,7 @@ export class AIService {
         }
       } else {
         for (const l of existingLists) {
-          const regex = new RegExp(`\\b(${l.name}|@${l.id})\\b`, 'i');
+          const regex = new RegExp(`(?:\\b(?:en|a|para)\\s+(?:la\\s+)?lista\\s+(?:de\\s+)?)?\\b(${l.name}|@${l.id})\\b`, 'i');
           if (regex.test(segment) || regex.test(text)) {
             listId = l.id;
             listName = l.name;
@@ -864,6 +904,28 @@ export class AIService {
         .replace(/^(?:he\s+hecho|hice|estuve|fui\s+a|quedé\s+con|tengo\s+que|debo|hay\s+que)\s+/i, (m) => m)
         .replace(/\s{2,}/g, ' ')
         .trim();
+      cleanTitle = tidyTitle(cleanTitle);
+      const segmentVerb = leadingInfinitive(cleanTitle);
+
+      let modifierDueDate: string | undefined;
+      if (dueDate) {
+        const d = new Date(dueDate);
+        if (timeString) {
+          const [h, m] = timeString.split(':').map(Number);
+          d.setHours(h, m, 0, 0);
+        } else {
+          d.setHours(12, 0, 0, 0);
+        }
+        modifierDueDate = d.toISOString();
+      }
+      // «…el viernes» o «a las 5» dichos aparte: completan la tarea anterior, no crean otra.
+      if (cleanTitle.length < 2 && tasks.length > 0 && (modifierDueDate || timeOfDay || price !== undefined)) {
+        const prev = tasks[tasks.length - 1];
+        if (modifierDueDate) prev.dueDate = modifierDueDate;
+        if (timeOfDay) prev.timeOfDay = timeOfDay;
+        if (price !== undefined && prev.price === undefined) prev.price = price;
+        continue;
+      }
 
       if (cleanTitle.length >= 2) {
         if (/^(?:en\s+(?:la\s+)?lista|unifica|unifícalos|agrupa|agrupalos|ponlos todos|haz una tarea|crea una tarea|donde pone)\b/i.test(cleanTitle)) {
@@ -891,12 +953,17 @@ export class AIService {
           timeOfDay,
           price,
           priority,
+          description: weekdayDescription,
           cycle,
           people: finalPeople.length > 0 ? finalPeople : undefined,
           vibe,
           locationName,
           selected: true
         });
+        if (segmentVerb) {
+          lastVerb = segmentVerb;
+          lastCtx = { dueDate: dueDate ? new Date(dueDate) : undefined, timeString, timeOfDay };
+        }
       }
     }
 
@@ -1059,35 +1126,22 @@ DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
     }
 
     // Multi-model fallback list in order of performance and availability
-    const candidateModels = [
-      'gemini-2.0-flash',
-      'gemini-2.5-flash',
-      'gemini-2.0-flash-lite',
-      'gemini-1.5-flash-latest',
-      'gemini-1.5-flash',
-      'gemini-1.5-pro'
-    ];
+    const candidateModels = GEMINI_MODELS;
     let lastError: Error | null = null;
 
     for (const model of candidateModels) {
       const timeoutController = new AbortController();
       const timeoutId = setTimeout(() => timeoutController.abort(), 15000);
       try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: timeoutController.signal,
-          body: JSON.stringify({
-            contents,
-            systemInstruction: {
-              parts: [{ text: systemInstruction }]
-            },
-            generationConfig: {
-              responseMimeType: 'application/json'
-            }
-          })
-        });
+        const res = await geminiRequest(model, apiKey, {
+          contents,
+          systemInstruction: {
+            parts: [{ text: systemInstruction }]
+          },
+          generationConfig: {
+            responseMimeType: 'application/json'
+          }
+        }, timeoutController.signal);
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
@@ -1235,15 +1289,19 @@ Vivencias destacadas:
 ${tasks.slice(0, 10).map(t => `- ${t.title} ${t.people?.length ? '(con ' + t.people.join(', ') + ')' : ''} ${t.locationName ? 'en ' + t.locationName : ''}`).join('\n')}
 Redacta 2 o 3 párrafos de lectura agradable con emojis sutiles.`;
 
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${config.apiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) return text.trim();
+        for (const model of GEMINI_MODELS) {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000);
+          try {
+            const res = await geminiRequest(model, config.apiKey, { contents: [{ parts: [{ text: prompt }] }] }, controller.signal);
+            if (res.status === 401 || res.status === 403) break; // clave inválida: no insistir con otros modelos
+            if (!res.ok) continue;
+            const data = await res.json();
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) return text.trim();
+          } finally {
+            clearTimeout(timeoutId);
+          }
         }
       } catch (err) {
         console.warn('Gemini monthly summary error:', err);

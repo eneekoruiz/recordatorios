@@ -1,5 +1,6 @@
 import express from 'express';
 import crypto from 'node:crypto';
+import net from 'node:net';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
@@ -23,6 +24,7 @@ const SESSION_TTL = '30d';
 const SESSION_REFRESH_AFTER_MS = 7 * DAY_MS;
 const RESET_TTL = '30m';
 const MAX_ITEMS_PER_COLLECTION = 2000;
+const CRON_CONCURRENCY = 8;
 const DEV_FALLBACK_SECRET = 'dev-only-insecure-secret-change-me';
 
 const isProduction = () => process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL);
@@ -57,36 +59,101 @@ export function passwordFingerprint(passwordHash) {
   return crypto.createHash('sha256').update(String(passwordHash || '')).digest('base64url').slice(0, 16);
 }
 
+// Servicios de push de los navegadores. El servidor hace POST al endpoint que envía el cliente,
+// así que solo se aceptan estos dominios (más los de PUSH_ALLOWED_HOSTS): de lo contrario,
+// cualquier usuario podría usar el cron para lanzar peticiones a hosts arbitrarios (SSRF).
+const PUSH_HOST_SUFFIXES = [
+  'fcm.googleapis.com',
+  'android.googleapis.com',
+  'push.services.mozilla.com',
+  'push.apple.com',
+  'notify.windows.com',
+];
+
+export function isAllowedPushEndpoint(endpoint, extraSuffixes = (process.env.PUSH_ALLOWED_HOSTS || '').split(',')) {
+  if (typeof endpoint !== 'string' || endpoint.length > 1000) return false;
+  let url;
+  try {
+    url = new URL(endpoint);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== 'https:' || url.username || url.password || (url.port && url.port !== '443')) return false;
+  const host = url.hostname.toLowerCase().replace(/\.$/, '');
+  if (net.isIP(host) || host === 'localhost') return false;
+  return [...PUSH_HOST_SUFFIXES, ...extraSuffixes.map((h) => h.trim().toLowerCase()).filter(Boolean)]
+    .some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
+}
+
+const safeEqual = (a, b) => {
+  const ha = crypto.createHash('sha256').update(String(a)).digest();
+  const hb = crypto.createHash('sha256').update(String(b)).digest();
+  return crypto.timingSafeEqual(ha, hb);
+};
+
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const normalizeEmail = (email) => (typeof email === 'string' ? email.toLowerCase().trim() : '');
 
-// --- Rate limiting en memoria (best-effort: en serverless cada instancia tiene el suyo) ---
-function createRateLimiter({ windowMs, max, keyFn, message }) {
+// --- Límites de peticiones ---
+// Con base de datos, los contadores viven en la tabla RateLimit y valen para todas las instancias
+// (en serverless, cada instancia tiene su propia memoria). Si la BD falla, se limita en memoria:
+// preferimos un límite por instancia a dejar el login sin ninguna protección.
+function createMemoryHitStore() {
   const hits = new Map();
-  return (req, res, next) => {
-    const key = keyFn(req);
+  return async (key, windowMs) => {
     const now = Date.now();
     const record = hits.get(key);
     if (!record || now > record.resetAt) {
       hits.set(key, { count: 1, resetAt: now + windowMs });
     } else {
       record.count += 1;
-      if (record.count > max) {
-        res.setHeader('Retry-After', Math.ceil((record.resetAt - now) / 1000));
-        return res.status(429).json({ error: message });
-      }
     }
     if (hits.size > 10_000) {
       for (const [k, v] of hits) if (now > v.resetAt) hits.delete(k);
+    }
+    return hits.get(key);
+  };
+}
+
+function createDbHitStore(prisma) {
+  const fallback = createMemoryHitStore();
+  const table = prisma.rateLimit;
+  return async (key, windowMs) => {
+    try {
+      const now = new Date();
+      const resetAt = new Date(now.getTime() + windowMs);
+      // Ventana caducada: se reinicia. Después, el incremento es atómico en la BD.
+      await table.updateMany({ where: { key, resetAt: { lt: now } }, data: { count: 0, resetAt } });
+      let row;
+      try {
+        row = await table.upsert({ where: { key }, create: { key, count: 1, resetAt }, update: { count: { increment: 1 } } });
+      } catch {
+        // Dos peticiones crearon la fila a la vez: la segunda ya puede incrementarla.
+        row = await table.update({ where: { key }, data: { count: { increment: 1 } } });
+      }
+      if (Math.random() < 0.01) table.deleteMany({ where: { resetAt: { lt: now } } }).catch(() => {});
+      return { count: row.count, resetAt: new Date(row.resetAt).getTime() };
+    } catch (error) {
+      console.error('Rate limit store error (se limita en memoria):', error?.message || error);
+      return fallback(key, windowMs);
+    }
+  };
+}
+
+function createRateLimiter({ windowMs, max, keyFn, message, hit }) {
+  return async (req, res, next) => {
+    const { count, resetAt } = await hit(keyFn(req), windowMs);
+    if (count > max) {
+      res.setHeader('Retry-After', Math.max(1, Math.ceil((resetAt - Date.now()) / 1000)));
+      return res.status(429).json({ error: message });
     }
     next();
   };
 }
 
-const clientIp = (req) => {
-  const forwarded = req.headers['x-forwarded-for'];
-  return (typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : null) || req.socket?.remoteAddress || 'unknown';
-};
+// Con `trust proxy` activo, `req.ip` ya resuelve la IP real a partir de X-Forwarded-For de forma
+// segura (sin fiarse ciegamente de la primera entrada, que el cliente puede fijar a su gusto).
+const clientIp = (req) => req.ip || req.socket?.remoteAddress || 'unknown';
 
 /** Envío real con Web Push si hay claves VAPID; null si el servidor no está configurado. */
 function defaultPushSender() {
@@ -100,10 +167,12 @@ function defaultPushSender() {
 
 export function createApp({ prisma, pushSender = defaultPushSender() }) {
   const app = express();
+  const hit = prisma?.rateLimit ? createDbHitStore(prisma) : createMemoryHitStore();
   const clients = new Map(); // userId -> Set<Response> (SSE, solo en servidores persistentes)
 
   app.disable('x-powered-by');
-  app.set('trust proxy', true);
+  // Un salto de proxy (Vercel / balanceador). Con `true` se confiaría en toda la cadena de X-Forwarded-For.
+  app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS) || 1);
 
   // --- CORS: abierto en desarrollo; en producción solo mismo origen o ALLOWED_ORIGINS ---
   const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
@@ -228,18 +297,28 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
     max: 10,
     keyFn: (req) => `login:${clientIp(req)}:${normalizeEmail(req.body?.email)}`,
     message: 'Demasiados intentos. Espera unos minutos antes de volver a probar.',
+    hit,
   });
   const authIpLimiter = createRateLimiter({
     windowMs: 15 * 60 * 1000,
     max: 60,
     keyFn: (req) => `auth:${clientIp(req)}`,
     message: 'Demasiadas peticiones. Espera unos minutos.',
+    hit,
+  });
+  const changePasswordLimiter = createRateLimiter({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    keyFn: (req) => `change:${clientIp(req)}`,
+    message: 'Demasiados intentos. Espera unos minutos.',
+    hit,
   });
   const forgotLimiter = createRateLimiter({
     windowMs: 60 * 60 * 1000,
     max: 5,
     keyFn: (req) => `forgot:${clientIp(req)}`,
     message: 'Has solicitado demasiados enlaces. Inténtalo dentro de una hora.',
+    hit,
   });
 
   const validatePassword = (password) => {
@@ -410,7 +489,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
     }
   });
 
-  app.post(['/api/auth/change-password', '/auth/change-password'], authenticateToken, async (req, res) => {
+  app.post(['/api/auth/change-password', '/auth/change-password'], changePasswordLimiter, authenticateToken, async (req, res) => {
     const secret = requireSecret(res);
     if (!secret) return;
     try {
@@ -525,6 +604,10 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
             ...(existing?.preferences && typeof existing.preferences === 'object' ? existing.preferences : {}),
             ...preferences,
           };
+          // Cada push trae ≤50 kB, pero la fusión acumula claves: se acota también el resultado.
+          if (JSON.stringify(merged).length > 50_000) {
+            return res.status(413).json({ error: 'Preferencias demasiado grandes' });
+          }
           transaction.push(prisma.user.update({ where: { id: userId }, data: { preferences: merged } }));
         }
       }
@@ -588,15 +671,26 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
   // Tiempo real por SSE. En Vercel (funciones efímeras) no es viable mantener conexiones
   // abiertas ni compartir memoria entre instancias: respondemos 204 y el cliente se queda
   // con el sondeo periódico + sincronización al volver a la pestaña.
+  // El EventSource no puede mandar cabeceras, y poner el token de sesión (30 días) en la URL lo
+  // dejaría en logs y proxies. En su lugar, el cliente pide un ticket de 60 s y un solo propósito.
+  app.post(['/api/sync/live-ticket', '/sync/live-ticket'], authenticateToken, (req, res) => {
+    const secret = requireSecret(res);
+    if (!secret) return;
+    const ticket = jwt.sign({ sub: req.user.id, purpose: 'live' }, secret, { expiresIn: '60s', algorithm: 'HS256' });
+    res.json({ ticket });
+  });
+
   app.get(['/api/sync/live', '/sync/live'], async (req, res) => {
     if (process.env.VERCEL) return res.status(204).end();
     const secret = getJwtSecret();
-    const token = typeof req.query.token === 'string' ? req.query.token : null;
-    if (!token || !secret) return res.sendStatus(401);
+    const ticket = typeof req.query.ticket === 'string' ? req.query.ticket : null;
+    if (!ticket || !secret) return res.sendStatus(401);
 
     let userId;
     try {
-      const user = await sessionUser(verifySession(token, secret));
+      const payload = jwt.verify(ticket, secret, { algorithms: ['HS256'] });
+      if (payload?.purpose !== 'live' || !payload.sub) return res.sendStatus(401);
+      const user = await prisma.user.findUnique({ where: { id: String(payload.sub) }, select: { id: true } });
       if (!user) return res.sendStatus(401);
       userId = user.id;
     } catch {
@@ -692,21 +786,20 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
         prisma.task.findMany({ where: { userId: ownerId, deletedAt: null } }),
         prisma.listSection.findMany({ where: { userId: ownerId, deletedAt: null } }),
       ]);
-      const strip = (p) => {
-        const clean = { ...p };
-        delete clean.user_id;
-        delete clean.location;
-        return clean;
-      };
+      // Lista blanca: la vista pública solo recibe lo que necesita pintar. Notas privadas, personas,
+      // ubicaciones, enlaces de gestión o datos de tarjetas nunca salen por un enlace compartido.
+      const pick = (p, keys) => Object.fromEntries(keys.filter((k) => p[k] !== undefined).map((k) => [k, p[k]]));
+      const TASK_KEYS = ['id', 'title', 'description', 'status', 'dueDate', 'sectionId', 'price', 'quantity', 'order', 'created_at'];
       const tasks = allTasks
         .map((t) => toClientPayload(ownerId, t))
         .filter((p) => (p.categoryId || p.category_id || p.listId) === clientListId && !p.deleted_at)
-        .map(strip);
+        .map((p) => pick(p, TASK_KEYS));
       const sections = allSections
         .map((s) => toClientPayload(ownerId, s))
-        .filter((p) => p.listId === clientListId && !p.deleted_at);
+        .filter((p) => p.listId === clientListId && !p.deleted_at)
+        .map((p) => pick(p, ['id', 'name', 'order', 'parentId']));
 
-      res.json({ list: strip(toClientPayload(ownerId, link.list)), tasks, sections });
+      res.json({ list: pick(toClientPayload(ownerId, link.list), ['id', 'name', 'color', 'icon']), tasks, sections });
     } catch (err) {
       console.error('Share read error:', err);
       res.status(500).json({ error: 'No se pudo cargar la lista compartida' });
@@ -724,7 +817,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
     const { subscription, timeZone, digestHour, weeklyDay } = req.body || {};
     const endpoint = subscription?.endpoint;
     const keys = subscription?.keys;
-    if (typeof endpoint !== 'string' || !endpoint.startsWith('https://') || endpoint.length > 1000
+    if (!isAllowedPushEndpoint(endpoint)
       || typeof keys?.p256dh !== 'string' || typeof keys?.auth !== 'string') {
       return res.status(400).json({ error: 'Suscripción no válida' });
     }
@@ -762,7 +855,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
   // Se protege con CRON_SECRET (Vercel Cron manda «Authorization: Bearer <CRON_SECRET>»).
   app.all(['/api/cron/notify', '/cron/notify'], async (req, res) => {
     const cronSecret = process.env.CRON_SECRET;
-    if (!cronSecret || req.headers['authorization'] !== `Bearer ${cronSecret}`) {
+    if (!cronSecret || !safeEqual(req.headers['authorization'] || '', `Bearer ${cronSecret}`)) {
       return res.status(401).json({ error: 'No autorizado' });
     }
     if (!pushSender) return res.status(503).json({ error: 'Faltan las claves VAPID' });
@@ -772,50 +865,70 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
     try {
       const subscriptions = await prisma.pushSubscription.findMany({});
       // Tareas, listas y secciones de cada usuario (la frecuencia sale también de la sección).
-      const dataByUser = new Map();
-      for (const sub of subscriptions) {
-        if (!dataByUser.has(sub.userId)) {
-          const where = { userId: sub.userId, deletedAt: null };
-          const [tasks, lists, sections, user] = await Promise.all([
-            prisma.task.findMany({ where }),
-            prisma.list.findMany({ where }),
-            prisma.listSection.findMany({ where }),
-            prisma.user.findUnique({ where: { id: sub.userId }, select: { preferences: true } }),
-          ]);
-          const toClient = (rows) => rows.map((r) => toClientPayload(sub.userId, r));
-          // El día semanal elegido en la app (sincronizado) manda sobre el de la suscripción.
-          const weeklyDay = user?.preferences?.weeklyTasksDay;
-          dataByUser.set(sub.userId, {
-            data: { tasks: toClient(tasks), lists: toClient(lists), sections: toClient(sections) },
-            weeklyDay: Number.isInteger(weeklyDay) && weeklyDay >= 0 && weeklyDay <= 6 ? weeklyDay : undefined,
+      // Una sola carga por usuario, compartida por todas sus suscripciones.
+      const userData = new Map();
+      const loadUser = (userId) => {
+        if (!userData.has(userId)) {
+          userData.set(userId, (async () => {
+            const where = { userId, deletedAt: null };
+            const [tasks, lists, sections, user] = await Promise.all([
+              prisma.task.findMany({ where }),
+              prisma.list.findMany({ where }),
+              prisma.listSection.findMany({ where }),
+              prisma.user.findUnique({ where: { id: userId }, select: { preferences: true } }),
+            ]);
+            const toClient = (rows) => rows.map((r) => toClientPayload(userId, r));
+            // El día semanal elegido en la app (sincronizado) manda sobre el de la suscripción.
+            const weeklyDay = user?.preferences?.weeklyTasksDay;
+            return {
+              data: { tasks: toClient(tasks), lists: toClient(lists), sections: toClient(sections) },
+              weeklyDay: Number.isInteger(weeklyDay) && weeklyDay >= 0 && weeklyDay <= 6 ? weeklyDay : undefined,
+            };
+          })());
+        }
+        return userData.get(userId);
+      };
+
+      const processSubscription = async (sub) => {
+        try {
+          const { data, weeklyDay } = await loadUser(sub.userId);
+          const { messages, sentLog } = planNotifications({
+            ...data,
+            prefs: { timeZone: sub.timeZone, digestHour: sub.digestHour, weeklyDay: weeklyDay ?? sub.weeklyDay },
+            now,
+            since: sub.lastCheckedAt,
+            sentLog: sub.sentLog || {},
           });
-        }
-        const { data, weeklyDay } = dataByUser.get(sub.userId);
-        const { messages, sentLog } = planNotifications({
-          ...data,
-          prefs: { timeZone: sub.timeZone, digestHour: sub.digestHour, weeklyDay: weeklyDay ?? sub.weeklyDay },
-          now,
-          since: sub.lastCheckedAt,
-          sentLog: sub.sentLog || {},
-        });
-        let gone = false;
-        for (const message of messages) {
-          try {
-            await pushSender({ endpoint: sub.endpoint, keys: sub.keys }, message);
-            sent++;
-          } catch (error) {
-            // 404/410: el navegador anuló la suscripción; se borra para no reintentar.
-            if (error?.statusCode === 404 || error?.statusCode === 410) { gone = true; break; }
-            console.error('Push send error:', error?.statusCode || error);
+          let gone = false;
+          for (const message of messages) {
+            try {
+              await pushSender({ endpoint: sub.endpoint, keys: sub.keys }, message);
+              sent++;
+            } catch (error) {
+              // 404/410: el navegador anuló la suscripción; se borra para no reintentar.
+              if (error?.statusCode === 404 || error?.statusCode === 410) { gone = true; break; }
+              console.error('Push send error:', error?.statusCode || error);
+            }
           }
+          if (gone) {
+            await prisma.pushSubscription.delete({ where: { id: sub.id } });
+            removed++;
+          } else {
+            await prisma.pushSubscription.update({ where: { id: sub.id }, data: { lastCheckedAt: now, sentLog } });
+          }
+        } catch (error) {
+          // Un fallo con una suscripción no debe impedir avisar a las demás.
+          console.error('Cron notify subscription error:', error);
         }
-        if (gone) {
-          await prisma.pushSubscription.delete({ where: { id: sub.id } });
-          removed++;
-        } else {
-          await prisma.pushSubscription.update({ where: { id: sub.id }, data: { lastCheckedAt: now, sentLog } });
-        }
-      }
+      };
+
+      // Concurrencia acotada: en serverless el tiempo total de la función es limitado.
+      const queue = [...subscriptions];
+      await Promise.all(
+        Array.from({ length: Math.min(CRON_CONCURRENCY, queue.length) }, async () => {
+          for (let sub = queue.shift(); sub; sub = queue.shift()) await processSubscription(sub);
+        })
+      );
       res.json({ subscriptions: subscriptions.length, sent, removed });
     } catch (error) {
       console.error('Cron notify error:', error);

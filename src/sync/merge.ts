@@ -19,6 +19,17 @@ export function serverWins(server: Syncable, local: Syncable | undefined): boole
   return toTime(server.updated_at) >= toTime(local.updated_at);
 }
 
+/**
+ * Un cambio local pendiente de subir (_is_dirty) solo cede ante un servidor estrictamente
+ * más nuevo: con versión y fecha iguales conserva lo local, que es lo que se va a subir.
+ */
+export function serverWinsOverDirty(server: Syncable, local: Syncable): boolean {
+  const sv = server.version || 0;
+  const lv = local.version || 0;
+  if (sv !== lv) return sv > lv;
+  return toTime(server.updated_at) > toTime(local.updated_at);
+}
+
 /** Normaliza campos heredados en snake_case que puedan venir del servidor. */
 export function normalizeServerTask(raw: any): TaskItem {
   return {
@@ -41,7 +52,8 @@ export function mergeServerTasks(local: Record<string, TaskItem>, incoming: any[
     if (!raw || typeof raw.id !== 'string') continue;
     const serverTask = normalizeServerTask(raw);
     const localTask = local[serverTask.id];
-    if (serverWins(serverTask, localTask)) {
+    const wins = localTask?._is_dirty ? serverWinsOverDirty(serverTask, localTask) : serverWins(serverTask, localTask);
+    if (wins) {
       next[serverTask.id] = serverTask;
       changed = true;
     }

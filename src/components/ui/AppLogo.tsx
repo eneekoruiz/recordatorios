@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 
 interface AppLogoProps {
   size?: number;
@@ -7,10 +7,12 @@ interface AppLogoProps {
 }
 
 /**
- * Official Apple Reminders Squircle Icon (matching /favicon.svg)
- * Features the signature squircle, 3 colored reminder dots (orange, blue, red) and grey rounded text lines.
+ * Logo de la app (igual que /favicon.svg): lista de tareas con la primera completada, sobre degradado índigo-azul.
+ * Los ids de los gradientes llevan un sufijo único para que varias instancias no choquen en el DOM.
  */
 export const AppLogo: React.FC<AppLogoProps> = ({ size = 26, className, style }) => {
+  const uid = useId().replace(/:/g, '');
+  const id = (name: string) => `${name}-${uid}`;
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -29,42 +31,25 @@ export const AppLogo: React.FC<AppLogoProps> = ({ size = 26, className, style })
       aria-label="Logo Recordatorios"
     >
       <defs>
-        <linearGradient id="appLogoBgGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#FFFFFF" />
-          <stop offset="100%" stopColor="#F7F7F8" />
+        <linearGradient id={id('appLogoBg')} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#6E6BF2" />
+          <stop offset="100%" stopColor="#0A84FF" />
         </linearGradient>
-        <linearGradient id="appLogoOrangeGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#FF9F0A" />
-          <stop offset="100%" stopColor="#FF8A00" />
-        </linearGradient>
-        <linearGradient id="appLogoBlueGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#0A84FF" />
-          <stop offset="100%" stopColor="#0062D2" />
-        </linearGradient>
-        <linearGradient id="appLogoRedGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#FF453A" />
-          <stop offset="100%" stopColor="#D7261E" />
-        </linearGradient>
-        <filter id="appLogoSubtleShadow" x="-10%" y="-10%" width="120%" height="120%">
-          <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#000000" floodOpacity="0.12" />
+        <filter id={id('appLogoSoft')} x="-20%" y="-20%" width="140%" height="150%">
+          <feDropShadow dx="0" dy="6" stdDeviation="8" floodColor="#0B2A6B" floodOpacity="0.28" />
         </filter>
       </defs>
 
-      {/* Background Squircle */}
-      <rect width="512" height="512" rx="114" fill="url(#appLogoBgGrad)" />
-      <rect width="512" height="512" rx="114" fill="none" stroke="rgba(0,0,0,0.08)" strokeWidth="2" />
-
-      {/* Row 1: Orange Reminder */}
-      <circle cx="144" cy="160" r="26" fill="url(#appLogoOrangeGrad)" filter="url(#appLogoSubtleShadow)" />
-      <rect x="196" y="147" width="200" height="26" rx="13" fill="#D1D1D6" />
-
-      {/* Row 2: Blue Reminder */}
-      <circle cx="144" cy="256" r="26" fill="url(#appLogoBlueGrad)" filter="url(#appLogoSubtleShadow)" />
-      <rect x="196" y="243" width="160" height="26" rx="13" fill="#D1D1D6" />
-
-      {/* Row 3: Red Reminder */}
-      <circle cx="144" cy="352" r="26" fill="url(#appLogoRedGrad)" filter="url(#appLogoSubtleShadow)" />
-      <rect x="196" y="339" width="120" height="26" rx="13" fill="#D1D1D6" />
+      <rect width="512" height="512" rx="114" fill={`url(#${id('appLogoBg')})`} />
+      <g filter={`url(#${id('appLogoSoft')})`}>
+        <circle cx="140" cy="164" r="34" fill="#FFFFFF" />
+        <path d="M124 165 l11 11 l21 -23" fill="none" stroke="#3F7CF6" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
+        <rect x="204" y="148" width="212" height="32" rx="16" fill="#FFFFFF" />
+        <circle cx="140" cy="256" r="30" fill="none" stroke="#FFFFFF" strokeOpacity="0.85" strokeWidth="9" />
+        <rect x="204" y="240" width="164" height="32" rx="16" fill="#FFFFFF" fillOpacity="0.78" />
+        <circle cx="140" cy="348" r="30" fill="none" stroke="#FFFFFF" strokeOpacity="0.85" strokeWidth="9" />
+        <rect x="204" y="332" width="112" height="32" rx="16" fill="#FFFFFF" fillOpacity="0.6" />
+      </g>
     </svg>
   );
 };

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { isTaskDurationDisabled } from '../../../utils/taskDuration';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -598,7 +599,7 @@ function MenuActions({
 
   // Submenu: Duración
   if (currentSubmenu === 'duration') {
-    const isDurationDisabled = task.disableDuration === true || task.duration === 0;
+    const isDurationDisabled = isTaskDurationDisabled(task);
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -613,9 +614,9 @@ function MenuActions({
             onClick={() => {
               setContextMenuOpen(false);
               if (isDurationDisabled) {
-                updateTask(task.id, { disableDuration: false, duration: undefined });
+                updateTask(task.id, { disableDuration: undefined, duration: undefined });
               } else {
-                updateTask(task.id, { disableDuration: true, duration: 0 });
+                updateTask(task.id, { disableDuration: undefined, duration: 0 });
               }
               HapticService.selection();
             }} 
@@ -637,7 +638,7 @@ function MenuActions({
                 trailing={isSelected ? <CheckCircle size={15} color="var(--accent-primary)" /> : undefined}
                 onClick={() => {
                   setContextMenuOpen(false);
-                  updateTask(task.id, { disableDuration: false, duration: mins });
+                  updateTask(task.id, { disableDuration: undefined, duration: mins });
                   HapticService.selection();
                 }}
               />
@@ -748,9 +749,9 @@ function MenuActions({
 
       {/* 7. Duración */}
       <ActionRow 
-        icon={<Clock size={16} color={task.disableDuration || task.duration === 0 ? 'var(--text-tertiary)' : 'var(--accent-primary)'} />} 
+        icon={<Clock size={16} color={isTaskDurationDisabled(task) ? 'var(--text-tertiary)' : 'var(--accent-primary)'} />} 
         label="Duración"
-        sublabel={task.disableDuration || task.duration === 0 ? "Desactivada" : (typeof task.duration === 'number' && task.duration > 0 ? `${task.duration} min` : "Auto")}
+        sublabel={isTaskDurationDisabled(task) ? "Desactivada" : (typeof task.duration === 'number' && task.duration > 0 ? `${task.duration} min` : "Auto")}
         trailing={<ChevronRight size={14} color="var(--text-tertiary)" />}
         onClick={() => setCurrentSubmenu('duration')} 
       />

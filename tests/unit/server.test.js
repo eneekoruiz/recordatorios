@@ -397,6 +397,84 @@ describe('MCP', () => {
   });
 });
 
+describe('listas compartidas — privacidad', () => {
+  it('solo expone los campos que pinta la vista pública', async () => {
+    const a = await register(`priv${Date.now()}@example.com`);
+    const t = new Date().toISOString();
+    await post('/api/sync/push', {
+      lists: [{ id: 'viaje', name: 'Viaje', color: '#0a84ff', updated_at: t, secreto: 'x' }],
+      tasks: [{
+        id: 'p1', title: 'Vuelo', categoryId: 'viaje', version: 1, updated_at: t, price: 99,
+        people: ['Irantzu'], issuerMask: 'VISA •• 4821', managementUrl: 'https://cuenta.example/cancelar',
+        location: { lat: 1, lng: 2 }, locationName: 'Casa', user_id: a.user.id,
+      }],
+    }, a.token);
+    const { token } = await (await post('/api/share/generate', { listId: 'viaje' }, a.token)).json();
+    const shared = await (await get(`/api/share/${token}`)).json();
+    expect(Object.keys(shared.tasks[0]).sort()).toEqual(['id', 'price', 'title']);
+    for (const leaked of ['people', 'issuerMask', 'managementUrl', 'location', 'locationName', 'user_id']) {
+      expect(shared.tasks[0]).not.toHaveProperty(leaked);
+    }
+    expect(shared.tasks[0]).toMatchObject({ id: 'p1', title: 'Vuelo', price: 99 });
+    expect(shared.list).not.toHaveProperty('secreto');
+    expect(shared.list.name).toBe('Viaje');
+  });
+});
+
+describe('tiempo real (SSE)', () => {
+  it('el ticket es de un solo propósito: no vale como sesión y la sesión no vale como ticket', async () => {
+    const a = await register(`sse${Date.now()}@example.com`);
+    expect((await post('/api/sync/live-ticket', {})).status).toBe(401);
+    const { ticket } = await (await post('/api/sync/live-ticket', {}, a.token)).json();
+    expect(jwt.decode(ticket).purpose).toBe('live');
+    expect(jwt.decode(ticket).exp - jwt.decode(ticket).iat).toBeLessThanOrEqual(60);
+    // Un ticket no autentica ninguna ruta de la API…
+    expect((await get('/api/sync/pull', ticket)).status).toBe(401);
+    // …y el token de sesión ya no se acepta en la URL del canal en vivo.
+    expect((await get(`/api/sync/live?ticket=${encodeURIComponent(a.token)}`)).status).toBe(401);
+    expect((await get(`/api/sync/live?token=${encodeURIComponent(a.token)}`)).status).toBe(401);
+  });
+});
+
+describe('límites de peticiones compartidos', () => {
+  it('el contador vive en la base de datos: dos instancias suman sus intentos', async () => {
+    const shared = createMemoryPrisma();
+    const open = () => new Promise((resolve) => {
+      const srv = createApp({ prisma: shared }).listen(0, () => resolve(srv));
+    });
+    const [a, b] = await Promise.all([open(), open()]);
+    const call = (srv) => fetch(`http://127.0.0.1:${srv.address().port}/api/auth/login`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'nadie@example.com', password: 'incorrecta!!' }),
+    });
+    try {
+      for (let i = 0; i < 10; i++) expect((await call(i % 2 ? a : b)).status).toBe(401);
+      const blocked = await call(a);
+      expect(blocked.status).toBe(429);
+      expect(Number(blocked.headers.get('retry-after'))).toBeGreaterThan(0);
+      expect((await call(b)).status).toBe(429); // la otra instancia ve el mismo contador
+      expect(shared._stores.limits.rows.length).toBeGreaterThan(0);
+    } finally {
+      a.close();
+      b.close();
+    }
+  });
+
+  it('si la base de datos falla, limita en memoria en lugar de dejar de proteger', async () => {
+    const broken = createMemoryPrisma();
+    broken.rateLimit.updateMany = async () => { throw new Error('db caída'); };
+    const srv = await new Promise((resolve) => { const s = createApp({ prisma: broken }).listen(0, () => resolve(s)); });
+    try {
+      const url = `http://127.0.0.1:${srv.address().port}/api/auth/login`;
+      const call = () => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'x@example.com', password: 'incorrecta!!' }) });
+      for (let i = 0; i < 10; i++) expect((await call()).status).toBe(401);
+      expect((await call()).status).toBe(429);
+    } finally {
+      srv.close();
+    }
+  });
+});
+
 describe('robustez', () => {
   it('devuelve JSON en rutas inexistentes y cuerpos inválidos', async () => {
     const r404 = await get('/api/no-existe');
@@ -408,7 +486,7 @@ describe('robustez', () => {
   it('en Vercel el canal SSE responde 204 para que el cliente use sondeo', async () => {
     process.env.VERCEL = '1';
     try {
-      expect((await get('/api/sync/live?token=x')).status).toBe(204);
+      expect((await get('/api/sync/live?ticket=x')).status).toBe(204);
     } finally {
       delete process.env.VERCEL;
     }
