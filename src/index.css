@@ -1913,3 +1913,14 @@ html, body {
   .parent-modal-option:hover { background: var(--bg-hover); transform: translateY(-1px); }
   .parent-modal-option--danger:hover { background: rgba(255, 59, 48, 0.16); }
 }
+
+/* Movimiento reducido: quien lo pide en el sistema no ve transiciones ni animaciones largas
+   (framer-motion ya lo respeta con MotionConfig; esto cubre las de CSS). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
