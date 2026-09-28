@@ -96,9 +96,9 @@ export function ConfirmModal({
             <p id="confirm-description" style={{ fontSize: '0.94rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>{message}</p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 24 }}>
-            <button ref={cancelRef} type="button" className="modal-btn-secondary" onClick={onCancel}>{cancelText}</button>
-            <button type="button" className={tone === 'danger' ? 'modal-btn-danger' : 'modal-btn-primary'} onClick={onConfirm}>{confirmText}</button>
+          <div className="premium-sheet-actions" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 24 }}>
+            <button ref={cancelRef} type="button" className="modal-btn-secondary secondary" onClick={onCancel}>{cancelText}</button>
+            <button type="button" className={tone === 'danger' ? 'modal-btn-danger danger' : 'modal-btn-primary'} onClick={onConfirm}>{confirmText}</button>
           </div>
         </motion.section>
       </motion.div>

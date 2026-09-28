@@ -627,24 +627,26 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         </div>
       </div>
 
-      {/* 4. BARRA INFERIOR: ACCESO DIRECTO A HABLAR CON LA IA */}
-      <div className="sidebar-bottom-toolbar" style={{ justifyContent: 'center' }}>
-        <button
-          type="button"
-          className="apple-sidebar-ai-btn"
-          onClick={() => {
-            HapticService.selection();
-            window.dispatchEvent(new CustomEvent('open-ai-assistant'));
-          }}
-          title="Hablar con el Asistente IA (dictado y lenguaje natural)"
-          aria-label="Hablar con el Asistente IA"
-        >
-          <div className="ai-icon-sparkle">
-            <Sparkles size={16} strokeWidth={2.4} />
-          </div>
-          <span>Hablar con la IA</span>
-        </button>
-      </div>
+      {/* 4. BARRA INFERIOR: ACCESO DIRECTO A HABLAR CON LA IA (Solo en móvil para no duplicar en escritorio) */}
+      {isMobile && (
+        <div className="sidebar-bottom-toolbar" style={{ justifyContent: 'center' }}>
+          <button
+            type="button"
+            className="apple-sidebar-ai-btn"
+            onClick={() => {
+              HapticService.selection();
+              window.dispatchEvent(new CustomEvent('open-ai-assistant'));
+            }}
+            title="Hablar con el Asistente IA (dictado y lenguaje natural)"
+            aria-label="Hablar con el Asistente IA"
+          >
+            <div className="ai-icon-sparkle">
+              <Sparkles size={16} strokeWidth={2.4} />
+            </div>
+            <span>Hablar con la IA</span>
+          </button>
+        </div>
+      )}
       
       {/* MODALS (OUTSIDE SCROLL) */}
       <ListConfigModal 

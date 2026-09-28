@@ -692,7 +692,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                   >
                     <span style={{ opacity: 0.35 }}>(</span>
                     <span style={{ color: ownColor }}>{onlyCount}</span>
-                    <span style={{ opacity: 0.3, margin: '0 1px' }}>+</span>
+                    <span style={{ opacity: 0.3, margin: '0 1px' }}> + </span>
                     <span style={{ color: extraColor }}>{extraCount}</span>
                     <span style={{ opacity: 0.35 }}>)</span>
                   </span>

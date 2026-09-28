@@ -202,6 +202,36 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
     const rawText = (textToSend || input).trim();
     if ((!rawText && !attachedFile) || loading || isExtractingFile) return;
 
+    if (/abrir ajustes|ajustes de ia|configuraci[oó]n|^\/settings|^\/ajustes/i.test(rawText)) {
+      setInput('');
+      setShowSettings(true);
+      return;
+    }
+
+    if (/usar extractor local|extractor local/i.test(rawText)) {
+      setConfig(prev => ({ ...prev, provider: 'auto' }));
+      AIService.saveConfig({ ...config, provider: 'auto' });
+      setInput('');
+      const localBatch = AIService.localSemanticExtract('Organizar mis recordatorios', lists, tasks);
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `msg_user_${Date.now()}`,
+          sender: 'user',
+          text: 'Usar extractor local',
+          timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+        },
+        {
+          id: `msg_ai_${Date.now()}`,
+          sender: 'assistant',
+          text: '✅ Se ha activado el extractor local inteligente. Puedes pedirme organizar, crear o modificar tareas de inmediato.',
+          batch: localBatch,
+          timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+        }
+      ]);
+      return;
+    }
+
     const userDisplayTitle = rawText || `Analizar y estructurar recordatorios de "${attachedFile?.name}"`;
     const fileName = attachedFile?.name;
 
@@ -1039,7 +1069,20 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                       <button
                         key={rIdx}
                         type="button"
-                        onClick={() => handleSend(replyText)}
+                        onClick={() => {
+                          if (/abrir ajustes|ajustes de ia|configuraci[oó]n/i.test(replyText)) {
+                            setShowSettings(true);
+                            return;
+                          }
+                          if (/usar extractor local|extractor local/i.test(replyText)) {
+                            setConfig(prev => ({ ...prev, provider: 'auto' }));
+                            AIService.saveConfig({ ...config, provider: 'auto' });
+                            window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Modo extractor local activado' }));
+                            handleSend('Organizar recordatorios');
+                            return;
+                          }
+                          handleSend(replyText);
+                        }}
                         style={{
                           background: 'var(--bg-surface)',
                           border: '1px solid var(--accent-primary)',
@@ -1703,7 +1746,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                   ? 'Escuchando... di lo que necesitas apuntar'
                   : attachedFile
                     ? 'Añade una instrucción o pulsa la flecha para procesar...'
-                    : 'Habla, escribe o adjunta tus documentos...'
+                    : 'Habla o escribe tus recordatorios o adjunta documentos...'
               }
               style={{
                 flex: 1,

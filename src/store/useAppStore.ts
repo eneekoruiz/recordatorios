@@ -9,7 +9,7 @@ import { isValidWeekday, readStoredWeeklyDay, writeStoredWeeklyDay } from '../ut
 import { DEFAULT_SMART_LIST_VISIBILITY } from '../constants/smartLists';
 import { smartSortTasks } from '../utils/smartSort';
 import { readStoredDisplayName, writeStoredDisplayName } from '../utils/userIdentity';
-import { findDuplicateTask, normalizeTitle } from '../utils/taskDeduplication';
+import { findDuplicateTask } from '../utils/taskDeduplication';
 import { FREQUENCY_RESERVED_COLORS, getReservedFrequencyColor } from '../constants/colors';
 
 const optimisticUpdate = (
@@ -105,7 +105,7 @@ interface AppState {
   deleteTask: (id: string) => void;
   deleteTaskWithOptions: (id: string, options?: { keepSubtasks?: boolean; permanent?: boolean }) => void;
   updateTask: (id: string, updates: Partial<TaskItem>) => void;
-  reorderTasks: (orderedTaskIds: string[]) => void;
+  reorderTasks: (orderedTaskIds: string[], taskUpdates?: Record<string, Partial<TaskItem>>) => void;
   
   addCycle: (cycle: CustomCycle) => void;
   updateCycle: (id: string, updates: Partial<CustomCycle>) => void;
@@ -737,17 +737,52 @@ export const useAppStore = create<AppState>()(
         const task = state.tasks[id];
         if (!task) return state;
         const updated = TaskRepository.update(task, updates);
-        return {
-          tasks: {
-            ...state.tasks,
-            [id]: updated
+        const updatedTasks = {
+          ...state.tasks,
+          [id]: updated
+        };
+
+        // Si se cambia la lista o la sección de una tarea padre, propagar el cambio a todas sus subtareas
+        if (updates.categoryId !== undefined || updates.sectionId !== undefined) {
+          const targetCat = updates.categoryId !== undefined ? updates.categoryId : updated.categoryId;
+          const targetSec = updates.sectionId !== undefined ? updates.sectionId : updated.sectionId;
+          Object.values(state.tasks).forEach(c => {
+            if (!c.deleted_at && c.parentId === id) {
+              updatedTasks[c.id] = TaskRepository.update(c, {
+                categoryId: targetCat,
+                sectionId: targetSec
+              });
+            }
+          });
+        }
+
+        // Si una subtarea cambia de lista o sección y difiere de su padre, desanidarla para no romper la jerarquía
+        if (updated.parentId && (updates.categoryId !== undefined || updates.sectionId !== undefined)) {
+          const parent = state.tasks[updated.parentId];
+          if (parent && (parent.categoryId !== updated.categoryId || parent.sectionId !== updated.sectionId)) {
+            updatedTasks[id] = TaskRepository.update(updatedTasks[id], { parentId: undefined });
           }
+        }
+
+        return {
+          tasks: updatedTasks
         };
       }),
 
-      reorderTasks: (orderedTaskIds) => optimisticUpdate(get, set, (state) => {
+      reorderTasks: (orderedTaskIds, taskUpdates) => optimisticUpdate(get, set, (state) => {
         const newTasks = { ...state.tasks };
         let changed = false;
+
+        if (taskUpdates) {
+          Object.entries(taskUpdates).forEach(([id, upd]) => {
+            const t = newTasks[id];
+            if (t) {
+              newTasks[id] = TaskRepository.update(t, upd);
+              changed = true;
+            }
+          });
+        }
+
         orderedTaskIds.forEach((id, index) => {
           const t = newTasks[id];
           if (t && t.order !== index) {
@@ -1098,12 +1133,23 @@ export const useAppStore = create<AppState>()(
       updateTaskSection: (taskId, sectionId) => optimisticUpdate(get, set, (state) => {
         const task = state.tasks[taskId];
         if (!task) return state;
-        return {
-          tasks: {
-            ...state.tasks,
-            [taskId]: TaskRepository.update(task, { sectionId })
+
+        const updatedTasks = { ...state.tasks };
+        let parentId = task.parentId;
+        if (parentId && state.tasks[parentId] && state.tasks[parentId].sectionId !== sectionId) {
+          parentId = undefined;
+        }
+
+        updatedTasks[taskId] = TaskRepository.update(task, { sectionId, parentId });
+
+        // Propagar la sección a las subtareas hijas
+        Object.values(state.tasks).forEach(c => {
+          if (!c.deleted_at && c.parentId === taskId) {
+            updatedTasks[c.id] = TaskRepository.update(c, { sectionId });
           }
-        };
+        });
+
+        return { tasks: updatedTasks };
       }),
 
       purgeOldDeletedTasks: () => optimisticUpdate(get, set, (state) => {
@@ -1416,7 +1462,6 @@ export const useAppStore = create<AppState>()(
         if (!task) return state;
 
         const updatedTasks = { ...state.tasks };
-        const now = new Date().toISOString();
 
         if (!parentId) {
           // Des-anidar (anular sangrado): mantener la posición visual justo después de su tarea padre
@@ -1439,28 +1484,44 @@ export const useAppStore = create<AppState>()(
           const reordered = [...siblingRoots];
           reordered.splice(insertIdx, 0, { ...task, parentId: undefined });
           reordered.forEach((t, idx) => {
-            updatedTasks[t.id] = {
-              ...state.tasks[t.id],
-              ...t,
-              parentId: undefined,
-              order: idx,
-              _is_dirty: true,
-              updated_at: now
-            };
+            const original = state.tasks[t.id];
+            if (original) {
+              updatedTasks[t.id] = TaskRepository.update(original, {
+                parentId: undefined,
+                order: idx
+              });
+            }
           });
         } else {
-          // Anidar dentro de parentId: colocar al final de las subtareas del padre
+          // Anidar dentro de parentId
+          const parent = state.tasks[parentId];
+          if (!parent) return state;
+
+          // Si parentId ya es subtarea de otra tarea, anidar bajo el padre raíz (máximo 1 nivel de sangría estilo Apple)
+          const effectiveParentId = parent.parentId ? parent.parentId : parentId;
+          const effectiveParent = state.tasks[effectiveParentId] || parent;
+
           const existingChildren = Object.values(state.tasks)
-            .filter(t => !t.deleted_at && t.parentId === parentId && t.id !== taskId);
+            .filter(t => !t.deleted_at && t.parentId === effectiveParentId && t.id !== taskId);
           const maxChildOrder = existingChildren.reduce((max, c) => Math.max(max, c.order ?? 0), -1);
 
-          updatedTasks[taskId] = {
-            ...task,
-            parentId: parentId,
-            order: maxChildOrder + 1,
-            _is_dirty: true,
-            updated_at: now
-          };
+          updatedTasks[taskId] = TaskRepository.update(task, {
+            parentId: effectiveParentId,
+            categoryId: effectiveParent.categoryId || task.categoryId,
+            sectionId: effectiveParent.sectionId,
+            order: maxChildOrder + 1
+          });
+
+          // Si la tarea tenía ya subtareas, aplanarlas para que sean hermanas bajo effectiveParentId
+          Object.values(state.tasks).forEach(c => {
+            if (!c.deleted_at && c.parentId === taskId) {
+              updatedTasks[c.id] = TaskRepository.update(c, {
+                parentId: effectiveParentId,
+                categoryId: effectiveParent.categoryId || task.categoryId,
+                sectionId: effectiveParent.sectionId
+              });
+            }
+          });
         }
 
         return { tasks: updatedTasks };
@@ -1598,58 +1659,10 @@ export const useAppStore = create<AppState>()(
           : false;
         const resolvedTheme = userExplicitTheme === 'dark' ? 'dark' : userExplicitTheme === 'light' ? 'light' : (systemPrefersDark ? 'dark' : 'light');
 
-        // Saneamiento y deduplicación de tareas locales/persistidas
-        const rawTasks = (persistedState?.tasks || currentState.tasks || {}) as Record<string, TaskItem>;
-        const tasksByGroup = new Map<string, TaskItem[]>();
-
-        for (const t of Object.values(rawTasks)) {
-          if (!t || !t.id || t.deleted_at) continue;
-          const norm = normalizeTitle(t.title);
-          const cat = t.categoryId || (t as any).category_id || 'no_cat';
-          const sec = t.sectionId || (t as any).section_id || 'no_sec';
-          const normSec = sec
-            .replace(/^sec_limpieza_/, 'sec_limp_')
-            .replace(/_diarias$/, '_diaria')
-            .replace(/_semanales$/, '_semanal')
-            .replace(/_mensuales$/, '_mensual')
-            .replace(/_anuales$/, '_anual');
-          const groupKey = `${cat}:::${normSec}:::${norm}`;
-          if (!tasksByGroup.has(groupKey)) {
-            tasksByGroup.set(groupKey, []);
-          }
-          tasksByGroup.get(groupKey)!.push(t);
-        }
-
-        const cleanTasks: Record<string, TaskItem> = { ...rawTasks };
-        for (const [, group] of tasksByGroup.entries()) {
-          if (group.length > 1) {
-            group.sort((a, b) => {
-              const aDone = isTaskCompleted(a) || (a as any).completed;
-              const bDone = isTaskCompleted(b) || (b as any).completed;
-              if (!aDone && bDone) return -1;
-              if (aDone && !bDone) return 1;
-
-              const vA = a.version || 1;
-              const vB = b.version || 1;
-              if (vA !== vB) return vB - vA;
-
-              const tA = new Date(a.updated_at || a.created_at || 0).getTime();
-              const tB = new Date(b.updated_at || b.created_at || 0).getTime();
-              return tB - tA;
-            });
-
-            const nowStr = new Date().toISOString();
-            for (let i = 1; i < group.length; i++) {
-              const dupe = group[i];
-              cleanTasks[dupe.id] = {
-                ...dupe,
-                deleted_at: nowStr,
-                _is_dirty: true,
-                version: (dupe.version || 1) + 1
-              };
-            }
-          }
-        }
+        // Cargar tareas locales/persistidas sin auto-eliminación
+        const cleanTasks: Record<string, TaskItem> = {
+          ...((persistedState?.tasks || currentState.tasks || {}) as Record<string, TaskItem>)
+        };
 
         if (Object.keys(remappedCycleIds).length > 0) {
           for (const [tId, t] of Object.entries(cleanTasks)) {

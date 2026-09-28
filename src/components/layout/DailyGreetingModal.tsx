@@ -186,8 +186,10 @@ export const DailyGreetingModal: React.FC<DailyGreetingModalProps> = ({ onSelect
             </button>
 
             <header className="greeting-head">
-              <span className="greeting-sun" aria-hidden="true"><Icon size={21} strokeWidth={2.1} /></span>
-              <span className="greeting-date">{briefing.date}</span>
+              <div className="greeting-top-bar">
+                <span className="greeting-sun" aria-hidden="true"><Icon size={19} strokeWidth={2.1} /></span>
+                <span className="greeting-date">{briefing.date}</span>
+              </div>
               <h2 id="greeting-title" className="greeting-title">{briefing.greeting}</h2>
               <p className="greeting-lead">
                 <strong>{briefing.headline}</strong>

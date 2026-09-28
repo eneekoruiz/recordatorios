@@ -1688,7 +1688,7 @@ const CORE_CYCLES = [
 
             if (!isCatCollapsed(freqCatKey)) {
               const sortedRooms = Array.from(roomBuckets.values())
-                .filter(rb => rb.tasks.length > 0)
+                .filter(rb => defaultRooms.some(dr => dr.key === rb.key) || rb.tasks.length > 0)
                 .sort((a, b) => a.order - b.order);
 
               if (sortedRooms.length === 0) {
@@ -1983,9 +1983,83 @@ const CORE_CYCLES = [
     const insertIdx = position === 'after' ? newTargetIdx + 1 : newTargetIdx;
     reordered.splice(insertIdx, 0, removed);
 
-    reorderTasks(reordered.map(t => t.id));
+    const sourceTask = tasks[sourceTaskId] || visibleTasks[sourceIdx];
+    const targetTask = tasks[targetTaskId] || visibleTasks[targetIdx];
+
+    const taskUpdates: Record<string, Partial<TaskItem>> = {};
+
+    if (sourceTask && targetTask) {
+      const prevTask = insertIdx > 0 ? reordered[insertIdx - 1] : undefined;
+      const nextTask = insertIdx < reordered.length - 1 ? reordered[insertIdx + 1] : undefined;
+
+      let newParentId: string | undefined = undefined;
+
+      // Escenario 1: Soltado entre una tarea principal y su primera subtarea
+      // (prevTask es el padre y nextTask es subtarea de prevTask)
+      if (prevTask && nextTask && nextTask.parentId && nextTask.parentId === prevTask.id) {
+        newParentId = prevTask.id;
+      }
+      // Escenario 2: Soltado entre dos subtareas del mismo padre
+      else if (prevTask && nextTask && prevTask.parentId && nextTask.parentId && prevTask.parentId === nextTask.parentId) {
+        newParentId = prevTask.parentId;
+      }
+      // Escenario 3: Soltado después de una subtarea
+      else if (position === 'after' && targetTask.parentId) {
+        newParentId = targetTask.parentId;
+      }
+      // Escenario 4: Soltado antes de una subtarea, cuando el elemento anterior es el padre o un hermano
+      else if (position === 'before' && targetTask.parentId && prevTask && (prevTask.id === targetTask.parentId || prevTask.parentId === targetTask.parentId)) {
+        newParentId = targetTask.parentId;
+      }
+      // Escenario 5: Soltado después de un padre cuya subtarea sigue a continuación
+      else if (position === 'after' && !targetTask.parentId && nextTask && nextTask.parentId === targetTask.id) {
+        newParentId = targetTask.id;
+      }
+      // Escenario 6: Soltado como tarea raíz ordinaria
+      else {
+        newParentId = undefined;
+      }
+
+      // Sincronizar sección y lista
+      const effectiveParent = newParentId ? (tasks[newParentId] || visibleTasks.find(t => t.id === newParentId)) : undefined;
+      const newCategoryId = effectiveParent?.categoryId || targetTask.categoryId || sourceTask.categoryId;
+      const newSectionId = effectiveParent ? effectiveParent.sectionId : targetTask.sectionId;
+
+      if (
+        sourceTask.parentId !== newParentId ||
+        sourceTask.categoryId !== newCategoryId ||
+        sourceTask.sectionId !== newSectionId
+      ) {
+        taskUpdates[sourceTaskId] = {
+          parentId: newParentId,
+          categoryId: newCategoryId,
+          sectionId: newSectionId
+        };
+
+        // Mantener consistentes las subtareas de la tarea movida
+        Object.values(tasks).forEach(c => {
+          if (!c.deleted_at && c.parentId === sourceTaskId) {
+            if (newParentId) {
+              // Evitar 2 niveles de anidación: aplanar bajo el mismo padre
+              taskUpdates[c.id] = {
+                parentId: newParentId,
+                categoryId: newCategoryId,
+                sectionId: newSectionId
+              };
+            } else {
+              taskUpdates[c.id] = {
+                categoryId: newCategoryId,
+                sectionId: newSectionId
+              };
+            }
+          }
+        });
+      }
+    }
+
+    reorderTasks(reordered.map(t => t.id), Object.keys(taskUpdates).length > 0 ? taskUpdates : undefined);
     HapticService.selection();
-  }, [visibleTasks, reorderTasks, sortBy]);
+  }, [visibleTasks, tasks, reorderTasks, sortBy]);
 
   const handleReorderSections = useCallback((sourceSectionId: string, targetSectionId: string, position: 'before' | 'after' = 'before') => {
     if (sourceSectionId === targetSectionId) return;

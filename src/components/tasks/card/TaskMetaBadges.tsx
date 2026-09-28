@@ -275,7 +275,9 @@ export function TaskMetaBadges({
                 >
                   <Tag size={11} strokeWidth={2.4} style={{ color: '#30d158', flexShrink: 0 }} />
                   {task.quantity && task.quantity > 1 && subtasksPrice === 0 && (
-                    <span style={{ color: 'var(--text-tertiary)', fontSize: '0.72rem', fontWeight: 500 }}>{task.quantity}×</span>
+                    <span style={{ color: 'var(--text-tertiary)', fontSize: '0.72rem', fontWeight: 500 }}>
+                      {task.quantity} × {formatEuro(task.price || 0)} =
+                    </span>
                   )}
                   <span>{formatEuro(totalPrice)}</span>
                 </span>

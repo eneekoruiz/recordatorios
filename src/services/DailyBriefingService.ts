@@ -120,7 +120,7 @@ export function buildDailyBriefing(
       if (weight !== 0) return weight;
       return new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime();
     })
-    .slice(0, 8);
+    .slice(0, 3);
 
   // ── Redacción: una frase que lo dice todo, sin repetirlo luego en cápsulas ──
   const who = name ? `, ${name}` : '';

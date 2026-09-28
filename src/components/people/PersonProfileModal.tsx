@@ -75,7 +75,7 @@ export const PersonProfileModal: React.FC<PersonProfileModalProps> = ({
   return createPortal(
     <AnimatePresence>
       <div
-        className="premium-overlay"
+        className="premium-overlay person-profile-overlay"
         data-testid="person-profile-modal"
         style={{
           position: 'fixed',

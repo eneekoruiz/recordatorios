@@ -351,6 +351,50 @@ describe('MCP', () => {
     const q = await (await rpc({ method: 'tools/call', params: { name: 'query_reminders', arguments: { query: 'pan' } } }, a.token)).json();
     expect(JSON.parse(q.result.content[0].text).count).toBe(1);
   });
+
+  it('agrupa subtareas con precios y cantidades mediante group_reminders y las actualiza con update_reminders', async () => {
+    const a = await register(`mcp_group_${Date.now()}@example.com`);
+    const groupRes = await (await rpc({
+      method: 'tools/call',
+      params: {
+        name: 'group_reminders',
+        arguments: {
+          parentTitle: 'Productos de belleza',
+          listName: 'compra',
+          cycle: 'cycle_year',
+          items: [
+            { title: 'Sérum', price: 18, quantity: 3 },
+            { title: 'Bálsamo labial', price: 3.5, quantity: 4 }
+          ]
+        }
+      }
+    }, a.token)).json();
+
+    const groupData = JSON.parse(groupRes.result.content[0].text);
+    expect(groupData.success).toBe(true);
+    expect(groupData.childrenCount).toBe(2);
+    expect(groupData.parent.title).toBe('Productos de belleza');
+    expect(groupData.children[0].parentId).toBe(groupData.parent.id);
+    expect(groupData.children[0].price).toBe(18);
+    expect(groupData.children[0].quantity).toBe(3);
+
+    // Actualizar con update_reminders
+    const childId = groupData.children[0].id;
+    const updRes = await (await rpc({
+      method: 'tools/call',
+      params: {
+        name: 'update_reminders',
+        arguments: {
+          updates: [{ id: childId, price: 20, quantity: 5 }]
+        }
+      }
+    }, a.token)).json();
+
+    const updData = JSON.parse(updRes.result.content[0].text);
+    expect(updData.success).toBe(true);
+    expect(updData.updated[0].price).toBe(20);
+    expect(updData.updated[0].quantity).toBe(5);
+  });
 });
 
 describe('robustez', () => {

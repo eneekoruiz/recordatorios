@@ -108,7 +108,7 @@ export class AIService {
       return { ok: false, error: 'La clave de API no puede estar vacía' };
     }
 
-    const candidateModels = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
+    const candidateModels = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash-latest', 'gemini-1.5-flash'];
     let lastError = '';
 
     for (const model of candidateModels) {
@@ -130,7 +130,7 @@ export class AIService {
         const message = errData?.error?.message || `HTTP ${res.status} ${res.statusText}`;
         lastError = message;
 
-        if (res.status === 400 || res.status === 403) {
+        if (res.status === 401 || res.status === 403) {
           return { ok: false, error: `Clave no válida o sin permisos (${message})` };
         }
       } catch (err: any) {
@@ -160,11 +160,14 @@ export class AIService {
         return await this.callGemini(userMessage, existingLists, conversationHistory, apiKey, existingTasks);
       } catch (err: any) {
         console.error('Gemini API call failed:', err);
+        const localBatch = this.localSemanticExtract(userMessage, existingLists, existingTasks);
         return {
-          reply: `⚠️ **Error de conexión con Google Gemini:** ${err.message || 'No se pudo comunicar con el modelo'}.\n\nPor favor, verifica tu clave API en **Ajustes de IA ⚙️** (icono de rueda arriba a la derecha). Mientras tanto, puedes usar el extractor inteligente local.`,
-          tasks: [],
-          clarificationQuestions: ['¿Quieres verificar la clave de Gemini en Ajustes?', '¿O prefieres que use el extractor local?'],
-          suggestedReplies: ['Abrir Ajustes de IA ⚙️', 'Usar extractor local']
+          ...localBatch,
+          reply: `⚠️ *[Aviso: No se pudo conectar con Gemini (${err.message || 'error de conexión'}). He procesado tu solicitud con el extractor local inteligente]:*\n\n${localBatch.reply}`,
+          suggestedReplies: [
+            ...(localBatch.suggestedReplies || []),
+            'Abrir Ajustes de IA ⚙️'
+          ]
         };
       }
     }
@@ -866,7 +869,14 @@ DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
     }
 
     // Multi-model fallback list in order of performance and availability
-    const candidateModels = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
+    const candidateModels = [
+      'gemini-2.0-flash',
+      'gemini-2.5-flash',
+      'gemini-2.0-flash-lite',
+      'gemini-1.5-flash-latest',
+      'gemini-1.5-flash',
+      'gemini-1.5-pro'
+    ];
     let lastError: Error | null = null;
 
     for (const model of candidateModels) {
@@ -889,13 +899,15 @@ DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
           const errMsg = errData?.error?.message || `HTTP ${res.status} ${res.statusText}`;
-          // If model not found (404), try next model in list
-          if (res.status === 404) {
-            console.warn(`Gemini model ${model} returned 404, falling back to next model.`);
-            lastError = new Error(errMsg);
-            continue;
+          console.warn(`Gemini model ${model} failed (HTTP ${res.status}): ${errMsg}`);
+          lastError = new Error(errMsg);
+
+          if (res.status === 401 || res.status === 403) {
+            throw new Error(`Clave de API no válida o sin permisos: ${errMsg}`);
           }
-          throw new Error(errMsg);
+
+          // Para 404 (modelo no encontrado en la versión), 429 (cuota excedida) o 500/503 (error temporal), intentar el siguiente modelo
+          continue;
         }
 
         const data = await res.json();
