@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Download, AlertCircle, Monitor, Share2 } from 'lucide-react';
+import { AppLogo } from '../ui/AppLogo';
 
 type InstallInfo = { title: string; desc: string; isError?: boolean; isEdge?: boolean };
 
@@ -144,21 +145,28 @@ export function InstallPromptModal() {
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', damping: 18, stiffness: 300, delay: 0.1 }}
               style={{
-                width: 64,
-                height: 64,
-                borderRadius: 20,
-                background: iconBg,
-                color: iconColor,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 20,
-                boxShadow: installInfo.isError
-                  ? '0 8px 24px rgba(255,59,48,0.2)'
-                  : '0 8px 24px rgba(10,132,255,0.2)'
+                marginBottom: 20
               }}
             >
-              <IconComponent size={30} />
+              {!installInfo.isError ? (
+                <AppLogo size={64} style={{ borderRadius: 16, boxShadow: '0 8px 24px rgba(0,0,0,0.14)' }} />
+              ) : (
+                <div
+                  style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: 20,
+                    background: iconBg,
+                    color: iconColor,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 8px 24px rgba(255,59,48,0.2)'
+                  }}
+                >
+                  <IconComponent size={30} />
+                </div>
+              )}
             </motion.div>
 
             <h3 style={{

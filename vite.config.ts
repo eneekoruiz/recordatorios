@@ -55,7 +55,7 @@ export default defineConfig({
         // Solo precacheamos las fuentes latinas (español); el resto se descarga bajo demanda.
         globIgnores: ['**/*cyrillic*', '**/*greek*', '**/*vietnamese*']
       },
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icons/*.png'],
+      includeAssets: ['favicon.ico', 'favicon.svg', 'apple-touch-icon.png', 'icons/*.png'],
       manifest: {
         id: '/',
         name: 'Recordatorios Élite',
@@ -70,6 +70,7 @@ export default defineConfig({
         scope: '/',
         categories: ['productivity', 'utilities'],
         icons: [
+          { src: '/favicon.ico', sizes: '48x48', type: 'image/x-icon', purpose: 'any' },
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
           { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },

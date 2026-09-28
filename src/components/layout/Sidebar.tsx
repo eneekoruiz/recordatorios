@@ -17,6 +17,7 @@ import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
 import { ListConfigModal } from './ListConfigModal';
 import { CycleConfigModal } from './CycleConfigModal';
+import { AppLogo } from '../ui/AppLogo';
 import './Layout.css';
 
 // Modular sidebar subcomponents
@@ -175,7 +176,8 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         {!isSearchExpanded ? (
           <>
             {/* Header Title / Logo */}
-            <div style={{ display: 'flex', alignItems: 'center', minWidth: 0, flex: 1, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0, flex: 1, overflow: 'hidden' }}>
+              <AppLogo size={24} />
               <span style={{ fontSize: '1.20rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 Recordatorios
               </span>
