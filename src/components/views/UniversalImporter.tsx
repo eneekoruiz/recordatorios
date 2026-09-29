@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Download, Upload, Info, CheckCircle2, ChevronLeft, Sparkles, Target, FileText, Clipboard, Loader2, Calendar, Printer, Database } from 'lucide-react';
+import { ViewHeader } from '../ui/ViewHeader';
+import { ArrowUpDown, Download, Upload, Info, CheckCircle2, Sparkles, Target, FileText, Clipboard, Loader2, Calendar, Printer, Database } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 import { detectFormatAndParse } from '../../utils/importerParser';
@@ -222,19 +223,13 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
       height: '100%',
       overflowY: 'auto'
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-16)' }}>
-        <button 
-          onClick={handleBackClick} 
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-full)', padding: '8px 16px', color: 'var(--text-primary)', fontWeight: 500, cursor: 'pointer', transition: 'all 0.2s ease' }}
-        >
-          <ChevronLeft size={18} /> Volver a Listas
-        </button>
-      </div>
-
-      <header>
-        <h1 className="text-display" style={{ marginBottom: 'var(--space-8)' }}>Importar y Exportar</h1>
-        <p className="text-secondary">Haz backup de tus datos o importa desde texto plano, CSV o JSON.</p>
-      </header>
+      <ViewHeader
+        title="Importar y exportar"
+        subtitle="Copia de seguridad de tus datos, o importa desde texto, CSV o JSON."
+        icon={<ArrowUpDown size={20} />}
+        color="var(--accent-blue)"
+        onBack={handleBackClick}
+      />
 
       <div style={{ 
         display: 'grid', 
@@ -296,8 +291,8 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
           className="surface-card" 
           style={{ padding: 'var(--space-32)', background: 'var(--bg-surface)' }}
         >
-          <h3 aria-level={2} className="text-title" style={{ marginBottom: 'var(--space-16)' }}>Exportar Backup</h3>
-          <p className="text-muted" style={{ marginBottom: 'var(--space-32)' }}>Descarga un archivo JSON con absolutamente todos tus ciclos, listas y tareas.</p>
+          <h3 aria-level={2} className="text-title" style={{ marginBottom: 'var(--space-16)' }}>Copia de seguridad</h3>
+          <p className="text-muted" style={{ marginBottom: 'var(--space-32)' }}>Descarga un archivo JSON con todas tus frecuencias, listas y recordatorios.</p>
           
           <motion.button 
             onClick={handleExport}
@@ -323,10 +318,10 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
           className="surface-card" 
           style={{ padding: 'var(--space-32)', background: 'var(--bg-surface)', gridColumn: '1 / -1' }}
         >
-          <h3 aria-level={2} className="text-title" style={{ marginBottom: 'var(--space-16)' }}>Omni-Importador</h3>
+          <h3 aria-level={2} className="text-title" style={{ marginBottom: 'var(--space-16)' }}>Importar datos</h3>
           <div style={{ display: 'flex', gap: 'var(--space-12)', color: 'var(--text-tertiary)', fontSize: '0.9rem', marginBottom: 'var(--space-24)', background: 'var(--bg-elevated)', padding: 'var(--space-12)', borderRadius: 'var(--radius-sm)' }}>
             <Info size={18} style={{ flexShrink: 0, marginTop: 2, color: 'var(--accent-primary)' }} />
-            <span>Pega tu Backup JSON, un CSV estructurado, o simplemente suelta tus pensamientos en texto plano. El sistema detectará el formato.</span>
+            <span>Pega una copia de seguridad (JSON), un CSV o simplemente tus ideas en texto plano: se detecta el formato solo.</span>
           </div>
 
           <div className="glass-panel" style={{ padding: 'var(--space-20)', borderRadius: 'var(--radius-xl)', marginBottom: 'var(--space-24)', border: '1px solid var(--border-subtle)' }}>
@@ -536,7 +531,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 'var(--space-16)' }}>
             <div>
               <h3 aria-level={2} className="text-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Download size={20} color="var(--accent-primary)" /> Exportador Soberano y Calendarios
+                <Download size={20} color="var(--accent-primary)" /> Exportar y calendarios
               </h3>
               <p className="text-secondary" style={{ margin: '4px 0 0 0', fontSize: '0.9rem' }}>
                 Lleva tus recordatorios a cualquier dispositivo o aplicación, o genera informes para imprimir.
