@@ -6,7 +6,6 @@ import { Sidebar } from './components/layout/Sidebar';
 import { MainContent } from './components/layout/MainContent';
 import { WidgetDashboard } from './components/layout/WidgetDashboard';
 
-import { TaskDrawer } from './components/tasks/TaskDrawer';
 import { PromptModal } from './components/layout/PromptModal';
 
 import { SpotlightModal } from './components/search/SpotlightModal';
@@ -47,6 +46,7 @@ const UniversalImporter = lazyNamed(() => import('./components/views/UniversalIm
 const AnalyticsView = lazyNamed(() => import('./components/analytics/AnalyticsView'), 'AnalyticsView');
 const ZenMode = lazyNamed(() => import('./components/tasks/ZenMode'), 'ZenMode');
 const ListSequenceMode = lazyNamed(() => import('./components/tasks/ListSequenceMode'), 'ListSequenceMode');
+const TaskDrawer = lazyNamed(() => import('./components/tasks/TaskDrawer'), 'TaskDrawer');
 const AIAssistantModal = lazyNamed(() => import('./components/ai/AIAssistantModal'), 'AIAssistantModal');
 const SharedListView = lazyNamed(() => import('./components/share/SharedListView'), 'SharedListView');
 
@@ -74,6 +74,14 @@ function App() {
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   const [aiAssistantEverOpened, setAiAssistantEverOpened] = useState(false);
   if (isAIAssistantOpen && !aiAssistantEverOpened) setAiAssistantEverOpened(true);
+  const [drawerEverOpened, setDrawerEverOpened] = useState(false);
+  // El editor se descarga en un momento libre tras arrancar, para que al abrirlo ya esté listo.
+  useEffect(() => {
+    const idle = (window as any).requestIdleCallback || ((cb: () => void) => window.setTimeout(cb, 1500));
+    const id = idle(() => { void import('./components/tasks/TaskDrawer'); });
+    return () => { (window as any).cancelIdleCallback?.(id); };
+  }, []);
+  if (isDrawerOpen && !drawerEverOpened) setDrawerEverOpened(true);
   const hasHydrated = useAppStore((state) => state.hasHydrated);
   // Enlaces especiales: recuperación de contraseña (?reset=) y lista compartida (?share=)
   const [resetToken, setResetToken] = useState(() => new URLSearchParams(window.location.search).get('reset'));
@@ -1132,17 +1140,21 @@ function App() {
         </NavigationFrame>
       </div>
 
-      <TaskDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => { setIsDrawerOpen(false); setEditingTaskId(null); setDefaultSectionId(undefined); setDrawerInitialFocus(undefined); setDrawerInitialTitle(undefined); }}
-        defaultCategoryId={
-          currentView.startsWith('list_') ? currentView.replace('list_', '') : undefined
-        }
-        defaultSectionId={defaultSectionId}
-        taskId={editingTaskId || undefined}
-        initialFocus={drawerInitialFocus}
-        initialTitle={drawerInitialTitle}
-      />
+      {drawerEverOpened && (
+        <Suspense fallback={null}>
+        <TaskDrawer
+          isOpen={isDrawerOpen}
+          onClose={() => { setIsDrawerOpen(false); setEditingTaskId(null); setDefaultSectionId(undefined); setDrawerInitialFocus(undefined); setDrawerInitialTitle(undefined); }}
+          defaultCategoryId={
+            currentView.startsWith('list_') ? currentView.replace('list_', '') : undefined
+          }
+          defaultSectionId={defaultSectionId}
+          taskId={editingTaskId || undefined}
+          initialFocus={drawerInitialFocus}
+          initialTitle={drawerInitialTitle}
+        />
+        </Suspense>
+      )}
 
       {/* Se monta al abrirlo por primera vez (así su código no pesa en la carga inicial) y se queda montado para animar el cierre. */}
       {aiAssistantEverOpened && (

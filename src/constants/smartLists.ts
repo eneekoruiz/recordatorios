@@ -25,7 +25,7 @@ export function TodayIcon({ size = 18 }: { size?: number; color?: string }) {
 
 export const SMART_LISTS = [
   { id: 'smart_primeros_pasos', name: 'Primeros pasos', icon: Rocket, color: '#ff2d55' },
-  { id: 'smart_today', name: 'Hoy', icon: TodayIcon, color: '#007aff' },
+  { id: 'smart_today', name: 'Hoy', icon: TodayIcon, color: '#0068d6' },
   { id: 'smart_scheduled', name: 'Programados', icon: Calendar, color: '#ff3b30' },
   { id: 'smart_all', name: 'Todos', icon: Inbox, color: '#48484a' },
   { id: 'smart_flagged', name: 'Con marca', icon: Flag, color: '#ff9500' },

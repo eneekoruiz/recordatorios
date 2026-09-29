@@ -4,7 +4,8 @@
   container-type: inline-size;
   padding: 0 16px 24px;
   box-sizing: border-box;
-  --cal-today: #ff3b30;
+  --cal-today: #d70015;
+  --cal-today-fill: #d70015;
   --cal-selected-bg: #000000;
   --cal-selected-ink: #ffffff;
   --cal-inset: 42px;
@@ -12,6 +13,7 @@
 [data-theme="dark"] .cal,
 body.dark .cal {
   --cal-today: #ff453a;
+  --cal-today-fill: #d70015;
   --cal-selected-bg: #ffffff;
   --cal-selected-ink: #000000;
 }
@@ -167,7 +169,7 @@ body.dark .cal {
   font-weight: 600;
 }
 .cal-day.is-today.is-selected .cal-num {
-  background: var(--cal-today);
+  background: var(--cal-today-fill, var(--cal-today));
   color: #ffffff;
 }
 @media (hover: hover) {
@@ -480,7 +482,7 @@ body.dark .cal-day.is-outside .cal-dots {
     overflow: hidden;
     text-overflow: ellipsis;
     background: color-mix(in srgb, var(--chip-color) 14%, transparent);
-    color: color-mix(in srgb, var(--chip-color) 78%, var(--text-primary));
+    color: color-mix(in srgb, var(--chip-color) 52%, var(--text-primary));
   }
   .cal-chip.is-done {
     opacity: 0.5;

@@ -103,7 +103,7 @@ export function AnalyticsView({ onBack }: AnalyticsViewProps) {
 
         {/* Gráfico de Barras CSS Nativo */}
         <motion.div variants={itemVariants} className="surface-card" style={{ padding: 'var(--space-32)', marginTop: 'var(--space-16)' }}>
-          <h3 className="text-title" style={{ margin: '0 0 var(--space-32) 0', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <h3 aria-level={2} className="text-title" style={{ margin: '0 0 var(--space-32) 0', display: 'flex', alignItems: 'center', gap: 12 }}>
             <ArrowUpRight size={24} color="var(--accent-primary)" /> Actividad Reciente
           </h3>
           

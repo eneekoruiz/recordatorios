@@ -569,6 +569,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                   </span>
                 )}
                 <h3 
+                  aria-level={2}
                   onDoubleClick={(e) => isCustomSection && startEditingSection(e, data.sectionId!, data.title)}
                   style={{ 
                     cursor: isCustomSection ? 'text' : 'pointer',

@@ -697,6 +697,9 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
         {/* Modal Window */}
         <motion.div
           className="ai-assistant-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Asistente IA"
           initial={{ opacity: 0, scale: 0.95, y: 16 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 12 }}

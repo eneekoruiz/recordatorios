@@ -45,7 +45,7 @@ export const MetaSplit: React.FC<MetaSplitProps> = ({ label, parts, description,
         <span className="meta-split__parts" aria-hidden="true">
           {visible.map((p, i) => (
             <span key={p.id} className="meta-split__part">
-              <span style={{ color: p.color }}>{p.text}</span>
+              <span className="meta-split__text" style={{ ['--pc' as string]: p.color } as React.CSSProperties}>{p.text}</span>
               {i < visible.length - 1 && <span className="meta-split__sep">+</span>}
             </span>
           ))}

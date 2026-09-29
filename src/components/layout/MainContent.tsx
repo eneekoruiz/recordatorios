@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback, useEffect, type ReactNode } from 'react';
+import { useState, useRef, useMemo, useCallback, useEffect, lazy, Suspense, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { Plus, User, Users, PartyPopper, UtensilsCrossed, ShowerHead, BedDouble, DoorOpen, Flower2, House } from 'lucide-react';
@@ -14,7 +14,6 @@ import { BottomShortcutBar } from './BottomShortcutBar';
 import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
 import { extractPeopleFromText, calculateExpirationStatus, calculateSubscriptionCosts, findFlashbackMemories, isCompletedInCurrentPeriod } from '../../services/TaskService';
-import { PersonProfileModal } from '../people/PersonProfileModal';
 import { AIService } from '../../services/AIService';
 import { isCaducidadesList, isQueHeHechoList, ensureCaducidadesSections, isLimpiezaList, isRoutineList, isShoppingList, getRoomForCleaningTask, getListType, doesListSupportSequenceMode } from '../../utils/specialLists';
 import { 
@@ -32,10 +31,12 @@ import { MainGlassHeader } from './main/MainGlassHeader';
 import { MainSectionHeader } from './main/MainSectionHeader';
 import { DeletedTaskToast } from './main/DeletedTaskToast';
 import { SectionContextMenu, type SectionMenuState } from './main/SectionContextMenu';
-import { MonthlySummaryModal } from './main/MonthlySummaryModal';
 import { MainPageHeader } from './main/MainPageHeader';
 import { DailyBriefingBanner } from './DailyBriefingBanner';
-import { CalendarView } from '../views/CalendarView';
+// Solo se necesitan al abrir el calendario, un perfil o el resumen del mes: no viajan con el arranque.
+const CalendarView = lazy(() => import('../views/CalendarView').then((m) => ({ default: m.CalendarView })));
+const PersonProfileModal = lazy(() => import('../people/PersonProfileModal').then((m) => ({ default: m.PersonProfileModal })));
+const MonthlySummaryModal = lazy(() => import('./main/MonthlySummaryModal').then((m) => ({ default: m.MonthlySummaryModal })));
 import { smartSortTasks } from '../../utils/smartSort';
 import { WeeklyStreakWidget } from './main/WeeklyStreakWidget';
 import { confirmDialog } from '../ui/confirmDialog';
@@ -2693,7 +2694,9 @@ const CORE_CYCLES = [
                           </>
                         )}
                         {isCalendarView && (
-                          <CalendarView onSelectView={(view) => onSelectView?.(view)} onEditTask={(taskId) => onEditTask?.(taskId)} />
+                          <Suspense fallback={null}>
+                            <CalendarView onSelectView={(view) => onSelectView?.(view)} onEditTask={(taskId) => onEditTask?.(taskId)} />
+                          </Suspense>
                         )}
                       </div>
                     );
@@ -3081,19 +3084,24 @@ const CORE_CYCLES = [
         document.body
       )}
 
-      <PersonProfileModal
-        personName={selectedPersonForProfile}
-        isOpen={!!selectedPersonForProfile}
-        onClose={() => setSelectedPersonForProfile(null)}
-        allTasks={allTasksArray}
-        onEditTask={onEditTask}
-        onAddMemoryWithPerson={() => onOpenNewTask('que_he_hecho')}
-      />
-
-      <MonthlySummaryModal
-        modal={monthlySummaryModal}
-        onClose={() => setMonthlySummaryModal(prev => ({ ...prev, open: false }))}
-      />
+      <Suspense fallback={null}>
+        {selectedPersonForProfile && (
+          <PersonProfileModal
+            personName={selectedPersonForProfile}
+            isOpen
+            onClose={() => setSelectedPersonForProfile(null)}
+            allTasks={allTasksArray}
+            onEditTask={onEditTask}
+            onAddMemoryWithPerson={() => onOpenNewTask('que_he_hecho')}
+          />
+        )}
+        {monthlySummaryModal.open && (
+          <MonthlySummaryModal
+            modal={monthlySummaryModal}
+            onClose={() => setMonthlySummaryModal(prev => ({ ...prev, open: false }))}
+          />
+        )}
+      </Suspense>
 
       {currentView !== 'TRASH' && (
         <>

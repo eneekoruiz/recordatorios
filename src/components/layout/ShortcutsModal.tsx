@@ -72,7 +72,7 @@ export const ShortcutsModal: FC<ShortcutsModalProps> = ({ isOpen, onClose }) => 
             onClick={(e) => e.stopPropagation()}
           >
             <SheetNavBar title="Atajos de teclado" onConfirm={onClose} confirmLabel="Listo" />
-            <div className="form-sheet-body">
+            <div className="form-sheet-body" tabIndex={0}>
               {groups.map((group) => (
                 <div key={group.title}>
                   <p className="form-group-label">{group.title}</p>

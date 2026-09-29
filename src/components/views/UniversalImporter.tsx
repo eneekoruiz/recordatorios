@@ -211,7 +211,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
   };
 
   return (
-    <div style={{ 
+    <main aria-label="Importar y exportar" style={{ 
       padding: 'var(--space-24)', 
       maxWidth: 900, 
       margin: '0 auto', 
@@ -261,10 +261,10 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
           }}
         >
           <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 10px', borderRadius: 999, background: 'var(--accent-glow)', color: 'var(--accent-primary)', fontSize: '0.8rem', fontWeight: 700, marginBottom: 12 }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 10px', borderRadius: 999, background: 'var(--accent-glow)', color: 'color-mix(in srgb, var(--accent-primary) 70%, var(--text-primary))', fontSize: '0.8rem', fontWeight: 700, marginBottom: 12 }}>
               <Sparkles size={14} /> Asistente IA
             </div>
-            <h3 className="text-title" style={{ marginBottom: 'var(--space-8)' }}>Importación asistida</h3>
+            <h3 aria-level={2} className="text-title" style={{ marginBottom: 'var(--space-8)' }}>Importación asistida</h3>
             <p className="text-secondary" style={{ margin: 0, maxWidth: 640 }}>
               Habla o pega cualquier texto en bruto (rutinas, listas de compras, mudanzas o proyectos). La IA desglosará automáticamente los recordatorios con sus precios, fechas, franjas horarias y listas adecuadas para que los confirmes con un solo clic.
             </p>
@@ -296,14 +296,14 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
           className="surface-card" 
           style={{ padding: 'var(--space-32)', background: 'var(--bg-surface)' }}
         >
-          <h3 className="text-title" style={{ marginBottom: 'var(--space-16)' }}>Exportar Backup</h3>
+          <h3 aria-level={2} className="text-title" style={{ marginBottom: 'var(--space-16)' }}>Exportar Backup</h3>
           <p className="text-muted" style={{ marginBottom: 'var(--space-32)' }}>Descarga un archivo JSON con absolutamente todos tus ciclos, listas y tareas.</p>
           
           <motion.button 
             onClick={handleExport}
             style={{ 
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-8)', 
-              width: '100%', background: 'var(--accent-primary)', color: 'white', border: 'none', 
+              width: '100%', background: 'var(--accent-fill, var(--accent-primary))', color: 'white', border: 'none', 
               padding: 'var(--space-16)', borderRadius: 'var(--radius-md)', fontWeight: 600, 
               cursor: 'pointer', transition: 'all 0.2s', boxShadow: 'var(--shadow-md)'
             }}
@@ -323,7 +323,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
           className="surface-card" 
           style={{ padding: 'var(--space-32)', background: 'var(--bg-surface)', gridColumn: '1 / -1' }}
         >
-          <h3 className="text-title" style={{ marginBottom: 'var(--space-16)' }}>Omni-Importador</h3>
+          <h3 aria-level={2} className="text-title" style={{ marginBottom: 'var(--space-16)' }}>Omni-Importador</h3>
           <div style={{ display: 'flex', gap: 'var(--space-12)', color: 'var(--text-tertiary)', fontSize: '0.9rem', marginBottom: 'var(--space-24)', background: 'var(--bg-elevated)', padding: 'var(--space-12)', borderRadius: 'var(--radius-sm)' }}>
             <Info size={18} style={{ flexShrink: 0, marginTop: 2, color: 'var(--accent-primary)' }} />
             <span>Pega tu Backup JSON, un CSV estructurado, o simplemente suelta tus pensamientos en texto plano. El sistema detectará el formato.</span>
@@ -338,6 +338,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
                 <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Las tareas sin lista o en bandeja de entrada se reasignarán automáticamente aquí.</p>
               </div>
               <select
+                aria-label="Lista de destino de la importación"
                 value={targetListId}
                 onChange={(e) => setTargetListId(e.target.value)}
                 style={{
@@ -489,7 +490,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
                   background: 'rgba(52, 199, 89, 0.1)', padding: 'var(--space-24)', 
                   borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-green)' 
                 }}>
-                  <h4 style={{ color: 'var(--accent-green)', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, fontSize: '1.1rem' }}>
+                  <h4 aria-level={3} style={{ color: 'var(--accent-green)', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, fontSize: '1.1rem' }}>
                     <CheckCircle2 size={24} /> Análisis Exitoso
                   </h4>
                   <ul style={{ color: 'var(--text-primary)', marginLeft: 24, fontSize: '0.95rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -534,7 +535,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 'var(--space-16)' }}>
             <div>
-              <h3 className="text-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h3 aria-level={2} className="text-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Download size={20} color="var(--accent-primary)" /> Exportador Soberano y Calendarios
               </h3>
               <p className="text-secondary" style={{ margin: '4px 0 0 0', fontSize: '0.9rem' }}>
@@ -569,7 +570,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(0, 122, 255, 0.12)', color: 'var(--accent-primary)', display: 'grid', placeItems: 'center', marginBottom: 12 }}>
                   <Calendar size={18} />
                 </div>
-                <h4 style={{ margin: '0 0 4px 0', fontSize: '0.98rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                <h4 aria-level={3} style={{ margin: '0 0 4px 0', fontSize: '0.98rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                   iCalendar (.ics)
                 </h4>
                 <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
@@ -603,7 +604,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255, 149, 0, 0.12)', color: '#ff9500', display: 'grid', placeItems: 'center', marginBottom: 12 }}>
                   <Printer size={18} />
                 </div>
-                <h4 style={{ margin: '0 0 4px 0', fontSize: '0.98rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                <h4 aria-level={3} style={{ margin: '0 0 4px 0', fontSize: '0.98rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                   Informe Editorial (PDF)
                 </h4>
                 <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
@@ -637,7 +638,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(52, 199, 89, 0.12)', color: 'var(--accent-green)', display: 'grid', placeItems: 'center', marginBottom: 12 }}>
                   <FileText size={18} />
                 </div>
-                <h4 style={{ margin: '0 0 4px 0', fontSize: '0.98rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                <h4 aria-level={3} style={{ margin: '0 0 4px 0', fontSize: '0.98rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                   Hoja de Cálculo (CSV)
                 </h4>
                 <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
@@ -671,7 +672,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(175, 82, 222, 0.12)', color: 'var(--accent-purple)', display: 'grid', placeItems: 'center', marginBottom: 12 }}>
                   <Database size={18} />
                 </div>
-                <h4 style={{ margin: '0 0 4px 0', fontSize: '0.98rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                <h4 aria-level={3} style={{ margin: '0 0 4px 0', fontSize: '0.98rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                   Copia de Seguridad (JSON)
                 </h4>
                 <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
@@ -690,6 +691,6 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
           </div>
         </motion.div>
       </div>
-    </div>
+    </main>
   );
 }
