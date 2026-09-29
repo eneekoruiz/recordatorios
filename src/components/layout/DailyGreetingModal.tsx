@@ -94,13 +94,19 @@ export const DailyGreetingModal: React.FC<DailyGreetingModalProps> = ({ onSelect
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const focusTimer = window.setTimeout(() => {
-      sheetRef.current?.querySelector<HTMLElement>('.greeting-primary')?.focus();
+      // El foco va a la hoja (sin anillo); Intro abre el día y Tab recorre los botones.
+      sheetRef.current?.focus();
     }, 120);
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.stopPropagation();
         handleClose();
+        return;
+      }
+      if (event.key === 'Enter' && document.activeElement === sheetRef.current) {
+        event.preventDefault();
+        sheetRef.current?.querySelector<HTMLElement>('.greeting-primary')?.click();
         return;
       }
       if (event.key !== 'Tab' || !sheetRef.current) return;
@@ -164,6 +170,7 @@ export const DailyGreetingModal: React.FC<DailyGreetingModalProps> = ({ onSelect
 
           <motion.div
             ref={sheetRef}
+            tabIndex={-1}
             className="greeting-sheet"
             role="dialog"
             aria-modal="true"

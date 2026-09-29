@@ -539,7 +539,8 @@ input:focus, input:focus-visible, textarea:focus, textarea:focus-visible {
 }
 
 /* Smooth focus ring system-wide with color from accent */
-:focus-visible:not(input):not(textarea):not(.task-title-input) {
+/* Los contenedores que reciben el foco por código (tabindex=-1) no llevan anillo. */
+:focus-visible:not(input):not(textarea):not(.task-title-input):not([tabindex="-1"]) {
   outline: 2px solid var(--accent-primary, #007aff) !important;
   outline-offset: 2px !important;
   border-radius: 8px !important;
@@ -2227,3 +2228,11 @@ body.dark .cad-summary-cost strong {
   background: var(--separator);
   z-index: 1;
 }
+.install-alert .app-alert-copy { align-items: center; text-align: center; }
+.install-alert-icon {
+  width: 52px; height: 52px; border-radius: 12px; margin: 0 auto 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--accent-red, #ff3b30);
+  background: color-mix(in srgb, var(--accent-red, #ff3b30) 14%, transparent);
+}
+.app-alert-actions > button:only-child { grid-column: 1 / -1; }
