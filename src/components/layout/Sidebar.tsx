@@ -8,8 +8,7 @@ import {
   Rocket,
   Search,
   Sparkles,
-  X
-} from 'lucide-react';
+  X, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { isCompletedInCurrentPeriod } from '../../services/TaskService';
@@ -27,6 +26,7 @@ import { SmartListsGrid } from './sidebar/SmartListsGrid';
 import { CyclesListSection } from './sidebar/CyclesListSection';
 import { UserProfileDropdown } from './sidebar/UserProfileDropdown';
 import { getUserEmail } from '../../utils/userIdentity';
+import { modShortcut } from '../../utils/platform';
 
 interface SidebarProps {
   currentView: string;
@@ -130,7 +130,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
     email: isGuest ? 'Datos solo en este dispositivo' : getUserEmail(),
   };
   // Inicial del avatar: la del nombre si lo hay; si no, la del email.
-  const avatarInitial = (displayName || getUserEmail() || '·').charAt(0).toUpperCase();
+  const avatarInitial = (displayName || getUserEmail() || '').trim().charAt(0).toUpperCase();
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [isEditCyclesMode, setIsEditCyclesMode] = useState(false);
@@ -224,7 +224,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                   transition: 'all 0.18s ease',
                   overflow: 'hidden'
                 }}
-                title="Buscar (⌘K)"
+                title={`Buscar (${modShortcut('K')})`}
                 aria-label="Buscar"
               >
                 <Search size={15} style={{ flexShrink: 0 }} />
@@ -262,7 +262,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                     fontSize: '0.82rem',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.12)'
                   }}>
-                    {avatarInitial}
+                    {avatarInitial || <User size={17} strokeWidth={2.4} aria-hidden="true" />}
                   </div>
                   {/* Sync status micro-dot */}
                   <span style={{
@@ -313,7 +313,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 borderRadius: 4,
                 border: '1px solid var(--border-subtle)',
                 flexShrink: 0
-              }}>⌘K</kbd>
+              }}>{modShortcut('K')}</kbd>
             </div>
 
             <button
@@ -479,7 +479,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               <div
                 className="list-separator-line"
                 aria-hidden="true"
-                style={{ height: 1, minHeight: 1, background: 'var(--border-subtle, rgba(120, 120, 128, 0.28))', marginLeft: 55, marginRight: 0 }}
+                style={{ marginLeft: 56 }}
               />
             )}
 
@@ -553,11 +553,11 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 <Inbox size={17} color="white" strokeWidth={2.2} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-                <span className="title" style={{ fontSize: '1.05rem', fontWeight: 600, color: currentView === 'list_inbox' ? 'var(--accent-primary)' : 'var(--text-primary)' }}>Bandeja de entrada</span>
+                <span className="title" style={{ fontSize: '1.05rem', fontWeight: currentView === 'list_inbox' ? 600 : 500, color: currentView === 'list_inbox' ? 'var(--accent-primary)' : 'var(--text-primary)' }}>Bandeja de entrada</span>
               </div>
               <span className="count">
                 {Object.values(tasks || {}).filter(t => {
-                  if (t.deleted_at || isTaskCompleted(t)) return false;
+                  if (t.deleted_at || isTaskCompleted(t) || isCompletedInCurrentPeriod(t, cycles, listSections, lists)) return false;
                   const catId = t.categoryId || (t as any).category_id;
                   return catId === 'inbox' || !catId;
                 }).length}
@@ -566,15 +566,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
             <div 
               className="list-separator-line"
               aria-hidden="true" 
-              style={{
-                height: 1,
-                minHeight: 1,
-                background: 'var(--border-subtle, rgba(120, 120, 128, 0.28))',
-                marginLeft: 55,
-                marginRight: 0,
-                opacity: 0.95,
-                flexShrink: 0
-              }} 
+              style={{ marginLeft: 56 }} 
             />
 
             <ListHierarchy 
@@ -619,7 +611,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 <Trash2 size={17} color="white" strokeWidth={2.2} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-                <span className="title" style={{ fontSize: '1.05rem', fontWeight: 600, color: currentView === 'TRASH' ? 'var(--accent-primary)' : 'var(--text-primary)' }}>Papelera</span>
+                <span className="title" style={{ fontSize: '1.05rem', fontWeight: currentView === 'TRASH' ? 600 : 500, color: currentView === 'TRASH' ? 'var(--accent-primary)' : 'var(--text-primary)' }}>Papelera</span>
               </div>
               <span className="count">
                 {Object.values(tasks || {}).filter(t => t.deleted_at).length}

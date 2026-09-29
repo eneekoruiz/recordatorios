@@ -519,8 +519,9 @@ export function getGroceryCategory(title?: string | null): string | null {
  * Obtiene la información distintiva del tipo de lista (Duraciones, Financiera, Anotar, etc.)
  * para mostrar un distintivo claro y visible junto al nombre.
  */
-export function getListBadgeInfo(list?: CustomList | null, listIdOrView?: string | null): { label: string; color: string } {
-  if (!list && !listIdOrView) return { label: 'Anotar', color: 'var(--text-tertiary)' };
+export function getListBadgeInfo(list?: CustomList | null, listIdOrView?: string | null): { label: string; color: string; generic?: boolean } {
+  // «Anotar» es la lista corriente: no lleva distintivo (sería ruido junto a cada título).
+  if (!list && !listIdOrView) return { label: 'Anotar', color: 'var(--text-tertiary)', generic: true };
   if (list?.isFinancial || isShoppingList(listIdOrView, list)) {
     return { label: 'Financiera', color: '#30d158' };
   }
@@ -540,6 +541,6 @@ export function getListBadgeInfo(list?: CustomList | null, listIdOrView?: string
   if (type === 'goals') {
     return { label: 'Propósitos', color: '#af52de' };
   }
-  return { label: 'Anotar', color: 'var(--text-tertiary)' };
+  return { label: 'Anotar', color: 'var(--text-tertiary)', generic: true };
 }
 

@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Calendar, Sparkles, Clock, Heart, Plus, Share2, Coffee, MapPin } from 'lucide-react';
+import { Plus, Share2, Coffee, ChevronRight } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
 import { getPersonRelationshipStats } from '../../services/TaskService';
 import { HapticService } from '../../services/HapticService';
+import { SheetNavBar } from '../ui/SheetNavBar';
 
 interface PersonProfileModalProps {
   personName: string | null;
@@ -23,6 +24,13 @@ export const PersonProfileModal: React.FC<PersonProfileModalProps> = ({
   onEditTask,
   onAddMemoryWithPerson
 }) => {
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
+
   if (!isOpen || !personName) return null;
 
   const stats = getPersonRelationshipStats(personName, allTasks);
@@ -72,299 +80,99 @@ export const PersonProfileModal: React.FC<PersonProfileModalProps> = ({
     }
   };
 
+  const firstMemory = stats.earliestTask
+    ? new Date(stats.earliestTask.dueDate || stats.earliestTask.created_at).toLocaleDateString('es-ES', { month: 'short', year: 'numeric' })
+    : '—';
+
   return createPortal(
     <AnimatePresence>
       <div
-        className="premium-overlay person-profile-overlay"
+        className="premium-overlay list-config-overlay person-profile-overlay"
         data-testid="person-profile-modal"
-        style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 99999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '16px'
-        }}
+        style={{ position: 'fixed', inset: 0, zIndex: 99999 }}
+        onClick={onClose}
       >
-        {/* Backdrop */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-          style={{
-            position: 'absolute',
-            inset: 0
-          }}
-        />
-
-        {/* Modal Window */}
-        <motion.div
-          className="premium-sheet person-profile-sheet"
-          initial={{ opacity: 0, scale: 0.95, y: 16 }}
+          className="person-profile-sheet form-sheet"
+          role="dialog"
+          aria-modal="true"
+          aria-label={personName}
+          initial={{ opacity: 0, scale: 0.96, y: 16 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 12 }}
-          transition={{ type: 'spring', damping: 28, stiffness: 400 }}
-          style={{
-            maxWidth: 520,
-            padding: 0,
-            overflow: 'hidden'
-          }}
+          exit={{ opacity: 0, scale: 0.96, y: 12 }}
+          transition={{ type: 'spring', damping: 30, stiffness: 400 }}
           onClick={e => e.stopPropagation()}
         >
-          {/* Header */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '18px 20px',
-            borderBottom: '1px solid var(--border-subtle)',
-            background: 'var(--bg-surface)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{
-                width: 44,
-                height: 44,
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #5856D6, #af52de)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-                fontSize: '1.25rem',
-                fontWeight: 700,
-                boxShadow: '0 4px 12px rgba(88, 86, 214, 0.35)'
-              }}>
+          <SheetNavBar title={personName} onConfirm={onClose} confirmLabel="Listo" confirmTitle="Cerrar" />
+
+          <div className="form-sheet-body">
+            {/* Cabecera: inicial + nombre */}
+            <div className="form-hero" style={{ paddingBottom: 4 }}>
+              <div className="form-hero-icon" style={{ background: 'linear-gradient(135deg, #5856D6, #af52de)', fontSize: '1.9rem', fontWeight: 700, ['--hero-color' as string]: 'rgba(88, 86, 214, 0.5)' } as React.CSSProperties}>
                 {initial}
               </div>
-              <div>
-                <h3 className="modal-title" style={{ fontSize: '1.15rem' }}>
-                  {personName}
-                </h3>
-                <span className="modal-subtitle">
-                  Bitácora de momentos compartidos
-                </span>
-              </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <button
-                type="button"
-                className="modal-close-btn"
-                onClick={handleShare}
-                title="Compartir vivencias"
-                aria-label="Compartir vivencias"
-              >
-                <Share2 size={15} />
-              </button>
-
-              <button
-                type="button"
-                className="modal-close-btn"
-                onClick={onClose}
-                title="Cerrar"
-                aria-label="Cerrar"
-              >
-                <X size={16} strokeWidth={2.4} />
-              </button>
-            </div>
-          </div>
-
-          {/* Stats Cards Row */}
-          <div style={{
-            padding: '16px 20px',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: 10,
-            background: 'var(--bg-card)'
-          }}>
-            <div style={{
-              padding: '12px 10px',
-              borderRadius: 14,
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border-subtle)',
-              textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 4 }}>
-                <Heart size={12} color="#ff2d55" />
-                <span>Vivencias</span>
-              </div>
-              <div style={{ fontSize: '1.15rem', fontWeight: 750, color: 'var(--text-primary)' }}>
-                {stats.count}
-              </div>
+            {/* Cifras */}
+            <div className="form-group stat-grid">
+              <div><strong>{stats.count}</strong><span>{stats.count === 1 ? 'momento' : 'momentos'}</span></div>
+              <div><strong style={{ color: '#5856D6' }}>{stats.lastPlanText}</strong><span>último plan</span></div>
+              <div><strong>{firstMemory}</strong><span>primer recuerdo</span></div>
             </div>
 
-            <div style={{
-              padding: '12px 10px',
-              borderRadius: 14,
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border-subtle)',
-              textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 4 }}>
-                <Clock size={12} color="#5856D6" />
-                <span>Último plan</span>
+            {/* Hace tiempo que no os veis */}
+            {stats.daysSinceLast !== null && stats.daysSinceLast >= 30 && (
+              <div className="form-group" data-testid="long-time-no-see-alert">
+                <button type="button" className="form-row" onClick={handleAddClick}>
+                  <span className="form-row-icon" style={{ background: '#ff9500' }}><Coffee size={15} /></span>
+                  <span className="form-row-text">
+                    <span className="form-row-title">Hace {stats.daysSinceLast} días del último plan</span>
+                    <span className="form-row-sub">¿Qué tal un café o una llamada?</span>
+                  </span>
+                  <span style={{ color: 'var(--accent-blue, #007aff)', fontWeight: 600, fontSize: '0.9rem' }}>Planear algo</span>
+                </button>
               </div>
-              <div style={{ fontSize: '0.95rem', fontWeight: 750, color: '#5856D6', marginTop: 2 }}>
-                {stats.lastPlanText}
-              </div>
-            </div>
-
-            <div style={{
-              padding: '12px 10px',
-              borderRadius: 14,
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border-subtle)',
-              textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 4 }}>
-                <Sparkles size={12} color="#ff9500" />
-                <span>Primer recuerdo</span>
-              </div>
-              <div style={{ fontSize: '0.8rem', fontWeight: 650, color: 'var(--text-primary)', marginTop: 4 }}>
-                {stats.earliestTask
-                  ? new Date(stats.earliestTask.dueDate || stats.earliestTask.created_at).toLocaleDateString('es-ES', { month: 'short', year: 'numeric' })
-                  : '—'}
-              </div>
-            </div>
-          </div>
-
-          {/* Tiempo sin vernos proactivo */}
-          {stats.daysSinceLast !== null && stats.daysSinceLast >= 30 && (
-            <div
-              data-testid="long-time-no-see-alert"
-              style={{
-                margin: '12px 20px 0',
-                padding: '10px 14px',
-                borderRadius: 12,
-                background: 'rgba(255, 149, 0, 0.1)',
-                border: '1px solid rgba(255, 149, 0, 0.25)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 10
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Coffee size={18} color="#ff9500" />
-                <span style={{ fontSize: '0.80rem', color: '#ff9500', fontWeight: 600 }}>
-                  Hace {stats.daysSinceLast} días del último plan. ¿Qué tal un café o una llamada?
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={handleAddClick}
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: 999,
-                  background: '#ff9500',
-                  color: 'white',
-                  border: 'none',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  flexShrink: 0
-                }}
-              >
-                Planear algo
-              </button>
-            </div>
-          )}
-
-          {/* Memories List */}
-          <div style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '16px 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 8
-          }}>
-            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Historial de Recuerdos
-            </div>
-
-            {stats.allPersonTasks.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '30px 20px', color: 'var(--text-tertiary)', fontSize: '0.88rem' }}>
-                No hay recuerdos registrados con {personName} todavía.
-              </div>
-            ) : (
-              stats.allPersonTasks.map(task => {
-                const dateStr = task.dueDate || task.created_at;
-                const formatted = dateStr
-                  ? new Date(dateStr).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
-                  : '';
-
-                return (
-                  <div
-                    key={task.id}
-                    onClick={() => handleTaskClick(task.id)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '10px 12px',
-                      borderRadius: 12,
-                      background: 'var(--bg-surface)',
-                      border: '1px solid var(--border-subtle)',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                    title="Toca para editar este recuerdo"
-                  >
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {task.title}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
-                        {formatted && (
-                          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                            <Calendar size={11} /> {formatted}
-                          </span>
-                        )}
-                        {task.vibe && (
-                          <span style={{ fontSize: '0.72rem', color: '#ff9500', background: 'rgba(255, 149, 0, 0.12)', padding: '1px 6px', borderRadius: 999, fontWeight: 600 }}>
-                            {task.vibe}
-                          </span>
-                        )}
-                        {task.locationName && (
-                          <span style={{ fontSize: '0.72rem', color: '#34c759', background: 'rgba(52, 199, 89, 0.12)', padding: '1px 6px', borderRadius: 999, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                            <MapPin size={10} /> {task.locationName}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {task.price !== undefined && (
-                      <span className="apple-price-pill" style={{ marginLeft: 8, fontSize: '0.74rem' }}>
-                        {task.price} €
-                      </span>
-                    )}
-                  </div>
-                );
-              })
             )}
-          </div>
 
-          {/* Footer Action */}
-          <div style={{
-            padding: '14px 20px',
-            borderTop: '1px solid var(--border-subtle)',
-            background: 'var(--bg-surface)',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: 10
-          }}>
-            <button
-              type="button"
-              className="modal-btn-primary"
-              onClick={handleAddClick}
-            >
-              <Plus size={16} strokeWidth={2.4} />
-              <span>Añadir recuerdo con {personName}</span>
-            </button>
+            {/* Momentos */}
+            <div>
+              <p className="form-group-label">Momentos</p>
+              <div className="form-group">
+                <button type="button" className="form-row" onClick={handleAddClick}>
+                  <span className="form-row-icon" style={{ background: 'var(--accent-blue, #007aff)' }}><Plus size={16} strokeWidth={2.6} /></span>
+                  <span className="form-row-text"><span className="form-row-title" style={{ color: 'var(--accent-blue, #007aff)' }}>Añadir un momento con {personName}</span></span>
+                </button>
+                {stats.allPersonTasks.map(task => {
+                  const dateStr = task.dueDate || task.created_at;
+                  const formatted = dateStr
+                    ? new Date(dateStr).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
+                    : '';
+                  const meta = [formatted, task.locationName, task.vibe].filter(Boolean).join(' · ');
+                  return (
+                    <button type="button" key={task.id} className="form-row" onClick={() => handleTaskClick(task.id)} title="Abrir este recuerdo">
+                      <span className="form-row-text" style={{ paddingLeft: 40 }}>
+                        <span className="form-row-title" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{task.title}</span>
+                        {meta && <span className="form-row-sub">{meta}</span>}
+                      </span>
+                      {task.price !== undefined && <span style={{ color: 'var(--text-secondary)', fontSize: '0.86rem' }}>{task.price} €</span>}
+                      <ChevronRight size={16} color="var(--text-tertiary)" />
+                    </button>
+                  );
+                })}
+              </div>
+              {stats.allPersonTasks.length === 0 && (
+                <p className="form-group-footer">Todavía no hay momentos guardados con {personName}.</p>
+              )}
+            </div>
+
+            {stats.allPersonTasks.length > 0 && (
+              <div className="form-group">
+                <button type="button" className="form-row" onClick={handleShare}>
+                  <span className="form-row-icon" style={{ background: '#8e8e93' }}><Share2 size={15} /></span>
+                  <span className="form-row-text"><span className="form-row-title">Compartir estos momentos</span></span>
+                </button>
+              </div>
+            )}
           </div>
         </motion.div>
       </div>

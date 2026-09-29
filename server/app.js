@@ -115,10 +115,16 @@ function createMemoryHitStore() {
   };
 }
 
+const RATE_LIMIT_DB_COOLDOWN_MS = 60_000;
+
 function createDbHitStore(prisma) {
   const fallback = createMemoryHitStore();
   const table = prisma.rateLimit;
+  // Interruptor: si la BD falla (p. ej. la tabla aún no existe porque falta `prisma db push`), se
+  // limita en memoria durante un minuto sin volver a intentarlo ni registrar un error por petición.
+  let dbRetryAt = 0;
   return async (key, windowMs) => {
+    if (Date.now() < dbRetryAt) return fallback(key, windowMs);
     try {
       const now = new Date();
       const resetAt = new Date(now.getTime() + windowMs);
@@ -134,7 +140,8 @@ function createDbHitStore(prisma) {
       if (Math.random() < 0.01) table.deleteMany({ where: { resetAt: { lt: now } } }).catch(() => {});
       return { count: row.count, resetAt: new Date(row.resetAt).getTime() };
     } catch (error) {
-      console.error('Rate limit store error (se limita en memoria):', error?.message || error);
+      dbRetryAt = Date.now() + RATE_LIMIT_DB_COOLDOWN_MS;
+      console.error('Rate limit store no disponible (¿falta `prisma db push`?). Se limita en memoria durante 1 min:', error?.message || error);
       return fallback(key, windowMs);
     }
   };

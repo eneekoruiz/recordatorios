@@ -17,11 +17,8 @@
 .greeting-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(18px) saturate(1.1);
-  -webkit-backdrop-filter: blur(18px) saturate(1.1);
+  background: var(--scrim, rgba(0, 0, 0, 0.3));
 }
-[data-theme='dark'] .greeting-backdrop { background: rgba(0, 0, 0, 0.58); }
 
 .greeting-sheet {
   position: relative;
@@ -128,7 +125,15 @@
   border-radius: 8px;
   transition: background 0.15s ease;
 }
-.greeting-task + .greeting-task { border-top: 0.5px solid var(--separator, var(--border-subtle)); }
+.greeting-task { position: relative; }
+.greeting-task + .greeting-task::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; left: 26px;
+  height: 1px;
+  transform: scaleY(0.5);
+  background: var(--separator, var(--border-subtle));
+}
 @media (hover: hover) and (pointer: fine) {
   .greeting-task:hover { background: var(--bg-hover); }
 }
@@ -260,3 +265,4 @@
   .greeting-title { font-size: 1.40rem; }
 }
 
+.greeting-sheet:focus { outline: none; }

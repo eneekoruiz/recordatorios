@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, Trash2, CornerDownRight, X } from 'lucide-react';
 
 interface DeleteParentModalProps {
   isOpen: boolean;
@@ -70,10 +69,11 @@ export function DeleteParentModal({
 
   if (!isOpen) return null;
 
+  const subtareas = `${childCount} ${childCount === 1 ? 'subtarea' : 'subtareas'}`;
   return createPortal(
     <AnimatePresence>
       <motion.div
-        className="premium-overlay"
+        className="premium-overlay alert-overlay"
         role="presentation"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -81,141 +81,38 @@ export function DeleteParentModal({
         transition={{ duration: 0.18 }}
         onClick={onCancel}
       >
+        {/* Alerta de iOS con tres opciones apiladas: la destructiva en rojo y «Cancelar» en negrita. */}
         <motion.section
-          className="premium-sheet"
+          className="app-alert"
           role="alertdialog"
           ref={modalRef}
           aria-modal="true"
           aria-labelledby="delete-parent-title"
           aria-describedby="delete-parent-description"
-          initial={{ opacity: 0, y: 26, scale: 0.96 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 16, scale: 0.97 }}
+          initial={{ opacity: 0, scale: 1.08 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.96 }}
           transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
-            <div
-              className="modal-hero-badge"
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 16,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'rgba(255, 59, 48, 0.12)',
-                border: '1px solid rgba(255, 59, 48, 0.2)',
-                marginBottom: 0
-              }}
-              aria-hidden="true"
-            >
-              <AlertTriangle size={24} strokeWidth={2.2} color="var(--accent-red)" />
-            </div>
-
-            <button
-              className="modal-close-btn"
-              onClick={onCancel}
-              aria-label="Cerrar"
-            >
-              <X size={16} strokeWidth={2.4} />
-            </button>
+          <div className="app-alert-copy">
+            <h2 id="delete-parent-title">
+              {isPermanent ? `¿Eliminar definitivamente «${parentTitle || 'este recordatorio'}»?` : `¿Eliminar «${parentTitle || 'este recordatorio'}»?`}
+            </h2>
+            <p id="delete-parent-description">
+              {childCount === 1
+                ? 'Tiene 1 subtarea. Puedes eliminarla con él o conservarla como recordatorio suelto en el mismo sitio.'
+                : `Tiene ${subtareas}. Puedes eliminarlas con él o conservarlas como recordatorios sueltos en el mismo sitio.`}
+            </p>
           </div>
-
-          <h2
-            id="delete-parent-title"
-            style={{
-              fontSize: '1.25rem',
-              fontWeight: 700,
-              margin: '0 0 8px 0',
-              letterSpacing: '-0.02em',
-              color: 'var(--text-primary)'
-            }}
-          >
-            {isPermanent ? 'Eliminar definitivamente' : 'Eliminar recordatorio con subtareas'}
-          </h2>
-
-          <p
-            id="delete-parent-description"
-            style={{
-              fontSize: '0.94rem',
-              lineHeight: '1.5',
-              color: 'var(--text-secondary)',
-              margin: '0 0 20px 0'
-            }}
-          >
-            <strong>&quot;{parentTitle || 'Este recordatorio'}&quot;</strong> contiene{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>
-              {childCount} {childCount === 1 ? 'subtarea' : 'subtareas'}
-            </strong>
-            . ¿Qué deseas hacer con las subtareas?
-          </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {/* Opción 1: Eliminar todo */}
-            <button
-              type="button"
-              className="parent-modal-option parent-modal-option--danger"
-              onClick={onDeleteAll}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '14px 16px',
-                borderRadius: 16,
-                color: 'var(--accent-red, #ff453a)',
-                fontSize: '0.94rem',
-                fontWeight: 650,
-                cursor: 'pointer',
-                textAlign: 'left',
-              }}
-            >
-              <Trash2 size={18} style={{ flexShrink: 0 }} />
-              <div style={{ flex: 1 }}>
-                <div>Eliminar todo</div>
-                <div style={{ fontSize: '0.78rem', fontWeight: 400, opacity: 0.85, marginTop: 2 }}>
-                  {isPermanent
-                    ? 'Borrará permanentemente el recordatorio y sus subtareas'
-                    : 'Moverá el recordatorio y todas sus subtareas a la papelera'}
-                </div>
-              </div>
+          <div className="app-alert-actions is-stacked">
+            <button type="button" className="danger" onClick={onDeleteAll}>
+              {isPermanent ? 'Eliminar todo definitivamente' : childCount === 1 ? 'Eliminar con su subtarea' : `Eliminar con sus ${subtareas}`}
             </button>
-
-            {/* Opción 2: Conservar subtareas (anular sangrado) */}
-            <button
-              type="button"
-              className="parent-modal-option"
-              onClick={onKeepSubtasks}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '14px 16px',
-                borderRadius: 16,
-                color: 'var(--text-primary)',
-                fontSize: '0.94rem',
-                fontWeight: 650,
-                cursor: 'pointer',
-                textAlign: 'left',
-              }}
-            >
-              <CornerDownRight size={18} style={{ flexShrink: 0, color: 'var(--accent-primary, #0a84ff)' }} />
-              <div style={{ flex: 1 }}>
-                <div>Conservar subtareas</div>
-                <div style={{ fontSize: '0.78rem', fontWeight: 400, color: 'var(--text-secondary)', marginTop: 2 }}>
-                  Anula el sangrado en su misma posición y elimina solo la tarea principal
-                </div>
-              </div>
+            <button type="button" onClick={onKeepSubtasks}>
+              {childCount === 1 ? 'Conservar la subtarea' : 'Conservar las subtareas'}
             </button>
-
-            {/* Opción 3: Cancelar */}
-            <button
-              ref={cancelRef}
-              type="button"
-              className="modal-btn-secondary"
-              onClick={onCancel}
-              style={{ marginTop: 6, width: '100%' }}
-            >
+            <button ref={cancelRef} type="button" className="is-preferred" onClick={onCancel}>
               Cancelar
             </button>
           </div>

@@ -262,9 +262,9 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
         >
           <div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 10px', borderRadius: 999, background: 'var(--accent-glow)', color: 'var(--accent-primary)', fontSize: '0.8rem', fontWeight: 700, marginBottom: 12 }}>
-              <Sparkles size={14} /> Asistente IA & Protocolo MCP
+              <Sparkles size={14} /> Asistente IA
             </div>
-            <h3 className="text-title" style={{ marginBottom: 'var(--space-8)' }}>Importación Asistida con IA</h3>
+            <h3 className="text-title" style={{ marginBottom: 'var(--space-8)' }}>Importación asistida</h3>
             <p className="text-secondary" style={{ margin: 0, maxWidth: 640 }}>
               Habla o pega cualquier texto en bruto (rutinas, listas de compras, mudanzas o proyectos). La IA desglosará automáticamente los recordatorios con sus precios, fechas, franjas horarias y listas adecuadas para que los confirmes con un solo clic.
             </p>
@@ -284,7 +284,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
-            <Sparkles size={18} /> Iniciar Asistente IA
+            <Sparkles size={18} /> Abrir el asistente
           </motion.button>
         </motion.div>
 

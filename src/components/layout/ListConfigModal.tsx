@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type React from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
@@ -13,7 +14,8 @@ interface ListConfigModalProps {
 
 import { LIST_AVAILABLE_COLORS, isReservedFrequencyColor } from '../../constants/colors';
 import { LIST_ICON_MAP as ICONS, getSuggestedListIconAndColor } from '../../constants/icons';
-import { CheckSquare, Folder, Check, X, CreditCard, BookOpen, Sparkles, Calendar, Target, Clock } from 'lucide-react';
+import { CheckSquare, Folder, Check, CreditCard, BookOpen, Sparkles, Calendar, Target, Clock } from 'lucide-react';
+import { SheetNavBar } from '../ui/SheetNavBar';
 
 const COLORS = LIST_AVAILABLE_COLORS;
 // Una fila completa de muestras (7 columnas) antes de «Ver más»: sin muestras huérfanas.
@@ -158,425 +160,215 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
     onClose();
   };
 
+  const title = existingList
+    ? (existingList.isFolder ? 'Editar carpeta' : 'Editar lista')
+    : (isFolder ? 'Nueva carpeta' : (parentId ? 'Nueva lista anidada' : 'Nueva lista'));
+  const TYPE_KEYS = ['simple', 'routines', 'events', 'goals', 'caducidades', 'que_he_hecho'] as const;
+  const typeIcon = (iconName: string) =>
+    iconName === 'sparkles' ? Sparkles :
+    iconName === 'check-square' ? CheckSquare :
+    iconName === 'calendar' ? Calendar :
+    iconName === 'target' ? Target :
+    iconName === 'credit-card' ? CreditCard : BookOpen;
+  // Una frase por tipo: lo justo para elegir sin leer un párrafo.
+  const TYPE_HINT: Record<ListType, string> = {
+    simple: 'Para apuntar cosas y compras, sin duraciones ni frecuencias.',
+    routines: 'Limpieza y hogar: estima el tiempo, admite tareas en segundo plano y modo secuencia.',
+    events: 'Cumpleaños, citas y fechas señaladas con cuenta atrás.',
+    goals: 'Objetivos y retos a medio y largo plazo.',
+    caducidades: 'Carnets, seguros, tarjetas y suscripciones, con avisos antes de que venzan.',
+    que_he_hecho: 'Bitácora para recordar vivencias y con quién las compartiste.',
+  } as Record<ListType, string>;
+  const HeroIcon = ICONS[icon] || CheckSquare;
+  const visibleIcons = showAllIcons ? Object.keys(ICONS) : Object.keys(ICONS).slice(0, 12);
+
   return createPortal(
     <AnimatePresence>
       <div className="prompt-overlay list-config-overlay" onClick={onClose} style={{ zIndex: 100000, position: 'fixed', inset: 0 }}>
-        <motion.div 
-          className="list-config-modal"
-          initial={{ opacity: 0, scale: 0.95, y: 30 }}
+        <motion.div
+          className="list-config-modal form-sheet"
+          role="dialog"
+          aria-modal="true"
+          aria-label={title}
+          initial={{ opacity: 0, scale: 0.96, y: 24 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 30 }}
-          transition={{ type: 'spring', damping: 28, stiffness: 380 }}
+          exit={{ opacity: 0, scale: 0.96, y: 24 }}
+          transition={{ type: 'spring', damping: 30, stiffness: 400 }}
           onClick={e => e.stopPropagation()}
+          onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
+          style={{ ['--hero-color' as string]: color } as React.CSSProperties}
         >
-          <div className="modal-header-row">
-            <h3 className="modal-title">
-              {existingList ? (existingList.isFolder ? 'Editar carpeta' : 'Editar lista') : (isFolder ? 'Nueva carpeta' : (parentId ? 'Nueva lista anidada' : 'Nueva lista'))}
-            </h3>
-            <button 
-              type="button"
-              className="modal-close-btn"
-              onClick={onClose}
-              aria-label="Cerrar modal"
-            >
-              <X size={16} strokeWidth={2.4} />
-            </button>
-          </div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            
-            {/* Header Preview */}
-            <div style={{ display: 'flex', justifyContent: 'center', margin: '2px 0 6px' }}>
-              <motion.div 
-                animate={{ backgroundColor: color, boxShadow: `0 12px 32px ${color}55, inset 0 2px 4px rgba(255,255,255,0.4)` }}
-                transition={{ duration: 0.2 }}
-                style={{
-                  width: 72, 
-                  height: 72, 
-                  borderRadius: '50%', 
-                  background: color,
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  boxShadow: `0 12px 32px ${color}55, inset 0 2px 4px rgba(255,255,255,0.4)`
-                }}
-              >
-                {(() => {
-                  const IconComp = ICONS[icon] || CheckSquare;
-                  return <IconComp size={34} color="white" />;
-                })()}
-              </motion.div>
-            </div>
+          <SheetNavBar
+            title={title}
+            onCancel={onClose}
+            onConfirm={handleSave}
+            confirmLabel={existingList ? 'Guardar' : 'Crear'}
+            confirmDisabled={!name.trim()}
+          />
 
-            {/* Title Input */}
-            <div style={{ width: '100%' }}>
-              <input 
-                type="text" 
-                className="modal-title-input"
-                value={name} 
+          <div className="form-sheet-body">
+            {/* Icono + nombre */}
+            <div className="form-group form-hero">
+              <div className="form-hero-icon" style={{ background: color, ['--hero-color' as string]: `${color}88` } as React.CSSProperties}>
+                <HeroIcon size={34} color="white" />
+              </div>
+              <input
+                type="text"
+                className="form-name-input"
+                value={name}
                 onChange={e => handleNameChange(e.target.value)}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
-                placeholder={isFolder ? "Nombre de la carpeta" : "Nombre de la lista"} 
+                onKeyDown={e => { if (e.key === 'Enter' && name.trim()) handleSave(); }}
+                placeholder={isFolder ? 'Nombre de la carpeta' : 'Nombre de la lista'}
+                aria-label={isFolder ? 'Nombre de la carpeta' : 'Nombre de la lista'}
+                data-focused={isFocused || undefined}
                 autoFocus
-                style={{
-                  textAlign: 'center',
-                  borderColor: isFocused ? color : 'var(--border-subtle)',
-                  boxShadow: isFocused ? `0 0 0 3px ${color}26, 0 8px 20px rgba(0,0,0,0.06)` : 'none'
-                }}
               />
             </div>
 
-            {/* Selector de Tipo de Lista (6 tipos: simple, rutinas, eventos, propósitos, caducidades, qué he hecho) */}
+            {/* Tipo de lista */}
             {!isFolder && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px' }}>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Tipo de Lista
-                  </span>
-                  <span style={{ 
-                    fontSize: '0.72rem', 
-                    fontWeight: 600, 
-                    color: LIST_TYPE_CONFIG[listType].supportsDuration ? '#0a84ff' : 'var(--text-tertiary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4
-                  }}>
-                    {LIST_TYPE_CONFIG[listType].supportsDuration ? 'Con duraciones estimadas' : 'Sin duraciones'}
-                  </span>
+              <div>
+                <p className="form-group-label">Tipo</p>
+                <div className="form-group is-padded">
+                  <div className="type-grid" role="radiogroup" aria-label="Tipo de lista">
+                    {TYPE_KEYS.map(typeKey => {
+                      const item = LIST_TYPE_CONFIG[typeKey];
+                      const isSelected = listType === typeKey;
+                      const TypeIcon = typeIcon(item.iconName);
+                      const testId = typeKey === 'caducidades'
+                        ? 'template-caducidades-btn'
+                        : (typeKey === 'que_he_hecho' ? 'template-quehehecho-btn' : `template-${typeKey}-btn`);
+                      return (
+                        <button
+                          key={typeKey}
+                          type="button"
+                          role="radio"
+                          aria-checked={isSelected}
+                          data-testid={testId}
+                          className={`type-tile${isSelected ? ' is-selected' : ''}`}
+                          style={{ ['--tile-color' as string]: item.color } as React.CSSProperties}
+                          onClick={() => {
+                            setListType(typeKey);
+                            if (!existingList) {
+                              setColor(item.color);
+                              setIcon(item.iconName);
+                            }
+                          }}
+                        >
+                          <TypeIcon size={19} strokeWidth={2.2} />
+                          <span>{item.badgeLabel}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
+                <p className="form-group-footer">{TYPE_HINT[listType]}</p>
+              </div>
+            )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                  {(['simple', 'routines', 'events', 'goals', 'caducidades', 'que_he_hecho'] as const).map(typeKey => {
-                    const item = LIST_TYPE_CONFIG[typeKey];
-                    const isSelected = listType === typeKey;
-                    const TypeIcon = item.iconName === 'sparkles' ? Sparkles :
-                                     item.iconName === 'check-square' ? CheckSquare :
-                                     item.iconName === 'calendar' ? Calendar :
-                                     item.iconName === 'target' ? Target :
-                                     item.iconName === 'credit-card' ? CreditCard : BookOpen;
-                    const testId = typeKey === 'caducidades' 
-                      ? 'template-caducidades-btn' 
-                      : (typeKey === 'que_he_hecho' ? 'template-quehehecho-btn' : `template-${typeKey}-btn`);
-
+            {/* Color */}
+            <div>
+              <p className="form-group-label">Color</p>
+              <div className="form-group is-padded">
+                <div className="swatch-grid color-grid">
+                  {(showAllColors ? COLORS : COLORS.slice(0, COLOR_PREVIEW_COUNT)).map(c => {
+                    const isSelected = color === c;
                     return (
                       <button
-                        key={typeKey}
+                        key={c}
                         type="button"
-                        data-testid={testId}
-                        onClick={() => {
-                          setListType(typeKey);
-                          if (!existingList) {
-                            setColor(item.color);
-                            setIcon(item.iconName);
-                          }
-                        }}
-                        style={{
-                          padding: '10px 6px',
-                          borderRadius: 12,
-                          border: isSelected ? `1.5px solid ${item.color}` : '1px solid var(--border-subtle)',
-                          background: isSelected ? `${item.color}15` : 'var(--bg-elevated)',
-                          color: isSelected ? item.color : 'var(--text-secondary)',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          gap: 4,
-                          textAlign: 'center',
-                          transition: 'all 0.16s ease'
-                        }}
+                        className={`swatch${isSelected ? ' is-selected' : ''}`}
+                        style={{ background: c, ['--swatch' as string]: c } as React.CSSProperties}
+                        onClick={() => setColor(c)}
+                        aria-label={`Color ${c}`}
+                        aria-pressed={isSelected}
                       >
-                        <TypeIcon size={18} strokeWidth={2.2} color={isSelected ? item.color : 'var(--text-secondary)'} />
-                        <span style={{ fontSize: '0.78rem', fontWeight: 650, color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)', lineHeight: 1.15 }}>
-                          {item.badgeLabel}
-                        </span>
-                        <span style={{ fontSize: '0.67rem', color: 'var(--text-tertiary)', lineHeight: 1.1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                          {typeKey === 'routines' ? 'Limpieza y hogar' :
-                           typeKey === 'simple' ? 'Notas y compras' :
-                           typeKey === 'events' ? 'Citas y fechas' :
-                           typeKey === 'goals' ? 'Metas del año' :
-                           typeKey === 'caducidades' ? 'Suscripciones' : 'Diario personal'}
-                        </span>
+                        {isSelected && <Check size={16} color="white" strokeWidth={3} />}
                       </button>
                     );
                   })}
                 </div>
-
-                {/* Explicación clara y detallada del tipo de lista seleccionado */}
-                <div style={{
-                  padding: '12px 14px',
-                  borderRadius: 14,
-                  background: `${LIST_TYPE_CONFIG[listType].color}10`,
-                  border: `1px solid ${LIST_TYPE_CONFIG[listType].color}30`,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 6
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 22,
-                      height: 22,
-                      borderRadius: 6,
-                      background: `${LIST_TYPE_CONFIG[listType].color}25`,
-                      color: LIST_TYPE_CONFIG[listType].color
-                    }}>
-                      {(() => {
-                        const item = LIST_TYPE_CONFIG[listType];
-                        const TypeIcon = item.iconName === 'sparkles' ? Sparkles :
-                                         item.iconName === 'check-square' ? CheckSquare :
-                                         item.iconName === 'calendar' ? Calendar :
-                                         item.iconName === 'target' ? Target :
-                                         item.iconName === 'credit-card' ? CreditCard : BookOpen;
-                        return <TypeIcon size={13} strokeWidth={2.4} />;
-                      })()}
-                    </span>
-                    <span style={{ fontSize: '0.84rem', fontWeight: 650, color: 'var(--text-primary)' }}>
-                      {LIST_TYPE_CONFIG[listType].label}
-                    </span>
-                  </div>
-                  <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.35 }}>
-                    {listType === 'routines' && 'Diseñada para limpieza, hogar y quehaceres recurrentes. Admite estimación de tiempo activo y en segundo plano (lavadora, mascarilla), secciones cíclicas y modo secuencia con temporizador.'}
-                    {listType === 'simple' && 'Para apuntar cosas, compras y notas de checklist. Sin duraciones forzadas ni frecuencias obligatorias; directo y al grano.'}
-                    {listType === 'events' && 'Pensada para fechas señaladas, cumpleaños, citas y eventos con cuenta atrás.'}
-                    {listType === 'goals' && 'Para objetivos anuales, retos y proyectos personales a medio y largo plazo.'}
-                    {listType === 'caducidades' && 'Ideal para carnets, DNI, seguros, tarjetas y suscripciones periódicas con avisos preventivos de renovación.'}
-                    {listType === 'que_he_hecho' && 'Bitácora personal para recordar vivencias, personas con las que estuviste y momentos especiales.'}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Is Folder Switch */}
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between', 
-              background: 'rgba(255,255,255,0.04)', 
-              border: '1px solid rgba(255,255,255,0.08)', 
-              borderRadius: 14, 
-              padding: '12px 16px',
-              cursor: 'pointer'
-            }}
-            onClick={() => {
-              const next = !isFolder;
-              setIsFolder(next);
-              if (next && icon === 'list') setIcon('folder');
-              if (!next && (icon === 'folder' || icon === 'folder-open')) setIcon('list');
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <Folder size={20} color={isFolder ? color : 'var(--text-secondary)'} />
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)' }}>Es una carpeta</span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Agrupa listas y subcarpetas sin contener tareas directamente</span>
-                </div>
-              </div>
-              <label className="switch" style={{ flexShrink: 0, margin: 0, pointerEvents: 'none' }}>
-                <input 
-                  type="checkbox" 
-                  checked={isFolder} 
-                  readOnly 
-                />
-                <span className="slider round"></span>
-              </label>
-            </div>
-
-            {/* Auto estimate duration toggle */}
-            {!isFolder && (
-              <div 
-                style={{
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  background: 'var(--bg-secondary)', 
-                  border: '1px solid var(--border-color)',
-                  borderRadius: 14, 
-                  padding: '12px 16px',
-                  cursor: 'pointer'
-                }}
-                onClick={() => setAutoEstimateDuration(!autoEstimateDuration)}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <Clock size={20} color={autoEstimateDuration ? color : 'var(--text-secondary)'} />
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)' }}>Estimar duración automáticamente</span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Calcula la duración estimada de cada tarea según su texto</span>
-                  </div>
-                </div>
-                <div style={{
-                  width: 44, height: 26, borderRadius: 13,
-                  background: autoEstimateDuration ? color : 'rgba(255,255,255,0.15)',
-                  position: 'relative', transition: 'background-color 0.2s ease', flexShrink: 0
-                }}>
-                  <div style={{
-                    width: 22, height: 22, borderRadius: '50%', background: '#ffffff',
-                    position: 'absolute', top: 2, left: autoEstimateDuration ? 20 : 2,
-                    transition: 'left 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                  }} />
-                </div>
-              </div>
-            )}
-
-            {/* Colors */}
-            <div>
-              <span style={{ display: 'block', marginBottom: 10, fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.02em', textTransform: 'uppercase' }}>Color</span>
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${COLOR_PREVIEW_COUNT}, minmax(0, 1fr))`, gap: '12px 0', justifyItems: 'center' }}>
-                {(showAllColors ? COLORS : COLORS.slice(0, COLOR_PREVIEW_COUNT)).map(c => {
-                  const isSelected = color === c;
-                  return (
-                    <button 
-                      key={c}
-                      type="button"
-                      onClick={() => setColor(c)}
-                      style={{
-                        width: 38, 
-                        height: 38, 
-                        borderRadius: '50%', 
-                        background: c, 
-                        border: isSelected ? '2px solid white' : '2px solid transparent',
-                        outline: isSelected ? `2px solid ${c}` : 'none',
-                        outlineOffset: 2, 
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: isSelected ? `0 4px 12px ${c}66` : '0 2px 6px rgba(0,0,0,0.15)',
-                        transition: 'all 0.15s ease',
-                        transform: isSelected ? 'scale(1.08)' : 'scale(1)'
-                      }}
-                    >
-                      {isSelected && <Check size={18} color="white" strokeWidth={3} style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }} />}
-                    </button>
-                  );
-                })}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10 }}>
-                <button
-                  type="button"
-                  onClick={() => setShowAllColors(!showAllColors)}
-                  style={{
-                    background: 'var(--bg-hover)',
-                    border: '1px solid var(--border-subtle)',
-                    color: 'var(--accent-primary)',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    padding: '6px 14px',
-                    borderRadius: '16px',
-                    transition: 'all 0.15s ease',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'var(--border-subtle)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'var(--bg-hover)';
-                  }}
-                >
-                  {showAllColors ? 'Ver menos' : `Ver ${COLORS.length - COLOR_PREVIEW_COUNT} más`}
+                <button type="button" className="form-more-btn" onClick={() => setShowAllColors(!showAllColors)}>
+                  {showAllColors ? 'Menos colores' : 'Más colores'}
                 </button>
               </div>
             </div>
 
-            {/* Icons */}
+            {/* Icono */}
             <div>
-              <span style={{ display: 'block', marginBottom: 10, fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Icono</span>
-              <div style={{ 
-                background: 'var(--bg-elevated)', 
-                border: '1px solid var(--border-subtle)', 
-                borderRadius: 18, 
-                padding: 14, 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fill, minmax(44px, 1fr))', 
-                gap: 10, 
-                maxHeight: showAllIcons ? 220 : 'auto', 
-                overflowY: showAllIcons ? 'auto' : 'visible',
-                scrollbarWidth: 'thin',
-                transition: 'max-height 0.25s ease'
-              }}>
-                {(showAllIcons ? Object.keys(ICONS) : Object.keys(ICONS).slice(0, 12)).map(k => {
-                  const IconComp = ICONS[k];
-                  const isActive = icon === k;
-                  return (
-                    <button
-                      key={k}
-                      type="button"
-                      onClick={() => setIcon(k)}
-                      style={{
-                        width: 44, 
-                        height: 44, 
-                        borderRadius: '50%',
-                        background: isActive ? color : 'var(--bg-hover)',
-                        border: isActive ? `none` : '1px solid var(--border-subtle)', 
-                        cursor: 'pointer',
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        boxShadow: isActive ? `0 4px 12px ${color}50` : 'none',
-                        transition: 'all 0.15s ease',
-                        transform: isActive ? 'scale(1.05)' : 'scale(1)'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isActive) e.currentTarget.style.background = 'var(--border-subtle)';
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)';
-                      }}
-                    >
-                      <IconComp size={22} color={isActive ? 'white' : 'var(--text-secondary)'} />
-                    </button>
-                  );
-                })}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10 }}>
-                <button
-                  type="button"
-                  onClick={() => setShowAllIcons(!showAllIcons)}
-                  style={{
-                    background: 'var(--bg-hover)',
-                    border: '1px solid var(--border-subtle)',
-                    color: 'var(--accent-primary)',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    padding: '6px 14px',
-                    borderRadius: '16px',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--border-subtle)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                >
-                  {showAllIcons ? 'Ver menos' : `Ver ${Object.keys(ICONS).length - 12} más`}
+              <p className="form-group-label">Icono</p>
+              <div className="form-group is-padded">
+                <div className="swatch-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(42px, 1fr))' }}>
+                  {visibleIcons.map(k => {
+                    const IconComp = ICONS[k];
+                    const isActive = icon === k;
+                    return (
+                      <button
+                        key={k}
+                        type="button"
+                        className={`icon-choice${isActive ? ' is-selected' : ''}`}
+                        onClick={() => setIcon(k)}
+                        aria-label={`Icono ${k}`}
+                        aria-pressed={isActive}
+                      >
+                        <IconComp size={20} />
+                      </button>
+                    );
+                  })}
+                </div>
+                <button type="button" className="form-more-btn" onClick={() => setShowAllIcons(!showAllIcons)}>
+                  {showAllIcons ? 'Menos iconos' : 'Más iconos'}
                 </button>
               </div>
             </div>
 
-          </div>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 'auto', paddingTop: 8 }}>
-            <button 
-              type="button"
-              className="modal-btn-secondary"
-              onClick={onClose} 
-            >
-              Cancelar
-            </button>
-            <button 
-              type="button"
-              className="modal-btn-primary"
-              onClick={handleSave} 
-              disabled={!name.trim()} 
-              style={{ 
-                background: name.trim() ? color : undefined,
-                boxShadow: name.trim() ? `0 4px 16px ${color}50` : undefined
-              }}
-            >
-              {existingList ? 'Guardar' : 'Crear'}
-            </button>
+            {/* Opciones */}
+            <div>
+              <p className="form-group-label">Opciones</p>
+              <div className="form-group">
+                <label className="form-row">
+                  <span className="form-row-icon" style={{ background: '#8e8e93' }}><Folder size={16} /></span>
+                  <span className="form-row-text">
+                    <span className="form-row-title">Es una carpeta</span>
+                    <span className="form-row-sub">Agrupa listas en lugar de recordatorios</span>
+                  </span>
+                  <span className="switch" style={{ flexShrink: 0, margin: 0 }}>
+                    <input
+                      type="checkbox"
+                      role="switch"
+                      checked={isFolder}
+                      onChange={() => {
+                        const next = !isFolder;
+                        setIsFolder(next);
+                        if (next && icon === 'list') setIcon('folder');
+                        if (!next && (icon === 'folder' || icon === 'folder-open')) setIcon('list');
+                      }}
+                    />
+                    <span className="slider round"></span>
+                  </span>
+                </label>
+                {!isFolder && (
+                  <label className="form-row">
+                    <span className="form-row-icon" style={{ background: '#0a84ff' }}><Clock size={16} /></span>
+                    <span className="form-row-text">
+                      <span className="form-row-title">Estimar duración</span>
+                      <span className="form-row-sub">Calcula cuánto lleva cada tarea por su nombre</span>
+                    </span>
+                    <span className="switch" style={{ flexShrink: 0, margin: 0 }}>
+                      <input
+                        type="checkbox"
+                        role="switch"
+                        checked={autoEstimateDuration}
+                        onChange={() => setAutoEstimateDuration(!autoEstimateDuration)}
+                      />
+                      <span className="slider round"></span>
+                    </span>
+                  </label>
+                )}
+              </div>
+            </div>
           </div>
         </motion.div>
       </div>

@@ -820,15 +820,7 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
               <div 
                 className="list-separator-line"
                 aria-hidden="true" 
-                style={{
-                  height: 1,
-                  minHeight: 1,
-                  background: 'var(--border-subtle, rgba(120, 120, 128, 0.28))',
-                  marginLeft: depth > 0 ? 47 : 55,
-                  marginRight: 0,
-                  opacity: 0.95,
-                  flexShrink: 0
-                }} 
+                style={{ marginLeft: depth > 0 ? 48 : 56 }} 
               />
             )}
           </div>

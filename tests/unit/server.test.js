@@ -462,13 +462,16 @@ describe('límites de peticiones compartidos', () => {
 
   it('si la base de datos falla, limita en memoria en lugar de dejar de proteger', async () => {
     const broken = createMemoryPrisma();
-    broken.rateLimit.updateMany = async () => { throw new Error('db caída'); };
+    let dbCalls = 0;
+    broken.rateLimit.updateMany = async () => { dbCalls++; throw new Error('db caída'); };
     const srv = await new Promise((resolve) => { const s = createApp({ prisma: broken }).listen(0, () => resolve(s)); });
     try {
       const url = `http://127.0.0.1:${srv.address().port}/api/auth/login`;
       const call = () => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'x@example.com', password: 'incorrecta!!' }) });
       for (let i = 0; i < 10; i++) expect((await call()).status).toBe(401);
       expect((await call()).status).toBe(429);
+      // Interruptor: tras el primer fallo no se vuelve a llamar a la BD (ni a registrar un error por petición).
+      expect(dbCalls).toBe(1);
     } finally {
       srv.close();
     }

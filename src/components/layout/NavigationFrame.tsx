@@ -1,4 +1,4 @@
-import { motion, AnimatePresence, useDragControls } from 'framer-motion';
+import { motion, AnimatePresence, useDragControls, useMotionValue, animate } from 'framer-motion';
 import { ArrowLeft, ChevronLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
@@ -25,6 +25,25 @@ export function NavigationFrame({
     typeof window !== 'undefined' ? window.innerWidth : 400
   );
   const dragControls = useDragControls();
+  // Posición del gesto «deslizar desde el borde para volver» (como en iOS): mientras se arrastra,
+  // el sidebar asoma por detrás (clase y variable CSS en <body>), y al soltar la página sale
+  // deslizándose en vez de volver de golpe.
+  const swipeX = useMotionValue(0);
+  useEffect(() => {
+    const unsubscribe = swipeX.on('change', (x) => {
+      const p = Math.max(0, Math.min(1, x / Math.max(1, screenWidth)));
+      document.body.style.setProperty('--swipe-p', p.toFixed(3));
+    });
+    return () => {
+      unsubscribe();
+      document.body.classList.remove('nav-swiping');
+      document.body.style.removeProperty('--swipe-p');
+    };
+  }, [swipeX, screenWidth]);
+  const endSwipe = () => {
+    document.body.classList.remove('nav-swiping');
+    document.body.style.removeProperty('--swipe-p');
+  };
 
   // Keep screenWidth in sync so drag constraints stay correct after orientation change
   useEffect(() => {
@@ -105,17 +124,30 @@ export function NavigationFrame({
           dragControls={dragControls}
           dragConstraints={canGoBack ? { left: 0, right: screenWidth } : undefined}
           dragElastic={canGoBack ? { left: 0, right: 0.05 } : undefined}
+          dragMomentum={false}
           whileDrag={canGoBack ? {
             boxShadow: '-22px 0 52px rgba(0, 0, 0, 0.22), -4px 0 14px rgba(0, 0, 0, 0.10)',
             cursor: 'grabbing',
           } : undefined}
+          onDragStart={canGoBack ? () => document.body.classList.add('nav-swiping') : undefined}
           onDragEnd={canGoBack ? (_e, info) => {
             const threshold = typeof window !== 'undefined' ? window.innerWidth * 0.35 : 150;
             if (info.offset.x > threshold || info.velocity.x > 300) {
-              handleBackTrigger();
+              // Termina de salir por la derecha y entonces vuelve a la lista de listas.
+              animate(swipeX, screenWidth, { type: 'tween', duration: 0.18, ease: [0.25, 1, 0.5, 1] }).then(() => {
+                // El gesto ya ha mostrado las listas: sin animación de entrada repetida.
+                document.body.classList.add('nav-swiped-back');
+                setTimeout(() => document.body.classList.remove('nav-swiped-back'), 400);
+                handleBackTrigger();
+                swipeX.set(0);
+                endSwipe();
+              });
+            } else {
+              animate(swipeX, 0, { type: 'spring', stiffness: 520, damping: 42 }).then(endSwipe);
             }
           } : undefined}
           style={{
+            x: swipeX,
             position: 'absolute',
             inset: 0,
             display: 'flex',
@@ -135,7 +167,7 @@ export function NavigationFrame({
                 top: 'calc(env(safe-area-inset-top, 0px) + 60px)',
                 bottom: 0,
                 left: 0,
-                width: 24,
+                width: 28,
                 zIndex: 90,
                 touchAction: 'none',
                 cursor: 'grab'

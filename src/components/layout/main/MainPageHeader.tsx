@@ -146,7 +146,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
           alignItems: 'center', 
           justifyContent: 'space-between', 
           gap: '12px', 
-          flexWrap: 'wrap',
+          flexWrap: 'nowrap',
           opacity: titleOpacity,
           transform: `translateY(${titleTranslateY}px) scale(${titleScale})`,
           filter: titleBlur > 0.1 ? `blur(${titleBlur}px)` : 'none',
@@ -154,10 +154,10 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
           willChange: 'opacity, transform, filter',
           transition: 'opacity 0.08s ease-out, transform 0.08s ease-out, filter 0.08s ease-out'
         }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, flex: '1 1 auto' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, flex: '1 1 0%' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flexWrap: 'wrap' }}>
               <h1 className="text-display" style={{ 
-                fontSize: '34px', 
+                fontSize: getTitle().length > 24 ? '28px' : '34px', 
                 fontWeight: 700,
                 lineHeight: '1.2',
                 wordBreak: 'break-word',
@@ -248,7 +248,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                         setIsEditingListName(true);
                       }
                     }}
-                    style={{ cursor: (currentCycle || (currentList && !currentList.isFolder)) ? 'text' : 'default', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                    style={{ cursor: (currentCycle || (currentList && !currentList.isFolder)) ? 'text' : 'default', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', minWidth: 0 }}
                     title={currentCycle ? "Doble click para editar nombre" : (currentList && !currentList.isFolder) ? "Toca para cambiar nombre" : undefined}
                   >
                     {getTitle()}
@@ -257,6 +257,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
               </h1>
               {currentList && !currentList.isFolder && (() => {
                 const badge = getListBadgeInfo(currentList, currentView);
+                if (badge.generic) return null;
                 return (
                   <span 
                     className="apple-list-type-pill" 
@@ -264,8 +265,8 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                       fontSize: '0.74rem', 
                       fontWeight: 600, 
                       color: badge.color, 
-                      background: `${badge.color}15`, 
-                      border: `1px solid ${badge.color}30`, 
+                      background: `color-mix(in srgb, ${badge.color} 9%, transparent)`, 
+                      border: `1px solid color-mix(in srgb, ${badge.color} 20%, transparent)`, 
                       padding: '2px 8px', 
                       borderRadius: 999,
                       letterSpacing: '-0.01em',

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import type React from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, Plus, Minus, Sparkles, Circle } from 'lucide-react';
+import { Check, Plus, Minus, Sparkles, Circle } from 'lucide-react';
+import { SheetNavBar } from '../ui/SheetNavBar';
 import { useAppStore } from '../../store/useAppStore';
 import { CYCLE_ICON_MAP } from '../../constants/icons';
 import { CURATED_MODAL_PALETTE } from '../../constants/colors';
@@ -51,7 +53,7 @@ function CycleConfigModalContent({
   const addCycle = useAppStore(state => state.addCycle);
   const [name, setName] = useState('');
   const [days, setDays] = useState<number | ''>(90);
-  const [selectedColor, setSelectedColor] = useState('#AF52DE');
+  const [selectedColor, setSelectedColor] = useState<string>('#7928CA'); // de la paleta, para que se vea marcado
   const [selectedIcon, setSelectedIcon] = useState('star');
   const [isFocused, setIsFocused] = useState(false);
 
@@ -109,391 +111,150 @@ function CycleConfigModalContent({
   const isValid = name.trim().length > 0 && typeof days === 'number' && days > 0;
 
   return (
-    <div
-      className="prompt-overlay"
-      onClick={onClose}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 100000,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px',
-        background: 'rgba(0, 0, 0, 0.48)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-      }}
-    >
+    <div className="prompt-overlay list-config-overlay" onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 100000 }}>
       <motion.div
-        className="cycle-config-modal"
-        initial={{ opacity: 0, scale: 0.94, y: 24 }}
+        className="cycle-config-modal form-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Nueva frecuencia"
+        initial={{ opacity: 0, scale: 0.96, y: 24 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.94, y: 24 }}
-        transition={{ type: 'spring', damping: 28, stiffness: 380 }}
+        exit={{ opacity: 0, scale: 0.96, y: 24 }}
+        transition={{ type: 'spring', damping: 30, stiffness: 400 }}
         onClick={(e) => e.stopPropagation()}
-        style={{
-          width: 'min(100%, 460px)',
-          maxHeight: 'min(92dvh, 720px)',
-          overflowY: 'auto',
-          background: 'var(--bg-elevated, #ffffff)',
-          border: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.14))',
-          borderRadius: 24,
-          padding: '24px 22px 20px',
-          boxShadow: '0 24px 70px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 18,
-          color: 'var(--text-primary)',
-          boxSizing: 'border-box',
-        }}
+        style={{ ['--hero-color' as string]: selectedColor } as React.CSSProperties}
       >
-        {/* Top Bar with Title and Close Button */}
-        <div className="modal-header-row">
+        <SheetNavBar
+          title="Nueva frecuencia"
+          onCancel={onClose}
+          onConfirm={handleSave}
+          confirmLabel="Crear"
+          confirmDisabled={!isValid}
+        />
+
+        <div className="form-sheet-body">
+          {/* Icono + nombre */}
+          <div className="form-group form-hero">
+            <div className="form-hero-icon" style={{ background: selectedColor, ['--hero-color' as string]: `${selectedColor}88` } as React.CSSProperties}>
+              <CyclePreviewIcon icon={selectedIcon} size={32} />
+            </div>
+            <input
+              type="text"
+              className="form-name-input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              placeholder="Nombre (p. ej. Trimestral)"
+              aria-label="Nombre de la frecuencia"
+              data-focused={isFocused || undefined}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && isValid) {
+                  e.preventDefault();
+                  handleSave();
+                }
+              }}
+            />
+          </div>
+
+          {/* Cada cuánto */}
           <div>
-            <h3 className="modal-title">
-              Nuevo Ciclo Temporal
-            </h3>
-            <p className="modal-subtitle">
-              Frecuencia personalizada para tareas periódicas
+            <p className="form-group-label">Cada cuánto</p>
+            <div className="form-group is-padded" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="preset-row" role="radiogroup" aria-label="Frecuencias habituales">
+                {PRESET_CADENCES.map((preset) => {
+                  const isSelected = days === preset.days;
+                  return (
+                    <button
+                      key={preset.days}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      className={`preset-chip${isSelected ? ' is-selected' : ''}`}
+                      onClick={() => handleSelectPreset(preset)}
+                    >
+                      {preset.name}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="day-stepper">
+                <button type="button" onClick={() => adjustDays(-1)} disabled={typeof days === 'number' && days <= 1} aria-label="Un día menos">
+                  <Minus size={16} />
+                </button>
+                <label className="day-stepper-value">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={days}
+                    onChange={(e) => setDays(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1))}
+                    min="1"
+                    aria-label="Días"
+                  />
+                  <span>{days === 1 ? 'día' : 'días'}</span>
+                </label>
+                <button type="button" onClick={() => adjustDays(1)} aria-label="Un día más">
+                  <Plus size={16} />
+                </button>
+              </div>
+            </div>
+            <p className="form-group-footer">
+              {typeof days === 'number' && days > 0
+                ? `Sus tareas vuelven a quedar pendientes cada ${days} ${days === 1 ? 'día' : 'días'}.`
+                : 'Indica cada cuántos días se repiten sus tareas.'}
             </p>
           </div>
-          <button
-            type="button"
-            className="modal-close-btn"
-            onClick={onClose}
-            aria-label="Cerrar"
-          >
-            <X size={16} strokeWidth={2.4} />
-          </button>
-        </div>
 
-        {/* Interactive Preview Bubble */}
-        <div style={{ display: 'flex', justifyContent: 'center', margin: '2px 0 4px' }}>
-          <motion.div
-            animate={{
-              backgroundColor: selectedColor,
-              boxShadow: `0 12px 30px ${selectedColor}55, inset 0 2px 4px rgba(255, 255, 255, 0.4)`,
-            }}
-            transition={{ duration: 0.2 }}
-            style={{
-              width: 68,
-              height: 68,
-              borderRadius: '50%',
-              background: selectedColor,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <CyclePreviewIcon icon={selectedIcon} size={32} />
-          </motion.div>
-        </div>
-
-        {/* Name Field */}
-        <div>
-          <label
-            style={{
-              display: 'block',
-              marginBottom: 6,
-              fontSize: '0.74rem',
-              fontWeight: 650,
-              color: 'var(--text-tertiary)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em',
-            }}
-          >
-            Nombre del ciclo
-          </label>
-          <input
-            type="text"
-            className="modal-title-input"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            placeholder="Ej: Trimestral, Quincenal..."
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && isValid) {
-                e.preventDefault();
-                handleSave();
-              }
-            }}
-            style={{
-              borderColor: isFocused ? selectedColor : undefined,
-              boxShadow: isFocused ? `0 0 0 3px ${selectedColor}25` : undefined,
-            }}
-          />
-        </div>
-
-        {/* Cadence / Days Presets & Stepper */}
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-            <label
-              style={{
-                fontSize: '0.74rem',
-                fontWeight: 650,
-                color: 'var(--text-tertiary)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-              }}
-            >
-              Frecuencia en días
-            </label>
-            {typeof days === 'number' && (
-              <span style={{ fontSize: '0.78rem', color: selectedColor, fontWeight: 600 }}>
-                Cada {days} {days === 1 ? 'día' : 'días'}
-              </span>
-            )}
-          </div>
-
-          {/* Preset chips */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-            {PRESET_CADENCES.map((preset) => {
-              const isSelected = days === preset.days;
-              return (
-                <button
-                  key={preset.days}
-                  type="button"
-                  onClick={() => handleSelectPreset(preset)}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: 10,
-                    border: isSelected ? `1.5px solid ${selectedColor}` : '1px solid var(--border-subtle)',
-                    background: isSelected ? `${selectedColor}18` : 'var(--bg-hover, rgba(142, 142, 147, 0.08))',
-                    color: isSelected ? selectedColor : 'var(--text-primary)',
-                    fontSize: '0.82rem',
-                    fontWeight: isSelected ? 700 : 500,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                  }}
-                >
-                  <span>{preset.name}</span>
-                  <span style={{ opacity: 0.65, fontSize: '0.72rem' }}>({preset.label})</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Days numeric stepper */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              background: 'var(--bg-hover, rgba(142, 142, 147, 0.08))',
-              padding: '6px 10px',
-              borderRadius: 14,
-              border: '1px solid var(--border-subtle)',
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => adjustDays(-5)}
-              disabled={typeof days === 'number' && days <= 1}
-              aria-label="Restar 5 días"
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                border: 'none',
-                background: 'var(--bg-base)',
-                color: 'var(--text-primary)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: typeof days === 'number' && days <= 1 ? 'not-allowed' : 'pointer',
-                opacity: typeof days === 'number' && days <= 1 ? 0.4 : 1,
-                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.08)',
-              }}
-            >
-              <Minus size={16} />
-            </button>
-
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              <input
-                type="number"
-                value={days}
-                onChange={(e) => setDays(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1))}
-                min="1"
-                style={{
-                  width: 70,
-                  textAlign: 'center',
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--text-primary)',
-                  fontSize: '1.25rem',
-                  fontWeight: 700,
-                  outline: 'none',
-                }}
-              />
-              <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
-                días
-              </span>
+          {/* Color */}
+          <div>
+            <p className="form-group-label">Color</p>
+            <div className="form-group is-padded">
+              <div className="swatch-grid color-grid">
+                {AVAILABLE_COLORS.map((col) => {
+                  const isSelected = selectedColor === col;
+                  return (
+                    <button
+                      key={col}
+                      type="button"
+                      className={`swatch${isSelected ? ' is-selected' : ''}`}
+                      style={{ background: col, ['--swatch' as string]: col } as React.CSSProperties}
+                      onClick={() => { HapticService.selection(); setSelectedColor(col); }}
+                      aria-label={`Color ${col}`}
+                      aria-pressed={isSelected}
+                    >
+                      {isSelected && <Check size={16} color="white" strokeWidth={3} />}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-
-            <button
-              type="button"
-              onClick={() => adjustDays(5)}
-              aria-label="Sumar 5 días"
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                border: 'none',
-                background: 'var(--bg-base)',
-                color: 'var(--text-primary)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.08)',
-              }}
-            >
-              <Plus size={16} />
-            </button>
           </div>
 
-          <p style={{ fontSize: '0.74rem', color: 'var(--text-tertiary)', margin: '6px 2px 0' }}>
-            Las tareas asignadas a este ciclo se renovarán cada {days || 'X'} días.
-          </p>
-        </div>
-
-        {/* Color Selection Palette */}
-        <div>
-          <label
-            style={{
-              display: 'block',
-              marginBottom: 8,
-              fontSize: '0.74rem',
-              fontWeight: 650,
-              color: 'var(--text-tertiary)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em',
-            }}
-          >
-            Color
-          </label>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'space-between' }}>
-            {AVAILABLE_COLORS.map((col) => {
-              const isSelected = selectedColor === col;
-              return (
-                <button
-                  key={col}
-                  type="button"
-                  onClick={() => {
-                    HapticService.selection();
-                    setSelectedColor(col);
-                  }}
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: '50%',
-                    background: col,
-                    border: 'none',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    outline: isSelected ? `2.5px solid var(--text-primary)` : 'none',
-                    outlineOffset: 2,
-                    transform: isSelected ? 'scale(1.1)' : 'scale(1)',
-                    transition: 'transform 0.15s ease, outline 0.15s ease',
-                    boxShadow: isSelected ? `0 4px 12px ${col}66` : '0 2px 4px rgba(0,0,0,0.1)',
-                  }}
-                  aria-label={`Color ${col}`}
-                >
-                  {isSelected && <Check size={18} color="white" strokeWidth={3} />}
-                </button>
-              );
-            })}
+          {/* Icono */}
+          <div>
+            <p className="form-group-label">Icono</p>
+            <div className="form-group is-padded">
+              <div className="swatch-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(42px, 1fr))' }}>
+                {SELECTABLE_ICONS.map((iconName) => {
+                  const ItemIcon = CYCLE_ICON_MAP[iconName] || Sparkles;
+                  const isSelected = selectedIcon === iconName;
+                  return (
+                    <button
+                      key={iconName}
+                      type="button"
+                      className={`icon-choice${isSelected ? ' is-selected' : ''}`}
+                      onClick={() => { HapticService.selection(); setSelectedIcon(iconName); }}
+                      aria-label={`Icono ${iconName}`}
+                      aria-pressed={isSelected}
+                    >
+                      <ItemIcon size={19} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-        </div>
-
-        {/* Icon Selection Grid */}
-        <div>
-          <label
-            style={{
-              display: 'block',
-              marginBottom: 8,
-              fontSize: '0.74rem',
-              fontWeight: 650,
-              color: 'var(--text-tertiary)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em',
-            }}
-          >
-            Icono
-          </label>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(9, 1fr)',
-              gap: 6,
-              background: 'var(--bg-hover, rgba(142, 142, 147, 0.08))',
-              padding: '8px',
-              borderRadius: 14,
-              border: '1px solid var(--border-subtle)',
-            }}
-          >
-            {SELECTABLE_ICONS.map((iconName) => {
-              const ItemIcon = CYCLE_ICON_MAP[iconName] || Sparkles;
-              const isSelected = selectedIcon === iconName;
-              return (
-                <button
-                  key={iconName}
-                  type="button"
-                  onClick={() => {
-                    HapticService.selection();
-                    setSelectedIcon(iconName);
-                  }}
-                  style={{
-                    aspectRatio: '1',
-                    borderRadius: 10,
-                    border: 'none',
-                    background: isSelected ? selectedColor : 'transparent',
-                    color: isSelected ? 'white' : 'var(--text-secondary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    padding: 0,
-                  }}
-                  title={iconName}
-                >
-                  <ItemIcon size={18} strokeWidth={isSelected ? 2.5 : 2} />
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Footer Action Buttons */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 6 }}>
-          <button
-            type="button"
-            className="modal-btn-secondary"
-            onClick={onClose}
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            className="modal-btn-primary"
-            onClick={handleSave}
-            disabled={!isValid}
-            style={{
-              background: isValid ? selectedColor : undefined,
-              boxShadow: isValid ? `0 6px 18px ${selectedColor}44` : 'none',
-            }}
-          >
-            Crear Ciclo
-          </button>
         </div>
       </motion.div>
     </div>
