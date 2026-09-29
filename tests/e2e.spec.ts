@@ -684,8 +684,8 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
     // Person Profile modal should open
     const profileModal = page.locator('.person-profile-overlay').first();
     await expect(profileModal).toBeVisible();
-    await expect(page.locator('text=Bitácora de momentos compartidos').first()).toBeVisible();
-    await expect(page.locator('text=Vivencias').first()).toBeVisible();
+    await expect(profileModal.getByText('último plan')).toBeVisible();
+    await expect(profileModal.getByText('primer recuerdo')).toBeVisible();
 
     // Check shared memory appears in the modal list
     const modalMemory = page.locator('.person-profile-overlay :text("Tarde de surf y helados")').first();

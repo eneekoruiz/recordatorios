@@ -63,6 +63,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
   const displayName = useAppStore((state) => state.displayName);
   const setDisplayName = useAppStore((state) => state.setDisplayName);
   const editName = async () => {
+    onClose(); // el menú se cierra: el diálogo no queda debajo de él
     const next = await usePromptStore.getState().openPrompt('¿Cómo quieres que te llamemos?', 'Tu nombre');
     if (next !== null) setDisplayName(next);
   };

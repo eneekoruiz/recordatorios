@@ -401,7 +401,7 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     // 2. Verificar que el modal se abre centrado con el título correcto
     const modal = page.locator('.cycle-config-modal');
     await expect(modal).toBeVisible({ timeout: 5000 });
-    await expect(modal.locator('h3')).toHaveText('Nuevo Ciclo Temporal');
+    await expect(modal.locator('h3')).toHaveText('Nueva frecuencia');
 
     // 3. Seleccionar preset Trimestral (90d)
     const presetTrimestral = modal.locator('button:has-text("Trimestral")');
@@ -413,7 +413,7 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     await expect(nameInput).toHaveValue('Trimestral');
 
     // 4. Crear el ciclo
-    const submitBtn = modal.locator('button:has-text("Crear Ciclo")');
+    const submitBtn = modal.getByRole('button', { name: 'Crear', exact: true });
     await expect(submitBtn).toBeEnabled();
     await submitBtn.click();
 

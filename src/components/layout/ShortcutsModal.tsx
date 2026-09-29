@@ -1,6 +1,6 @@
 import { useEffect, type FC } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Keyboard, Navigation, Zap, CheckCircle2, Lightbulb } from 'lucide-react';
+import { SheetNavBar } from '../ui/SheetNavBar';
 
 interface ShortcutsModalProps {
   isOpen: boolean;
@@ -18,126 +18,76 @@ export const ShortcutsModal: FC<ShortcutsModalProps> = ({ isOpen, onClose }) => 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  const categories = [
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent);
+  const mod = isMac ? '⌘' : 'Ctrl';
+
+  // Solo los atajos que la app implementa de verdad (App.tsx).
+  const groups: { title: string; items: { label: string; keys: string[] }[] }[] = [
     {
-      title: 'Navegación Rápida',
-      icon: <Navigation size={18} color="var(--accent-blue)" />,
+      title: 'Ir a',
       items: [
-        { label: 'Ir a Hoy / Día', keys: ['1'] },
-        { label: 'Ir a Semana', keys: ['2'] },
-        { label: 'Ir a Todos', keys: ['3'] },
+        { label: 'Diario', keys: ['1'] },
+        { label: 'Semanal', keys: ['2'] },
+        { label: 'Todos', keys: ['3'] },
         { label: 'Bandeja de entrada', keys: ['4'] },
-        { label: 'Estadísticas / Hábitos', keys: ['5'] },
-        { label: 'Importador Universal', keys: ['6'] },
-        { label: 'Búsqueda / Paleta de Comandos', keys: ['/', '⌘K'] },
-      ]
+        { label: 'Estadísticas', keys: ['5'] },
+        { label: 'Importar', keys: ['6'] },
+      ],
     },
     {
-      title: 'Acciones de Productividad',
-      icon: <Zap size={18} color="var(--accent-orange)" />,
+      title: 'Acciones',
       items: [
-        { label: 'Crear nueva tarea', keys: ['N'] },
-        { label: 'Modo Zen en tarea destacada', keys: ['Z'] },
-        { label: 'Cerrar menús o modales activos', keys: ['Esc'] },
-        { label: 'Abrir este panel de atajos', keys: ['?'] },
-      ]
+        { label: 'Buscar', keys: ['/'] },
+        { label: 'Buscar (desde cualquier campo)', keys: [mod, 'K'] },
+        { label: 'Nuevo recordatorio', keys: ['N'] },
+        { label: 'Asistente', keys: [mod, 'J'] },
+        { label: 'Cerrar', keys: ['Esc'] },
+        { label: 'Mostrar estos atajos', keys: ['?'] },
+      ],
     },
     {
-      title: 'Gestos y Edición',
-      icon: <CheckCircle2 size={18} color="var(--accent-green)" />,
+      title: 'Gestos',
       items: [
-        { label: 'Completar / Desmarcar tarea', keys: ['Deslizar der. 65px'] },
-        { label: 'Eliminar tarea', keys: ['Deslizar izq. 65px'] },
-        { label: 'Menú contextual de tarea', keys: ['Pulsación larga'] },
-      ]
-    }
+        { label: 'Completar un recordatorio', keys: ['Deslizar →'] },
+        { label: 'Eliminar un recordatorio', keys: ['← Deslizar'] },
+        { label: 'Más opciones', keys: ['Mantener pulsado'] },
+        { label: 'Volver a las listas (móvil)', keys: ['Desde el borde →'] },
+      ],
+    },
   ];
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="premium-overlay" style={{ position: 'fixed', inset: 0, zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            onClick={onClose}
-            style={{ position: 'absolute', inset: 0 }}
-          />
+        <div className="premium-overlay list-config-overlay" style={{ position: 'fixed', inset: 0, zIndex: 100000 }} onClick={onClose}>
           <motion.div
             role="dialog"
             aria-modal="true"
-            aria-labelledby="shortcuts-title"
-            className="premium-sheet shortcuts-sheet"
+            aria-label="Atajos de teclado"
+            className="shortcuts-sheet form-sheet"
             initial={{ opacity: 0, scale: 0.96, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 8 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
             onClick={(e) => e.stopPropagation()}
-            style={{
-              maxWidth: 620,
-              gap: 22
-            }}
           >
-            <div className="modal-header-row">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div className="modal-hero-badge" style={{ background: 'var(--accent-glow)', marginBottom: 0 }}>
-                  <Keyboard size={24} color="var(--accent-primary)" />
-                </div>
-                <div>
-                  <h2 id="shortcuts-title" className="modal-title">Atajos de Teclado</h2>
-                  <p className="modal-subtitle">Navegación de alta velocidad sin tocar el ratón</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="modal-close-btn"
-                onClick={onClose}
-                aria-label="Cerrar panel de atajos"
-              >
-                <X size={16} strokeWidth={2.4} />
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-              {categories.map((cat, i) => (
-                <div key={i}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, borderBottom: '1px solid var(--border-subtle)', paddingBottom: 8 }}>
-                    {cat.icon}
-                    <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)' }}>{cat.title}</h3>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {cat.items.map((item, j) => (
-                      <div key={j} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 4px' }}>
-                        <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{item.label}</span>
-                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                          {item.keys.map((k, idx) => (
-                            <kbd key={idx} style={{
-                              background: 'var(--bg-elevated)',
-                              border: '1px solid var(--border-color)',
-                              borderRadius: 6,
-                              padding: '2px 8px',
-                              fontSize: '0.8rem',
-                              fontFamily: 'monospace',
-                              fontWeight: 600,
-                              color: 'var(--text-primary)',
-                              boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
-                            }}>
-                              {k}
-                            </kbd>
-                          ))}
-                        </div>
+            <SheetNavBar title="Atajos de teclado" onConfirm={onClose} confirmLabel="Listo" />
+            <div className="form-sheet-body">
+              {groups.map((group) => (
+                <div key={group.title}>
+                  <p className="form-group-label">{group.title}</p>
+                  <div className="form-group">
+                    {group.items.map((item) => (
+                      <div key={item.label} className="form-row" style={{ cursor: 'default' }}>
+                        <span className="form-row-text"><span className="form-row-title">{item.label}</span></span>
+                        <span className="kbd-group">
+                          {item.keys.map((k) => <kbd key={k} className="kbd">{k}</kbd>)}
+                        </span>
                       </div>
                     ))}
                   </div>
                 </div>
               ))}
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'var(--bg-elevated)', padding: '12px 16px', borderRadius: 12, fontSize: '0.85rem', color: 'var(--text-tertiary)', textAlign: 'center' }}>
-              <Lightbulb size={14} strokeWidth={2.1} style={{ flexShrink: 0 }} />
-              <span>Pulsa <kbd style={{ padding: '2px 6px', borderRadius: 4, background: 'var(--bg-surface)', border: '1px solid var(--border-color)' }}>?</kbd> en cualquier momento para abrir esta guía.</span>
             </div>
           </motion.div>
         </div>

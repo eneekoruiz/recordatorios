@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X } from 'lucide-react';
 import { usePromptStore } from '../../store/usePromptStore';
 
 export function PromptModal() {
@@ -39,37 +38,25 @@ export function PromptModal() {
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div className="premium-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+        <motion.div className="premium-overlay alert-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
           exit={{ opacity: 0 }} onClick={() => closePrompt(null)}>
-          <motion.section className="premium-sheet prompt-sheet" role="dialog" aria-modal="true"
-            aria-labelledby="prompt-title" initial={{ opacity: 0, y: 26, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 16, scale: 0.97 }}
+          <motion.section className="app-alert" role="dialog" aria-modal="true"
+            aria-labelledby="prompt-title" initial={{ opacity: 0, scale: 1.08 }}
+            animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
             onClick={(event) => event.stopPropagation()}
           >
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
-              <div className="modal-hero-badge" style={{ background: 'var(--accent-glow)', marginBottom: 0 }} aria-hidden="true">
-                <Sparkles size={22} color="var(--accent-primary)" />
+            <form onSubmit={handleSubmit}>
+              <div className="app-alert-copy">
+                <h2 id="prompt-title">{title}</h2>
+                <input ref={inputRef} className="app-alert-input" value={inputValue}
+                  onChange={(event) => setInputValue(event.target.value)}
+                  placeholder={placeholder || 'Escribe aquí…'} aria-label={title}
+                />
               </div>
-              <button className="modal-close-btn" onClick={() => closePrompt(null)} aria-label="Cerrar">
-                <X size={16} strokeWidth={2.4} />
-              </button>
-            </div>
-
-            <div className="premium-sheet-copy">
-              <span className="premium-eyebrow">Acción rápida</span>
-              <h2 id="prompt-title" style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', margin: 0 }}>{title}</h2>
-            </div>
-
-            <form onSubmit={handleSubmit} style={{ marginTop: 18 }}>
-              <input ref={inputRef} className="modal-title-input" value={inputValue}
-                onChange={(event) => setInputValue(event.target.value)}
-                placeholder={placeholder || 'Escribe aquí…'} aria-label={title}
-                style={{ textAlign: 'left', minHeight: 48 }}
-              />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 22 }}>
-                <button type="button" className="modal-btn-secondary" onClick={() => closePrompt(null)}>Cancelar</button>
-                <button type="submit" className="modal-btn-primary" disabled={!inputValue.trim()}>Aceptar</button>
+              <div className="app-alert-actions">
+                <button type="button" onClick={() => closePrompt(null)}>Cancelar</button>
+                <button type="submit" className="is-preferred" disabled={!inputValue.trim()}>Aceptar</button>
               </div>
             </form>
           </motion.section>

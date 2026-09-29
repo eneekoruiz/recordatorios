@@ -71,6 +71,33 @@ test.describe('Pulido final', () => {
     expect(state.token).not.toMatch(/^local_offline/); // ya es una cuenta real
   });
 
+  test('nueva lista: «Crear» arriba, desactivado sin nombre, e Intro guarda', async ({ page }) => {
+    await ensureAppUnlocked(page);
+    await page.getByText('Añadir lista').first().click();
+    const sheet = page.getByRole('dialog', { name: 'Nueva lista' });
+    await expect(sheet).toBeVisible();
+    const create = sheet.getByRole('button', { name: 'Crear', exact: true });
+    await expect(create).toBeDisabled();
+    await sheet.getByLabel('Nombre de la lista').fill('Viaje a Roma');
+    await expect(create).toBeEnabled();
+    await sheet.getByLabel('Nombre de la lista').press('Enter');
+    await expect(sheet).toHaveCount(0);
+    await expect(page.locator('.ios-list-item', { hasText: 'Viaje a Roma' }).first()).toBeVisible();
+  });
+
+  test('las alertas no llevan «×» ni etiquetas y la acción destructiva va en rojo', async ({ page }) => {
+    await ensureAppUnlocked(page);
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent('app-confirm-request', {
+      detail: { title: '¿Eliminar «Casa»?', message: 'Se moverá a la papelera.', confirmText: 'Eliminar', tone: 'danger', resolve: () => {} },
+    })));
+    const alert = page.getByRole('alertdialog');
+    await expect(alert).toBeVisible();
+    await expect(alert.getByRole('button')).toHaveCount(2);
+    await expect(alert.getByRole('button', { name: 'Eliminar' })).toHaveClass(/danger/);
+    await page.keyboard.press('Escape');
+    await expect(alert).toHaveCount(0);
+  });
+
   test.describe('móvil', () => {
     test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 

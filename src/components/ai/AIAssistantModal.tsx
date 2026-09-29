@@ -14,6 +14,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
 import { extractTextFromPdf } from '../../utils/pdfExtractor';
+import { renderInlineMarkdown } from '../../utils/inlineMarkdown';
 
 interface AIAssistantModalProps {
   isOpen: boolean;
@@ -1044,7 +1045,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                           <span>{msg.fileName}</span>
                         </div>
                       )}
-                      <div>{msg.text}</div>
+                      <div>{renderInlineMarkdown(msg.text)}</div>
                     </div>
 
                     {msg.sender === 'assistant' && (
