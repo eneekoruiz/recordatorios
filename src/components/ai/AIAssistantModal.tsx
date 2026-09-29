@@ -13,7 +13,8 @@ import { AIService, type ProposedBatch, type AIConfig } from '../../services/AIS
 import { useAppStore } from '../../store/useAppStore';
 import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
-import { formatEuro } from '../../utils/format';
+import { formatEuro, plural } from '../../utils/format';
+import { showUndoToast } from '../../utils/undoToast';
 import { extractTextFromPdf } from '../../utils/pdfExtractor';
 import { renderInlineMarkdown } from '../../utils/inlineMarkdown';
 
@@ -428,9 +429,11 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
 
     // Notify user
     const listName = targetListToCreate?.name || lists.find(l => l.id === tasksPayload[0]?.categoryId)?.name || 'Inbox';
-    window.dispatchEvent(new CustomEvent('show-toast', { 
-      detail: `${tasksPayload.length} recordatorios importados a "${listName}"`
-    }));
+    // Se puede deshacer: los recordatorios recién añadidos van a la papelera.
+    showUndoToast(
+      `${plural(tasksPayload.length, 'recordatorio')} ${tasksPayload.length === 1 ? 'añadido' : 'añadidos'} a «${listName}»`,
+      () => tasksPayload.forEach((t) => useAppStore.getState().deleteTask(t.id))
+    );
 
     // Mark as imported in message
     setMessages(prev => prev.map(m => {
@@ -441,7 +444,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
           ...m.batch,
           tasks: []
         },
-        text: `${m.text}\n\n¡${tasksPayload.length} recordatorios importados con éxito!`
+        text: `${m.text}\n\n✅ ${plural(tasksPayload.length, 'recordatorio')} ${tasksPayload.length === 1 ? 'añadido' : 'añadidos'}.`
       };
     }));
 
@@ -587,8 +590,10 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
     const selectedUpdates = msg.batch.taskUpdates.filter(u => u.selected);
     if (selectedUpdates.length === 0) return;
 
+    const removedIds: string[] = [];
     selectedUpdates.forEach(update => {
       if (update.deleted) {
+        removedIds.push(update.taskId);
         deleteTask(update.taskId);
       } else {
         const patch: any = {};
@@ -607,9 +612,18 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
 
     SoundService.playComplete();
     HapticService.notification('success');
-    window.dispatchEvent(new CustomEvent('show-toast', {
-      detail: `✓ ${selectedUpdates.length} modificación(es) aplicada(s) correctamente.`
-    }));
+    const n = selectedUpdates.length;
+    if (removedIds.length > 0) {
+      // Lo más delicado que puede hacer el asistente es borrar: siempre se puede deshacer.
+      showUndoToast(
+        removedIds.length === 1 ? 'Recordatorio eliminado por el asistente' : `${removedIds.length} recordatorios eliminados por el asistente`,
+        () => removedIds.forEach((id) => useAppStore.getState().restoreTask(id))
+      );
+    } else {
+      window.dispatchEvent(new CustomEvent('show-toast', {
+        detail: n === 1 ? '✓ Cambio aplicado' : `✓ ${n} cambios aplicados`
+      }));
+    }
 
     setMessages(prev => prev.map(m => {
       if (m.id !== messageId || !m.batch) return m;
@@ -619,7 +633,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
           ...m.batch,
           taskUpdates: []
         },
-        text: `${m.text}\n\n✅ ¡${selectedUpdates.length} modificación(es) aplicada(s) con éxito!`
+        text: `${m.text}\n\n✅ ${n === 1 ? 'Cambio aplicado' : `${n} cambios aplicados`}.`
       };
     }));
   };
@@ -697,6 +711,9 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
         {/* Modal Window */}
         <motion.div
           className="ai-assistant-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Asistente IA"
           initial={{ opacity: 0, scale: 0.95, y: 16 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 12 }}

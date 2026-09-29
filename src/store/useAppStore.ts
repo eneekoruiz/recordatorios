@@ -200,6 +200,8 @@ interface AppState {
   addListSection: (section: ListSection) => void;
   updateListSection: (id: string, updatesOrName: string | Partial<ListSection>) => void;
   deleteListSection: (id: string) => void;
+  restoreListSection: (id: string) => void;
+  restoreCycle: (id: string) => void;
   reorderListSections: (updates: { id: string; order: number }[]) => void;
   duplicateSection: (sectionId: string) => void;
   emptySection: (sectionId: string, taskIds?: string[]) => void;
@@ -1140,6 +1142,28 @@ export const useAppStore = create<AppState>()(
             _is_dirty: true,
             updated_at: new Date().toISOString()
           } : s)
+        };
+      }),
+
+      // Deshacer «eliminar sección»: vuelve con una fecha de edición nueva (si no, el servidor, que ya puede
+      // tener la sección borrada, la seguiría viendo como más antigua que su borrado).
+      restoreListSection: (id) => optimisticUpdate(get, set, (state) => {
+        const now = new Date().toISOString();
+        return {
+          listSections: (state.listSections || []).map((s: any) =>
+            s.id === id ? { ...s, deleted_at: undefined, _is_dirty: true, updated_at: now } : s
+          ),
+        };
+      }),
+
+      // Deshacer «eliminar frecuencia»: sale de las lápidas y vuelve a la lista.
+      restoreCycle: (id) => optimisticUpdate(get, set, (state) => {
+        const gone = (state.tombstones?.cycles || []).find((c: any) => c.id === id);
+        if (!gone || state.cycles.some((c) => c.id === id)) return state;
+        const { deleted_at: _deleted, ...rest } = gone as any;
+        return {
+          cycles: [...state.cycles, { ...rest, _is_dirty: true, updated_at: new Date().toISOString() }],
+          tombstones: { ...state.tombstones, cycles: state.tombstones.cycles.filter((c: any) => c.id !== id) },
         };
       }),
 

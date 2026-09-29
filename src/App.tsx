@@ -4,9 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { Sidebar } from './components/layout/Sidebar';
 import { MainContent } from './components/layout/MainContent';
+import { undoLastDeletion } from './utils/undoToast';
 import { WidgetDashboard } from './components/layout/WidgetDashboard';
 
-import { TaskDrawer } from './components/tasks/TaskDrawer';
 import { PromptModal } from './components/layout/PromptModal';
 
 import { SpotlightModal } from './components/search/SpotlightModal';
@@ -47,6 +47,8 @@ const UniversalImporter = lazyNamed(() => import('./components/views/UniversalIm
 const AnalyticsView = lazyNamed(() => import('./components/analytics/AnalyticsView'), 'AnalyticsView');
 const ZenMode = lazyNamed(() => import('./components/tasks/ZenMode'), 'ZenMode');
 const ListSequenceMode = lazyNamed(() => import('./components/tasks/ListSequenceMode'), 'ListSequenceMode');
+const SecuritySheet = lazyNamed(() => import('./components/account/SecuritySheet'), 'SecuritySheet');
+const TaskDrawer = lazyNamed(() => import('./components/tasks/TaskDrawer'), 'TaskDrawer');
 const AIAssistantModal = lazyNamed(() => import('./components/ai/AIAssistantModal'), 'AIAssistantModal');
 const SharedListView = lazyNamed(() => import('./components/share/SharedListView'), 'SharedListView');
 
@@ -74,6 +76,20 @@ function App() {
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   const [aiAssistantEverOpened, setAiAssistantEverOpened] = useState(false);
   if (isAIAssistantOpen && !aiAssistantEverOpened) setAiAssistantEverOpened(true);
+  const [securityOpen, setSecurityOpen] = useState(false);
+  useEffect(() => {
+    const open = () => setSecurityOpen(true);
+    window.addEventListener('open-security-sheet', open);
+    return () => window.removeEventListener('open-security-sheet', open);
+  }, []);
+  const [drawerEverOpened, setDrawerEverOpened] = useState(false);
+  // El editor se descarga en un momento libre tras arrancar, para que al abrirlo ya esté listo.
+  useEffect(() => {
+    const idle = (window as any).requestIdleCallback || ((cb: () => void) => window.setTimeout(cb, 1500));
+    const id = idle(() => { void import('./components/tasks/TaskDrawer'); });
+    return () => { (window as any).cancelIdleCallback?.(id); };
+  }, []);
+  if (isDrawerOpen && !drawerEverOpened) setDrawerEverOpened(true);
   const hasHydrated = useAppStore((state) => state.hasHydrated);
   // Enlaces especiales: recuperación de contraseña (?reset=) y lista compartida (?share=)
   const [resetToken, setResetToken] = useState(() => new URLSearchParams(window.location.search).get('reset'));
@@ -105,6 +121,18 @@ function App() {
       window.removeEventListener('open-ai-assistant', handleOpenAI);
       window.removeEventListener('keydown', handleKeyDown);
     };
+  }, []);
+
+  // Ctrl/⌘+Z fuera de un campo de texto: deshace la última eliminación (30 s de margen).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.key.toLowerCase() !== 'z') return;
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
+      if (undoLastDeletion()) e.preventDefault();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
   // IndexedDB can be unavailable in privacy/restricted contexts. Never strand the
@@ -1132,17 +1160,21 @@ function App() {
         </NavigationFrame>
       </div>
 
-      <TaskDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => { setIsDrawerOpen(false); setEditingTaskId(null); setDefaultSectionId(undefined); setDrawerInitialFocus(undefined); setDrawerInitialTitle(undefined); }}
-        defaultCategoryId={
-          currentView.startsWith('list_') ? currentView.replace('list_', '') : undefined
-        }
-        defaultSectionId={defaultSectionId}
-        taskId={editingTaskId || undefined}
-        initialFocus={drawerInitialFocus}
-        initialTitle={drawerInitialTitle}
-      />
+      {drawerEverOpened && (
+        <Suspense fallback={null}>
+        <TaskDrawer
+          isOpen={isDrawerOpen}
+          onClose={() => { setIsDrawerOpen(false); setEditingTaskId(null); setDefaultSectionId(undefined); setDrawerInitialFocus(undefined); setDrawerInitialTitle(undefined); }}
+          defaultCategoryId={
+            currentView.startsWith('list_') ? currentView.replace('list_', '') : undefined
+          }
+          defaultSectionId={defaultSectionId}
+          taskId={editingTaskId || undefined}
+          initialFocus={drawerInitialFocus}
+          initialTitle={drawerInitialTitle}
+        />
+        </Suspense>
+      )}
 
       {/* Se monta al abrirlo por primera vez (así su código no pesa en la carga inicial) y se queda montado para animar el cierre. */}
       {aiAssistantEverOpened && (
@@ -1182,6 +1214,11 @@ function App() {
         onSelectView={handleSelectView}
         onOpenTask={(taskId) => { handleSelectView('smart_today'); setEditingTaskId(taskId); setIsDrawerOpen(true); }}
       />
+      {securityOpen && (
+        <Suspense fallback={null}>
+          <SecuritySheet onClose={() => setSecurityOpen(false)} />
+        </Suspense>
+      )}
       <ShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
       <ConfirmHost />
 

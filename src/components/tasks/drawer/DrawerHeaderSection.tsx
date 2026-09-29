@@ -44,7 +44,7 @@ export const DrawerHeaderSection: React.FC<DrawerHeaderSectionProps> = ({
             layoutId={taskId ? "task-title-" + taskId : undefined}
             type="text" 
             className="title-input" 
-            placeholder="Ej: Tomar pastillas mañana a las 5 y a las 8..." 
+            placeholder="Título · p. ej. «Pastillas mañana 9:00»" 
             value={title}
             onChange={e => setTitle(e.target.value)}
             autoFocus 
@@ -55,7 +55,7 @@ export const DrawerHeaderSection: React.FC<DrawerHeaderSectionProps> = ({
             type="button"
             onClick={toggleListening} 
             aria-label="Dictar por voz"
-            style={{ background: 'none', border: 'none', color: isListening ? '#ff3b30' : 'var(--accent-color)', cursor: 'pointer', padding: '0 16px' }}
+            style={{ background: 'none', border: 'none', color: isListening ? '#ff3b30' : 'var(--accent-blue)', cursor: 'pointer', padding: '0 16px' }}
           >
             {isListening ? <MicOff size={20} className="pulse-anim" /> : <Mic size={20} />}
           </button>

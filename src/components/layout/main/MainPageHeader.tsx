@@ -15,10 +15,12 @@ import { HapticService } from '../../../services/HapticService';
 import { isCaducidadesList, isQueHeHechoList, getListBadgeInfo, isShoppingList } from '../../../utils/specialLists';
 import { confirmDialog } from '../../ui/confirmDialog';
 import { useAppStore } from '../../../store/useAppStore';
+import { deleteCycleWithUndo } from '../../../utils/undoToast';
 import type { TaskItem, CustomCycle, CustomList } from '../../../models/Task';
 import { formatDuration, type TasksDurationSummary } from '../../../utils/taskDuration';
 import { formatEuro } from '../../../utils/format';
 import { MetaSplit, type MetaPart, MONEY_COLOR } from '../../ui/MetaSplit';
+import { describeRoutineParts, routinePeriodLabel, type RoutinePart } from '../../../utils/routineBreakdown';
 import { getReservedFrequencyColor } from '../../../constants/colors';
 
 export interface CycleBreakdownInfo {
@@ -54,6 +56,8 @@ interface MainPageHeaderProps {
   activeVisibleCount: number;
   completedVisibleCount: number;
   cycleBreakdown?: CycleBreakdownInfo;
+  /** Sin desglose por frecuencia: lo pendiente repartido en puntuales y frecuencias. */
+  mixParts?: RoutinePart[] | null;
   setConfirmProps: (props: any) => void;
   setIsConfirmOpen: (open: boolean) => void;
   deleteCycle: (id: string) => void;
@@ -101,6 +105,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   activeVisibleCount,
   completedVisibleCount: _completedVisibleCount,
   cycleBreakdown,
+  mixParts,
   setConfirmProps,
   setIsConfirmOpen,
   deleteCycle,
@@ -156,13 +161,14 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
         }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, flex: '1 1 0%' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flexWrap: 'wrap' }}>
-              <h1 className="text-display" style={{ 
+              <h1 className="text-display view-title" style={{ 
                 fontSize: getTitle().length > 24 ? '28px' : '34px', 
                 fontWeight: 700,
                 lineHeight: '1.2',
                 wordBreak: 'break-word',
                 letterSpacing: '-0.5px',
-                color: viewColor,
+                // En claro se oscurece un poco el color de la lista para que el título llegue a 3:1 (AA texto grande).
+                ['--title-color' as string]: viewColor,
                 display: 'flex', alignItems: 'center', margin: 0,
                 padding: 0,
                 boxSizing: 'border-box',
@@ -323,6 +329,15 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                       const own = cycleBreakdown!.ownDurationMinutes;
                       const acc = cycleBreakdown!.accumulatedDurationMinutes;
                       description = `Duración total ~${total.formattedActive}: ${formatDuration(own)} propias de ${ownName} (barra sólida) + ${formatDuration(acc)} acumuladas de otras frecuencias (barra rayada)`;
+                    } else if (mixParts && mixParts.length > 1) {
+                      parts = mixParts.map(mp => ({
+                        id: mp.periodicity,
+                        value: mp.minutes,
+                        text: `${formatDuration(mp.minutes)} ${routinePeriodLabel(mp.periodicity)}`,
+                        color: mp.periodicity === 'none' ? 'var(--text-secondary)' : getReservedFrequencyColor(mp.periodicity),
+                        tone: 'solid',
+                      }));
+                      description = `Duración total ~${total.formattedActive}: ${describeRoutineParts(mixParts)}`;
                     } else if (doneMinutes > 0) {
                       parts = [
                         { id: 'left', value: total.activeMinutes, text: `${total.formattedActive} restantes`, color: viewColor, tone: 'solid' },
@@ -330,11 +345,11 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                       ];
                       description = `Te quedan ~${total.formattedActive} porque ya has completado ~${completedDuration!.formattedActive} (de ~${formatDuration(total.activeMinutes + doneMinutes)})`;
                     }
-                    return <MetaSplit label={<span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>~{total.formattedActive}</span>} parts={parts} description={description} />;
+                    return <MetaSplit label={<span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>~{total.formattedActive}</span>} parts={parts} description={description} className={mixParts && !hasBreakdown ? 'meta-split--open' : undefined} />;
                   })()}
 
                   {hasValidDuration && hasValidPrice && (
-                    <span style={{ opacity: 0.4 }}>·</span>
+                    <span className="meta-dot" style={{ opacity: 0.4 }}>·</span>
                   )}
 
                   {hasValidPrice && (
@@ -455,18 +470,19 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                   title: 'Eliminar Frecuencia', 
                   message: `¿Estás seguro de eliminar la frecuencia "${cycleName}"? Esta acción no se puede deshacer.`, 
                   onConfirm: () => {
-                    deleteCycle(cycleId);
+                    deleteCycleWithUndo({
+                      getCycleName: () => cycleName,
+                      getTaskIds: () => Object.values(useAppStore.getState().tasks).filter((t) => t.cycle_id === cycleId && !t.deleted_at).map((t) => t.id),
+                      remove: () => deleteCycle(cycleId),
+                      restore: () => useAppStore.getState().restoreCycle(cycleId),
+                      relink: (id) => useAppStore.getState().updateTask(id, { cycle_id: cycleId }),
+                    });
                     if (onNavigateView) {
                       onNavigateView('smart_today');
                     }
                     if (_onBackToSidebar) {
                       _onBackToSidebar();
                     }
-                    window.dispatchEvent(
-                      new CustomEvent('show-toast', {
-                        detail: `Frecuencia "${cycleName}" eliminada`,
-                      })
-                    );
                   }
                 }); 
                 setIsConfirmOpen(true);

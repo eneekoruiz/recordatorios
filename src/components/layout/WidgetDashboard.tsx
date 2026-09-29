@@ -19,7 +19,7 @@ export function WidgetDashboard() {
 
   return (
     <div style={{ padding: '16px', background: 'transparent', width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <h3 style={{ margin: '0 0 16px 0', fontSize: '1rem', color: '#0a84ff' }}>Up Next</h3>
+      <h3 style={{ margin: '0 0 16px 0', fontSize: '1rem', color: '#0a84ff' }}>A continuación</h3>
       
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <AnimatePresence>

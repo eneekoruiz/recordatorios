@@ -50,13 +50,24 @@ export function extractPrice(text?: string | null, isNote = false): ExtractedPri
 
   // 3. Sufijo de divisa: '100 e', '100e', '100 €', '100€', '100 euros', '100 eur', '100$'
   // Protegemos contra la conjunción castellana "e": no hacer match si le sigue una palabra que empieza por 'i' o 'hi' ("10 e ir")
-  const suffixCur = /(?:^|\s|\()(?:por\s+|coste\s+|precio\s+)?(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur\.?|\$|usd|e\b)(?:\s*\)|\s*$|\s*[,;.])(?!\s*(?:i\w+|hi\w+))/i;
+  const suffixCur = /(?:^|\s|\()(?:(?:de\s+)?(?:unos|aproximadamente|aprox\.?|alrededor de)\s+|por\s+|coste\s+|precio\s+)?(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur\.?|\$|usd|e\b)(?:\s*\)|\s*$|\s*[,;.])(?!\s*(?:i\w+|hi\w+))/i;
   const sufMatch = trimmed.match(suffixCur);
   if (sufMatch) {
     const val = parseFloat(sufMatch[1].replace(',', '.'));
     if (!isNaN(val) && val > 0) {
       const clean = cleanExtractedSnippet(trimmed, suffixCur);
       return { price: val, cleanText: clean };
+    }
+  }
+
+  // 4. Importe con divisa explícita en mitad de la frase: 'pagar 45 euros de luz', 'regalo de unos 50 euros para Ana'.
+  //    Solo con €/euros/eur (nunca con la «e» suelta) y quitando el «de unos» / «por» y el «de» que le sigue.
+  const midCur = /(?:^|\s|\()(?:(?:por|de|en)\s+)?(?:(?:unos|aproximadamente|aprox\.?|alrededor de)\s+)?(\d+(?:[.,]\d{1,2})?)\s*(?:€|euros?|eur\b\.?)(?:\s+de\b)?(?=\s|[,;.)]|$)/i;
+  const midMatch = trimmed.match(midCur);
+  if (midMatch) {
+    const val = parseFloat(midMatch[1].replace(',', '.'));
+    if (!isNaN(val) && val > 0) {
+      return { price: val, cleanText: cleanExtractedSnippet(trimmed, midCur) };
     }
   }
 

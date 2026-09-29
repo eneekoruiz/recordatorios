@@ -136,3 +136,92 @@ describe('AIService.localSemanticExtract — frases enrevesadas', () => {
     expect(new Date(tasks[1].dueDate!).getDate()).toBe(new Date(Date.now() + 86400000).getDate());
   });
 });
+
+describe('asistente local — frases más largas', () => {
+  const run = (text: string) => AIService.localSemanticExtract(text, [], {}).tasks;
+  const at = (iso?: string) => (iso ? new Date(iso) : undefined);
+
+  it('«apunta comprar huevos y pan mañana»: sin «apunta» y con la fecha en los dos', () => {
+    const tasks = run('apunta comprar huevos y pan mañana, llamar al médico el jueves por la tarde');
+    expect(tasks.map((t) => t.title)).toEqual(['Comprar huevos', 'Comprar pan', 'Llamar al médico']);
+    expect(at(tasks[0].dueDate)?.getDate()).toBe(at(tasks[1].dueDate)?.getDate());
+    expect(tasks[0].dueDate).toBeDefined();
+    expect(at(tasks[2].dueDate)?.getDay()).toBe(4);
+  });
+
+  it('«unos 50 euros» es el precio y «tengo boda de Marta» es «Boda de Marta»', () => {
+    const tasks = run('recuérdame que el sábado tengo boda de Marta y hay que comprar un regalo de unos 50 euros');
+    expect(tasks.map((t) => t.title)).toEqual(['Boda de Marta', 'Comprar un regalo']);
+    expect(tasks[1].price).toBe(50);
+    expect(at(tasks[0].dueDate)?.getDay()).toBe(6);
+  });
+
+  it('hábitos: «todas las mañanas» y «los domingos» no se quedan en el título ni se mezclan', () => {
+    const tasks = run('todas las mañanas tomar vitaminas y los domingos limpiar el baño');
+    expect(tasks.map((t) => t.title)).toEqual(['Tomar vitaminas', 'Limpiar el baño']);
+    expect(tasks[0].cycle).toBe('cycle_day');
+    expect(tasks[0].timeOfDay).toBe('morning');
+    expect(tasks[1].cycle).toBe('cycle_week');
+    expect(at(tasks[1].dueDate)?.getDay()).toBe(0);
+  });
+
+  it('un horario con horas: cada elemento conserva su hora y no hereda el verbo del anterior', () => {
+    const tasks = run('mañana a las 8 reunión, a las 12 comer con Irantzu, a las 18 gimnasio');
+    expect(tasks.map((t) => t.title)).toEqual(['Reunión', 'Comer con Irantzu', 'Gimnasio']);
+    expect(tasks.map((t) => at(t.dueDate)?.getHours())).toEqual([8, 12, 18]);
+    expect(new Set(tasks.map((t) => at(t.dueDate)?.getDate())).size).toBe(1);
+  });
+
+  it('fechas como «antes del 20 de noviembre», «el mes que viene» y «el 1 de cada mes»', () => {
+    const a = run('tengo que renovar el pasaporte antes del 20 de noviembre');
+    expect(a[0].title).toBe('Renovar el pasaporte');
+    expect(at(a[0].dueDate)?.getDate()).toBe(20);
+    const b = run('revisar el coche el mes que viene y pagar el seguro el 1 de cada mes');
+    expect(b.map((t) => t.title)).toEqual(['Revisar el coche', 'Pagar el seguro']);
+    expect(b[1].cycle).toBe('cycle_month');
+    expect(at(b[1].dueDate)?.getDate()).toBe(1);
+  });
+
+  it('«lista de la compra: …» no crea una tarea con la cabecera', () => {
+    const tasks = run('lista de la compra: manzanas, yogures 2,30€, detergente 5 euros');
+    expect(tasks.map((t) => t.title)).toEqual(['Manzanas', 'Yogures', 'Detergente']);
+    expect(tasks[1].price).toBe(2.3);
+    expect(tasks[2].price).toBe(5);
+  });
+});
+
+describe('AIService.localSemanticExtract — horas y fechas coloquiales', () => {
+  const run = (text: string) => AIService.localSemanticExtract(text, [], {}).tasks;
+  const at = (iso?: string) => (iso ? new Date(iso) : undefined);
+
+  it('«a las 5 y media» y «a las 7 menos cuarto» no parten la frase ni dejan restos', () => {
+    const a = run('Reunión con Marta mañana a las 5 y media');
+    expect(a).toHaveLength(1);
+    expect(a[0].title).toBe('Reunión con Marta');
+    const d = at(a[0].dueDate)!;
+    expect([d.getHours(), d.getMinutes()]).toEqual([17, 30]);
+    const b = run('Salir mañana a las 8 menos cuarto');
+    expect(b).toHaveLength(1);
+    expect(b[0].title).toBe('Salir');
+    const e = at(b[0].dueDate)!;
+    expect([e.getHours(), e.getMinutes()]).toEqual([7, 45]);
+  });
+
+  it('«7am» y «21h» sueltos, y «el jueves 3 de diciembre» manda el día del mes', () => {
+    const a = run('Correr mañana 7am');
+    expect(a[0].title).toBe('Correr');
+    expect(at(a[0].dueDate)!.getHours()).toBe(7);
+    const b = run('Cena con Ana el viernes 21h');
+    expect(b[0].title).toBe('Cena con Ana');
+    expect(at(b[0].dueDate)!.getHours()).toBe(21);
+    const c = at(run('Dentista el jueves 3 de diciembre')[0].dueDate)!;
+    expect([c.getMonth(), c.getDate()]).toEqual([11, 3]);
+  });
+
+  it('«en 2 horas» fija la hora resultante', () => {
+    const t = run('Revisar correo en 2 horas')[0];
+    expect(t.title).toBe('Revisar correo');
+    const diff = at(t.dueDate)!.getTime() - Date.now();
+    expect(Math.abs(diff - 2 * 3_600_000)).toBeLessThan(120_000);
+  });
+});

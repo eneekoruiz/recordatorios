@@ -1,138 +1,92 @@
-import { useAppStore } from '../../store/useAppStore';
-import { Flame, Target, ArrowUpRight, ListTodo, ChevronLeft } from 'lucide-react';
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { BarChart3, Flame, Target, CheckCircle2 } from 'lucide-react';
+import { useAppStore } from '../../store/useAppStore';
 import { useNavigation } from '../../hooks/useNavigation';
+import { ViewHeader } from '../ui/ViewHeader';
+import { completionsByDay, currentStreak, totals, weeklySuccess } from '../../utils/stats';
+import { plural } from '../../utils/format';
 
 interface AnalyticsViewProps {
   onBack?: () => void;
 }
 
+const weekday = (ms: number) => {
+  const label = new Date(ms).toLocaleDateString('es-ES', { weekday: 'short' }).replace('.', '');
+  return label.charAt(0).toUpperCase() + label.slice(1);
+};
+
 export function AnalyticsView({ onBack }: AnalyticsViewProps) {
   const { reset } = useNavigation();
-  const tasks = useAppStore(state => state.tasks);
+  const tasks = useAppStore((state) => state.tasks);
 
-  const handleBackClick = () => {
-    if (onBack) {
-      onBack();
-    } else {
-      reset('HOME');
-    }
-  };
+  const { streak, week, days, sum } = useMemo(() => {
+    const list = Object.values(tasks);
+    return { streak: currentStreak(list), week: weeklySuccess(list), days: completionsByDay(list), sum: totals(list) };
+  }, [tasks]);
 
-  // Estadísticas Simples (Habit Tracking)
-  const taskList = Object.values(tasks).filter(t => !t.deleted_at);
-  const completed = taskList.filter(t => t.status === 'completed');
-  const pending = taskList.filter(t => t.status === 'pending');
+  const max = Math.max(...days.map((d) => d.count));
+  const chartSummary = days.map((d) => `${weekday(d.day)}: ${plural(d.count, 'completada')}`).join(', ');
 
-  const total = completed.length + pending.length;
-  const completionRate = total === 0 ? 0 : Math.round((completed.length / total) * 100);
-
-  // Cálculo de Racha de Tareas Diarias
-  const dailyCompleted = completed.filter(t => t.cycle_id === 'cycle_day').length;
-  // (En un entorno real iteraríamos las fechas, pero para esta demo mostramos el volumen como Racha)
-  const streak = dailyCompleted > 0 ? dailyCompleted + 2 : 0; 
-
-  const containerVariants: any = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 }
-    }
-  };
-
-  const itemVariants: any = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
-  };
+  const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 26 } } };
 
   return (
-    <main style={{ padding: 'var(--space-24)', maxWidth: 1000, margin: '0 auto', overflowY: 'auto', height: '100%' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-16)' }}>
-        <button 
-          onClick={handleBackClick} 
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-full)', padding: '8px 16px', color: 'var(--text-primary)', fontWeight: 500, cursor: 'pointer', transition: 'all 0.2s ease' }}
-        >
-          <ChevronLeft size={18} /> Volver a Listas
-        </button>
-      </div>
-      <header style={{ marginBottom: 'var(--space-32)' }}>
-        <h1 className="text-display" style={{ color: 'var(--accent-purple)', marginBottom: 0 }}>
-          Estadísticas y Hábitos
-        </h1>
-        <p className="text-secondary" style={{ marginTop: 8 }}>Visualiza tu progreso y mantén la consistencia.</p>
-      </header>
+    <main className="stats-page" aria-label="Estadísticas">
+      <ViewHeader
+        title="Estadísticas"
+        subtitle="Tu constancia, con lo que de verdad has completado."
+        icon={<BarChart3 size={20} />}
+        color="var(--accent-purple)"
+        onBack={() => (onBack ? onBack() : reset('HOME'))}
+      />
 
-      <motion.div 
-        variants={containerVariants}
-        initial="hidden"
-        animate="show"
-        style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-24)' }}
-      >
-        
-        {/* Tarjetas de Métricas */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--space-24)' }}>
-          
-          <motion.div variants={itemVariants} className="surface-card" style={{ padding: 'var(--space-24)', background: 'linear-gradient(135deg, var(--bg-surface) 0%, rgba(255, 59, 48, 0.05) 100%)' }}>
-            <div className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem' }}>
-              <Flame size={20} color="var(--accent-red)" /> Racha Diaria
-            </div>
-            <div style={{ fontSize: '3.5rem', fontWeight: 700, marginTop: 'var(--space-12)', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>
-              {streak} <span style={{fontSize:'1.25rem', color:'var(--text-tertiary)', fontWeight: 500, letterSpacing: 'normal'}}>días</span>
-            </div>
-          </motion.div>
+      <motion.div className="stat-cards" initial="hidden" animate="show" transition={{ staggerChildren: 0.06 }}>
+        <motion.section variants={item} className="stat-card" aria-label="Racha diaria">
+          <div className="stat-card-label"><Flame size={16} color="var(--accent-red-text)" aria-hidden="true" /> Racha</div>
+          <div className="stat-card-value">{streak}<span className="stat-card-unit">{streak === 1 ? 'día' : 'días'}</span></div>
+          <div className="stat-card-hint">{streak > 0 ? 'Días seguidos completando algo' : 'Completa algo hoy para empezar'}</div>
+        </motion.section>
 
-          <motion.div variants={itemVariants} className="surface-card" style={{ padding: 'var(--space-24)', background: 'linear-gradient(135deg, var(--bg-surface) 0%, rgba(52, 199, 89, 0.05) 100%)' }}>
-            <div className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem' }}>
-              <Target size={20} color="var(--accent-green)" /> Éxito Semanal
-            </div>
-            <div style={{ fontSize: '3.5rem', fontWeight: 700, marginTop: 'var(--space-12)', color: completionRate >= 70 ? 'var(--accent-green)' : 'var(--text-primary)', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>
-              {completionRate}%
-            </div>
-          </motion.div>
-
-          <motion.div variants={itemVariants} className="surface-card" style={{ padding: 'var(--space-24)', background: 'linear-gradient(135deg, var(--bg-surface) 0%, rgba(10, 132, 255, 0.05) 100%)' }}>
-            <div className="text-muted" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem' }}>
-              <ListTodo size={20} color="var(--accent-primary)" /> Total Tareas
-            </div>
-            <div style={{ fontSize: '3.5rem', fontWeight: 700, marginTop: 'var(--space-12)', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>
-              {total} <span style={{fontSize:'1.25rem', color:'var(--text-tertiary)', fontWeight: 500, letterSpacing: 'normal'}}>históricas</span>
-            </div>
-          </motion.div>
-
-        </div>
-
-        {/* Gráfico de Barras CSS Nativo */}
-        <motion.div variants={itemVariants} className="surface-card" style={{ padding: 'var(--space-32)', marginTop: 'var(--space-16)' }}>
-          <h3 className="text-title" style={{ margin: '0 0 var(--space-32) 0', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <ArrowUpRight size={24} color="var(--accent-primary)" /> Actividad Reciente
-          </h3>
-          
-          <div style={{ display: 'flex', alignItems: 'flex-end', height: '220px', gap: 'var(--space-16)', paddingBottom: 'var(--space-16)', borderBottom: '1px solid var(--border-subtle)' }}>
-            {/* Generación de barras falsas para la demo analítica */}
-            {[40, 70, 30, 90, 60, 100, Math.max(10, completionRate)].map((h, i) => (
-              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-8)' }}>
-                <motion.div 
-                  initial={{ height: 0 }}
-                  animate={{ height: `${h}%` }}
-                  transition={{ duration: 0.8, delay: 0.4 + (i * 0.05), type: 'spring', bounce: 0.4 }}
-                  style={{ 
-                    width: '100%', 
-                    maxWidth: 60,
-                    background: i === 6 ? 'linear-gradient(180deg, var(--accent-primary) 0%, rgba(10,132,255,0.4) 100%)' : 'var(--border-subtle)', 
-                    borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0',
-                    transition: 'background 0.3s'
-                  }}
-                  whileHover={{ background: 'var(--accent-primary)', opacity: 0.8 }}
-                />
-              </div>
-            ))}
+        <motion.section variants={item} className="stat-card" aria-label="Éxito de la semana">
+          <div className="stat-card-label"><Target size={16} color="var(--accent-green)" aria-hidden="true" /> Semana</div>
+          <div className="stat-card-value" style={{ color: week.rate !== null && week.rate >= 70 ? 'var(--accent-green)' : undefined }}>
+            {week.rate !== null ? `${week.rate}%` : '—'}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16, color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500, padding: '0 10px' }}>
-            <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>Dom</span>
+          <div className="stat-card-hint">
+            {week.rate === null ? 'Aún nada que medir' : `${plural(week.done, 'hecha')}${week.missed ? ` · ${week.missed} sin hacer` : ''}`}
           </div>
-        </motion.div>
+        </motion.section>
 
+        <motion.section variants={item} className="stat-card" aria-label="Completadas en total">
+          <div className="stat-card-label"><CheckCircle2 size={16} color="var(--accent-blue)" aria-hidden="true" /> Total</div>
+          <div className="stat-card-value">{sum.completed}<span className="stat-card-unit">{sum.completed === 1 ? 'hecha' : 'hechas'}</span></div>
+          <div className="stat-card-hint">{plural(sum.pending, 'pendiente')}</div>
+        </motion.section>
       </motion.div>
+
+      <motion.section className="week-chart" variants={item} initial="hidden" animate="show" aria-label="Actividad de los últimos 7 días">
+        <h2 className="week-chart-title">Últimos 7 días</h2>
+        <div className="week-chart-plot" role="img" aria-label={chartSummary}>
+          {max === 0 && <p className="week-chart-empty">Aún no has completado nada esta semana.<br />Cada recordatorio que marques aparecerá aquí.</p>}
+          {days.map((d, i) => {
+            const isToday = i === days.length - 1;
+            return (
+              <div key={d.day} className="week-bar-col">
+                <div className="week-bar-track">
+                  <span className="week-bar-count" aria-hidden="true">{d.count > 0 ? d.count : ''}</span>
+                  <motion.div
+                    className={`week-bar${isToday ? ' is-today' : ''}`}
+                    initial={{ height: 0 }}
+                    animate={{ height: d.count === 0 ? 3 : `${Math.max(8, (d.count / max) * 84)}%` }}
+                    transition={{ duration: 0.6, delay: 0.25 + i * 0.05, type: 'spring', bounce: 0.3 }}
+                  />
+                </div>
+                <span className={`week-bar-label${isToday ? ' is-today' : ''}`} aria-hidden="true">{weekday(d.day)}</span>
+              </div>
+            );
+          })}
+        </div>
+      </motion.section>
     </main>
   );
 }

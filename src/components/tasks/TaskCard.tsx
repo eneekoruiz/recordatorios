@@ -1718,6 +1718,7 @@ export const TaskCard = React.memo(function TaskCard({
             {!isMobile && Boolean(onReorderTasks) && (
               <div
                 className="task-drag-handle"
+                role="img"
                 draggable={!isBlocked && !isEditingTitle && !isEditingNote && !contextMenuOpen}
                 onDragStart={handleDragStart}
                 onPointerDown={(e) => e.stopPropagation()}

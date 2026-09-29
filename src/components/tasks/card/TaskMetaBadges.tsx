@@ -130,7 +130,7 @@ export function TaskMetaBadges({
             if (showDueDate) {
               const isRed = (dueDateColor || '').toLowerCase() === '#ff3b30';
               const isBlue = (dueDateColor || '').toLowerCase() === '#007aff';
-              const dueColor = isRed ? '#ff3b30' : isBlue ? '#007aff' : 'var(--text-secondary)';
+              const dueColor = isRed ? 'var(--accent-red-text, #d70015)' : isBlue ? 'var(--accent-blue, #0068d6)' : 'var(--text-secondary)';
 
               const due = new Date(task.dueDate!);
               const today = new Date(); today.setHours(0, 0, 0, 0);

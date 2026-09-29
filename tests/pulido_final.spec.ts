@@ -113,6 +113,44 @@ test.describe('Pulido final', () => {
     await expect(input).toHaveCount(0);
   });
 
+  test('la duración de una sección o vista con mezcla se reparte en puntuales, diarias y semanales', async ({ page }) => {
+    await ensureAppUnlocked(page);
+    await seedCasa(page);
+    await page.evaluate(() => {
+      (window as any).useAppStore.getState().addTask({ id: 'ce_5', title: 'Comprar pan', status: 'pending', categoryId: 'casa_e2e', dueDate: new Date().toISOString(), duration: 10 });
+      window.dispatchEvent(new CustomEvent('select-view', { detail: 'smart_all' }));
+    });
+    const casa = page.locator('.group-header', { hasText: 'Casa E2E' });
+    await expect(casa.locator('.meta-split__parts')).toContainText('10 min puntuales');
+    await expect(casa.locator('.meta-split__parts')).toContainText('15 min diarias');
+    await expect(casa.locator('.meta-split__parts')).toContainText('30 min semanales');
+    await expect(casa.locator('.meta-split')).toHaveAttribute('aria-label', /10 min puntuales \+ 15 min diarias \+ 30 min semanales/);
+    // La cabecera de la vista tiene el mismo reparto
+    await expect(page.locator('.list-duration-meta .meta-split__parts').first()).toContainText('30 min semanales');
+  });
+
+  test('eliminar una sección avisa con «Deshacer» y Ctrl+Z la devuelve con sus recordatorios', async ({ page }) => {
+    await ensureAppUnlocked(page);
+    await page.evaluate(() => {
+      const st = (window as any).useAppStore.getState();
+      st.addTasksBatch([], { createList: { id: 'proy', name: 'Proyecto', color: '#af52de', icon: 'sparkles' } });
+      st.addListSection({ id: 'sx', listId: 'proy', name: 'Fase uno', order: 0 });
+      st.addTask({ id: 't1', title: 'Diseñar', status: 'pending', categoryId: 'proy', sectionId: 'sx', created_at: new Date().toISOString() });
+    });
+    await page.locator('.ios-list-item', { hasText: 'Proyecto' }).first().click();
+    const header = page.locator('.group-header', { hasText: 'Fase uno' });
+    await header.hover();
+    await header.getByRole('button', { name: 'Opciones de sección' }).click();
+    await page.getByText('Eliminar sección').first().click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Eliminar' }).click();
+    await expect(header).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Deshacer' })).toBeVisible();
+    await page.locator('body').click({ position: { x: 900, y: 500 } });
+    await page.keyboard.press('Control+z');
+    await expect(header).toHaveCount(1);
+    expect(await page.evaluate(() => (window as any).useAppStore.getState().tasks.t1.sectionId)).toBe('sx');
+  });
+
   test.describe('móvil', () => {
     test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 

@@ -276,7 +276,7 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
             <button type="button" className="spotlight-cancel" onClick={handleClose}>Cancelar</button>
           </div>
 
-          <div ref={listContainerRef} className="spotlight-results" role="listbox" aria-label="Resultados">
+          <div ref={listContainerRef} className="spotlight-results" role="listbox" aria-label="Resultados" tabIndex={0}>
             {items.length === 0 ? (
               <div className="spotlight-empty">Sin resultados para «{query.trim()}»</div>
             ) : items.map((item, idx) => {

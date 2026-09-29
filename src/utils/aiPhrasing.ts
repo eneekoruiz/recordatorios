@@ -3,13 +3,13 @@
 // recuérdame que tengo que llamar a mi madre» debe acabar como «Llamar a mi madre · jueves · tarde».
 
 const WEEKDAY_NAMES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'] as const;
-const WEEKDAY_SRC = '(?:lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)';
+const WEEKDAY_SRC = '(?:lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bados?|domingos?)';
 
 const stripAccents = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 /** Índice Date.getDay() (0 = domingo) de un nombre de día, con o sin tilde. */
 export function weekdayIndex(name: string): number {
-  const clean = stripAccents(name);
+  const clean = stripAccents(name).replace(/^(sabado|domingo)s$/, '$1');
   return WEEKDAY_NAMES.findIndex((d) => stripAccents(d) === clean);
 }
 
@@ -44,7 +44,7 @@ const LEAD_FILLER =
 
 /** «recuérdame que», «apúntame», «no me dejes olvidar», «tengo que», «debería»… en cualquier punto. */
 const REQUEST_FRAME =
-  /\b(?:(?:por\s+favor,?\s+)?(?:recu[eé]rdame|ap[uú]ntame|ap[uú]ntalo|anota(?:me)?|a[ñn]ade(?:me)?|agrega(?:me)?|pon(?:me)?\s+un\s+recordatorio(?:\s+para)?|crea(?:me)?\s+(?:un\s+)?recordatorio(?:\s+para)?)(?:\s+que)?|no\s+(?:te\s+)?(?:olvides|me\s+dejes\s+olvidar)(?:\s+de)?|acu[eé]rdate\s+de|(?:tendr[ií]a|deber[ií]a|tengo|debo|hay|necesito|quiero)\s+(?:que\s+)?(?=[a-záéíóúñ]+(?:ar|er|ir|arme|erme|irme)\b)|(?:deber[ií]a|debo)\s+)/gi;
+  /\b(?:(?:por\s+favor,?\s+)?(?:recu[eé]rdame|ap[uú]nta(?:me|lo)?|anota(?:me)?|a[ñn]ade(?:me)?|agrega(?:me)?|pon(?:me)?\s+un\s+recordatorio(?:\s+para)?|crea(?:me)?\s+(?:un\s+)?recordatorio(?:\s+para)?)(?:\s+que)?|no\s+(?:te\s+)?(?:olvides|me\s+dejes\s+olvidar)(?:\s+de)?|acu[eé]rdate\s+de|(?:tendr[ií]a|deber[ií]a|tengo|debo|hay|necesito|quiero)\s+(?:que\s+)?(?=[a-záéíóúñ]+(?:ar|er|ir|arme|erme|irme)\b)|(?:deber[ií]a|debo)\s+)/gi;
 
 /** Quita muletillas iniciales y verbos de petición; conserva el contenido. */
 export function stripRequestFrames(segment: string): string {
@@ -126,17 +126,30 @@ export interface ClockTime {
 export function parseClockTime(text: string): ClockTime | null {
   const re =
     /\b(?:a\s+las?|a\s+la|sobre\s+las?|sobre\s+la|hacia\s+las?|hacia\s+la|a\s+eso\s+de\s+las?|para\s+las?)\s+(\d{1,2})(?::([0-5]\d))?\s*(am|pm|h(?![a-záéíóúñ])|de\s+la\s+(?:ma[ñn]ana|tarde|noche)|del\s+mediod[ií]a)?/i;
-  const m = text.match(re);
+  let m = text.match(re);
+  // «7am», «10 pm», «21h» sueltos (la «h» sola solo cuenta con dos cifras: «3h» suele ser una duración)
+  if (!m) {
+    m = text.match(/(?:^|\s)(\d{1,2})()\s?(am|pm|h(?![a-záéíóúñ]))(?=\s|$|[,.;!?])/i);
+    if (m && m[3].toLowerCase() === 'h' && m[1].length < 2) return null;
+  }
   if (!m) return null;
   let hour = parseInt(m[1], 10);
   if (hour > 23) return null;
-  const minute = m[2] ? parseInt(m[2], 10) : 0;
+  let minute = m[2] ? parseInt(m[2], 10) : 0;
   const cue = stripAccents(m[3] || '');
   const mentionsAfternoon = /tarde|noche/.test(cue) || /\b(?:por\s+la\s+(?:tarde|noche)|de\s+la\s+(?:tarde|noche))\b/i.test(text);
   if (cue === 'pm' || (mentionsAfternoon && hour < 12)) hour = hour < 12 ? hour + 12 : hour;
   else if (cue === 'am' && hour === 12) hour = 0;
   else if (!cue && hour >= 1 && hour <= 7) hour += 12;
-  return { matched: m[0].replace(/\s+$/, ''), hour, minute };
+  let matched = m[0].replace(/\s+$/, '');
+  // «a las 5 y media», «a las 5 y cuarto», «a las 7 menos cuarto», «a las 9 y diez»
+  const tail = text.slice((m.index ?? 0) + m[0].length).match(/^\s*(y|menos)\s+(media|cuarto|veinte|diez|cinco)(?![a-záéíóúñ])/i);
+  if (tail && !m[2]) {
+    const mins = { media: 30, cuarto: 15, veinte: 20, diez: 10, cinco: 5 }[tail[2].toLowerCase() as 'media'];
+    if (tail[1].toLowerCase() === 'menos') { hour = (hour + 23) % 24; minute = 60 - mins; } else minute = mins;
+    matched = text.slice(m.index ?? 0, (m.index ?? 0) + m[0].length + tail[0].length).replace(/\s+$/, '');
+  }
+  return { matched, hour, minute };
 }
 
 export function timeOfDayForHour(hour: number): 'morning' | 'afternoon' | 'night' {
@@ -178,7 +191,7 @@ export function leadingInfinitive(segment: string): string | null {
 const TEMPORAL_WORDS = new RegExp(
   '\\b(?:' + [
     'pasado\\s+ma[ñn]ana', 'ma[ñn]ana', 'hoy', 'ayer', 'tarde', 'noche', 'mediod[ií]a',
-    'lunes', 'martes', 'mi[ée]rcoles', 'jueves', 'viernes', 's[áa]bado', 'domingo',
+    'lunes', 'martes', 'mi[ée]rcoles', 'jueves', 'viernes', 's[áa]bados?', 'domingos?',
     'que\\s+viene', 'pr[óo]ximo', 'pr[óo]xima', 'este', 'esta', 'todos', 'todas', 'cada',
     'antes', 'despu[ée]s', 'del?', 'el', 'la', 'las', 'los', 'a', 'al', 'sobre', 'por', 'en', 'para',
     'y\\s+media', 'y\\s+cuarto', 'menos\\s+cuarto', 'en\\s+punto', 'h', 'horas?',
@@ -194,7 +207,8 @@ function withoutTemporal(segment: string): string {
 export function isBareNounPhrase(segment: string): boolean {
   const words = segment.trim().split(/\s+/).filter(Boolean);
   if (words.length === 0 || words.length > 5) return false;
-  if (leadingInfinitive(segment)) return false;
+  // «los domingos limpiar el baño»: con el día delante sigue siendo una acción, no un nombre suelto.
+  if (leadingInfinitive(segment) || leadingInfinitive(withoutTemporal(segment))) return false;
   // Una fecha u hora dicha aparte no es un elemento nuevo: completa la tarea anterior.
   // «huevos mañana», en cambio, sí es un elemento (con su fecha).
   if (parseWeekdayPhrase(segment) || parseClockTime(segment) || /\b(?:hoy|ma[ñn]ana|pasado\s+ma[ñn]ana|ayer)\b/i.test(segment)) {

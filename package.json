@@ -2,6 +2,14 @@
   "name": "recordatorios",
   "private": true,
   "version": "1.0.1",
+  "homepage": "https://recordatorios-delta.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eneekoruiz/recordatorios.git"
+  },
+  "bugs": {
+    "url": "https://github.com/eneekoruiz/recordatorios/issues"
+  },
   "type": "module",
   "scripts": {
     "dev": "concurrently \"vite\" \"node server/index.js\"",
@@ -21,23 +29,27 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
     "framer-motion": "^12.43.0",
     "idb": "^8.0.3",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^1.47.0",
     "pdfjs-dist": "^6.3.289",
+    "qrcode": "^1.5.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "web-push": "^3.6.7",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.63.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.13.6",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",

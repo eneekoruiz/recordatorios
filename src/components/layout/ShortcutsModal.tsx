@@ -41,6 +41,7 @@ export const ShortcutsModal: FC<ShortcutsModalProps> = ({ isOpen, onClose }) => 
         { label: 'Buscar (desde cualquier campo)', keys: [mod, 'K'] },
         { label: 'Nuevo recordatorio', keys: ['N'] },
         { label: 'Asistente', keys: [mod, 'J'] },
+        { label: 'Deshacer la última eliminación', keys: [mod, 'Z'] },
         { label: 'Cerrar', keys: ['Esc'] },
         { label: 'Mostrar estos atajos', keys: ['?'] },
       ],
@@ -72,7 +73,7 @@ export const ShortcutsModal: FC<ShortcutsModalProps> = ({ isOpen, onClose }) => 
             onClick={(e) => e.stopPropagation()}
           >
             <SheetNavBar title="Atajos de teclado" onConfirm={onClose} confirmLabel="Listo" />
-            <div className="form-sheet-body">
+            <div className="form-sheet-body" tabIndex={0}>
               {groups.map((group) => (
                 <div key={group.title}>
                   <p className="form-group-label">{group.title}</p>

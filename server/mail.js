@@ -36,3 +36,28 @@ export async function sendPasswordResetEmail(to, resetUrl) {
     throw new Error(`Resend respondió ${res.status}: ${body.slice(0, 200)}`);
   }
 }
+
+/**
+ * Aviso de seguridad (cambio de contraseña, inicio de sesión nuevo, 2FA…). Siempre «al mejor esfuerzo»:
+ * si no hay proveedor de correo o falla el envío, no debe romper la operación que lo originó.
+ */
+export async function sendSecurityEmail(to, { subject, heading, body }) {
+  if (!isMailConfigured()) return false;
+  try {
+    const html = `
+  <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#1c1c1e">
+    <h1 style="font-size:22px;margin:0 0 12px">${escapeHtml(heading)}</h1>
+    <p style="font-size:15px;line-height:1.5;color:#3a3a3c">${escapeHtml(body)}</p>
+    <p style="font-size:13px;color:#6c6c70">Si no has sido tú, cambia tu contraseña cuanto antes y cierra la sesión en todos tus dispositivos desde Seguridad.</p>
+  </div>`;
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: process.env.MAIL_FROM, to: [to], subject, html, text: `${heading}\n\n${body}` }),
+    });
+    return res.ok;
+  } catch (error) {
+    console.error('Aviso de seguridad no enviado:', error?.message || error);
+    return false;
+  }
+}

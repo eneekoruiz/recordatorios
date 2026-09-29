@@ -85,11 +85,15 @@ export function AuthScreen({ onSuccess, resetToken, onResetFinished }: AuthScree
   const [devResetUrl, setDevResetUrl] = useState<string | null>(null);
   const [suggestReset, setSuggestReset] = useState(false);
   const [loading, setLoading] = useState(false);
+  // Cuenta con verificación en dos pasos: tras la contraseña se pide el código de la app.
+  const [needsCode, setNeedsCode] = useState(false);
+  const [code, setCode] = useState('');
 
   const nameId = useId();
   const emailId = useId();
   const passwordId = useId();
   const confirmId = useId();
+  const codeId = useId();
 
   // Si llega un enlace de recuperación con la pantalla ya abierta, se pasa a «reset».
   const [seenResetToken, setSeenResetToken] = useState(resetToken);
@@ -106,6 +110,8 @@ export function AuthScreen({ onSuccess, resetToken, onResetFinished }: AuthScree
     setSuggestReset(false);
     setPassword('');
     setConfirmPassword('');
+    setNeedsCode(false);
+    setCode('');
   };
 
   const needsPassword = mode !== 'forgot';
@@ -159,7 +165,14 @@ export function AuthScreen({ onSuccess, resetToken, onResetFinished }: AuthScree
         ? { email: cleanEmail }
         : mode === 'reset'
         ? { token: resetToken, newPassword: password }
+        : needsCode && mode === 'login'
+        ? { email: cleanEmail, password, code: code.trim() }
         : { email: cleanEmail, password };
+
+    if (mode === 'login' && needsCode && !code.trim()) {
+      setError('Escribe el código de 6 dígitos de tu app (o un código de recuperación).');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -171,6 +184,13 @@ export function AuthScreen({ onSuccess, resetToken, onResetFinished }: AuthScree
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
+        if (data?.twoFactorRequired) {
+          // Contraseña correcta: falta (o falló) el segundo factor.
+          if (needsCode) setError(data.error);
+          else setInfo(data.error);
+          setNeedsCode(true);
+          return;
+        }
         if (res.status === 409 || (mode === 'login' && res.status === 401)) setSuggestReset(true);
         throw new Error(data.error || `No se pudo completar la operación (${res.status}).`);
       }
@@ -276,7 +296,7 @@ export function AuthScreen({ onSuccess, resetToken, onResetFinished }: AuthScree
             </label>
           )}
 
-          {needsEmail && (
+          {needsEmail && !needsCode && (
             <label htmlFor={emailId} className="auth-field">
               <span>Correo electrónico</span>
               <input
@@ -291,7 +311,27 @@ export function AuthScreen({ onSuccess, resetToken, onResetFinished }: AuthScree
             </label>
           )}
 
-          {needsPassword && (
+          {needsCode && mode === 'login' && (
+            <div className="auth-field">
+              <label htmlFor={codeId}>Código de verificación</label>
+              <input
+                id={codeId}
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                autoFocus
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="123 456"
+                maxLength={24}
+              />
+              <button type="button" className="auth-inline-link" onClick={() => switchMode('login')}>
+                Usar otra cuenta
+              </button>
+            </div>
+          )}
+
+          {needsPassword && !needsCode && (
             <div className="auth-field">
               <span className="auth-field-row">
                 <label htmlFor={passwordId}>{mode === 'reset' ? 'Nueva contraseña' : 'Contraseña'}</label>

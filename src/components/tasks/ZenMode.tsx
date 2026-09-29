@@ -651,7 +651,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   gap: 8,
                   padding: '16px 20px',
                   background: isActive ? (isDark ? 'rgba(255, 149, 0, 0.2)' : 'rgba(255, 149, 0, 0.15)') : 'var(--accent-primary, #0a84ff)',
-                  color: isActive ? '#ff9500' : 'white',
+                  color: isActive ? (isDark ? '#ff9f0a' : '#a35400') : 'white',
                   border: isActive ? '1px solid rgba(255, 149, 0, 0.4)' : 'none',
                   borderRadius: 16,
                   fontSize: '1.05rem',
@@ -661,7 +661,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   transition: 'all 0.18s ease'
                 }}
               >
-                {isActive ? <><Pause size={20} fill="#ff9500" /> Pausar</> : <><Play size={20} fill="white" style={{ marginLeft: 2 }} /> Reanudar</>}
+                {isActive ? <><Pause size={20} fill="currentColor" /> Pausar</> : <><Play size={20} fill="white" style={{ marginLeft: 2 }} /> Reanudar</>}
               </button>
 
               <button

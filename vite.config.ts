@@ -25,6 +25,8 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          // El ayudante de precarga de Vite lo usa el índice: si cae en el chunk de pdf.js, este viaja al arrancar.
+          if (id.includes('vite/preload-helper') || id.includes('vite/modulepreload-polyfill')) return 'vendor';
           if (id.includes('node_modules')) {
             if (id.includes('framer-motion')) return 'vendor-motion';
             if (id.includes('lucide-react')) return 'vendor-icons';

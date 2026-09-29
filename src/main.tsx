@@ -8,11 +8,8 @@ import './styles/polish.css'
 
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 
-// En iOS, maximum-scale evita el zoom automático al enfocar un campo y el
-// usuario conserva el zoom con los dedos. En Android bloquearía el zoom, así que solo se aplica en iOS.
-if (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
-  document.querySelector('meta[name=viewport]')?.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover');
-}
+// Sin maximum-scale: bloquear el zoom incumple WCAG 1.4.4. iOS solo amplía al enfocar campos con fuente < 16 px, y
+// los campos ya usan 16 px en móvil (lo comprueba tests/mobile.spec.ts).
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

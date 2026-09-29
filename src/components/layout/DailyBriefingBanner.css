@@ -70,7 +70,7 @@
   font-size: 0.82rem;
   font-weight: 600;
   background: color-mix(in srgb, var(--accent-orange) 12%, transparent);
-  color: var(--accent-orange);
+  color: color-mix(in srgb, var(--accent-orange) 55%, var(--text-primary));
   max-width: 100%;
 }
 .briefing-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
