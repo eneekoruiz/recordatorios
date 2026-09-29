@@ -19,6 +19,7 @@ import type { TaskItem, CustomCycle, CustomList } from '../../../models/Task';
 import { formatDuration, type TasksDurationSummary } from '../../../utils/taskDuration';
 import { formatEuro } from '../../../utils/format';
 import { MetaSplit, type MetaPart, MONEY_COLOR } from '../../ui/MetaSplit';
+import { describeRoutineParts, routinePeriodLabel, type RoutinePart } from '../../../utils/routineBreakdown';
 import { getReservedFrequencyColor } from '../../../constants/colors';
 
 export interface CycleBreakdownInfo {
@@ -54,6 +55,8 @@ interface MainPageHeaderProps {
   activeVisibleCount: number;
   completedVisibleCount: number;
   cycleBreakdown?: CycleBreakdownInfo;
+  /** Sin desglose por frecuencia: lo pendiente repartido en puntuales y frecuencias. */
+  mixParts?: RoutinePart[] | null;
   setConfirmProps: (props: any) => void;
   setIsConfirmOpen: (open: boolean) => void;
   deleteCycle: (id: string) => void;
@@ -101,6 +104,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   activeVisibleCount,
   completedVisibleCount: _completedVisibleCount,
   cycleBreakdown,
+  mixParts,
   setConfirmProps,
   setIsConfirmOpen,
   deleteCycle,
@@ -323,6 +327,15 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                       const own = cycleBreakdown!.ownDurationMinutes;
                       const acc = cycleBreakdown!.accumulatedDurationMinutes;
                       description = `Duración total ~${total.formattedActive}: ${formatDuration(own)} propias de ${ownName} (barra sólida) + ${formatDuration(acc)} acumuladas de otras frecuencias (barra rayada)`;
+                    } else if (mixParts && mixParts.length > 1) {
+                      parts = mixParts.map(mp => ({
+                        id: mp.periodicity,
+                        value: mp.minutes,
+                        text: `${formatDuration(mp.minutes)} ${routinePeriodLabel(mp.periodicity)}`,
+                        color: mp.periodicity === 'none' ? 'var(--text-secondary)' : getReservedFrequencyColor(mp.periodicity),
+                        tone: 'solid',
+                      }));
+                      description = `Duración total ~${total.formattedActive}: ${describeRoutineParts(mixParts)}`;
                     } else if (doneMinutes > 0) {
                       parts = [
                         { id: 'left', value: total.activeMinutes, text: `${total.formattedActive} restantes`, color: viewColor, tone: 'solid' },
@@ -330,11 +343,11 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                       ];
                       description = `Te quedan ~${total.formattedActive} porque ya has completado ~${completedDuration!.formattedActive} (de ~${formatDuration(total.activeMinutes + doneMinutes)})`;
                     }
-                    return <MetaSplit label={<span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>~{total.formattedActive}</span>} parts={parts} description={description} />;
+                    return <MetaSplit label={<span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>~{total.formattedActive}</span>} parts={parts} description={description} className={mixParts && !hasBreakdown ? 'meta-split--open' : undefined} />;
                   })()}
 
                   {hasValidDuration && hasValidPrice && (
-                    <span style={{ opacity: 0.4 }}>·</span>
+                    <span className="meta-dot" style={{ opacity: 0.4 }}>·</span>
                   )}
 
                   {hasValidPrice && (

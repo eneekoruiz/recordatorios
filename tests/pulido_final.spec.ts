@@ -113,6 +113,22 @@ test.describe('Pulido final', () => {
     await expect(input).toHaveCount(0);
   });
 
+  test('la duración de una sección o vista con mezcla se reparte en puntuales, diarias y semanales', async ({ page }) => {
+    await ensureAppUnlocked(page);
+    await seedCasa(page);
+    await page.evaluate(() => {
+      (window as any).useAppStore.getState().addTask({ id: 'ce_5', title: 'Comprar pan', status: 'pending', categoryId: 'casa_e2e', dueDate: new Date().toISOString(), duration: 10 });
+      window.dispatchEvent(new CustomEvent('select-view', { detail: 'smart_all' }));
+    });
+    const casa = page.locator('.group-header', { hasText: 'Casa E2E' });
+    await expect(casa.locator('.meta-split__parts')).toContainText('10 min puntuales');
+    await expect(casa.locator('.meta-split__parts')).toContainText('15 min diarias');
+    await expect(casa.locator('.meta-split__parts')).toContainText('30 min semanales');
+    await expect(casa.locator('.meta-split')).toHaveAttribute('aria-label', /10 min puntuales \+ 15 min diarias \+ 30 min semanales/);
+    // La cabecera de la vista tiene el mismo reparto
+    await expect(page.locator('.list-duration-meta .meta-split__parts').first()).toContainText('30 min semanales');
+  });
+
   test.describe('móvil', () => {
     test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 

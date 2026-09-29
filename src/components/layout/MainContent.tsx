@@ -40,6 +40,7 @@ import { smartSortTasks } from '../../utils/smartSort';
 import { WeeklyStreakWidget } from './main/WeeklyStreakWidget';
 import { confirmDialog } from '../ui/confirmDialog';
 import { deduplicateTaskList } from '../../utils/taskDeduplication';
+import { buildRoutineParts, buildMixParts, type RoutinePart } from '../../utils/routineBreakdown';
 import { calculateTasksDuration, calculateCompletedTasksDuration, getTaskDuration, type TasksDurationSummary } from '../../utils/taskDuration';
 import { getReservedFrequencyColor } from '../../constants/colors';
 import { BatchTaskActionsBar } from '../tasks/BatchTaskActionsBar';
@@ -73,6 +74,7 @@ type VirtualItemType =
       periodicity?: PeriodicityType | null,
       routineCounts?: { full: number; only: number } | null,
       routineDurations?: { only: TasksDurationSummary; full: TasksDurationSummary } | null,
+      routineParts?: RoutinePart[] | null,
       routineMode?: 'full_routine' | 'only_section',
       sectionTaskIds?: string[],
       /** Pendientes de esta cabecera (con las incluidas ya mezcladas, si «+ Diarias» está activo). */
@@ -1486,6 +1488,7 @@ const CORE_CYCLES = [
           let tasksToRender = deduplicateTaskList(categoryTasks);
           let routineCounts: { full: number; only: number } | null = null;
           let routineDurations: { only: TasksDurationSummary; full: TasksDurationSummary } | null = null;
+          let routineParts: RoutinePart[] | null = null;
 
           const allChildTasks = childSections.flatMap(cs => [
             ...(groupedTasks[`section_${cs.id}`] || []),
@@ -1512,6 +1515,7 @@ const CORE_CYCLES = [
               const onlyDuration = calculateTasksDuration(thisSectionTasksTotal, listSections, lists);
               const fullDuration = calculateTasksDuration(fullRoutineTasks, listSections, lists);
               routineDurations = { only: onlyDuration, full: fullDuration };
+              routineParts = buildRoutineParts(fullRoutineTasks, listSections, lists);
 
               const currentRoutineMode = sectionRoutineModes[categoryKey] || 'only_section';
               if (currentRoutineMode === 'full_routine') {
@@ -1540,6 +1544,7 @@ const CORE_CYCLES = [
             periodicity: sectionPeriodicity,
             routineCounts,
             routineDurations,
+            routineParts,
             sectionTaskIds: allSectionPendingTaskIds,
             pendingCount: countPending(sectionScopeForCounts)
           });
@@ -1630,6 +1635,7 @@ const CORE_CYCLES = [
             const onlyDuration = calculateTasksDuration(freqTasks, listSections, lists);
             const fullDuration = calculateTasksDuration(cumulativeTasks, listSections, lists);
             const routineDurations = routineCounts ? { only: onlyDuration, full: fullDuration } : null;
+            const routineParts = routineCounts ? buildRoutineParts(cumulativeTasks, listSections, lists) : null;
 
             const mode = sectionRoutineModes[`limpieza_freq_${periodicity}`] || 'only_section';
             // Con «+ Acumuladas», las incluidas se mezclan en su habitación, al mismo nivel.
@@ -1695,6 +1701,7 @@ const CORE_CYCLES = [
               periodicity: periodicity as PeriodicityType,
               routineCounts,
               routineDurations,
+              routineParts,
               sectionTaskIds: freqPendingIds,
               pendingCount: countPending(tasksToGroup)
             });
@@ -1838,6 +1845,7 @@ const CORE_CYCLES = [
               const onlyDuration = calculateTasksDuration(thisSectionTasksTotal, listSections, lists);
               const fullDuration = calculateTasksDuration(fullTasksTotal, listSections, lists);
               const routineDurations = routineCounts ? { only: onlyDuration, full: fullDuration } : null;
+              const routineParts = routineCounts ? buildRoutineParts(fullTasksTotal, listSections, lists) : null;
 
               const mode = sectionRoutineModes[catKey] || 'only_section';
               // Con «+ Diarias», las incluidas se mezclan con las propias, al mismo nivel.
@@ -1864,6 +1872,7 @@ const CORE_CYCLES = [
                 periodicity: sectionPeriodicity,
                 routineCounts,
                 routineDurations,
+                routineParts,
                 sectionTaskIds: allSectionPendingTaskIds,
                 pendingCount: countPending(countScope)
               });
@@ -2264,6 +2273,12 @@ const CORE_CYCLES = [
     };
   }, [currentCycle, cycleViewMode, viewTasks, cycles, listSections, lists]);
 
+  // Vistas sin desglose por frecuencia: la duración total se reparte en puntuales y frecuencias (si hay mezcla).
+  const viewMixParts = useMemo(
+    () => (cycleBreakdown || isShoppingList(currentView, currentList) ? null : buildMixParts(viewTasks, listSections, lists)),
+    [cycleBreakdown, currentView, currentList, viewTasks, listSections, lists]
+  );
+
   // Group flattenedData into sections to enable native multi-tier CSS sticky push effect between sections
   const sectionGroups = useMemo(() => {
     interface SubSectionGroup {
@@ -2484,7 +2499,9 @@ const CORE_CYCLES = [
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
   const smartListInfo = isSmartView ? SMART_LISTS.find(l => l.id === currentView) : null;
   const SmartIcon = smartListInfo ? smartListInfo.icon : null;
-  const viewColor = currentView === 'TRASH' ? '#8e8e93' : isSmartView ? (smartListInfo?.color || SMART_COLORS[currentView] || 'var(--accent-primary)') : (isListView && currentList) ? (currentList.color || 'var(--accent-primary)') : isFolderView ? (lists?.find(l => l.id === currentView.replace('folder_', ''))?.color || 'var(--accent-primary)') : currentCycle ? (currentCycle.color || getReservedFrequencyColor(currentCycle.id)) : 'var(--accent-primary)';
+  // «Todos» es gris grafito: sobre negro no se lee, así que en oscuro usa un gris claro (--smart-all-color).
+  const viewColorRaw = currentView === 'TRASH' ? '#8e8e93' : isSmartView ? (smartListInfo?.color || SMART_COLORS[currentView] || 'var(--accent-primary)') : (isListView && currentList) ? (currentList.color || 'var(--accent-primary)') : isFolderView ? (lists?.find(l => l.id === currentView.replace('folder_', ''))?.color || 'var(--accent-primary)') : currentCycle ? (currentCycle.color || getReservedFrequencyColor(currentCycle.id)) : 'var(--accent-primary)';
+  const viewColor = viewColorRaw === '#48484a' ? 'var(--smart-all-color, #48484a)' : viewColorRaw;
 
   const getTitle = () => {
     if (currentView === 'TRASH') return 'Papelera';
@@ -2644,6 +2661,7 @@ const CORE_CYCLES = [
                           activeVisibleCount={titleCount}
                           completedVisibleCount={completedVisibleCount}
                           cycleBreakdown={cycleBreakdown}
+                          mixParts={viewMixParts}
                           setConfirmProps={setConfirmProps}
                           setIsConfirmOpen={setIsConfirmOpen}
                           deleteCycle={deleteCycle}
@@ -2699,6 +2717,10 @@ const CORE_CYCLES = [
                     const sectionCompletedDurationSummary = !isShoppingList(currentView, currentList)
                       ? calculateCompletedTasksDuration(tasksForSection, listSections, lists)
                       : undefined;
+                    // Con «+ Diarias» ya hay desglose por frecuencia; si no, se reparte por tipo de tarea.
+                    const sectionMixParts = !isShoppingList(currentView, currentList) && !(activeMode === 'full_routine' && data.routineParts)
+                      ? buildMixParts(tasksForSection, listSections, lists)
+                      : null;
                     return (
                       <MainSectionHeader
                         key={itemKey}
@@ -2726,6 +2748,7 @@ const CORE_CYCLES = [
                         sectionTotal={sectionTotal}
                         sectionCompletedTotal={sectionCompletedTotal}
                         durationSummary={sectionDurationSummary}
+                        mixParts={sectionMixParts}
                         completedDurationSummary={sectionCompletedDurationSummary}
                         onOpenNewTask={onOpenNewTask}
                         onAddSection={handleAddSection}

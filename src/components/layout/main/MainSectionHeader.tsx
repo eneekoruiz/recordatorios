@@ -9,6 +9,7 @@ import { formatEuro } from '../../../utils/format';
 import { classifyDropZone, DRAG_MOVE_THRESHOLD_PX } from '../../../utils/dragDrop';
 import { getReservedFrequencyColor } from '../../../constants/colors';
 import { MetaSplit, type MetaPart, MONEY_COLOR } from '../../ui/MetaSplit';
+import { describeRoutineParts, routinePeriodLabel, type RoutinePart } from '../../../utils/routineBreakdown';
 
 interface SectionData {
   title: string;
@@ -20,6 +21,8 @@ interface SectionData {
   periodicity?: string | null;
   routineCounts?: { full: number; only: number } | null;
   routineDurations?: { only: TasksDurationSummary; full: TasksDurationSummary } | null;
+  /** Pendientes de cada frecuencia incluida (de la más larga a la más corta). */
+  routineParts?: RoutinePart[] | null;
   routineMode?: 'full_routine' | 'only_section';
   sectionTaskIds?: string[];
   /** Pendientes de esta cabecera (con las incluidas ya mezcladas, si «+ Diarias» está activo). */
@@ -50,6 +53,8 @@ interface MainSectionHeaderProps {
   sectionTotal: number;
   sectionCompletedTotal?: number;
   durationSummary?: TasksDurationSummary;
+  /** Sin «+ Diarias»: lo pendiente repartido en puntuales y frecuencias, si de verdad hay mezcla. */
+  mixParts?: RoutinePart[] | null;
   completedDurationSummary?: TasksDurationSummary;
   onOpenNewTask?: (sectionId?: string) => void;
   onAddSection?: (parentId?: string) => void;
@@ -95,6 +100,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   sectionTotal,
   sectionCompletedTotal,
   durationSummary,
+  mixParts,
   completedDurationSummary,
   onOpenNewTask: _onOpenNewTask,
   onAddSection: _onAddSection,
@@ -130,7 +136,18 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   if (sectionDurationLabel && durSummary) {
     let parts: MetaPart[] = [];
     let description = `Duración estimada: ~${sectionDurationLabel}`;
-    if (hasRoutineDurationBreakdown && data.routineDurations) {
+    const routineParts = data.routineParts && data.routineParts.length > 1 ? data.routineParts : null;
+    if (hasRoutineDurationBreakdown && data.routineDurations && routineParts) {
+      // Una parte por frecuencia, con su color: sólido = la de esta sección, rayado = acumuladas de las demás.
+      parts = routineParts.map((rp) => ({
+        id: rp.periodicity,
+        value: rp.minutes,
+        text: formatDuration(rp.minutes),
+        color: getReservedFrequencyColor(rp.periodicity),
+        tone: rp.periodicity === data.periodicity ? 'solid' : 'striped',
+      }));
+      description = `Duración total ~${sectionDurationLabel}: ${describeRoutineParts(routineParts)} (la barra sólida es la de esta sección; las rayadas, las acumuladas)`;
+    } else if (hasRoutineDurationBreakdown && data.routineDurations) {
       // Sólido = tareas de esta sección; rayado = acumuladas desde las frecuencias más cortas.
       const ownColor = getReservedFrequencyColor(data.periodicity);
       const extraColor = data.periodicity === 'week' ? getReservedFrequencyColor('day') : 'var(--text-tertiary)';
@@ -141,6 +158,15 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         { id: 'extra', value: extraMinutes, text: formatDuration(extraMinutes), color: extraColor, tone: 'striped' },
       ];
       description = `Duración total ~${sectionDurationLabel}: ${data.routineDurations.only.formattedActive} ${data.periodicity === 'week' ? 'semanales' : 'de esta sección'} (barra sólida) + ${formatDuration(extraMinutes)} ${data.periodicity === 'week' ? 'diarias' : includeLabel.toLowerCase()} (barra rayada)`;
+    } else if (mixParts && mixParts.length > 1) {
+      parts = mixParts.map((mp) => ({
+        id: mp.periodicity,
+        value: mp.minutes,
+        text: `${formatDuration(mp.minutes)} ${routinePeriodLabel(mp.periodicity)}`,
+        color: mp.periodicity === 'none' ? 'var(--text-secondary)' : getReservedFrequencyColor(mp.periodicity),
+        tone: 'solid',
+      }));
+      description = `Duración total ~${sectionDurationLabel}: ${describeRoutineParts(mixParts)}`;
     } else if (completedDurationSummary && completedDurationSummary.activeMinutes > 0) {
       parts = [
         { id: 'left', value: durSummary.activeMinutes, text: `${sectionDurationLabel} restantes`, color: 'var(--accent-primary)', tone: 'solid' },
@@ -148,7 +174,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       ];
       description = `Te queda ~${sectionDurationLabel} porque ya has completado ~${completedDurationSummary.formattedActive} (de ~${formatDuration(durSummary.activeMinutes + completedDurationSummary.activeMinutes)})`;
     }
-    durationNode = <MetaSplit label={`~${sectionDurationLabel}`} parts={parts} description={description} />;
+    durationNode = <MetaSplit label={`~${sectionDurationLabel}`} parts={parts} description={description} className={parts.length > 1 && (hasRoutineDurationBreakdown || Boolean(mixParts)) ? 'meta-split--open' : undefined} />;
   }
 
   let priceNode: React.ReactNode = null;
@@ -664,13 +690,18 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
 
             const ownLabel = data.periodicity === 'week' ? 'semanales' : data.periodicity === 'month' ? 'mensuales' : data.periodicity === 'year' ? 'anuales' : 'propias';
             const extraLabel = data.periodicity === 'week' ? 'diarias' : 'acumuladas';
+            const countParts = hasRoutineBreakdown && data.routineParts && data.routineParts.length > 1
+              ? data.routineParts.map((rp) => ({ id: rp.periodicity, n: rp.count, color: getReservedFrequencyColor(rp.periodicity), label: routinePeriodLabel(rp.periodicity) }))
+              : hasRoutineBreakdown
+                ? [
+                    { id: 'own', n: onlyCount, color: getReservedFrequencyColor(data.periodicity), label: ownLabel },
+                    { id: 'extra', n: extraCount, color: data.periodicity === 'week' ? getReservedFrequencyColor('day') : 'var(--text-tertiary)', label: extraLabel },
+                  ]
+                : [];
 
             const tooltipText = hasRoutineBreakdown
-              ? `${count} tareas totales (${onlyCount} ${ownLabel} + ${extraCount} ${extraLabel})`
+              ? `${count} tareas totales (${countParts.map(cp => `${cp.n} ${cp.label}`).join(' + ')})`
               : `${count} tareas pendientes`;
-
-            const ownColor = getReservedFrequencyColor(data.periodicity);
-            const extraColor = data.periodicity === 'week' ? getReservedFrequencyColor('day') : 'var(--text-tertiary)';
 
             return (
               <span 
@@ -703,9 +734,12 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                     }}
                   >
                     <span style={{ opacity: 0.35 }}>(</span>
-                    <span style={{ color: ownColor }}>{onlyCount}</span>
-                    <span style={{ opacity: 0.3, margin: '0 1px' }}> + </span>
-                    <span style={{ color: extraColor }}>{extraCount}</span>
+                    {countParts.map((cp, i) => (
+                      <React.Fragment key={cp.id}>
+                        {i > 0 && <span style={{ opacity: 0.3, margin: '0 1px' }}> + </span>}
+                        <span style={{ color: cp.color }}>{cp.n}</span>
+                      </React.Fragment>
+                    ))}
                     <span style={{ opacity: 0.35 }}>)</span>
                   </span>
                 )}

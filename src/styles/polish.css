@@ -2236,3 +2236,14 @@ body.dark .cad-summary-cost strong {
   background: color-mix(in srgb, var(--accent-red, #ff3b30) 14%, transparent);
 }
 .app-alert-actions > button:only-child { grid-column: 1 / -1; }
+
+/* Secciones con «+ Diarias/Acumuladas»: las cifras de cada frecuencia se ven sin pasar el ratón
+   (en móvil no hay «hover»); cada una en el color de su frecuencia, como el contador de la derecha. */
+.meta-split--open { flex-wrap: wrap; row-gap: 2px; }
+.meta-split--open .meta-split__parts { max-width: none; opacity: 1; flex-wrap: wrap; white-space: normal; font-weight: 600; font-variant-numeric: tabular-nums; }
+.meta-split__part { display: inline-flex; align-items: baseline; gap: 3px; white-space: nowrap; }
+.meta-split--open .meta-split__sep { margin: 0 0 0 1px; }
+/* En móvil el precio baja a su propia línea: sin el punto separador colgando */
+@media (max-width: 640px) { .meta-split--open + .meta-dot { display: none; } }
+:root { --smart-all-color: #48484a; }
+[data-theme="dark"] { --smart-all-color: #a1a1a6; }
