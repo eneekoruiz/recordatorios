@@ -1,3 +1,4 @@
+import rateLimit from 'express-rate-limit';
 import express from 'express';
 import crypto from 'node:crypto';
 import net from 'node:net';
@@ -187,21 +188,17 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
   // Límites generosos para el resto de la API (evitan abusos sin estorbar a la sincronización normal: una
   // pestaña hace unas 4 peticiones por minuto). Van en memoria: un acceso a la BD por petición sería un coste
   // mayor que el que se quiere evitar.
-  const apiMemoryHit = createMemoryHitStore();
-  const apiLimiter = createRateLimiter({
-    windowMs: 15 * 60 * 1000,
-    max: 900,
-    keyFn: (req) => `api:${req.user?.id || clientIp(req)}`,
-    message: 'Demasiadas peticiones. Espera un momento.',
-    hit: apiMemoryHit,
-  });
-  const publicLimiter = createRateLimiter({
-    windowMs: 15 * 60 * 1000,
-    max: 300,
-    keyFn: (req) => `public:${clientIp(req)}`,
-    message: 'Demasiadas peticiones. Espera un momento.',
-    hit: apiMemoryHit,
-  });
+  // express-rate-limit (memoria por instancia): por IP, antes de autenticar, para que también frene la fuerza bruta de tokens.
+  const generic = (max) =>
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      limit: max,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { error: 'Demasiadas peticiones. Espera un momento.' },
+    });
+  const apiLimiter = generic(900);
+  const publicLimiter = generic(300);
 
   app.disable('x-powered-by');
   // Un salto de proxy (Vercel / balanceador). Con `true` se confiaría en toda la cadena de X-Forwarded-For.
@@ -613,7 +610,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
   const passwordMatches = async (user, given) =>
     user.password.startsWith('$2') ? bcrypt.compare(String(given || ''), user.password) : given === user.password;
 
-  app.get(['/api/auth/security', '/auth/security'], authenticateToken, apiLimiter, async (req, res) => {
+  app.get(['/api/auth/security', '/auth/security'], apiLimiter, authenticateToken, async (req, res) => {
     try {
       const user = await loadAccount(req.user.id);
       if (!user) return res.status(401).json({ error: 'Sesión no válida.' });
@@ -793,7 +790,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
     return { ops, stale };
   }
 
-  app.post(['/api/sync/push', '/sync/push'], authenticateToken, apiLimiter, async (req, res) => {
+  app.post(['/api/sync/push', '/sync/push'], apiLimiter, authenticateToken, async (req, res) => {
     const userId = req.user.id;
     try {
       const transaction = [];
@@ -841,7 +838,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
     }
   });
 
-  app.get(['/api/sync/pull', '/sync/pull'], authenticateToken, apiLimiter, async (req, res) => {
+  app.get(['/api/sync/pull', '/sync/pull'], apiLimiter, authenticateToken, async (req, res) => {
     const userId = req.user.id;
     const rawToken = Number.parseInt(String(req.query.lastToken || '0'), 10);
     const lastToken = Number.isFinite(rawToken) && rawToken > 0 ? rawToken : 0;
@@ -889,7 +886,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
   // con el sondeo periódico + sincronización al volver a la pestaña.
   // El EventSource no puede mandar cabeceras, y poner el token de sesión (30 días) en la URL lo
   // dejaría en logs y proxies. En su lugar, el cliente pide un ticket de 60 s y un solo propósito.
-  app.post(['/api/sync/live-ticket', '/sync/live-ticket'], authenticateToken, apiLimiter, (req, res) => {
+  app.post(['/api/sync/live-ticket', '/sync/live-ticket'], apiLimiter, authenticateToken, (req, res) => {
     const secret = requireSecret(res);
     if (!secret) return;
     const ticket = jwt.sign({ sub: req.user.id, purpose: 'live' }, secret, { expiresIn: '60s', algorithm: 'HS256' });
@@ -940,7 +937,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
       where: { userId, deletedAt: null, id: { in: [clientListId, scopedId(userId, clientListId)] } },
     });
 
-  app.get(['/api/share/shared-list-ids', '/share/shared-list-ids'], authenticateToken, apiLimiter, async (req, res) => {
+  app.get(['/api/share/shared-list-ids', '/share/shared-list-ids'], apiLimiter, authenticateToken, async (req, res) => {
     try {
       const userId = req.user.id;
       const sharedLinks = await prisma.sharedLink.findMany({
@@ -955,7 +952,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
     }
   });
 
-  app.post(['/api/share/generate', '/share/generate'], authenticateToken, apiLimiter, async (req, res) => {
+  app.post(['/api/share/generate', '/share/generate'], apiLimiter, authenticateToken, async (req, res) => {
     const userId = req.user.id;
     const { listId } = req.body || {};
     if (!isValidClientId(listId)) return res.status(400).json({ error: 'Lista no válida' });
@@ -975,7 +972,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
     }
   });
 
-  app.delete(['/api/share/list/:listId', '/share/list/:listId'], authenticateToken, apiLimiter, async (req, res) => {
+  app.delete(['/api/share/list/:listId', '/share/list/:listId'], apiLimiter, authenticateToken, async (req, res) => {
     try {
       const list = await findOwnedList(req.user.id, req.params.listId);
       if (!list) return res.status(404).json({ error: 'Lista no encontrada' });
@@ -1029,7 +1026,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
     res.json({ publicKey });
   });
 
-  app.post(['/api/push/subscribe', '/push/subscribe'], authenticateToken, apiLimiter, async (req, res) => {
+  app.post(['/api/push/subscribe', '/push/subscribe'], apiLimiter, authenticateToken, async (req, res) => {
     const { subscription, timeZone, digestHour, weeklyDay } = req.body || {};
     const endpoint = subscription?.endpoint;
     const keys = subscription?.keys;
@@ -1055,7 +1052,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
     }
   });
 
-  app.post(['/api/push/unsubscribe', '/push/unsubscribe'], authenticateToken, apiLimiter, async (req, res) => {
+  app.post(['/api/push/unsubscribe', '/push/unsubscribe'], apiLimiter, authenticateToken, async (req, res) => {
     const endpoint = req.body?.endpoint;
     if (typeof endpoint !== 'string') return res.status(400).json({ error: 'Suscripción no válida' });
     try {
@@ -1153,7 +1150,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
   });
 
   // --- MCP (Model Context Protocol) ---
-  app.post(['/api/mcp', '/mcp'], optionalAuthenticateToken, apiLimiter, async (req, res) => {
+  app.post(['/api/mcp', '/mcp'], apiLimiter, optionalAuthenticateToken, async (req, res) => {
     try {
       res.json(await handleMcpRequest(req.body, prisma, req.user?.id));
     } catch (err) {

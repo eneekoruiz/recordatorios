@@ -1018,6 +1018,25 @@ button[aria-label="Opciones de sección"]::before {
   height: 44px;
   transform: translate(-50%, -50%);
 }
+/* Con el dedo (no con ratón), los botones pequeños de las cabeceras y de la barra de añadir también llegan a 44 pt. */
+@media (pointer: coarse) {
+  .back-btn-ios,
+  .briefing-toggle,
+  .section-collapse-chevron-btn {
+    position: relative;
+  }
+  .back-btn-ios::before,
+  .briefing-toggle::before,
+  .section-collapse-chevron-btn::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100%, 44px);
+    height: 44px;
+    transform: translate(-50%, -50%);
+  }
+}
 
 /* ---------- Editor de recordatorios: formulario agrupado de iOS ---------- */
 :root {
@@ -2375,4 +2394,24 @@ body.dark .cad-summary-cost strong {
 @media (max-width: 860px) {
   .auth-stage { align-content: start; grid-template-rows: auto auto; }
   .auth-hero-panel { justify-content: flex-start !important; text-align: left; }
+}
+
+/* Título grande de la lista: el color de la lista, algo más oscuro en modo claro para cumplir el contraste AA. */
+.view-title {
+  color: color-mix(in srgb, var(--title-color) 66%, #000);
+}
+[data-theme="dark"] .view-title {
+  color: var(--title-color);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .view-title { color: var(--title-color); }
+}
+
+/* iOS Safari amplía la página al enfocar un campo con fuente menor de 16 px: en pantallas táctiles nunca bajan de eso. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  textarea,
+  select {
+    font-size: max(16px, 1em) !important;
+  }
 }

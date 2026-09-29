@@ -189,3 +189,39 @@ describe('asistente local — frases más largas', () => {
     expect(tasks[2].price).toBe(5);
   });
 });
+
+describe('AIService.localSemanticExtract — horas y fechas coloquiales', () => {
+  const run = (text: string) => AIService.localSemanticExtract(text, [], {}).tasks;
+  const at = (iso?: string) => (iso ? new Date(iso) : undefined);
+
+  it('«a las 5 y media» y «a las 7 menos cuarto» no parten la frase ni dejan restos', () => {
+    const a = run('Reunión con Marta mañana a las 5 y media');
+    expect(a).toHaveLength(1);
+    expect(a[0].title).toBe('Reunión con Marta');
+    const d = at(a[0].dueDate)!;
+    expect([d.getHours(), d.getMinutes()]).toEqual([17, 30]);
+    const b = run('Salir mañana a las 8 menos cuarto');
+    expect(b).toHaveLength(1);
+    expect(b[0].title).toBe('Salir');
+    const e = at(b[0].dueDate)!;
+    expect([e.getHours(), e.getMinutes()]).toEqual([7, 45]);
+  });
+
+  it('«7am» y «21h» sueltos, y «el jueves 3 de diciembre» manda el día del mes', () => {
+    const a = run('Correr mañana 7am');
+    expect(a[0].title).toBe('Correr');
+    expect(at(a[0].dueDate)!.getHours()).toBe(7);
+    const b = run('Cena con Ana el viernes 21h');
+    expect(b[0].title).toBe('Cena con Ana');
+    expect(at(b[0].dueDate)!.getHours()).toBe(21);
+    const c = at(run('Dentista el jueves 3 de diciembre')[0].dueDate)!;
+    expect([c.getMonth(), c.getDate()]).toEqual([11, 3]);
+  });
+
+  it('«en 2 horas» fija la hora resultante', () => {
+    const t = run('Revisar correo en 2 horas')[0];
+    expect(t.title).toBe('Revisar correo');
+    const diff = at(t.dueDate)!.getTime() - Date.now();
+    expect(Math.abs(diff - 2 * 3_600_000)).toBeLessThan(120_000);
+  });
+});

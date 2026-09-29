@@ -134,3 +134,85 @@ describe('lenguaje natural — fechas y frecuencias más largas', () => {
     expect(parseNaturalLanguage('Comprar 2 kilos de patatas').suggestedPrice).toBeUndefined();
   });
 });
+
+describe('lenguaje natural — horas y fechas coloquiales', () => {
+  const ymd = (d?: Date) => (d ? `${d.getMonth() + 1}-${d.getDate()}` : undefined);
+
+  it('horas con «h», «y media», «y cuarto», «menos cuarto» y cero inicial', () => {
+    const a = parseNaturalLanguage('Cena con Ana el viernes a las 21h');
+    expect(a.times).toEqual(['21:00']);
+    expect(a.cleanTitle).toBe('Cena con Ana');
+    expect(parseNaturalLanguage('Reunión a las 5 y media')).toMatchObject({ times: ['17:30'], cleanTitle: 'Reunión' });
+    expect(parseNaturalLanguage('Reunión a las 5 y cuarto').times).toEqual(['17:15']);
+    expect(parseNaturalLanguage('Salir a las 7 menos cuarto')).toMatchObject({ times: ['06:45'], cleanTitle: 'Salir' });
+    expect(parseNaturalLanguage('Vuelo a las 06:45').times).toEqual(['06:45']);
+    expect(parseNaturalLanguage('Vuelo a las 18h30').times).toEqual(['18:30']);
+  });
+
+  it('«hoy a las 10 pm» no se come la «y» de «hoy»', () => {
+    const r = parseNaturalLanguage('Llamar a Pedro hoy a las 10 pm');
+    expect(r.times).toEqual(['22:00']);
+    expect(r.cleanTitle).toBe('Llamar a Pedro');
+    expect(ymd(r.suggestedDueDate)).toBe(ymd(new Date()));
+  });
+
+  it('«7am», «21h» y rangos «de las 10 a las 11» como hora suelta', () => {
+    const c = parseNaturalLanguage('Correr cada martes y jueves 7am');
+    expect(c).toMatchObject({ times: ['07:00'], cleanTitle: 'Correr', suggestedCycleId: 'cycle_week' });
+    expect(parseNaturalLanguage('Recoger paquete 18h').times).toEqual(['18:00']);
+    const r = parseNaturalLanguage('Reunión de las 10 a las 11');
+    expect(r.times).toEqual(['10:00']);
+    expect(r.cleanTitle).toBe('Reunión');
+    expect(parseNaturalLanguage('Comprar 3h de carbón').times).toEqual([]);
+  });
+
+  it('franjas: «mañana por la tarde», «el sábado a la noche»', () => {
+    const t = parseNaturalLanguage('Ir al gimnasio mañana por la tarde');
+    expect(t.times).toEqual(['17:00']);
+    expect(t.cleanTitle).toBe('Ir al gimnasio');
+    expect(parseNaturalLanguage('Reservar mesa el sábado a la noche')).toMatchObject({ times: ['21:00'], cleanTitle: 'Reservar mesa' });
+    expect(parseNaturalLanguage('Correr por la mañana').times).toEqual([]);
+  });
+
+  it('«el jueves 3 de diciembre» manda el día del mes, no el jueves', () => {
+    const r = parseNaturalLanguage('Dentista el jueves 3 de diciembre');
+    expect(r.suggestedDueDate?.getMonth()).toBe(11);
+    expect(r.suggestedDueDate?.getDate()).toBe(3);
+    expect(r.cleanTitle).toBe('Dentista');
+  });
+
+  it('«el día 12», «el 1/12», «el último día del mes» y «el fin de semana»', () => {
+    const d = parseNaturalLanguage('Cumple de Luis el día 12');
+    expect(d.suggestedDueDate?.getDate()).toBe(12);
+    expect(d.cleanTitle).toBe('Cumple de Luis');
+    const s = parseNaturalLanguage('Ir al médico el 1/12 a las 9');
+    expect(ymd(s.suggestedDueDate)).toBe('12-1');
+    expect(s.times).toEqual(['09:00']);
+    expect(s.cleanTitle).toBe('Ir al médico');
+    expect(parseNaturalLanguage('Comprar 1/2 kilo de queso').suggestedDueDate).toBeUndefined();
+    const l = parseNaturalLanguage('Pagar la hipoteca el último día del mes');
+    const end = new Date(l.suggestedDueDate as Date);
+    end.setDate(end.getDate() + 1);
+    expect(end.getDate()).toBe(1);
+    const f = parseNaturalLanguage('Hacer la compra el fin de semana');
+    expect(f.suggestedDueDate?.getDay()).toBe(6);
+    expect(f.cleanTitle).toBe('Hacer la compra');
+  });
+
+  it('«en 2 horas», «en 45 minutos» y «el próximo mes»', () => {
+    const h = parseNaturalLanguage('Revisar correo en 2 horas');
+    expect(h.cleanTitle).toBe('Revisar correo');
+    expect(h.times).toHaveLength(1);
+    const diff = (h.suggestedDueDate as Date).getTime() - Date.now();
+    expect(Math.abs(diff - 2 * 3_600_000)).toBeLessThan(60_000);
+    expect(parseNaturalLanguage('Quedar con Marta en 45 minutos').cleanTitle).toBe('Quedar con Marta');
+    const m = parseNaturalLanguage('Renovar seguro el próximo mes');
+    expect(m.cleanTitle).toBe('Renovar seguro');
+    expect(m.suggestedDueDate).toBeDefined();
+  });
+
+  it('«todas las tardes» es diario y «antes del viernes» no deja «antes»', () => {
+    expect(parseNaturalLanguage('Estudiar inglés todas las tardes')).toMatchObject({ suggestedCycleId: 'cycle_day', cleanTitle: 'Estudiar inglés' });
+    expect(parseNaturalLanguage('Devolver libro antes del viernes').cleanTitle).toBe('Devolver libro');
+  });
+});

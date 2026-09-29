@@ -161,13 +161,14 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
         }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, flex: '1 1 0%' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flexWrap: 'wrap' }}>
-              <h1 className="text-display" style={{ 
+              <h1 className="text-display view-title" style={{ 
                 fontSize: getTitle().length > 24 ? '28px' : '34px', 
                 fontWeight: 700,
                 lineHeight: '1.2',
                 wordBreak: 'break-word',
                 letterSpacing: '-0.5px',
-                color: viewColor,
+                // En claro se oscurece un poco el color de la lista para que el título llegue a 3:1 (AA texto grande).
+                ['--title-color' as string]: viewColor,
                 display: 'flex', alignItems: 'center', margin: 0,
                 padding: 0,
                 boxSizing: 'border-box',

@@ -682,7 +682,7 @@ export class AIService {
     // If only one segment and it contains multiple actions joined by " y también ", " y luego ", " y ", commas
     let splitByConjunction = false;
     if (rawSegments.length === 1 && (spoken.includes(',') || /\s+y\s+(?:también\s+|luego\s+)?/i.test(spoken))) {
-      const parts = spoken.split(/(?:,(?!\d)\s*(?:y\s+)?|\s+y\s+(?:también\s+|luego\s+)?)/i);
+      const parts = spoken.split(/(?:,(?!\d)\s*(?:y\s+)?|\s+y\s+(?!(?:media|cuarto)\b)(?:también\s+|luego\s+)?)/i);
       if (parts.length > 1) {
         rawSegments = parts;
         splitByConjunction = true;
@@ -816,7 +816,8 @@ export class AIService {
         segment = segment.replace(/\b(este\s+)?fin\s+de\s+semana\b/i, '').trim();
       } else {
         // «el jueves», «el jueves que viene», «antes del viernes», «todos los lunes y miércoles»
-        const weekday = parseWeekdayPhrase(segment, now);
+        const explicitDay = /\b\d{1,2}\s+de\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\b|\b(?:el|para el|antes del|hasta el)\s+\d{1,2}\/\d{1,2}\b/i.test(segment);
+        const weekday = explicitDay ? null : parseWeekdayPhrase(segment, now);
         if (weekday) {
           dueDate = weekday.date;
           segment = segment.replace(weekday.matched, '').trim();
@@ -832,6 +833,7 @@ export class AIService {
         if (ext.date) {
           dueDate = ext.date;
           if (ext.cycle && !weekdayCycle) weekdayCycle = ext.cycle as ProposedTask['cycle'];
+          if (ext.time && !timeString) timeString = ext.time;
           for (const re of ext.consumed) segment = segment.replace(re, ' ').trim();
         }
       }

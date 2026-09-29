@@ -38,7 +38,15 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
+      testIgnore: /mobile\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      // WebKit no viene en el entorno de CI: se emula un iPhone (pantalla, táctil, agente) sobre Chromium.
+      // Con `npx playwright install webkit` se puede cambiar `browserName` a 'webkit' para probar en el motor real.
+      name: 'iphone',
+      testMatch: /mobile\.spec\.ts/,
+      use: { ...devices['iPhone 14'], browserName: 'chromium', defaultBrowserType: 'chromium' },
     },
   ],
 });

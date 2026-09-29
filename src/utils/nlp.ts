@@ -14,11 +14,40 @@ export interface ParsedNLPResult {
  * Motor de lenguaje natural avanzado para Recordatorios Élite.
  * Extrae fechas, horas, ciclos, prioridades y listas en español.
  */
-// «a las 18:30», «y a las 9 de la noche», «a la 1»
-const TIME_PHRASE = /(?:y\s+)?(?:a las?|a la)\s*\d{1,2}(?::\d{2})?\s*(?:am|pm|de la mañana|de la tarde|de la noche)?/gi;
+// «a las 18:30», «a las 21h», «a las 5 y media», «a las 7 menos cuarto», «a las 9 de la noche», «a la 1».
+// Sin lookbehind (Safari < 16.4 no lo admite): el carácter previo se consume en el grupo 1.
+const CLOCK_SRC =
+  String.raw`(^|[^\p{L}\d])(?:y\s+)?(?:a\s+las?|a\s+la)\s*(\d{1,2})(?:[:.h](\d{2}))?\s*(?:h(?:oras?|s)?(?![\p{L}]))?(?:\s*(y|menos)\s+(media|cuarto|veinte|diez|cinco)(?![\p{L}]))?\s*(am|pm|de la mañana|de la tarde|de la noche|de la madrugada)?`;
+const clockRe = () => new RegExp(CLOCK_SRC, 'giu');
 
 // «9:30» suelto (sin «a las»)
 const BARE_TIME = /(?:^|\s)(\d{1,2}):(\d{2})(?:\s*h(?:oras?)?)?(?=\s|$|[,.;])/gi;
+// «7am», «10 pm», «21h» sueltos
+const BARE_SUFFIX = /(?:^|\s)(\d{1,2})\s?(am|pm|h)(?=\s|$|[,.;!?])/gi;
+// «de las 10 a las 11»: se toma la hora de inicio
+const RANGE_TIME = /(?:^|\s)de\s+las?\s+(\d{1,2})(?::(\d{2}))?\s*h?\s+a\s+las?\s+(\d{1,2})(?::(\d{2}))?\s*h?(?![\p{L}\d])/giu;
+
+const MINUTE_WORDS: Record<string, number> = { media: 30, cuarto: 15, veinte: 20, diez: 10, cinco: 5 };
+
+/** Hora en 24 h a partir de lo escrito; sin am/pm, de 1 a 6 se entiende de la tarde (salvo «06:45»). */
+function toClock(hourRaw: string, minutes: number, modifier?: string, rel?: string, word?: string): string | undefined {
+  let hour = parseInt(hourRaw, 10);
+  if (isNaN(hour) || hour < 0 || hour > 24) return undefined;
+  if (minutes < 0 || minutes > 59) minutes = 0;
+  const m = modifier?.toLowerCase();
+  if (m) {
+    if ((m.includes('pm') || m.includes('tarde') || m.includes('noche')) && hour < 12) hour += 12;
+    else if ((m.includes('am') || m.includes('mañana') || m.includes('madrugada')) && hour === 12) hour = 0;
+  } else if (hour >= 1 && hour <= 6 && !(hourRaw.length === 2 && hourRaw.startsWith('0'))) {
+    hour += 12;
+  }
+  if (word && MINUTE_WORDS[word] !== undefined) {
+    if (rel === 'menos') { hour -= 1; minutes = 60 - MINUTE_WORDS[word]; } else minutes = MINUTE_WORDS[word];
+  }
+  if (hour < 0) hour += 24;
+  if (hour >= 24) hour = 0;
+  return `${String(hour).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
 
 const MONTHS: Record<string, number> = {
   enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5, julio: 6, agosto: 7,
@@ -60,9 +89,9 @@ function dateFromParts(day: number, month: number, year: number | undefined, now
 }
 
 /** Fecha, frecuencia y horas que se pueden leer con frases más largas; devuelve también qué trozos del título consumen. */
-export function readExtendedDate(dateText: string, now: Date): { date?: Date; cycle?: string; consumed: RegExp[] } {
+export function readExtendedDate(dateText: string, now: Date): { date?: Date; cycle?: string; time?: string; consumed: RegExp[] } {
   const consumed: RegExp[] = [];
-  const found: { date?: Date; cycle?: string } = {};
+  const found: { date?: Date; cycle?: string; time?: string } = {};
 
   // «el 1 de cada mes», «el 15 de cada mes»
   let m = dateText.match(new RegExp(`\\b(?:el\\s+)?(\\d{1,2})\\s+de\\s+cada\\s+mes\\b`));
@@ -79,7 +108,7 @@ export function readExtendedDate(dateText: string, now: Date): { date?: Date; cy
     const d = dateFromParts(parseInt(m[1], 10), MONTHS[m[2]], m[3] ? parseInt(m[3], 10) : undefined, now);
     if (d) {
       found.date = d;
-      consumed.push(new RegExp(`(?:^|\\s)${PREP}\\d{1,2}\\s+de\\s+(?:${MONTH_SRC})(?:\\s+(?:de|del)\\s+\\d{4})?\\b`, 'gi'));
+      consumed.push(new RegExp(`(?:^|\\s)(?:(?:el\\s+)?(?:${WD_SRC}),?\\s+)?${PREP}\\d{1,2}\\s+de\\s+(?:${MONTH_SRC})(?:\\s+(?:de|del)\\s+\\d{4})?\\b`, 'gi'));
       return { ...found, consumed };
     }
   }
@@ -109,14 +138,65 @@ export function readExtendedDate(dateText: string, now: Date): { date?: Date; cy
     return { ...found, consumed };
   }
 
+  // «en 2 horas», «dentro de 45 minutos», «en media hora»: hoy, con la hora resultante
+  m = dateText.match(/\b(?:en|dentro de)\s+(?:(\d+|un|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+(horas?|minutos?|min)|media hora)\b/);
+  if (m) {
+    const n = m[1] === undefined ? 30 : /^\d+$/.test(m[1]) ? parseInt(m[1], 10) : NUMBER_WORDS[m[1]];
+    const d = new Date(now.getTime() + (m[1] === undefined || /^m/.test(m[2]) ? n * 60_000 : n * 3_600_000));
+    found.date = d;
+    found.time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    consumed.push(/(?:^|\s)(?:en|dentro de)\s+(?:(?:\d+|un|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+(?:horas?|minutos?|min)|media hora)\b/gi);
+    return { ...found, consumed };
+  }
+
+  // «el día 12»: el próximo día 12
+  m = dateText.match(/\b(?:el\s+)?d[ií]a\s+(\d{1,2})\b(?!\s*(?:de\b|\/))/);
+  if (m) {
+    const d = nextDayOfMonth(parseInt(m[1], 10), now);
+    if (d) {
+      found.date = d;
+      consumed.push(/(?:^|\s)(?:el\s+)?d[ií]a\s+\d{1,2}\b/gi);
+      return { ...found, consumed };
+    }
+  }
+
+  // «el 1/12», «para el 15/03»: día/mes sin año (con «el», para no confundirlo con «1/2 kilo»)
+  m = dateText.match(/\b(?:el|para el|antes del|hasta el)\s+(\d{1,2})\/(\d{1,2})\b(?!\/)/);
+  if (m) {
+    const d = dateFromParts(parseInt(m[1], 10), parseInt(m[2], 10) - 1, undefined, now);
+    if (d) {
+      found.date = d;
+      consumed.push(new RegExp(`(?:^|\\s)${PREP}\\d{1,2}\\/\\d{1,2}\\b(?!\\/)`, 'gi'));
+      return { ...found, consumed };
+    }
+  }
+
+  // «el último día del mes»
+  if (/\b(?:el\s+)?[úu]ltimo d[íi]a del mes\b/.test(dateText)) {
+    let d = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    if (d < startOfDay(now)) d = new Date(now.getFullYear(), now.getMonth() + 2, 0);
+    found.date = d;
+    consumed.push(/(?:^|\s)(?:para\s+)?(?:el\s+)?[úu]ltimo d[íi]a del mes\b/gi);
+    return { ...found, consumed };
+  }
+
+  // «el fin de semana», «este finde»: el próximo sábado
+  if (/\b(?:el|este|para el)\s+(?:fin de semana|finde)\b/.test(dateText)) {
+    const d = startOfDay(now);
+    d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7));
+    found.date = d;
+    consumed.push(/(?:^|\s)(?:para\s+)?(?:el|este)\s+(?:fin de semana|finde)\b/gi);
+    return { ...found, consumed };
+  }
+
   // «la semana que viene», «el mes que viene»
-  m = dateText.match(/\b(?:la semana|el mes) que viene\b/);
+  m = dateText.match(/\b(?:la semana|el mes) que viene\b|\b(?:el\s+)?pr[óo]xim[oa]\s+mes\b/);
   if (m) {
     const d = new Date(now);
     if (m[0].includes('semana')) d.setDate(d.getDate() + 7);
     else d.setMonth(d.getMonth() + 1);
     found.date = d;
-    consumed.push(/(?:^|\s)(?:para\s+)?(?:la semana|el mes) que viene\b/gi);
+    consumed.push(/(?:^|\s)(?:para\s+)?(?:(?:la semana|el mes) que viene|(?:el\s+)?pr[óo]xim[oa]\s+mes)\b/gi);
     return { ...found, consumed };
   }
 
@@ -150,14 +230,14 @@ export function readExtendedDate(dateText: string, now: Date): { date?: Date; cy
 function stripDateTimePhrases(title: string, found: { time: boolean; date: boolean; bareTime?: boolean; extra?: RegExp[] }): string {
   let t = title;
   if (found.time) {
-    t = t.replace(TIME_PHRASE, ' ').replace(/(?:^|\s)(?:a|al|a la)?\s*(?:mediod[íi]a|medianoche)\b/gi, ' ');
+    t = t.replace(RANGE_TIME, ' ').replace(clockRe(), ' ').replace(/(?:^|\s)(?:a|al|a la)?\s*(?:mediod[íi]a|medianoche)\b/gi, ' ');
   }
-  if (found.bareTime) t = t.replace(BARE_TIME, ' ');
+  if (found.bareTime) t = t.replace(BARE_TIME, ' ').replace(BARE_SUFFIX, ' ');
   for (const re of found.extra || []) t = t.replace(re, ' ');
   if (found.date) {
     t = t
       .replace(/(?:^|\s)(?:para|de|del|hasta)?\s*(?:hoy|pasado ma[ñn]ana|ma[ñn]ana|(?:la\s+)?pr[óo]xima semana)\b/gi, ' ')
-      .replace(/(?:^|\s)(?:para\s+|de\s+|del\s+|hasta\s+)?(?:el\s+|este\s+)?(?:pr[óo]ximo\s+)?(?:domingo|lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado)\b/gi, ' ');
+      .replace(/(?:^|\s)(?:(?:antes|despu[ée]s)\s+del\s+|(?:(?:antes|despu[ée]s)\s+de\s+|para\s+|de\s+|del\s+|hasta\s+)?(?:el\s+|este\s+)?)(?:pr[óo]ximo\s+)?(?:domingo|lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado)\b/gi, ' ');
   }
   t = t.replace(/\s+/g, ' ').trim();
   // Nunca dejar el título vacío (p. ej. si solo se escribió «mañana a las 10»)
@@ -223,36 +303,17 @@ export function parseNaturalLanguage(text: string): ParsedNLPResult {
   }
 
   // 4. Detección de Horas (Alertas)
-  // a) "a las 18:30", "a la 1:15", "a las 8 pm", "a las 9 de la noche"
-  const timeRegex = /(?:a las?|y a las?|a la)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm|de la mañana|de la tarde|de la noche)?/gi;
-  let match;
-
-  while ((match = timeRegex.exec(textLower)) !== null) {
-    let hour = parseInt(match[1], 10);
-    const minutesRaw = match[2] || '00';
-    let minutes = parseInt(minutesRaw, 10);
-    const modifier = match[3]?.toLowerCase();
-
-    if (isNaN(hour) || hour < 0 || hour > 24) continue;
-    if (isNaN(minutes) || minutes < 0 || minutes > 59) minutes = 0;
-
-    if (modifier) {
-      if ((modifier.includes('pm') || modifier.includes('tarde') || modifier.includes('noche')) && hour < 12) {
-        hour += 12;
-      } else if ((modifier.includes('am') || modifier.includes('mañana')) && hour === 12) {
-        hour = 0;
-      }
-    } else {
-      if (hour >= 1 && hour <= 6) {
-        hour += 12; 
-      }
-    }
-
-    if (hour === 24) hour = 0;
-
-    const formattedHour = String(hour).padStart(2, '0');
-    const formattedMinutes = String(minutes).padStart(2, '0');
-    times.push(`${formattedHour}:${formattedMinutes}`);
+  // «de las 10 a las 11» (se toma el inicio) y después «a las 18:30», «a las 21h», «a las 5 y media», «a las 7 menos cuarto»…
+  let work = textLower;
+  let hadRange = false;
+  for (const rm of textLower.matchAll(RANGE_TIME)) {
+    const t = toClock(rm[1], rm[2] ? parseInt(rm[2], 10) : 0);
+    if (t) { times.push(t); hadRange = true; }
+  }
+  if (hadRange) work = work.replace(RANGE_TIME, ' ');
+  for (const cm of work.matchAll(clockRe())) {
+    const t = toClock(cm[2], cm[3] ? parseInt(cm[3], 10) : 0, cm[6], cm[4], cm[5]?.toLowerCase());
+    if (t) times.push(t);
   }
 
   // b) "mediodía" / "medianoche"
@@ -269,9 +330,12 @@ export function parseNaturalLanguage(text: string): ParsedNLPResult {
   // Se quita del título la frase que expresa la frecuencia («todos los días»), no el adjetivo («informe semanal»).
   const consumedByCycle: RegExp[] = [];
   if (!suggestedCycleId) {
-    if (/(todos los d[íi]as|diario|cada d[íi]a|diariamente)/.test(textLower)) {
+    if (/(todos los d[íi]as|diario|cada d[íi]a|diariamente|todas las (?:ma[ñn]anas|tardes|noches)|cada (?:tarde|noche))/.test(textLower)) {
       suggestedCycleId = 'cycle_day';
       consumedByCycle.push(/(?:^|\s)(?:todos los d[íi]as|cada d[íi]a|diariamente)\b/gi);
+      if (/todas las (?:ma[ñn]anas|tardes|noches)|cada (?:tarde|noche)/.test(textLower) && !/\bhoy\b|\bma[ñn]ana\b/.test(textLower)) {
+        consumedByCycle.push(/(?:^|\s)(?:todas las (?:ma[ñn]anas|tardes|noches)|cada (?:tarde|noche))\b/gi);
+      }
     } else if (/(cada semana|semanal|todos los (lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bados|domingos))/.test(textLower)) {
       suggestedCycleId = 'cycle_week';
       consumedByCycle.push(/(?:^|\s)(?:cada semana|semanalmente|todas las semanas)\b/gi);
@@ -286,7 +350,8 @@ export function parseNaturalLanguage(text: string): ParsedNLPResult {
 
   // Fechas relativas (sin las horas: «a las 9 de la mañana» o «por la mañana» no son «mañana»)
   const dateText = textLower
-    .replace(TIME_PHRASE, ' ')
+    .replace(RANGE_TIME, ' ')
+    .replace(clockRe(), ' ')
     .replace(/\b(?:por|de|en) la ma[ñn]ana\b/g, ' ');
   if (/\bhoy\b/.test(dateText)) {
     const today = new Date(now);
@@ -309,7 +374,9 @@ export function parseNaturalLanguage(text: string): ParsedNLPResult {
       'domingo': 0, 'lunes': 1, 'martes': 2, 'miércoles': 3, 'miercoles': 3,
       'jueves': 4, 'viernes': 5, 'sábado': 6, 'sabado': 6
     };
+    const explicitDate = new RegExp(`\\b\\d{1,2}\\s+de\\s+(?:${MONTH_SRC})\\b|\\b\\d{1,2}\\/\\d{1,2}\\b`).test(dateText);
     for (const [dayName, dayIndex] of Object.entries(daysMap)) {
+      if (explicitDate) break;
       const regex = new RegExp(`(?:el|este|pr[óo]ximo)\\s+${dayName}`, 'i');
       if (regex.test(dateText)) {
         const target = new Date(now);
@@ -328,6 +395,7 @@ export function parseNaturalLanguage(text: string): ParsedNLPResult {
   if (!suggestedDueDate) {
     const ext = readExtendedDate(dateText, now);
     if (ext.date) suggestedDueDate = ext.date;
+    if (ext.time && times.length === 0) times.push(ext.time);
     if (ext.cycle && !suggestedCycleId) suggestedCycleId = ext.cycle;
     extendedConsumed.push(...ext.consumed);
   }
@@ -342,6 +410,27 @@ export function parseNaturalLanguage(text: string): ParsedNLPResult {
         times.push(`${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')}`);
         bareTime = true;
       }
+    }
+  }
+
+  if (times.length === 0) {
+    for (const bm of textLower.matchAll(BARE_SUFFIX)) {
+      const h = parseInt(bm[1], 10);
+      // «3h» suelto suele ser una duración; «7am», «21h» o «10 pm» son horas
+      if (bm[2] === 'h' && bm[1].length < 2 && h < 7) continue;
+      const t = toClock(bm[1], 0, bm[2] === 'h' ? undefined : bm[2]);
+      if (t && h <= 24) { times.push(t); bareTime = true; }
+    }
+  }
+
+  // «mañana por la tarde», «el sábado a la noche»: la franja se convierte en hora y sale del título
+  const partOfDay = /(?:^|\s)(?:por|a|en)\s+la\s+(ma[ñn]ana|tarde|noche)\b/i;
+  let partExtra: RegExp | undefined;
+  if (suggestedDueDate && times.length === 0) {
+    const pd = textLower.replace(/\bde la ma[ñn]ana\b/g, ' ').match(partOfDay);
+    if (pd) {
+      times.push(pd[1].startsWith('ma') ? '09:00' : pd[1] === 'tarde' ? '17:00' : '21:00');
+      partExtra = /(?:^|\s)(?:por|a|en)\s+la\s+(?:ma[ñn]ana|tarde|noche)\b/gi;
     }
   }
 
@@ -368,7 +457,7 @@ export function parseNaturalLanguage(text: string): ParsedNLPResult {
     time: times.length > 0 && !bareTime,
     bareTime,
     date: Boolean(suggestedDueDate),
-    extra: [...extendedConsumed, ...consumedByCycle],
+    extra: [...extendedConsumed, ...consumedByCycle, ...(partExtra ? [partExtra] : [])],
   });
 
   // 7. Detección de Precio/Coste (100 e, 100€, 15.50 euros, etc.)

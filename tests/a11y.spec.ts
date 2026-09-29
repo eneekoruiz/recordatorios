@@ -27,13 +27,11 @@ async function boot(page: Page) {
 const event = (page: Page, name: string, detail?: unknown) =>
   page.evaluate(([n, d]) => window.dispatchEvent(new CustomEvent(n as string, { detail: d })), [name, detail] as const);
 
-// Los títulos de lista llevan el color que elige cada persona (p. ej. naranja): no se puede garantizar su contraste.
 const scan = async (page: Page, where: string) => {
   const measure = async () => {
     await page.waitForTimeout(1200); // que acaben las animaciones de entrada: axe mediría un fundido a medias
     const result = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
-      .exclude('[title="Toca para cambiar nombre"]')
       .analyze();
     return result.violations
       .filter((v) => v.impact === 'serious' || v.impact === 'critical')

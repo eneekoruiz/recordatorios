@@ -116,7 +116,7 @@ export function EmptyState({
         </div>
       </motion.div>
 
-      <motion.h3 
+      <motion.h2 
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
@@ -129,7 +129,7 @@ export function EmptyState({
         letterSpacing: '-0.015em'
       }}>
         {title}
-      </motion.h3>
+      </motion.h2>
       
       <motion.p 
         initial={{ opacity: 0, y: 10 }}
