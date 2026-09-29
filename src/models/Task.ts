@@ -95,6 +95,7 @@ export interface TaskItem {
   status: 'pending' | 'in_progress' | 'completed'; // Mapped to DB
   alerts?: AlertDef[]; 
   completedAlerts?: string[]; // IDs of AlertDefs that have fired
+  completed_at?: string; // Cuándo se marcó como completada por última vez (ISO)
   completionHistory?: number[]; // Timestamps de cuando se ha completado en el pasado
   
   // --- APPLE REMINDERS FEATURES ---

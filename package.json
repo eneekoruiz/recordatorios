@@ -2,6 +2,14 @@
   "name": "recordatorios",
   "private": true,
   "version": "1.0.1",
+  "homepage": "https://recordatorios-delta.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eneekoruiz/recordatorios.git"
+  },
+  "bugs": {
+    "url": "https://github.com/eneekoruiz/recordatorios/issues"
+  },
   "type": "module",
   "scripts": {
     "dev": "concurrently \"vite\" \"node server/index.js\"",

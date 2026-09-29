@@ -1,5 +1,12 @@
 import type { AlertDef } from '../models/Task';
 import { parseNaturalLanguage } from './nlp';
+import { stripRequestFrames } from './aiPhrasing';
+
+/** «tengo que renovar el pasaporte» → «Renovar el pasaporte». */
+const withoutFrame = (title: string): string => {
+  const t = stripRequestFrames(title).trim();
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : title;
+};
 
 export interface TaskDraft {
   title: string;
@@ -20,7 +27,7 @@ export function draftFromText(raw: string): TaskDraft {
   const nlp = parseNaturalLanguage(text);
   const alerts: AlertDef[] = nlp.times.map((t) => ({ id: `alert_${Date.now()}_${t}`, type: 'at_time' as const, time: t }));
   return {
-    title: nlp.cleanTitle || text,
+    title: withoutFrame(nlp.cleanTitle || text),
     dueDate: nlp.suggestedDueDate ? nlp.suggestedDueDate.toISOString() : undefined,
     priority: nlp.suggestedPriority && nlp.suggestedPriority !== 'none' ? nlp.suggestedPriority : undefined,
     price: nlp.suggestedPrice !== undefined && nlp.suggestedPrice > 0 ? nlp.suggestedPrice : undefined,

@@ -2,6 +2,8 @@
 
 [![CI & Quality Assurance](https://github.com/eneekoruiz/recordatorios/actions/workflows/ci.yml/badge.svg)](https://github.com/eneekoruiz/recordatorios/actions/workflows/ci.yml)
 
+**Demo en vivo: [recordatorios-delta.vercel.app](https://recordatorios-delta.vercel.app)** · Código: [github.com/eneekoruiz/recordatorios](https://github.com/eneekoruiz/recordatorios)
+
 PWA de recordatorios inspirada en Recordatorios de Apple: listas y carpetas, ciclos (diario/semanal/mensual/anual), hábitos con contador, caducidades de tarjetas y suscripciones, diario «Qué he hecho», lenguaje natural en español y asistente IA. Funciona sin conexión y se sincroniza entre dispositivos.
 
 ## Características

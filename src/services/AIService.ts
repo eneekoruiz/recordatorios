@@ -1,6 +1,7 @@
 import type { CustomList, TaskItem } from '../models/Task';
 import { extractPrice } from '../utils/priceExtractor';
 import { detectFormatAndParse } from '../utils/importerParser';
+import { readExtendedDate } from '../utils/nlp';
 import { normalizeSpokenPrompt, stripRequestFrames, isFillerOnly, asPriorityModifier, parseWeekdayPhrase, parseClockTime, timeOfDayForHour, tidyTitle, leadingInfinitive, isBareNounPhrase } from '../utils/aiPhrasing';
 
 export interface ProposedTask {
@@ -668,7 +669,8 @@ export class AIService {
     // Split into individual task candidates:
     // Lenguaje hablado: «lunes y miércoles» no son dos tareas, «3 euros cada uno» es un precio,
     // «ah y también» es solo un separador… (ver utils/aiPhrasing).
-    const spoken = normalizeSpokenPrompt(trimmed);
+    // «lista de la compra: manzanas, yogures…»: la cabecera no es una tarea, solo los elementos.
+    const spoken = normalizeSpokenPrompt(trimmed).replace(/^\s*(?:la\s+)?lista\s+(?:de\s+)?(?:la\s+)?[\wáéíóúñ ]{2,30}:\s*/i, '');
     let rawSegments: string[] = [];
     if (spoken.includes('\n')) {
       rawSegments = spoken.split('\n');
@@ -688,6 +690,10 @@ export class AIService {
     }
     // Contexto de la frase anterior: «comprar pan y leche» → «Comprar leche» (mismo verbo, fecha y hora).
     let lastVerb: string | null = null;
+    // Día dicho en un elemento («mañana a las 8 reunión, a las 12 comer…») que valen los siguientes con hora.
+    let dayCtx: Date | undefined;
+    // Primer elemento del grupo que comparte verbo, para darle la fecha si solo el último la dice.
+    let chainStart = -1;
     let lastCtx: { dueDate?: Date; timeString?: string; timeOfDay?: 'morning' | 'afternoon' | 'night' } = {};
 
     const tasks: ProposedTask[] = [];
@@ -742,7 +748,8 @@ export class AIService {
       }
       // Frase nominal suelta tras un verbo compartido («comprar pan y leche»): hereda verbo y contexto.
       let inheritsContext = false;
-      if (splitByConjunction && !isNarrative && lastVerb && isBareNounPhrase(segment)) {
+      if (splitByConjunction && !isNarrative && lastVerb && isBareNounPhrase(segment)
+        && !/^\s*(?:a\s+las?|a\s+la|sobre\s+las?|hacia\s+las?)\s+\d/i.test(segment)) {
         segment = `${lastVerb} ${segment.charAt(0).toLowerCase()}${segment.slice(1)}`;
         inheritsContext = true;
       }
@@ -819,6 +826,18 @@ export class AIService {
           }
         }
       }
+      // «el 15 de octubre», «en 3 días», «el mes que viene», «esta noche», «el 1 de cada mes»…
+      if (!dueDate) {
+        const ext = readExtendedDate(segment.toLowerCase(), now);
+        if (ext.date) {
+          dueDate = ext.date;
+          if (ext.cycle && !weekdayCycle) weekdayCycle = ext.cycle as ProposedTask['cycle'];
+          for (const re of ext.consumed) segment = segment.replace(re, ' ').trim();
+        }
+      }
+      const ownDate = Boolean(dueDate);
+      // Un elemento con hora pero sin día usa el del último que lo dijo.
+      if (!dueDate && timeString && dayCtx && !inheritsContext) dueDate = new Date(dayCtx);
       // Sin fecha propia, «Comprar leche» comparte la de «Comprar pan».
       if (inheritsContext) {
         if (!dueDate && lastCtx.dueDate) dueDate = new Date(lastCtx.dueDate);
@@ -871,6 +890,15 @@ export class AIService {
       else if (/\b(semanal|cada\s+semana)\b/i.test(segment)) cycle = 'cycle_week';
       else if (/\b(mensual|cada\s+mes)\b/i.test(segment)) cycle = 'cycle_month';
       else if (/\b(anual|cada\s+año)\b/i.test(segment)) cycle = 'cycle_year';
+      // «todas las mañanas/tardes/noches»: a diario, a esa hora del día.
+      const habitual = segment.match(/\btodas\s+las\s+(ma[ñn]anas|tardes|noches)\b/i);
+      if (habitual) {
+        cycle = cycle ?? 'cycle_day';
+        timeOfDay = timeOfDay ?? (/^ma/i.test(habitual[1]) ? 'morning' : /^tar/i.test(habitual[1]) ? 'afternoon' : 'night');
+        segment = segment.replace(habitual[0], ' ').trim();
+      }
+      // La frase de frecuencia sale del título (no el adjetivo: «informe semanal»).
+      if (cycle) segment = segment.replace(/\b(?:todos\s+los\s+d[íi]as|cada\s+d[íi]a|diariamente|cada\s+semana|semanalmente|cada\s+mes|mensualmente|cada\s+a[ñn]o|anualmente)\b/gi, ' ').replace(/\s{2,}/g, ' ').trim();
       cycle = weekdayCycle ?? cycle;
 
       // Match target list
@@ -904,7 +932,7 @@ export class AIService {
         .replace(/^(?:he\s+hecho|hice|estuve|fui\s+a|quedé\s+con|tengo\s+que|debo|hay\s+que)\s+/i, (m) => m)
         .replace(/\s{2,}/g, ' ')
         .trim();
-      cleanTitle = tidyTitle(cleanTitle);
+      cleanTitle = tidyTitle(cleanTitle.replace(/^tengo\s+(?!que\b|ganas\b|hambre\b|sue[ñn]o\b|sed\b)/i, ''));
       const segmentVerb = leadingInfinitive(cleanTitle);
 
       let modifierDueDate: string | undefined;
@@ -960,9 +988,20 @@ export class AIService {
           locationName,
           selected: true
         });
+        if (ownDate && dueDate) dayCtx = new Date(dueDate);
+        // «comprar huevos y pan mañana»: la fecha dicha al final vale para todo el grupo.
+        if (inheritsContext && ownDate && finalDueDateString) {
+          for (let i = Math.max(chainStart, 0); i < tasks.length - 1; i++) {
+            if (!tasks[i].dueDate) {
+              tasks[i].dueDate = finalDueDateString;
+              if (timeOfDay && !tasks[i].timeOfDay) tasks[i].timeOfDay = timeOfDay;
+            }
+          }
+        }
         if (segmentVerb) {
           lastVerb = segmentVerb;
           lastCtx = { dueDate: dueDate ? new Date(dueDate) : undefined, timeString, timeOfDay };
+          if (!inheritsContext) chainStart = tasks.length - 1;
         }
       }
     }

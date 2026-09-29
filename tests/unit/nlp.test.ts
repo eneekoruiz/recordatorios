@@ -65,3 +65,72 @@ describe('lenguaje natural', () => {
     expect(parseNaturalLanguage('mañana a las 10').cleanTitle).toBe('mañana a las 10');
   });
 });
+
+describe('lenguaje natural — fechas y frecuencias más largas', () => {
+  const day = (d?: Date) => (d ? `${d.getMonth() + 1}-${d.getDate()}` : undefined);
+  const inDays = (n: number) => { const d = new Date(); d.setDate(d.getDate() + n); return day(d); };
+
+  it('«el 15 de octubre» (este año o el siguiente si ya pasó) y «antes del 20 de noviembre»', () => {
+    const r = parseNaturalLanguage('Cumpleaños de mamá el 15 de octubre');
+    expect(day(r.suggestedDueDate)).toBe('10-15');
+    expect(r.cleanTitle).toBe('Cumpleaños de mamá');
+    const past = parseNaturalLanguage('Vacaciones el 1 de enero');
+    expect((past.suggestedDueDate as Date) >= new Date(new Date().setHours(0, 0, 0, 0))).toBe(true);
+    expect(parseNaturalLanguage('Renovar pasaporte antes del 20 de noviembre').cleanTitle).toBe('Renovar pasaporte');
+    expect(parseNaturalLanguage('Renovar pasaporte antes del 20 de noviembre').suggestedDueDate?.getDate()).toBe(20);
+  });
+
+  it('fechas con año y numéricas dd/mm/aaaa', () => {
+    expect(parseNaturalLanguage('Boda el 3 de marzo de 2031').suggestedDueDate?.getFullYear()).toBe(2031);
+    const r = parseNaturalLanguage('Reunión 3/11/2031 a las 10');
+    expect(r.suggestedDueDate?.getFullYear()).toBe(2031);
+    expect(r.cleanTitle).toBe('Reunión');
+    expect(r.times).toEqual(['10:00']);
+  });
+
+  it('«en 3 días», «dentro de dos semanas», «la semana que viene»', () => {
+    expect(day(parseNaturalLanguage('Entregar informe en 3 días').suggestedDueDate)).toBe(inDays(3));
+    expect(day(parseNaturalLanguage('Quedar dentro de dos semanas').suggestedDueDate)).toBe(inDays(14));
+    expect(day(parseNaturalLanguage('Llamar la semana que viene').suggestedDueDate)).toBe(inDays(7));
+    expect(parseNaturalLanguage('Entregar informe en 3 días').cleanTitle).toBe('Entregar informe');
+  });
+
+  it('las frecuencias salen del título, pero no el adjetivo', () => {
+    const d = parseNaturalLanguage('Regar plantas todos los días');
+    expect(d.suggestedCycleId).toBe('cycle_day');
+    expect(d.cleanTitle).toBe('Regar plantas');
+    const m = parseNaturalLanguage('Pagar alquiler el 1 de cada mes');
+    expect(m.suggestedCycleId).toBe('cycle_month');
+    expect(m.suggestedDueDate?.getDate()).toBe(1);
+    expect(m.cleanTitle).toBe('Pagar alquiler');
+    expect(parseNaturalLanguage('Informe semanal').cleanTitle).toBe('Informe semanal');
+  });
+
+  it('«los lunes y jueves» es semanal y empieza en el próximo de esos días', () => {
+    const r = parseNaturalLanguage('Correr los lunes y jueves a las 7');
+    expect(r.suggestedCycleId).toBe('cycle_week');
+    expect([1, 4]).toContain(r.suggestedDueDate?.getDay());
+    expect(r.cleanTitle).toBe('Correr');
+    expect(r.times).toEqual(['07:00']);
+  });
+
+  it('hora suelta, «esta noche» y «el próximo martes» sin dejar restos', () => {
+    const t = parseNaturalLanguage('Dentista pasado mañana 9:30');
+    expect(t.times).toEqual(['09:30']);
+    expect(t.cleanTitle).toBe('Dentista');
+    const n = parseNaturalLanguage('Llamar a Ana esta noche');
+    expect(day(n.suggestedDueDate)).toBe(inDays(0));
+    expect(n.cleanTitle).toBe('Llamar a Ana');
+    expect(parseNaturalLanguage('Revisar coche el próximo martes').cleanTitle).toBe('Revisar coche');
+  });
+
+  it('importes con «euros» en mitad de la frase', () => {
+    const a = parseNaturalLanguage('Pagar 45 euros de luz');
+    expect(a.suggestedPrice).toBe(45);
+    expect(a.cleanTitle).toBe('Pagar luz');
+    const b = parseNaturalLanguage('Comprar regalo de unos 50 euros');
+    expect(b.suggestedPrice).toBe(50);
+    expect(b.cleanTitle).toBe('Comprar regalo');
+    expect(parseNaturalLanguage('Comprar 2 kilos de patatas').suggestedPrice).toBeUndefined();
+  });
+});

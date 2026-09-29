@@ -35,3 +35,11 @@ describe('draftFromText — añadir dentro de una lista entiende lo mismo que la
     expect(draftFromText('mañana a las 10').title.length).toBeGreaterThan(0);
   });
 });
+
+describe('draftFromText — sin marcos conversacionales', () => {
+  it('«tengo que renovar el pasaporte antes del 20 de noviembre» → título limpio y fecha', () => {
+    const d = draftFromText('tengo que renovar el pasaporte antes del 20 de noviembre');
+    expect(d.title).toBe('Renovar el pasaporte');
+    expect(new Date(d.dueDate!).getDate()).toBe(20);
+  });
+});

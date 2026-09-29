@@ -17,16 +17,147 @@ export interface ParsedNLPResult {
 // «a las 18:30», «y a las 9 de la noche», «a la 1»
 const TIME_PHRASE = /(?:y\s+)?(?:a las?|a la)\s*\d{1,2}(?::\d{2})?\s*(?:am|pm|de la mañana|de la tarde|de la noche)?/gi;
 
+// «9:30» suelto (sin «a las»)
+const BARE_TIME = /(?:^|\s)(\d{1,2}):(\d{2})(?:\s*h(?:oras?)?)?(?=\s|$|[,.;])/gi;
+
+const MONTHS: Record<string, number> = {
+  enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5, julio: 6, agosto: 7,
+  septiembre: 8, setiembre: 8, octubre: 9, noviembre: 10, diciembre: 11,
+};
+const MONTH_SRC = Object.keys(MONTHS).join('|');
+const WD_SRC = 'domingos?|lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bados?';
+const NUMBER_WORDS: Record<string, number> = { un: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10 };
+const PREP = '(?:(?:antes|despu[ée]s)\\s+del?\\s+|para\\s+el\\s+|hasta\\s+el\\s+|desde\\s+el\\s+|el\\s+|del?\\s+)?';
+
+const weekdayIndex = (w: string): number => {
+  const n = w.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'].findIndex((d) => n.startsWith(d));
+};
+
+const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+/** Próxima vez que cae el día N del mes (hoy incluido). */
+function nextDayOfMonth(day: number, now: Date): Date | undefined {
+  if (day < 1 || day > 31) return undefined;
+  let y = now.getFullYear();
+  let m = now.getMonth();
+  for (let i = 0; i < 24; i++) {
+    const d = new Date(y, m, day);
+    if (d.getMonth() === m && d >= startOfDay(now)) return d;
+    if (++m > 11) { m = 0; y++; }
+  }
+  return undefined;
+}
+
+/** «15 de octubre»: este año, o el siguiente si ya pasó (salvo que se diga el año). */
+function dateFromParts(day: number, month: number, year: number | undefined, now: Date): Date | undefined {
+  if (day < 1 || day > 31 || month < 0 || month > 11) return undefined;
+  const y = year ?? now.getFullYear();
+  let d = new Date(y, month, day);
+  if (d.getMonth() !== month) return undefined;
+  if (year === undefined && d < startOfDay(now)) d = new Date(y + 1, month, day);
+  return d;
+}
+
+/** Fecha, frecuencia y horas que se pueden leer con frases más largas; devuelve también qué trozos del título consumen. */
+export function readExtendedDate(dateText: string, now: Date): { date?: Date; cycle?: string; consumed: RegExp[] } {
+  const consumed: RegExp[] = [];
+  const found: { date?: Date; cycle?: string } = {};
+
+  // «el 1 de cada mes», «el 15 de cada mes»
+  let m = dateText.match(new RegExp(`\\b(?:el\\s+)?(\\d{1,2})\\s+de\\s+cada\\s+mes\\b`));
+  if (m) {
+    found.cycle = 'cycle_month';
+    found.date = nextDayOfMonth(parseInt(m[1], 10), now);
+    consumed.push(/(?:^|\s)(?:el\s+)?\d{1,2}\s+de\s+cada\s+mes\b/gi);
+    return { ...found, consumed };
+  }
+
+  // «15 de octubre», «el 3 de marzo de 2027», «antes del 20 de noviembre»
+  m = dateText.match(new RegExp(`\\b(\\d{1,2})\\s+de\\s+(${MONTH_SRC})(?:\\s+(?:de|del)\\s+(\\d{4}))?\\b`));
+  if (m) {
+    const d = dateFromParts(parseInt(m[1], 10), MONTHS[m[2]], m[3] ? parseInt(m[3], 10) : undefined, now);
+    if (d) {
+      found.date = d;
+      consumed.push(new RegExp(`(?:^|\\s)${PREP}\\d{1,2}\\s+de\\s+(?:${MONTH_SRC})(?:\\s+(?:de|del)\\s+\\d{4})?\\b`, 'gi'));
+      return { ...found, consumed };
+    }
+  }
+
+  // «15/10/2026»
+  m = dateText.match(/\b(\d{1,2})\/(\d{1,2})\/(\d{2,4})\b/);
+  if (m) {
+    const y = parseInt(m[3], 10);
+    const d = dateFromParts(parseInt(m[1], 10), parseInt(m[2], 10) - 1, y < 100 ? 2000 + y : y, now);
+    if (d) {
+      found.date = d;
+      consumed.push(new RegExp(`(?:^|\\s)${PREP}\\d{1,2}\\/\\d{1,2}\\/\\d{2,4}\\b`, 'gi'));
+      return { ...found, consumed };
+    }
+  }
+
+  // «en 3 días», «dentro de dos semanas», «en un mes»
+  m = dateText.match(/\b(?:en|dentro de)\s+(\d+|un|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+(d[íi]as?|semanas?|mes(?:es)?)\b/);
+  if (m) {
+    const n = /^\d+$/.test(m[1]) ? parseInt(m[1], 10) : NUMBER_WORDS[m[1]];
+    const d = new Date(now);
+    if (/^d/.test(m[2])) d.setDate(d.getDate() + n);
+    else if (/^s/.test(m[2])) d.setDate(d.getDate() + 7 * n);
+    else d.setMonth(d.getMonth() + n);
+    found.date = d;
+    consumed.push(/(?:^|\s)(?:en|dentro de)\s+(?:\d+|un|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+(?:d[íi]as?|semanas?|mes(?:es)?)\b/gi);
+    return { ...found, consumed };
+  }
+
+  // «la semana que viene», «el mes que viene»
+  m = dateText.match(/\b(?:la semana|el mes) que viene\b/);
+  if (m) {
+    const d = new Date(now);
+    if (m[0].includes('semana')) d.setDate(d.getDate() + 7);
+    else d.setMonth(d.getMonth() + 1);
+    found.date = d;
+    consumed.push(/(?:^|\s)(?:para\s+)?(?:la semana|el mes) que viene\b/gi);
+    return { ...found, consumed };
+  }
+
+  // «esta noche», «esta tarde», «esta mañana»: hoy
+  if (/\besta\s+(?:noche|tarde|ma[ñn]ana)\b/.test(dateText)) {
+    found.date = new Date(now);
+    consumed.push(/(?:^|\s)(?:para\s+)?esta\s+(?:noche|tarde|ma[ñn]ana)\b/gi);
+    return { ...found, consumed };
+  }
+
+  // «los lunes y jueves», «cada viernes», «todos los sábados»: semanal, empezando en el próximo de esos días
+  m = dateText.match(new RegExp(`\\b(?:(?:todos\\s+)?los|cada)\\s+((?:${WD_SRC})(?:\\s*(?:,|y|e)\\s*(?:los\\s+)?(?:${WD_SRC}))*)\\b`));
+  if (m) {
+    const days = (m[1].match(new RegExp(WD_SRC, 'g')) || []).map(weekdayIndex).filter((n) => n >= 0);
+    if (days.length > 0) {
+      let best: Date | undefined;
+      for (const idx of days) {
+        const d = startOfDay(now);
+        d.setDate(d.getDate() + ((idx - d.getDay() + 7) % 7));
+        if (!best || d < best) best = d;
+      }
+      found.date = best;
+      found.cycle = 'cycle_week';
+      consumed.push(new RegExp(`(?:^|\\s)(?:(?:todos\\s+)?los|cada)\\s+(?:${WD_SRC})(?:\\s*(?:,|y|e)\\s*(?:los\\s+)?(?:${WD_SRC}))*\\b`, 'gi'));
+    }
+  }
+  return { ...found, consumed };
+}
+
 /** Quita del título las expresiones de fecha y hora que ya se han convertido en datos. */
-function stripDateTimePhrases(title: string, found: { time: boolean; date: boolean }): string {
+function stripDateTimePhrases(title: string, found: { time: boolean; date: boolean; bareTime?: boolean; extra?: RegExp[] }): string {
   let t = title;
   if (found.time) {
     t = t.replace(TIME_PHRASE, ' ').replace(/(?:^|\s)(?:a|al|a la)?\s*(?:mediod[íi]a|medianoche)\b/gi, ' ');
   }
+  if (found.bareTime) t = t.replace(BARE_TIME, ' ');
+  for (const re of found.extra || []) t = t.replace(re, ' ');
   if (found.date) {
     t = t
       .replace(/(?:^|\s)(?:para|de|del|hasta)?\s*(?:hoy|pasado ma[ñn]ana|ma[ñn]ana|(?:la\s+)?pr[óo]xima semana)\b/gi, ' ')
-      .replace(/(?:^|\s)(?:para|de|del|hasta)?\s*(?:el|este|pr[óo]ximo)\s+(?:domingo|lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado)\b/gi, ' ');
+      .replace(/(?:^|\s)(?:para\s+|de\s+|del\s+|hasta\s+)?(?:el\s+|este\s+)?(?:pr[óo]ximo\s+)?(?:domingo|lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bado)\b/gi, ' ');
   }
   t = t.replace(/\s+/g, ' ').trim();
   // Nunca dejar el título vacío (p. ej. si solo se escribió «mañana a las 10»)
@@ -135,15 +266,21 @@ export function parseNaturalLanguage(text: string): ParsedNLPResult {
   let suggestedDueDate: Date | undefined;
 
   // Ciclos implícitos
+  // Se quita del título la frase que expresa la frecuencia («todos los días»), no el adjetivo («informe semanal»).
+  const consumedByCycle: RegExp[] = [];
   if (!suggestedCycleId) {
     if (/(todos los d[íi]as|diario|cada d[íi]a|diariamente)/.test(textLower)) {
       suggestedCycleId = 'cycle_day';
+      consumedByCycle.push(/(?:^|\s)(?:todos los d[íi]as|cada d[íi]a|diariamente)\b/gi);
     } else if (/(cada semana|semanal|todos los (lunes|martes|mi[ée]rcoles|jueves|viernes|s[áa]bados|domingos))/.test(textLower)) {
       suggestedCycleId = 'cycle_week';
+      consumedByCycle.push(/(?:^|\s)(?:cada semana|semanalmente|todas las semanas)\b/gi);
     } else if (/(cada mes|mensual|todos los meses)/.test(textLower)) {
       suggestedCycleId = 'cycle_month';
+      consumedByCycle.push(/(?:^|\s)(?:cada mes|mensualmente|todos los meses)\b/gi);
     } else if (/(cada a[ñn]o|anual|todos los a[ñn]os)/.test(textLower)) {
       suggestedCycleId = 'cycle_year';
+      consumedByCycle.push(/(?:^|\s)(?:cada a[ñn]o|anualmente|todos los a[ñn]os)\b/gi);
     }
   }
 
@@ -186,6 +323,28 @@ export function parseNaturalLanguage(text: string): ParsedNLPResult {
     }
   }
 
+  // Fechas y frecuencias con frases más largas: «el 15 de octubre», «en 3 días», «los lunes y jueves»…
+  const extendedConsumed: RegExp[] = [];
+  if (!suggestedDueDate) {
+    const ext = readExtendedDate(dateText, now);
+    if (ext.date) suggestedDueDate = ext.date;
+    if (ext.cycle && !suggestedCycleId) suggestedCycleId = ext.cycle;
+    extendedConsumed.push(...ext.consumed);
+  }
+
+  // Hora suelta («pasado mañana 9:30») cuando no hay «a las»
+  let bareTime = false;
+  if (times.length === 0) {
+    for (const bm of textLower.matchAll(BARE_TIME)) {
+      const h = parseInt(bm[1], 10);
+      const mi = parseInt(bm[2], 10);
+      if (h <= 23 && mi <= 59) {
+        times.push(`${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')}`);
+        bareTime = true;
+      }
+    }
+  }
+
   // 6. Inferencia temática de Categoría por defecto si no se especificó @Lista
   if (!suggestedCategory) {
     const categoryKeywords: Record<string, string[]> = {
@@ -205,7 +364,12 @@ export function parseNaturalLanguage(text: string): ParsedNLPResult {
 
   // 6b. La fecha y la hora detectadas salen del título, como en Recordatorios de Apple:
   //     «Reunión mañana a las 10:00» → «Reunión» (y así el precio queda al final).
-  cleanTitle = stripDateTimePhrases(cleanTitle, { time: times.length > 0, date: Boolean(suggestedDueDate) });
+  cleanTitle = stripDateTimePhrases(cleanTitle, {
+    time: times.length > 0 && !bareTime,
+    bareTime,
+    date: Boolean(suggestedDueDate),
+    extra: [...extendedConsumed, ...consumedByCycle],
+  });
 
   // 7. Detección de Precio/Coste (100 e, 100€, 15.50 euros, etc.)
   let suggestedPrice: number | undefined = undefined;

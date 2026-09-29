@@ -13,7 +13,7 @@ import { AIService, type ProposedBatch, type AIConfig } from '../../services/AIS
 import { useAppStore } from '../../store/useAppStore';
 import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
-import { formatEuro } from '../../utils/format';
+import { formatEuro, plural } from '../../utils/format';
 import { showUndoToast } from '../../utils/undoToast';
 import { extractTextFromPdf } from '../../utils/pdfExtractor';
 import { renderInlineMarkdown } from '../../utils/inlineMarkdown';
@@ -429,9 +429,11 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
 
     // Notify user
     const listName = targetListToCreate?.name || lists.find(l => l.id === tasksPayload[0]?.categoryId)?.name || 'Inbox';
-    window.dispatchEvent(new CustomEvent('show-toast', { 
-      detail: `${tasksPayload.length} recordatorios importados a "${listName}"`
-    }));
+    // Se puede deshacer: los recordatorios recién añadidos van a la papelera.
+    showUndoToast(
+      `${plural(tasksPayload.length, 'recordatorio')} ${tasksPayload.length === 1 ? 'añadido' : 'añadidos'} a «${listName}»`,
+      () => tasksPayload.forEach((t) => useAppStore.getState().deleteTask(t.id))
+    );
 
     // Mark as imported in message
     setMessages(prev => prev.map(m => {
@@ -442,7 +444,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
           ...m.batch,
           tasks: []
         },
-        text: `${m.text}\n\n¡${tasksPayload.length} recordatorios importados con éxito!`
+        text: `${m.text}\n\n✅ ${plural(tasksPayload.length, 'recordatorio')} ${tasksPayload.length === 1 ? 'añadido' : 'añadidos'}.`
       };
     }));
 
