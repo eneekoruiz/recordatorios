@@ -129,6 +129,28 @@ test.describe('Pulido final', () => {
     await expect(page.locator('.list-duration-meta .meta-split__parts').first()).toContainText('30 min semanales');
   });
 
+  test('eliminar una sección avisa con «Deshacer» y Ctrl+Z la devuelve con sus recordatorios', async ({ page }) => {
+    await ensureAppUnlocked(page);
+    await page.evaluate(() => {
+      const st = (window as any).useAppStore.getState();
+      st.addTasksBatch([], { createList: { id: 'proy', name: 'Proyecto', color: '#af52de', icon: 'sparkles' } });
+      st.addListSection({ id: 'sx', listId: 'proy', name: 'Fase uno', order: 0 });
+      st.addTask({ id: 't1', title: 'Diseñar', status: 'pending', categoryId: 'proy', sectionId: 'sx', created_at: new Date().toISOString() });
+    });
+    await page.locator('.ios-list-item', { hasText: 'Proyecto' }).first().click();
+    const header = page.locator('.group-header', { hasText: 'Fase uno' });
+    await header.hover();
+    await header.getByRole('button', { name: 'Opciones de sección' }).click();
+    await page.getByText('Eliminar sección').first().click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Eliminar' }).click();
+    await expect(header).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Deshacer' })).toBeVisible();
+    await page.locator('body').click({ position: { x: 900, y: 500 } });
+    await page.keyboard.press('Control+z');
+    await expect(header).toHaveCount(1);
+    expect(await page.evaluate(() => (window as any).useAppStore.getState().tasks.t1.sectionId)).toBe('sx');
+  });
+
   test.describe('móvil', () => {
     test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 

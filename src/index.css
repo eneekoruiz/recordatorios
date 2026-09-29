@@ -1154,7 +1154,8 @@ button:disabled {
 .confirm-sheet,
 .shortcuts-sheet,
 .person-profile-sheet,
-.monthly-summary-sheet {
+.monthly-summary-sheet,
+.security-sheet {
   position: relative;
   width: min(100%, 460px);
   max-height: min(90dvh, 740px);
@@ -1180,6 +1181,7 @@ button:disabled {
 [data-theme="dark"] .shortcuts-sheet,
 [data-theme="dark"] .person-profile-sheet,
 [data-theme="dark"] .monthly-summary-sheet,
+[data-theme="dark"] .security-sheet,
 .dark .premium-sheet,
 .dark .list-config-modal,
 .dark .cycle-config-modal,

@@ -13,7 +13,8 @@ import {
   LogOut,
   Bell,
   UserPlus,
-  Trash2
+  Trash2,
+  ShieldCheck
 } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { SoundService } from '../../../services/SoundService';
@@ -189,6 +190,17 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
             </span>
             <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>
               {lastSyncedAt ? new Date(lastSyncedAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : 'Pendiente'}
+            </span>
+          </div>
+        )}
+        {!isGuest && (
+          <div
+            className="ios-dropdown-item"
+            onClick={(e) => { e.stopPropagation(); HapticService.selection(); window.dispatchEvent(new Event('open-security-sheet')); onClose(); }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <ShieldCheck size={16} /> Seguridad
             </span>
           </div>
         )}

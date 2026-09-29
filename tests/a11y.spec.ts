@@ -29,13 +29,20 @@ const event = (page: Page, name: string, detail?: unknown) =>
 
 // Los títulos de lista llevan el color que elige cada persona (p. ej. naranja): no se puede garantizar su contraste.
 const scan = async (page: Page, where: string) => {
-  await page.waitForTimeout(1200); // que acaben las animaciones de entrada: axe mediría un fundido a medias
-  const result = await new AxeBuilder({ page })
-    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
-    .exclude('[title="Toca para cambiar nombre"]')
-    .analyze();
-  const serious = result.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
-  expect(serious.map((v) => `${where}: ${v.id} → ${v.nodes.slice(0, 2).map((n) => n.target.join(' ')).join(' | ')}`), where).toEqual([]);
+  const measure = async () => {
+    await page.waitForTimeout(1200); // que acaben las animaciones de entrada: axe mediría un fundido a medias
+    const result = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+      .exclude('[title="Toca para cambiar nombre"]')
+      .analyze();
+    return result.violations
+      .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+      .map((v) => `${where}: ${v.id} → ${v.nodes.slice(0, 2).map((n) => n.target.join(' ')).join(' | ')}`);
+  };
+  // Con la máquina cargada una animación puede tardar más: solo falla si el problema persiste en una segunda medición.
+  let found = await measure();
+  if (found.length > 0) found = await measure();
+  expect(found, where).toEqual([]);
 };
 
 for (const scheme of ['light', 'dark'] as const) {

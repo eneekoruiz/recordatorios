@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutList, IndentIncrease, CheckCircle2, Trash2, X, FolderInput } from 'lucide-react';
 import type { TaskItem, ListSection } from '../../models/Task';
 import { useAppStore } from '../../store/useAppStore';
+import { showUndoToast } from '../../utils/undoToast';
 import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
 
@@ -73,9 +74,16 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
 
   const handleBatchDelete = () => {
     HapticService.impact('heavy');
-    selectedTaskIds.forEach(id => {
+    const ids = Array.from(selectedTaskIds).filter((id) => tasks[id]);
+    ids.forEach(id => {
       deleteTask(id);
     });
+    if (ids.length > 0) {
+      showUndoToast(
+        ids.length === 1 ? `«${tasks[ids[0]].title}» eliminado` : `${ids.length} recordatorios eliminados`,
+        () => ids.forEach((id) => useAppStore.getState().restoreTask(id))
+      );
+    }
     setActiveModal(null);
     onClearSelection();
   };

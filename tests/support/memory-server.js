@@ -1,4 +1,5 @@
 // Backend local sin PostgreSQL (datos en memoria). Uso: node tests/support/memory-server.js
+process.env.BCRYPT_COST = process.env.BCRYPT_COST || '4';
 import { createApp } from '../../server/app.js';
 import { createMemoryPrisma } from './memoryPrisma.js';
 

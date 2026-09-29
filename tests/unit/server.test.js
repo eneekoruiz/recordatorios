@@ -2,6 +2,8 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import jwt from 'jsonwebtoken';
 import { createApp, resetLinkBase, passwordFingerprint } from '../../server/app.js';
 import { createMemoryPrisma } from '../support/memoryPrisma.js';
+import bcrypt from 'bcryptjs';
+import { totpCode } from '../../server/security.js';
 
 let server;
 let base;
@@ -23,6 +25,7 @@ async function register(email, password = 'Password123!') {
 
 beforeAll(async () => {
   process.env.JWT_SECRET = 'test-secret-with-enough-length';
+  process.env.BCRYPT_COST = '4'; // los hashes reales usan 12; aquí solo importa la lógica
   delete process.env.VERCEL;
   delete process.env.RESEND_API_KEY;
   process.env.NODE_ENV = 'test';
@@ -164,6 +167,122 @@ describe('autenticación', () => {
       process.env.JWT_SECRET = prev;
       process.env.NODE_ENV = 'test';
     }
+  });
+});
+
+describe('seguridad de la cuenta', () => {
+  let n = 0;
+  const newEmail = () => `seg${Date.now()}_${n++}@example.com`;
+  const login = (email, extra = {}, ua = 'Mozilla/5.0 Test') =>
+    fetch(base + '/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'User-Agent': ua },
+      body: JSON.stringify({ email, password: 'Password123!', ...extra }),
+    });
+
+  async function enable2fa(token) {
+    const setup = await (await post('/api/auth/2fa/setup', {}, token)).json();
+    expect(setup.secret).toMatch(/^[A-Z2-7]{32}$/);
+    expect(setup.otpauthUrl).toContain('otpauth://totp/');
+    const enabled = await post('/api/auth/2fa/enable', { code: totpCode(setup.secret) }, token);
+    expect(enabled.status).toBe(200);
+    const { recoveryCodes } = await enabled.json();
+    return { secret: setup.secret, recoveryCodes };
+  }
+
+  it('actualiza en silencio las contraseñas con menos coste de bcrypt al iniciar sesión', async () => {
+    const email = newEmail();
+    await register(email);
+    const weak = await bcrypt.hash('Password123!', 4);
+    await prisma.user.update({ where: { email }, data: { password: weak } });
+    process.env.BCRYPT_COST = '6';
+    try {
+      expect((await login(email)).status).toBe(200);
+      const stored = (await prisma.user.findUnique({ where: { email } })).password;
+      expect(bcrypt.getRounds(stored)).toBe(6);
+    } finally {
+      process.env.BCRYPT_COST = '4';
+    }
+  });
+
+  it('cerrar sesión en todos los dispositivos invalida los tokens anteriores y devuelve uno válido', async () => {
+    const email = newEmail();
+    const { token: a } = await register(email);
+    const b = (await (await login(email)).json()).token;
+    const res = await post('/api/auth/logout-all', {}, a);
+    expect(res.status).toBe(200);
+    const fresh = (await res.json()).token;
+    expect((await get('/api/auth/security', a)).status).toBe(401);
+    expect((await get('/api/auth/security', b)).status).toBe(401);
+    expect((await get('/api/auth/security', fresh)).status).toBe(200);
+  });
+
+  it('activa la verificación en dos pasos: el login pide código y acepta TOTP o un código de recuperación (una vez)', async () => {
+    const email = newEmail();
+    const { token } = await register(email);
+    const { secret, recoveryCodes } = await enable2fa(token);
+    expect((await (await get('/api/auth/security', token)).json())).toMatchObject({ twoFactorEnabled: true, recoveryCodesLeft: 8 });
+
+    const noCode = await login(email);
+    expect(noCode.status).toBe(401);
+    expect((await noCode.json()).twoFactorRequired).toBe(true);
+    expect((await login(email, { code: '000000' })).status).toBe(401);
+
+    // El código con el que se activó ya está usado: hace falta el del siguiente intervalo
+    const next = totpCode(secret, Date.now() + 30_000);
+    expect((await login(email, { code: next })).status).toBe(200);
+    expect((await login(email, { code: next })).status).toBe(401); // reutilizado
+
+    expect((await login(email, { code: recoveryCodes[0] })).status).toBe(200);
+    expect((await login(email, { code: recoveryCodes[0] })).status).toBe(401); // un solo uso
+    expect((await (await get('/api/auth/security', token)).json()).recoveryCodesLeft).toBe(7);
+  });
+
+  it('una contraseña incorrecta no revela si la cuenta tiene 2FA', async () => {
+    const email = newEmail();
+    const { token } = await register(email);
+    await enable2fa(token);
+    const res = await post('/api/auth/login', { email, password: 'incorrecta!!' });
+    expect(res.status).toBe(401);
+    expect((await res.json()).twoFactorRequired).toBeUndefined();
+  });
+
+  it('desactivar el 2FA exige contraseña y código', async () => {
+    const email = newEmail();
+    const { token } = await register(email);
+    const { recoveryCodes } = await enable2fa(token);
+    expect((await post('/api/auth/2fa/disable', { password: 'mala', code: recoveryCodes[0] }, token)).status).toBe(400);
+    expect((await post('/api/auth/2fa/disable', { password: 'Password123!', code: '111111' }, token)).status).toBe(400);
+    expect((await post('/api/auth/2fa/disable', { password: 'Password123!', code: recoveryCodes[1] }, token)).status).toBe(200);
+    expect((await login(email)).status).toBe(200);
+  });
+
+  it('el cliente nunca ve ni puede escribir los datos de seguridad en las preferencias', async () => {
+    const email = newEmail();
+    const { token } = await register(email);
+    await enable2fa(token);
+
+    const pull = await (await get('/api/sync/pull?since=0', token)).json();
+    expect(JSON.stringify(pull.preferences ?? {})).not.toContain('_security');
+    const relog = await (await login(email, { code: 'x' })).json();
+    expect(JSON.stringify(relog)).not.toContain('totp');
+
+    // Intento de apagar el 2FA (y subir la versión de sesión) desde el push de preferencias
+    const push = await post('/api/sync/push', { preferences: { theme: 'dark', updated_at: new Date().toISOString(), _security: { totp: { enabled: false } } } }, token);
+    expect(push.status).toBe(200);
+    const stored = (await prisma.user.findUnique({ where: { email } })).preferences;
+    expect(stored.theme).toBe('dark');
+    expect(stored._security.totp.enabled).toBe(true);
+  });
+
+  it('un dispositivo nuevo se recuerda (y el primero no genera aviso)', async () => {
+    const email = newEmail();
+    await register(email);
+    await login(email, {}, 'Mozilla/5.0 Mac');
+    await login(email, {}, 'Mozilla/5.0 Mac');
+    await login(email, {}, 'Mozilla/5.0 Windows');
+    const devices = (await prisma.user.findUnique({ where: { email } })).preferences._security.devices;
+    expect(devices).toHaveLength(2);
   });
 });
 

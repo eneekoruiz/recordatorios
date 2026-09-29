@@ -15,6 +15,7 @@ import { HapticService } from '../../../services/HapticService';
 import { isCaducidadesList, isQueHeHechoList, getListBadgeInfo, isShoppingList } from '../../../utils/specialLists';
 import { confirmDialog } from '../../ui/confirmDialog';
 import { useAppStore } from '../../../store/useAppStore';
+import { deleteCycleWithUndo } from '../../../utils/undoToast';
 import type { TaskItem, CustomCycle, CustomList } from '../../../models/Task';
 import { formatDuration, type TasksDurationSummary } from '../../../utils/taskDuration';
 import { formatEuro } from '../../../utils/format';
@@ -468,18 +469,19 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                   title: 'Eliminar Frecuencia', 
                   message: `¿Estás seguro de eliminar la frecuencia "${cycleName}"? Esta acción no se puede deshacer.`, 
                   onConfirm: () => {
-                    deleteCycle(cycleId);
+                    deleteCycleWithUndo({
+                      getCycleName: () => cycleName,
+                      getTaskIds: () => Object.values(useAppStore.getState().tasks).filter((t) => t.cycle_id === cycleId && !t.deleted_at).map((t) => t.id),
+                      remove: () => deleteCycle(cycleId),
+                      restore: () => useAppStore.getState().restoreCycle(cycleId),
+                      relink: (id) => useAppStore.getState().updateTask(id, { cycle_id: cycleId }),
+                    });
                     if (onNavigateView) {
                       onNavigateView('smart_today');
                     }
                     if (_onBackToSidebar) {
                       _onBackToSidebar();
                     }
-                    window.dispatchEvent(
-                      new CustomEvent('show-toast', {
-                        detail: `Frecuencia "${cycleName}" eliminada`,
-                      })
-                    );
                   }
                 }); 
                 setIsConfirmOpen(true);

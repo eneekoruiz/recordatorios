@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
+import { showUndoToast } from '../../utils/undoToast';
 import { parseNaturalLanguage } from '../../utils/nlp';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { isCaducidadesList, getListType, isShoppingList } from '../../utils/specialLists';
@@ -569,7 +570,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   const handleSave = () => {
     if (!title.trim()) {
       if (taskId) {
+        const gone = useAppStore.getState().tasks[taskId];
         deleteTask(taskId);
+        if (gone?.title) showUndoToast(`«${gone.title}» eliminado`, () => useAppStore.getState().restoreTask(taskId));
         onClose();
       }
       return;

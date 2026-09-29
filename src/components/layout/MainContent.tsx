@@ -41,6 +41,7 @@ import { smartSortTasks } from '../../utils/smartSort';
 import { WeeklyStreakWidget } from './main/WeeklyStreakWidget';
 import { confirmDialog } from '../ui/confirmDialog';
 import { deduplicateTaskList } from '../../utils/taskDeduplication';
+import { showUndoToast } from '../../utils/undoToast';
 import { buildRoutineParts, buildMixParts, type RoutinePart } from '../../utils/routineBreakdown';
 import { calculateTasksDuration, calculateCompletedTasksDuration, getTaskDuration, type TasksDurationSummary } from '../../utils/taskDuration';
 import { getReservedFrequencyColor } from '../../constants/colors';
@@ -953,7 +954,19 @@ const CORE_CYCLES = [
       message: 'La sección desaparecerá, pero sus recordatorios se conservarán sin sección.',
       confirmText: 'Eliminar',
     });
-    if (ok) deleteListSection(sectionId);
+    if (!ok) return;
+    // Lo que hay que recolocar al deshacer: los recordatorios de la sección y sus subsecciones.
+    const st = useAppStore.getState();
+    const section = (st.listSections || []).find((s) => s.id === sectionId);
+    const taskIds = Object.values(st.tasks).filter((t) => t.sectionId === sectionId && !t.deleted_at).map((t) => t.id);
+    const childIds = (st.listSections || []).filter((s) => s.parentId === sectionId && !s.deleted_at).map((s) => s.id);
+    deleteListSection(sectionId);
+    showUndoToast(`Sección «${section?.name || ''}» eliminada`, () => {
+      const s = useAppStore.getState();
+      s.restoreListSection(sectionId);
+      taskIds.forEach((id) => s.updateTask(id, { sectionId }));
+      childIds.forEach((id) => s.updateListSection(id, { parentId: sectionId }));
+    });
   }, [sectionMenu, deleteListSection]);
 
   const handleEmptySectionMenu = useCallback(async () => {

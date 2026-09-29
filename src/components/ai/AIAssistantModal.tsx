@@ -14,6 +14,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
 import { formatEuro } from '../../utils/format';
+import { showUndoToast } from '../../utils/undoToast';
 import { extractTextFromPdf } from '../../utils/pdfExtractor';
 import { renderInlineMarkdown } from '../../utils/inlineMarkdown';
 
@@ -587,8 +588,10 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
     const selectedUpdates = msg.batch.taskUpdates.filter(u => u.selected);
     if (selectedUpdates.length === 0) return;
 
+    const removedIds: string[] = [];
     selectedUpdates.forEach(update => {
       if (update.deleted) {
+        removedIds.push(update.taskId);
         deleteTask(update.taskId);
       } else {
         const patch: any = {};
@@ -607,9 +610,18 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
 
     SoundService.playComplete();
     HapticService.notification('success');
-    window.dispatchEvent(new CustomEvent('show-toast', {
-      detail: `✓ ${selectedUpdates.length} modificación(es) aplicada(s) correctamente.`
-    }));
+    const n = selectedUpdates.length;
+    if (removedIds.length > 0) {
+      // Lo más delicado que puede hacer el asistente es borrar: siempre se puede deshacer.
+      showUndoToast(
+        removedIds.length === 1 ? 'Recordatorio eliminado por el asistente' : `${removedIds.length} recordatorios eliminados por el asistente`,
+        () => removedIds.forEach((id) => useAppStore.getState().restoreTask(id))
+      );
+    } else {
+      window.dispatchEvent(new CustomEvent('show-toast', {
+        detail: n === 1 ? '✓ Cambio aplicado' : `✓ ${n} cambios aplicados`
+      }));
+    }
 
     setMessages(prev => prev.map(m => {
       if (m.id !== messageId || !m.batch) return m;
@@ -619,7 +631,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
           ...m.batch,
           taskUpdates: []
         },
-        text: `${m.text}\n\n✅ ¡${selectedUpdates.length} modificación(es) aplicada(s) con éxito!`
+        text: `${m.text}\n\n✅ ${n === 1 ? 'Cambio aplicado' : `${n} cambios aplicados`}.`
       };
     }));
   };

@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Check, Trash2 } from 'lucide-react';
 import { useAppStore, isTaskCompleted } from '../../../store/useAppStore';
+import { deleteCycleWithUndo } from '../../../utils/undoToast';
 import { confirmDialog } from '../../ui/confirmDialog';
 import { isCompletedInCurrentPeriod } from '../../../services/TaskService';
 import { getCycleIcon } from '../../../constants/icons';
@@ -257,15 +258,16 @@ export const CyclesListSection: React.FC<CyclesListSectionProps> = ({
                           tone: 'danger',
                         });
                         if (ok) {
-                          deleteCycle(cycle.id);
+                          deleteCycleWithUndo({
+                            getCycleName: () => cycle.name,
+                            getTaskIds: () => Object.values(useAppStore.getState().tasks).filter((t) => t.cycle_id === cycle.id && !t.deleted_at).map((t) => t.id),
+                            remove: () => deleteCycle(cycle.id),
+                            restore: () => useAppStore.getState().restoreCycle(cycle.id),
+                            relink: (id) => useAppStore.getState().updateTask(id, { cycle_id: cycle.id }),
+                          });
                           if (currentView === cycle.id) {
                             onSelectView('smart_today');
                           }
-                          window.dispatchEvent(
-                            new CustomEvent('show-toast', {
-                              detail: `Frecuencia "${cycle.name}" eliminada`,
-                            })
-                          );
                         }
                       }}
                       title="Eliminar frecuencia personalizada"
