@@ -198,6 +198,8 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
       message: { error: 'Demasiadas peticiones. Espera un momento.' },
     });
   const apiLimiter = generic(900);
+  // Rutas de cuenta: tope por IP con express-rate-limit, además de los límites por correo/usuario respaldados en BD.
+  const authRateLimit = generic(120);
   const publicLimiter = generic(300);
 
   app.disable('x-powered-by');
@@ -374,7 +376,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
   });
 
   // --- AUTH ---
-  app.post(['/api/auth/register', '/auth/register'], authIpLimiter, async (req, res) => {
+  app.post(['/api/auth/register', '/auth/register'], authRateLimit, authIpLimiter, async (req, res) => {
     const secret = requireSecret(res);
     if (!secret) return;
     try {
@@ -404,7 +406,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
     }
   });
 
-  app.post(['/api/auth/login', '/auth/login'], authIpLimiter, loginLimiter, async (req, res) => {
+  app.post(['/api/auth/login', '/auth/login'], authRateLimit, authIpLimiter, loginLimiter, async (req, res) => {
     const secret = requireSecret(res);
     if (!secret) return;
     try {
@@ -481,7 +483,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
   });
 
   // Paso 1 de la recuperación: enviar enlace firmado al email (nunca revela si existe la cuenta).
-  app.post(['/api/auth/forgot-password', '/auth/forgot-password'], forgotLimiter, async (req, res) => {
+  app.post(['/api/auth/forgot-password', '/auth/forgot-password'], authRateLimit, forgotLimiter, async (req, res) => {
     const secret = requireSecret(res);
     if (!secret) return;
     const genericMessage = 'Si existe una cuenta con ese correo, te hemos enviado un enlace para restablecer la contraseña.';
@@ -529,7 +531,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
   });
 
   // Paso 2: fijar nueva contraseña con el token recibido por email.
-  app.post(['/api/auth/reset-password', '/auth/reset-password'], authIpLimiter, async (req, res) => {
+  app.post(['/api/auth/reset-password', '/auth/reset-password'], authRateLimit, authIpLimiter, async (req, res) => {
     const secret = requireSecret(res);
     if (!secret) return;
     const invalidLink = () =>
@@ -566,7 +568,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
     }
   });
 
-  app.post(['/api/auth/change-password', '/auth/change-password'], changePasswordLimiter, authenticateToken, async (req, res) => {
+  app.post(['/api/auth/change-password', '/auth/change-password'], authRateLimit, changePasswordLimiter, authenticateToken, async (req, res) => {
     const secret = requireSecret(res);
     if (!secret) return;
     try {
@@ -627,7 +629,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
   });
 
   // Cierra la sesión en todos los dispositivos (también en este: se devuelve un token nuevo).
-  app.post(['/api/auth/logout-all', '/auth/logout-all'], securityLimiter, authenticateToken, async (req, res) => {
+  app.post(['/api/auth/logout-all', '/auth/logout-all'], authRateLimit, securityLimiter, authenticateToken, async (req, res) => {
     const secret = requireSecret(res);
     if (!secret) return;
     try {
@@ -649,7 +651,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
   });
 
   // Paso 1: genera un secreto (aún sin activar) para añadirlo a la app de autenticación.
-  app.post(['/api/auth/2fa/setup', '/auth/2fa/setup'], securityLimiter, authenticateToken, async (req, res) => {
+  app.post(['/api/auth/2fa/setup', '/auth/2fa/setup'], authRateLimit, securityLimiter, authenticateToken, async (req, res) => {
     const secret = requireSecret(res);
     if (!secret) return;
     try {
@@ -667,7 +669,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
   });
 
   // Paso 2: confirma con un código de la app; entonces se activa y se entregan los códigos de recuperación (una sola vez).
-  app.post(['/api/auth/2fa/enable', '/auth/2fa/enable'], securityLimiter, authenticateToken, async (req, res) => {
+  app.post(['/api/auth/2fa/enable', '/auth/2fa/enable'], authRateLimit, securityLimiter, authenticateToken, async (req, res) => {
     const secret = requireSecret(res);
     if (!secret) return;
     try {
@@ -698,7 +700,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
   });
 
   // Desactivar exige la contraseña y un código (o un código de recuperación).
-  app.post(['/api/auth/2fa/disable', '/auth/2fa/disable'], securityLimiter, authenticateToken, async (req, res) => {
+  app.post(['/api/auth/2fa/disable', '/auth/2fa/disable'], authRateLimit, securityLimiter, authenticateToken, async (req, res) => {
     const secret = requireSecret(res);
     if (!secret) return;
     try {
