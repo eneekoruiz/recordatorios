@@ -59,19 +59,6 @@ export function resetLinkBase({ appUrl, production, origin, protocol, host }) {
   return `${protocol}://${host}`;
 }
 
-/**
- * Huella de la contraseña actual que viaja dentro del token de sesión. Si la
- * contraseña cambia, la huella deja de coincidir y las demás sesiones se cierran.
- */
-export function passwordFingerprint(passwordHash) {
-  // HMAC con la clave del servidor (no un hash sin clave): la huella no se puede calcular sin ella.
-  return crypto
-    .createHmac('sha256', process.env.JWT_SECRET || 'sin-clave')
-    .update(String(passwordHash || ''))
-    .digest('base64url')
-    .slice(0, 16);
-}
-
 // Servicios de push de los navegadores. El servidor hace POST al endpoint que envía el cliente,
 // así que solo se aceptan estos dominios (más los de PUSH_ALLOWED_HOSTS): de lo contrario,
 // cualquier usuario podría usar el cron para lanzar peticiones a hosts arbitrarios (SSRF).
@@ -248,10 +235,10 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
     return secret;
   };
 
-  // `user` debe traer el hash de su contraseña (la huella va dentro del token).
-  // `sv` (versión de sesión) sube con «cerrar sesión en todos los dispositivos»: los tokens anteriores dejan de valer.
+  // `sv` (versión de sesión) sube con «cerrar sesión en todos los dispositivos» y al cambiar o restablecer la
+  // contraseña: los tokens anteriores dejan de valer. `user` debe traer sus preferencias.
   const signSession = (user, secret) =>
-    jwt.sign({ id: user.id, email: user.email, pv: passwordFingerprint(user.password), sv: getSecurity(user.preferences).sessionVersion || 0 }, secret, {
+    jwt.sign({ id: user.id, email: user.email, sv: getSecurity(user.preferences).sessionVersion || 0 }, secret, {
       expiresIn: SESSION_TTL,
       algorithm: 'HS256',
     });
@@ -269,19 +256,27 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
   };
 
   /**
-   * Devuelve el usuario de un token válido cuya huella coincide con su contraseña
-   * actual; null si la sesión ya no vale (contraseña cambiada, usuario borrado o
-   * token anterior a las huellas). Los fallos de base de datos se propagan: no
+   * Devuelve el usuario de un token válido cuya versión de sesión sigue vigente; null si
+   * la sesión ya no vale (contraseña cambiada, cierre global, usuario borrado o token
+   * anterior a las versiones de sesión). Los fallos de base de datos se propagan: no
    * deben confundirse con una sesión caducada.
    */
   const sessionUser = async (payload) => {
+    // Los tokens sin `pv` ni `sv` son anteriores a las huellas: se vuelve a entrar una vez.
+    if (payload.pv === undefined && payload.sv === undefined) return null;
     const user = await prisma.user.findUnique({
       where: { id: String(payload.id) },
       select: { id: true, email: true, password: true, preferences: true },
     });
-    if (!user || !payload.pv || payload.pv !== passwordFingerprint(user.password)) return null;
+    if (!user) return null;
     if ((payload.sv || 0) !== (getSecurity(user.preferences).sessionVersion || 0)) return null;
     return user;
+  };
+
+  // Subir la versión de sesión cierra todas las sesiones abiertas (cambio o restablecimiento de contraseña).
+  const bumpedSessions = (user) => {
+    const security = getSecurity(user.preferences);
+    return withSecurity(user.preferences, { ...security, sessionVersion: (security.sessionVersion || 0) + 1 });
   };
 
   const bearerToken = (req) => {
@@ -559,7 +554,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
 
       const updated = await prisma.user.update({
         where: { id: user.id },
-        data: { password: await hashPassword(newPassword) },
+        data: { password: await hashPassword(newPassword), preferences: bumpedSessions(user) },
       });
       sendSecurityEmail(updated.email, {
         subject: 'Tu contraseña de Recordatorios ha cambiado',
@@ -588,7 +583,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }) {
       if (!ok) return res.status(400).json({ error: 'La contraseña actual no es correcta.' });
       const updated = await prisma.user.update({
         where: { id: user.id },
-        data: { password: await hashPassword(newPassword) },
+        data: { password: await hashPassword(newPassword), preferences: bumpedSessions(user) },
       });
       sendSecurityEmail(updated.email, {
         subject: 'Tu contraseña de Recordatorios ha cambiado',

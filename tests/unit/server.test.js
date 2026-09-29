@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import jwt from 'jsonwebtoken';
-import { createApp, resetLinkBase, passwordFingerprint } from '../../server/app.js';
+import { createApp, resetLinkBase } from '../../server/app.js';
 import { createMemoryPrisma } from '../support/memoryPrisma.js';
 import bcrypt from 'bcryptjs';
 import { totpCode } from '../../server/security.js';
@@ -112,7 +112,7 @@ describe('autenticación', () => {
     expect((await get('/api/sync/pull', forged)).status).toBe(401);
   });
 
-  it('los tokens anteriores a la huella de contraseña ya no valen (se vuelve a entrar una vez)', async () => {
+  it('los tokens anteriores a las versiones de sesión ya no valen (se vuelve a entrar una vez)', async () => {
     const { user } = await register(email);
     const legacy = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET);
     expect((await get('/api/sync/pull', legacy)).status).toBe(401);
@@ -120,10 +120,9 @@ describe('autenticación', () => {
 
   it('renueva de forma transparente los tokens con más de 7 días', async () => {
     const { user } = await register(email);
-    const stored = await prisma.user.findUnique({ where: { id: user.id } });
     const eightDaysAgo = Math.floor(Date.now() / 1000) - 8 * 24 * 3600;
     const old = jwt.sign(
-      { id: user.id, email: user.email, pv: passwordFingerprint(stored.password), iat: eightDaysAgo },
+      { id: user.id, email: user.email, sv: 0, iat: eightDaysAgo },
       process.env.JWT_SECRET,
       { expiresIn: '30d' }
     );
@@ -131,7 +130,8 @@ describe('autenticación', () => {
     expect(res.status).toBe(200);
     const refreshed = res.headers.get('x-refreshed-token');
     expect(refreshed).toBeTruthy();
-    expect(jwt.decode(refreshed).pv).toBe(passwordFingerprint(stored.password));
+    expect(jwt.decode(refreshed).sv).toBe(0);
+    expect(jwt.decode(refreshed).iat).toBeGreaterThan(eightDaysAgo);
   });
 
   it('cambiar la contraseña cierra las demás sesiones y mantiene la actual', async () => {
