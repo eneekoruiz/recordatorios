@@ -17,7 +17,7 @@ export interface ParsedNLPResult {
 // «a las 18:30», «a las 21h», «a las 5 y media», «a las 7 menos cuarto», «a las 9 de la noche», «a la 1».
 // Sin lookbehind (Safari < 16.4 no lo admite): el carácter previo se consume en el grupo 1.
 const CLOCK_SRC =
-  String.raw`(^|[^\p{L}\d])(?:y\s+)?(?:a\s+las?|a\s+la)\s*(\d{1,2})(?:[:.h](\d{2}))?\s*(?:h(?:oras?|s)?(?![\p{L}]))?(?:\s*(y|menos)\s+(media|cuarto|veinte|diez|cinco)(?![\p{L}]))?\s*(am|pm|de la mañana|de la tarde|de la noche|de la madrugada)?`;
+  String.raw`(^|[^\p{L}\d])(?:y\s+)?(?:a\s+las?|a\s+la)\s*(\d{1,2})(?:[:.h](\d{2}))?(?:\s*h(?:oras?|s)?(?![\p{L}]))?(?:\s*(y|menos)\s+(media|cuarto|veinte|diez|cinco)(?![\p{L}]))?(?:\s*(am|pm|de la mañana|de la tarde|de la noche|de la madrugada))?`;
 const clockRe = () => new RegExp(CLOCK_SRC, 'giu');
 
 // «9:30» suelto (sin «a las»)
@@ -25,7 +25,7 @@ const BARE_TIME = /(?:^|\s)(\d{1,2}):(\d{2})(?:\s*h(?:oras?)?)?(?=\s|$|[,.;])/gi
 // «7am», «10 pm», «21h» sueltos
 const BARE_SUFFIX = /(?:^|\s)(\d{1,2})\s?(am|pm|h)(?=\s|$|[,.;!?])/gi;
 // «de las 10 a las 11»: se toma la hora de inicio
-const RANGE_TIME = /(?:^|\s)de\s+las?\s+(\d{1,2})(?::(\d{2}))?\s*h?\s+a\s+las?\s+(\d{1,2})(?::(\d{2}))?\s*h?(?![\p{L}\d])/giu;
+const RANGE_TIME = /(?:^|\s)de\s+las?\s+(\d{1,2})(?::(\d{2}))?(?:\s*h)?\s+a\s+las?\s+(\d{1,2})(?::(\d{2}))?(?:\s*h)?(?![\p{L}\d])/giu;
 
 const MINUTE_WORDS: Record<string, number> = { media: 30, cuarto: 15, veinte: 20, diez: 10, cinco: 5 };
 
