@@ -64,7 +64,12 @@ export function resetLinkBase({ appUrl, production, origin, protocol, host }) {
  * contraseña cambia, la huella deja de coincidir y las demás sesiones se cierran.
  */
 export function passwordFingerprint(passwordHash) {
-  return crypto.createHash('sha256').update(String(passwordHash || '')).digest('base64url').slice(0, 16);
+  // HMAC con la clave del servidor (no un hash sin clave): la huella no se puede calcular sin ella.
+  return crypto
+    .createHmac('sha256', process.env.JWT_SECRET || 'sin-clave')
+    .update(String(passwordHash || ''))
+    .digest('base64url')
+    .slice(0, 16);
 }
 
 // Servicios de push de los navegadores. El servidor hace POST al endpoint que envía el cliente,
