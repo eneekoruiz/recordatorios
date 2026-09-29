@@ -104,7 +104,7 @@ export const DrawerHeaderSection: React.FC<DrawerHeaderSectionProps> = ({
             onChange={val => setCategory(val)}
             options={[
               ...lists.map(list => ({ value: list.id, label: list.name })),
-              { value: 'inbox', label: 'Bandeja de Entrada' }
+              { value: 'inbox', label: 'Bandeja de entrada' }
             ]}
           />
         </div>

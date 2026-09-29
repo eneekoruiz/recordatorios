@@ -175,12 +175,31 @@ export function leadingInfinitive(segment: string): string | null {
   return NOT_VERBS.has(v) ? null : v;
 }
 
+const TEMPORAL_WORDS = new RegExp(
+  '\\b(?:' + [
+    'pasado\\s+ma[ñn]ana', 'ma[ñn]ana', 'hoy', 'ayer', 'tarde', 'noche', 'mediod[ií]a',
+    'lunes', 'martes', 'mi[ée]rcoles', 'jueves', 'viernes', 's[áa]bado', 'domingo',
+    'que\\s+viene', 'pr[óo]ximo', 'pr[óo]xima', 'este', 'esta', 'todos', 'todas', 'cada',
+    'antes', 'despu[ée]s', 'del?', 'el', 'la', 'las', 'los', 'a', 'al', 'sobre', 'por', 'en', 'para',
+    'y\\s+media', 'y\\s+cuarto', 'menos\\s+cuarto', 'en\\s+punto', 'h', 'horas?',
+  ].join('|') + ')\\b|\\d{1,2}(?::\\d{2})?|[,.]',
+  'gi'
+);
+/** Lo que queda de un fragmento al quitarle las palabras de fecha y hora («huevos mañana» → «huevos»). */
+function withoutTemporal(segment: string): string {
+  return segment.replace(TEMPORAL_WORDS, ' ').replace(/\s+/g, ' ').trim();
+}
+
 /** ¿Es una frase nominal corta y sin verbo (p. ej. «leche», «cepillos de dientes»)? */
 export function isBareNounPhrase(segment: string): boolean {
   const words = segment.trim().split(/\s+/).filter(Boolean);
   if (words.length === 0 || words.length > 5) return false;
   if (leadingInfinitive(segment)) return false;
   // Una fecha u hora dicha aparte no es un elemento nuevo: completa la tarea anterior.
-  if (parseWeekdayPhrase(segment) || parseClockTime(segment) || /\b(?:hoy|ma[ñn]ana|pasado\s+ma[ñn]ana|ayer)\b/i.test(segment)) return false;
+  // «huevos mañana», en cambio, sí es un elemento (con su fecha).
+  if (parseWeekdayPhrase(segment) || parseClockTime(segment) || /\b(?:hoy|ma[ñn]ana|pasado\s+ma[ñn]ana|ayer)\b/i.test(segment)) {
+    if (!withoutTemporal(segment)) return false;
+    segment = withoutTemporal(segment);
+  }
   return !/[?¿!¡]/.test(segment) && !/^(?:y|o|pero|que|si|no|es|son|hay|ya|hoy|ayer|mañana)\b/i.test(segment.trim());
 }

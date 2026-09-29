@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useEffectEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Sparkles, X, ArrowUp, Check, Bot, User, Settings, Mic, MicOff,
+  Sparkles, X, ArrowUp, Check, User, Settings, Mic, MicOff,
   Calendar, CheckCircle2, Volume2, VolumeX,
   Sunrise, Sun, Moon, Repeat, MapPin,
   CalendarRange, Luggage, ShoppingCart, SprayCan,
@@ -13,6 +13,7 @@ import { AIService, type ProposedBatch, type AIConfig } from '../../services/AIS
 import { useAppStore } from '../../store/useAppStore';
 import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
+import { formatEuro } from '../../utils/format';
 import { extractTextFromPdf } from '../../utils/pdfExtractor';
 import { renderInlineMarkdown } from '../../utils/inlineMarkdown';
 
@@ -34,7 +35,7 @@ interface ChatMessage {
 const WELCOME_MESSAGE: ChatMessage = {
   id: 'welcome_1',
   sender: 'assistant',
-  text: '¡Hola! Soy tu asistente de Recordatorios con IA. Puedes hablarme, escribirme o adjuntar cualquier documento (PDF, CSV, TXT) en lenguaje natural y prepararé todos los recordatorios para importarlos al instante.',
+  text: 'Hola. Cuéntame lo que tienes que hacer —escribiendo, dictando o con un PDF, CSV o TXT— y lo convierto en recordatorios.',
   timestamp: '',
 };
 
@@ -668,7 +669,8 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
 
   return createPortal(
     <AnimatePresence>
-      <div 
+      <div
+        className="ai-assistant-overlay"
         style={{
           position: 'fixed',
           inset: 0,
@@ -760,79 +762,28 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
             <div style={{ width: 36, height: 4.5, borderRadius: 3, background: 'var(--text-tertiary)', opacity: 0.35 }} />
           </div>
 
-          {/* Header */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '14px 20px',
-            borderBottom: '1px solid var(--border-subtle)',
-            background: 'var(--bg-surface)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{
-                width: 32, height: 32, borderRadius: 10,
-                background: 'linear-gradient(135deg, #007aff, #af52de)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 3px 10px rgba(0, 122, 255, 0.35)'
-              }}>
-                <Sparkles size={18} color="white" />
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
-                  Asistente IA
-                </h3>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                  {/* Antes solo miraba el proveedor elegido: con Gemini/OpenAI seleccionado pero
-                      sin clave guardada, seguía diciendo "Google Gemini LLM" aunque cada mensaje
-                      lo respondiera en realidad el extractor local (ver AIService.processPrompt). */}
-                  {config.provider !== 'auto' && config.apiKey
-                    ? (config.provider === 'gemini' ? 'Google Gemini LLM' : 'OpenAI GPT')
-                    : 'Extractor Inteligente Local'}
-                </span>
-              </div>
+          {/* Barra de navegación: ajustes · título · Listo */}
+          <div className="sheet-navbar ai-navbar">
+            <button
+              type="button"
+              className={`ai-navbar-icon${showSettings ? ' is-active' : ''}`}
+              onClick={() => setShowSettings(!showSettings)}
+              title="Ajustes de IA"
+              aria-label="Ajustes de IA"
+              aria-expanded={showSettings}
+            >
+              <Settings size={19} />
+            </button>
+            <div className="ai-navbar-title">
+              <h3 className="sheet-navbar-title">Asistente IA</h3>
+              {/* Con Gemini/OpenAI elegido pero sin clave, responde el extractor local (ver AIService.processPrompt). */}
+              <span className="ai-navbar-engine">
+                {config.provider !== 'auto' && config.apiKey
+                  ? (config.provider === 'gemini' ? 'Google Gemini' : 'OpenAI')
+                  : 'En este dispositivo'}
+              </span>
             </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <button
-                onClick={() => setShowSettings(!showSettings)}
-                style={{
-                  background: showSettings ? 'var(--bg-hover)' : 'transparent',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: 32,
-                  height: 32,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  color: 'var(--text-secondary)',
-                  transition: 'all 0.15s ease'
-                }}
-                title="Ajustes de IA / Proveedor"
-              >
-                <Settings size={18} />
-              </button>
-
-              <button
-                onClick={onClose}
-                style={{
-                  background: 'var(--bg-surface)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: '50%',
-                  width: 30,
-                  height: 30,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  color: 'var(--text-secondary)',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <X size={16} />
-              </button>
-            </div>
+            <button type="button" className="sheet-navbar-btn is-primary" onClick={onClose}>Listo</button>
           </div>
 
           {/* Settings Overlay Drawer */}
@@ -842,47 +793,39 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
+                className="ai-settings"
                 style={{
-                  background: 'var(--bg-card)',
-                  borderBottom: '1px solid var(--border-subtle)',
-                  padding: '16px 20px',
+                  padding: '14px 18px 16px',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 12,
                   overflow: 'hidden'
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontWeight: 650, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Configurar Motor de IA</span>
-                </div>
-
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div className="ai-settings-label">Quién entiende tus mensajes</div>
+                <div className="segmented" role="radiogroup" aria-label="Motor del asistente">
                   {(['auto', 'gemini', 'openai'] as const).map(p => (
                     <button
                       key={p}
+                      type="button"
+                      role="radio"
+                      aria-checked={tempProvider === p}
+                      className={tempProvider === p ? 'is-selected' : ''}
                       onClick={() => setTempProvider(p)}
-                      style={{
-                        flex: 1,
-                        padding: '8px 12px',
-                        borderRadius: 10,
-                        border: tempProvider === p ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                        background: tempProvider === p ? 'var(--accent-glow)' : 'var(--bg-surface)',
-                        color: tempProvider === p ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                        fontSize: '0.82rem',
-                        fontWeight: tempProvider === p ? 700 : 500,
-                        cursor: 'pointer'
-                      }}
                     >
-                      {p === 'auto' ? 'Local (Zero-Config)' : p === 'gemini' ? 'Google Gemini' : 'OpenAI'}
+                      {p === 'auto' ? 'Este dispositivo' : p === 'gemini' ? 'Gemini' : 'OpenAI'}
                     </button>
                   ))}
                 </div>
+                {tempProvider === 'auto' && (
+                  <p className="ai-settings-hint">Sin clave ni conexión: tus mensajes no salen del dispositivo.</p>
+                )}
 
                 {tempProvider !== 'auto' && (
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                       <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                        Clave API ({tempProvider === 'gemini' ? 'Gemini API Key' : 'OpenAI API Key'}):
+                        Clave de {tempProvider === 'gemini' ? 'Gemini' : 'OpenAI'}
                       </label>
                       {tempProvider === 'gemini' && (
                         <button
@@ -1002,31 +945,19 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: 8,
-                  maxWidth: '88%',
+                  maxWidth: '86%',
                   flexDirection: msg.sender === 'user' ? 'row-reverse' : 'row'
                 }}>
-                  <div style={{
-                    width: 28, height: 28, borderRadius: '50%',
-                    background: msg.sender === 'user' ? 'var(--accent-primary)' : 'var(--bg-surface)',
-                    border: '1px solid var(--border-subtle)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    flexShrink: 0, marginTop: 2
-                  }}>
-                    {msg.sender === 'user' ? <User size={14} color="white" /> : <Bot size={14} color="var(--accent-primary)" />}
-                  </div>
-
                   <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
                     <div style={{
-                      padding: '12px 16px',
+                      padding: '9px 14px',
                       borderRadius: 18,
-                      background: msg.sender === 'user' ? 'var(--accent-primary)' : 'var(--bg-surface)',
+                      background: msg.sender === 'user' ? 'var(--accent-blue, #007aff)' : 'color-mix(in srgb, var(--text-primary) 8%, transparent)',
                       color: msg.sender === 'user' ? '#ffffff' : 'var(--text-primary)',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                      fontSize: '0.92rem',
-                      lineHeight: '1.45',
+                      fontSize: '0.94rem',
+                      lineHeight: '1.42',
                       whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                      border: msg.sender === 'user' ? 'none' : '1px solid var(--border-subtle)'
+                      wordBreak: 'break-word'
                     }}>
                       {msg.fileName && (
                         <div style={{
@@ -1054,9 +985,9 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                         data-testid="ai-tts-btn"
                         onClick={() => toggleSpeak(msg.id, msg.text)}
                         style={{
-                          background: speakingMsgId === msg.id ? 'var(--accent-primary)' : 'var(--bg-surface)',
-                          border: '1px solid var(--border-subtle)',
-                          color: speakingMsgId === msg.id ? 'white' : 'var(--text-secondary)',
+                          background: speakingMsgId === msg.id ? 'var(--accent-primary)' : 'transparent',
+                          border: 'none',
+                          color: speakingMsgId === msg.id ? 'white' : 'var(--text-tertiary)',
                           borderRadius: '50%',
                           width: 28,
                           height: 28,
@@ -1083,7 +1014,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                     animate={{ opacity: 1, y: 0 }}
                     style={{
                       maxWidth: '88%',
-                      marginLeft: msg.sender === 'user' ? 0 : 36,
+                      marginLeft: 0,
                       background: 'rgba(0, 122, 255, 0.07)',
                       border: '1px solid rgba(0, 122, 255, 0.22)',
                       borderRadius: 14,
@@ -1115,7 +1046,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                       flexWrap: 'wrap',
                       gap: 7,
                       maxWidth: '88%',
-                      marginLeft: msg.sender === 'user' ? 0 : 36,
+                      marginLeft: 0,
                       marginTop: 2
                     }}
                   >
@@ -1168,18 +1099,17 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                     style={{
                       width: '100%',
                       maxWidth: '88%',
-                      marginLeft: msg.sender === 'user' ? 0 : 36,
+                      marginLeft: 0,
                       background: 'var(--bg-card)',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: 16,
-                      padding: '14px 16px',
-                      boxShadow: '0 4px 18px rgba(0,0,0,0.06)',
+                      border: '0.5px solid var(--separator)',
+                      borderRadius: 14,
+                      padding: '10px 14px 14px',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: 12
+                      gap: 8
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '0.5px solid var(--separator)', paddingBottom: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <div style={{ width: 24, height: 24, borderRadius: 6, background: 'var(--accent-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <Edit3 size={14} color="var(--accent-primary)" />
@@ -1192,7 +1122,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                         onClick={() => handleToggleAllTaskUpdates(msg.id)}
                         style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600 }}
                       >
-                        {msg.batch.taskUpdates.every(u => u.selected) ? 'Deseleccionar todos' : 'Seleccionar todos'}
+                        {msg.batch.taskUpdates.every(u => u.selected) ? 'Ninguno' : 'Todos'}
                       </button>
                     </div>
 
@@ -1200,23 +1130,20 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                       {msg.batch.taskUpdates.map(u => (
                         <div
                           key={u.taskId}
+                          className="ai-card-row"
                           onClick={() => handleToggleTaskUpdateSelected(msg.id, u.taskId)}
                           style={{
                             display: 'flex',
                             alignItems: 'flex-start',
                             gap: 10,
-                            padding: '8px 10px',
-                            borderRadius: 10,
-                            background: u.selected ? 'var(--bg-hover)' : 'transparent',
-                            border: u.selected ? '1px solid var(--border-subtle)' : '1px solid transparent',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease'
+                            padding: '9px 2px',
+                            cursor: 'pointer'
                           }}
                         >
                           <div style={{
-                            width: 18, height: 18, borderRadius: 6,
-                            border: u.selected ? '1.5px solid var(--accent-primary)' : '1.5px solid var(--text-tertiary)',
-                            background: u.selected ? 'var(--accent-primary)' : 'transparent',
+                            width: 20, height: 20, borderRadius: '50%',
+                            border: u.selected ? '1.5px solid var(--accent-blue, #007aff)' : '1.5px solid var(--text-tertiary)',
+                            background: u.selected ? 'var(--accent-blue, #007aff)' : 'transparent',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             flexShrink: 0,
                             marginTop: 2
@@ -1241,7 +1168,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                               )}
                               {u.price !== undefined && (
                                 <span className="apple-price-pill" style={{ padding: '0 5px', fontSize: '0.70rem' }}>
-                                  {u.price} €
+                                  {formatEuro(Number(u.price))}
                                 </span>
                               )}
                               {u.newTitle && (
@@ -1282,7 +1209,6 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                         justifyContent: 'center',
                         gap: 8,
                         cursor: msg.batch.taskUpdates.filter(u => u.selected).length === 0 ? 'not-allowed' : 'pointer',
-                        boxShadow: '0 4px 14px rgba(0, 122, 255, 0.3)',
                         opacity: msg.batch.taskUpdates.filter(u => u.selected).length === 0 ? 0.5 : 1
                       }}
                     >
@@ -1300,22 +1226,21 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                     style={{
                       width: '100%',
                       maxWidth: '88%',
-                      marginLeft: msg.sender === 'user' ? 0 : 36,
+                      marginLeft: 0,
                       background: 'var(--bg-card)',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: 16,
-                      padding: '14px 16px',
-                      boxShadow: '0 4px 18px rgba(0,0,0,0.06)',
+                      border: '0.5px solid var(--separator)',
+                      borderRadius: 14,
+                      padding: '10px 14px 14px',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: 12
+                      gap: 8
                     }}
                   >
                     {/* Header with suggested list and toggle all */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '0.5px solid var(--separator)', paddingBottom: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                          {msg.batch.tasks.filter(t => t.selected).length} de {msg.batch.tasks.length} seleccionados
+                          {msg.batch.tasks.filter(t => t.selected).length} de {msg.batch.tasks.length} elegidos
                         </span>
                         {msg.batch.suggestedList && (
                           <span style={{ fontSize: '0.75rem', background: 'var(--accent-glow)', color: 'var(--accent-primary)', padding: '2px 8px', borderRadius: 999, fontWeight: 600 }}>
@@ -1327,7 +1252,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                         onClick={() => handleToggleAllTasks(msg.id)}
                         style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600 }}
                       >
-                        {msg.batch.tasks.every(t => t.selected) ? 'Deseleccionar todos' : 'Seleccionar todos'}
+                        {msg.batch.tasks.every(t => t.selected) ? 'Ninguno' : 'Todos'}
                       </button>
                     </div>
 
@@ -1336,23 +1261,20 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                       {msg.batch.tasks.map(t => (
                         <div
                           key={t.id}
+                          className="ai-card-row"
                           onClick={() => handleToggleTaskSelected(msg.id, t.id)}
                           style={{
                             display: 'flex',
                             alignItems: 'center',
                             gap: 10,
-                            padding: '8px 10px',
-                            borderRadius: 10,
-                            background: t.selected ? 'var(--bg-hover)' : 'transparent',
-                            border: t.selected ? '1px solid var(--border-subtle)' : '1px solid transparent',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease'
+                            padding: '9px 2px',
+                            cursor: 'pointer'
                           }}
                         >
                           <div style={{
-                            width: 18, height: 18, borderRadius: 6,
-                            border: t.selected ? '1.5px solid var(--accent-primary)' : '1.5px solid var(--text-tertiary)',
-                            background: t.selected ? 'var(--accent-primary)' : 'transparent',
+                            width: 20, height: 20, borderRadius: '50%',
+                            border: t.selected ? '1.5px solid var(--accent-blue, #007aff)' : '1.5px solid var(--text-tertiary)',
+                            background: t.selected ? 'var(--accent-blue, #007aff)' : 'transparent',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             flexShrink: 0
                           }}>
@@ -1365,7 +1287,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 2 }}>
                               {t.listName && (
-                                <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', background: 'var(--bg-surface)', padding: '1px 6px', borderRadius: 4 }}>
+                                <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
                                   {t.listName}
                                 </span>
                               )}
@@ -1382,7 +1304,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                               )}
                               {t.price !== undefined && (
                                 <span className="apple-price-pill" style={{ padding: '0 5px', fontSize: '0.72rem' }}>
-                                  {t.price} €
+                                  {formatEuro(Number(t.price))}
                                 </span>
                               )}
                               {t.priority && t.priority !== 'none' && (
@@ -1439,14 +1361,13 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                         justifyContent: 'center',
                         gap: 8,
                         cursor: 'pointer',
-                        boxShadow: '0 4px 14px rgba(0, 122, 255, 0.3)',
                         opacity: msg.batch.tasks.filter(t => t.selected).length === 0 ? 0.5 : 1
                       }}
                     >
                       <CheckCircle2 size={17} />
                       {msg.batch.tasks[0]?.listId === 'que_he_hecho' || msg.batch.tasks[0]?.listName?.toLowerCase().includes('qué he hecho')
                         ? `Sí, apuntar e importar todo a Qué he hecho (${msg.batch.tasks.filter(t => t.selected).length})`
-                        : `Sí, importar todo (${msg.batch.tasks.filter(t => t.selected).length})`}
+                        : (() => { const n = msg.batch.tasks.filter(t => t.selected).length; return n === 1 ? 'Añadir 1 recordatorio' : `Añadir ${n} recordatorios`; })()}
                     </button>
                   </motion.div>
                 )}
@@ -1459,7 +1380,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                     style={{
                       width: '100%',
                       maxWidth: '90%',
-                      marginLeft: msg.sender === 'user' ? 0 : 36,
+                      marginLeft: 0,
                       background: 'var(--bg-card)',
                       border: '1px solid var(--border-subtle)',
                       borderRadius: 16,
@@ -1470,7 +1391,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                       gap: 12
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '0.5px solid var(--separator)', paddingBottom: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <div style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--accent-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <Sparkles size={16} color="var(--accent-primary)" />
@@ -1573,7 +1494,6 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: 8,
-                        boxShadow: '0 4px 14px rgba(0, 122, 255, 0.3)',
                         opacity: msg.batch.action.children.filter(c => c.selected).length === 0 ? 0.5 : 1,
                         transition: 'opacity 0.2s'
                       }}
@@ -1598,15 +1518,9 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
             <div ref={chatBottomRef} />
           </div>
 
-          {/* Quick Suggestions Chips */}
+          {/* Sugerencias: una fila que se desliza, con el borde desvanecido para indicar que hay más */}
           {messages.length <= 2 && (
-            <div style={{
-              display: 'flex',
-              gap: 8,
-              padding: '0 20px 10px 20px',
-              overflowX: 'auto',
-              flexShrink: 0
-            }}>
+            <div className="ai-chips">
               {[
                 { label: 'Importar PDF o documento', Icon: FileText, action: 'file' },
                 { label: 'Planificar mi semana', Icon: CalendarRange, action: 'send' },
@@ -1616,25 +1530,11 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
               ].map(chip => (
                 <button
                   key={chip.label}
+                  type="button"
+                  className="ai-chip"
                   onClick={() => {
-                    if (chip.action === 'file') {
-                      fileInputRef.current?.click();
-                    } else {
-                      handleSend(chip.label);
-                    }
-                  }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    background: 'var(--bg-surface)',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: 999,
-                    padding: '5px 12px',
-                    fontSize: '0.78rem',
-                    color: 'var(--text-secondary)',
-                    whiteSpace: 'nowrap',
-                    cursor: 'pointer'
+                    if (chip.action === 'file') fileInputRef.current?.click();
+                    else handleSend(chip.label);
                   }}
                 >
                   <chip.Icon size={13} strokeWidth={2.2} />
@@ -1714,16 +1614,8 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
             </div>
           )}
 
-          {/* Input Area */}
-          <div style={{
-            padding: '12px 18px',
-            borderTop: '1px solid var(--border-subtle)',
-            background: 'var(--bg-surface)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10
-          }}>
-            {/* Hidden File Input */}
+          {/* Redactor: adjuntar · campo (con dictado dentro) · enviar, como en Mensajes */}
+          <div className="ai-composer">
             <input
               ref={fileInputRef}
               type="file"
@@ -1738,99 +1630,68 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
               }}
             />
 
-            {/* Paperclip File Attachment Button */}
             <button
               type="button"
+              className={`ai-composer-attach${attachedFile ? ' is-active' : ''}`}
               onClick={() => fileInputRef.current?.click()}
               disabled={isExtractingFile}
-              style={{
-                width: 36, height: 36, borderRadius: '50%',
-                background: attachedFile ? 'var(--accent-primary)' : 'var(--bg-elevated)',
-                border: attachedFile ? 'none' : '1px solid var(--border-subtle)',
-                color: attachedFile ? '#ffffff' : 'var(--text-secondary)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', flexShrink: 0,
-                transition: 'all 0.15s ease'
-              }}
               title="Adjuntar PDF, CSV o documento"
+              aria-label="Adjuntar documento"
             >
               <Paperclip size={17} />
             </button>
 
-            {speechSupported && (
-              <button
-                type="button"
-                onClick={toggleVoiceInput}
-                style={{
-                  width: 36, height: 36, borderRadius: '50%',
-                  background: isListening ? '#ff3b30' : 'var(--bg-elevated)',
-                  border: isListening ? 'none' : '1px solid var(--border-subtle)',
-                  color: isListening ? 'white' : 'var(--text-secondary)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', flexShrink: 0,
-                  boxShadow: isListening ? '0 0 16px rgba(255, 59, 48, 0.6)' : 'none',
-                  animation: isListening ? 'pulse-badge 1.4s ease-in-out infinite' : 'none',
-                  transition: 'all 0.15s ease'
+            <div className={`ai-composer-field${isListening ? ' is-listening' : ''}`}>
+              <input
+                type="text"
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
                 }}
-                title={isListening ? 'Detener dictado' : 'Hablar por micrófono'}
-              >
-                {isListening ? <MicOff size={18} /> : <Mic size={18} />}
-              </button>
-            )}
-
-            <input
-              type="text"
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
+                onPaste={e => {
+                  const file = e.clipboardData?.files?.[0];
+                  if (file) {
+                    e.preventDefault();
+                    processAttachedFile(file);
+                  }
+                }}
+                aria-label="Mensaje para el asistente"
+                placeholder={
+                  isListening
+                    ? 'Escuchando… di lo que quieras apuntar'
+                    : attachedFile
+                      ? 'Añade una instrucción o envía el documento'
+                      : 'Habla o escribe tus recordatorios…'
                 }
-              }}
-              onPaste={e => {
-                const file = e.clipboardData?.files?.[0];
-                if (file) {
-                  e.preventDefault();
-                  processAttachedFile(file);
-                }
-              }}
-              placeholder={
-                isListening
-                  ? 'Escuchando... di lo que necesitas apuntar'
-                  : attachedFile
-                    ? 'Añade una instrucción o pulsa la flecha para procesar...'
-                    : 'Habla o escribe tus recordatorios o adjunta documentos...'
-              }
-              style={{
-                flex: 1,
-                padding: '10px 14px',
-                borderRadius: 999,
-                border: '1px solid var(--border-subtle)',
-                background: 'var(--bg-elevated)',
-                color: 'var(--text-primary)',
-                fontSize: '0.92rem',
-                outline: 'none'
-              }}
-            />
-
-            <button
-              onClick={() => handleSend()}
-              disabled={(!input.trim() && !attachedFile) || loading || isExtractingFile}
-              style={{
-                width: 36, height: 36, borderRadius: '50%',
-                background: (input.trim() || attachedFile) ? 'var(--accent-primary)' : 'var(--bg-hover)',
-                border: 'none',
-                color: (input.trim() || attachedFile) ? '#ffffff' : 'var(--text-tertiary)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: (input.trim() || attachedFile) ? 'pointer' : 'default',
-                flexShrink: 0,
-                transition: 'all 0.15s ease'
-              }}
-              title="Enviar"
-            >
-              <ArrowUp size={18} />
-            </button>
+              />
+              {speechSupported && (isListening || !input.trim()) && (
+                <button
+                  type="button"
+                  className="ai-composer-mic"
+                  onClick={toggleVoiceInput}
+                  title={isListening ? 'Detener dictado' : 'Dictar'}
+                  aria-label={isListening ? 'Detener dictado' : 'Dictar'}
+                >
+                  {isListening ? <MicOff size={17} /> : <Mic size={17} />}
+                </button>
+              )}
+              {(input.trim() || attachedFile) && (
+                <button
+                  type="button"
+                  className="ai-composer-send"
+                  onClick={() => handleSend()}
+                  disabled={loading || isExtractingFile}
+                  title="Enviar"
+                  aria-label="Enviar"
+                >
+                  <ArrowUp size={16} strokeWidth={2.6} />
+                </button>
+              )}
+            </div>
           </div>
         </motion.div>
       </div>

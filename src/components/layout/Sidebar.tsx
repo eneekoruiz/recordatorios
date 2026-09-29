@@ -26,6 +26,7 @@ import { SmartListsGrid } from './sidebar/SmartListsGrid';
 import { CyclesListSection } from './sidebar/CyclesListSection';
 import { UserProfileDropdown } from './sidebar/UserProfileDropdown';
 import { getUserEmail } from '../../utils/userIdentity';
+import { modShortcut } from '../../utils/platform';
 
 interface SidebarProps {
   currentView: string;
@@ -223,7 +224,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                   transition: 'all 0.18s ease',
                   overflow: 'hidden'
                 }}
-                title="Buscar (⌘K)"
+                title={`Buscar (${modShortcut('K')})`}
                 aria-label="Buscar"
               >
                 <Search size={15} style={{ flexShrink: 0 }} />
@@ -312,7 +313,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                 borderRadius: 4,
                 border: '1px solid var(--border-subtle)',
                 flexShrink: 0
-              }}>⌘K</kbd>
+              }}>{modShortcut('K')}</kbd>
             </div>
 
             <button

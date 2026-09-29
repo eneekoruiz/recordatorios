@@ -491,7 +491,7 @@ export class AIService {
       const itemsMatch = trimmed.match(/(?:donde pone|los productos donde pone|las tareas donde pone|los recordatorios donde pone|los productos|las tareas|los recordatorios)\s+([\s\S]+?)(?:,\s*unif[íi]calos|,\s*agrup|,\s*j[úu]ntalos|\s+unif[íi]calos|\s+agrup|\s+j[úu]ntalos|\s+en una tarea|\s+en la tarea|\.|$)/i);
       if (itemsMatch && itemsMatch[1]) {
         const rawList = itemsMatch[1];
-        rawList.split(/(?:,\s*|\s+y\s+)/i).forEach(item => {
+        rawList.split(/(?:,(?!\d)\s*|\s+y\s+)/i).forEach(item => {
           const cleaned = item.trim().replace(/^(?:el|la|los|las|un|una|donde pone)\s+/i, '').trim();
           if (cleaned && cleaned.length >= 2 && !/^(unifica|unifícalos|agrupa|todos|productos)$/i.test(cleaned)) {
             candidateItems.push(cleaned);
@@ -500,7 +500,7 @@ export class AIService {
       }
 
       if (candidateItems.length === 0) {
-        const parts = trimmed.split(/,/);
+        const parts = trimmed.split(/,(?!\d)/);
         if (parts.length > 1) {
           parts.forEach(p => {
             const c = p.trim().replace(/^(?:el|la|los|las|un|una|donde pone)\s+/i, '').trim();
@@ -680,7 +680,7 @@ export class AIService {
     // If only one segment and it contains multiple actions joined by " y también ", " y luego ", " y ", commas
     let splitByConjunction = false;
     if (rawSegments.length === 1 && (spoken.includes(',') || /\s+y\s+(?:también\s+|luego\s+)?/i.test(spoken))) {
-      const parts = spoken.split(/(?:,\s*(?:y\s+)?|\s+y\s+(?:también\s+|luego\s+)?)/i);
+      const parts = spoken.split(/(?:,(?!\d)\s*(?:y\s+)?|\s+y\s+(?:también\s+|luego\s+)?)/i);
       if (parts.length > 1) {
         rawSegments = parts;
         splitByConjunction = true;

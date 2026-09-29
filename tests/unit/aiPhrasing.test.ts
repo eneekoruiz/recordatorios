@@ -123,4 +123,16 @@ describe('AIService.localSemanticExtract — frases enrevesadas', () => {
     expect(new Date(tasks[1].dueDate!).getHours()).toBe(10);
     expect(tasks[2].timeOfDay).toBe('afternoon');
   });
+
+  it('la coma decimal de un precio no parte la tarea en dos', () => {
+    const tasks = run('comprar pan, leche 1,20€ y huevos');
+    expect(tasks.map((t) => t.title)).toEqual(['Comprar pan', 'Comprar leche', 'Comprar huevos']);
+    expect(tasks[1].price).toBe(1.2);
+  });
+
+  it('un elemento con su propia fecha hereda el verbo: «pan y huevos mañana»', () => {
+    const tasks = run('comprar pan y huevos mañana');
+    expect(tasks.map((t) => t.title)).toEqual(['Comprar pan', 'Comprar huevos']);
+    expect(new Date(tasks[1].dueDate!).getDate()).toBe(new Date(Date.now() + 86400000).getDate());
+  });
 });

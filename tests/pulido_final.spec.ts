@@ -98,6 +98,21 @@ test.describe('Pulido final', () => {
     await expect(alert).toHaveCount(0);
   });
 
+  test('el buscador ignora las tildes, agrupa resultados y muestra el precio con formato', async ({ page }) => {
+    await ensureAppUnlocked(page);
+    await seedCasa(page);
+    await page.evaluate(() => (window as any).useAppStore.getState().addTask({ id: 'ce_4', title: 'Café molido', status: 'pending', categoryId: 'casa_e2e', price: 1.5 }));
+    await page.evaluate(() => window.dispatchEvent(new Event('open-command-palette')));
+    const input = page.getByPlaceholder('Buscar recordatorios, listas o acciones...');
+    await input.fill('medico');
+    await expect(page.locator('.spotlight-section').first()).toHaveText('Recordatorios');
+    await expect(page.locator('.spotlight-row').first()).toContainText('Llamar al médico');
+    await input.fill('cafe');
+    await expect(page.locator('.spotlight-row').first()).toContainText('1,50 €');
+    await page.keyboard.press('Escape');
+    await expect(input).toHaveCount(0);
+  });
+
   test.describe('móvil', () => {
     test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 

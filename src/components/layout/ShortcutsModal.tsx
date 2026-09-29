@@ -1,6 +1,7 @@
 import { useEffect, type FC } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SheetNavBar } from '../ui/SheetNavBar';
+import { modKey } from '../../utils/platform';
 
 interface ShortcutsModalProps {
   isOpen: boolean;
@@ -18,8 +19,7 @@ export const ShortcutsModal: FC<ShortcutsModalProps> = ({ isOpen, onClose }) => 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent);
-  const mod = isMac ? '⌘' : 'Ctrl';
+  const mod = modKey();
 
   // Solo los atajos que la app implementa de verdad (App.tsx).
   const groups: { title: string; items: { label: string; keys: string[] }[] }[] = [
