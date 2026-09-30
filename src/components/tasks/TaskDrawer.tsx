@@ -793,6 +793,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
 
               {/* Card 1: Fecha y Horarios */}
               <DrawerDateTimeSection
+                task={task}
                 cardTimeOpen={cardTimeOpen}
                 setCardTimeOpen={setCardTimeOpen}
                 hasDate={hasDate}

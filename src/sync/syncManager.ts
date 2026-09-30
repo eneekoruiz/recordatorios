@@ -47,27 +47,35 @@ class SyncManager {
   private connectingRealtime = false;
   private debounceTimeout: ReturnType<typeof setTimeout> | null = null;
 
+  private handleOnline = () => {
+    this.isOnline = true;
+    this.syncNow();
+  };
+
+  private handleOffline = () => {
+    this.isOnline = false;
+    useAppStore.getState().setSyncStatus('offline');
+  };
+
+  private handleVisibilityChange = () => {
+    if (document.visibilityState === 'hidden') {
+      if (this.hasPendingChanges()) this.syncNow();
+    } else if (document.visibilityState === 'visible') {
+      this.syncNow();
+    }
+  };
+
+  private handlePageHide = () => {
+    if (this.hasPendingChanges()) this.syncNow();
+  };
+
   constructor() {
     if (typeof window === 'undefined') return;
-    window.addEventListener('online', () => {
-      this.isOnline = true;
-      this.syncNow();
-    });
-    window.addEventListener('offline', () => {
-      this.isOnline = false;
-      useAppStore.getState().setSyncStatus('offline');
-    });
+    window.addEventListener('online', this.handleOnline);
+    window.addEventListener('offline', this.handleOffline);
     if (typeof document !== 'undefined') {
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'hidden') {
-          if (this.hasPendingChanges()) this.syncNow();
-        } else if (document.visibilityState === 'visible') {
-          this.syncNow();
-        }
-      });
-      window.addEventListener('pagehide', () => {
-        if (this.hasPendingChanges()) this.syncNow();
-      });
+      document.addEventListener('visibilitychange', this.handleVisibilityChange);
+      window.addEventListener('pagehide', this.handlePageHide);
     }
   }
 
@@ -89,6 +97,14 @@ class SyncManager {
     this.syncInterval = null;
     this.eventSource?.close();
     this.eventSource = null;
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('online', this.handleOnline);
+      window.removeEventListener('offline', this.handleOffline);
+      window.removeEventListener('pagehide', this.handlePageHide);
+    }
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+    }
   }
 
   /** Gestiona la respuesta común: renovación de token y sesión caducada. */
@@ -242,11 +258,19 @@ class SyncManager {
       const body = first
         ? { tasks: taskChunks[i], cycles: allCycles, lists: allLists, listSections, preferences }
         : { tasks: taskChunks[i] };
-      const response = await fetch(apiUrl('/api/sync/push'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(body),
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      let response: Response;
+      try {
+        response = await fetch(apiUrl('/api/sync/push'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
       this.handleAuth(response);
       if (!response.ok) throw new Error(`Push failed (${response.status})`);
       const data = await response.json().catch(() => ({}));
@@ -311,7 +335,17 @@ class SyncManager {
 
     const url = new URL(apiUrl('/api/sync/pull'), window.location.origin);
     url.searchParams.set('lastToken', lastToken);
-    const response = await fetch(url.toString(), { headers: { Authorization: `Bearer ${token}` } });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    let response: Response;
+    try {
+      response = await fetch(url.toString(), { 
+        headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
     this.handleAuth(response);
     if (!response.ok) throw new Error(`Pull failed (${response.status})`);
     const data = await response.json();

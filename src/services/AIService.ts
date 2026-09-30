@@ -99,7 +99,7 @@ export class AIService {
         }
         return parsed;
       }
-    } catch {}
+    } catch (err) { console.error('AIService error:', err); }
 
     // Sin VITE_GEMINI_API_KEY: cualquier variable VITE_* acaba en el bundle público.
     return { provider: 'auto' };

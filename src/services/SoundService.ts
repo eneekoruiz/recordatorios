@@ -81,7 +81,7 @@ class SoundServiceClass {
       gain2.connect(this.ctx.destination);
       osc2.start(now + 0.045);
       osc2.stop(now + 0.28);
-    } catch {}
+    } catch (err) { console.error('SoundService error:', err); }
   }
 
   /**
@@ -105,7 +105,7 @@ class SoundServiceClass {
       gain.connect(this.ctx.destination);
       osc.start(now);
       osc.stop(now + 0.09);
-    } catch {}
+    } catch (err) { console.error('SoundService error:', err); }
   }
 
   /**
@@ -129,7 +129,7 @@ class SoundServiceClass {
       gain.connect(this.ctx.destination);
       osc.start(now);
       osc.stop(now + 0.12);
-    } catch {}
+    } catch (err) { console.error('SoundService error:', err); }
   }
 
   /**
@@ -153,7 +153,7 @@ class SoundServiceClass {
       gain.connect(this.ctx.destination);
       osc.start(now);
       osc.stop(now + 0.025);
-    } catch {}
+    } catch (err) { console.error('SoundService error:', err); }
   }
 
   /**
@@ -332,7 +332,7 @@ class SoundServiceClass {
 
     if (!oldGain || !this.ctx) {
       oldSources.forEach(s => {
-        try { (s as any).stop?.(); s.disconnect(); } catch {}
+        try { (s as any).stop?.(); s.disconnect(); } catch (err) { console.error('SoundService error:', err); }
       });
       return;
     }
@@ -341,10 +341,10 @@ class SoundServiceClass {
       try {
         oldGain.gain.setValueAtTime(0.0001, this.ctx.currentTime);
         oldSources.forEach(s => {
-          try { (s as any).stop?.(); s.disconnect(); } catch {}
+          try { (s as any).stop?.(); s.disconnect(); } catch (err) { console.error('SoundService error:', err); }
         });
         oldGain.disconnect();
-      } catch {}
+      } catch (err) { console.error('SoundService error:', err); }
       return;
     }
 
@@ -352,16 +352,16 @@ class SoundServiceClass {
       oldGain.gain.linearRampToValueAtTime(0.0001, this.ctx.currentTime + 0.35);
       this.ambientTimeout = setTimeout(() => {
         oldSources.forEach(s => {
-          try { (s as any).stop?.(); s.disconnect(); } catch {}
+          try { (s as any).stop?.(); s.disconnect(); } catch (err) { console.error('SoundService error:', err); }
         });
-        try { oldGain.disconnect(); } catch {}
+        try { oldGain.disconnect(); } catch (err) { console.error('SoundService error:', err); }
         this.ambientTimeout = null;
       }, 380);
     } catch {
       oldSources.forEach(s => {
-        try { (s as any).stop?.(); s.disconnect(); } catch {}
+        try { (s as any).stop?.(); s.disconnect(); } catch (err) { console.error('SoundService error:', err); }
       });
-      try { oldGain.disconnect(); } catch {}
+      try { oldGain.disconnect(); } catch (err) { console.error('SoundService error:', err); }
     }
   }
 
@@ -382,7 +382,7 @@ class SoundServiceClass {
     if (this.ambientGain && this.ctx) {
       try {
         this.ambientGain.gain.linearRampToValueAtTime(this._ambientVolume * 0.35, this.ctx.currentTime + 0.1);
-      } catch {}
+      } catch (err) { console.error('SoundService error:', err); }
     }
   }
 }

@@ -173,6 +173,7 @@ interface AppState {
   toggleGlobalCycles: () => void;
   setShowDuration: (val: boolean) => void;
   postponeTask: (taskId: string) => void;
+  trackTaskExecution: (taskId: string, elapsedSeconds: number) => void;
   inlineEditingTaskId: string | null;
   setInlineEditingTaskId: (id: string | null) => void;
   dismissOnboarding: () => void;
@@ -353,7 +354,42 @@ export const useAppStore = create<AppState>()(
         return {
           tasks: {
             ...state.tasks,
-            [taskId]: TaskRepository.update(task, { order: maxOrder + 1 } as any)
+            [taskId]: TaskRepository.update(task, { 
+              order: maxOrder + 1,
+              postponeCount: (task.postponeCount || 0) + 1 
+            } as any)
+          }
+        };
+      }),
+
+      trackTaskExecution: (taskId: string, elapsedSeconds: number) => optimisticUpdate(get, set, (state) => {
+        const task = state.tasks[taskId];
+        if (!task) return state;
+        
+        const history = [...(task.executionHistory || []), elapsedSeconds];
+        let updates: Partial<any> = { executionHistory: history };
+
+        if (history.length >= 2) {
+          const avgSeconds = history.reduce((sum, val) => sum + val, 0) / history.length;
+          const avgMinutes = Math.max(1, Math.round(avgSeconds / 60));
+          
+          const currentDuration = task.duration || 0;
+          if (currentDuration > 0) {
+            const diffPercentage = Math.abs(currentDuration - avgMinutes) / currentDuration;
+            if (diffPercentage > 0.3) {
+              updates.suggestedDuration = avgMinutes;
+            } else if (task.suggestedDuration !== undefined) {
+              updates.suggestedDuration = undefined; // clear suggestion if no longer differs significantly
+            }
+          } else {
+            updates.suggestedDuration = avgMinutes;
+          }
+        }
+
+        return {
+          tasks: {
+            ...state.tasks,
+            [taskId]: TaskRepository.update(task, updates)
           }
         };
       }),

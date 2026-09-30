@@ -1199,6 +1199,7 @@ export const TaskCard = React.memo(function TaskCard({
                           categoryId: task.categoryId,
                           sectionId: task.sectionId,
                           cycle_id: task.cycle_id,
+                          parentId: task.parentId,
                           order: currentOrder + 1,
                           status: 'pending',
                           type: 'task',

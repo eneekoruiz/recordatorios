@@ -140,6 +140,11 @@ export interface TaskItem {
   deleted_at?: string; // ISO String
   version: number;
 
+  // --- SMART DURATIONS & PERSONALIZATION ---
+  executionHistory?: number[]; // historical elapsed times in seconds
+  suggestedDuration?: number; // AI suggested duration in minutes
+  postponeCount?: number; // count of times the task was postponed
+
   // --- LOCAL ONLY STATE ---
   _is_dirty?: boolean; // Flag to indicate if it needs to be synced to server
 }

@@ -39,8 +39,8 @@ export class NotificationService {
       this.hasPermission = permission === 'granted';
       this.permissionDenied = permission === 'denied';
       return this.hasPermission;
-    } catch {
-      // Silencioso
+    } catch (err) {
+      console.error('NotificationService error:', err);
       this.permissionDenied = true;
       return false; // Zero crashes
     }
@@ -53,15 +53,15 @@ export class NotificationService {
     this.intervalId = window.setInterval(() => {
       try {
         this.checkAndFireAlerts(getPendingAlerts());
-      } catch {
-        // Silencioso
-      }
+      } catch (err) {
+      console.error('NotificationService error:', err);
+    }
     }, 60000);
     
     // Ejecución inicial segura
     try {
       this.checkAndFireAlerts(getPendingAlerts());
-    } catch {}
+    } catch (err) { console.error('NotificationService error:', err); }
   }
 
   public stopScheduler() {
@@ -104,8 +104,8 @@ export class NotificationService {
       });
 
       localStorage.setItem('weekly_notif_sent_date', todayStr);
-    } catch {
-      // Silencioso
+    } catch (err) {
+      console.error('NotificationService error:', err);
     }
   }
 
@@ -125,9 +125,9 @@ export class NotificationService {
           window.focus();
           notification.close();
         };
-      } catch {
-        // Silencioso
-      }
+      } catch (err) {
+      console.error('NotificationService error:', err);
+    }
     };
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistration()

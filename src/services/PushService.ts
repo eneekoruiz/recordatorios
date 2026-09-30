@@ -48,23 +48,38 @@ export const PushService = {
       return { ok: false, reason: 'Las notificaciones están bloqueadas. Actívalas en los ajustes del navegador.' };
     }
     try {
-      const keyResponse = await fetch(apiUrl('/api/push/public-key'));
+      const keyController = new AbortController();
+      const keyTimeout = setTimeout(() => keyController.abort(), 15000);
+      let keyResponse;
+      try {
+        keyResponse = await fetch(apiUrl('/api/push/public-key'), { signal: keyController.signal });
+      } finally {
+        clearTimeout(keyTimeout);
+      }
       if (!keyResponse.ok) return { ok: false, reason: 'Los avisos todavía no están activados en el servidor.' };
       const { publicKey } = await keyResponse.json();
       const registration = await navigator.serviceWorker.ready;
       const subscription =
         (await registration.pushManager.getSubscription()) ||
         (await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64UrlToBytes(publicKey) }));
-      const response = await fetch(apiUrl('/api/push/subscribe'), {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({
-          subscription: subscription.toJSON(),
-          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          digestHour: DIGEST_HOUR,
-          weeklyDay: useAppStore.getState().weeklyTasksDay,
-        }),
-      });
+      const subController = new AbortController();
+      const subTimeout = setTimeout(() => subController.abort(), 15000);
+      let response;
+      try {
+        response = await fetch(apiUrl('/api/push/subscribe'), {
+          method: 'POST',
+          headers: authHeaders(),
+          signal: subController.signal,
+          body: JSON.stringify({
+            subscription: subscription.toJSON(),
+            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            digestHour: DIGEST_HOUR,
+            weeklyDay: useAppStore.getState().weeklyTasksDay,
+          }),
+        });
+      } finally {
+        clearTimeout(subTimeout);
+      }
       if (!response.ok) return { ok: false, reason: 'No se pudieron activar los avisos. Inténtalo de nuevo.' };
       return { ok: true };
     } catch {
@@ -77,11 +92,20 @@ export const PushService = {
     const registration = await navigator.serviceWorker.getRegistration();
     const subscription = await registration?.pushManager.getSubscription();
     if (!subscription) return;
-    await fetch(apiUrl('/api/push/unsubscribe'), {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ endpoint: subscription.endpoint }),
-    }).catch(() => undefined);
+    const unsubController = new AbortController();
+    const unsubTimeout = setTimeout(() => unsubController.abort(), 15000);
+    try {
+      await fetch(apiUrl('/api/push/unsubscribe'), {
+        method: 'POST',
+        headers: authHeaders(),
+        signal: unsubController.signal,
+        body: JSON.stringify({ endpoint: subscription.endpoint }),
+      });
+    } catch {
+      // Ignore errors on unsubscribe
+    } finally {
+      clearTimeout(unsubTimeout);
+    }
     await subscription.unsubscribe().catch(() => undefined);
   },
 };

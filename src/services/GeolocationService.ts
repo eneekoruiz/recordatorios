@@ -57,6 +57,14 @@ export class GeolocationService {
         const tasks = getGeoTasks();
         if (tasks.length === 0) return;
 
+        // Limpiar IDs de tareas que ya no existen o no tienen geolocalización activa
+        const currentTaskIds = new Set(tasks.map(t => t.id));
+        for (const id of this.lastFiredIds) {
+          if (!currentTaskIds.has(id)) {
+            this.lastFiredIds.delete(id);
+          }
+        }
+
         const { latitude, longitude } = position.coords;
 
         tasks.forEach(task => {

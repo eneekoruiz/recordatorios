@@ -111,6 +111,12 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
   const handleComplete = () => {
     SoundService.stopAmbientSound();
     SoundService.playComplete();
+    
+    const elapsedSeconds = initialDuration - Math.max(0, timeLeft);
+    if (elapsedSeconds > 0) {
+      useAppStore.getState().trackTaskExecution(task.id, Math.round(elapsedSeconds));
+    }
+
     toggleTask(task.id);
     onClose();
   };

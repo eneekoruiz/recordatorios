@@ -355,13 +355,19 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     if (!currentTask) return;
     SoundService.playComplete();
     HapticService.notification('success');
+    
+    const elapsedSeconds = initialDuration - Math.max(0, timeLeft);
+    if (elapsedSeconds > 0) {
+      useAppStore.getState().trackTaskExecution(currentTask.id, Math.round(elapsedSeconds));
+    }
+
     toggleTask(currentTask.id);
     setCompletedIds(prev => [...prev, currentTask.id]);
     setIsActive(false);
     SoundService.stopAmbientSound();
     setLastStepAt(Date.now());
     setIndex(i => i + 1);
-  }, [currentTask, toggleTask]);
+  }, [currentTask, toggleTask, initialDuration, timeLeft]);
 
   const handleSkipTask = useCallback(() => {
     if (!currentTask) return;
@@ -411,13 +417,18 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
       }
     ]);
 
+    const elapsedSeconds = initialDuration - Math.max(0, timeLeft);
+    if (elapsedSeconds > 0) {
+      useAppStore.getState().trackTaskExecution(currentTask.id, Math.round(elapsedSeconds));
+    }
+
     toggleTask(currentTask.id);
     setCompletedIds(prev => [...prev, currentTask.id]);
     setIsActive(false);
     SoundService.stopAmbientSound();
     setLastStepAt(Date.now());
     setIndex(i => i + 1);
-  }, [currentTask, currentDurationInfo, toggleTask]);
+  }, [currentTask, currentDurationInfo, toggleTask, initialDuration, timeLeft]);
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);

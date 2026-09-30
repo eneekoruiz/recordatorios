@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar as CalendarIcon, Clock, PlusCircle, X, Zap, CreditCard, Bell, Sparkles, Minus, Plus } from 'lucide-react';
 import { SectionTrailing } from './SectionTrailing';
 import { formatRelativeDay, formatTime } from '../../../utils/format';
-import type { AlertDef } from '../../../models/Task';
+import type { AlertDef, TaskItem } from '../../../models/Task';
 import { isCaducidadesList, getListType, doesListSupportDuration } from '../../../utils/specialLists';
 import { formatDuration } from '../../../utils/taskDuration';
 import { Sunrise, Sun, Moon } from 'lucide-react';
@@ -11,6 +11,7 @@ import { AppleTimerPicker } from '../../ui/AppleTimerPicker';
 import { useAppStore } from '../../../store/useAppStore';
 
 interface DrawerDateTimeSectionProps {
+  task?: TaskItem;
   cardTimeOpen: boolean;
   setCardTimeOpen: (open: boolean) => void;
   hasDate: boolean;
@@ -38,6 +39,7 @@ interface DrawerDateTimeSectionProps {
 }
 
 export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
+  task,
   cardTimeOpen,
   setCardTimeOpen,
   hasDate,
@@ -374,6 +376,46 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                       sublabel={isParallel ? 'El tiempo que estás ocupado realizándola (ej: 20 seg para ponértela, 2 min para cargarla)' : undefined}
                       isParallel={Boolean(isParallel)}
                     />
+
+                    {/* Personalización y Smart Durations */}
+                    {task?.suggestedDuration !== undefined && task.suggestedDuration !== duration && (
+                      <div style={{
+                        marginTop: 12, padding: '10px 14px', borderRadius: 12,
+                        background: 'rgba(10, 132, 255, 0.1)', border: '1px solid rgba(10, 132, 255, 0.25)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--accent-primary, #0a84ff)' }}>
+                          <Sparkles size={16} />
+                          <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>IA: Sueles tardar {task.suggestedDuration} min</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDisableDuration?.(false);
+                            setDuration?.(task.suggestedDuration as number);
+                          }}
+                          style={{
+                            padding: '4px 10px', borderRadius: 8, background: 'var(--accent-primary, #0a84ff)', color: 'white',
+                            border: 'none', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer'
+                          }}
+                        >
+                          ¿Actualizar?
+                        </button>
+                      </div>
+                    )}
+
+                    {task?.postponeCount !== undefined && task.postponeCount > 3 && (
+                      <div style={{
+                        marginTop: 8, padding: '10px 14px', borderRadius: 12,
+                        background: 'rgba(255, 59, 48, 0.1)', border: '1px solid rgba(255, 59, 48, 0.25)',
+                        display: 'flex', alignItems: 'center', gap: 8, color: 'var(--accent-red, #ff3b30)'
+                      }}>
+                        <Clock size={16} />
+                        <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>
+                          Has pospuesto esto varias veces. ¿Quieres dividirla o eliminarla?
+                        </span>
+                      </div>
+                    )}
 
                 {/* Opción Tarea en Paralelo / Segundo plano (ej: lavadora, mascarilla, secadora) */}
                 {setIsParallel && (isRoutineList || isParallel) && (
