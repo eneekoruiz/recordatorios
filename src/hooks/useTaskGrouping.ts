@@ -31,8 +31,8 @@ export function useTaskGrouping({
   return useMemo(() => {
     let rawGrouped: Record<string, TaskItem[]> = {};
     if (currentView === 'TRASH') {
-      const allTrash = Object.values(tasks).filter((t: any) => !!t.deleted_at);
-      rawGrouped = { 'Papelera': allTrash };
+      const allTrash = Object.values(tasks as Record<string, TaskItem>).filter((t: any) => !!t.deleted_at);
+      rawGrouped = { 'Papelera': allTrash as TaskItem[] };
       return rawGrouped;
     }
     if (isFolderView) {
@@ -114,7 +114,7 @@ export function useTaskGrouping({
             });
           }
         } else {
-          const sortedByDate = [...validTasks].sort((a, b) => {
+          const sortedByDate = [...validTasks].sort((a: any, b: any) => {
             const dateA = a.dueDate ? new Date(a.dueDate).getTime() : new Date(a.created_at).getTime();
             const dateB = b.dueDate ? new Date(b.dueDate).getTime() : new Date(b.created_at).getTime();
             return dateB - dateA;
