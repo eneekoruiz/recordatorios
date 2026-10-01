@@ -365,13 +365,16 @@ export const useAppStore = create<AppState>()(
       trackTaskExecution: (taskId: string, elapsedSeconds: number) => optimisticUpdate(get, set, (state) => {
         const task = state.tasks[taskId];
         if (!task) return state;
+        if (!Number.isFinite(elapsedSeconds) || elapsedSeconds <= 0) return state;
         
-        const history = [...(task.executionHistory || []), elapsedSeconds];
-        let updates: Partial<any> = { executionHistory: history };
+        // Ventana rodante acotada a las últimas 10 ejecuciones para evitar inflar IndexedDB y el payload de sync
+        const history = [...(task.executionHistory || []), Math.round(elapsedSeconds)].slice(-10);
+        const updates: Partial<TaskItem> = { executionHistory: history };
 
         if (history.length >= 2) {
           const avgSeconds = history.reduce((sum, val) => sum + val, 0) / history.length;
-          const avgMinutes = Math.max(1, Math.round(avgSeconds / 60));
+          // Si el promedio es inferior a 45 segundos, sugerir 0.5 min (30 seg); en otro caso, minutos enteros
+          const avgMinutes = avgSeconds < 45 ? 0.5 : Math.max(1, Math.round(avgSeconds / 60));
           
           const currentDuration = task.duration || 0;
           if (currentDuration > 0) {
@@ -379,7 +382,7 @@ export const useAppStore = create<AppState>()(
             if (diffPercentage > 0.3) {
               updates.suggestedDuration = avgMinutes;
             } else if (task.suggestedDuration !== undefined) {
-              updates.suggestedDuration = undefined; // clear suggestion if no longer differs significantly
+              updates.suggestedDuration = undefined; // limpiar sugerencia si ya está dentro de margen aceptable
             }
           } else {
             updates.suggestedDuration = avgMinutes;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Play, Pause, CheckCircle, X, Sparkles, CloudRain, Waves, 
@@ -30,6 +30,9 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
   const [isActive, setIsActive] = useState<boolean>(false);
   const [ambientType, setAmbientType] = useState<'off' | 'rain' | 'waves' | 'binaural' | 'focus'>('off');
   
+  // Acumulador de segundos activos trabajados (inmune a pausas y a botones de +1 min / +5 min)
+  const activeElapsedRef = useRef<number>(0);
+
   // Prompt Modal if task has no duration set
   const [showDurationPrompt, setShowDurationPrompt] = useState<boolean>(false);
   const [promptMinutes, setPromptMinutes] = useState<string>('25');
@@ -56,10 +59,15 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
     }
   }
 
+  useEffect(() => {
+    activeElapsedRef.current = 0;
+  }, [timerKey]);
+
   // Manejo del temporizador: un paso por segundo; al llegar a cero, suena y se para.
   useEffect(() => {
     if (!isActive || timeLeft <= 0) return;
     const timer = setTimeout(() => {
+      activeElapsedRef.current += 1;
       const next = timeLeft - 1;
       setTimeLeft(next);
       if (next <= 0) {
@@ -112,9 +120,10 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
     SoundService.stopAmbientSound();
     SoundService.playComplete();
     
-    const elapsedSeconds = initialDuration - Math.max(0, timeLeft);
+    // Registrar los segundos reales trabajados de forma limpia e inmune a pausas o extensiones
+    const elapsedSeconds = activeElapsedRef.current;
     if (elapsedSeconds > 0) {
-      useAppStore.getState().trackTaskExecution(task.id, Math.round(elapsedSeconds));
+      useAppStore.getState().trackTaskExecution(task.id, elapsedSeconds);
     }
 
     toggleTask(task.id);
