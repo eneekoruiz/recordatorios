@@ -44,7 +44,8 @@ const getInitialTheme = (): 'light' | 'dark' => {
   return 'light';
 };
 
-export const isTaskCompleted = (t: any) => {
+export const isTaskCompleted = (t?: TaskItem | null): boolean => {
+  if (!t) return false;
   // Si la tarea tiene meta de repeticiones (ej. 3 vasos de agua), solo se considera completada si se alcanza la meta
   if (t.targetCount && t.targetCount > 1) {
     return (t.currentCount || 0) >= t.targetCount;
@@ -339,7 +340,7 @@ export const useAppStore = create<AppState>()(
       hasHydrated: false,
       setHasHydrated: (val) => set({ hasHydrated: val }),
 
-      toggleGlobalCycles: () => set((state: any) => ({ globalCyclesEnabled: !state.globalCyclesEnabled })),
+      toggleGlobalCycles: () => set((state: AppState) => ({ globalCyclesEnabled: !state.globalCyclesEnabled })),
 
       setShowDuration: (val: boolean) => set({ showDuration: val }),
 
@@ -348,16 +349,16 @@ export const useAppStore = create<AppState>()(
         if (!task) return state;
         // Find max order among siblings (same list + section)
         const siblings = Object.values(state.tasks).filter(
-          (t: any) => !t.deleted_at && t.categoryId === task.categoryId && t.sectionId === task.sectionId
+          (t: TaskItem) => !t.deleted_at && t.categoryId === task.categoryId && t.sectionId === task.sectionId
         );
-        const maxOrder = siblings.reduce((max: number, t: any) => Math.max(max, t.order ?? 0), 0);
+        const maxOrder = siblings.reduce((max: number, t: TaskItem) => Math.max(max, t.order ?? 0), 0);
         return {
           tasks: {
             ...state.tasks,
             [taskId]: TaskRepository.update(task, { 
               order: maxOrder + 1,
               postponeCount: (task.postponeCount || 0) + 1 
-            } as any)
+            })
           }
         };
       }),
@@ -1138,9 +1139,9 @@ export const useAppStore = create<AppState>()(
 
       deleteList: (id) => get().removeList(id),
 
-      addListSection: (section) => set((state: any) => ({
+      addListSection: (section) => set((state: AppState) => ({
         listSections: [
-          ...(state.listSections || []).filter((s: any) => s.id !== section.id),
+          ...(state.listSections || []).filter((s: ListSection) => s.id !== section.id),
           {
             ...section,
             name: (typeof section?.name === 'string' && section.name.trim()) ? section.name.trim() : 'Nueva sección',
@@ -1150,7 +1151,7 @@ export const useAppStore = create<AppState>()(
         ]
       })),
 
-      updateListSection: (id, updatesOrName) => set((state: any) => {
+      updateListSection: (id, updatesOrName) => set((state: AppState) => {
         const updates: Partial<ListSection> = typeof updatesOrName === 'string'
           ? { name: updatesOrName.trim() || 'Nueva sección' }
           : { ...(updatesOrName as Partial<ListSection>) };
@@ -1175,7 +1176,7 @@ export const useAppStore = create<AppState>()(
         }
 
         return {
-          listSections: (state.listSections || []).map((s: any) => s.id === id ? {
+          listSections: (state.listSections || []).map((s: ListSection) => s.id === id ? {
             ...s,
             ...updates,
             _is_dirty: true,
@@ -1189,7 +1190,7 @@ export const useAppStore = create<AppState>()(
       restoreListSection: (id) => optimisticUpdate(get, set, (state) => {
         const now = new Date().toISOString();
         return {
-          listSections: (state.listSections || []).map((s: any) =>
+          listSections: (state.listSections || []).map((s) =>
             s.id === id ? { ...s, deleted_at: undefined, _is_dirty: true, updated_at: now } : s
           ),
         };

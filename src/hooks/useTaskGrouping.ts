@@ -243,6 +243,6 @@ export function useTaskGrouping({
     currentView, isFolderView, isSmartView, isListView, getTasksForSmartView, getTasksByList, 
     getTasksByCycle, tasks, resolvedShowCompleted, recentlyCompletedIds, lists, listSections, cycles, 
     currentCycle, cycleViewMode, listSectionFilter, dailyTimeFilter, resolveTimeOfDay, currentList, 
-    sortTaskList, lifeLogViewMode, selectedPersonFilter
+    sortTaskList, lifeLogViewMode, selectedPersonFilter, extractPeopleFromText
   ]);
 }

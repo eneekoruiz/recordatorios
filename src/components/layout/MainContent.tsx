@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo, useCallback, useEffect, lazy, Suspense, type ReactNode } from 'react';
+import { safeGetJSON, safeSetJSON } from '../../utils/safeStorage';
 import { useTaskGrouping } from '../../hooks/useTaskGrouping';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
@@ -168,17 +169,11 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     weekly: 'only_weekly' | 'include_daily';
     monthly: 'only_monthly' | 'include_weekly' | 'include_all';
     annual: 'only_annual' | 'include_monthly' | 'include_all';
-  }>(() => {
-    try {
-      const saved = localStorage.getItem('cycle_inclusion_pref');
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return {
-      weekly: 'only_weekly',
-      monthly: 'only_monthly',
-      annual: 'only_annual'
-    };
-  });
+  }>(() => safeGetJSON('cycle_inclusion_pref', {
+    weekly: 'only_weekly',
+    monthly: 'only_monthly',
+    annual: 'only_annual'
+  }));
 
   // Filtro de secciones temporales dentro de listas (ej. Care, Quehaceres)
   const [listSectionFilter, setListSectionFilter] = useState<string>('all');
@@ -189,30 +184,22 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   // Modo de rutina cuando una sección periódica está aislada ('full_routine' = acumulativa con anuales/semanales/diarias, 'only_section' = estricta)
   const [isolatedRoutineMode, setIsolatedRoutineMode] = useState<'full_routine' | 'only_section'>('only_section');
   // Modo de rutina por sección individual
-  const [sectionRoutineModes, setSectionRoutineModes] = useState<Record<string, 'full_routine' | 'only_section'>>(() => {
-    try {
-      const saved = localStorage.getItem('section_routine_modes');
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return {};
-  });
+  const [sectionRoutineModes, setSectionRoutineModes] = useState<Record<string, 'full_routine' | 'only_section'>>(() =>
+    safeGetJSON('section_routine_modes', {})
+  );
 
   const toggleSectionRoutineMode = useCallback((secKey: string, mode: 'full_routine' | 'only_section') => {
     setSectionRoutineModes(prev => {
       const next = { ...prev, [secKey]: mode };
-      try { localStorage.setItem('section_routine_modes', JSON.stringify(next)); } catch {}
+      safeSetJSON('section_routine_modes', next);
       return next;
     });
   }, []);
 
   // Modo general por ciclo/frecuencia ('only_section' o 'full_routine')
-  const [cycleGeneralModes, setCycleGeneralModes] = useState<Record<string, 'only_section' | 'full_routine'>>(() => {
-    try {
-      const saved = localStorage.getItem('cycle_general_modes');
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return {};
-  });
+  const [cycleGeneralModes, setCycleGeneralModes] = useState<Record<string, 'only_section' | 'full_routine'>>(() =>
+    safeGetJSON('cycle_general_modes', {})
+  );
 
   const handleUndoDelete = useCallback((taskId: string) => {
     if (deletedToast && deletedToast.timeoutId) {
@@ -313,7 +300,7 @@ const CORE_CYCLES = [
     if (!currentCycle) return;
     setCycleGeneralModes(prev => {
       const next = { ...prev, [currentCycle.id]: mode };
-      try { localStorage.setItem('cycle_general_modes', JSON.stringify(next)); } catch {}
+      safeSetJSON('cycle_general_modes', next);
       return next;
     });
   }, [currentCycle]);
