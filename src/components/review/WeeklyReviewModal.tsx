@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, CheckCircle2, Trophy, ArrowRight, ArrowLeft,
@@ -27,6 +27,17 @@ export const WeeklyReviewModal: React.FC<WeeklyReviewModalProps> = ({ isOpen, on
   const report: WeeklyReviewReport = useMemo(() => {
     return ReviewAgentService.generateWeeklyAudit(tasks, lists, listSections);
   }, [tasks, lists, listSections]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   const handleNextStep = () => {
     HapticService.selection();
@@ -150,9 +161,25 @@ export const WeeklyReviewModal: React.FC<WeeklyReviewModalProps> = ({ isOpen, on
                   <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, letterSpacing: '-0.02em' }}>
                     Agente de Revisión Semanal
                   </h3>
-                  <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                    Paso {step} de 4 · {STEPS_TITLE[step - 1]}
-                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                    <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                      Paso {step} de 4 · {STEPS_TITLE[step - 1]}
+                    </p>
+                    <div style={{ display: 'inline-flex', gap: 3, marginLeft: 2 }} aria-hidden="true">
+                      {[1, 2, 3, 4].map(idx => (
+                        <div
+                          key={idx}
+                          style={{
+                            height: 3,
+                            width: 14,
+                            borderRadius: 2,
+                            background: idx <= step ? 'var(--accent-primary, #0a84ff)' : 'var(--border-subtle, rgba(0,0,0,0.12))',
+                            transition: 'background 0.25s ease'
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -308,13 +335,14 @@ export const WeeklyReviewModal: React.FC<WeeklyReviewModalProps> = ({ isOpen, on
                                 borderRadius: 10,
                                 background: 'rgba(0, 122, 255, 0.1)',
                                 color: '#007aff',
-                                border: 'none',
+                                border: '1px solid rgba(0, 122, 255, 0.22)',
                                 fontSize: '0.76rem',
                                 fontWeight: 700,
                                 cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: 4
+                                gap: 4,
+                                transition: 'background 0.15s ease, transform 0.1s ease'
                               }}
                               title="Posponer 1 semana"
                             >
@@ -332,10 +360,11 @@ export const WeeklyReviewModal: React.FC<WeeklyReviewModalProps> = ({ isOpen, on
                                 borderRadius: 10,
                                 background: 'rgba(48, 209, 88, 0.1)',
                                 color: '#30d158',
-                                border: 'none',
+                                border: '1px solid rgba(48, 209, 88, 0.22)',
                                 fontSize: '0.76rem',
                                 fontWeight: 700,
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                transition: 'background 0.15s ease, transform 0.1s ease'
                               }}
                               title="Marcar completada"
                             >

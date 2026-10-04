@@ -279,7 +279,11 @@ export const MediaTrackerFields: React.FC<MediaTrackerFieldsProps> = ({
                 border: 'none',
                 padding: 4,
                 cursor: 'pointer',
-                color: star <= currentRating ? '#ffcc00' : 'var(--text-tertiary, #8e8e93)'
+                color: star <= currentRating ? '#ffcc00' : 'var(--text-tertiary, #8e8e93)',
+                transition: 'transform 0.12s ease',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
               title={`${star} estrellas`}
             >
@@ -316,9 +320,10 @@ export const MediaTrackerFields: React.FC<MediaTrackerFieldsProps> = ({
                   fontSize: '0.72rem',
                   fontWeight: 600,
                   cursor: 'pointer',
-                  border: currentPlatform === plat ? '1px solid currentColor' : '1px solid transparent',
+                  border: currentPlatform === plat ? '1px solid currentColor' : '1px solid var(--border-subtle, rgba(0,0,0,0.06))',
                   background: PLATFORM_COLORS[plat]?.bg || 'rgba(0,0,0,0.05)',
-                  color: PLATFORM_COLORS[plat]?.color || 'inherit'
+                  color: PLATFORM_COLORS[plat]?.color || 'inherit',
+                  transition: 'background 0.15s ease, border-color 0.15s ease'
                 }}
               >
                 {plat}

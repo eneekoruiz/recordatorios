@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, Mail, FileText, Download, Copy, Check, ExternalLink } from 'lucide-react';
 import { IntegrationService } from '../../services/IntegrationService';
@@ -19,6 +19,17 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
   listName = 'Recordatorios'
 }) => {
   const [copiedNotion, setCopiedNotion] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   const handleCopyNotionMarkdown = () => {
     HapticService.selection();

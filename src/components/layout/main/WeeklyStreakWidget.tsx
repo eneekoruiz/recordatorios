@@ -372,7 +372,7 @@ export function WeeklyStreakWidget() {
                 </div>
               )}
 
-              {/* Botón Agente de Revisión Semanal */}
+              {/* Botón Revisión Semanal - Apple HIG Tinted Surface */}
               <button
                 type="button"
                 onClick={() => setIsReviewOpen(true)}
@@ -382,12 +382,12 @@ export function WeeklyStreakWidget() {
                   padding: '10px 14px',
                   borderRadius: 14,
                   background: isDark
-                    ? 'linear-gradient(135deg, rgba(10, 132, 255, 0.22), rgba(94, 92, 230, 0.22))'
-                    : 'linear-gradient(135deg, rgba(0, 122, 255, 0.12), rgba(88, 86, 214, 0.12))',
+                    ? 'rgba(10, 132, 255, 0.14)'
+                    : 'rgba(0, 122, 255, 0.08)',
                   border: isDark
-                    ? '1px solid rgba(10, 132, 255, 0.35)'
-                    : '1px solid rgba(0, 122, 255, 0.25)',
-                  color: isDark ? '#64d2ff' : '#007aff',
+                    ? '1px solid rgba(10, 132, 255, 0.28)'
+                    : '1px solid rgba(0, 122, 255, 0.2)',
+                  color: isDark ? '#0a84ff' : '#007aff',
                   fontSize: '0.84rem',
                   fontWeight: 650,
                   display: 'flex',
@@ -395,11 +395,11 @@ export function WeeklyStreakWidget() {
                   justifyContent: 'center',
                   gap: 8,
                   cursor: 'pointer',
-                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
+                  transition: 'background 0.2s ease, border-color 0.2s ease, transform 0.15s ease'
                 }}
               >
                 <Sparkles size={16} />
-                <span>Iniciar Revisión Semanal con IA</span>
+                <span>Iniciar Revisión Semanal</span>
               </button>
             </div>
           </motion.div>
