@@ -156,6 +156,17 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const [dragOverSectionId, setDragOverSectionId] = useState<string | null>(null);
   const [sectionMenu, setSectionMenu] = useState<SectionMenuState>({ open: false, x: 0, y: 0 });
 
+  useEffect(() => {
+    if (!sectionMenu.open) return;
+    const handleClose = () => setSectionMenu({ open: false, x: 0, y: 0 });
+    window.addEventListener('close-list-menus', handleClose);
+    window.addEventListener('close-context-menus', handleClose);
+    return () => {
+      window.removeEventListener('close-list-menus', handleClose);
+      window.removeEventListener('close-context-menus', handleClose);
+    };
+  }, [sectionMenu.open]);
+
   // Creation inline input state
 
   // Quick long press timer for section options
@@ -1302,16 +1313,19 @@ const CORE_CYCLES = [
               return p && allowedPeriodicities.has(p);
             }));
 
+            const pendingThisSection = countPending(thisSectionTasksTotal);
+            const pendingFullRoutine = countPending(fullRoutineTasks);
+
             if (fullRoutineTasks.length > thisSectionTasksTotal.length) {
               routineCounts = {
-                full: fullRoutineTasks.length,
-                only: thisSectionTasksTotal.length
+                full: pendingFullRoutine,
+                only: pendingThisSection
               };
 
               const onlyDuration = calculateTasksDuration(thisSectionTasksTotal, listSections, lists);
               const fullDuration = calculateTasksDuration(fullRoutineTasks, listSections, lists);
               routineDurations = { only: onlyDuration, full: fullDuration };
-              routineParts = buildRoutineParts(fullRoutineTasks, listSections, lists);
+              routineParts = buildRoutineParts(fullRoutineTasks, listSections, lists, cycles);
 
               const currentRoutineMode = sectionRoutineModes[categoryKey] || 'only_section';
               if (currentRoutineMode === 'full_routine') {
@@ -1423,15 +1437,18 @@ const CORE_CYCLES = [
               })
             );
 
+            const pendingFreq = countPending(freqTasks);
+            const pendingCumulative = countPending(cumulativeTasks);
+
             const routineCounts = periodicity !== 'day' && cumulativeTasks.length > freqTasks.length ? {
-              only: freqTasks.length,
-              full: cumulativeTasks.length
+              only: pendingFreq,
+              full: pendingCumulative
             } : null;
 
             const onlyDuration = calculateTasksDuration(freqTasks, listSections, lists);
             const fullDuration = calculateTasksDuration(cumulativeTasks, listSections, lists);
             const routineDurations = routineCounts ? { only: onlyDuration, full: fullDuration } : null;
-            const routineParts = routineCounts ? buildRoutineParts(cumulativeTasks, listSections, lists) : null;
+            const routineParts = routineCounts ? buildRoutineParts(cumulativeTasks, listSections, lists, cycles) : null;
 
             const mode = sectionRoutineModes[`limpieza_freq_${periodicity}`] || 'only_section';
             // Con «+ Acumuladas», las incluidas se mezclan en su habitación, al mismo nivel.
@@ -1633,15 +1650,18 @@ const CORE_CYCLES = [
               const thisSectionTasksTotal = deduplicateTaskList([...categoryTasks, ...allChildTasks]);
               const fullTasksTotal = deduplicateTaskList(fullTasks);
 
+              const pendingThisSection = countPending(thisSectionTasksTotal);
+              const pendingFull = countPending(fullTasksTotal);
+
               const routineCounts = sectionPeriodicity && sectionPeriodicity !== 'day' && fullTasksTotal.length > thisSectionTasksTotal.length ? {
-                only: thisSectionTasksTotal.length,
-                full: fullTasksTotal.length
+                only: pendingThisSection,
+                full: pendingFull
               } : null;
 
               const onlyDuration = calculateTasksDuration(thisSectionTasksTotal, listSections, lists);
               const fullDuration = calculateTasksDuration(fullTasksTotal, listSections, lists);
               const routineDurations = routineCounts ? { only: onlyDuration, full: fullDuration } : null;
-              const routineParts = routineCounts ? buildRoutineParts(fullTasksTotal, listSections, lists) : null;
+              const routineParts = routineCounts ? buildRoutineParts(fullTasksTotal, listSections, lists, cycles) : null;
 
               const mode = sectionRoutineModes[catKey] || 'only_section';
               // Con «+ Diarias», las incluidas se mezclan con las propias, al mismo nivel.
@@ -2071,8 +2091,8 @@ const CORE_CYCLES = [
 
   // Vistas sin desglose por frecuencia: la duración total se reparte en puntuales y frecuencias (si hay mezcla).
   const viewMixParts = useMemo(
-    () => (cycleBreakdown || isShoppingList(currentView, currentList) ? null : buildMixParts(viewTasks, listSections, lists)),
-    [cycleBreakdown, currentView, currentList, viewTasks, listSections, lists]
+    () => (cycleBreakdown || isShoppingList(currentView, currentList) ? null : buildMixParts(viewTasks, listSections, lists, cycles)),
+    [cycleBreakdown, currentView, currentList, viewTasks, listSections, lists, cycles]
   );
 
   // Group flattenedData into sections to enable native multi-tier CSS sticky push effect between sections
@@ -2520,7 +2540,7 @@ const CORE_CYCLES = [
                       : undefined;
                     // Con «+ Diarias» ya hay desglose por frecuencia; si no, se reparte por tipo de tarea.
                     const sectionMixParts = !isShoppingList(currentView, currentList) && !(activeMode === 'full_routine' && data.routineParts)
-                      ? buildMixParts(tasksForSection, listSections, lists)
+                      ? buildMixParts(tasksForSection, listSections, lists, cycles)
                       : null;
                     return (
                       <MainSectionHeader
@@ -2603,6 +2623,7 @@ const CORE_CYCLES = [
                         </span>
                         <button
                           type="button"
+                          className="empty-section-btn"
                           onClick={() => {
                             HapticService.selection();
                             onOpenNewTask(data.sectionId);

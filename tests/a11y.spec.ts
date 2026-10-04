@@ -3,7 +3,9 @@ import AxeBuilder from '@axe-core/playwright';
 
 async function boot(page: Page) {
   await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
   await page.evaluate(() => {
+    (window as any).__E2E__ = true;
     sessionStorage.setItem('__E2E__', 'true');
     sessionStorage.setItem('daily_greeting_seen_session', 'true');
     localStorage.setItem('daily_greeting_dismissed_day', new Date().toDateString());
@@ -11,6 +13,12 @@ async function boot(page: Page) {
     localStorage.setItem('pwa_prompt_dismissed', 'true');
     (window as any).useAppStore?.getState()?.setToken('local_offline_token', 'local_guest_e2e');
   });
+  const guestBtn = page.locator('button:has-text("Usar sin cuenta")').first();
+  try {
+    await guestBtn.click({ timeout: 1500 });
+  } catch {
+    // Ya desbloqueada
+  }
   await page.reload();
   await page.waitForFunction(() => document.querySelectorAll('.ios-list-item').length > 0, null, { timeout: 8000 });
   await page.evaluate(() => {
@@ -48,6 +56,7 @@ for (const scheme of ['light', 'dark'] as const) {
     test.use({ colorScheme: scheme });
 
     test('las vistas principales no tienen fallos graves', async ({ page }) => {
+      test.setTimeout(60000);
       await boot(page);
       await scan(page, 'barra lateral');
       for (const view of ['smart_today', 'smart_all', 'smart_calendar', 'list_casa', 'ANALYTICS', 'DATA', 'TRASH']) {

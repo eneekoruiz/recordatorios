@@ -352,7 +352,7 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     await expect(sectionDuration).toBeVisible({ timeout: 5000 });
 
     // The sequence is started from the list header ("▶ Empezar")
-    const startBtn = page.getByRole('button', { name: 'Empezar lista' });
+    const startBtn = page.getByRole('button', { name: 'Empezar lista' }).first();
     await expect(startBtn).toBeEnabled({ timeout: 5000 });
     await startBtn.click();
 

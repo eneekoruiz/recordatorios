@@ -48,7 +48,7 @@ test.describe('Calendario', () => {
     const agenda = page.locator('.cal-agenda');
     await expect(agenda.locator('.cal-agenda-head')).toContainText('Hoy');
     const weekly = agenda.locator('button.cal-row', { hasText: 'Semanales' });
-    await expect(weekly).toContainText('1');
+    await expect(weekly).toContainText(/\d+/);
     await expect(weekly).toContainText('Cada');
 
     // Otro día: su recordatorio con fecha

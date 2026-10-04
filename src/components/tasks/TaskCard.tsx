@@ -158,9 +158,14 @@ export const TaskCard = React.memo(function TaskCard({
       }
       setContextMenuOpen(false);
     };
+    const handleDismiss = () => setContextMenuOpen(false);
     window.addEventListener('wheel', handleDismissScroll, { passive: true });
+    window.addEventListener('close-list-menus', handleDismiss);
+    window.addEventListener('close-context-menus', handleDismiss);
     return () => {
       window.removeEventListener('wheel', handleDismissScroll);
+      window.removeEventListener('close-list-menus', handleDismiss);
+      window.removeEventListener('close-context-menus', handleDismiss);
     };
   }, [contextMenuOpen]);
 
@@ -357,6 +362,9 @@ export const TaskCard = React.memo(function TaskCard({
   const getCardElement = useCallback(() => cardRef.current, []);
 
   const openContextMenu = useCallback(() => {
+    if (typeof document !== 'undefined' && document.querySelector('[role="dialog"], [aria-modal="true"], .duration-info-card-overlay, .spotlight-overlay, .drawer-overlay, .prompt-overlay, .premium-overlay')) {
+      return;
+    }
     HapticService.impact('medium');
     x.set(0); // Reset any active horizontal swipe offset immediately
     if (cardRef.current) {
@@ -747,6 +755,9 @@ export const TaskCard = React.memo(function TaskCard({
         ].filter(Boolean).join(', '),
       }}
       onPointerDown={(e) => {
+        if (typeof document !== 'undefined' && document.querySelector('[role="dialog"], [aria-modal="true"], .duration-info-card-overlay, .spotlight-overlay, .drawer-overlay, .prompt-overlay, .premium-overlay')) {
+          return;
+        }
         if (isEditingTitle || isEditingNote) return;
         if (e.pointerType === 'mouse' && e.button !== 0) return;
         if (onToggleSelect && (isSelectionMode || e.ctrlKey || e.metaKey)) {
@@ -816,6 +827,9 @@ export const TaskCard = React.memo(function TaskCard({
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();
+        if (typeof document !== 'undefined' && document.querySelector('[role="dialog"], [aria-modal="true"], .duration-info-card-overlay, .spotlight-overlay, .drawer-overlay, .prompt-overlay, .premium-overlay')) {
+          return;
+        }
         if (longPressTimer.current) {
           window.clearTimeout(longPressTimer.current);
           longPressTimer.current = null;

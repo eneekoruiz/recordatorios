@@ -1,5 +1,6 @@
-import type { TaskItem, ListSection, CustomList } from '../models/Task';
+import type { TaskItem, ListSection, CustomList, CustomCycle } from '../models/Task';
 import { isTaskCompleted } from '../store/useAppStore';
+import { isCompletedInCurrentPeriod } from '../services/TaskService';
 import { getTaskPeriodicity } from './sectionRoutine';
 import { calculateTasksDuration, formatDuration } from './taskDuration';
 
@@ -25,10 +26,16 @@ export const routinePeriodLabel = (p: MixKind): string => LABEL[p];
  * Reparte lo pendiente de una sección con «+ Diarias/Acumuladas» por frecuencia (de la más larga a la
  * más corta), para poder ver cuánto tiempo y cuántas tareas aporta cada una.
  */
-export function buildRoutineParts(tasks: TaskItem[], sections?: ListSection[], lists?: CustomList[]): RoutinePart[] {
+export function buildRoutineParts(
+  tasks: TaskItem[],
+  sections?: ListSection[],
+  lists?: CustomList[],
+  cycles?: CustomCycle[]
+): RoutinePart[] {
   const groups = new Map<RoutinePeriod, TaskItem[]>();
   for (const t of tasks) {
     if (isTaskCompleted(t)) continue;
+    if (cycles && isCompletedInCurrentPeriod(t, cycles, sections, lists)) continue;
     const p = (getTaskPeriodicity(t, sections, lists) || 'day') as RoutinePeriod;
     if (!ORDER.includes(p)) continue;
     groups.set(p, [...(groups.get(p) || []), t]);
@@ -49,10 +56,16 @@ export function describeRoutineParts(parts: RoutinePart[]): string {
  * Reparte lo pendiente de una sección o vista por tipo: puntuales (con fecha o sin ella) y cada frecuencia.
  * Devuelve las partes solo si de verdad hay mezcla con tiempo en al menos dos tipos.
  */
-export function buildMixParts(tasks: TaskItem[], sections?: ListSection[], lists?: CustomList[]): RoutinePart[] | null {
+export function buildMixParts(
+  tasks: TaskItem[],
+  sections?: ListSection[],
+  lists?: CustomList[],
+  cycles?: CustomCycle[]
+): RoutinePart[] | null {
   const groups = new Map<MixKind, TaskItem[]>();
   for (const t of tasks) {
     if (isTaskCompleted(t)) continue;
+    if (cycles && isCompletedInCurrentPeriod(t, cycles, sections, lists)) continue;
     const p = (getTaskPeriodicity(t, sections, lists) || 'none') as MixKind;
     if (!MIX_ORDER.includes(p)) continue;
     groups.set(p, [...(groups.get(p) || []), t]);

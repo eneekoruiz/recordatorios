@@ -117,6 +117,7 @@ export function TaskMetaBadges({
               items.push(
                 <span 
                   key="list-name"
+                  className="task-meta-list-name"
                   style={{ 
                     display: 'inline-flex', alignItems: 'center', gap: 3.5,
                     fontWeight: 650, fontSize: '0.74rem', color: taskList.color || 'var(--text-secondary)'

@@ -60,10 +60,47 @@
   color: var(--accent-orange, #c95100) !important;
 }
 
-:root:not([data-theme="dark"]) .apple-header-start-btn[style*="#ff9500"],
-:root:not([data-theme="dark"]) .apple-header-start-btn[style*="rgb(255, 149, 0)"] {
+:root:not([data-theme="dark"]):not(.dark) .apple-header-start-btn,
+:root:not([data-theme="dark"]):not(.dark) .apple-header-start-btn > span,
+:root:not([data-theme="dark"]):not(.dark) .section-play-btn,
+:root:not([data-theme="dark"]):not(.dark) .section-play-btn > span,
+:root:not([data-theme="dark"]):not(.dark) .apple-nav-start-btn,
+:root:not([data-theme="dark"]):not(.dark) .apple-nav-start-btn > span {
+  color: #1c1c1e !important;
+}
+
+:root:not([data-theme="dark"]):not(.dark) .apple-header-start-btn svg,
+:root:not([data-theme="dark"]):not(.dark) .section-play-btn svg,
+:root:not([data-theme="dark"]):not(.dark) .apple-nav-start-btn svg {
+  color: #1c1c1e !important;
+}
+
+[data-theme="dark"] .apple-header-start-btn,
+[data-theme="dark"] .apple-header-start-btn > span,
+[data-theme="dark"] .section-play-btn,
+[data-theme="dark"] .section-play-btn > span,
+html.dark .apple-header-start-btn,
+html.dark .apple-header-start-btn > span,
+html.dark .section-play-btn,
+html.dark .section-play-btn > span {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .apple-header-start-btn svg,
+[data-theme="dark"] .section-play-btn svg,
+html.dark .apple-header-start-btn svg,
+html.dark .section-play-btn svg {
+  color: #ffffff !important;
+}
+
+:root:not([data-theme="dark"]):not(.dark) .empty-section-btn[style*="#ff9500"],
+:root:not([data-theme="dark"]):not(.dark) .empty-section-btn[style*="rgb(255, 149, 0)"] {
   color: var(--accent-orange, #c95100) !important;
-  border-color: color-mix(in srgb, var(--accent-orange, #c95100) 35%, transparent) !important;
+}
+
+:root:not([data-theme="dark"]):not(.dark) .task-meta-list-name[style*="#ff9500"],
+:root:not([data-theme="dark"]):not(.dark) .task-meta-list-name[style*="rgb(255, 149, 0)"] {
+  color: var(--accent-orange, #c95100) !important;
 }
 
 /* ---------- Tipografía: nunca partir palabras a mitad ---------- */
@@ -2434,3 +2471,84 @@ body.dark .cad-summary-cost strong {
     font-size: max(16px, 1em) !important;
   }
 }
+
+/* ---------- Micro-cápsula moderna de duración (Apple Reminders / iOS 18 style) ---------- */
+.apple-duration-chip,
+.section-duration-chip {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4.5px !important;
+  height: 22px !important;
+  padding: 0 8px !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, var(--accent-primary, #007aff) 9%, var(--bg-material, rgba(0,0,0,0.04))) !important;
+  border: 1px solid color-mix(in srgb, var(--accent-primary, #007aff) 20%, transparent) !important;
+  color: var(--text-primary, #1c1c1e) !important;
+  cursor: pointer !important;
+  font-size: 0.74rem !important;
+  font-weight: 650 !important;
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -0.01em !important;
+  transition: all 0.16s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  user-select: none !important;
+  flex-shrink: 0 !important;
+}
+
+.apple-duration-chip:hover,
+.section-duration-chip:hover {
+  background: color-mix(in srgb, var(--accent-primary, #007aff) 16%, var(--bg-material, rgba(0,0,0,0.06))) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #007aff) 32%, transparent) !important;
+  transform: translateY(-0.5px) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06) !important;
+}
+
+.apple-duration-chip:active,
+.section-duration-chip:active {
+  transform: scale(0.97) !important;
+}
+
+[data-theme="dark"] .apple-duration-chip,
+[data-theme="dark"] .section-duration-chip,
+html.dark .apple-duration-chip,
+html.dark .section-duration-chip {
+  background: color-mix(in srgb, var(--accent-primary, #0a84ff) 14%, rgba(255, 255, 255, 0.06)) !important;
+  border-color: color-mix(in srgb, var(--accent-primary, #0a84ff) 28%, transparent) !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Conteo numérico vertical compacto en cabeceras de sección */
+.section-total-count {
+  display: inline-flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+  justify-content: center !important;
+  line-height: 1.1 !important;
+  padding-right: 2px !important;
+  font-variant-numeric: tabular-nums !important;
+  user-select: none !important;
+}
+
+.section-main-count {
+  font-size: 0.92rem !important;
+  font-weight: 700 !important;
+  color: var(--text-secondary, #6c6c70) !important;
+  line-height: 1 !important;
+}
+
+.section-routine-breakdown {
+  font-size: 0.68rem !important;
+  font-weight: 650 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 1.5px !important;
+  letter-spacing: -0.01em !important;
+  font-variant-numeric: tabular-nums !important;
+  margin-top: 1px !important;
+  opacity: 0.95 !important;
+  line-height: 1 !important;
+}
+

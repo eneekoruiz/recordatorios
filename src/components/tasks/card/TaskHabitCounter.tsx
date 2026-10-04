@@ -101,6 +101,9 @@ export const TaskHabitCounter: React.FC<TaskHabitCounterProps> = ({
         onContextMenu={(e) => {
           e.preventDefault();
           e.stopPropagation();
+          if (typeof document !== 'undefined' && document.querySelector('[role="dialog"], [aria-modal="true"], .duration-info-card-overlay, .spotlight-overlay, .drawer-overlay, .prompt-overlay, .premium-overlay')) {
+            return;
+          }
           if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate([6]);
           SoundService.playUncomplete();
           onToggle(task.id, true);

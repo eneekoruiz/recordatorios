@@ -389,6 +389,9 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
               onContextMenu={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                if (typeof document !== 'undefined' && document.querySelector('[role="dialog"], [aria-modal="true"], .duration-info-card-overlay, .spotlight-overlay, .drawer-overlay, .prompt-overlay, .premium-overlay')) {
+                  return;
+                }
                 if (longPressTimerRef.current) {
                   clearTimeout(longPressTimerRef.current);
                   longPressTimerRef.current = null;

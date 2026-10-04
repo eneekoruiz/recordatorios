@@ -149,25 +149,11 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         title="Ver desglose de tiempo de esta sección"
         aria-label="Ver desglose de tiempo de sección"
         style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 4,
-          height: 22,
-          padding: '0 8px',
-          borderRadius: 999,
-          background: 'var(--bg-secondary, rgba(0,0,0,0.04))',
-          border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
-          color: 'var(--text-secondary)',
-          cursor: 'pointer',
-          fontSize: '0.76rem',
-          fontWeight: 650,
-          fontVariantNumeric: 'tabular-nums',
-          transition: 'all 0.15s ease'
+          ['--accent-primary' as string]: data.color || 'var(--accent-primary)',
         }}
       >
-        <Clock size={11} color={data.color || 'var(--text-secondary)'} />
+        <Clock size={11} strokeWidth={2.4} color={data.color || 'var(--accent-primary)'} />
         <span>~{sectionDurationLabel}</span>
-        <ChevronDown size={10} style={{ opacity: 0.5 }} />
       </button>
     );
   }
@@ -214,6 +200,9 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   );
 
   const openSectionMenu = useCallback(() => {
+    if (typeof document !== 'undefined' && document.querySelector('[role="dialog"], [aria-modal="true"], .duration-info-card-overlay, .spotlight-overlay, .drawer-overlay, .prompt-overlay, .premium-overlay')) {
+      return;
+    }
     HapticService.selection();
 
     const rowRect = getRowRect();
@@ -488,9 +477,16 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       }}
       onContextMenu={(e) => {
         e.preventDefault();
+        e.stopPropagation();
+        if (typeof document !== 'undefined' && document.querySelector('[role="dialog"], [aria-modal="true"], .duration-info-card-overlay, .spotlight-overlay, .drawer-overlay, .prompt-overlay, .premium-overlay')) {
+          return;
+        }
         openSectionMenu();
       }}
       onPointerDown={(e) => {
+        if (typeof document !== 'undefined' && document.querySelector('[role="dialog"], [aria-modal="true"], .duration-info-card-overlay, .spotlight-overlay, .drawer-overlay, .prompt-overlay, .premium-overlay')) {
+          return;
+        }
         if ((e.target as HTMLElement).closest('button, input')) return;
         setIsPressed(true);
         didSectionLongPressRef.current = false;
@@ -586,13 +582,18 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                 >
                   {data.title}
                 </h3>
+                {!isMobile && durationNode && (
+                  <div className="section-duration section-meta" style={{ marginLeft: 6, flexShrink: 0, display: 'inline-flex', alignItems: 'center' }}>
+                    {durationNode}
+                  </div>
+                )}
               </div>
-              {(durationNode || priceNode) && (
+              {((isMobile && durationNode) || priceNode) && (
                 <div
                   className="section-duration section-meta"
                   style={{ fontSize: data.depth === 0 ? '0.8rem' : '0.74rem', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 3 }}
                 >
-                  {durationNode}
+                  {isMobile && durationNode}
                   {priceNode}
                 </div>
               )}
@@ -722,37 +723,17 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
             return (
               <span 
                 className="section-total-count"
-                style={{ 
-                  fontSize: '0.88rem', 
-                  fontWeight: 500, 
-                  color: 'var(--text-tertiary)', 
-                  fontVariantNumeric: 'tabular-nums',
-                  display: 'inline-flex',
-                  alignItems: 'baseline',
-                  gap: 4,
-                  paddingRight: 2
-                }}
                 title={tooltipText}
               >
                 <span className="section-main-count">{count}</span>
-                {hasRoutineBreakdown && !isMobile && (
+                {hasRoutineBreakdown && countParts.length > 0 && (
                   <span 
-                    className="section-routine-breakdown desktop-only-inline"
-                    style={{ 
-                      fontSize: '0.80rem', 
-                      fontWeight: 600, 
-                      display: 'inline-flex',
-                      alignItems: 'baseline',
-                      gap: 2,
-                      letterSpacing: '-0.01em',
-                      fontVariantNumeric: 'tabular-nums',
-                      opacity: 0.95
-                    }}
+                    className="section-routine-breakdown"
                   >
                     <span style={{ opacity: 0.35 }}>(</span>
                     {countParts.map((cp, i) => (
                       <React.Fragment key={cp.id}>
-                        {i > 0 && <span style={{ opacity: 0.3, margin: '0 1px' }}> + </span>}
+                        {i > 0 && <span style={{ opacity: 0.35, fontSize: '0.62rem', margin: '0 1px' }}> + </span>}
                         <span style={{ color: cp.color }}>{cp.n}</span>
                       </React.Fragment>
                     ))}

@@ -34,6 +34,13 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
   onStartSequence,
   pendingCount
 }) => {
+  // Cierra cualquier menú contextual previo al abrirse
+  useEffect(() => {
+    if (!isOpen) return;
+    window.dispatchEvent(new Event('close-list-menus'));
+    window.dispatchEvent(new Event('close-context-menus'));
+  }, [isOpen]);
+
   // Manejo de tecla Escape
   useEffect(() => {
     if (!isOpen) return;
@@ -87,10 +94,21 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
     <AnimatePresence>
       {isOpen && (
         <div
+          className="duration-info-card-overlay"
+          onContextMenu={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+          }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+          }}
           style={{
             position: 'fixed',
             inset: 0,
-            zIndex: 100005,
+            zIndex: 1000005,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -105,6 +123,16 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={onClose}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+            }}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+            }}
             style={{
               position: 'absolute',
               inset: 0,

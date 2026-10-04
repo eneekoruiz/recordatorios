@@ -158,6 +158,32 @@ test.describe('Pulido final', () => {
     expect(await page.evaluate(() => (window as any).useAppStore.getState().tasks.t1.sectionId)).toBe('sx');
   });
 
+  test('con el modal de duración abierto, clic derecho no interactúa con las capas inferiores ni abre menús', async ({ page }) => {
+    await ensureAppUnlocked(page);
+    await seedCasa(page);
+    await page.locator('.ios-list-item', { hasText: 'Casa E2E' }).first().click();
+    await page.waitForTimeout(400);
+
+    // Abrir modal de duración
+    const durationBtn = page.locator('.apple-duration-chip').first();
+    await expect(durationBtn).toBeVisible();
+    await durationBtn.click();
+
+    // El diálogo de duración está visible
+    const dialog = page.locator('[role="dialog"][aria-modal="true"]');
+    await expect(dialog).toBeVisible();
+
+    // Clic derecho en la pantalla (sobre el backdrop o el área de una tarea de fondo)
+    await page.mouse.click(100, 300, { button: 'right' });
+    await page.waitForTimeout(200);
+
+    // Ningún menú contextual de tarea o sección debe abrirse
+    await expect(page.locator('.ios-dropdown-menu')).toHaveCount(0);
+    // El diálogo de duración se cierra con Escape
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+  });
+
   test.describe('móvil', () => {
     test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
