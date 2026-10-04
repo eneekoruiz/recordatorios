@@ -7,7 +7,7 @@ import {
   AlertCircle, Flag, FolderInput, LayoutList, Copy, Play, Trash2, 
   ChevronRight, ArrowLeft, Sun, CalendarDays, Clock, CalendarX, Edit3,
   ArrowUp, ArrowDown, ChevronDown, SlidersHorizontal, Coins, RotateCcw,
-  CheckSquare
+  CheckSquare, Mail
 } from 'lucide-react';
 import type { TaskItem } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
@@ -16,6 +16,7 @@ import { SoundService } from '../../../services/SoundService';
 import { SpotlightBackdrop, type SpotlightRect } from '../../ui/SpotlightBackdrop';
 import { formatEuro } from '../../../utils/format';
 import { useFitMenuInViewport } from '../../../hooks/useFitMenuInViewport';
+import { IntegrationService } from '../../../services/IntegrationService';
 
 export interface TaskContextMenuProps {
   task: TaskItem;
@@ -929,6 +930,28 @@ function MenuActions({
               onClick={() => { setContextMenuOpen(false); onOpenZenMode(task.id); }} 
             />
           )}
+
+          {/* Integración Google Calendar */}
+          <ActionRow 
+            icon={<Calendar size={16} color="var(--accent-primary)" />} 
+            label="Añadir a Google Calendar" 
+            onClick={() => { 
+              setContextMenuOpen(false); 
+              const url = IntegrationService.generateGoogleCalendarUrl(task);
+              window.open(url, '_blank');
+            }} 
+          />
+
+          {/* Integración Gmail */}
+          <ActionRow 
+            icon={<Mail size={16} color="#ea4335" />} 
+            label="Buscar en Gmail" 
+            onClick={() => { 
+              setContextMenuOpen(false); 
+              const url = IntegrationService.generateGmailSearchUrl(task.title);
+              window.open(url, '_blank');
+            }} 
+          />
         </div>
       )}
 

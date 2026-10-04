@@ -9,7 +9,8 @@
 
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Flame, TrendingUp, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Flame, TrendingUp, CheckCircle2, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { WeeklyReviewModal } from '../../review/WeeklyReviewModal';
 import { useAppStore } from '../../../store/useAppStore';
 import { isCompletedInCurrentPeriod, calculateHabitStreak, getStartOfWeek } from '../../../services/TaskService';
 import type { TaskItem } from '../../../models/Task';
@@ -34,6 +35,7 @@ export function WeeklyStreakWidget() {
   const { tasks, cycles, listSections, lists, theme } = useAppStore();
   const isDark = theme === 'dark';
   const [expanded, setExpanded] = useState(false);
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
 
   const weekStats = useMemo(() => {
     const now = new Date();
@@ -369,10 +371,45 @@ export function WeeklyStreakWidget() {
                   </div>
                 </div>
               )}
+
+              {/* Botón Agente de Revisión Semanal */}
+              <button
+                type="button"
+                onClick={() => setIsReviewOpen(true)}
+                style={{
+                  width: '100%',
+                  marginTop: 12,
+                  padding: '10px 14px',
+                  borderRadius: 14,
+                  background: isDark
+                    ? 'linear-gradient(135deg, rgba(10, 132, 255, 0.22), rgba(94, 92, 230, 0.22))'
+                    : 'linear-gradient(135deg, rgba(0, 122, 255, 0.12), rgba(88, 86, 214, 0.12))',
+                  border: isDark
+                    ? '1px solid rgba(10, 132, 255, 0.35)'
+                    : '1px solid rgba(0, 122, 255, 0.25)',
+                  color: isDark ? '#64d2ff' : '#007aff',
+                  fontSize: '0.84rem',
+                  fontWeight: 650,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
+                }}
+              >
+                <Sparkles size={16} />
+                <span>Iniciar Revisión Semanal con IA</span>
+              </button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      <WeeklyReviewModal
+        isOpen={isReviewOpen}
+        onClose={() => setIsReviewOpen(false)}
+      />
     </motion.div>
   );
 }

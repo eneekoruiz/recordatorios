@@ -74,6 +74,16 @@ export const LIST_TYPE_CONFIG: Record<ListType, ListTypeInfo> = {
     color: '#5856d6',
     supportsDuration: false,
     supportsSequence: false
+  },
+  library: {
+    type: 'library',
+    label: 'Biblioteca de Vida',
+    description: 'Series, películas, libros y contenidos culturales',
+    badgeLabel: 'Biblioteca',
+    iconName: 'film',
+    color: '#ff2d55',
+    supportsDuration: false,
+    supportsSequence: false
   }
 };
 
@@ -135,6 +145,41 @@ export function isQueHeHechoList(listIdOrView?: string | null, list?: CustomList
       cleanName.includes('bitacora') ||
       cleanName.includes('vivencias') ||
       cleanName.includes('diario')
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Determina si una lista o vista corresponde a la Biblioteca de Vida (Series, Películas, Libros, etc.).
+ */
+export function isLifeLibraryList(listIdOrView?: string | null, list?: CustomList | null): boolean {
+  if (!listIdOrView && !list) return false;
+
+  const cleanId = (listIdOrView || '').replace(/^list_/, '').toLowerCase();
+  if (['series', 'peliculas', 'libros', 'biblioteca', 'lecturas', 'anime', 'manga', 'podcasts'].includes(cleanId)) return true;
+
+  if (list) {
+    if (list.listType === 'library') return true;
+    const cleanName = (list.name || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+    if (
+      cleanName.includes('serie') ||
+      cleanName.includes('pelicula') ||
+      cleanName.includes('film') ||
+      cleanName.includes('cinema') ||
+      cleanName.includes('libro') ||
+      cleanName.includes('lectura') ||
+      cleanName.includes('biblioteca') ||
+      cleanName.includes('podcast') ||
+      cleanName.includes('watchlist') ||
+      cleanName.includes('anime')
     ) {
       return true;
     }
@@ -302,6 +347,7 @@ export function isShoppingList(listIdOrView?: string | null, list?: CustomList |
  */
 export function getListType(list?: CustomList | null, listIdOrView?: string | null): ListType {
   if (list?.listType) return list.listType;
+  if (isLifeLibraryList(listIdOrView, list)) return 'library';
   if (isCaducidadesList(listIdOrView, list)) return 'caducidades';
   if (isQueHeHechoList(listIdOrView, list)) return 'que_he_hecho';
   if (isEventsList(listIdOrView, list)) return 'events';

@@ -52,6 +52,7 @@ import { BatchTaskActionsBar } from '../tasks/BatchTaskActionsBar';
 import { downloadIcsFile } from '../../utils/icsExporter';
 import { exportReportToPdf } from '../../utils/pdfExport';
 import { parseTaskPrice } from '../../utils/format';
+import { IntegrationsModal } from '../integrations/IntegrationsModal';
 
 interface MainContentProps {
   currentView: string;
@@ -219,6 +220,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const [selectedPersonForProfile, setSelectedPersonForProfile] = useState<string | null>(null);
   // Resumen del mes IA (modal)
   const [monthlySummaryModal, setMonthlySummaryModal] = useState<{ open: boolean; title: string; text: string; loading: boolean }>({ open: false, title: '', text: '', loading: false });
+  // Modal de integraciones y vinculaciones externas (Google Calendar, Gmail, Notion)
+  const [isIntegrationsOpen, setIsIntegrationsOpen] = useState(false);
 
   const handleOpenMonthlySummary = async () => {
     HapticService.selection();
@@ -2373,6 +2376,7 @@ const CORE_CYCLES = [
             }))
           });
         }}
+        onOpenIntegrations={() => setIsIntegrationsOpen(true)}
       />
 
       {/* Main Scrollable View */}
@@ -2946,6 +2950,13 @@ const CORE_CYCLES = [
         listSections={listSections || []}
         tasks={tasks}
         currentListId={currentList?.id}
+      />
+
+      <IntegrationsModal
+        isOpen={isIntegrationsOpen}
+        onClose={() => setIsIntegrationsOpen(false)}
+        tasks={viewTasks}
+        listName={getTitle()}
       />
     </main>
   );

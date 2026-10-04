@@ -14,7 +14,7 @@ export interface CustomCycle {
   _is_dirty?: boolean;
 }
 
-export type ListType = 'routines' | 'simple' | 'events' | 'goals' | 'caducidades' | 'que_he_hecho';
+export type ListType = 'routines' | 'simple' | 'events' | 'goals' | 'caducidades' | 'que_he_hecho' | 'library';
 
 export interface CustomList {
   id: string;
@@ -144,6 +144,19 @@ export interface TaskItem {
   executionHistory?: number[]; // historical elapsed times in seconds
   suggestedDuration?: number; // AI suggested duration in minutes
   postponeCount?: number; // count of times the task was postponed
+
+  // --- BIBLIOTECA DE VIDA (SERIES, PELÍCULAS, LIBROS) ---
+  mediaType?: 'series' | 'movie' | 'book' | 'podcast' | 'other';
+  mediaStatus?: 'want_to_watch' | 'in_progress' | 'completed' | 'dropped';
+  mediaRating?: number; // 1-5 estrellas
+  mediaPlatform?: string; // Netflix, HBO, Prime, Disney+, etc.
+  mediaSeasonEpisode?: string; // ej: "T2 E5", "Pág 120/350"
+
+  // --- INTEGRACIONES EXTERNAS (GOOGLE CALENDAR, GMAIL, NOTION) ---
+  googleCalendarUrl?: string;
+  gmailQuery?: string;
+  gmailThreadId?: string;
+  notionPageUrl?: string;
 
   // --- LOCAL ONLY STATE ---
   _is_dirty?: boolean; // Flag to indicate if it needs to be synced to server

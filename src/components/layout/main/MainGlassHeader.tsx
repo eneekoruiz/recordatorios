@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, MoreHorizontal, Check, Settings, FolderPlus, Play, Calendar, Printer } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Check, Settings, FolderPlus, Play, Calendar, Printer, Share2 } from 'lucide-react';
 import type { CustomList } from '../../../models/Task';
 import { HapticService } from '../../../services/HapticService';
 import { getListType, LIST_TYPE_CONFIG, getListBadgeInfo } from '../../../utils/specialLists';
@@ -43,6 +43,7 @@ interface MainGlassHeaderProps {
   isStartDisabled?: boolean;
   onExportIcs?: () => void;
   onExportPdf?: () => void;
+  onOpenIntegrations?: () => void;
 }
 
 export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
@@ -72,6 +73,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
   isStartDisabled = false,
   onExportIcs,
   onExportPdf,
+  onOpenIntegrations,
 }) => {
   const listAccentColor = isSmartView 
     ? (SMART_COLORS[currentView] || 'var(--accent-blue, #007AFF)') 
@@ -505,9 +507,24 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                           </>
                         )}
 
-                        {(onExportIcs || onExportPdf) && (
+                        {(onExportIcs || onExportPdf || onOpenIntegrations) && (
                           <>
                             <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '6px 0' }} />
+                            {onOpenIntegrations && (
+                              <button
+                                type="button"
+                                className="ios-dropdown-item"
+                                onClick={() => {
+                                  HapticService.selection();
+                                  setIsMenuOpen(false);
+                                  onOpenIntegrations();
+                                }}
+                                style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 44, fontSize: '0.95rem' }}
+                              >
+                                <Share2 size={16} color="var(--accent-purple, #af52de)" />
+                                <span>Vincular e Integraciones...</span>
+                              </button>
+                            )}
                             {onExportIcs && (
                               <button
                                 type="button"
@@ -756,9 +773,23 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                         </>
                       )}
 
-                      {(onExportIcs || onExportPdf) && (
+                      {(onExportIcs || onExportPdf || onOpenIntegrations) && (
                         <>
                           <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
+                          {onOpenIntegrations && (
+                            <button 
+                              className="ios-dropdown-item"
+                              onClick={() => {
+                                HapticService.selection();
+                                setIsMenuOpen(false);
+                                onOpenIntegrations();
+                              }}
+                              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
+                            >
+                              <Share2 size={14} color="var(--accent-purple, #af52de)" />
+                              <span style={{ whiteSpace: 'nowrap' }}>Vincular e Integraciones...</span>
+                            </button>
+                          )}
                           {onExportIcs && (
                             <button 
                               className="ios-dropdown-item"

@@ -16,7 +16,8 @@ import { ConfettiService } from '../../services/ConfettiService';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { DeleteParentModal } from './DeleteParentModal';
 import type { SpotlightRect } from '../ui/SpotlightBackdrop';
-import { isCaducidadesList, isQueHeHechoList } from '../../utils/specialLists';
+import { isCaducidadesList, isQueHeHechoList, isLifeLibraryList } from '../../utils/specialLists';
+import { MediaTrackerFields } from '../library/MediaTrackerFields';
 import { TaskContextMenu } from './card/TaskContextMenu';
 import { TaskSwipeBackground } from './card/TaskSwipeBackground';
 import { TaskMetaBadges } from './card/TaskMetaBadges';
@@ -1653,6 +1654,15 @@ export const TaskCard = React.memo(function TaskCard({
                 <Link2 size={11} strokeWidth={2.4} style={{ flexShrink: 0 }} />
                 <span>Gestionar</span>
               </a>
+            )}
+
+            {/* Biblioteca de Vida: Series, Películas, Libros */}
+            {(isLifeLibraryList(task.categoryId, taskList) || task.mediaType || task.mediaStatus || task.mediaPlatform || (task.mediaRating && task.mediaRating > 0)) && (
+              <MediaTrackerFields
+                task={task}
+                onUpdate={(updates) => updateTask(task.id, updates)}
+                isCompact
+              />
             )}
           </div>
 
