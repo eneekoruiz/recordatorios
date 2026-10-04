@@ -18,7 +18,7 @@ const getDb = () => {
 const withTimeout = async <T>(operation: Promise<T>, fallback: T): Promise<T> => {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<T>((resolve) => {
-    timeoutId = setTimeout(() => resolve(fallback), 1800);
+    timeoutId = setTimeout(() => resolve(fallback), 3500);
   });
   try {
     return await Promise.race([operation, timeout]);

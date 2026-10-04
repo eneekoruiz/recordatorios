@@ -133,7 +133,7 @@ function App() {
     if (hasHydrated) return;
     const hydrationGuard = window.setTimeout(() => {
       useAppStore.getState().setHasHydrated(true);
-    }, 600); // 600ms max — avoid getting stuck on the loader
+    }, 4500); // 4500ms guard: allows mobile IndexedDB enough time to open without premature abort
     return () => window.clearTimeout(hydrationGuard);
   }, [hasHydrated]);
 
