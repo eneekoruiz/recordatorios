@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, CheckCircle2, Trophy, ArrowRight, ArrowLeft,
@@ -58,7 +58,7 @@ export const WeeklyReviewModal: React.FC<WeeklyReviewModalProps> = ({ isOpen, on
     }
   };
 
-  const handlePostponeWeek = (taskId: string) => {
+  const handlePostponeWeek = useCallback((taskId: string) => {
     HapticService.selection();
     const task = tasks[taskId];
     if (!task) return;
@@ -67,7 +67,7 @@ export const WeeklyReviewModal: React.FC<WeeklyReviewModalProps> = ({ isOpen, on
       dueDate: nextWeek,
       postponeCount: (task.postponeCount || 0) + 1
     });
-  };
+  }, [tasks, updateTask]);
 
   const STEPS_TITLE = [
     'Logros de la Semana',

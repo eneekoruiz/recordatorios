@@ -38,5 +38,5 @@ export function useAppLayout(setIsMobile: React.Dispatch<React.SetStateAction<bo
         screen.orientation.removeEventListener('change', handleOrientation);
       }
     };
-  }, []);
+  }, [setIsMobile]);
 }

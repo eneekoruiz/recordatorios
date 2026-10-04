@@ -19,7 +19,7 @@ export default defineConfig({
   webServer: [
     {
       // E2E_MEMORY_DB=1 levanta el backend con datos en memoria (sin PostgreSQL)
-      command: process.env.E2E_MEMORY_DB ? 'node tests/support/memory-server.js' : 'node server/index.js',
+      command: process.env.E2E_MEMORY_DB ? 'npx tsx tests/support/memory-server.js' : 'npx tsx server/index.ts',
       url: 'http://127.0.0.1:3001/api/health',
       reuseExistingServer: !process.env.CI,
       timeout: 60000,

@@ -12,10 +12,9 @@ import net from 'node:net';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { handleMcpRequest, MCP_TOOLS } from './mcp.js';
-import { isMailConfigured, sendPasswordResetEmail, sendSecurityEmail } from './mail.js';
+import { isMailConfigured } from './mail.js';
 import {
-  getSecurity, withSecurity, publicPreferences, stripSecurity, checkSecondFactor, noteDevice, deviceId, newTotpSecret,
+  getSecurity, withSecurity, publicPreferences, newTotpSecret,
   otpauthUrl, encryptSecret, decryptSecret, verifyTotp, generateRecoveryCodes, hashRecoveryCode,
 } from './security.js';
 import webpush from 'web-push';
