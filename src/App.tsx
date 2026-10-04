@@ -217,7 +217,7 @@ function App() {
   // ── Default lists initialization & Data Hygiene ──────────────────
   // Se ejecuta una sola vez, cuando los datos locales ya se han cargado de IndexedDB
   // (antes se lanzaba sobre un estado vacío y su efecto dependía de una carrera).
-  useDataHygiene(hasHydrated);
+  const isHygieneDone = useDataHygiene(hasHydrated);
 
   useSyncManager(token);
 
@@ -293,7 +293,7 @@ function App() {
   }, []);
 
   // ── Conditional returns (AFTER all hooks) ────────────────────────
-  if (!hasHydrated) {
+  if (!hasHydrated || !isHygieneDone) {
     return (
       <div style={{
         display: 'flex',

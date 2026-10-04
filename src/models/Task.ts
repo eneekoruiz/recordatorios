@@ -77,6 +77,7 @@ export interface TaskItem {
   type: 'task' | 'log'; 
   title: string;
   description?: string; // Changed from notes to match DB
+  notes?: string; // Alias opcional para compatibilidad con código existente
 
   // Estructura Espacial (Subtareas y Orden)
   parentId?: string; // Si es null o undefined, es una tarea raíz

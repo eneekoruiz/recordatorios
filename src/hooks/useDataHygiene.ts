@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { 
   formatSectionTitle, 
@@ -13,10 +13,15 @@ import { isKnownRedundantTask, semanticKey, normalizeTitle } from '../utils/task
 import { runContentMigrations } from '../utils/contentMigrations';
 import type { TaskItem } from '../models/Task';
 
-export function useDataHygiene(hasHydrated: boolean) {
+export function useDataHygiene(hasHydrated: boolean): boolean {
+  const [isDone, setIsDone] = useState(false);
   const initDoneRef = useRef(false);
   useEffect(() => {
-    if (!hasHydrated || initDoneRef.current) return;
+    if (!hasHydrated) return;
+    if (initDoneRef.current) {
+      setIsDone(true);
+      return;
+    }
     initDoneRef.current = true;
     const state = useAppStore.getState();
     const lists = state.lists;
@@ -663,5 +668,7 @@ export function useDataHygiene(hasHydrated: boolean) {
 
     runContentMigrations(state);
     state.cleanupDataHygiene();
+    setIsDone(true);
   }, [hasHydrated]);
+  return isDone;
 }

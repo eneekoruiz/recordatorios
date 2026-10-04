@@ -286,17 +286,23 @@ export function runContentMigrations(store: ContentMigrationStore): void {
   // ──────────────────────────────────────────────────────────────────────────
   // 7. 'Biblioteca de vida': unificar con 'Recuerda' si existe, o crearla con sus secciones
   // ──────────────────────────────────────────────────────────────────────────
-  let libraryList = lists.find(l => 
-    l.id === 'biblioteca_vida' || 
-    l.id === 'biblioteca' || 
-    normalize(l.name).includes('biblioteca de vida') ||
-    normalize(l.name) === 'biblioteca' ||
-    normalize(l.name) === 'recuerda'
-  );
+  const isLibraryOrRecuerda = (l: any) => {
+    if (!l) return false;
+    const n = normalize(l.name);
+    return l.id === 'biblioteca_vida' ||
+      l.id === 'biblioteca' ||
+      l.id === 'recuerda' ||
+      n.includes('biblioteca de vida') ||
+      n === 'biblioteca' ||
+      n === 'recuerda';
+  };
 
-  if (libraryList) {
-    if (store.updateList && (libraryList.listType !== 'library' || normalize(libraryList.name) === 'recuerda')) {
-      store.updateList(libraryList.id, {
+  const matchingLibLists = lists.filter((l: any) => !l.deleted_at && isLibraryOrRecuerda(l));
+  let canonicalLibList = matchingLibLists.find((l: any) => l.id === 'biblioteca_vida') || matchingLibLists[0];
+
+  if (canonicalLibList) {
+    if (store.updateList && (canonicalLibList.listType !== 'library' || normalize(canonicalLibList.name) !== 'biblioteca de vida')) {
+      store.updateList(canonicalLibList.id, {
         name: 'Biblioteca de vida',
         listType: 'library',
         color: '#ff2d55',
@@ -314,10 +320,10 @@ export function runContentMigrations(store: ContentMigrationStore): void {
       autoEstimateDuration: false,
       updated_at: EPOCH
     });
-    libraryList = { id: newLibId, name: 'Biblioteca de vida' };
+    canonicalLibList = { id: newLibId, name: 'Biblioteca de vida' };
   }
 
-  const libListId = libraryList.id;
+  const libListId = canonicalLibList.id;
 
   const defaultLibSections = [
     { name: 'Películas', key: 'peliculas' },
@@ -347,25 +353,90 @@ export function runContentMigrations(store: ContentMigrationStore): void {
   });
 
   const updatedLibSections = (store.listSections || sections).filter(s => s.listId === libListId && !s.deleted_at);
+  const getSectionForType = (key: string) => {
+    return updatedLibSections.find(s => s.id === `sec_${libListId}_${key}` || normalize(s.name).includes(key))?.id;
+  };
+
+  // Mover tareas de listas redundantes (ej. lista independiente 'Recuerda') a la canónica
+  const redundantLibLists = matchingLibLists.filter((l: any) => l.id !== libListId);
+  redundantLibLists.forEach((redList: any) => {
+    const redTasks = Object.values(store.tasks || {}).filter(t => t.categoryId === redList.id);
+    redTasks.forEach(t => {
+      const oldSec = sections.find(s => s.id === t.sectionId);
+      const oldSecName = normalize(oldSec?.name);
+      let targetSecId = t.sectionId;
+
+      if (!oldSec || oldSec.listId !== libListId) {
+        if (oldSecName.includes('pelicula')) targetSecId = getSectionForType('peliculas');
+        else if (oldSecName.includes('serie')) targetSecId = getSectionForType('series');
+        else if (oldSecName.includes('musica') || oldSecName.includes('cancion')) targetSecId = getSectionForType('musica');
+        else if (oldSecName.includes('libro')) targetSecId = getSectionForType('libros');
+        else if (oldSecName.includes('apellido')) targetSecId = getSectionForType('apellidos');
+        else targetSecId = getSectionForType('recuerda');
+      }
+
+      store.updateTask(t.id, {
+        categoryId: libListId,
+        sectionId: targetSecId,
+        deleted_at: undefined
+      });
+    });
+
+    if (store.deleteList) {
+      store.deleteList(redList.id);
+    } else if (store.updateList) {
+      store.updateList(redList.id, { deleted_at: new Date().toISOString() });
+    }
+  });
+
+  // Reasignar también tareas huérfanas con categoryId 'recuerda' o 'biblioteca'
+  Object.values(store.tasks || {}).forEach(t => {
+    if ((t.categoryId === 'recuerda' || t.categoryId === 'biblioteca') && t.categoryId !== libListId) {
+      store.updateTask(t.id, {
+        categoryId: libListId,
+        sectionId: getSectionForType('recuerda'),
+        deleted_at: undefined
+      });
+    }
+  });
+
+  // Procesar y enriquecer todas las tareas de la Biblioteca de vida
   const libTasks = Object.values(store.tasks || {}).filter(t => !t.deleted_at && t.categoryId === libListId);
 
   libTasks.forEach(t => {
-    const taskSec = updatedLibSections.find(s => s.id === t.sectionId);
-    const secName = normalize(taskSec?.name);
+    let taskSec = updatedLibSections.find(s => s.id === t.sectionId);
+    let secName = normalize(taskSec?.name);
     let inferredType: TaskItem['mediaType'] | undefined = t.mediaType;
 
+    const titleNorm = normalize(t.title);
+    const notesNorm = normalize(t.notes || t.description);
+
     if (!inferredType) {
-      if (secName.includes('pelicula')) inferredType = 'movie';
-      else if (secName.includes('serie')) inferredType = 'series';
-      else if (secName.includes('musica') || secName.includes('cancion')) inferredType = 'music';
-      else if (secName.includes('libro')) inferredType = 'book';
+      if (secName.includes('pelicula') || titleNorm.includes('pelicula') || notesNorm.includes('pelicula')) inferredType = 'movie';
+      else if (secName.includes('serie') || titleNorm.includes('serie')) inferredType = 'series';
+      else if (secName.includes('musica') || secName.includes('cancion') || titleNorm.includes('cancion') || titleNorm.includes('disco')) inferredType = 'music';
+      else if (secName.includes('libro') || titleNorm.includes('libro')) inferredType = 'book';
+      else if (secName.includes('apellido') || titleNorm.includes('apellido')) inferredType = 'other';
       else inferredType = 'other';
+    }
+
+    // Si la tarea no tiene sección, asignarle la mejor sección por tipo o contenido
+    let newSectionId = t.sectionId;
+    if (!newSectionId || !updatedLibSections.some(s => s.id === newSectionId)) {
+      if (inferredType === 'movie' || titleNorm.includes('pelicula')) newSectionId = getSectionForType('peliculas');
+      else if (inferredType === 'series' || titleNorm.includes('serie')) newSectionId = getSectionForType('series');
+      else if (inferredType === 'music' || titleNorm.includes('cancion') || titleNorm.includes('musica')) newSectionId = getSectionForType('musica');
+      else if (inferredType === 'book' || titleNorm.includes('libro')) newSectionId = getSectionForType('libros');
+      else if (titleNorm.includes('apellido') || notesNorm.includes('apellido')) newSectionId = getSectionForType('apellidos');
+      else newSectionId = getSectionForType('recuerda');
     }
 
     const updates: Partial<TaskItem> = {};
     if (inferredType && t.mediaType !== inferredType) updates.mediaType = inferredType;
     if (!t.mediaStatus) updates.mediaStatus = 'want_to_watch';
-    if (t.disableDuration === undefined) updates.disableDuration = true;
+    if (newSectionId && t.sectionId !== newSectionId) updates.sectionId = newSectionId;
+    if (t.disableDuration === undefined || !t.disableDuration) updates.disableDuration = true;
+    if (t.duration !== undefined) updates.duration = undefined;
 
     if (Object.keys(updates).length > 0) {
       store.updateTask(t.id, updates);

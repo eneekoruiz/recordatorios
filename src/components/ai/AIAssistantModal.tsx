@@ -96,6 +96,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const lists = useAppStore(state => state.lists);
+  const listSections = useAppStore(state => state.listSections);
   const tasks = useAppStore(state => state.tasks);
   const addTask = useAppStore(state => state.addTask);
   const updateTask = useAppStore(state => state.updateTask);
@@ -304,7 +305,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
       const lastPending = [...shownMessages].reverse().find(m => m.sender === 'assistant' && m.batch && m.batch.tasks.length > 0);
       const lastProposedTasks = lastPending?.batch?.tasks;
 
-      const batch = await AIService.processPrompt(fullPrompt, lists, history, tasks, lastProposedTasks);
+      const batch = await AIService.processPrompt(fullPrompt, lists, history, tasks, lastProposedTasks, listSections);
 
       const aiMsg: ChatMessage = {
         id: `msg_ai_${Date.now()}`,
@@ -409,6 +410,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
         title: t.title,
         description: t.description,
         categoryId: finalCatId,
+        sectionId: t.sectionId,
         dueDate: t.dueDate,
         timeOfDay: t.timeOfDay,
         price: t.price,
@@ -418,6 +420,8 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
         people: t.people,
         vibe: t.vibe,
         locationName: t.locationName,
+        mediaType: t.mediaType,
+        mediaStatus: t.mediaStatus,
         status: 'pending' as const,
         created_at: new Date().toISOString()
       };
@@ -606,6 +610,8 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
         if (update.priority) patch.priority = update.priority;
         if (update.listId) patch.categoryId = update.listId;
         if (update.cycle) patch.cycle_id = update.cycle;
+        if (update.sectionId !== undefined) patch.sectionId = update.sectionId;
+        if (update.mediaStatus) patch.mediaStatus = update.mediaStatus;
         updateTask(update.taskId, patch);
       }
     });

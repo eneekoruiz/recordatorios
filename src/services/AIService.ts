@@ -1,4 +1,4 @@
-import type { CustomList, TaskItem } from '../models/Task';
+import type { CustomList, TaskItem, ListSection } from '../models/Task';
 import { extractPrice } from '../utils/priceExtractor';
 import { detectFormatAndParse } from '../utils/importerParser';
 import { readExtendedDate } from '../utils/nlp';
@@ -10,6 +10,8 @@ export interface ProposedTask {
   description?: string;
   listName?: string;
   listId?: string;
+  sectionId?: string;
+  sectionName?: string;
   dueDate?: string;
   timeOfDay?: 'morning' | 'afternoon' | 'night';
   price?: number;
@@ -19,6 +21,8 @@ export interface ProposedTask {
   people?: string[];
   vibe?: string;
   locationName?: string;
+  mediaType?: 'series' | 'movie' | 'book' | 'music' | 'podcast' | 'other';
+  mediaStatus?: 'want_to_watch' | 'in_progress' | 'completed' | 'dropped' | 'favorite';
   selected: boolean;
 }
 
@@ -48,9 +52,12 @@ export interface ProposedTaskUpdate {
   price?: number;
   listId?: string;
   listName?: string;
+  sectionId?: string;
+  sectionName?: string;
   priority?: 'none' | 'low' | 'medium' | 'high';
   cycle?: 'cycle_day' | 'cycle_week' | 'cycle_month' | 'cycle_year';
   status?: 'pending' | 'completed';
+  mediaStatus?: 'want_to_watch' | 'in_progress' | 'completed' | 'dropped' | 'favorite';
   deleted?: boolean;
   selected: boolean;
   reason?: string;
@@ -158,7 +165,8 @@ export class AIService {
     existingLists: CustomList[],
     conversationHistory: { role: 'user' | 'assistant'; text: string }[] = [],
     existingTasks?: Record<string, TaskItem> | TaskItem[],
-    lastProposedTasks?: ProposedTask[]
+    lastProposedTasks?: ProposedTask[],
+    listSections?: ListSection[]
   ): Promise<ProposedBatch> {
     const config = this.getConfig();
     const apiKey = config.apiKey?.trim();
@@ -170,10 +178,10 @@ export class AIService {
     const isGemini = config.provider === 'gemini' || (config.provider === 'auto' && Boolean(apiKey) && apiKey!.startsWith('AIza'));
     if (isGemini && apiKey) {
       try {
-        return await this.callGemini(userMessage, existingLists, conversationHistory, apiKey, existingTasks);
+        return await this.callGemini(userMessage, existingLists, conversationHistory, apiKey, existingTasks, listSections);
       } catch (err: any) {
         console.error('Gemini API call failed:', err);
-        const localBatch = this.localSemanticExtract(userMessage, existingLists, existingTasks, lastProposedTasks);
+        const localBatch = this.localSemanticExtract(userMessage, existingLists, existingTasks, lastProposedTasks, listSections);
         return {
           ...localBatch,
           reply: `⚠️ *[Aviso: No se pudo conectar con Gemini (${err.message || 'error de conexión'}). He procesado tu solicitud con el extractor local inteligente]:*\n\n${localBatch.reply}`,
@@ -188,10 +196,10 @@ export class AIService {
     // 2. External LLM via OpenAI API if key is present
     if (config.provider === 'openai' && apiKey) {
       try {
-        return await this.callOpenAI(userMessage, existingLists, conversationHistory, apiKey, existingTasks);
+        return await this.callOpenAI(userMessage, existingLists, conversationHistory, apiKey, existingTasks, listSections);
       } catch (err: any) {
         console.error('OpenAI API call failed:', err);
-        const localBatch = this.localSemanticExtract(userMessage, existingLists, existingTasks, lastProposedTasks);
+        const localBatch = this.localSemanticExtract(userMessage, existingLists, existingTasks, lastProposedTasks, listSections);
         return {
           ...localBatch,
           reply: `⚠️ *[Aviso: No se pudo conectar con OpenAI (${err.message || 'error de conexión'}). He procesado tu solicitud con el extractor local inteligente]:*\n\n${localBatch.reply}`,
@@ -208,7 +216,7 @@ export class AIService {
     // "Google Gemini LLM" / "OpenAI GPT" — parecía que se estaba hablando con el LLM real
     // cuando en realidad cada mensaje lo respondía el extractor de reglas.
     if ((config.provider === 'gemini' || config.provider === 'openai') && !apiKey) {
-      const localBatch = this.localSemanticExtract(userMessage, existingLists, existingTasks, lastProposedTasks);
+      const localBatch = this.localSemanticExtract(userMessage, existingLists, existingTasks, lastProposedTasks, listSections);
       return {
         ...localBatch,
         reply: `⚠️ *[Tienes ${config.provider === 'gemini' ? 'Gemini' : 'OpenAI'} elegido en Ajustes pero sin clave de API guardada, así que esto lo ha respondido el extractor local, no un LLM real]:*\n\n${localBatch.reply}`,
@@ -220,7 +228,7 @@ export class AIService {
     }
 
     // 4. Fallback: Intelligent Local Semantic Extractor (Zero-Config)
-    return this.localSemanticExtract(userMessage, existingLists, existingTasks, lastProposedTasks);
+    return this.localSemanticExtract(userMessage, existingLists, existingTasks, lastProposedTasks, listSections);
   }
 
   /**
@@ -353,7 +361,8 @@ export class AIService {
     text: string,
     existingLists: CustomList[],
     existingTasks?: Record<string, TaskItem> | TaskItem[],
-    lastProposedTasks?: ProposedTask[]
+    lastProposedTasks?: ProposedTask[],
+    listSections?: ListSection[]
   ): ProposedBatch {
     const trimmed = text.trim();
     if (!trimmed) {
@@ -559,6 +568,95 @@ export class AIService {
           }
         };
       }
+    }
+
+    // 1.5. Intent: Consulta sobre lo que se ha hecho / tareas completadas
+    const isQueryCompleted = /\b(qu[ée]\s+(?:(?:tareas|cosas|recordatorios)\s+)?(?:he\s+hecho|hice|he\s+completado|complet[ée]|he\s+terminado|termin[ée])|cosas\s+(?:que\s+he\s+hecho|completadas)|tareas\s+(?:completadas|hechas|terminadas)|recordatorios\s+(?:completados|hechos|terminados))\b/i.test(trimmed);
+    if (isQueryCompleted && tasksArray.length > 0) {
+      const completedTasks = tasksArray.filter(t => !t.deleted_at && (t.status === 'completed' || (t.completionHistory && t.completionHistory.length > 0)));
+      if (completedTasks.length === 0) {
+        return {
+          reply: 'Aún no tienes recordatorios marcados como completados en tu historial reciente. ¡Ánimo con la jornada!',
+          tasks: []
+        };
+      }
+      const bullets = completedTasks.slice(0, 10).map(t => {
+        const listName = existingLists.find(l => l.id === t.categoryId)?.name;
+        const sec = listSections?.find(s => s.id === t.sectionId);
+        const meta = [listName, sec?.name].filter(Boolean).join(' › ');
+        return `- ✅ **${t.title}**${meta ? ` (${meta})` : ''}`;
+      }).join('\n');
+      return {
+        reply: `✨ **Has completado ${completedTasks.length} recordatorio${completedTasks.length === 1 ? '' : 's'}**:\n\n${bullets}${completedTasks.length > 10 ? `\n...y ${completedTasks.length - 10} más en el historial.` : ''}\n\n¡Gran trabajo! Cada paso cuenta. 🎉`,
+        tasks: []
+      };
+    }
+
+    // 1.8. Intent: Consulta o conversación sobre Biblioteca de Vida / Recuerda
+    const isLibraryCreationVerb = /\b(apunta|anota|guarda|agrega|a[ñn]ade|crea|recu[ée]rdame|pon(?:me)?)\b/i.test(trimmed);
+    const isQueryLifeLibrary = !isLibraryCreationVerb &&
+      /\b(biblioteca(?: de vida)?|pel[íi]culas?|series?|m[úu]sica|cancion(?:es)?|apellidos?|libros?|recuerda)\b/i.test(trimmed) &&
+      /\b(qu[ée]|cu[áa]l(?:es)?|tengo|hay|muestra|mu[ée]strame|dime|recomiend|para qu[ée] sirve|sirve|apuntad[ao]s?|guardad[ao]s?)\b/i.test(trimmed);
+    if (isQueryLifeLibrary) {
+      const libList = existingLists.find(l => 
+        l.id === 'biblioteca_vida' || 
+        l.id === 'biblioteca' || 
+        (l.name || '').toLowerCase().includes('biblioteca') || 
+        (l.name || '').toLowerCase().includes('recuerda')
+      );
+      const libTasks = tasksArray.filter(t => !t.deleted_at && (
+        (libList && t.categoryId === libList.id) ||
+        Boolean(t.mediaType) ||
+        (listSections && listSections.some(s => s.id === t.sectionId && (s.listId === libList?.id || s.name.toLowerCase().includes('pel') || s.name.toLowerCase().includes('ser') || s.name.toLowerCase().includes('mus') || s.name.toLowerCase().includes('apel'))))
+      ));
+
+      const normLower = trimmed.toLowerCase();
+      let filtered = libTasks;
+      let categorySubject = 'tu Biblioteca de vida';
+
+      if (normLower.includes('pelicula') || normLower.includes('película')) {
+        filtered = libTasks.filter(t => t.mediaType === 'movie' || (listSections?.find(s => s.id === t.sectionId)?.name || '').toLowerCase().includes('pel'));
+        categorySubject = 'Películas';
+      } else if (normLower.includes('serie')) {
+        filtered = libTasks.filter(t => t.mediaType === 'series' || (listSections?.find(s => s.id === t.sectionId)?.name || '').toLowerCase().includes('ser'));
+        categorySubject = 'Series';
+      } else if (normLower.includes('musica') || normLower.includes('música') || normLower.includes('cancion') || normLower.includes('canción')) {
+        filtered = libTasks.filter(t => t.mediaType === 'music' || (listSections?.find(s => s.id === t.sectionId)?.name || '').toLowerCase().includes('mus'));
+        categorySubject = 'Música';
+      } else if (normLower.includes('apellido')) {
+        filtered = libTasks.filter(t => (listSections?.find(s => s.id === t.sectionId)?.name || '').toLowerCase().includes('apel') || t.title.toLowerCase().includes('apellido'));
+        categorySubject = 'Apellidos';
+      } else if (normLower.includes('libro')) {
+        filtered = libTasks.filter(t => t.mediaType === 'book' || (listSections?.find(s => s.id === t.sectionId)?.name || '').toLowerCase().includes('lib'));
+        categorySubject = 'Libros';
+      }
+
+      if (normLower.includes('para que sirve') || normLower.includes('para qué sirve')) {
+        return {
+          reply: '📚 **Tu Biblioteca de vida** es tu repositorio personal para todas las cosas que quieres recordar y conservar: películas y series pendientes o vistas, música que te han recomendado, lecturas, citas y curiosidades como apellidos o notas familiares. Está organizada por secciones para que puedas guardar estados (visto/por ver), valoraciones de estrellas y notas privadas.',
+          tasks: []
+        };
+      }
+
+      if (filtered.length === 0) {
+        return {
+          reply: `En la sección de **${categorySubject}** no tienes elementos anotados todavía. Puedes decirme por ejemplo *"Apunta la película Interstellar"* o *"Guarda el apellido García"* y lo organizaré directamente en tu biblioteca.`,
+          tasks: []
+        };
+      }
+
+      const bullets = filtered.slice(0, 12).map(t => {
+        const sec = listSections?.find(s => s.id === t.sectionId);
+        const statusIcon = t.mediaStatus === 'completed' || t.status === 'completed' ? '✅ Vista' : t.mediaStatus === 'favorite' ? '⭐ Favorita' : '⏳ Pendiente';
+        const ratingStr = t.mediaRating ? ` [${t.mediaRating}★]` : '';
+        const notesStr = (t.notes || t.description) ? ` — "${(t.notes || t.description || '').slice(0, 50)}"` : '';
+        return `- **${t.title}** (${statusIcon}${ratingStr}${sec ? `, en ${sec.name}` : ''})${notesStr}`;
+      }).join('\n');
+
+      return {
+        reply: `🎬 **En ${categorySubject} tienes ${filtered.length} elemento${filtered.length === 1 ? '' : 's'}**:\n\n${bullets}${filtered.length > 12 ? `\n...y ${filtered.length - 12} más.` : ''}\n\n¿Quieres que marquemos alguno como visto, añadamos una valoración o apuntemos uno nuevo?`,
+        tasks: []
+      };
     }
 
     // 2. Intent: Consulta sobre tareas de hoy
@@ -906,8 +1004,60 @@ export class AIService {
       // Match target list
       let listId = suggestedList ? undefined : 'inbox';
       let listName = suggestedList ? suggestedList.name : 'Bandeja de entrada';
+      let targetSectionId: string | undefined;
+      let targetSectionName: string | undefined;
+      let inferredMediaType: ProposedTask['mediaType'];
+      let inferredMediaStatus: ProposedTask['mediaStatus'];
 
-      if (isNarrative || finalPeople.length > 0) {
+      const normSeg = segment.toLowerCase();
+      let inferredStatusFromText: ProposedTask['mediaStatus'] = 'want_to_watch';
+      if (/\b(?:ya\s+(?:he\s+)?visto|he\s+visto|ya\s+vi|vista|visto|le[ií]d[ao]|escuchad[ao]|terminad[ao])\b/i.test(normSeg) || /\b(?:ya\s+(?:he\s+)?visto|he\s+visto|ya\s+vi|vista|visto|le[ií]d[ao]|escuchad[ao]|terminad[ao])\b/i.test(text)) {
+        inferredStatusFromText = 'completed';
+      } else if (/\bfavorit[ao]s?\b/i.test(normSeg) || /\bfavorit[ao]s?\b/i.test(text)) {
+        inferredStatusFromText = 'favorite';
+      }
+
+      if (normSeg.includes('pelicula') || normSeg.includes('película')) {
+        inferredMediaType = 'movie';
+        inferredMediaStatus = inferredStatusFromText;
+      } else if (normSeg.includes('serie')) {
+        inferredMediaType = 'series';
+        inferredMediaStatus = inferredStatusFromText;
+      } else if (normSeg.includes('cancion') || normSeg.includes('canción') || normSeg.includes('musica') || normSeg.includes('música') || normSeg.includes('disco') || normSeg.includes('álbum')) {
+        inferredMediaType = 'music';
+        inferredMediaStatus = inferredStatusFromText;
+      } else if (normSeg.includes('libro') || normSeg.includes('novela')) {
+        inferredMediaType = 'book';
+        inferredMediaStatus = inferredStatusFromText;
+      } else if (normSeg.includes('apellido')) {
+        inferredMediaType = 'other';
+        inferredMediaStatus = 'want_to_watch';
+      }
+
+      const libraryList = existingLists.find(l => 
+        l.id === 'biblioteca_vida' || 
+        l.id === 'biblioteca' || 
+        (l.name || '').toLowerCase().includes('biblioteca') || 
+        (l.name || '').toLowerCase().includes('recuerda')
+      );
+
+      if (inferredMediaType && libraryList) {
+        listId = libraryList.id;
+        listName = libraryList.name;
+        if (listSections && listSections.length > 0) {
+          const matchSec = listSections.find(s => s.listId === libraryList.id && (
+            (inferredMediaType === 'movie' && s.name.toLowerCase().includes('pel')) ||
+            (inferredMediaType === 'series' && s.name.toLowerCase().includes('ser')) ||
+            (inferredMediaType === 'music' && s.name.toLowerCase().includes('mus')) ||
+            (inferredMediaType === 'book' && s.name.toLowerCase().includes('lib')) ||
+            (normSeg.includes('apellido') && s.name.toLowerCase().includes('apel'))
+          ));
+          if (matchSec) {
+            targetSectionId = matchSec.id;
+            targetSectionName = matchSec.name;
+          }
+        }
+      } else if (isNarrative || finalPeople.length > 0) {
         const queHeHechoList = existingLists.find(l => l.id === 'que_he_hecho' || l.id === 'list_que_he_hecho' || (l.name || '').toLowerCase().includes('qué he hecho'));
         if (queHeHechoList) {
           listId = queHeHechoList.id;
@@ -979,6 +1129,8 @@ export class AIService {
           title: cleanTitle,
           listName,
           listId,
+          sectionId: targetSectionId,
+          sectionName: targetSectionName,
           dueDate: finalDueDateString,
           timeOfDay,
           price,
@@ -988,6 +1140,8 @@ export class AIService {
           people: finalPeople.length > 0 ? finalPeople : undefined,
           vibe,
           locationName,
+          mediaType: inferredMediaType,
+          mediaStatus: inferredMediaStatus,
           selected: true
         });
         if (ownDate && dueDate) dayCtx = new Date(dueDate);
@@ -1043,26 +1197,57 @@ export class AIService {
    * precio/frecuencia...), así que su calidad dependía de qué proveedor tuviera configurado
    * el usuario. Con el mismo prompt, ambos entienden las mismas formulaciones igual de bien.
    */
-  private static buildSystemInstruction(existingLists: CustomList[], tasksArr: TaskItem[]): string {
-    const listNames = existingLists.map(l => `"${l.name}" (id: "${l.id}")`).join(', ');
+  private static buildSystemInstruction(existingLists: CustomList[], tasksArr: TaskItem[], listSections: ListSection[] = []): string {
+    const listNames = existingLists.map(l => {
+      const secs = listSections.filter(s => s.listId === l.id && !s.deleted_at);
+      const secsStr = secs.length > 0 ? ` [Secciones: ${secs.map(s => `"${s.name}" (id: "${s.id}")`).join(', ')}]` : '';
+      return `- "${l.name}" (id: "${l.id}", tipo: "${l.listType || 'simple'}")${secsStr}`;
+    }).join('\n');
 
-    // Format up to 60 active non-deleted tasks so the model can cross-reference them accurately
+    // Format up to 80 active non-deleted tasks with section names and cultural/media metadata
     const activeTasksFormatted = tasksArr
       .filter(t => !t.deleted_at && t.status !== 'completed')
-      .slice(0, 60)
+      .slice(0, 80)
       .map(t => {
         const listName = existingLists.find(l => l.id === t.categoryId)?.name || t.categoryId || 'inbox';
-        return `- [ID: "${t.id}"] "${t.title}" (Lista: "${listName}", ID Lista: "${t.categoryId || 'inbox'}"${t.price !== undefined ? `, Precio: ${t.price}€` : ''}${t.dueDate ? `, Fecha: ${t.dueDate.slice(0, 10)}` : ''}${t.cycle_id ? `, Ciclo: ${t.cycle_id}` : ''})`;
+        const sec = listSections.find(s => s.id === t.sectionId);
+        const secStr = sec ? `, Sección: "${sec.name}" (id: "${sec.id}")` : '';
+        const notesStr = (t.notes || t.description) ? `, Notas: "${(t.notes || t.description || '').slice(0, 100)}"` : '';
+        const mediaParts: string[] = [];
+        if (t.mediaType) mediaParts.push(`tipo: ${t.mediaType}`);
+        if (t.mediaStatus) mediaParts.push(`estado: ${t.mediaStatus}`);
+        if (t.mediaRating) mediaParts.push(`valoración: ${t.mediaRating}★`);
+        if (t.mediaPlatform) mediaParts.push(`plataforma: ${t.mediaPlatform}`);
+        if (t.mediaRecommendedBy) mediaParts.push(`recomendado por: "${t.mediaRecommendedBy}"`);
+        const mediaStr = mediaParts.length > 0 ? `, Cultura/Media: [${mediaParts.join(', ')}]` : '';
+        return `- [ID: "${t.id}"] "${t.title}" (Lista: "${listName}", ID Lista: "${t.categoryId || 'inbox'}"${secStr}${mediaStr}${notesStr}${t.price !== undefined ? `, Precio: ${t.price}€` : ''}${t.dueDate ? `, Fecha: ${t.dueDate.slice(0, 10)}` : ''}${t.cycle_id ? `, Ciclo: ${t.cycle_id}` : ''})`;
+      })
+      .join('\n');
+
+    // Format recently completed tasks so the model can report on accomplishments and history
+    const completedTasksFormatted = tasksArr
+      .filter(t => !t.deleted_at && (t.status === 'completed' || (t.completionHistory && t.completionHistory.length > 0)))
+      .slice(0, 30)
+      .map(t => {
+        const listName = existingLists.find(l => l.id === t.categoryId)?.name || t.categoryId || 'inbox';
+        const sec = listSections.find(s => s.id === t.sectionId);
+        const secStr = sec ? `, Sección: "${sec.name}"` : '';
+        const dateStr = t.completed_at ? t.completed_at.slice(0, 10) : t.updated_at ? t.updated_at.slice(0, 10) : 'reciente';
+        return `- [COMPLETADO] "${t.title}" (Lista: "${listName}"${secStr}, Fecha: ${dateStr})`;
       })
       .join('\n');
 
     return `Eres el Asistente IA de Recordatorios Élite (Apple Reminders & Journal companion), sumamente inteligente, analítico, meticuloso y empático.
 Tu objetivo es comprender incluso los mensajes más densos, caóticos o enrevesados del usuario, desglosando cada instrucción sin omitir ningún detalle.
 
-Listas existentes del usuario: [${listNames}].
+Listas y secciones existentes del usuario:
+${listNames || '(Sin listas personalizadas)'}
 
 Recordatorios activos actuales del usuario:
 ${activeTasksFormatted || '(No hay recordatorios activos)'}
+
+Recordatorios completados recientemente (lo que el usuario ha hecho):
+${completedTasksFormatted || '(Aún no hay recordatorios completados recientemente)'}
 
 REGLAS CRÍTICAS DE COMPRENSIÓN, MODIFICACIÓN Y PREGUNTAS:
 1. DISTINCIÓN ENTRE TAREAS NUEVAS vs MODIFICACIÓN / COMPLETAR / BORRAR DE TAREAS EXISTENTES:
@@ -1073,7 +1258,7 @@ REGLAS CRÍTICAS DE COMPRENSIÓN, MODIFICACIÓN Y PREGUNTAS:
    - PREVENCIÓN DE DUPLICADOS: Si el usuario menciona crear una tarea pero ya existe en activos para esa misma lista, no crees un duplicado idéntico. En su lugar, avísale en "reply" o propón modificarla.
 
 2. PREGUNTAS Y ACLARACIONES (¡NO DEDUZCAS SIN SABER!):
-   - Si el mensaje del usuario es ambiguo, le falta información clave o no está claro a qué lista corresponde (por ejemplo: hay varias listas posibles y no especificó cuál, o pide "cambia la cita" y hay más de una cita, o la fecha es confusa):
+   - Si el mensaje del usuario es ambiguo, le falta información clave o no está claro a qué lista corresponde:
      ¡NO deduzcas a ciegas ni te inventes datos!
      Haz preguntas concretas al usuario en "clarificationQuestions" (y redáctalas amablemente en "reply").
      Proporciona opciones directas y clicables en "suggestedReplies" (ej: ["En la lista Compra", "En la lista Casa", "Para hoy a las 18:00"]).
@@ -1094,6 +1279,22 @@ REGLAS CRÍTICAS DE COMPRENSIÓN, MODIFICACIÓN Y PREGUNTAS:
    - Asigna a la lista "Qué he hecho" (id: "que_he_hecho").
    - Extrae los nombres de personas en "people" y el emoji en "vibe".
 
+6. CONSULTAS SOBRE LO QUE HAS HECHO / HISTORIAL DE LOGROS:
+   - Si el usuario pregunta qué ha hecho hoy, qué ha completado, qué tareas ha terminado o pide un resumen de su actividad:
+     Consulta la sección "Recordatorios completados recientemente".
+     Responde en "reply" de forma cálida, ágil y precisa, felicitando por los avances y resumiendo lo completado. No inventes tareas ficticias.
+
+7. BIBLIOTECA DE VIDA (Películas, Series, Música, Libros, Apellidos, Recuerdos):
+   - La lista "Biblioteca de vida" (o "Recuerda") guarda contenidos culturales y recuerdos personales organizados por secciones (Películas, Series, Música, Libros, Apellidos, Recuerda).
+   - Conversa con total agilidad: recomienda qué ver de lo que tiene pendiente, comenta sobre su música, resume qué apellidos tiene guardados o qué lecturas tiene anotadas.
+   - Si el usuario pide añadir una película, serie, canción, libro o apellido (ej. "apunta la peli Oppenheimer", "añade la serie Dark", "guarda el apellido Martínez"):
+     Añádelo a "tasks" con:
+     * "listId": ID de la lista "Biblioteca de vida" (o equivalente)
+     * "sectionId": ID exacto de la sección ("Películas", "Series", "Música", "Libros", "Apellidos", "Recuerda")
+     * "mediaType": "movie" | "series" | "music" | "book" | "other"
+     * "mediaStatus": "want_to_watch" (o "completed" si dice que ya lo vio / escuchó).
+   - Si pide marcar una obra como vista o calificarla, incluye en "taskUpdates" el "taskId", "mediaStatus": "completed" y opcionalmente notas.
+
 DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
 {
   "reply": "Respuesta conversacional empática, inteligente y clara",
@@ -1109,6 +1310,8 @@ DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
       "status": "completed", // o "pending"
       "deleted": false, // true si pidió eliminarla
       "listId": "id_nueva_lista",
+      "sectionId": "id_nueva_seccion",
+      "mediaStatus": "want_to_watch" | "in_progress" | "completed" | "favorite",
       "dueDate": "ISO 8601 o null",
       "reason": "Explicación de la modificación"
     }
@@ -1119,13 +1322,16 @@ DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
       "description": "Notas adicionales (opcional)",
       "listName": "Nombre de la lista recomendada",
       "listId": "id de la lista si coincide con una existente",
+      "sectionId": "id de la sección si coincide con una existente",
       "dueDate": "ISO 8601 string o null",
       "timeOfDay": "morning" | "afternoon" | "night" | null,
       "price": number | null,
       "priority": "none" | "low" | "medium" | "high",
       "cycle": "cycle_day" | "cycle_week" | "cycle_month" | "cycle_year" | null,
       "people": ["Persona1", "Persona2"],
-      "vibe": "✨ Especial"
+      "vibe": "✨ Especial",
+      "mediaType": "series" | "movie" | "book" | "music" | "podcast" | "other" | null,
+      "mediaStatus": "want_to_watch" | "in_progress" | "completed" | "dropped" | "favorite" | null
     }
   ]
 }`;
@@ -1139,10 +1345,11 @@ DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
     existingLists: CustomList[],
     history: { role: string; text: string }[] = [],
     apiKey: string,
-    existingTasks?: Record<string, TaskItem> | TaskItem[]
+    existingTasks?: Record<string, TaskItem> | TaskItem[],
+    listSections?: ListSection[]
   ): Promise<ProposedBatch> {
     const tasksArr = existingTasks ? (Array.isArray(existingTasks) ? existingTasks : Object.values(existingTasks)) : [];
-    const systemInstruction = this.buildSystemInstruction(existingLists, tasksArr);
+    const systemInstruction = this.buildSystemInstruction(existingLists, tasksArr, listSections);
 
     // Prepare conversational history payload (ensuring alternating user/model sequence)
     const contents: any[] = [];
@@ -1239,10 +1446,11 @@ DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
     existingLists: CustomList[],
     history: { role: string; text: string }[],
     apiKey: string,
-    existingTasks?: Record<string, TaskItem> | TaskItem[]
+    existingTasks?: Record<string, TaskItem> | TaskItem[],
+    listSections?: ListSection[]
   ): Promise<ProposedBatch> {
     const tasksArr = existingTasks ? (Array.isArray(existingTasks) ? existingTasks : Object.values(existingTasks)) : [];
-    const systemPrompt = this.buildSystemInstruction(existingLists, tasksArr);
+    const systemPrompt = this.buildSystemInstruction(existingLists, tasksArr, listSections);
 
     // OpenAI ya usa 'user'/'assistant' tal cual, a diferencia de Gemini — no hace falta
     // traducir el rol. Antes este historial se recibía pero nunca se usaba: cada turno se
