@@ -78,20 +78,13 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
   const setTheme = useAppStore(state => state.setTheme);
 
   useEffect(() => {
+    const handleToggle = () => setInternalOpen(prev => !prev);
     const handleOpen = () => setInternalOpen(true);
-    window.addEventListener('open-command-palette', handleOpen);
+    window.addEventListener('open-command-palette', handleToggle);
     window.addEventListener('open-spotlight', handleOpen);
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setInternalOpen(prev => !prev);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
     return () => {
-      window.removeEventListener('open-command-palette', handleOpen);
+      window.removeEventListener('open-command-palette', handleToggle);
       window.removeEventListener('open-spotlight', handleOpen);
-      window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
@@ -211,7 +204,14 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
   useEffect(() => {
     if (!isModalOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown') {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          setSelectedIndex(prev => (prev - 1 >= 0 ? prev - 1 : items.length - 1));
+        } else {
+          setSelectedIndex(prev => (prev + 1 < items.length ? prev + 1 : 0));
+        }
+      } else if (e.key === 'ArrowDown') {
         e.preventDefault();
         setSelectedIndex(prev => (prev + 1 < items.length ? prev + 1 : 0));
       } else if (e.key === 'ArrowUp') {

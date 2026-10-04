@@ -10,6 +10,7 @@
   /* Contraste AA (≥ 4,5:1) sobre blanco y sobre el gris agrupado: el terciario de iOS (30–46 %) no lo alcanza. */
   --text-secondary: rgba(60, 60, 67, 0.84);
   --text-tertiary: rgba(60, 60, 67, 0.74);
+  --accent-orange: #c95100; /* Accesible AA sobre fondo blanco */
   --separator: rgba(60, 60, 67, 0.16);
   --sidebar-width: 320px;
   --content-max-width: 920px;
@@ -45,6 +46,24 @@
   --separator: rgba(84, 84, 88, 0.45);
   --card-bg: #1c1c1e;
   --bg-material: rgba(44, 44, 46, 0.82);
+}
+
+/* ---------- Accesibilidad AA en tema claro para acentos naranja ---------- */
+.apple-large-counter {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+:root:not([data-theme="dark"]) .apple-large-counter[style*="#ff9500"],
+:root:not([data-theme="dark"]) .apple-large-counter[style*="rgb(255, 149, 0)"] {
+  color: var(--accent-orange, #c95100) !important;
+}
+
+:root:not([data-theme="dark"]) .apple-header-start-btn[style*="#ff9500"],
+:root:not([data-theme="dark"]) .apple-header-start-btn[style*="rgb(255, 149, 0)"] {
+  color: var(--accent-orange, #c95100) !important;
+  border-color: color-mix(in srgb, var(--accent-orange, #c95100) 35%, transparent) !important;
 }
 
 /* ---------- Tipografía: nunca partir palabras a mitad ---------- */

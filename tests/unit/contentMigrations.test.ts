@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { runContentMigrations } from '../../src/utils/contentMigrations';
-import { VITAL_HABITS_LIST_ID } from '../../src/utils/vitalHabits';
+import { VITAL_HABITS_LIST_ID, VITAL_HABITS_SECTION_ID } from '../../src/utils/vitalHabits';
 import { calculateTasksDuration } from '../../src/utils/taskDuration';
 import type { TaskItem } from '../../src/models/Task';
 
@@ -60,12 +60,14 @@ describe('runContentMigrations (Misiones 4 y 5)', () => {
 
     const taskValues = Object.values(tasks).filter(t => !t.deleted_at);
 
-    // 1. Hábitos vitales
-    const vitalList = lists.find(l => l.id === VITAL_HABITS_LIST_ID);
-    expect(vitalList).toBeDefined();
-    expect(vitalList.name).toBe('Hábitos vitales');
+    // 1. Hábitos vitales integrados en sección de quehaceres (sin lista separada)
+    const vitalList = lists.find(l => l.id === VITAL_HABITS_LIST_ID && !l.deleted_at);
+    expect(vitalList).toBeUndefined();
 
-    const habitTasks = taskValues.filter(t => t.categoryId === VITAL_HABITS_LIST_ID);
+    const habitSec = listSections.find(s => s.id === VITAL_HABITS_SECTION_ID || s.name === 'Hábitos vitales');
+    expect(habitSec).toBeDefined();
+
+    const habitTasks = taskValues.filter(t => t.sectionId === habitSec?.id);
     expect(habitTasks.some(t => t.title.toLowerCase().includes('beber agua'))).toBe(true);
     expect(habitTasks.some(t => t.title.toLowerCase().includes('comer'))).toBe(true);
     // Verificar que los hábitos vitales suman 0 minutos en el motor de duración
@@ -121,5 +123,58 @@ describe('runContentMigrations (Misiones 4 y 5)', () => {
     runContentMigrations(store);
     const countAfter = Object.values(tasks).filter(t => !t.deleted_at).length;
     expect(countAfter).toBe(countBefore);
+  });
+
+  it('P1-1: restaura tareas personalizadas de hábitos vitales que estuvieran en la lista eliminada o con deleted_at', () => {
+    let tasks: Record<string, TaskItem> = {
+      t_custom: {
+        id: 't_custom',
+        title: 'Tomar suplemento vitamínico',
+        categoryId: VITAL_HABITS_LIST_ID,
+        status: 'pending',
+        deleted_at: '2026-10-01T12:00:00.000Z',
+        created_at: '',
+        version: 1,
+        user_id: 'u1',
+        type: 'task',
+        notes: 'Con el desayuno'
+      }
+    };
+    let lists: any[] = [
+      { id: 'quehaceres', name: 'Quehaceres diarios', listType: 'routines' },
+      { id: VITAL_HABITS_LIST_ID, name: 'Hábitos vitales', listType: 'simple' }
+    ];
+    let listSections: any[] = [];
+
+    const store: any = {
+      get tasks() { return tasks; },
+      get lists() { return lists; },
+      get listSections() { return listSections; },
+      addList: (l: any) => { lists.push(l); },
+      addListSection: (s: any) => { listSections.push(s); },
+      addTask: (t: any) => {
+        const id = t.id || 'gen_' + Math.random().toString(36).slice(2);
+        tasks[id] = { id, ...t };
+      },
+      updateTask: (id: string, updates: any) => {
+        if (tasks[id]) {
+          tasks[id] = { ...tasks[id], ...updates };
+        }
+      },
+      deleteList: (id: string) => {
+        lists = lists.filter(l => l.id !== id);
+      }
+    };
+
+    runContentMigrations(store);
+
+    const migrated = tasks['t_custom'];
+    expect(migrated).toBeDefined();
+    expect(migrated.deleted_at).toBeUndefined();
+    expect(migrated.categoryId).toBe('quehaceres');
+    expect(migrated.sectionId).toBe(VITAL_HABITS_SECTION_ID);
+    expect(migrated.disableDuration).toBe(true);
+    expect(migrated.notes).toBe('Con el desayuno');
+    expect(lists.some(l => l.id === VITAL_HABITS_LIST_ID)).toBe(false);
   });
 });

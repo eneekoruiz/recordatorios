@@ -100,21 +100,33 @@ export function createAuthRouter(context: AppContext) {
         securityChanged = true; // último código usado / código de recuperación consumido
       }
 
-      // Aviso de inicio de sesión desde un dispositivo nuevo (al mejor esfuerzo: nunca impide entrar).
+      // Aviso de inicio de sesión desde un dispositivo nuevo
       const seen = noteDevice(security, deviceId(req.headers['user-agent']));
-      if (seen.changed || securityChanged) {
+
+      // Si cambió el estado de seguridad (consumo de código de recuperación o replay de TOTP),
+      // la persistencia atómica en BD es OBLIGATORIA antes de emitir cualquier token de sesión.
+      if (securityChanged) {
+        user.preferences = withSecurity(user.preferences, seen.security);
+        await prisma.user.update({ where: { id: user.id }, data: { preferences: user.preferences } });
+      } else if (seen.changed) {
+        // El registro de dispositivo habitual es de mejor esfuerzo: nunca bloquea entrar
         try {
           user.preferences = withSecurity(user.preferences, seen.security);
           await prisma.user.update({ where: { id: user.id }, data: { preferences: user.preferences } });
-          if (seen.isNew) {
-            sendSecurityEmail(user.email, {
-              subject: 'Nuevo inicio de sesión en Recordatorios',
-              heading: 'Has iniciado sesión desde un dispositivo nuevo',
-              body: 'Acabamos de detectar un inicio de sesión en tu cuenta desde un navegador o dispositivo que no habíamos visto antes.',
-            });
-          }
         } catch (error: any) {
           console.error('No se pudo registrar el dispositivo:', error?.message || error);
+        }
+      }
+
+      if (seen.isNew) {
+        try {
+          sendSecurityEmail(user.email, {
+            subject: 'Nuevo inicio de sesión en Recordatorios',
+            heading: 'Has iniciado sesión desde un dispositivo nuevo',
+            body: 'Acabamos de detectar un inicio de sesión en tu cuenta desde un navegador o dispositivo que no habíamos visto antes.',
+          });
+        } catch (error: any) {
+          console.error('No se pudo enviar el aviso de nuevo dispositivo:', error?.message || error);
         }
       }
 

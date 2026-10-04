@@ -4,7 +4,7 @@ import { DurationInfoCard } from '../../ui/DurationInfoCard';
 import { HapticService } from '../../../services/HapticService';
 import type { SectionMenuState } from './SectionContextMenu';
 import type { TasksDurationSummary } from '../../../utils/taskDuration';
-import { isShoppingList } from '../../../utils/specialLists';
+import { isShoppingList, isLifeLibraryList } from '../../../utils/specialLists';
 import { useAppStore } from '../../../store/useAppStore';
 import { formatEuro } from '../../../utils/format';
 import { classifyDropZone, DRAG_MOVE_THRESHOLD_PX } from '../../../utils/dragDrop';
@@ -124,9 +124,10 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
 }) => {
   const currentSectionRoutineMode = sectionRoutineModes[data.category] || data.routineMode || 'only_section';
   const isShopping = isShoppingList(data.category);
+  const isLibrary = isLifeLibraryList(data.category);
   // Con «+ Diarias» activo, routineDurations.full ya incluye las mezcladas (mismo nivel, sin subcabecera).
   const isFullRoutine = currentSectionRoutineMode === 'full_routine';
-  const durSummary = !isShopping ? (data.routineDurations ? (isFullRoutine ? data.routineDurations.full : data.routineDurations.only) : durationSummary) : null;
+  const durSummary = !isShopping && !isLibrary ? (data.routineDurations ? (isFullRoutine ? data.routineDurations.full : data.routineDurations.only) : durationSummary) : null;
   const sectionDurationLabel = durSummary && durSummary.activeMinutes > 0 ? durSummary.formattedActive : null;
 
   // Corto para caber en el móvil: «+ Diarias» en las semanales, «+ Acumuladas» en mensuales y anuales.
@@ -585,17 +586,13 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                 >
                   {data.title}
                 </h3>
-                {durationNode && (
-                  <div style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center' }}>
-                    {durationNode}
-                  </div>
-                )}
               </div>
-              {priceNode && (
+              {(durationNode || priceNode) && (
                 <div
                   className="section-duration section-meta"
-                  style={{ fontSize: data.depth === 0 ? '0.8rem' : '0.74rem', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 2 }}
+                  style={{ fontSize: data.depth === 0 ? '0.8rem' : '0.74rem', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 3 }}
                 >
+                  {durationNode}
                   {priceNode}
                 </div>
               )}
@@ -647,8 +644,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, justifyContent: 'flex-end' }}>
-          {/* Botón Empezar sección */}
-          {_onStartSectionSequence && (data.pendingCount ?? pendingTaskCount ?? data.sectionTaskIds?.length ?? 1) > 0 && (
+          {/* Botón Empezar sección (excluido en Biblioteca de vida y compras) */}
+          {_onStartSectionSequence && !isLibrary && (data.pendingCount ?? pendingTaskCount ?? data.sectionTaskIds?.length ?? 1) > 0 && (
             <button
               type="button"
               className="section-play-btn"

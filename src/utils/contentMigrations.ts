@@ -1,4 +1,4 @@
-import { VITAL_HABITS_LIST_ID, VITAL_HABITS_LIST_NAME, VITAL_HABIT_TITLE_REGEX } from './vitalHabits';
+import { VITAL_HABITS_LIST_ID, VITAL_HABITS_SECTION_ID, VITAL_HABIT_TITLE_REGEX } from './vitalHabits';
 import type { TaskItem } from '../models/Task';
 
 const normalize = (s?: string | null): string =>
@@ -14,6 +14,7 @@ export interface ContentMigrationStore {
   listSections?: any[];
   addList: (list: any) => void;
   updateList?: (id: string, updates: any) => void;
+  deleteList?: (id: string) => void;
   addListSection: (sec: any) => void;
   addTask: (task: Partial<TaskItem>) => void;
   updateTask: (id: string, updates: Partial<TaskItem>) => void;
@@ -22,34 +23,20 @@ export interface ContentMigrationStore {
 
 /**
  * Migración idempotente de contenidos y secciones críticas:
- * 1. Garantiza la lista aislada 'habitos_vitales' (sin duración) con 'Beber agua' y 'Comer'.
- * 2. Migra cualquier microhábito vital fuera de quehaceres/limpieza a 'habitos_vitales'.
- * 3. Garantiza 'Limpiar el horno a fondo' en frecuencia mensual.
- * 4. Modifica 'Regar las plantas' para incluir 'Añadir abono para que crezcan más rápido'.
- * 5. Reestructura 'Limpiar espejos' en frecuencia semanal con 3 subtareas y 10 min de duración máxima.
- * 6. Añade la tarea semanal 'Tirar el albornoz a la lavadora'.
+ * 1. Integra Hábitos vitales como subsección fija en Quehaceres diarios (sin duración).
+ * 2. Migra cualquier microhábito vital a Quehaceres > Hábitos vitales, restaurando tareas si estaban soft-deleted.
+ * 3. Retira la lista independiente de Hábitos vitales tras mover con seguridad todo su contenido.
+ * 4. Garantiza 'Limpiar el horno a fondo' en frecuencia mensual.
+ * 5. Modifica 'Regar las plantas' para incluir 'Añadir abono para que crezcan más rápido'.
+ * 6. Reestructura 'Limpiar espejos' en frecuencia semanal con 3 subtareas y 10 min de duración máxima.
+ * 7. Añade la tarea semanal 'Tirar el albornoz a la lavadora'.
+ * 8. Configura la Biblioteca de vida unificada.
  */
 export function runContentMigrations(store: ContentMigrationStore): void {
   const tasks = store.tasks || {};
   const lists = store.lists || [];
   const sections = store.listSections || [];
   const EPOCH = new Date(0).toISOString();
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // 1. LISTA AISLADA: 'Hábitos vitales' (Sin duración, tracker visual de cumplimiento)
-  // ──────────────────────────────────────────────────────────────────────────
-  let habitosList = lists.find(l => l.id === VITAL_HABITS_LIST_ID);
-  if (!habitosList) {
-    store.addList({
-      id: VITAL_HABITS_LIST_ID,
-      name: VITAL_HABITS_LIST_NAME,
-      color: '#30d158',
-      icon: 'heart',
-      listType: 'simple',
-      autoEstimateDuration: false,
-      updated_at: EPOCH
-    });
-  }
 
   // Encontrar o crear secciones de referencia para rutinas
   const findOrCreateSection = (listId: string, periodicityName: string, fallbackId: string) => {
@@ -59,7 +46,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
         id: fallbackId,
         listId,
         name: periodicityName,
-        order: periodicityName === 'Diarias' ? 0 : periodicityName === 'Semanales' ? 1 : 2,
+        order: periodicityName === 'Hábitos vitales' ? 0 : periodicityName === 'Diarias' ? 1 : periodicityName === 'Semanales' ? 2 : 3,
         updated_at: EPOCH
       };
       store.addListSection(sec);
@@ -67,43 +54,56 @@ export function runContentMigrations(store: ContentMigrationStore): void {
     return sec;
   };
 
-  const limpiezaList = lists.find(l => l.id === 'limpieza') || { id: 'limpieza' };
-  const quehaceresList = lists.find(l => l.id === 'quehaceres') || { id: 'quehaceres' };
+  const limpiezaList = lists.find(l => l.id === 'limpieza' || normalize(l.name).includes('limpieza'));
+  const quehaceresList = lists.find(l => l.id === 'quehaceres' || normalize(l.name).includes('quehacer')) || { id: 'quehaceres' };
 
-  const targetListId = limpiezaList.id || quehaceresList.id || 'limpieza';
-  const secSemanales = findOrCreateSection(targetListId, 'Semanales', `sec_${targetListId}_semanales`);
-  const secMensuales = findOrCreateSection(targetListId, 'Mensuales', `sec_${targetListId}_mensuales`);
+  // Hábitos vitales: viven SIEMPRE integrados dentro de Quehaceres diarios
+  const vitalListId = quehaceresList.id || 'quehaceres';
+  // Tareas de hogar/limpieza (horno, plantas, espejos, albornoz): en Limpieza si existe, o Quehaceres
+  const routinesListId = limpiezaList?.id || quehaceresList.id || 'limpieza';
 
-  const allActiveTasks = Object.values(tasks).filter(t => !t.deleted_at);
+  const secHabitosVitales = findOrCreateSection(vitalListId, 'Hábitos vitales', VITAL_HABITS_SECTION_ID);
+  const secSemanales = findOrCreateSection(routinesListId, 'Semanales', `sec_${routinesListId}_semanales`);
+  const secMensuales = findOrCreateSection(routinesListId, 'Mensuales', `sec_${routinesListId}_mensuales`);
+
+  const habitosList = lists.find(l => l.id === VITAL_HABITS_LIST_ID || normalize(l.name) === 'habitos vitales' || normalize(l.name) === 'habitos de vida');
+  const habitosListId = habitosList?.id || VITAL_HABITS_LIST_ID;
 
   // ──────────────────────────────────────────────────────────────────────────
+  // 1. INTEGRAR Y TRASLADAR HÁBITOS VITALES COMO SUBSECCIÓN EN QUEHACERES
+  // (Paso crítico: trasladar y desmarcar de borrado ANTES de eliminar el contenedor)
   // ──────────────────────────────────────────────────────────────────────────
-  // 2. INTEGRAR HÁBITOS VITALES COMO SUBSECCIÓN EN QUEHACERES Y LISTA AISLADA
-  // ──────────────────────────────────────────────────────────────────────────
-  const secHabitosVitales = findOrCreateSection(targetListId, 'Hábitos vitales', `sec_${targetListId}_habitos_vitales`);
-
-  allActiveTasks.forEach(t => {
+  Object.values(tasks).forEach(t => {
     const titleNorm = normalize(t.title);
-    if (VITAL_HABIT_TITLE_REGEX.test(t.title || '') || titleNorm === 'beber agua' || titleNorm === 'comer') {
+    const isVital =
+      t.categoryId === habitosListId ||
+      t.categoryId === VITAL_HABITS_LIST_ID ||
+      VITAL_HABIT_TITLE_REGEX.test(t.title || '') ||
+      titleNorm === 'beber agua' ||
+      titleNorm === 'comer';
+
+    if (isVital) {
       store.updateTask(t.id, {
-        categoryId: VITAL_HABITS_LIST_ID,
+        categoryId: vitalListId,
         sectionId: secHabitosVitales.id,
         duration: undefined,
         parallelDuration: undefined,
-        disableDuration: true
+        disableDuration: true,
+        // Si la tarea fue marcada como borrada accidentalmente por eliminación previa del contenedor, restaurarla
+        deleted_at: undefined
       });
     }
   });
 
-  // Asegurar que 'Beber agua' y 'Comer' existen con la subsección y lista
-  const vitalTasks = Object.values(store.tasks || {}).filter(t => !t.deleted_at && (t.categoryId === VITAL_HABITS_LIST_ID || t.sectionId === secHabitosVitales.id));
+  // Asegurar que 'Beber agua' y 'Comer' existen con la subsección en la lista unificada
+  const vitalTasks = Object.values(store.tasks || {}).filter(t => !t.deleted_at && (t.sectionId === secHabitosVitales.id || (t.categoryId === vitalListId && (normalize(t.title).includes('beber agua') || normalize(t.title).includes('comer')))));
   const hasAgua = vitalTasks.some(t => normalize(t.title).includes('beber agua'));
   const hasComer = vitalTasks.some(t => normalize(t.title).includes('comer'));
 
   if (!hasAgua) {
     store.addTask({
       title: 'Beber agua',
-      categoryId: VITAL_HABITS_LIST_ID,
+      categoryId: vitalListId,
       sectionId: secHabitosVitales.id,
       priority: 'none',
       status: 'pending',
@@ -115,7 +115,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
   if (!hasComer) {
     store.addTask({
       title: 'Comer',
-      categoryId: VITAL_HABITS_LIST_ID,
+      categoryId: vitalListId,
       sectionId: secHabitosVitales.id,
       priority: 'none',
       status: 'pending',
@@ -125,21 +125,34 @@ export function runContentMigrations(store: ContentMigrationStore): void {
   }
 
   // ──────────────────────────────────────────────────────────────────────────
+  // 2. ELIMINAR EL CONTENEDOR OBSOLETO TRAS ASEGURAR EL TRASLADO DE TODAS LAS TAREAS
+  // ──────────────────────────────────────────────────────────────────────────
+  if (habitosList) {
+    if (store.deleteList) {
+      store.deleteList(habitosList.id);
+    } else if (store.updateList) {
+      store.updateList(habitosList.id, { deleted_at: new Date().toISOString() });
+    }
+  }
+
+  const allActiveTasks = Object.values(store.tasks || tasks).filter(t => !t.deleted_at);
+
+  // ──────────────────────────────────────────────────────────────────────────
   // 3. 'Limpiar el horno a fondo' -> MENSUAL
   // ──────────────────────────────────────────────────────────────────────────
   let hornoTask = allActiveTasks.find(t => normalize(t.title).includes('horno'));
   if (hornoTask) {
-    if (hornoTask.sectionId !== secMensuales.id || hornoTask.categoryId !== targetListId) {
+    if (hornoTask.sectionId !== secMensuales.id || hornoTask.categoryId !== routinesListId) {
       store.updateTask(hornoTask.id, {
         title: 'Limpiar el horno a fondo',
-        categoryId: targetListId,
+        categoryId: routinesListId,
         sectionId: secMensuales.id
       });
     }
   } else {
     store.addTask({
       title: 'Limpiar el horno a fondo',
-      categoryId: targetListId,
+      categoryId: routinesListId,
       sectionId: secMensuales.id,
       priority: 'medium',
       status: 'pending'
@@ -171,7 +184,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
     store.addTask({
       id: newPlantasId,
       title: 'Regar las plantas',
-      categoryId: targetListId,
+      categoryId: routinesListId,
       sectionId: secSemanales.id,
       priority: 'medium',
       status: 'pending'
@@ -179,7 +192,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
     store.addTask({
       title: EXACT_ABONO_TEXT,
       parentId: newPlantasId,
-      categoryId: targetListId,
+      categoryId: routinesListId,
       sectionId: secSemanales.id,
       priority: 'none',
       status: 'pending'
@@ -203,7 +216,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
   if (espejosTask) {
     store.updateTask(espejosTask.id, {
       title: 'Limpiar espejos',
-      categoryId: targetListId,
+      categoryId: routinesListId,
       sectionId: secSemanales.id,
       duration: 10,
       disableDuration: false
@@ -213,7 +226,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
     store.addTask({
       id: newEspejosId,
       title: 'Limpiar espejos',
-      categoryId: targetListId,
+      categoryId: routinesListId,
       sectionId: secSemanales.id,
       duration: 10,
       priority: 'medium',
@@ -231,7 +244,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
       store.addTask({
         title: subTitle,
         parentId: espejosTask!.id,
-        categoryId: targetListId,
+        categoryId: routinesListId,
         sectionId: secSemanales.id,
         status: 'pending',
         priority: 'none',
@@ -262,7 +275,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
   if (!hasAlbornoz) {
     store.addTask({
       title: EXACT_ALBORNOZ_TITLE,
-      categoryId: targetListId,
+      categoryId: routinesListId,
       sectionId: secSemanales.id,
       priority: 'medium',
       status: 'pending',

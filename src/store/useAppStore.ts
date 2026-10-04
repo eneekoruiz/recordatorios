@@ -1800,7 +1800,6 @@ export const useAppStore = create<AppState>()(
       partialize: (state) => {
         const rest = { ...state };
         delete (rest as Partial<AppState>).hasHydrated;
-        delete (rest as Partial<AppState>)._preferences_dirty;
         return rest;
       },
       merge: (persistedState: any, currentState: any) => {

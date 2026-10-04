@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Clock, Play, CheckCircle2, Zap } from 'lucide-react';
+import { X, Clock, Play, Zap } from 'lucide-react';
 import type { TasksDurationSummary } from '../../utils/taskDuration';
 import { formatDuration } from '../../utils/taskDuration';
 import type { RoutinePart } from '../../utils/routineBreakdown';
@@ -127,7 +127,7 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
             style={{
               position: 'relative',
               width: '100%',
-              maxWidth: '410px',
+              maxWidth: 'min(410px, calc(100vw - 28px))',
               borderRadius: '26px',
               background: 'var(--bg-elevated, #ffffff)',
               color: 'var(--text-primary, #1c1c1e)',
@@ -136,24 +136,37 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
               overflow: 'hidden',
               display: 'flex',
               flexDirection: 'column',
-              maxHeight: 'min(80vh, 560px)'
+              maxHeight: 'min(82vh, 540px)'
             }}
           >
+            {/* Grabber pill para móviles */}
+            <div
+              style={{
+                width: 36,
+                height: 4.5,
+                borderRadius: 999,
+                background: 'var(--border-subtle, rgba(0,0,0,0.18))',
+                margin: '10px auto 0',
+                flexShrink: 0
+              }}
+            />
+
             {/* Cabecera */}
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '20px 22px 14px',
-                borderBottom: '1px solid var(--border-subtle, rgba(0,0,0,0.06))'
+                padding: '14px 22px 14px',
+                borderBottom: '1px solid var(--border-subtle, rgba(0,0,0,0.06))',
+                flexShrink: 0
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                 <div
                   style={{
-                    width: 36,
-                    height: 36,
+                    width: 34,
+                    height: 34,
                     borderRadius: '50%',
                     background: `color-mix(in srgb, ${color} 15%, transparent)`,
                     color: color,
@@ -163,13 +176,13 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
                     flexShrink: 0
                   }}
                 >
-                  <Clock size={19} />
+                  <Clock size={18} />
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <h3
                     style={{
                       margin: 0,
-                      fontSize: '1.05rem',
+                      fontSize: '1.02rem',
                       fontWeight: 700,
                       letterSpacing: '-0.02em',
                       whiteSpace: 'nowrap',
@@ -182,7 +195,7 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
                   <p
                     style={{
                       margin: '1px 0 0',
-                      fontSize: '0.80rem',
+                      fontSize: '0.78rem',
                       color: 'var(--text-secondary, #8e8e93)',
                       fontWeight: 500
                     }}
@@ -197,8 +210,8 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
                 onClick={onClose}
                 aria-label="Cerrar"
                 style={{
-                  width: 32,
-                  height: 32,
+                  width: 30,
+                  height: 30,
                   borderRadius: '50%',
                   border: 'none',
                   background: 'var(--bg-tertiary, rgba(0,0,0,0.06))',
@@ -211,79 +224,84 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
                   transition: 'all 0.15s ease'
                 }}
               >
-                <X size={17} />
+                <X size={16} />
               </button>
             </div>
 
             {/* Contenido scrolleable */}
-            <div style={{ padding: '20px 22px', overflowY: 'auto' }}>
-              {/* Bloque principal de progreso Screen Time / Apple Health */}
+            <div style={{ padding: '16px 20px', overflowY: 'auto', flex: 1, minHeight: 0 }}>
+              {/* Bloque principal de progreso: Anillo Apple Fitness + métricas */}
               <div
                 style={{
                   background: 'var(--bg-secondary, rgba(0,0,0,0.03))',
-                  borderRadius: '18px',
-                  padding: '16px 18px',
-                  marginBottom: '20px',
-                  border: '1px solid var(--border-subtle, rgba(0,0,0,0.04))'
+                  borderRadius: '20px',
+                  padding: '16px',
+                  marginBottom: '18px',
+                  border: '1px solid var(--border-subtle, rgba(0,0,0,0.05))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 16
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-                  <div>
-                    <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, color: 'var(--text-tertiary, #8e8e93)' }}>
-                      Tiempo restante
-                    </span>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: color, letterSpacing: '-0.03em', lineHeight: 1.2 }}>
-                      ~{totalSummary.formattedActive}
-                    </div>
+                {/* Anillo de actividad circular */}
+                <div style={{ position: 'relative', width: 72, height: 72, flexShrink: 0 }}>
+                  <svg width="72" height="72" viewBox="0 0 72 72" style={{ transform: 'rotate(-90deg)' }}>
+                    <circle
+                      cx="36"
+                      cy="36"
+                      r="30"
+                      fill="none"
+                      stroke="var(--border-subtle, rgba(0,0,0,0.08))"
+                      strokeWidth="7"
+                    />
+                    <circle
+                      cx="36"
+                      cy="36"
+                      r="30"
+                      fill="none"
+                      stroke="#30d158"
+                      strokeWidth="7"
+                      strokeDasharray={2 * Math.PI * 30}
+                      strokeDashoffset={2 * Math.PI * 30 * (1 - (progressPercent / 100))}
+                      strokeLinecap="round"
+                      style={{ transition: 'stroke-dashoffset 0.5s cubic-bezier(0.16,1,0.3,1)' }}
+                    />
+                  </svg>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.80rem',
+                      fontWeight: 800,
+                      color: progressPercent > 0 ? '#30d158' : 'var(--text-secondary)'
+                    }}
+                  >
+                    {progressPercent}%
                   </div>
-                  {completedMinutes > 0 && (
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, color: 'var(--text-tertiary, #8e8e93)' }}>
-                        Completado
-                      </span>
-                      <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#30d158', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
-                        <CheckCircle2 size={16} /> ~{completedSummary?.formattedActive}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
-                {/* Barra de progreso interactiva */}
-                {grandTotalMinutes > 0 && (
-                  <div style={{ marginTop: 10 }}>
-                    <div
-                      style={{
-                        height: 8,
-                        borderRadius: 999,
-                        background: 'var(--border-subtle, rgba(0,0,0,0.08))',
-                        overflow: 'hidden',
-                        display: 'flex'
-                      }}
-                    >
-                      {completedMinutes > 0 && (
-                        <div
-                          style={{
-                            width: `${progressPercent}%`,
-                            background: '#30d158',
-                            transition: 'width 0.4s ease'
-                          }}
-                        />
-                      )}
-                      <div
-                        style={{
-                          width: `${100 - progressPercent}%`,
-                          background: color,
-                          opacity: 0.9,
-                          transition: 'width 0.4s ease'
-                        }}
-                      />
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: '0.74rem', color: 'var(--text-secondary, #8e8e93)', fontWeight: 500 }}>
-                      <span>{pendingCount ? `${pendingCount} recordatorios pendientes` : 'Pendientes'}</span>
-                      {completedMinutes > 0 && <span>{progressPercent}% de la rutina completada</span>}
-                    </div>
+                {/* Métricas al lado del anillo */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 650, color: 'var(--text-tertiary, #8e8e93)' }}>
+                    Tiempo activo restante
+                  </span>
+                  <div style={{ fontSize: '1.55rem', fontWeight: 800, color: color, letterSpacing: '-0.03em', lineHeight: 1.15, marginTop: 1 }}>
+                    ~{totalSummary.formattedActive}
                   </div>
-                )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
+                    <span>{pendingCount ? `${pendingCount} pendientes` : 'Pendientes'}</span>
+                    {completedMinutes > 0 && (
+                      <>
+                        <span>·</span>
+                        <span style={{ color: '#30d158', fontWeight: 600 }}>~{completedSummary?.formattedActive} hechos</span>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Desglose por frecuencias si existe */}

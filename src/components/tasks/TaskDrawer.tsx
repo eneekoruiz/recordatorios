@@ -8,7 +8,7 @@ import { showUndoToast } from '../../utils/undoToast';
 import { parseNaturalLanguage } from '../../utils/nlp';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { isCaducidadesList, getListType, isShoppingList, isLifeLibraryList } from '../../utils/specialLists';
-import { MediaTrackerFields } from '../library/MediaTrackerFields';
+import { DrawerLibrarySection } from './drawer/DrawerLibrarySection';
 import './TaskDrawer.css';
 
 // Modular drawer subcomponents
@@ -83,6 +83,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   const [cardFinanceOpen, setCardFinanceOpen] = useState(false);
   const [cardCaducidadOpen, setCardCaducidadOpen] = useState(false);
   const [cardPeopleOpen, setCardPeopleOpen] = useState(false);
+  const [cardLibraryOpen, setCardLibraryOpen] = useState(false);
 
   const [hasDate, setHasDate] = useState(false);
   const [hasTime, setHasTime] = useState(false);
@@ -289,6 +290,10 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
           initialFocus === 'people' ||
           Boolean(task.people?.length) || task.categoryId === 'que_he_hecho'
         );
+        setCardLibraryOpen(
+          initialFocus === 'library' ||
+          Boolean(task.mediaType || task.mediaStatus || isLifeLibraryList(task.categoryId))
+        );
       } else {
         // Reset defaults
         setTitle(initialTitle || '');
@@ -320,6 +325,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setParallelDuration(undefined);
         const isCad = isCaducidadesList(defaultCategoryId);
         const isShopping = defaultCategoryId === 'compras' || defaultCategoryId?.toLowerCase().includes('compra');
+        const isLib = isLifeLibraryList(defaultCategoryId);
         const isSub = defaultSectionId?.includes('suscrip');
         setHasDate(isCad || initialFocus === 'date');
         setHasTime(false);
@@ -338,11 +344,12 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setCardFinanceOpen(Boolean(isShopping) || initialFocus === 'price');
         setCardCaducidadOpen(isCad || initialFocus === 'expiration');
         setCardPeopleOpen(defaultCategoryId === 'que_he_hecho' || initialFocus === 'people');
+        setCardLibraryOpen(Boolean(isLib) || initialFocus === 'library');
         setCycleId(undefined);
         setTimeOfDay(undefined);
         setManagementUrl('');
-        setMediaType(undefined);
-        setMediaStatus(undefined);
+        setMediaType(isLib ? 'movie' : undefined);
+        setMediaStatus(isLib ? 'want_to_watch' : undefined);
         setMediaRating(undefined);
         setMediaPlatform('');
         setMediaSeasonEpisode('');
@@ -441,6 +448,26 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
       if (e.key === 'Escape') {
         e.preventDefault();
         onClose();
+      } else if (e.key === 'Tab') {
+        const drawerEl = drawerRef.current;
+        if (!drawerEl) return;
+        const focusable = drawerEl.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first || !drawerEl.contains(document.activeElement)) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last || !drawerEl.contains(document.activeElement)) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -975,36 +1002,23 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
 
               {/* Card Especial: Biblioteca de Vida (Series, Películas, Música, Libros, etc.) */}
               {(listType === 'library' || isLifeLibraryList(category) || Boolean(mediaType || mediaStatus || task?.mediaType)) && (
-                <MediaTrackerFields
-                  task={{
-                    id: taskId || 'draft',
-                    user_id: task?.user_id || 'local',
-                    type: 'task',
-                    title: title || '',
-                    status: 'pending',
-                    categoryId: category,
-                    sectionId,
-                    mediaType,
-                    mediaStatus,
-                    mediaRating,
-                    mediaPlatform,
-                    mediaSeasonEpisode,
-                    mediaNotes,
-                    mediaRecommendedBy,
-                    created_at: '',
-                    updated_at: '',
-                    version: 1
-                  }}
-                  onUpdate={(updates) => {
-                    if (updates.mediaType !== undefined) setMediaType(updates.mediaType);
-                    if (updates.mediaStatus !== undefined) setMediaStatus(updates.mediaStatus);
-                    if (updates.mediaRating !== undefined) setMediaRating(updates.mediaRating);
-                    if (updates.mediaPlatform !== undefined) setMediaPlatform(updates.mediaPlatform);
-                    if (updates.mediaSeasonEpisode !== undefined) setMediaSeasonEpisode(updates.mediaSeasonEpisode);
-                    if (updates.mediaNotes !== undefined) setMediaNotes(updates.mediaNotes);
-                    if (updates.mediaRecommendedBy !== undefined) setMediaRecommendedBy(updates.mediaRecommendedBy);
-                  }}
-                  isCompact={false}
+                <DrawerLibrarySection
+                  cardLibraryOpen={cardLibraryOpen}
+                  setCardLibraryOpen={setCardLibraryOpen}
+                  mediaType={mediaType}
+                  setMediaType={setMediaType}
+                  mediaStatus={mediaStatus}
+                  setMediaStatus={setMediaStatus}
+                  mediaRating={mediaRating}
+                  setMediaRating={setMediaRating}
+                  mediaPlatform={mediaPlatform}
+                  setMediaPlatform={setMediaPlatform}
+                  mediaSeasonEpisode={mediaSeasonEpisode}
+                  setMediaSeasonEpisode={setMediaSeasonEpisode}
+                  mediaRecommendedBy={mediaRecommendedBy}
+                  setMediaRecommendedBy={setMediaRecommendedBy}
+                  mediaNotes={mediaNotes}
+                  setMediaNotes={setMediaNotes}
                 />
               )}
 

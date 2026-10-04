@@ -17,7 +17,7 @@ import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
 import { extractPeopleFromText, calculateExpirationStatus, calculateSubscriptionCosts, findFlashbackMemories, isCompletedInCurrentPeriod } from '../../services/TaskService';
 import { AIService } from '../../services/AIService';
-import { isCaducidadesList, isQueHeHechoList, ensureCaducidadesSections, isLimpiezaList, isRoutineList, isShoppingList, getRoomForCleaningTask, getListType, doesListSupportSequenceMode } from '../../utils/specialLists';
+import { isCaducidadesList, isQueHeHechoList, ensureCaducidadesSections, isLimpiezaList, isRoutineList, isShoppingList, isLifeLibraryList, getRoomForCleaningTask, getListType, doesListSupportSequenceMode } from '../../utils/specialLists';
 import { isVitalHabitsList } from '../../utils/vitalHabits';
 import { 
   getSectionPeriodicity, 
@@ -2235,8 +2235,9 @@ const CORE_CYCLES = [
   const isRoutine = doesListSupportSequenceMode(currentListType) || isRoutineList(currentView, currentList);
   const isVital = isVitalHabitsList(currentView) || isVitalHabitsList(currentList?.id);
   const isShopping = isShoppingList(currentView, currentList);
-  const canRunExecutionMode = !isShopping && !isVital;
-  // Empezar una tarea suelta: disponible en cualquier lista o vista excepto compras y hábitos vitales
+  const isLibrary = currentListType === 'library' || isLifeLibraryList(currentView, currentList);
+  const canRunExecutionMode = !isShopping && !isVital && !isLibrary;
+  // Empezar una tarea suelta: disponible en cualquier lista o vista excepto compras, hábitos vitales y biblioteca
   const canStartIndividualTasks = canRunExecutionMode;
   const handleStartTask = useCallback((task: TaskItem) => {
     onStartSequence?.([task.id], task.title);

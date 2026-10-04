@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { DurationInfoCard } from '../../ui/DurationInfoCard';
 import { HapticService } from '../../../services/HapticService';
-import { isCaducidadesList, isQueHeHechoList, getListBadgeInfo, isShoppingList } from '../../../utils/specialLists';
+import { isCaducidadesList, isQueHeHechoList, getListBadgeInfo, isShoppingList, isLifeLibraryList } from '../../../utils/specialLists';
 import { confirmDialog } from '../../ui/confirmDialog';
 import { useAppStore } from '../../../store/useAppStore';
 import { deleteCycleWithUndo } from '../../../utils/undoToast';
@@ -299,7 +299,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
           {/* Derecha: Botón Empezar + Gran Contador (en la misma fila) */}
           {currentView !== 'TRASH' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-              {_onStartSequence && (activeVisibleCount > 0 || currentView.startsWith('cycle_')) && currentView !== 'compras' && currentView !== 'habitos_vitales' && (
+              {_onStartSequence && !isLifeLibraryList(currentView, currentList) && currentList?.listType !== 'library' && (activeVisibleCount > 0 || currentView.startsWith('cycle_')) && currentView !== 'compras' && currentView !== 'habitos_vitales' && (
                 <button
                   type="button"
                   onClick={() => {

@@ -10,6 +10,8 @@ import { scopedId, clientIdOf, isValidClientId, shouldApplyIncoming, parseDelete
 import { getJwtSecret, resetLinkBase, isAllowedPushEndpoint, MIN_PASSWORD_LENGTH } from '../app.js';
 
 
+let isCronRunning = false;
+
 export function createCronRouter(context: AppContext) {
   const router = express.Router();
   const { prisma, pushSender, clients, hit, requireSecret, sessionResponse, authenticateToken, optionalAuthenticateToken, bumpedSessions, hashPassword, validatePassword, clientIp, apiLimiter, publicLimiter, authRateLimit, authIpLimiter, loginLimiter, changePasswordLimiter, forgotLimiter, safeEqual, emailRegex, normalizeEmail, MAX_ITEMS_PER_COLLECTION, CRON_CONCURRENCY } = context;
@@ -22,6 +24,12 @@ export function createCronRouter(context: AppContext) {
       return res.status(401).json({ error: 'No autorizado' });
     }
     if (!pushSender) return res.status(503).json({ error: 'Faltan las claves VAPID' });
+
+    if (isCronRunning) {
+      return res.status(429).json({ error: 'Ejecución de avisos cron ya en curso' });
+    }
+    isCronRunning = true;
+
     const now = new Date();
     let sent = 0;
     let removed = 0;
@@ -55,29 +63,58 @@ export function createCronRouter(context: AppContext) {
       const processSubscription = async (sub: any) => {
         try {
           const { data, weeklyDay } = await loadUser(sub.userId as string);
-          const { messages, sentLog } = planNotifications({
+          const currentSentLog = (sub as any).sentLog || {};
+          const { messages, sentLog: plannedSentLog } = planNotifications({
             ...data,
             prefs: { timeZone: (sub as any).timeZone, digestHour: (sub as any).digestHour, weeklyDay: weeklyDay ?? (sub as any).weeklyDay },
             now,
             since: (sub as any).lastCheckedAt,
-            sentLog: (sub as any).sentLog || {},
+            sentLog: currentSentLog,
           });
           let gone = false;
+          let hasTransientFailure = false;
+          const successfulTags = new Set<string>();
+
           for (const message of messages) {
             try {
               await pushSender({ endpoint: (sub as any).endpoint, keys: (sub as any).keys }, message);
               sent++;
+              if (message.tag) successfulTags.add(message.tag);
             } catch (error) {
               // 404/410: el navegador anuló la suscripción; se borra para no reintentar.
-              if ((error as any)?.statusCode === 404 || (error as any)?.statusCode === 410) { gone = true; break; }
+              if ((error as any)?.statusCode === 404 || (error as any)?.statusCode === 410) {
+                gone = true;
+                break;
+              }
+              hasTransientFailure = true;
               console.error('Push send error:', (error as any)?.statusCode || error);
             }
           }
+
           if (gone) {
             await prisma.pushSubscription.delete({ where: { id: (sub as any).id } });
             removed++;
           } else {
-            await prisma.pushSubscription.update({ where: { id: (sub as any).id }, data: { lastCheckedAt: now, sentLog: sentLog as any } });
+            // Construir sentLog registrando ÚNICAMENTE los mensajes cuyo envío fue confirmado
+            const updatedSentLog = { ...currentSentLog };
+            for (const message of messages) {
+              if (message.tag && successfulTags.has(message.tag)) {
+                if (message.tag.startsWith('digest-')) {
+                  updatedSentLog.digest = (plannedSentLog as any)?.digest;
+                }
+              }
+            }
+
+            // Si hubo fallos temporales y no se pudo enviar ningún mensaje, no avanzamos
+            // lastCheckedAt para que la siguiente pasada del cron pueda reintentar
+            const nextLastCheckedAt = hasTransientFailure && successfulTags.size === 0
+              ? (sub as any).lastCheckedAt
+              : now;
+
+            await prisma.pushSubscription.update({
+              where: { id: (sub as any).id },
+              data: { lastCheckedAt: nextLastCheckedAt, sentLog: updatedSentLog as any }
+            });
           }
         } catch (error) {
           // Un fallo con una suscripción no debe impedir avisar a las demás.
@@ -96,6 +133,8 @@ export function createCronRouter(context: AppContext) {
     } catch (error) {
       console.error('Cron notify error:', error);
       res.status(500).json({ error: 'No se pudieron enviar los avisos' });
+    } finally {
+      isCronRunning = false;
     }
   });
 

@@ -177,36 +177,80 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
 
   const handleConfirmImport = () => {
     if (!preview) return;
+    const now = new Date().toISOString();
     
     useAppStore.setState((state) => {
-      const destinationListId = targetListId || state.lists[0]?.id || 'inbox';
+      // 1. Merge de listas: conservar existentes e incorporar las nuevas del preview
+      const listsMap = new Map<string, any>(state.lists.map(l => [l.id, l]));
+      if (preview.lists && preview.lists.length > 0) {
+        preview.lists.forEach(l => {
+          if (!listsMap.has(l.id)) {
+            listsMap.set(l.id, { ...l, updated_at: now, _is_dirty: true });
+          }
+        });
+      }
+      const finalLists = Array.from(listsMap.values());
+
+      // 2. Merge de secciones: conservar existentes e incorporar las del preview
+      const sectionsMap = new Map<string, any>((state.listSections || []).map(s => [s.id, s]));
+      if (preview.listSections && preview.listSections.length > 0) {
+        preview.listSections.forEach(s => {
+          if (!sectionsMap.has(s.id)) {
+            sectionsMap.set(s.id, { ...s, updated_at: now, _is_dirty: true });
+          }
+        });
+      }
+      const finalSections = Array.from(sectionsMap.values());
+
+      // 3. Deduplicar ciclos por identificador
+      const cyclesMap = new Map<string, any>((state.cycles || []).map(c => [c.id, c]));
+      if (preview.cycles && preview.cycles.length > 0) {
+        preview.cycles.forEach(c => {
+          if (!cyclesMap.has(c.id)) {
+            cyclesMap.set(c.id, { ...c, updated_at: now, _is_dirty: true });
+          }
+        });
+      }
+      const finalCycles = Array.from(cyclesMap.values());
+
+      const destinationListId = targetListId || finalLists[0]?.id || 'inbox';
       const updatedTasks = { ...state.tasks };
       let importedCount = 0;
 
+      // 4. Validar relaciones y marcar _is_dirty en cada tarea importada
       preview.tasks.forEach(t => {
-        const taskCatId = t.categoryId || (t as any).listId;
-        const shouldRouteToTarget = forceAllToList || targetListId !== 'inbox' || !taskCatId || taskCatId === 'inbox' || !state.lists.some(l => l.id === taskCatId);
+        const rawCatId = t.categoryId || (t as any).listId;
+        const shouldRouteToTarget = forceAllToList || targetListId !== 'inbox' || !rawCatId || rawCatId === 'inbox' || !finalLists.some(l => l.id === rawCatId);
+        const resolvedCategoryId = shouldRouteToTarget ? destinationListId : (rawCatId || destinationListId);
+
+        // Validar que sectionId pertenezca a la lista de destino
+        const isSectionValid = t.sectionId && finalSections.some(s => s.id === t.sectionId && s.listId === resolvedCategoryId && !s.deleted_at);
+
         const taskToImport = {
           ...t,
-          categoryId: shouldRouteToTarget ? destinationListId : (taskCatId || destinationListId)
+          categoryId: resolvedCategoryId,
+          sectionId: isSectionValid ? t.sectionId : undefined,
+          updated_at: now,
+          _is_dirty: true,
+          version: (t.version || 0) + 1
         };
+
         updatedTasks[taskToImport.id] = taskToImport;
         importedCount++;
       });
-      
-      const nextLists = preview.lists && preview.lists.length > 0 ? preview.lists : state.lists;
-      const nextSections = preview.listSections && preview.listSections.length > 0 ? preview.listSections : state.listSections;
 
-      const destinationName = nextLists.find(l => l.id === destinationListId)?.name || (destinationListId === 'inbox' ? 'Bandeja de entrada' : 'Lista seleccionada');
-      window.dispatchEvent(new CustomEvent('show-toast', { detail: `Importados ${importedCount} recordatorios a "${destinationName}"` }));
+      const destinationName = finalLists.find(l => l.id === destinationListId)?.name || (destinationListId === 'inbox' ? 'Bandeja de entrada' : 'Lista seleccionada');
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: `Importados ${importedCount} recordatorios a "${destinationName}" (preparados para sincronizar)` }));
 
       return {
         tasks: updatedTasks,
-        cycles: [...state.cycles, ...preview.cycles],
-        lists: nextLists,
-        listSections: nextSections,
+        cycles: finalCycles,
+        lists: finalLists,
+        listSections: finalSections,
       };
     });
+
+    window.dispatchEvent(new CustomEvent('trigger-sync'));
 
     pop();
   };

@@ -37,7 +37,23 @@ export function createSyncRouter(context: AppContext) {
       throw err;
     }
 
-    const clientIds = items.map((i) => i.id);
+    // Deduplicar elementos dentro del mismo lote por clientId asegurando que gane la versión más reciente según LWW
+    const deduplicatedMap = new Map<string, any>();
+    for (const item of items) {
+      const prev = deduplicatedMap.get(item.id);
+      if (!prev) {
+        deduplicatedMap.set(item.id, item);
+      } else {
+        const prevPayload = sanitizePayload(prev);
+        const currPayload = sanitizePayload(item);
+        if (shouldApplyIncoming(currPayload, prevPayload)) {
+          deduplicatedMap.set(item.id, item);
+        }
+      }
+    }
+    const deduplicatedItems = Array.from(deduplicatedMap.values());
+
+    const clientIds = deduplicatedItems.map((i) => i.id);
     const existingRows = await delegate.findMany({
       where: { userId, id: { in: [...clientIds, ...clientIds.map((id) => scopedId(userId, id))] } },
       select: { id: true, payload: true, deletedAt: true },
@@ -51,13 +67,14 @@ export function createSyncRouter(context: AppContext) {
 
     const ops = [];
     const stale = [];
-    for (const item of items) {
+    for (const item of deduplicatedItems) {
       const payload = sanitizePayload(item);
       const deletedAt = parseDeletedAt(payload.deleted_at);
       const existing = byClientId.get(item.id);
       if (existing) {
         if (payload._hard_delete) {
           ops.push(delegate.delete({ where: { id: existing.id } }));
+          byClientId.delete(item.id);
           continue;
         }
         if (!shouldApplyIncoming(payload, existing.payload)) {
@@ -65,6 +82,7 @@ export function createSyncRouter(context: AppContext) {
           continue;
         }
         ops.push(delegate.update({ where: { id: existing.id }, data: { payload, deletedAt } }));
+        byClientId.set(item.id, { id: existing.id, payload, deletedAt });
       } else {
         if (payload._hard_delete) continue;
         const id = scopedId(userId, item.id);
@@ -75,6 +93,7 @@ export function createSyncRouter(context: AppContext) {
             create: { id, userId, payload, deletedAt },
           })
         );
+        byClientId.set(item.id, { id, payload, deletedAt });
       }
     }
     return { ops, stale };
