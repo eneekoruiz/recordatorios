@@ -1,4 +1,5 @@
 import type { CustomList, ListSection, ListType } from '../models/Task';
+import { isVitalHabitsList } from './vitalHabits';
 
 export type { ListType };
 
@@ -251,6 +252,7 @@ export function isGoalsList(listIdOrView?: string | null, list?: CustomList | nu
  * Determina si una lista o vista corresponde a una lista de rutinas periódicas (Limpieza, Quehaceres, Care).
  */
 export function isRoutineList(listIdOrView?: string | null, list?: CustomList | null): boolean {
+  if (isVitalHabitsList(listIdOrView) || isVitalHabitsList(list?.id)) return false;
   if (isShoppingList(listIdOrView, list)) return false;
   if (list?.listType) return list.listType === 'routines';
   if (!listIdOrView && !list) return false;

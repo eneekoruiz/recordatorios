@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { MoreHorizontal, ChevronDown, Check, Plus } from 'lucide-react';
+import { MoreHorizontal, ChevronDown, Check, Plus, Play, Clock } from 'lucide-react';
+import { DurationInfoCard } from '../../ui/DurationInfoCard';
 import { HapticService } from '../../../services/HapticService';
 import type { SectionMenuState } from './SectionContextMenu';
 import { formatDuration, type TasksDurationSummary } from '../../../utils/taskDuration';
@@ -8,8 +9,8 @@ import { useAppStore } from '../../../store/useAppStore';
 import { formatEuro } from '../../../utils/format';
 import { classifyDropZone, DRAG_MOVE_THRESHOLD_PX } from '../../../utils/dragDrop';
 import { getReservedFrequencyColor } from '../../../constants/colors';
-import { MetaSplit, type MetaPart, MONEY_COLOR } from '../../ui/MetaSplit';
-import { describeRoutineParts, routinePeriodLabel, type RoutinePart } from '../../../utils/routineBreakdown';
+import { MetaSplit, MONEY_COLOR } from '../../ui/MetaSplit';
+import { routinePeriodLabel, type RoutinePart } from '../../../utils/routineBreakdown';
 
 interface SectionData {
   title: string;
@@ -132,49 +133,43 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   // Corto para caber en el móvil: «+ Diarias» en las semanales, «+ Acumuladas» en mensuales y anuales.
   const includeLabel = data.periodicity === 'week' ? 'Diarias' : 'Acumuladas';
 
+  const [isSectionDurationOpen, setIsSectionDurationOpen] = useState(false);
+
   let durationNode: React.ReactNode = null;
   if (sectionDurationLabel && durSummary) {
-    let parts: MetaPart[] = [];
-    let description = `Duración estimada: ~${sectionDurationLabel}`;
-    const routineParts = data.routineParts && data.routineParts.length > 1 ? data.routineParts : null;
-    if (hasRoutineDurationBreakdown && data.routineDurations && routineParts) {
-      // Una parte por frecuencia, con su color: sólido = la de esta sección, rayado = acumuladas de las demás.
-      parts = routineParts.map((rp) => ({
-        id: rp.periodicity,
-        value: rp.minutes,
-        text: formatDuration(rp.minutes),
-        color: getReservedFrequencyColor(rp.periodicity),
-        tone: rp.periodicity === data.periodicity ? 'solid' : 'striped',
-      }));
-      description = `Duración total ~${sectionDurationLabel}: ${describeRoutineParts(routineParts)} (la barra sólida es la de esta sección; las rayadas, las acumuladas)`;
-    } else if (hasRoutineDurationBreakdown && data.routineDurations) {
-      // Sólido = tareas de esta sección; rayado = acumuladas desde las frecuencias más cortas.
-      const ownColor = getReservedFrequencyColor(data.periodicity);
-      const extraColor = data.periodicity === 'week' ? getReservedFrequencyColor('day') : 'var(--text-tertiary)';
-      const ownMinutes = data.routineDurations.only.activeMinutes;
-      const extraMinutes = Math.max(0, data.routineDurations.full.activeMinutes - ownMinutes);
-      parts = [
-        { id: 'own', value: ownMinutes, text: data.routineDurations.only.formattedActive, color: ownColor, tone: 'solid' },
-        { id: 'extra', value: extraMinutes, text: formatDuration(extraMinutes), color: extraColor, tone: 'striped' },
-      ];
-      description = `Duración total ~${sectionDurationLabel}: ${data.routineDurations.only.formattedActive} ${data.periodicity === 'week' ? 'semanales' : 'de esta sección'} (barra sólida) + ${formatDuration(extraMinutes)} ${data.periodicity === 'week' ? 'diarias' : includeLabel.toLowerCase()} (barra rayada)`;
-    } else if (mixParts && mixParts.length > 1) {
-      parts = mixParts.map((mp) => ({
-        id: mp.periodicity,
-        value: mp.minutes,
-        text: `${formatDuration(mp.minutes)} ${routinePeriodLabel(mp.periodicity)}`,
-        color: mp.periodicity === 'none' ? 'var(--text-secondary)' : getReservedFrequencyColor(mp.periodicity),
-        tone: 'solid',
-      }));
-      description = `Duración total ~${sectionDurationLabel}: ${describeRoutineParts(mixParts)}`;
-    } else if (completedDurationSummary && completedDurationSummary.activeMinutes > 0) {
-      parts = [
-        { id: 'left', value: durSummary.activeMinutes, text: `${sectionDurationLabel} restantes`, color: 'var(--accent-primary)', tone: 'solid' },
-        { id: 'done', value: completedDurationSummary.activeMinutes, text: `${completedDurationSummary.formattedActive} hechos`, color: 'var(--accent-primary)', tone: 'done' },
-      ];
-      description = `Te queda ~${sectionDurationLabel} porque ya has completado ~${completedDurationSummary.formattedActive} (de ~${formatDuration(durSummary.activeMinutes + completedDurationSummary.activeMinutes)})`;
-    }
-    durationNode = <MetaSplit label={`~${sectionDurationLabel}`} parts={parts} description={description} className={parts.length > 1 && (hasRoutineDurationBreakdown || Boolean(mixParts)) ? 'meta-split--open' : undefined} />;
+    durationNode = (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          HapticService.selection();
+          setIsSectionDurationOpen(true);
+        }}
+        className="section-duration-chip"
+        title="Ver desglose de tiempo de esta sección"
+        aria-label="Ver desglose de tiempo de sección"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          height: 22,
+          padding: '0 8px',
+          borderRadius: 999,
+          background: 'var(--bg-secondary, rgba(0,0,0,0.04))',
+          border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
+          color: 'var(--text-secondary)',
+          cursor: 'pointer',
+          fontSize: '0.76rem',
+          fontWeight: 650,
+          fontVariantNumeric: 'tabular-nums',
+          transition: 'all 0.15s ease'
+        }}
+      >
+        <Clock size={11} color={data.color || 'var(--text-secondary)'} />
+        <span>~{sectionDurationLabel}</span>
+        <ChevronDown size={10} style={{ opacity: 0.5 }} />
+      </button>
+    );
   }
 
   let priceNode: React.ReactNode = null;
@@ -661,6 +656,38 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, justifyContent: 'flex-end' }}>
+          {/* Botón Empezar sección */}
+          {_onStartSectionSequence && (data.pendingCount ?? pendingTaskCount ?? data.sectionTaskIds?.length ?? 1) > 0 && (
+            <button
+              type="button"
+              className="section-play-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                HapticService.selection();
+                _onStartSectionSequence();
+              }}
+              title={`Empezar sección: ${data.title}`}
+              aria-label={`Empezar sección ${data.title}`}
+              style={{
+                height: 24,
+                padding: '0 8px',
+                borderRadius: 999,
+                background: `color-mix(in srgb, ${data.color || 'var(--accent-primary)'} 14%, transparent)`,
+                border: `1px solid color-mix(in srgb, ${data.color || 'var(--accent-primary)'} 28%, transparent)`,
+                color: data.color || 'var(--accent-primary)',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                fontWeight: 650,
+                fontSize: '0.74rem',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Play size={10} fill="currentColor" />
+              <span>Empezar</span>
+            </button>
+          )}
           {/* Incluir las frecuencias anteriores: una cápsula que se enciende (con la sección desplegada) */}
           {!isCatCollapsed(data.category) && data.routineCounts && data.routineCounts.full > data.routineCounts.only && (
             <button
@@ -784,6 +811,21 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       </div>
       {isCustomSection && dragOverSectionId === data.sectionId && (
         <span style={{ fontSize: '0.8rem', color: data.color }}>Mover aquí</span>
+      )}
+
+      {durSummary && durSummary.activeMinutes > 0 && (
+        <DurationInfoCard
+          isOpen={isSectionDurationOpen}
+          onClose={() => setIsSectionDurationOpen(false)}
+          title={data.title}
+          color={data.color}
+          totalSummary={durSummary}
+          completedSummary={completedDurationSummary}
+          routineParts={data.routineParts}
+          mixParts={mixParts}
+          onStartSequence={_onStartSectionSequence}
+          pendingCount={data.pendingCount ?? pendingTaskCount ?? data.sectionTaskIds?.length}
+        />
       )}
     </div>
   );

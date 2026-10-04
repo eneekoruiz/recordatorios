@@ -18,7 +18,7 @@ const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 // Si el planificador lleva mucho sin ejecutarse, no se disparan avisos viejos en tromba.
 const MAX_LOOKBACK_MS = 2 * 60 * 60 * 1000;
 
-export function safeTimeZone(timeZone) {
+export function safeTimeZone(timeZone: string | undefined | null) {
   if (typeof timeZone !== 'string' || !timeZone) return DEFAULT_TZ;
   try {
     new Intl.DateTimeFormat('en-US', { timeZone }).format(0);
@@ -29,7 +29,7 @@ export function safeTimeZone(timeZone) {
 }
 
 /** Fecha y hora de pared de `date` en `timeZone`. */
-export function zonedParts(date, timeZone) {
+export function zonedParts(date: Date, timeZone: string) {
   const fmt = new Intl.DateTimeFormat('en-CA', {
     timeZone,
     year: 'numeric',
@@ -53,7 +53,7 @@ export function zonedParts(date, timeZone) {
 }
 
 /** Instante UTC de una hora de pared en `timeZone` (respeta el cambio de hora). */
-export function zonedTimeToUtc(y, m, d, hh, mm, timeZone) {
+export function zonedTimeToUtc(y: number, m: number, d: number, hh: number, mm: number, timeZone: string) {
   const target = Date.UTC(y, m - 1, d, hh, mm);
   let guess = target;
   for (let i = 0; i < 3; i++) {
@@ -66,7 +66,7 @@ export function zonedTimeToUtc(y, m, d, hh, mm, timeZone) {
 }
 
 /** Lunes a las 00:00 (hora local de `timeZone`) de la semana de `now`, como en la app. */
-export function startOfZonedWeek(now, timeZone) {
+export function startOfZonedWeek(now: Date, timeZone: string) {
   const p = zonedParts(now, timeZone);
   const monday = new Date(Date.UTC(p.y, p.m - 1, p.d - ((p.weekday + 6) % 7)));
   return zonedTimeToUtc(monday.getUTCFullYear(), monday.getUTCMonth() + 1, monday.getUTCDate(), 0, 0, timeZone);
@@ -77,11 +77,11 @@ export function startOfZonedWeek(now, timeZone) {
  * isCompletedInCurrentPeriod): las periódicas vuelven a «pendiente» al completarlas y
  * lo que cuenta es su última vez en el historial (hoy, esta semana, este mes o este año).
  */
-export function isDone(task, periodicity = null, now = new Date(), timeZone = DEFAULT_TZ) {
-  if (task.targetCount && task.targetCount > 1) return (task.currentCount || 0) >= task.targetCount;
-  if (task.status === 'completed' || Boolean(task.completed_at) || Boolean(task.completed)) return true;
+export function isDone(task: Record<string, unknown>, periodicity: string | null = null, now = new Date(), timeZone = DEFAULT_TZ) {
+  if ((task as any).targetCount && (task as any).targetCount > 1) return ((task as any).currentCount || 0) >= (task as any).targetCount;
+  if ((task as any).status === 'completed' || Boolean((task as any).completed_at) || Boolean((task as any).completed)) return true;
   if (!periodicity) return false;
-  const history = Array.isArray(task.completionHistory) ? task.completionHistory : [];
+  const history = Array.isArray((task as any).completionHistory) ? (task as any).completionHistory : [];
   const last = Number(history[history.length - 1]);
   if (!Number.isFinite(last)) return false;
   const then = zonedParts(new Date(last), timeZone);
@@ -93,11 +93,11 @@ export function isDone(task, periodicity = null, now = new Date(), timeZone = DE
 }
 
 /** Momentos (en el intervalo (from, to]) en que deben sonar las alertas de una tarea. */
-export function alertFireTimes(task, timeZone, from, to, periodicity = null) {
-  const out = [];
-  const due = task.dueDate ? new Date(task.dueDate) : null;
+export function alertFireTimes(task: Record<string, unknown>, timeZone: string, from: Date, to: Date, periodicity: string | null = null) {
+  const out: Date[] = [];
+  const due = (task as any).dueDate ? new Date((task as any).dueDate) : null;
   const hasDue = due && !Number.isNaN(due.getTime());
-  for (const alert of Array.isArray(task.alerts) ? task.alerts : []) {
+  for (const alert of Array.isArray((task.alerts as any[])) ? (task.alerts as any[]) : []) {
     if (!alert || typeof alert !== 'object') continue;
     const candidates = [];
     if (alert.type === 'before' && typeof alert.offsetMinutes === 'number' && hasDue) {
@@ -107,7 +107,7 @@ export function alertFireTimes(task, timeZone, from, to, periodicity = null) {
       if (hasDue) {
         const p = zonedParts(due, timeZone);
         candidates.push(zonedTimeToUtc(p.y, p.m, p.d, hh, mm, timeZone));
-      } else if (periodicity === 'day' || task.cycle_id === 'cycle_day') {
+      } else if (periodicity === 'day' || (task as any).cycle_id === 'cycle_day') {
         // Diarias sin fecha: la alerta suena cada día a esa hora.
         for (const day of [from, to]) {
           const p = zonedParts(day, timeZone);
@@ -122,19 +122,19 @@ export function alertFireTimes(task, timeZone, from, to, periodicity = null) {
   return out;
 }
 
-const joinNatural = (items) =>
+const joinNatural = (items: string[]) =>
   items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} y ${items[items.length - 1]}`;
-const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 /**
  * Resumen del día (o null si hoy no toca nada).
  * @param {Array<{task: object, periodicity: string|null}>} pending tareas pendientes ya clasificadas
  */
-export function buildDigest(pending, local, weeklyDay) {
+export function buildDigest(pending: { task: Record<string, unknown>; periodicity: string | null }[], local: { m: number; d: number; weekday: number; timeZone: string; dateKey: string }, weeklyDay: number) {
   const rounds = routineRoundsOn({ month: local.m, day: local.d, weekday: local.weekday }, weeklyDay);
-  const count = (p) => pending.filter((x) => x.periodicity === p).length;
+  const count = (p: string) => pending.filter((x: any) => x.periodicity === p).length;
   const dueToday = pending.filter(
-    (x) => !x.periodicity && x.task.dueDate && zonedParts(new Date(x.task.dueDate), local.timeZone).dateKey === local.dateKey
+    (x: any) => !x.periodicity && x.task.dueDate && zonedParts(new Date(x.task.dueDate), local.timeZone).dateKey === local.dateKey
   ).length;
   const daily = count('day');
   const weekly = rounds.week ? count('week') : 0;
@@ -165,11 +165,11 @@ export function buildDigest(pending, local, weeklyDay) {
  * Decide qué avisos enviar a una suscripción.
  * @returns {{ messages: Array<{title:string, body:string, tag:string, url:string}>, sentLog: object }}
  */
-export function planNotifications({ tasks, lists = [], sections = [], prefs = {}, now = new Date(), since, sentLog = {} }) {
-  const timeZone = safeTimeZone(prefs.timeZone);
-  const digestHour = Number.isInteger(prefs.digestHour) ? prefs.digestHour : 9;
-  const weeklyDay = Number.isInteger(prefs.weeklyDay) ? prefs.weeklyDay : 6;
-  const from = new Date(Math.max(since ? new Date(since).getTime() : now.getTime(), now.getTime() - MAX_LOOKBACK_MS));
+export function planNotifications({ tasks, lists = [], sections = [], prefs = {} as Record<string, unknown>, now = new Date(), since, sentLog = {} as Record<string, unknown> }: { tasks?: Record<string, unknown>[], lists?: Record<string, unknown>[], sections?: Record<string, unknown>[], prefs?: Record<string, unknown>, now?: Date, since?: string | Date | number, sentLog?: Record<string, unknown> }) {
+  const timeZone = safeTimeZone((prefs as any).timeZone);
+  const digestHour = Number.isInteger((prefs as any).digestHour) ? (prefs as any).digestHour : 9;
+  const weeklyDay = Number.isInteger((prefs as any).weeklyDay) ? (prefs as any).weeklyDay : 6;
+  const from = new Date(Math.max(since ? new Date(since as string | number).getTime() : now.getTime(), now.getTime() - MAX_LOOKBACK_MS));
   const local = { ...zonedParts(now, timeZone), timeZone };
   const messages = [];
   const nextLog = { ...(sentLog && typeof sentLog === 'object' ? sentLog : {}) };

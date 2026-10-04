@@ -134,21 +134,21 @@ export const MCP_TOOLS = [
   }
 ];
 
-const rpcResult = (id, data) => ({
+const rpcResult = (id: string | number | null, data: unknown) => ({
   jsonrpc: '2.0',
   id,
   result: { content: [{ type: 'text', text: JSON.stringify(data) }] },
 });
-const rpcError = (id, code, message) => ({ jsonrpc: '2.0', id, error: { code, message } });
+const rpcError = (id: string | number | null, code: number, message: string) => ({ jsonrpc: '2.0', id, error: { code, message } });
 
 const VALID_PRIORITIES = new Set(['none', 'low', 'medium', 'high']);
 const VALID_TIMES = new Set(['morning', 'afternoon', 'night']);
 const VALID_CYCLES = new Set(['cycle_day', 'cycle_week', 'cycle_month', 'cycle_year']);
-const cleanString = (v, max = 500) => (typeof v === 'string' ? v.trim().slice(0, max) : undefined);
-const cleanNumber = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
+const cleanString = (v: unknown, max = 500) => (typeof v === 'string' ? v.trim().slice(0, max) : undefined);
+const cleanNumber = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
 /** ¿Anidar `childId` bajo `parentId` crearía un ciclo (o una auto-referencia)? */
-const wouldCycle = (tasks, childId, parentId) => {
-  const byId = new Map(tasks.map((t) => [t.id, t]));
+const wouldCycle = (tasks: any[], childId: string, parentId: string) => {
+  const byId = new Map(tasks.map((t: any) => [t.id, t]));
   const seen = new Set();
   for (let cur = parentId; cur && !seen.has(cur); cur = byId.get(cur)?.parentId) {
     if (cur === childId) return true;
@@ -156,10 +156,10 @@ const wouldCycle = (tasks, childId, parentId) => {
   }
   return false;
 };
-const hasTitle = (t) => typeof t?.title === 'string' && t.title.trim() !== '';
-const isSettingsList = (l) => typeof l?.id === 'string' && l.id.startsWith('user_preferences_');
+const hasTitle = (t: any) => typeof t?.title === 'string' && t.title.trim() !== '';
+const isSettingsList = (l: any) => typeof l?.id === 'string' && l.id.startsWith('user_preferences_');
 
-export async function handleMcpRequest(reqBody, prisma, userId) {
+export async function handleMcpRequest(reqBody: any, prisma: any, userId: string) {
   const { jsonrpc, id = null, method, params } = reqBody || {};
 
   if (jsonrpc !== '2.0' || typeof method !== 'string') {
@@ -189,7 +189,7 @@ export async function handleMcpRequest(reqBody, prisma, userId) {
   const toolName = params?.name;
   const args = params?.arguments || {};
   if (!toolName) return rpcError(id, -32602, 'Falta el nombre de la herramienta en params.name');
-  if (!MCP_TOOLS.some((t) => t.name === toolName)) return rpcError(id, -32601, `Herramienta no encontrada: ${toolName}`);
+  if (!MCP_TOOLS.some((t: any) => t.name === toolName)) return rpcError(id, -32601, `Herramienta no encontrada: ${toolName}`);
   if (!userId) {
     return rpcError(id, -32001, 'Autenticación requerida: envía "Authorization: Bearer <token>" de tu sesión.');
   }
@@ -197,8 +197,8 @@ export async function handleMcpRequest(reqBody, prisma, userId) {
   try {
     if (toolName === 'list_lists') {
       const rows = await prisma.list.findMany({ where: { userId, deletedAt: null } });
-      const lists = rows.map((r) => toClientPayload(userId, r)).filter((l) => !isSettingsList(l));
-      return rpcResult(id, { lists: lists.map(({ id: lid, name, color, icon, parentId, isFolder }) => ({ id: lid, name, color, icon, parentId, isFolder })) });
+      const lists = rows.map((r: any) => toClientPayload(userId, r)).filter((l: any) => !isSettingsList(l));
+      return rpcResult(id, { lists: lists.map(({ id: lid, name, color, icon, parentId, isFolder }: any) => ({ id: lid, name, color, icon, parentId, isFolder })) });
     }
 
     if (toolName === 'create_list') {
@@ -224,18 +224,18 @@ export async function handleMcpRequest(reqBody, prisma, userId) {
 
       // Resolver listName -> id existente del usuario (por nombre, sin distinguir mayúsculas).
       const listRows = await prisma.list.findMany({ where: { userId, deletedAt: null } });
-      const userLists = listRows.map((r) => toClientPayload(userId, r)).filter((l) => !isSettingsList(l));
-      const resolveList = (r) => {
+      const userLists = listRows.map((r: any) => toClientPayload(userId, r)).filter((l: any) => !isSettingsList(l));
+      const resolveList = (r: any) => {
         const explicit = cleanString(r.listId, 200);
-        if (explicit && userLists.some((l) => l.id === explicit)) return explicit;
+        if (explicit && userLists.some((l: any) => l.id === explicit)) return explicit;
         const byName = cleanString(r.listName, 120)?.toLowerCase();
-        const match = byName && userLists.find((l) => String(l.name || '').toLowerCase() === byName);
+        const match = byName && userLists.find((l: any) => String(l.name || '').toLowerCase() === byName);
         return match ? match.id : 'inbox';
       };
 
       // Tareas activas existentes del usuario para evitar duplicados en el MCP
       const existingTaskRows = await prisma.task.findMany({ where: { userId, deletedAt: null } });
-      const existingTasks = existingTaskRows.map((r) => ({ ...toClientPayload(userId, r), _rowId: r.id }));
+      const existingTasks = existingTaskRows.map((r: any) => ({ ...toClientPayload(userId, r), _rowId: r.id }));
 
       const now = new Date().toISOString();
       const created = [];
@@ -249,7 +249,7 @@ export async function handleMcpRequest(reqBody, prisma, userId) {
 
         // Evitar duplicados: si ya existe una tarea idéntica pendiente en la misma lista, actualizar en vez de duplicar
         const existingTask = existingTasks.find(
-          (t) => t.status !== 'completed' && hasTitle(t) &&
+          (t: any) => t.status !== 'completed' && hasTitle(t) &&
                  String(t.categoryId || 'inbox') === String(catId) &&
                  String(t.title || '').toLowerCase().trim() === normTitle
         );
@@ -295,7 +295,7 @@ export async function handleMcpRequest(reqBody, prisma, userId) {
           created_at: now,
           updated_at: now,
         };
-        Object.keys(task).forEach((k) => task[k] === undefined && delete task[k]);
+        Object.keys(task).forEach((k) => (task as any)[k] === undefined && delete (task as any)[k]);
         created.push(task);
         ops.push(prisma.task.create({ data: { id: scopedId(userId, task.id), userId, payload: task } }));
       }
@@ -312,9 +312,9 @@ export async function handleMcpRequest(reqBody, prisma, userId) {
       const listId = cleanString(args.listId, 200);
       const rows = await prisma.task.findMany({ where: { userId, deletedAt: null } });
       const tasks = rows
-        .map((r) => toClientPayload(userId, r))
-        .filter((t) => !query || String(t.title || '').toLowerCase().includes(query))
-        .filter((t) => !listId || t.categoryId === listId)
+        .map((r: any) => toClientPayload(userId, r))
+        .filter((t: any) => !query || String(t.title || '').toLowerCase().includes(query))
+        .filter((t: any) => !listId || t.categoryId === listId)
         .slice(0, 200);
       return rpcResult(id, { count: tasks.length, tasks });
     }
@@ -324,17 +324,17 @@ export async function handleMcpRequest(reqBody, prisma, userId) {
       if (!parentTitle) return rpcError(id, -32602, 'El título del recordatorio padre es obligatorio');
 
       const listRows = await prisma.list.findMany({ where: { userId, deletedAt: null } });
-      const userLists = listRows.map((r) => toClientPayload(userId, r)).filter((l) => !isSettingsList(l));
-      const resolveList = (lid, lname) => {
+      const userLists = listRows.map((r: any) => toClientPayload(userId, r)).filter((l: any) => !isSettingsList(l));
+      const resolveList = (lid: unknown, lname: unknown) => {
         const explicit = cleanString(lid, 200);
-        if (explicit && userLists.some((l) => l.id === explicit)) return explicit;
+        if (explicit && userLists.some((l: any) => l.id === explicit)) return explicit;
         const byName = cleanString(lname, 120)?.toLowerCase();
-        const match = byName && userLists.find((l) => String(l.name || '').toLowerCase() === byName);
+        const match = byName && userLists.find((l: any) => String(l.name || '').toLowerCase() === byName);
         return match ? match.id : 'inbox';
       };
 
       const existingTaskRows = await prisma.task.findMany({ where: { userId, deletedAt: null } });
-      const existingTasks = existingTaskRows.map((r) => ({ ...toClientPayload(userId, r), _rowId: r.id }));
+      const existingTasks = existingTaskRows.map((r: any) => ({ ...toClientPayload(userId, r), _rowId: r.id }));
 
       const now = new Date().toISOString();
       const ops = [];
@@ -343,11 +343,11 @@ export async function handleMcpRequest(reqBody, prisma, userId) {
       // 1. Resolver o crear tarea padre
       let parentTask = null;
       if (args.parentId) {
-        parentTask = existingTasks.find((t) => t.id === args.parentId || t._rowId === args.parentId || scopedId(userId, t.id) === args.parentId);
+        parentTask = existingTasks.find((t: any) => t.id === args.parentId || t._rowId === args.parentId || scopedId(userId, t.id) === args.parentId);
       }
       if (!parentTask) {
         const normParent = parentTitle.toLowerCase().trim();
-        parentTask = existingTasks.find((t) => hasTitle(t) && String(t.title || '').toLowerCase().trim() === normParent && !t.parentId);
+        parentTask = existingTasks.find((t: any) => hasTitle(t) && String(t.title || '').toLowerCase().trim() === normParent && !t.parentId);
       }
 
       const cycle = VALID_CYCLES.has(args.cycle) ? args.cycle : undefined;
@@ -391,7 +391,7 @@ export async function handleMcpRequest(reqBody, prisma, userId) {
       // 2. Agrupar childTaskIds
       const childIds = Array.isArray(args.childTaskIds) ? args.childTaskIds : [];
       for (const cid of childIds) {
-        const existingChild = existingTasks.find((t) => t.id === cid || t._rowId === cid || scopedId(userId, t.id) === cid);
+        const existingChild = existingTasks.find((t: any) => t.id === cid || t._rowId === cid || scopedId(userId, t.id) === cid);
         if (existingChild && existingChild.id !== parentTask.id && !wouldCycle(existingTasks, existingChild.id, parentTask.id)) {
           const rowId = existingChild._rowId || scopedId(userId, existingChild.id);
           const updatedChild = {
@@ -420,11 +420,11 @@ export async function handleMcpRequest(reqBody, prisma, userId) {
         const norm = itemTitle.toLowerCase().trim();
 
         // Buscar si ya existe: primero por ID o coincidencia exacta de título en la misma lista
-        let existing = existingTasks.find((t) =>
+        let existing = existingTasks.find((t: any) =>
           item.id && (t.id === item.id || t._rowId === item.id || scopedId(userId, t.id) === item.id)
         );
         if (!existing) {
-          existing = existingTasks.find((t) =>
+          existing = existingTasks.find((t: any) =>
             hasTitle(t) &&
             String(t.categoryId || '') === String(parentTask.categoryId || '') &&
             String(t.title || '').toLowerCase().trim() === norm
@@ -473,7 +473,7 @@ export async function handleMcpRequest(reqBody, prisma, userId) {
             created_at: now,
             updated_at: now,
           };
-          Object.keys(newChild).forEach((k) => newChild[k] === undefined && delete newChild[k]);
+          Object.keys(newChild).forEach((k) => (newChild as any)[k] === undefined && delete (newChild as any)[k]);
           updatedChildren.push(newChild);
           ops.push(prisma.task.create({
             data: { id: scopedId(userId, newChild.id), userId, payload: newChild }
@@ -498,7 +498,7 @@ export async function handleMcpRequest(reqBody, prisma, userId) {
       if (updates.length === 0) return rpcError(id, -32602, 'Debes enviar al menos un recordatorio para actualizar');
 
       const existingTaskRows = await prisma.task.findMany({ where: { userId, deletedAt: null } });
-      const existingTasks = existingTaskRows.map((r) => ({ ...toClientPayload(userId, r), _rowId: r.id }));
+      const existingTasks = existingTaskRows.map((r: any) => ({ ...toClientPayload(userId, r), _rowId: r.id }));
 
       const now = new Date().toISOString();
       const ops = [];
@@ -507,7 +507,7 @@ export async function handleMcpRequest(reqBody, prisma, userId) {
       for (const u of updates) {
         const targetId = cleanString(u.id, 200);
         if (!targetId) continue;
-        const task = existingTasks.find((t) => t.id === targetId || t._rowId === targetId || scopedId(userId, t.id) === targetId);
+        const task = existingTasks.find((t: any) => t.id === targetId || t._rowId === targetId || scopedId(userId, t.id) === targetId);
         if (!task) continue;
 
         const rowId = task._rowId || scopedId(userId, task.id);
@@ -521,7 +521,7 @@ export async function handleMcpRequest(reqBody, prisma, userId) {
             updatedPayload.parentId = undefined;
           } else {
             // Solo se acepta un padre existente que no cree una auto-referencia ni un ciclo.
-            const parent = existingTasks.find((t) => t.id === wanted || t._rowId === wanted || scopedId(userId, t.id) === wanted);
+            const parent = existingTasks.find((t: any) => t.id === wanted || t._rowId === wanted || scopedId(userId, t.id) === wanted);
             if (parent && !wouldCycle(existingTasks, task.id, parent.id)) updatedPayload.parentId = parent.id;
           }
         }

@@ -8,17 +8,17 @@
 
 export const MAX_ID_LENGTH = 200;
 
-export const scopedId = (userId, clientId) => `${userId}:${clientId}`;
+export const scopedId = (userId: string, clientId: string) => `${userId}:${clientId}`;
 
-export const clientIdOf = (userId, rowId) => {
+export const clientIdOf = (userId: string, rowId: string) => {
   const prefix = `${userId}:`;
   return rowId.startsWith(prefix) ? rowId.slice(prefix.length) : rowId;
 };
 
-export const isValidClientId = (id) =>
+export const isValidClientId = (id: any) =>
   typeof id === 'string' && id.length > 0 && id.length <= MAX_ID_LENGTH;
 
-const toTime = (value) => {
+const toTime = (value: any) => {
   if (!value) return 0;
   const t = new Date(value).getTime();
   return Number.isNaN(t) ? 0 : t;
@@ -29,7 +29,7 @@ const toTime = (value) => {
  * al almacenado. Gana la versión más alta; a igual versión, el updated_at más reciente.
  * Así un dispositivo con datos antiguos nunca pisa cambios más nuevos de otro.
  */
-export const shouldApplyIncoming = (incoming, existing) => {
+export const shouldApplyIncoming = (incoming: any, existing: any) => {
   if (!existing) return true;
   const inV = Number(incoming?.version) || 0;
   const exV = Number(existing?.version) || 0;
@@ -37,14 +37,14 @@ export const shouldApplyIncoming = (incoming, existing) => {
   return toTime(incoming?.updated_at) >= toTime(existing?.updated_at);
 };
 
-export const parseDeletedAt = (value) => {
+export const parseDeletedAt = (value: any) => {
   if (!value) return null;
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? null : d;
 };
 
 /** Normaliza el payload que devolvemos al cliente: id de cliente + deleted_at coherente. */
-export const toClientPayload = (userId, row) => {
+export const toClientPayload = (userId: string, row: any) => {
   const payload = row.payload && typeof row.payload === 'object' ? { ...row.payload } : {};
   payload.id = clientIdOf(userId, row.id);
   if (row.deletedAt && !payload.deleted_at) {
@@ -57,7 +57,7 @@ export const toClientPayload = (userId, row) => {
 };
 
 /** Elimina campos exclusivamente locales antes de persistir. */
-export const sanitizePayload = (item) => {
+export const sanitizePayload = (item: any) => {
   const clean = { ...item };
   delete clean._is_dirty;
   return clean;

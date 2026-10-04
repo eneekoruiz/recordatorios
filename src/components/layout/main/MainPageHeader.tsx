@@ -9,18 +9,21 @@ import {
   ShieldAlert,
   Wand2,
   Star,
-  Trash2
+  Trash2,
+  Play,
+  ChevronDown
 } from 'lucide-react';
+import { DurationInfoCard } from '../../ui/DurationInfoCard';
 import { HapticService } from '../../../services/HapticService';
 import { isCaducidadesList, isQueHeHechoList, getListBadgeInfo, isShoppingList } from '../../../utils/specialLists';
 import { confirmDialog } from '../../ui/confirmDialog';
 import { useAppStore } from '../../../store/useAppStore';
 import { deleteCycleWithUndo } from '../../../utils/undoToast';
 import type { TaskItem, CustomCycle, CustomList } from '../../../models/Task';
-import { formatDuration, type TasksDurationSummary } from '../../../utils/taskDuration';
+import type { TasksDurationSummary } from '../../../utils/taskDuration';
 import { formatEuro } from '../../../utils/format';
-import { MetaSplit, type MetaPart, MONEY_COLOR } from '../../ui/MetaSplit';
-import { describeRoutineParts, routinePeriodLabel, type RoutinePart } from '../../../utils/routineBreakdown';
+import { MetaSplit, MONEY_COLOR } from '../../ui/MetaSplit';
+import type { RoutinePart } from '../../../utils/routineBreakdown';
 import { getReservedFrequencyColor } from '../../../constants/colors';
 
 export interface CycleBreakdownInfo {
@@ -128,6 +131,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   const updateList = useAppStore((state) => state.updateList);
   const [isEditingListName, setIsEditingListName] = React.useState(false);
   const [listEditName, setListEditName] = React.useState('');
+  const [isDurationCardOpen, setIsDurationCardOpen] = React.useState(false);
 
   const includeSwitchId = React.useId();
   const scrollOffset = Math.min(60, Math.max(0, scrollTop || 0));
@@ -309,44 +313,38 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                     marginTop: 3
                   }}
                 >
-                  {hasValidDuration && (() => {
-                    const total = totalDuration!;
-                    const doneMinutes = completedDuration?.activeMinutes ?? 0;
-                    const details = cycleBreakdown?.details;
-                    const hasBreakdown = Boolean(details && details.length > 1);
-                    const ownName = (currentCycle?.name || 'la lista').toLowerCase();
-                    let parts: MetaPart[] = [];
-                    let description = `Duración estimada: ~${total.formattedActive}`;
-                    if (hasBreakdown && details) {
-                      // Sólido = tareas de esta frecuencia; rayado = acumuladas desde las demás.
-                      parts = details.map(d => ({
-                        id: d.cycleId || d.cycleName,
-                        value: d.durationMinutes,
-                        text: formatDuration(d.durationMinutes),
-                        color: d.color || getReservedFrequencyColor(d.cycleId),
-                        tone: d.cycleId === currentCycle?.id ? 'solid' : 'striped',
-                      }));
-                      const own = cycleBreakdown!.ownDurationMinutes;
-                      const acc = cycleBreakdown!.accumulatedDurationMinutes;
-                      description = `Duración total ~${total.formattedActive}: ${formatDuration(own)} propias de ${ownName} (barra sólida) + ${formatDuration(acc)} acumuladas de otras frecuencias (barra rayada)`;
-                    } else if (mixParts && mixParts.length > 1) {
-                      parts = mixParts.map(mp => ({
-                        id: mp.periodicity,
-                        value: mp.minutes,
-                        text: `${formatDuration(mp.minutes)} ${routinePeriodLabel(mp.periodicity)}`,
-                        color: mp.periodicity === 'none' ? 'var(--text-secondary)' : getReservedFrequencyColor(mp.periodicity),
-                        tone: 'solid',
-                      }));
-                      description = `Duración total ~${total.formattedActive}: ${describeRoutineParts(mixParts)}`;
-                    } else if (doneMinutes > 0) {
-                      parts = [
-                        { id: 'left', value: total.activeMinutes, text: `${total.formattedActive} restantes`, color: viewColor, tone: 'solid' },
-                        { id: 'done', value: doneMinutes, text: `${completedDuration!.formattedActive} hechos`, color: viewColor, tone: 'done' },
-                      ];
-                      description = `Te quedan ~${total.formattedActive} porque ya has completado ~${completedDuration!.formattedActive} (de ~${formatDuration(total.activeMinutes + doneMinutes)})`;
-                    }
-                    return <MetaSplit label={<span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>~{total.formattedActive}</span>} parts={parts} description={description} className={mixParts && !hasBreakdown ? 'meta-split--open' : undefined} />;
-                  })()}
+                  {hasValidDuration && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        HapticService.selection();
+                        setIsDurationCardOpen(true);
+                      }}
+                      className="apple-duration-chip"
+                      title="Toca para ver el desglose detallado de tiempo"
+                      aria-label="Ver desglose de tiempo"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        height: 26,
+                        padding: '0 10px',
+                        borderRadius: 999,
+                        background: 'var(--bg-secondary, rgba(0,0,0,0.04))',
+                        border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
+                        color: 'var(--text-primary)',
+                        cursor: 'pointer',
+                        fontSize: '0.82rem',
+                        fontWeight: 650,
+                        fontVariantNumeric: 'tabular-nums',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <Clock size={12} color={viewColor} />
+                      <span>~{totalDuration!.formattedActive}</span>
+                      <ChevronDown size={11} style={{ opacity: 0.5, marginLeft: 1 }} />
+                    </button>
+                  )}
 
                   {hasValidDuration && hasValidPrice && (
                     <span className="meta-dot" style={{ opacity: 0.4 }}>·</span>
@@ -367,9 +365,40 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
             })()}
           </div>
 
-          {/* Gran Contador Apple Reminders en el color de la lista */}
+          {/* Gran Contador Apple Reminders en el color de la lista y botón Empezar */}
           {currentView !== 'TRASH' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+              {_onStartSequence && (activeVisibleCount > 0 || currentView.startsWith('cycle_')) && currentView !== 'compras' && currentView !== 'habitos_vitales' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    HapticService.selection();
+                    _onStartSequence();
+                  }}
+                  title="Empezar lista en modo ejecución"
+                  aria-label="Empezar lista"
+                  className="apple-header-start-btn"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    height: 34,
+                    padding: '0 14px',
+                    borderRadius: 999,
+                    background: `color-mix(in srgb, ${viewColor} 14%, transparent)`,
+                    border: `1px solid color-mix(in srgb, ${viewColor} 28%, transparent)`,
+                    color: viewColor,
+                    fontWeight: 700,
+                    fontSize: '0.84rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                    transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
+                  }}
+                >
+                  <Play size={13} fill="currentColor" />
+                  <span>Empezar</span>
+                </button>
+              )}
               {currentView !== 'smart_calendar' && (activeVisibleCount > 0 || currentView.startsWith('cycle_')) && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
                   <span className="apple-large-counter" style={{ color: viewColor }}>
@@ -733,6 +762,21 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
           </div>
         )}
       </header>
+
+      {totalDuration && totalDuration.activeMinutes > 0 && (
+        <DurationInfoCard
+          isOpen={isDurationCardOpen}
+          onClose={() => setIsDurationCardOpen(false)}
+          title={getTitle()}
+          color={viewColor}
+          totalSummary={totalDuration}
+          completedSummary={completedDuration}
+          routineParts={mixParts}
+          mixParts={mixParts}
+          onStartSequence={_onStartSequence}
+          pendingCount={activeVisibleCount}
+        />
+      )}
     </>
   );
 };

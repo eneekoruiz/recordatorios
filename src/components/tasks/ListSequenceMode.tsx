@@ -236,9 +236,10 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
       if (!t) return acc;
       const dInfo = getTaskDuration(t, listSections, lists);
       const learned = useAppStore.getState().learnedDurations[t.id];
-      const activeMins = (typeof t.duration === 'number' && t.duration > 0)
+      const rawMins = (typeof t.duration === 'number' && t.duration > 0)
         ? t.duration
         : (learned || dInfo.activeMinutes);
+      const activeMins = rawMins > 0 ? rawMins : 5;
       return acc + activeMins;
     }, 0);
   }, [activeTaskIds, tasks, listSections, lists]);
@@ -249,16 +250,17 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
       if (!t) return acc;
       const dInfo = getTaskDuration(t, listSections, lists);
       const learned = useAppStore.getState().learnedDurations[t.id];
-      const activeMins = (typeof t.duration === 'number' && t.duration > 0)
+      const rawMins = (typeof t.duration === 'number' && t.duration > 0)
         ? t.duration
         : (learned || dInfo.activeMinutes);
+      const activeMins = rawMins > 0 ? rawMins : 5;
       return acc + activeMins;
     }, 0);
   }, [activeTaskIds, index, tasks, listSections, lists]);
 
   // Al pasar a otra tarea, el temporizador arranca con su duración (la del usuario, la
-  // aprendida o la estimada). Se ajusta durante el render y solo al cambiar de tarea: antes
-  // era un efecto que también se reiniciaba si llegaba una sincronización a mitad de tarea.
+  // aprendida o la estimada). Si no tiene ninguna, arranca con 5 min por defecto para
+  // ofrecer una cuenta atrás razonable.
   const loadKey = currentTask ? `${index}|${currentTask.id}` : null;
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
   if (loadKey !== loadedKey) {
@@ -266,11 +268,12 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     if (currentTask) {
       const dInfo = getTaskDuration(currentTask, listSections, lists);
       const learned = useAppStore.getState().learnedDurations[currentTask.id];
-      const activeMins = (typeof currentTask.duration === 'number' && currentTask.duration > 0)
+      const rawMins = (typeof currentTask.duration === 'number' && currentTask.duration > 0)
         ? currentTask.duration
         : (learned || dInfo.activeMinutes);
-      // Segundos exactos: hay tareas de menos de un minuto.
-      const secs = Math.max(1, Math.round(activeMins * 60));
+      const effectiveMins = rawMins > 0 ? rawMins : 5;
+      // Segundos exactos para la cuenta atrás
+      const secs = Math.max(10, Math.round(effectiveMins * 60));
       setShowDurationPicker(false);
       setTimeLeft(secs);
       setInitialDuration(secs);

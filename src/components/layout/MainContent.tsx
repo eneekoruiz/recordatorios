@@ -18,6 +18,7 @@ import { SoundService } from '../../services/SoundService';
 import { extractPeopleFromText, calculateExpirationStatus, calculateSubscriptionCosts, findFlashbackMemories, isCompletedInCurrentPeriod } from '../../services/TaskService';
 import { AIService } from '../../services/AIService';
 import { isCaducidadesList, isQueHeHechoList, ensureCaducidadesSections, isLimpiezaList, isRoutineList, isShoppingList, getRoomForCleaningTask, getListType, doesListSupportSequenceMode } from '../../utils/specialLists';
+import { isVitalHabitsList } from '../../utils/vitalHabits';
 import { 
   getSectionPeriodicity, 
   getTaskPeriodicity, 
@@ -2229,8 +2230,11 @@ const CORE_CYCLES = [
 
   const currentListType = getListType(currentList, currentView);
   const isRoutine = doesListSupportSequenceMode(currentListType) || isRoutineList(currentView, currentList);
-  // Empezar una tarea suelta: solo si la lista admite duración (rutinas), igual que la sección o la lista.
-  const canStartIndividualTasks = isRoutine && !isShoppingList(currentView, currentList);
+  const isVital = isVitalHabitsList(currentView) || isVitalHabitsList(currentList?.id);
+  const isShopping = isShoppingList(currentView, currentList);
+  const canRunExecutionMode = !isShopping && !isVital;
+  // Empezar una tarea suelta: disponible en cualquier lista o vista excepto compras y hábitos vitales
+  const canStartIndividualTasks = canRunExecutionMode;
   const handleStartTask = useCallback((task: TaskItem) => {
     onStartSequence?.([task.id], task.title);
   }, [onStartSequence]);
@@ -2307,8 +2311,6 @@ const CORE_CYCLES = [
     return currentCycle?.name || 'Frecuencia';
   };
 
-  const canStartSequence = isRoutine || (!currentList && viewTasksDuration.activeMinutes > 0);
-
   return (
     <main className="main-content" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden', overflowX: 'hidden', overscrollBehaviorX: 'none', position: 'relative' }}>
       {/* Sticky Glass Top Bar */}
@@ -2333,10 +2335,10 @@ const CORE_CYCLES = [
         setIsListConfigOpen={setIsListConfigOpen}
         onAddSection={handleAddSection}
         completedCount={totalCompletedInCurrentView || completedVisibleCount}
-        showProminentStartButton={isRoutine && !isShoppingList(currentView, currentList)}
-        startDuration={!isShoppingList(currentView, currentList) ? viewTasksDuration?.formattedActive : undefined}
+        showProminentStartButton={canRunExecutionMode}
+        startDuration={canRunExecutionMode ? viewTasksDuration?.formattedActive : undefined}
         isStartDisabled={!viewTasks.some(t => !isTaskCompleted(t))}
-        onStartSequence={onStartSequence && isRoutine && !isShoppingList(currentView, currentList) ? () => {
+        onStartSequence={onStartSequence && canRunExecutionMode ? () => {
           const pendingTasks = viewTasks.filter(t => !isTaskCompleted(t));
           if (pendingTasks.length > 0) {
             onStartSequence(pendingTasks.map(t => t.id), getTitle(), viewColor);
@@ -2471,7 +2473,7 @@ const CORE_CYCLES = [
                           caducidadesStats={caducidadesStats}
                           cycleRoutineMode={currentCycle ? cycleViewMode : undefined}
                           onToggleCycleRoutineMode={currentCycle ? toggleCycleGeneralMode : undefined}
-                          onStartSequence={onStartSequence && isRoutine && !isShoppingList(currentView, currentList) ? () => {
+                          onStartSequence={onStartSequence && canRunExecutionMode ? () => {
                             const pendingTasks = visibleTasks.filter(t => !isTaskCompleted(t));
                             if (pendingTasks.length > 0) {
                               onStartSequence(pendingTasks.map(t => t.id), getTitle(), viewColor);
@@ -2554,7 +2556,7 @@ const CORE_CYCLES = [
                         sectionRoutineModes={sectionRoutineModes}
                         toggleSectionRoutineMode={toggleSectionRoutineMode}
                         dragOverSectionId={dragOverSectionId}
-                        onStartSectionSequence={onStartSequence && canStartSequence && sectionDurationSummary.activeMinutes > 0 && sectionPendingTaskIds.length > 0 ? () => {
+                        onStartSectionSequence={onStartSequence && canRunExecutionMode && sectionPendingTaskIds.length > 0 ? () => {
                           const rawTitle = (data?.title || '').replace(/^[\p{Emoji}\s⏳]+/gu, '').trim() || (data?.title || '');
                           const cleanTitle = rawTitle.length > 0 
                             ? rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1).toLowerCase() 

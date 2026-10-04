@@ -10,7 +10,7 @@ if (!getJwtSecret()) console.error('❌ JWT_SECRET no está configurado: el logi
 
 const prisma = new PrismaClient(dbUrl ? { datasourceUrl: dbUrl } : undefined);
 const app = createApp({ prisma });
-const PORT = process.env.PORT || 3001;
+const PORT = Number(process.env.PORT) || 3001;
 
 if (!process.env.VERCEL) {
   app.listen(PORT, '0.0.0.0', () => {

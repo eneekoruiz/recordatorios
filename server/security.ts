@@ -4,14 +4,14 @@ import crypto from 'node:crypto';
 
 export const SECURITY_KEY = '_security';
 const B32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-const sha256 = (s) => crypto.createHash('sha256').update(String(s)).digest('hex');
+const sha256 = (s: string) => crypto.createHash('sha256').update(String(s)).digest('hex');
 
 // ── Preferencias ↔ datos de seguridad ────────────────────────────────────────────────────────────
-const isObject = (v) => v && typeof v === 'object' && !Array.isArray(v);
-export const getSecurity = (prefs) => (isObject(prefs) && isObject(prefs[SECURITY_KEY]) ? prefs[SECURITY_KEY] : {});
-export const withSecurity = (prefs, security) => ({ ...(isObject(prefs) ? prefs : {}), [SECURITY_KEY]: security });
+const isObject = (v: any): v is Record<string, any> => v && typeof v === 'object' && !Array.isArray(v);
+export const getSecurity = (prefs: any): any => (isObject(prefs) && isObject(prefs[SECURITY_KEY]) ? prefs[SECURITY_KEY] : {});
+export const withSecurity = (prefs: any, security: any) => ({ ...(isObject(prefs) ? prefs : {}), [SECURITY_KEY]: security });
 /** Lo que puede ver el cliente: las preferencias sin la clave de seguridad. */
-export const publicPreferences = (prefs) => {
+export const publicPreferences = (prefs: any) => {
   if (!isObject(prefs)) return prefs ?? null;
   const { [SECURITY_KEY]: _hidden, ...rest } = prefs;
   return rest;
@@ -20,7 +20,7 @@ export const publicPreferences = (prefs) => {
 export const stripSecurity = publicPreferences;
 
 // ── TOTP (RFC 6238) ──────────────────────────────────────────────────────────────────────────────
-export function base32Encode(buf) {
+export function base32Encode(buf: Uint8Array | Buffer) {
   let bits = 0;
   let value = 0;
   let out = '';
@@ -36,7 +36,7 @@ export function base32Encode(buf) {
   return out;
 }
 
-export function base32Decode(str) {
+export function base32Decode(str: string) {
   const clean = String(str).toUpperCase().replace(/[\s=-]/g, '');
   let bits = 0;
   let value = 0;
@@ -54,7 +54,7 @@ export function base32Decode(str) {
   return Buffer.from(bytes);
 }
 
-export function hotp(key, counter, digits = 6) {
+export function hotp(key: Buffer, counter: number | bigint, digits = 6) {
   const msg = Buffer.alloc(8);
   msg.writeBigUInt64BE(BigInt(counter));
   const h = crypto.createHmac('sha1', key).update(msg).digest();
@@ -64,13 +64,13 @@ export function hotp(key, counter, digits = 6) {
 }
 
 export const totpStep = (nowMs = Date.now(), period = 30) => Math.floor(nowMs / 1000 / period);
-export const totpCode = (secretB32, nowMs = Date.now()) => hotp(base32Decode(secretB32), totpStep(nowMs));
+export const totpCode = (secretB32: string, nowMs = Date.now()) => hotp(base32Decode(secretB32), totpStep(nowMs));
 
 /**
  * Comprueba un código de 6 dígitos con ±1 intervalo de margen (relojes desajustados). Devuelve el intervalo
  * que coincidió (para guardarlo y rechazar su reutilización: `lastStep`) o null.
  */
-export function verifyTotp(secretB32, code, { nowMs = Date.now(), window = 1, lastStep = -1 } = {}) {
+export function verifyTotp(secretB32: string, code: string, { nowMs = Date.now(), window = 1, lastStep = -1 } = {}) {
   const given = String(code ?? '').replace(/\s/g, '');
   if (!/^\d{6}$/.test(given)) return null;
   let key;
@@ -91,20 +91,20 @@ export function verifyTotp(secretB32, code, { nowMs = Date.now(), window = 1, la
 
 export const newTotpSecret = () => base32Encode(crypto.randomBytes(20));
 
-export const otpauthUrl = (email, secretB32, issuer = 'Recordatorios') =>
+export const otpauthUrl = (email: string, secretB32: string, issuer = 'Recordatorios') =>
   `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(email)}?secret=${secretB32}&issuer=${encodeURIComponent(issuer)}&algorithm=SHA1&digits=6&period=30`;
 
 // ── Secreto TOTP cifrado en reposo (AES-256-GCM, clave derivada del secreto del servidor) ────────
-const atRestKey = (serverSecret) => crypto.createHash('sha256').update(`totp-at-rest:${serverSecret}`).digest();
+const atRestKey = (serverSecret: string) => crypto.createHash('sha256').update(`totp-at-rest:${serverSecret}`).digest();
 
-export function encryptSecret(plain, serverSecret) {
+export function encryptSecret(plain: string, serverSecret: string) {
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv('aes-256-gcm', atRestKey(serverSecret), iv);
   const ct = Buffer.concat([cipher.update(String(plain), 'utf8'), cipher.final()]);
   return ['v1', iv.toString('base64'), cipher.getAuthTag().toString('base64'), ct.toString('base64')].join('.');
 }
 
-export function decryptSecret(blob, serverSecret) {
+export function decryptSecret(blob: string, serverSecret: string) {
   try {
     const [v, iv, tag, ct] = String(blob).split('.');
     if (v !== 'v1') return null;
@@ -122,13 +122,13 @@ export const generateRecoveryCodes = (n = 8) =>
     const hex = crypto.randomBytes(5).toString('hex');
     return `${hex.slice(0, 5)}-${hex.slice(5)}`;
   });
-export const hashRecoveryCode = (code) => sha256(String(code).toLowerCase().replace(/[^a-z0-9]/g, ''));
+export const hashRecoveryCode = (code: string) => sha256(String(code).toLowerCase().replace(/[^a-z0-9]/g, ''));
 
 /**
  * Segundo factor de un inicio de sesión: código TOTP o de recuperación. Devuelve { ok, security } con los
  * datos ya actualizados (último intervalo usado / código de recuperación consumido), o { ok: false }.
  */
-export function checkSecondFactor(security, code, serverSecret, nowMs = Date.now()) {
+export function checkSecondFactor(security: any, code: string, serverSecret: string, nowMs = Date.now()) {
   const totp = security?.totp;
   if (!totp?.enabled) return { ok: true, security };
   const secret = decryptSecret(totp.secret, serverSecret);
@@ -137,21 +137,21 @@ export function checkSecondFactor(security, code, serverSecret, nowMs = Date.now
 
   const hash = hashRecoveryCode(code);
   const recovery = Array.isArray(totp.recovery) ? totp.recovery : [];
-  const idx = recovery.findIndex((h) => typeof h === 'string' && h.length === hash.length && crypto.timingSafeEqual(Buffer.from(h), Buffer.from(hash)));
+  const idx = recovery.findIndex((h: any) => typeof h === 'string' && h.length === hash.length && crypto.timingSafeEqual(Buffer.from(h), Buffer.from(hash)));
   if (idx >= 0) {
-    return { ok: true, usedRecovery: true, security: { ...security, totp: { ...totp, recovery: recovery.filter((_, i) => i !== idx) } } };
+    return { ok: true, usedRecovery: true, security: { ...security, totp: { ...totp, recovery: recovery.filter((_: any, i: number) => i !== idx) } } };
   }
   return { ok: false };
 }
 
 // ── Dispositivos conocidos (aviso de «inicio de sesión desde un dispositivo nuevo») ──────────────
-export const deviceId = (userAgent) => sha256(String(userAgent || '').slice(0, 300)).slice(0, 16);
+export const deviceId = (userAgent: string | undefined) => sha256(String(userAgent || '').slice(0, 300)).slice(0, 16);
 
 /**
  * Añade el dispositivo (máx. 10, los más recientes). `changed` indica si hay que guardar; `isNew` solo si ya
  * había otros dispositivos: el primero de la cuenta no avisa.
  */
-export function noteDevice(security, id) {
+export function noteDevice(security: any, id: string) {
   const known = Array.isArray(security?.devices) ? security.devices : [];
   if (known.includes(id)) return { security, isNew: false, changed: false };
   return { security: { ...security, devices: [...known, id].slice(-10) }, isNew: known.length > 0, changed: true };

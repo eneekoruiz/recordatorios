@@ -26,6 +26,18 @@ import { getTaskPeriodicity, getSectionPeriodicity, stripPeriodicityPrefix } fro
 import { extractPrice } from '../../utils/priceExtractor';
 import { classifyDropZone, DROP_GAP_PX } from '../../utils/dragDrop';
 
+function findScrollableParent(el: HTMLElement | null): HTMLElement | Window {
+  let parent = el?.parentElement;
+  while (parent) {
+    const style = window.getComputedStyle(parent);
+    if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && parent.scrollHeight > parent.clientHeight) {
+      return parent;
+    }
+    parent = parent.parentElement;
+  }
+  return window;
+}
+
 interface TaskCardProps {
   task: TaskItem;
   virtualStyle: React.CSSProperties;
@@ -577,6 +589,18 @@ export const TaskCard = React.memo(function TaskCard({
     touchDragLiftedRef.current = true;
     touchDragActiveRef.current = true;
 
+    const scrollEl = findScrollableParent(wrapperRef.current);
+    let rafIdRef = 0;
+    let scrollSpeed = 0;
+
+    const performScroll = () => {
+      if (scrollSpeed !== 0) {
+        scrollEl.scrollBy({ top: scrollSpeed });
+      }
+      rafIdRef = requestAnimationFrame(performScroll);
+    };
+    rafIdRef = requestAnimationFrame(performScroll);
+
     const rect = wrapperRef.current.getBoundingClientRect();
     const cloned = wrapperRef.current.cloneNode(true) as HTMLDivElement;
     cloned.removeAttribute('data-touch-drag-over');
@@ -611,11 +635,16 @@ export const TaskCard = React.memo(function TaskCard({
         touchDragGhostRef.current.style.top = `${t.clientY - rect.height / 2}px`;
       }
 
-      // Autodesplazamiento suave cerca de los bordes superior/inferior de pantalla
-      if (t.clientY > window.innerHeight - 80) {
-        window.scrollBy({ top: 9, behavior: 'auto' });
-      } else if (t.clientY < 80) {
-        window.scrollBy({ top: -9, behavior: 'auto' });
+      const bounds = scrollEl === window 
+        ? { top: 0, bottom: window.innerHeight } 
+        : (scrollEl as HTMLElement).getBoundingClientRect();
+        
+      if (t.clientY < bounds.top + 80) {
+        scrollSpeed = -Math.max(1, 14 * (1 - (t.clientY - bounds.top) / 80));
+      } else if (t.clientY > bounds.bottom - 80) {
+        scrollSpeed = Math.max(1, 14 * (1 - (bounds.bottom - t.clientY) / 80));
+      } else {
+        scrollSpeed = 0;
       }
 
       // Highlight drop target
@@ -631,6 +660,7 @@ export const TaskCard = React.memo(function TaskCard({
     };
 
     const onEnd = (_ev: TouchEvent) => {
+      cancelAnimationFrame(rafIdRef);
       document.removeEventListener('touchmove', onMove);
       if (touchDragGhostRef.current) {
         document.body.removeChild(touchDragGhostRef.current);
@@ -671,6 +701,7 @@ export const TaskCard = React.memo(function TaskCard({
     document.addEventListener('touchmove', onMove, { passive: false });
     document.addEventListener('touchend', onEnd, { once: true });
     document.addEventListener('touchcancel', () => {
+      cancelAnimationFrame(rafIdRef);
       document.removeEventListener('touchmove', onMove);
       if (touchDragGhostRef.current) {
         document.body.removeChild(touchDragGhostRef.current);
@@ -730,11 +761,11 @@ export const TaskCard = React.memo(function TaskCard({
 
         if (e.pointerType === 'touch' && onReorderTasks) {
           // Mobile: long press → drag mode (context menu shows only if no drag occurs)
-          const sx = e.clientX, sy = e.clientY;
           longPressTimer.current = window.setTimeout(() => {
             longPressTimer.current = null;
             didLongPressRef.current = true;
-            startTouchDrag(sy, sx);
+            touchDragLiftedRef.current = true;
+            openContextMenu();
           }, 280);
         } else {
           // Desktop / mouse: long press → context menu as before
@@ -751,6 +782,14 @@ export const TaskCard = React.memo(function TaskCard({
         }
       }}
       onPointerMove={(e) => {
+        if (didLongPressRef.current && touchDragLiftedRef.current && !isDraggingTouch) {
+          const dx = Math.abs(e.clientX - touchStartX.current);
+          const dy = Math.abs(e.clientY - touchStartY.current);
+          if (dx > 10 || dy > 10) {
+            setContextMenuOpen(false);
+            startTouchDrag(touchStartY.current, touchStartX.current);
+          }
+        }
         if (!longPressTimer.current) return;
         const dx = Math.abs(e.clientX - touchStartX.current);
         const dy = Math.abs(e.clientY - touchStartY.current);
@@ -764,12 +803,14 @@ export const TaskCard = React.memo(function TaskCard({
           window.clearTimeout(longPressTimer.current);
           longPressTimer.current = null;
         }
+        touchDragLiftedRef.current = false;
       }}
       onPointerCancel={() => {
         if (longPressTimer.current) {
           window.clearTimeout(longPressTimer.current);
           longPressTimer.current = null;
         }
+        touchDragLiftedRef.current = false;
       }}
       onContextMenu={(e) => {
         e.preventDefault();

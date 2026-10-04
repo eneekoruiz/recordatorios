@@ -9,7 +9,8 @@
 import type { TaskItem, ListSection, CustomList } from '../models/Task';
 import { getTaskPeriodicity } from './sectionRoutine';
 import { getListType, doesListSupportDuration } from './specialLists';
-import { useAppStore } from '../store/useAppStore';
+import { useAppStore, isTaskCompleted } from '../store/useAppStore';
+import { isVitalHabitTask } from './vitalHabits';
 
 export interface TaskDurationInfo {
   activeMinutes: number;
@@ -58,6 +59,8 @@ export function getTaskDuration(
   lists?: CustomList[]
 ): TaskDurationInfo {
   if (!task) return { activeMinutes: 0, parallelMinutes: 0, isParallel: false };
+  // Hábitos vitales: sin duración ni temporizador, aunque conserven un valor heredado.
+  if (isVitalHabitTask(task)) return { activeMinutes: 0, parallelMinutes: 0, isParallel: false };
 
   const currentPassedList = sectionsOrList && !Array.isArray(sectionsOrList) ? (sectionsOrList as CustomList) : undefined;
   const sections = Array.isArray(sectionsOrList) ? sectionsOrList : undefined;
@@ -284,110 +287,106 @@ export function formatDuration(minutes: number): string {
   return `${hours} h ${remainingMins} min`;
 }
 
+/** Minutos válidos: finitos y no negativos (nunca NaN/Infinity en un sumatorio). */
+const safeMinutes = (n: number): number => (Number.isFinite(n) && n > 0 ? n : 0);
+
+const hasExplicitDuration = (t: TaskItem): boolean =>
+  typeof t.duration === 'number' && Number.isFinite(t.duration) && t.duration > 0;
+
+const EMPTY_SUMMARY: TasksDurationSummary = {
+  activeMinutes: 0,
+  parallelMinutes: 0,
+  parallelTasksCount: 0,
+  formattedActive: '0 min',
+  formattedParallel: '0 min',
+  formattedTotal: '0 min',
+};
+
 /**
- * Aggregates estimated durations for a set of tasks (filtering to pending only).
- * Handles parallel tasks appropriately (parallel passive time runs concurrently).
+ * Suma las duraciones de las tareas que cumplen `include`, evitando el doble conteo jerárquico:
+ *  - si una tarea (o un ancestro) tiene duración explícita, esa cifra es el total del bloque y
+ *    sus subtareas no se vuelven a sumar («Limpiar espejos» = 10 min en total, no 10 + 3 × 5);
+ *  - si una tarea con subtareas presentes no tiene duración propia, solo suman sus subtareas.
+ */
+function aggregateDurations(
+  tasks: TaskItem[],
+  include: (t: TaskItem) => boolean,
+  sections?: ListSection[],
+  lists?: CustomList[]
+): TasksDurationSummary {
+  if (!tasks || tasks.length === 0) return { ...EMPTY_SUMMARY };
+
+  const byId = new Map<string, TaskItem>();
+  try {
+    for (const t of Object.values(useAppStore.getState()?.tasks ?? {})) byId.set(t.id, t);
+  } catch {
+    // Fuera de un entorno con store (tests puros): se usa solo lo recibido.
+  }
+  for (const t of tasks) byId.set(t.id, t);
+
+  const childrenInSet = new Set<string>();
+  for (const t of tasks) if (t.parentId && !t.deleted_at) childrenInSet.add(t.parentId);
+
+  const coveredByAncestor = (t: TaskItem): boolean => {
+    const seen = new Set<string>([t.id]);
+    let parentId = t.parentId;
+    while (parentId && !seen.has(parentId)) {
+      seen.add(parentId);
+      const parent = byId.get(parentId);
+      if (!parent || parent.deleted_at) return false;
+      if (hasExplicitDuration(parent)) return true;
+      parentId = parent.parentId;
+    }
+    return false;
+  };
+
+  let totalActive = 0;
+  let maxParallel = 0;
+  let parallelCount = 0;
+
+  for (const t of tasks) {
+    if (t.deleted_at || !include(t)) continue;
+    if (coveredByAncestor(t)) continue;
+    // Contenedor sin tiempo propio: lo aportan sus subtareas.
+    if (childrenInSet.has(t.id) && !hasExplicitDuration(t)) continue;
+
+    const info = getTaskDuration(t, sections, lists);
+    totalActive += safeMinutes(info.activeMinutes);
+    if (info.isParallel) {
+      parallelCount++;
+      maxParallel = Math.max(maxParallel, safeMinutes(info.parallelMinutes));
+    }
+  }
+
+  const formattedActive = formatDuration(totalActive);
+  const formattedParallel = formatDuration(maxParallel);
+  return {
+    activeMinutes: totalActive,
+    parallelMinutes: maxParallel,
+    parallelTasksCount: parallelCount,
+    formattedActive,
+    formattedParallel,
+    formattedTotal: parallelCount > 0 ? `${formattedActive} (+ ${formattedParallel} paralelo)` : formattedActive,
+  };
+}
+
+/**
+ * Tiempo activo de lo PENDIENTE. Usa `isTaskCompleted` (el mismo criterio que la interfaz), de modo
+ * que tachar/destachar —también metas con contador— recalcula el restante al instante.
  */
 export function calculateTasksDuration(
   tasks: TaskItem[],
   sections?: ListSection[],
   lists?: CustomList[]
 ): TasksDurationSummary {
-  if (!tasks || tasks.length === 0) {
-    return {
-      activeMinutes: 0,
-      parallelMinutes: 0,
-      parallelTasksCount: 0,
-      formattedActive: '0 min',
-      formattedParallel: '0 min',
-      formattedTotal: '0 min'
-    };
-  }
-
-  let totalActive = 0;
-  let maxParallel = 0;
-  let parallelCount = 0;
-
-  for (const t of tasks) {
-    // Only count active/pending tasks
-    if (t.status === 'completed' || t.deleted_at) continue;
-
-    const info = getTaskDuration(t, sections, lists);
-    totalActive += info.activeMinutes;
-    if (info.isParallel) {
-      parallelCount++;
-      if (info.parallelMinutes > maxParallel) {
-        maxParallel = info.parallelMinutes;
-      }
-    }
-  }
-
-  const formattedActive = formatDuration(totalActive);
-  const formattedParallel = formatDuration(maxParallel);
-  const formattedTotal = parallelCount > 0
-    ? `${formattedActive} (+ ${formattedParallel} paralelo)`
-    : formattedActive;
-
-  return {
-    activeMinutes: totalActive,
-    parallelMinutes: maxParallel,
-    parallelTasksCount: parallelCount,
-    formattedActive,
-    formattedParallel,
-    formattedTotal
-  };
+  return aggregateDurations(tasks, t => !isTaskCompleted(t), sections, lists);
 }
 
-/**
- * Aggregates estimated durations for completed tasks in a set of tasks.
- */
+/** Tiempo activo de lo ya COMPLETADO, con los mismos criterios que `calculateTasksDuration`. */
 export function calculateCompletedTasksDuration(
   tasks: TaskItem[],
   sections?: ListSection[],
   lists?: CustomList[]
 ): TasksDurationSummary {
-  if (!tasks || tasks.length === 0) {
-    return {
-      activeMinutes: 0,
-      parallelMinutes: 0,
-      parallelTasksCount: 0,
-      formattedActive: '0 min',
-      formattedParallel: '0 min',
-      formattedTotal: '0 min'
-    };
-  }
-
-  let totalActive = 0;
-  let maxParallel = 0;
-  let parallelCount = 0;
-
-  for (const t of tasks) {
-    // Only count completed tasks
-    if (t.status !== 'completed' || t.deleted_at) continue;
-
-    const info = getTaskDuration(t, sections, lists);
-    totalActive += info.activeMinutes;
-    if (info.isParallel) {
-      parallelCount++;
-      if (info.parallelMinutes > maxParallel) {
-        maxParallel = info.parallelMinutes;
-      }
-    }
-  }
-
-  const formattedActive = formatDuration(totalActive);
-  const formattedParallel = formatDuration(maxParallel);
-  const formattedTotal = parallelCount > 0
-    ? `${formattedActive} (+ ${formattedParallel} paralelo)`
-    : formattedActive;
-
-  return {
-    activeMinutes: totalActive,
-    parallelMinutes: maxParallel,
-    parallelTasksCount: parallelCount,
-    formattedActive,
-    formattedParallel,
-    formattedTotal
-  };
+  return aggregateDurations(tasks, t => isTaskCompleted(t), sections, lists);
 }
-

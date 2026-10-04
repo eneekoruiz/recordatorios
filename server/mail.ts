@@ -4,10 +4,10 @@
 
 export const isMailConfigured = () => Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM);
 
-const escapeHtml = (s) =>
-  String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const escapeHtml = (s: string) =>
+  String(s).replace(/[&<>"']/g, (c: string) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] || c));
 
-export async function sendPasswordResetEmail(to, resetUrl) {
+export async function sendPasswordResetEmail(to: string, resetUrl: string) {
   const html = `
   <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#1c1c1e">
     <h1 style="font-size:22px;margin:0 0 12px">Restablece tu contraseña</h1>
@@ -41,7 +41,7 @@ export async function sendPasswordResetEmail(to, resetUrl) {
  * Aviso de seguridad (cambio de contraseña, inicio de sesión nuevo, 2FA…). Siempre «al mejor esfuerzo»:
  * si no hay proveedor de correo o falla el envío, no debe romper la operación que lo originó.
  */
-export async function sendSecurityEmail(to, { subject, heading, body }) {
+export async function sendSecurityEmail(to: string, { subject, heading, body }: { subject: string; heading: string; body: string }) {
   if (!isMailConfigured()) return false;
   try {
     const html = `
@@ -57,7 +57,7 @@ export async function sendSecurityEmail(to, { subject, heading, body }) {
     });
     return res.ok;
   } catch (error) {
-    console.error('Aviso de seguridad no enviado:', error?.message || error);
+    console.error('Aviso de seguridad no enviado:', (error as any)?.message || error);
     return false;
   }
 }
