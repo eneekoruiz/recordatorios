@@ -154,13 +154,17 @@ export function isQueHeHechoList(listIdOrView?: string | null, list?: CustomList
 }
 
 /**
- * Determina si una lista o vista corresponde a la Biblioteca de Vida (Series, Películas, Libros, etc.).
+ * Determina si una lista o vista corresponde a la Biblioteca de Vida (Series, Películas, Música, Libros, Recuerda, etc.).
  */
 export function isLifeLibraryList(listIdOrView?: string | null, list?: CustomList | null): boolean {
   if (!listIdOrView && !list) return false;
 
   const cleanId = (listIdOrView || '').replace(/^list_/, '').toLowerCase();
-  if (['series', 'peliculas', 'libros', 'biblioteca', 'lecturas', 'anime', 'manga', 'podcasts'].includes(cleanId)) return true;
+  if ([
+    'series', 'peliculas', 'libros', 'biblioteca', 'biblioteca_vida', 
+    'biblioteca_de_vida', 'lecturas', 'anime', 'manga', 'podcasts', 
+    'musica', 'canciones', 'recuerda'
+  ].includes(cleanId)) return true;
 
   if (list) {
     if (list.listType === 'library') return true;
@@ -178,6 +182,10 @@ export function isLifeLibraryList(listIdOrView?: string | null, list?: CustomLis
       cleanName.includes('lectura') ||
       cleanName.includes('biblioteca') ||
       cleanName.includes('podcast') ||
+      cleanName.includes('musica') ||
+      cleanName.includes('cancion') ||
+      cleanName.includes('recuerda') ||
+      cleanName.includes('apellidos') ||
       cleanName.includes('watchlist') ||
       cleanName.includes('anime')
     ) {
@@ -186,6 +194,58 @@ export function isLifeLibraryList(listIdOrView?: string | null, list?: CustomLis
   }
 
   return false;
+}
+
+/**
+ * Determina si una sección pertenece a contenidos culturales o de biblioteca de vida.
+ */
+export function isLifeLibrarySection(sectionName?: string | null): boolean {
+  if (!sectionName) return false;
+  const clean = sectionName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return (
+    clean.includes('serie') ||
+    clean.includes('pelicula') ||
+    clean.includes('musica') ||
+    clean.includes('cancion') ||
+    clean.includes('libro') ||
+    clean.includes('apellido') ||
+    clean.includes('recuerda')
+  );
+}
+
+/**
+ * Inicializa las secciones predefinidas de la Biblioteca de Vida si no existen aún.
+ */
+export function ensureLifeLibrarySections(
+  listId: string,
+  sections: ListSection[],
+  addSection: (sec: ListSection) => void
+): void {
+  const currentSections = sections.filter(s => s.listId === listId && !s.deleted_at);
+
+  const defaultSections = [
+    { name: 'Películas', key: 'peliculas' },
+    { name: 'Series', key: 'series' },
+    { name: 'Música', key: 'musica' },
+    { name: 'Libros', key: 'libros' },
+    { name: 'Apellidos', key: 'apellidos' },
+    { name: 'Recuerda', key: 'recuerda' }
+  ];
+
+  defaultSections.forEach((def, idx) => {
+    const exists = currentSections.some(s => 
+      s.id === `sec_${listId}_${def.key}` || 
+      s.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(def.key)
+    );
+    if (!exists) {
+      addSection({
+        id: `sec_${listId}_${def.key}`,
+        listId,
+        name: def.name,
+        order: idx
+      });
+    }
+  });
 }
 
 /**

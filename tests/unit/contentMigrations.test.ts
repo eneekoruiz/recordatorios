@@ -103,6 +103,19 @@ describe('runContentMigrations (Misiones 4 y 5)', () => {
     expect(albornoz).toBeDefined();
     expect(albornoz?.sectionId).toBe('sec_limpieza_semanal');
 
+    // 6. Biblioteca de Vida
+    const biblio = lists.find(l => l.id === 'biblioteca_vida' || l.name === 'Biblioteca de vida');
+    expect(biblio).toBeDefined();
+    expect(biblio?.listType).toBe('library');
+    const biblioSections = listSections.filter(s => s.listId === biblio?.id);
+    const secNames = biblioSections.map(s => s.name);
+    expect(secNames).toContain('Películas');
+    expect(secNames).toContain('Series');
+    expect(secNames).toContain('Música');
+    expect(secNames).toContain('Libros');
+    expect(secNames).toContain('Apellidos');
+    expect(secNames).toContain('Recuerda');
+
     // Segunda ejecución (Idempotencia)
     const countBefore = Object.values(tasks).filter(t => !t.deleted_at).length;
     runContentMigrations(store);

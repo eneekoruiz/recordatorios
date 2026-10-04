@@ -1656,13 +1656,22 @@ export const TaskCard = React.memo(function TaskCard({
               </a>
             )}
 
-            {/* Biblioteca de Vida: Series, Películas, Libros */}
-            {(isLifeLibraryList(task.categoryId, taskList) || task.mediaType || task.mediaStatus || task.mediaPlatform || (task.mediaRating && task.mediaRating > 0)) && (
-              <MediaTrackerFields
-                task={task}
-                onUpdate={(updates) => updateTask(task.id, updates)}
-                isCompact
-              />
+            {/* Biblioteca de Vida: Series, Películas, Música, Libros, Recuerda */}
+            {(isLifeLibraryList(task.categoryId, taskList) || task.mediaType || task.mediaStatus || task.mediaPlatform || (task.mediaRating && task.mediaRating > 0) || task.mediaNotes || task.mediaRecommendedBy) && (
+              <div 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(task.id);
+                }}
+                style={{ cursor: 'pointer', display: 'inline-flex' }}
+                title="Toca para editar detalles de la Biblioteca de Vida"
+              >
+                <MediaTrackerFields
+                  task={task}
+                  onUpdate={(updates) => updateTask(task.id, updates)}
+                  isCompact
+                />
+              </div>
             )}
           </div>
 

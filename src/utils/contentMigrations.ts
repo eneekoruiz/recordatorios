@@ -77,25 +77,26 @@ export function runContentMigrations(store: ContentMigrationStore): void {
   const allActiveTasks = Object.values(tasks).filter(t => !t.deleted_at);
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 2. MIGRAR HÁBITOS VITALES FUERA DE QUEHACERES A LA LISTA AISLADA
   // ──────────────────────────────────────────────────────────────────────────
+  // 2. INTEGRAR HÁBITOS VITALES COMO SUBSECCIÓN EN QUEHACERES Y LISTA AISLADA
+  // ──────────────────────────────────────────────────────────────────────────
+  const secHabitosVitales = findOrCreateSection(targetListId, 'Hábitos vitales', `sec_${targetListId}_habitos_vitales`);
+
   allActiveTasks.forEach(t => {
     const titleNorm = normalize(t.title);
     if (VITAL_HABIT_TITLE_REGEX.test(t.title || '') || titleNorm === 'beber agua' || titleNorm === 'comer') {
-      if (t.categoryId !== VITAL_HABITS_LIST_ID) {
-        store.updateTask(t.id, {
-          categoryId: VITAL_HABITS_LIST_ID,
-          sectionId: undefined,
-          duration: undefined,
-          parallelDuration: undefined,
-          disableDuration: true
-        });
-      }
+      store.updateTask(t.id, {
+        categoryId: VITAL_HABITS_LIST_ID,
+        sectionId: secHabitosVitales.id,
+        duration: undefined,
+        parallelDuration: undefined,
+        disableDuration: true
+      });
     }
   });
 
-  // Asegurar que 'Beber agua' y 'Comer' existen en 'habitos_vitales'
-  const vitalTasks = Object.values(store.tasks || {}).filter(t => !t.deleted_at && t.categoryId === VITAL_HABITS_LIST_ID);
+  // Asegurar que 'Beber agua' y 'Comer' existen con la subsección y lista
+  const vitalTasks = Object.values(store.tasks || {}).filter(t => !t.deleted_at && (t.categoryId === VITAL_HABITS_LIST_ID || t.sectionId === secHabitosVitales.id));
   const hasAgua = vitalTasks.some(t => normalize(t.title).includes('beber agua'));
   const hasComer = vitalTasks.some(t => normalize(t.title).includes('comer'));
 
@@ -103,6 +104,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
     store.addTask({
       title: 'Beber agua',
       categoryId: VITAL_HABITS_LIST_ID,
+      sectionId: secHabitosVitales.id,
       priority: 'none',
       status: 'pending',
       disableDuration: true,
@@ -114,6 +116,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
     store.addTask({
       title: 'Comer',
       categoryId: VITAL_HABITS_LIST_ID,
+      sectionId: secHabitosVitales.id,
       priority: 'none',
       status: 'pending',
       disableDuration: true,
@@ -266,4 +269,93 @@ export function runContentMigrations(store: ContentMigrationStore): void {
       isParallel: true
     });
   }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 7. 'Biblioteca de vida': unificar con 'Recuerda' si existe, o crearla con sus secciones
+  // ──────────────────────────────────────────────────────────────────────────
+  let libraryList = lists.find(l => 
+    l.id === 'biblioteca_vida' || 
+    l.id === 'biblioteca' || 
+    normalize(l.name).includes('biblioteca de vida') ||
+    normalize(l.name) === 'biblioteca' ||
+    normalize(l.name) === 'recuerda'
+  );
+
+  if (libraryList) {
+    if (store.updateList && (libraryList.listType !== 'library' || normalize(libraryList.name) === 'recuerda')) {
+      store.updateList(libraryList.id, {
+        name: 'Biblioteca de vida',
+        listType: 'library',
+        color: '#ff2d55',
+        icon: 'film'
+      });
+    }
+  } else {
+    const newLibId = 'biblioteca_vida';
+    store.addList({
+      id: newLibId,
+      name: 'Biblioteca de vida',
+      color: '#ff2d55',
+      icon: 'film',
+      listType: 'library',
+      autoEstimateDuration: false,
+      updated_at: EPOCH
+    });
+    libraryList = { id: newLibId, name: 'Biblioteca de vida' };
+  }
+
+  const libListId = libraryList.id;
+
+  const defaultLibSections = [
+    { name: 'Películas', key: 'peliculas' },
+    { name: 'Series', key: 'series' },
+    { name: 'Música', key: 'musica' },
+    { name: 'Libros', key: 'libros' },
+    { name: 'Apellidos', key: 'apellidos' },
+    { name: 'Recuerda', key: 'recuerda' }
+  ];
+
+  const currentLibSections = sections.filter(s => s.listId === libListId && !s.deleted_at);
+
+  defaultLibSections.forEach((def, idx) => {
+    const exists = currentLibSections.some(s => 
+      s.id === `sec_${libListId}_${def.key}` || 
+      normalize(s.name).includes(normalize(def.name))
+    );
+    if (!exists) {
+      store.addListSection({
+        id: `sec_${libListId}_${def.key}`,
+        listId: libListId,
+        name: def.name,
+        order: idx,
+        updated_at: EPOCH
+      });
+    }
+  });
+
+  const updatedLibSections = (store.listSections || sections).filter(s => s.listId === libListId && !s.deleted_at);
+  const libTasks = Object.values(store.tasks || {}).filter(t => !t.deleted_at && t.categoryId === libListId);
+
+  libTasks.forEach(t => {
+    const taskSec = updatedLibSections.find(s => s.id === t.sectionId);
+    const secName = normalize(taskSec?.name);
+    let inferredType: TaskItem['mediaType'] | undefined = t.mediaType;
+
+    if (!inferredType) {
+      if (secName.includes('pelicula')) inferredType = 'movie';
+      else if (secName.includes('serie')) inferredType = 'series';
+      else if (secName.includes('musica') || secName.includes('cancion')) inferredType = 'music';
+      else if (secName.includes('libro')) inferredType = 'book';
+      else inferredType = 'other';
+    }
+
+    const updates: Partial<TaskItem> = {};
+    if (inferredType && t.mediaType !== inferredType) updates.mediaType = inferredType;
+    if (!t.mediaStatus) updates.mediaStatus = 'want_to_watch';
+    if (t.disableDuration === undefined) updates.disableDuration = true;
+
+    if (Object.keys(updates).length > 0) {
+      store.updateTask(t.id, updates);
+    }
+  });
 }

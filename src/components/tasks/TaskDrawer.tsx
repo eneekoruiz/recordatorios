@@ -7,7 +7,8 @@ import { useAppStore } from '../../store/useAppStore';
 import { showUndoToast } from '../../utils/undoToast';
 import { parseNaturalLanguage } from '../../utils/nlp';
 import { ConfirmModal } from '../ui/ConfirmModal';
-import { isCaducidadesList, getListType, isShoppingList } from '../../utils/specialLists';
+import { isCaducidadesList, getListType, isShoppingList, isLifeLibraryList } from '../../utils/specialLists';
+import { MediaTrackerFields } from '../library/MediaTrackerFields';
 import './TaskDrawer.css';
 
 // Modular drawer subcomponents
@@ -144,6 +145,15 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   const [subscriptionPeriod, setSubscriptionPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [managementUrl, setManagementUrl] = useState<string>('');
 
+  // Media Tracker Fields (Biblioteca de Vida: Series, Películas, Música, Libros...)
+  const [mediaType, setMediaType] = useState<'series' | 'movie' | 'book' | 'music' | 'podcast' | 'other' | undefined>(undefined);
+  const [mediaStatus, setMediaStatus] = useState<'want_to_watch' | 'in_progress' | 'completed' | 'dropped' | 'favorite' | undefined>(undefined);
+  const [mediaRating, setMediaRating] = useState<number | undefined>(undefined);
+  const [mediaPlatform, setMediaPlatform] = useState<string>('');
+  const [mediaSeasonEpisode, setMediaSeasonEpisode] = useState<string>('');
+  const [mediaNotes, setMediaNotes] = useState<string>('');
+  const [mediaRecommendedBy, setMediaRecommendedBy] = useState<string>('');
+
   // El título lo ha escrito (o dictado) el usuario en esta apertura: solo entonces se
   // muestran los chips de lo que se ha entendido.
   const [titleEdited, setTitleEdited] = useState(false);
@@ -247,6 +257,13 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setAutoRollover(task.autoRollover ?? true);
         setSubscriptionPeriod(task.subscriptionPeriod || 'monthly');
         setManagementUrl(task.managementUrl || '');
+        setMediaType(task.mediaType);
+        setMediaStatus(task.mediaStatus);
+        setMediaRating(task.mediaRating);
+        setMediaPlatform(task.mediaPlatform || '');
+        setMediaSeasonEpisode(task.mediaSeasonEpisode || '');
+        setMediaNotes(task.mediaNotes || '');
+        setMediaRecommendedBy(task.mediaRecommendedBy || '');
         setTitleEdited(false);
         
         // Abrir inteligentemente solo las tarjetas que contienen datos relevantes o el foco solicitado
@@ -324,6 +341,13 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setCycleId(undefined);
         setTimeOfDay(undefined);
         setManagementUrl('');
+        setMediaType(undefined);
+        setMediaStatus(undefined);
+        setMediaRating(undefined);
+        setMediaPlatform('');
+        setMediaSeasonEpisode('');
+        setMediaNotes('');
+        setMediaRecommendedBy('');
         // Borrador de la barra rápida: se aplica lo que dice («mañana a las 10»…).
         setTitleEdited(Boolean(initialTitle));
         if (initialTitle) applyTitleSuggestions(initialTitle, false);
@@ -613,7 +637,14 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
       issuerMask: issuerMask.trim() || undefined,
       autoRollover: expirationType === 'subscription' ? autoRollover : undefined,
       subscriptionPeriod: expirationType === 'subscription' ? subscriptionPeriod : undefined,
-      managementUrl: managementUrl.trim() || undefined
+      managementUrl: managementUrl.trim() || undefined,
+      mediaType: mediaType || undefined,
+      mediaStatus: mediaStatus || undefined,
+      mediaRating: mediaRating || undefined,
+      mediaPlatform: mediaPlatform.trim() || undefined,
+      mediaSeasonEpisode: mediaSeasonEpisode.trim() || undefined,
+      mediaNotes: mediaNotes.trim() || undefined,
+      mediaRecommendedBy: mediaRecommendedBy.trim() || undefined
     };
 
     if (taskId) {
@@ -661,6 +692,13 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
     setAutoRollover(true);
     setSubscriptionPeriod('monthly');
     setManagementUrl('');
+    setMediaType(undefined);
+    setMediaStatus(undefined);
+    setMediaRating(undefined);
+    setMediaPlatform('');
+    setMediaSeasonEpisode('');
+    setMediaNotes('');
+    setMediaRecommendedBy('');
     onClose();
   };
 
@@ -933,6 +971,41 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                 managementUrl={managementUrl}
                 setManagementUrl={setManagementUrl}
               />
+              )}
+
+              {/* Card Especial: Biblioteca de Vida (Series, Películas, Música, Libros, etc.) */}
+              {(listType === 'library' || isLifeLibraryList(category) || Boolean(mediaType || mediaStatus || task?.mediaType)) && (
+                <MediaTrackerFields
+                  task={{
+                    id: taskId || 'draft',
+                    user_id: task?.user_id || 'local',
+                    type: 'task',
+                    title: title || '',
+                    status: 'pending',
+                    categoryId: category,
+                    sectionId,
+                    mediaType,
+                    mediaStatus,
+                    mediaRating,
+                    mediaPlatform,
+                    mediaSeasonEpisode,
+                    mediaNotes,
+                    mediaRecommendedBy,
+                    created_at: '',
+                    updated_at: '',
+                    version: 1
+                  }}
+                  onUpdate={(updates) => {
+                    if (updates.mediaType !== undefined) setMediaType(updates.mediaType);
+                    if (updates.mediaStatus !== undefined) setMediaStatus(updates.mediaStatus);
+                    if (updates.mediaRating !== undefined) setMediaRating(updates.mediaRating);
+                    if (updates.mediaPlatform !== undefined) setMediaPlatform(updates.mediaPlatform);
+                    if (updates.mediaSeasonEpisode !== undefined) setMediaSeasonEpisode(updates.mediaSeasonEpisode);
+                    if (updates.mediaNotes !== undefined) setMediaNotes(updates.mediaNotes);
+                    if (updates.mediaRecommendedBy !== undefined) setMediaRecommendedBy(updates.mediaRecommendedBy);
+                  }}
+                  isCompact={false}
+                />
               )}
 
             </div>

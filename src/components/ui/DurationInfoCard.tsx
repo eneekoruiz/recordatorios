@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Clock, Play, CheckCircle2, Zap } from 'lucide-react';
 import type { TasksDurationSummary } from '../../utils/taskDuration';
@@ -80,18 +81,20 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
     });
   }, [routineParts, mixParts, activeMinutes]);
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <div
           style={{
             position: 'fixed',
             inset: 0,
-            zIndex: 99999,
+            zIndex: 100005,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '16px',
+            padding: '16px 16px calc(24px + env(safe-area-inset-bottom, 0px))',
             pointerEvents: 'auto'
           }}
         >
@@ -124,16 +127,16 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
             style={{
               position: 'relative',
               width: '100%',
-              maxWidth: '440px',
+              maxWidth: '410px',
               borderRadius: '26px',
               background: 'var(--bg-elevated, #ffffff)',
               color: 'var(--text-primary, #1c1c1e)',
-              boxShadow: '0 24px 60px rgba(0, 0, 0, 0.28), 0 4px 16px rgba(0, 0, 0, 0.08)',
+              boxShadow: '0 28px 70px rgba(0, 0, 0, 0.32), 0 4px 16px rgba(0, 0, 0, 0.08)',
               border: '1px solid var(--border-subtle, rgba(0, 0, 0, 0.08))',
               overflow: 'hidden',
               display: 'flex',
               flexDirection: 'column',
-              maxHeight: '90vh'
+              maxHeight: 'min(80vh, 560px)'
             }}
           >
             {/* Cabecera */}
@@ -416,6 +419,7 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };

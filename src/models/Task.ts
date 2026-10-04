@@ -145,12 +145,14 @@ export interface TaskItem {
   suggestedDuration?: number; // AI suggested duration in minutes
   postponeCount?: number; // count of times the task was postponed
 
-  // --- BIBLIOTECA DE VIDA (SERIES, PELÍCULAS, LIBROS) ---
-  mediaType?: 'series' | 'movie' | 'book' | 'podcast' | 'other';
-  mediaStatus?: 'want_to_watch' | 'in_progress' | 'completed' | 'dropped';
+  // --- BIBLIOTECA DE VIDA (SERIES, PELÍCULAS, MÚSICA, LIBROS, RECUERDA) ---
+  mediaType?: 'series' | 'movie' | 'book' | 'music' | 'podcast' | 'other';
+  mediaStatus?: 'want_to_watch' | 'in_progress' | 'completed' | 'dropped' | 'favorite';
   mediaRating?: number; // 1-5 estrellas
-  mediaPlatform?: string; // Netflix, HBO, Prime, Disney+, etc.
-  mediaSeasonEpisode?: string; // ej: "T2 E5", "Pág 120/350"
+  mediaPlatform?: string; // Netflix, HBO, Prime, Disney+, Spotify, Apple Music, YouTube, etc.
+  mediaSeasonEpisode?: string; // ej: "T2 E5", "Pág 120/350", "Pista / Álbum"
+  mediaNotes?: string; // Comentarios o valoración personal
+  mediaRecommendedBy?: string; // Quién te lo recomendó o cómo lo descubriste
 
   // --- INTEGRACIONES EXTERNAS (GOOGLE CALENDAR, GMAIL, NOTION) ---
   googleCalendarUrl?: string;

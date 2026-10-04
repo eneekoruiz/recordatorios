@@ -3,7 +3,7 @@ import { MoreHorizontal, ChevronDown, Check, Plus, Play, Clock } from 'lucide-re
 import { DurationInfoCard } from '../../ui/DurationInfoCard';
 import { HapticService } from '../../../services/HapticService';
 import type { SectionMenuState } from './SectionContextMenu';
-import { formatDuration, type TasksDurationSummary } from '../../../utils/taskDuration';
+import type { TasksDurationSummary } from '../../../utils/taskDuration';
 import { isShoppingList } from '../../../utils/specialLists';
 import { useAppStore } from '../../../store/useAppStore';
 import { formatEuro } from '../../../utils/format';
@@ -126,7 +126,6 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   const isShopping = isShoppingList(data.category);
   // Con «+ Diarias» activo, routineDurations.full ya incluye las mezcladas (mismo nivel, sin subcabecera).
   const isFullRoutine = currentSectionRoutineMode === 'full_routine';
-  const hasRoutineDurationBreakdown = isFullRoutine && Boolean(data.routineDurations && data.routineDurations.full.activeMinutes > data.routineDurations.only.activeMinutes);
   const durSummary = !isShopping ? (data.routineDurations ? (isFullRoutine ? data.routineDurations.full : data.routineDurations.only) : durationSummary) : null;
   const sectionDurationLabel = durSummary && durSummary.activeMinutes > 0 ? durSummary.formattedActive : null;
 
@@ -145,7 +144,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           HapticService.selection();
           setIsSectionDurationOpen(true);
         }}
-        className="section-duration-chip"
+        className="section-duration-chip apple-duration-chip"
         title="Ver desglose de tiempo de esta sección"
         aria-label="Ver desglose de tiempo de sección"
         style={{
@@ -556,8 +555,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               style={{ background: 'transparent', border: 'none', borderBottom: `2px solid ${data.color}`, color: 'inherit', fontSize: 'inherit', fontFamily: 'inherit', outline: 'none' }}
             />
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, justifyContent: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, justifyContent: 'center', flex: '1 1 auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flexWrap: 'nowrap' }}>
                 {data.titleIcon && (
                   <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 2, opacity: 0.85, flexShrink: 0 }}>
                     {data.titleIcon}
@@ -579,32 +578,24 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                     textOverflow: 'ellipsis',
                     margin: 0,
                     padding: '1px 0',
-                    boxSizing: 'border-box'
+                    boxSizing: 'border-box',
+                    flexShrink: 1
                   }}
                   title={isCustomSection ? "Doble click para editar" : data.title}
                 >
                   {data.title}
                 </h3>
+                {durationNode && (
+                  <div style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center' }}>
+                    {durationNode}
+                  </div>
+                )}
               </div>
-              {(durationNode || priceNode) && (
+              {priceNode && (
                 <div
                   className="section-duration section-meta"
-                  style={{ fontSize: data.depth === 0 ? '0.8rem' : '0.74rem', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}
-                  title={[
-                    hasRoutineDurationBreakdown && data.routineDurations
-                      ? `Duración total: ~${sectionDurationLabel} (~${data.routineDurations.only.formattedActive} ${data.periodicity === 'week' ? 'semanales' : 'de esta sección'} + ~${formatDuration(data.routineDurations.full.activeMinutes - data.routineDurations.only.activeMinutes)} ${data.periodicity === 'week' ? 'diarias' : includeLabel.toLowerCase()})`
-                      : (sectionDurationLabel && (completedDurationSummary && completedDurationSummary.activeMinutes > 0
-                          ? `Te queda ~${sectionDurationLabel} en esta sección porque ya has completado ~${completedDurationSummary.formattedActive} (de ~${formatDuration(durSummary!.activeMinutes + completedDurationSummary.activeMinutes)})`
-                          : `Duración estimada: ${sectionDurationLabel}`)),
-                    (sectionTotal > 0 || (sectionCompletedTotal && sectionCompletedTotal > 0)) && (
-                      sectionCompletedTotal && sectionCompletedTotal > 0
-                        ? `Pendiente: ${formatEuro(sectionTotal)} · Ya pagado: ${formatEuro(sectionCompletedTotal)} · Total original: ${formatEuro(sectionTotal + sectionCompletedTotal)}`
-                        : `Subtotal: ${formatEuro(sectionTotal)}`
-                    )
-                  ].filter(Boolean).join(' · ')}
+                  style={{ fontSize: data.depth === 0 ? '0.8rem' : '0.74rem', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 2 }}
                 >
-                  {durationNode}
-                  {durationNode && priceNode && <span style={{ opacity: 0.4 }}>·</span>}
                   {priceNode}
                 </div>
               )}
@@ -685,7 +676,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               }}
             >
               <Play size={10} fill="currentColor" />
-              <span>Empezar</span>
+              {!isMobile && <span>Empezar</span>}
             </button>
           )}
           {/* Incluir las frecuencias anteriores: una cápsula que se enciende (con la sección desplegada) */}
@@ -747,12 +738,12 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                 title={tooltipText}
               >
                 <span className="section-main-count">{count}</span>
-                {hasRoutineBreakdown && (
+                {hasRoutineBreakdown && !isMobile && (
                   <span 
-                    className="section-routine-breakdown"
+                    className="section-routine-breakdown desktop-only-inline"
                     style={{ 
                       fontSize: '0.80rem', 
-                      fontWeight: 600,
+                      fontWeight: 600, 
                       display: 'inline-flex',
                       alignItems: 'baseline',
                       gap: 2,

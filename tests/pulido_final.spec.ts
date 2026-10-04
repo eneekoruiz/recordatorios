@@ -121,12 +121,19 @@ test.describe('Pulido final', () => {
       window.dispatchEvent(new CustomEvent('select-view', { detail: 'smart_all' }));
     });
     const casa = page.locator('.group-header', { hasText: 'Casa E2E' });
-    await expect(casa.locator('.meta-split__parts')).toContainText('10 min puntuales');
-    await expect(casa.locator('.meta-split__parts')).toContainText('15 min diarias');
-    await expect(casa.locator('.meta-split__parts')).toContainText('30 min semanales');
-    await expect(casa.locator('.meta-split')).toHaveAttribute('aria-label', /10 min puntuales \+ 15 min diarias \+ 30 min semanales/);
-    // La cabecera de la vista tiene el mismo reparto
-    await expect(page.locator('.list-duration-meta .meta-split__parts').first()).toContainText('30 min semanales');
+    const chip = casa.locator('.apple-duration-chip');
+    await expect(chip).toBeVisible();
+    await chip.click();
+
+    // El desglose se muestra ahora en la tarjeta modal DurationInfoCard
+    const modal = page.locator('[role="dialog"]');
+    await expect(modal).toBeVisible();
+    await expect(modal).toContainText('Puntuales');
+    await expect(modal).toContainText('10 min');
+    await expect(modal).toContainText('Diarias');
+    await expect(modal).toContainText('15 min');
+    await expect(modal).toContainText('Semanales');
+    await expect(modal).toContainText('30 min');
   });
 
   test('eliminar una sección avisa con «Deshacer» y Ctrl+Z la devuelve con sus recordatorios', async ({ page }) => {
