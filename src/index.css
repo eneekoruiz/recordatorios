@@ -752,13 +752,7 @@ body.dark .ios-list-item.active {
 }
 
 
-/* .user-profile-menu { */
-  /* background: var(--bg-elevated, #ffffff) !important; */
-}
-
-[data-theme="dark"] /* .user-profile-menu { */
-  /* background: #1c1c1e !important; */
-}
+/* removed user-profile-menu */
 [data-theme="dark"] .ios-dropdown-menu {
   background: rgba(28, 28, 30, 0.92) !important;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1954,3 +1948,4 @@ html, body {
   from { transform: translateX(-22%); opacity: 0.7; }
   to { transform: none; opacity: 1; }
 }
+
