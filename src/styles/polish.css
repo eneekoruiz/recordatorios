@@ -2472,52 +2472,113 @@ body.dark .cad-summary-cost strong {
   }
 }
 
-/* ---------- Micro-cápsula moderna de duración (Apple Reminders / iOS 18 style) ---------- */
-.apple-duration-chip,
-.section-duration-chip {
+/* ---------- Metadato de duración tipográfico estilo Apple (secciones) ---------- */
+.section-duration-label {
   display: inline-flex !important;
   align-items: center !important;
-  gap: 4.5px !important;
-  height: 22px !important;
-  padding: 0 8px !important;
-  border-radius: 999px !important;
-  background: color-mix(in srgb, var(--accent-primary, #007aff) 9%, var(--bg-material, rgba(0,0,0,0.04))) !important;
-  border: 1px solid color-mix(in srgb, var(--accent-primary, #007aff) 20%, transparent) !important;
-  color: var(--text-primary, #1c1c1e) !important;
+  gap: 3.5px !important;
+  height: 20px !important;
+  padding: 0 5px !important;
+  border-radius: 5px !important;
+  background: transparent !important;
+  border: none !important;
+  color: var(--text-tertiary, rgba(60, 60, 67, 0.55)) !important;
   cursor: pointer !important;
-  font-size: 0.74rem !important;
-  font-weight: 650 !important;
+  font-size: 0.75rem !important;
+  font-weight: 450 !important;
   font-variant-numeric: tabular-nums !important;
   letter-spacing: -0.01em !important;
-  transition: all 0.16s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.12s ease !important;
+  box-shadow: none !important;
+  user-select: none !important;
+  flex-shrink: 0 !important;
+  text-decoration: none !important;
+  outline: none !important;
+}
+
+.section-duration-label .section-duration-icon {
+  opacity: 0.6 !important;
+  color: currentColor !important;
+  flex-shrink: 0 !important;
+}
+
+.section-duration-label:hover {
+  background: var(--apple-fill-quaternary, rgba(142, 142, 147, 0.12)) !important;
+  color: var(--text-secondary, #3a3a3c) !important;
+}
+
+.section-duration-label:active {
+  transform: scale(0.96) !important;
+}
+
+[data-theme="dark"] .section-duration-label,
+html.dark .section-duration-label {
+  color: rgba(235, 235, 245, 0.55) !important;
+}
+
+[data-theme="dark"] .section-duration-label:hover,
+html.dark .section-duration-label:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* ---------- Chip de duración de cabecera de lista (Apple Reminders style) ---------- */
+.apple-list-duration-chip,
+.apple-duration-chip {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  height: 24px !important;
+  padding: 0 8px !important;
+  border-radius: 999px !important;
+  background: var(--apple-fill-quaternary, rgba(142, 142, 147, 0.12)) !important;
+  border: 0.5px solid rgba(0, 0, 0, 0.05) !important;
+  color: var(--text-secondary, #3c3c43) !important;
+  cursor: pointer !important;
+  font-size: 0.77rem !important;
+  font-weight: 500 !important;
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -0.01em !important;
+  transition: background 0.15s ease, transform 0.12s ease !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
   user-select: none !important;
   flex-shrink: 0 !important;
 }
 
-.apple-duration-chip:hover,
-.section-duration-chip:hover {
-  background: color-mix(in srgb, var(--accent-primary, #007aff) 16%, var(--bg-material, rgba(0,0,0,0.06))) !important;
-  border-color: color-mix(in srgb, var(--accent-primary, #007aff) 32%, transparent) !important;
-  transform: translateY(-0.5px) !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06) !important;
+.apple-list-duration-chip .apple-list-duration-icon {
+  opacity: 0.6 !important;
+  color: currentColor !important;
+  flex-shrink: 0 !important;
 }
 
-.apple-duration-chip:active,
-.section-duration-chip:active {
+.apple-list-duration-chip:hover,
+.apple-duration-chip:hover {
+  background: var(--apple-fill-tertiary, rgba(142, 142, 147, 0.2)) !important;
+  color: var(--text-primary, #000) !important;
+}
+
+.apple-list-duration-chip:active,
+.apple-duration-chip:active {
   transform: scale(0.97) !important;
 }
 
+[data-theme="dark"] .apple-list-duration-chip,
 [data-theme="dark"] .apple-duration-chip,
-[data-theme="dark"] .section-duration-chip,
-html.dark .apple-duration-chip,
-html.dark .section-duration-chip {
-  background: color-mix(in srgb, var(--accent-primary, #0a84ff) 14%, rgba(255, 255, 255, 0.06)) !important;
-  border-color: color-mix(in srgb, var(--accent-primary, #0a84ff) 28%, transparent) !important;
-  color: rgba(255, 255, 255, 0.92) !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
+html.dark .apple-list-duration-chip,
+html.dark .apple-duration-chip {
+  background: rgba(255, 255, 255, 0.09) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(235, 235, 245, 0.75) !important;
+}
+
+[data-theme="dark"] .apple-list-duration-chip:hover,
+[data-theme="dark"] .apple-duration-chip:hover,
+html.dark .apple-list-duration-chip:hover,
+html.dark .apple-duration-chip:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
 }
 
 /* Conteo numérico vertical compacto en cabeceras de sección */
@@ -2551,4 +2612,20 @@ html.dark .section-duration-chip {
   opacity: 0.95 !important;
   line-height: 1 !important;
 }
+
+/* ── Distintivo contextual temporal para secciones y cabeceras de frecuencia (estilo Apple) ── */
+.section-period-context-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  font-weight: 520;
+  letter-spacing: -0.01em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-tertiary) 10%, transparent);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
 

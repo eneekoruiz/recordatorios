@@ -10,7 +10,8 @@ import {
   getEffectiveCycleId,
   stripPeriodicityPrefix,
   hasPeriodicityPrefix,
-  getPeriodicityFromPrefix
+  getPeriodicityFromPrefix,
+  getPeriodContextLabel
 } from '../../src/utils/sectionRoutine';
 import type { TaskItem, ListSection, CustomList } from '../../src/models/Task';
 
@@ -258,6 +259,73 @@ describe('sectionRoutine utility', () => {
       expect(stripPeriodicityPrefix('Comprar manzanas')).toBe('Comprar manzanas');
       expect(stripPeriodicityPrefix('')).toBe('');
       expect(stripPeriodicityPrefix(null)).toBe('');
+    });
+  });
+
+  describe('getPeriodContextLabel', () => {
+    const fixedDate = new Date('2026-10-05T10:00:00Z'); // Lunes 5 de octubre de 2026, semana 41
+
+    it('returns null when periodicity is null or undefined', () => {
+      expect(getPeriodContextLabel(null, 2, 5, fixedDate)).toBeNull();
+      expect(getPeriodContextLabel(undefined, 2, 5, fixedDate)).toBeNull();
+    });
+
+    it('returns Año 2026 when annual tasks are pending', () => {
+      const info = getPeriodContextLabel('year', 3, 5, fixedDate);
+      expect(info).toBeDefined();
+      expect(info?.label).toBe('Año 2026');
+      expect(info?.isRolledOver).toBe(false);
+      expect(info?.activePeriod).toBe('2026');
+    });
+
+    it('returns next year 2027 when all 2026 annual tasks are completed', () => {
+      const info = getPeriodContextLabel('year', 0, 5, fixedDate);
+      expect(info).toBeDefined();
+      expect(info?.label).toBe('2027 · 2026 completado');
+      expect(info?.isRolledOver).toBe(true);
+      expect(info?.activePeriod).toBe('2027');
+    });
+
+    it('returns month name and year when monthly tasks are pending', () => {
+      const info = getPeriodContextLabel('month', 2, 4, fixedDate);
+      expect(info).toBeDefined();
+      expect(info?.label).toBe('Octubre 2026');
+      expect(info?.isRolledOver).toBe(false);
+    });
+
+    it('returns next month when all current month tasks are completed', () => {
+      const info = getPeriodContextLabel('month', 0, 4, fixedDate);
+      expect(info).toBeDefined();
+      expect(info?.label).toBe('Noviembre 2026 · Octubre al día');
+      expect(info?.isRolledOver).toBe(true);
+    });
+
+    it('returns week number and dates when weekly tasks are pending', () => {
+      const info = getPeriodContextLabel('week', 1, 3, fixedDate);
+      expect(info).toBeDefined();
+      expect(info?.label).toContain('Semana 41');
+      expect(info?.isRolledOver).toBe(false);
+    });
+
+    it('returns next week when all weekly tasks are completed', () => {
+      const info = getPeriodContextLabel('week', 0, 3, fixedDate);
+      expect(info).toBeDefined();
+      expect(info?.label).toBe('Semana 42 · Semana actual al día');
+      expect(info?.isRolledOver).toBe(true);
+    });
+
+    it('returns today information when daily tasks are pending', () => {
+      const info = getPeriodContextLabel('day', 2, 6, fixedDate);
+      expect(info).toBeDefined();
+      expect(info?.label).toContain('Hoy');
+      expect(info?.isRolledOver).toBe(false);
+    });
+
+    it('returns tomorrow information when all daily tasks are completed', () => {
+      const info = getPeriodContextLabel('day', 0, 6, fixedDate);
+      expect(info).toBeDefined();
+      expect(info?.label).toContain('Mañana');
+      expect(info?.isRolledOver).toBe(true);
     });
   });
 });

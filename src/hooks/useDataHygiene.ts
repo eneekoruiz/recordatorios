@@ -9,7 +9,7 @@ import {
 } from '../utils/sectionRoutine';
 import { normalizeTaskPrices } from '../utils/priceExtractor';
 import { ensureLimpiezaSections, getRoomForCleaningTask, isCaducidadesList, isQueHeHechoList } from '../utils/specialLists';
-import { isKnownRedundantTask, semanticKey, normalizeTitle } from '../utils/taskDeduplication';
+import { semanticKey, normalizeTitle } from '../utils/taskDeduplication';
 import { runContentMigrations } from '../utils/contentMigrations';
 import type { TaskItem } from '../models/Task';
 
@@ -63,36 +63,21 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
 
     const activeTasks = Object.values(state.tasks || {}).filter((t: any) => !t.deleted_at);
 
-    // Hygiene: remove dummy section header tasks imported from PDF
-    const dummyHeaderTitles = new Set(['diarias', 'semanales', 'mensuales', 'anuales']);
-    const dummySectionTasks = new Set([
-      'skin-care diaria', 'limpieza diaria', 'skincare semanal', 'limpieza semanal',
-      'skin-care mensual', 'limpieza mensual', 'compra mensual', 'compra anual', 'limpieza anual'
+    // Hygiene: Restaurar tareas legítimas que fueron erróneamente soft-deleted por filtros de limpieza agresivos
+    const titlesToProtectAndRestore = new Set([
+      'compra mensual', 'compra anual', 'limpieza mensual', 'limpieza anual',
+      'skincare semanal', 'skin-care semanal', 'skin-care mensual', 'skin-care diaria'
     ]);
-    const cleaningRoomHeaders = new Set([
-      'habitación', 'habitacion', 'cocina', 'pasillo / entrada', 'baño', 'bano', 'balcón', 'balcon', 'general'
-    ]);
-    const activeTasksMap = new Map(activeTasks.map((t: any) => [t.id, t]));
-    const dummyIdsToPurge = new Set<string>();
-    activeTasks.forEach((t: any) => {
+    const allStoredTasks = Object.values(state.tasks || {});
+    allStoredTasks.forEach((t: any) => {
       const clean = (t.title || '').trim().toLowerCase();
-      const cat = t.categoryId || (t as any).category_id;
-      const isCleaningRoom = cat === 'limpieza' && cleaningRoomHeaders.has(clean);
-      if (dummyHeaderTitles.has(clean) || dummySectionTasks.has(clean) || isCleaningRoom) {
-        dummyIdsToPurge.add(t.id);
-        state.deleteTask(t.id);
-      }
-    });
-    activeTasks.forEach((t: any) => {
-      if (t.parentId && (dummyIdsToPurge.has(t.parentId) || !activeTasksMap.has(t.parentId))) {
-        state.updateTask(t.id, { parentId: undefined });
-      }
-    });
-
-    // Hygiene: remove known redundant or cross-frequency tasks
-    activeTasks.forEach((t: any) => {
-      if (isKnownRedundantTask(t.title)) {
-        state.deleteTask(t.id);
+      if (titlesToProtectAndRestore.has(clean) && t.deleted_at) {
+        state.updateTaskRaw({
+          ...t,
+          deleted_at: undefined,
+          updated_at: new Date().toISOString(),
+          _is_dirty: true
+        });
       }
     });
 
@@ -326,13 +311,15 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
       const compraListId = compraList ? compraList.id : 'compra';
       if (compraList) {
         const compraSections = [
-          { id: `sec_${compraListId}_diarias`, name: 'Diarias', order: 0, root: 'diari' },
-          { id: `sec_${compraListId}_semanales`, name: 'Semanales', order: 1, root: 'seman' },
-          { id: `sec_${compraListId}_mensuales`, name: 'Mensuales', order: 2, root: 'mensu' },
-          { id: `sec_${compraListId}_anuales`, name: 'Anuales', order: 3, root: 'anual' },
+          { id: `sec_${compraListId}_cuanto_antes`, name: 'Cuanto antes', order: 0, root: 'cuanto' },
+          { id: `sec_${compraListId}_diarias`, name: 'Diarias', order: 1, root: 'diari' },
+          { id: `sec_${compraListId}_semanales`, name: 'Semanales', order: 2, root: 'seman' },
+          { id: `sec_${compraListId}_mensuales`, name: 'Mensuales', order: 3, root: 'mensu' },
+          { id: `sec_${compraListId}_anuales`, name: 'Anuales', order: 4, root: 'anual' },
+          { id: `sec_${compraListId}_wish_list`, name: 'Wish list', order: 5, root: 'wish' },
         ];
         compraSections.forEach(cSec => {
-          if (!sections.some(s => s.listId === compraListId && (s.name || '').toLowerCase().includes(cSec.root))) {
+          if (!sections.some(s => s.listId === compraListId && (s.id === cSec.id || (s.name || '').toLowerCase().includes(cSec.root)))) {
             state.addListSection({
               id: cSec.id,
               listId: compraListId,
@@ -412,7 +399,21 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
             });
           }
         } else if (t.categoryId === 'compra' || t.categoryId === 'compras') {
-          if (t.sectionId === 'sec_compra_mensual') {
+          if (t.sectionId === 'compra_cuanto_antes' || t.sectionId === 'sec_compra_cuanto_antes') {
+            state.updateTaskRaw({
+              ...t,
+              sectionId: `sec_${compraListId}_cuanto_antes`,
+              updated_at: new Date().toISOString(),
+              _is_dirty: true
+            });
+          } else if (t.sectionId === 'compra_wish_list' || t.sectionId === 'sec_compra_wish_list') {
+            state.updateTaskRaw({
+              ...t,
+              sectionId: `sec_${compraListId}_wish_list`,
+              updated_at: new Date().toISOString(),
+              _is_dirty: true
+            });
+          } else if (t.sectionId === 'compra_mensual' || t.sectionId === 'sec_compra_mensual' || t.sectionId === 'sec_compra_mensuales') {
             state.updateTaskRaw({
               ...t,
               sectionId: `sec_${compraListId}_mensuales`,
@@ -420,7 +421,7 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
               updated_at: new Date().toISOString(),
               _is_dirty: true
             });
-          } else if (t.sectionId === 'compra_anual' || t.sectionId === 'sec_compra_anual') {
+          } else if (t.sectionId === 'compra_anual' || t.sectionId === 'sec_compra_anual' || t.sectionId === 'sec_compra_anuales') {
             state.updateTaskRaw({
               ...t,
               sectionId: `sec_${compraListId}_anuales`,

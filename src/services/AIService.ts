@@ -16,6 +16,8 @@ export interface ProposedTask {
   timeOfDay?: 'morning' | 'afternoon' | 'night';
   price?: number;
   quantity?: number;
+  targetCount?: number;
+  currentCount?: number;
   priority?: 'none' | 'low' | 'medium' | 'high';
   cycle?: 'cycle_day' | 'cycle_week' | 'cycle_month' | 'cycle_year';
   people?: string[];
@@ -83,8 +85,8 @@ export interface AIConfig {
 }
 
 const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
-/** Modelos por orden de preferencia (los 1.5 ya están retirados: solo añadían intentos fallidos). */
-const GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-2.5-flash-lite'];
+/** Modelos por orden de preferencia y baja latencia (los modelos Flash responden en < 500ms). */
+const GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'];
 
 /** La clave viaja en cabecera, no en la URL (las URLs acaban en logs y en historiales de proxy). */
 const geminiRequest = (model: string, apiKey: string, body: unknown, signal: AbortSignal) =>
@@ -990,6 +992,19 @@ export class AIService {
       else if (/\b(semanal|cada\s+semana)\b/i.test(segment)) cycle = 'cycle_week';
       else if (/\b(mensual|cada\s+mes)\b/i.test(segment)) cycle = 'cycle_month';
       else if (/\b(anual|cada\s+año)\b/i.test(segment)) cycle = 'cycle_year';
+
+      // Extract target count / repetitions (ej. "10 veces", "beber 8 vasos de agua", "10 veces al día", "5 series")
+      let targetCount: number | undefined;
+      const timesMatch = segment.match(/\b(\d+)\s*(?:veces|repeticiones|series|vasos|tazas)(?:\s+(?:al|por|cada)\s+d[íi]a)?\b/i);
+      if (timesMatch) {
+        const count = parseInt(timesMatch[1], 10);
+        if (count > 1 && count <= 100) {
+          targetCount = count;
+          cycle = cycle ?? 'cycle_day'; // Por defecto los hábitos de repetición son diarios
+          segment = segment.replace(timesMatch[0], ' ').trim();
+        }
+      }
+
       // «todas las mañanas/tardes/noches»: a diario, a esa hora del día.
       const habitual = segment.match(/\btodas\s+las\s+(ma[ñn]anas|tardes|noches)\b/i);
       if (habitual) {
@@ -1134,6 +1149,8 @@ export class AIService {
           dueDate: finalDueDateString,
           timeOfDay,
           price,
+          targetCount,
+          currentCount: 0,
           priority,
           description: weekdayDescription,
           cycle,
@@ -1197,7 +1214,14 @@ export class AIService {
    * precio/frecuencia...), así que su calidad dependía de qué proveedor tuviera configurado
    * el usuario. Con el mismo prompt, ambos entienden las mismas formulaciones igual de bien.
    */
-  private static buildSystemInstruction(existingLists: CustomList[], tasksArr: TaskItem[], listSections: ListSection[] = []): string {
+  public static buildSystemInstruction(
+    existingLists: CustomList[],
+    tasksArr: TaskItem[],
+    arg3?: any,
+    _arg4?: any,
+    arg5?: any
+  ): string {
+    const listSections: ListSection[] = Array.isArray(arg3) ? arg3 : (Array.isArray(arg5) ? arg5 : []);
     const listNames = existingLists.map(l => {
       const secs = listSections.filter(s => s.listId === l.id && !s.deleted_at);
       const secsStr = secs.length > 0 ? ` [Secciones: ${secs.map(s => `"${s.name}" (id: "${s.id}")`).join(', ')}]` : '';
@@ -1293,11 +1317,19 @@ REGLAS CRÍTICAS DE COMPRENSIÓN, MODIFICACIÓN Y PREGUNTAS:
      * "sectionId": ID exacto de la sección ("Películas", "Series", "Música", "Libros", "Apellidos", "Recuerda")
      * "mediaType": "movie" | "series" | "music" | "book" | "other"
      * "mediaStatus": "want_to_watch" (o "completed" si dice que ya lo vio / escuchó).
-   - Si pide marcar una obra como vista o calificarla, incluye en "taskUpdates" el "taskId", "mediaStatus": "completed" y opcionalmente notas.
+    - Si pide marcar una obra como vista o calificarla, incluye en "taskUpdates" el "taskId", "mediaStatus": "completed" y opcionalmente notas.
+
+8. HÁBITOS DE REPETICIÓN Y CONTADORES NUMÉRICOS (targetCount):
+   - Si el usuario especifica un hábito con repeticiones numéricas (ej. "beber agua 10 veces al día", "10 vasos de agua diarios", "hacer 20 flexiones", "tomar pastilla 3 veces al día"):
+     Asigna "targetCount": 10 (o el número especificado), "cycle": "cycle_day" (u otra periodicidad si se indica), y el título limpio (ej. "Beber agua").
+
+9. ESTILO DE RESPUESTA CONCISO, ELEGANTE Y ÁGIL (Estilo Apple):
+   - Sé directo, educado y breve: máximo 1 o 2 oraciones en "reply".
+   - Evita discursos ceremoniosos, parrafadas vacías o coletillas repetitivas. Ve directo a la acción.
 
 DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
 {
-  "reply": "Respuesta conversacional empática, inteligente y clara",
+  "reply": "Respuesta conversacional concisa, directa y elegante",
   "suggestedList": { "name": "NombreSiRecomiendasCrearLista", "color": "#007aff", "icon": "list" }, // opcional
   "clarificationQuestions": ["¿Pregunta de aclaración 1?"], // opcional si falta info o hay ambigüedad
   "suggestedReplies": ["Opción 1 para pulsar", "Opción 2"], // botones sugeridos para responder con un toque
@@ -1326,6 +1358,7 @@ DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
       "dueDate": "ISO 8601 string o null",
       "timeOfDay": "morning" | "afternoon" | "night" | null,
       "price": number | null,
+      "targetCount": number | null,
       "priority": "none" | "low" | "medium" | "high",
       "cycle": "cycle_day" | "cycle_week" | "cycle_month" | "cycle_year" | null,
       "people": ["Persona1", "Persona2"],
@@ -1379,7 +1412,7 @@ DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
 
     for (const model of candidateModels) {
       const timeoutController = new AbortController();
-      const timeoutId = setTimeout(() => timeoutController.abort(), 15000);
+      const timeoutId = setTimeout(() => timeoutController.abort(), 9000);
       try {
         const res = await geminiRequest(model, apiKey, {
           contents,
@@ -1387,7 +1420,9 @@ DEBES responder SIEMPRE en formato JSON estricto con la siguiente estructura:
             parts: [{ text: systemInstruction }]
           },
           generationConfig: {
-            responseMimeType: 'application/json'
+            responseMimeType: 'application/json',
+            temperature: 0.1,
+            maxOutputTokens: 2048
           }
         }, timeoutController.signal);
 

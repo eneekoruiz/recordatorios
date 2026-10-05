@@ -415,6 +415,8 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
         timeOfDay: t.timeOfDay,
         price: t.price,
         quantity: t.quantity,
+        targetCount: t.targetCount,
+        currentCount: t.currentCount || 0,
         priority: t.priority || 'none',
         cycle_id: t.cycle,
         people: t.people,

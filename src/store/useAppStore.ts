@@ -661,9 +661,15 @@ export const useAppStore = create<AppState>()(
           }
         }
 
-        // Lógica de cascada: si se tacha un recordatorio padre, se completan también todas sus subtareas recursivamente
+        // Lógica de cascada y desacople padre-hijo:
+        // 1. Si se tacha un padre (!shouldReverse y está terminado), se completan todas sus subtareas recursivamente.
+        // 2. Si se destacha un hijo (shouldReverse), solo se destacha ese hijo, pero el padre reabre a pendiente para que no quede falsamente completado mientras tenga tareas sin hacer.
         const childUpdates: Record<string, TaskItem> = {};
-        if (!shouldReverse && (updatedTask.status === 'completed' || isDone)) {
+        const isNowDone = isTaskCompleted(updatedTask) || 
+          isCompletedInCurrentPeriod(updatedTask, state.cycles, state.listSections, state.lists) ||
+          (Boolean(updatedTask.targetCount) && (updatedTask.currentCount || 0) >= (updatedTask.targetCount || 1));
+
+        if (!shouldReverse && isNowDone) {
           const queue = [id];
           const nowTs = Date.now();
           while (queue.length > 0) {
@@ -699,9 +705,35 @@ export const useAppStore = create<AppState>()(
           }
         }
 
+        // Si se destacha una subtarea específica dentro de un padre, reabrir ancestros completados a pendiente
+        const parentUpdates: Record<string, TaskItem> = {};
+        if (shouldReverse && existingTask.parentId) {
+          let currParentId: string | undefined = existingTask.parentId;
+          const visitedParents = new Set<string>();
+          while (currParentId && !visitedParents.has(currParentId)) {
+            visitedParents.add(currParentId);
+            const parent: TaskItem | undefined = state.tasks[currParentId];
+            if (!parent || parent.deleted_at) break;
+
+            const parentDone = isTaskCompleted(parent) || isCompletedInCurrentPeriod(parent, state.cycles, state.listSections, state.lists);
+            if (parentDone) {
+              const pHistory = [...(parent.completionHistory || [])];
+              if (pHistory.length > 0) pHistory.pop();
+              parentUpdates[parent.id] = TaskRepository.update(parent, {
+                status: 'pending',
+                completionHistory: pHistory,
+                completedAlerts: [],
+                currentCount: Math.max(0, (parent.currentCount || 1) - 1)
+              });
+            }
+            currParentId = parent.parentId;
+          }
+        }
+
         return {
           tasks: {
             ...state.tasks,
+            ...parentUpdates,
             [id]: updatedTask,
             ...childUpdates
           }

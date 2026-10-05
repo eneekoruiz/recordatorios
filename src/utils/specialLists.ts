@@ -640,7 +640,7 @@ export function getGroceryCategory(title?: string | null): string | null {
  * para mostrar un distintivo claro y visible junto al nombre.
  */
 export function getListBadgeInfo(list?: CustomList | null, listIdOrView?: string | null): { label: string; color: string; generic?: boolean } {
-  // «Anotar» es la lista corriente: no lleva distintivo (sería ruido junto a cada título).
+  // Las listas de usuario no llevan distintivos ruidosos estilo IA junto al título principal
   if (!list && !listIdOrView) return { label: 'Anotar', color: 'var(--text-tertiary)', generic: true };
   if (list?.isFinancial || isShoppingList(listIdOrView, list)) {
     return { label: 'Financiera', color: '#30d158' };

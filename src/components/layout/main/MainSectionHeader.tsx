@@ -3,7 +3,7 @@ import { MoreHorizontal, ChevronDown, Check, Plus, Clock } from 'lucide-react';
 import { DurationInfoCard } from '../../ui/DurationInfoCard';
 import { HapticService } from '../../../services/HapticService';
 import type { SectionMenuState } from './SectionContextMenu';
-import type { TasksDurationSummary } from '../../../utils/taskDuration';
+import { formatSummaryDuration, type TasksDurationSummary } from '../../../utils/taskDuration';
 import { isShoppingList, isLifeLibraryList } from '../../../utils/specialLists';
 import { useAppStore } from '../../../store/useAppStore';
 import { formatEuro } from '../../../utils/format';
@@ -11,6 +11,7 @@ import { classifyDropZone, DRAG_MOVE_THRESHOLD_PX } from '../../../utils/dragDro
 import { getReservedFrequencyColor } from '../../../constants/colors';
 import { MetaSplit, MONEY_COLOR } from '../../ui/MetaSplit';
 import { routinePeriodLabel, type RoutinePart } from '../../../utils/routineBreakdown';
+import { getPeriodContextLabel } from '../../../utils/sectionRoutine';
 
 interface SectionData {
   title: string;
@@ -128,10 +129,17 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   // Con «+ Diarias» activo, routineDurations.full ya incluye las mezcladas (mismo nivel, sin subcabecera).
   const isFullRoutine = currentSectionRoutineMode === 'full_routine';
   const durSummary = !isShopping && !isLibrary ? (data.routineDurations ? (isFullRoutine ? data.routineDurations.full : data.routineDurations.only) : durationSummary) : null;
-  const sectionDurationLabel = durSummary && durSummary.activeMinutes > 0 ? durSummary.formattedActive : null;
+  const sectionDurationLabel = durSummary && durSummary.activeMinutes > 0 ? formatSummaryDuration(durSummary.activeMinutes) : null;
 
   // Corto para caber en el móvil: «+ Diarias» en las semanales, «+ Acumuladas» en mensuales y anuales.
   const includeLabel = data.periodicity === 'week' ? 'Diarias' : 'Acumuladas';
+
+  const periodContext = React.useMemo(() => {
+    const effPeriod = (data.periodicity as any) || null;
+    if (!effPeriod) return null;
+    if (/^\d{4}$/.test((data.title || '').trim())) return null;
+    return getPeriodContextLabel(effPeriod, pendingTaskCount ?? 0, sectionTotal);
+  }, [data.periodicity, data.title, pendingTaskCount, sectionTotal]);
 
   const [isSectionDurationOpen, setIsSectionDurationOpen] = useState(false);
 
@@ -145,15 +153,12 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           HapticService.selection();
           setIsSectionDurationOpen(true);
         }}
-        className="section-duration-chip apple-duration-chip"
-        title="Ver desglose de tiempo de esta sección"
+        className="section-duration-label"
+        title="Toca para ver el desglose de tiempo"
         aria-label="Ver desglose de tiempo de sección"
-        style={{
-          ['--accent-primary' as string]: data.color || 'var(--accent-primary)',
-        }}
       >
-        <Clock size={11} strokeWidth={2.4} color={data.color || 'var(--accent-primary)'} />
-        <span>~{sectionDurationLabel}</span>
+        <Clock size={11} strokeWidth={1.8} className="section-duration-icon" />
+        <span>{sectionDurationLabel}</span>
       </button>
     );
   }
@@ -582,6 +587,26 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                 >
                   {data.title}
                 </h3>
+                {periodContext && (
+                  <span 
+                    className="section-period-context-badge"
+                    title={periodContext.isRolledOver ? 'Período actual completado · Mostrando siguiente ciclo' : 'Período en curso'}
+                    style={{
+                      marginLeft: 4,
+                      fontSize: '0.72rem',
+                      fontWeight: 500,
+                      color: periodContext.isRolledOver ? 'var(--accent-green, #34c759)' : 'var(--text-tertiary)',
+                      letterSpacing: '-0.01em',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 3,
+                      flexShrink: 0
+                    }}
+                  >
+                    {periodContext.isRolledOver && <Check size={11} strokeWidth={2.5} />}
+                    {periodContext.label}
+                  </span>
+                )}
                 {!isMobile && durationNode && (
                   <div className="section-duration section-meta" style={{ marginLeft: 6, flexShrink: 0, display: 'inline-flex', alignItems: 'center' }}>
                     {durationNode}

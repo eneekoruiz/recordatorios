@@ -122,4 +122,13 @@ describe('AIService - Conversación y contexto de Biblioteca de Vida y Tareas Co
     expect(instruction).toContain('Series');
     expect(instruction).toContain('Biblioteca de vida');
   });
+
+  it('extrae hábitos con meta de repeticiones (ej. beber agua 10 veces al día) con targetCount y cycle_day', () => {
+    const res = AIService.localSemanticExtract('Beber agua 10 veces al día', lists, tasks, undefined, listSections);
+    expect(res.tasks).toHaveLength(1);
+    const task = res.tasks[0];
+    expect(task.title.toLowerCase()).toContain('beber agua');
+    expect(task.targetCount).toBe(10);
+    expect(task.cycle).toBe('cycle_day');
+  });
 });

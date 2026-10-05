@@ -287,6 +287,27 @@ export function formatDuration(minutes: number): string {
   return `${hours} h ${remainingMins} min`;
 }
 
+/**
+ * Formato de duración para resúmenes de cabeceras y secciones al estilo Apple:
+ * - Omite segundos ruidosos cuando la duración es >= 1 min (ej. 40.5 min -> 41 min, 4.5 min -> 5 min).
+ * - Muestra segundos solo para microtareas < 1 min (ej. 0.75 min -> 45 s).
+ * - No incluye tildes '~'.
+ * - Formato limpio y humano: "41 min", "18 min", "1 min", "4 h 3 min".
+ */
+export function formatSummaryDuration(minutes: number): string {
+  if (!minutes || minutes <= 0) return '0 min';
+  if (minutes < 1) {
+    const totalSeconds = Math.round(minutes * 60);
+    return `${Math.max(1, totalSeconds)} s`;
+  }
+  const roundMins = Math.round(minutes);
+  const hours = Math.floor(roundMins / 60);
+  const remainingMins = roundMins % 60;
+  if (hours === 0) return `${remainingMins} min`;
+  if (remainingMins === 0) return `${hours} h`;
+  return `${hours} h ${remainingMins} min`;
+}
+
 /** Minutos válidos: finitos y no negativos (nunca NaN/Infinity en un sumatorio). */
 const safeMinutes = (n: number): number => (Number.isFinite(n) && n > 0 ? n : 0);
 

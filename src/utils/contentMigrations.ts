@@ -483,4 +483,133 @@ export function runContentMigrations(store: ContentMigrationStore): void {
       store.updateTask(t.id, updates);
     }
   });
+
+  // 9. Blindaje total de integridad: restaurar tareas legítimas y asegurar secciones completas
+  const protectedTitles = new Set([
+    'compra mensual', 'compra anual', 'limpieza mensual', 'limpieza anual',
+    'skincare semanal', 'skin-care semanal', 'skin-care mensual', 'skin-care diaria'
+  ]);
+  Object.values(store.tasks || {}).forEach(t => {
+    const normTitle = normalize(t.title);
+    if (protectedTitles.has(normTitle) && t.deleted_at) {
+      store.updateTask(t.id, { deleted_at: undefined });
+    }
+  });
+
+  // Asegurar secciones completas de Compra
+  const targetCompraList = lists.find((l: any) => l.id === 'compra' || l.id === 'compras' || normalize(l.name).includes('compra'));
+  if (targetCompraList) {
+    const cId = targetCompraList.id;
+    const requiredCompraSecs = [
+      { id: `sec_${cId}_cuanto_antes`, name: 'Cuanto antes', order: 0, root: 'cuanto' },
+      { id: `sec_${cId}_diarias`, name: 'Diarias', order: 1, root: 'diari' },
+      { id: `sec_${cId}_semanales`, name: 'Semanales', order: 2, root: 'seman' },
+      { id: `sec_${cId}_mensuales`, name: 'Mensuales', order: 3, root: 'mensu' },
+      { id: `sec_${cId}_anuales`, name: 'Anuales', order: 4, root: 'anual' },
+      { id: `sec_${cId}_wish_list`, name: 'Wish list', order: 5, root: 'wish' },
+    ];
+    requiredCompraSecs.forEach(req => {
+      const exists = sections.some((s: any) => s.listId === cId && (s.id === req.id || normalize(s.name).includes(req.root)));
+      if (!exists) {
+        store.addListSection({
+          id: req.id,
+          listId: cId,
+          name: req.name,
+          order: req.order,
+          updated_at: EPOCH
+        });
+      }
+    });
+
+    // Remapear tareas de Compra huérfanas o con IDs de sección heredados
+    Object.values(store.tasks || {}).forEach(t => {
+      if ((t.categoryId === 'compra' || t.categoryId === 'compras' || t.categoryId === cId) && !t.deleted_at) {
+        let targetSec = t.sectionId;
+        if (t.sectionId === 'compra_cuanto_antes' || t.sectionId === 'sec_compra_cuanto_antes') {
+          targetSec = `sec_${cId}_cuanto_antes`;
+        } else if (t.sectionId === 'compra_wish_list' || t.sectionId === 'sec_compra_wish_list') {
+          targetSec = `sec_${cId}_wish_list`;
+        } else if (t.sectionId === 'compra_mensual' || t.sectionId === 'sec_compra_mensual' || t.sectionId === 'sec_compra_mensuales') {
+          targetSec = `sec_${cId}_mensuales`;
+        } else if (t.sectionId === 'compra_anual' || t.sectionId === 'sec_compra_anual' || t.sectionId === 'sec_compra_anuales') {
+          targetSec = `sec_${cId}_anuales`;
+        }
+        if (targetSec && targetSec !== t.sectionId) {
+          store.updateTask(t.id, { sectionId: targetSec, categoryId: cId });
+        }
+      }
+    });
+  }
+
+  // Asegurar secciones completas de Quehaceres
+  const targetQuehaceresList = lists.find((l: any) => l.id === 'quehaceres' || normalize(l.name).includes('quehacer'));
+  if (targetQuehaceresList) {
+    const qId = targetQuehaceresList.id;
+    const requiredQSecs = [
+      { id: `sec_${qId}_diarias`, name: 'Diarias', order: 0, root: 'diari' },
+      { id: `sec_${qId}_semanales`, name: 'Semanales', order: 1, root: 'seman' },
+      { id: `sec_${qId}_mensuales`, name: 'Mensuales', order: 2, root: 'mensu' },
+      { id: `sec_${qId}_anuales`, name: 'Anuales', order: 3, root: 'anual' },
+    ];
+    requiredQSecs.forEach(req => {
+      const exists = sections.some((s: any) => s.listId === qId && (s.id === req.id || normalize(s.name).includes(req.root)));
+      if (!exists) {
+        store.addListSection({
+          id: req.id,
+          listId: qId,
+          name: req.name,
+          order: req.order,
+          updated_at: EPOCH
+        });
+      }
+    });
+
+    // Remapear tareas de Quehaceres con sección antigua
+    Object.values(store.tasks || {}).forEach(t => {
+      if ((t.categoryId === 'quehaceres' || t.categoryId === qId) && !t.deleted_at) {
+        let targetSec = t.sectionId;
+        if (t.sectionId === 'quehaceres_diarias' || t.sectionId === 'sec_quehaceres_diaria') targetSec = `sec_${qId}_diarias`;
+        else if (t.sectionId === 'quehaceres_semanales' || t.sectionId === 'sec_quehaceres_semanal') targetSec = `sec_${qId}_semanales`;
+        else if (t.sectionId === 'quehaceres_mensuales' || t.sectionId === 'sec_quehaceres_mensual') targetSec = `sec_${qId}_mensuales`;
+        else if (t.sectionId === 'quehaceres_anuales' || t.sectionId === 'sec_quehaceres_anual') targetSec = `sec_${qId}_anuales`;
+        if (targetSec && targetSec !== t.sectionId) {
+          store.updateTask(t.id, { sectionId: targetSec, categoryId: qId });
+        }
+      }
+    });
+  }
+
+  // Asegurar secciones completas de Propósitos Anuales
+  const targetGoalsList = lists.find((l: any) => l.id === 'prop_sitos_anuales' || normalize(l.name).includes('proposito'));
+  if (targetGoalsList) {
+    const gId = targetGoalsList.id;
+    const requiredYears = [
+      { id: 'sec_prop_2020', name: '2020', order: 0 },
+      { id: 'sec_prop_2021', name: '2021', order: 1 },
+      { id: 'sec_prop_2022', name: '2022', order: 2 },
+      { id: 'sec_prop_2023', name: '2023', order: 3 },
+      { id: 'sec_prop_2026', name: '2026', order: 4 },
+    ];
+    requiredYears.forEach(req => {
+      const exists = sections.some((s: any) => s.listId === gId && (s.id === req.id || normalize(s.name) === req.name));
+      if (!exists) {
+        store.addListSection({
+          id: req.id,
+          listId: gId,
+          name: req.name,
+          order: req.order,
+          updated_at: EPOCH
+        });
+      }
+    });
+    // Remapear tareas de Propósitos con IDs tipo section_year_2021
+    Object.values(store.tasks || {}).forEach(t => {
+      if ((t.categoryId === 'prop_sitos_anuales' || t.categoryId === gId) && !t.deleted_at) {
+        if (t.sectionId?.startsWith('section_year_')) {
+          const year = t.sectionId.replace('section_year_', '');
+          store.updateTask(t.id, { sectionId: `sec_prop_${year}`, categoryId: gId });
+        }
+      }
+    });
+  }
 }

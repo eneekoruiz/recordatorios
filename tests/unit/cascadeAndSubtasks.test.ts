@@ -66,6 +66,42 @@ describe('Cascade subtask completion & deleteTaskWithOptions', () => {
     expect(state.tasks['grandchild_1']?.status).toBe('completed');
   });
 
+  it('allows unchecking a specific child inside a completed parent while leaving siblings completed and reopening parent', () => {
+    const parent: TaskItem = { id: 'p_group', title: 'Viaje a Roma', categoryId: 'compra', status: 'pending', created_at: new Date().toISOString() };
+    const child1: TaskItem = { id: 'c_pasaporte', title: 'Renovar pasaporte', parentId: 'p_group', categoryId: 'compra', status: 'pending', created_at: new Date().toISOString() };
+    const child2: TaskItem = { id: 'c_hotel', title: 'Reservar hotel', parentId: 'p_group', categoryId: 'compra', status: 'pending', created_at: new Date().toISOString() };
+    const child3: TaskItem = { id: 'c_vuelos', title: 'Comprar vuelos', parentId: 'p_group', categoryId: 'compra', status: 'pending', created_at: new Date().toISOString() };
+
+    useAppStore.setState({
+      tasks: {
+        p_group: parent,
+        c_pasaporte: child1,
+        c_hotel: child2,
+        c_vuelos: child3
+      }
+    });
+
+    // 1. Tachar padre: se completan todas por defecto
+    useAppStore.getState().toggleTask('p_group');
+    let state = useAppStore.getState();
+    expect(state.tasks['p_group']?.status).toBe('completed');
+    expect(state.tasks['c_pasaporte']?.status).toBe('completed');
+    expect(state.tasks['c_hotel']?.status).toBe('completed');
+    expect(state.tasks['c_vuelos']?.status).toBe('completed');
+
+    // 2. Destachar una en específico (ej. el hotel todavía no se reservó)
+    useAppStore.getState().toggleTask('c_hotel');
+    state = useAppStore.getState();
+
+    // La subtarea específica pasa a pendiente
+    expect(state.tasks['c_hotel']?.status).toBe('pending');
+    // Las demás subtareas permanecen completadas
+    expect(state.tasks['c_pasaporte']?.status).toBe('completed');
+    expect(state.tasks['c_vuelos']?.status).toBe('completed');
+    // El padre se reabre a pendiente para reflejar que el grupo ya no está 100% terminado
+    expect(state.tasks['p_group']?.status).toBe('pending');
+  });
+
   it('deleteTaskWithOptions with keepSubtasks: true unnests children preserving order and deletes parent', () => {
     const root1: TaskItem = { id: 'root_1', title: 'Primero', categoryId: 'compra', order: 0, status: 'pending', created_at: new Date().toISOString() };
     const parent: TaskItem = { id: 'parent_1', title: 'Padre', categoryId: 'compra', order: 1, status: 'pending', created_at: new Date().toISOString() };

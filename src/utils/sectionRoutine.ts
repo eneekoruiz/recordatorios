@@ -234,3 +234,137 @@ export function sortTasksByUserPreference(taskList: TaskItem[], sortBy: TaskSort
     return 0;
   });
 }
+
+export interface PeriodContextInfo {
+  label: string;
+  shortLabel: string;
+  isRolledOver: boolean;
+  activePeriod: string;
+}
+
+/**
+ * Genera la etiqueta contextual temporal (año, mes, semana o día) para cabeceras de frecuencia.
+ * Informa con exactitud al usuario si está viendo las tareas del período actual (ej. 2026, Octubre, Semana 41)
+ * o si, habiendo completado todas las del período actual, la sección ya refleja el próximo período (ej. 2027, Noviembre).
+ */
+export function getPeriodContextLabel(
+  periodicity: PeriodicityType | null | undefined,
+  pendingCount: number = 0,
+  totalTasks: number = 0,
+  referenceDate: Date = new Date()
+): PeriodContextInfo | null {
+  if (!periodicity) return null;
+
+  const MONTH_NAMES = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+  const MONTH_SHORTS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const DAY_SHORTS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+
+  const isRolledOver = totalTasks > 0 && pendingCount === 0;
+
+  if (periodicity === 'year') {
+    const curYear = referenceDate.getFullYear();
+    if (isRolledOver) {
+      const nextYear = curYear + 1;
+      return {
+        label: `${nextYear} · ${curYear} completado`,
+        shortLabel: `${nextYear}`,
+        isRolledOver: true,
+        activePeriod: `${nextYear}`
+      };
+    }
+    return {
+      label: `Año ${curYear}`,
+      shortLabel: `${curYear}`,
+      isRolledOver: false,
+      activePeriod: `${curYear}`
+    };
+  }
+
+  if (periodicity === 'month') {
+    const curMIdx = referenceDate.getMonth();
+    const curYear = referenceDate.getFullYear();
+    const curName = MONTH_NAMES[curMIdx];
+    if (isRolledOver) {
+      const nextMIdx = (curMIdx + 1) % 12;
+      const nextYear = curMIdx === 11 ? curYear + 1 : curYear;
+      const nextName = MONTH_NAMES[nextMIdx];
+      return {
+        label: `${nextName} ${nextYear} · ${curName} al día`,
+        shortLabel: `${nextName}`,
+        isRolledOver: true,
+        activePeriod: `${nextName}`
+      };
+    }
+    return {
+      label: `${curName} ${curYear}`,
+      shortLabel: `${curName}`,
+      isRolledOver: false,
+      activePeriod: `${curName}`
+    };
+  }
+
+  if (periodicity === 'week') {
+    const d = new Date(Date.UTC(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+
+    // Fechas de inicio (lunes) y fin (domingo)
+    const monday = new Date(referenceDate);
+    const day = monday.getDay();
+    const diff = monday.getDate() - day + (day === 0 ? -6 : 1);
+    monday.setDate(diff);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+
+    const mMonth = MONTH_SHORTS[monday.getMonth()];
+    const sMonth = MONTH_SHORTS[sunday.getMonth()];
+    const dateRange = monday.getMonth() === sunday.getMonth()
+      ? `${monday.getDate()}–${sunday.getDate()} ${sMonth}`
+      : `${monday.getDate()} ${mMonth}–${sunday.getDate()} ${sMonth}`;
+
+    if (isRolledOver) {
+      return {
+        label: `Semana ${weekNo + 1} · Semana actual al día`,
+        shortLabel: `Sem. ${weekNo + 1}`,
+        isRolledOver: true,
+        activePeriod: `Semana ${weekNo + 1}`
+      };
+    }
+    return {
+      label: `Semana ${weekNo} · ${dateRange}`,
+      shortLabel: `Sem. ${weekNo}`,
+      isRolledOver: false,
+      activePeriod: `Semana ${weekNo}`
+    };
+  }
+
+  if (periodicity === 'day') {
+    const dayName = DAY_SHORTS[referenceDate.getDay()];
+    const mName = MONTH_SHORTS[referenceDate.getMonth()];
+    if (isRolledOver) {
+      const tom = new Date(referenceDate.getTime() + 86400000);
+      const tomDayName = DAY_SHORTS[tom.getDay()];
+      const tomMName = MONTH_SHORTS[tom.getMonth()];
+      return {
+        label: `Mañana · ${tomDayName} ${tom.getDate()} ${tomMName} (Hoy al día)`,
+        shortLabel: 'Mañana',
+        isRolledOver: true,
+        activePeriod: 'Mañana'
+      };
+    }
+    return {
+      label: `Hoy · ${dayName} ${referenceDate.getDate()} ${mName}`,
+      shortLabel: 'Hoy',
+      isRolledOver: false,
+      activePeriod: 'Hoy'
+    };
+  }
+
+  return null;
+}
+

@@ -10,7 +10,8 @@ import {
   Wand2,
   Star,
   Trash2,
-  ChevronDown
+  ChevronDown,
+  Check
 } from 'lucide-react';
 import { DurationInfoCard } from '../../ui/DurationInfoCard';
 import { HapticService } from '../../../services/HapticService';
@@ -19,11 +20,12 @@ import { confirmDialog } from '../../ui/confirmDialog';
 import { useAppStore } from '../../../store/useAppStore';
 import { deleteCycleWithUndo } from '../../../utils/undoToast';
 import type { TaskItem, CustomCycle, CustomList } from '../../../models/Task';
-import type { TasksDurationSummary } from '../../../utils/taskDuration';
+import { formatSummaryDuration, type TasksDurationSummary } from '../../../utils/taskDuration';
 import { formatEuro } from '../../../utils/format';
 import { MetaSplit, MONEY_COLOR } from '../../ui/MetaSplit';
 import type { RoutinePart } from '../../../utils/routineBreakdown';
 import { getReservedFrequencyColor } from '../../../constants/colors';
+import { getPeriodContextLabel } from '../../../utils/sectionRoutine';
 
 export interface CycleBreakdownInfo {
   ownCount: number;
@@ -293,6 +295,35 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                 </span>
               );
             })()}
+
+            {currentCycle && (() => {
+              const effPeriod = currentCycle.id === 'cycle_day' ? 'day' :
+                                currentCycle.id === 'cycle_week' ? 'week' :
+                                currentCycle.id === 'cycle_month' ? 'month' :
+                                currentCycle.id === 'cycle_year' ? 'year' : null;
+              const periodContext = getPeriodContextLabel(effPeriod, activeVisibleCount, activeVisibleCount);
+              if (!periodContext) return null;
+              return (
+                <span 
+                  className="section-period-context-badge"
+                  title={periodContext.isRolledOver ? 'Período actual completado' : 'Período en curso'}
+                  style={{ 
+                    fontSize: '0.72rem', 
+                    fontWeight: 500, 
+                    color: periodContext.isRolledOver ? 'var(--accent-green, #34c759)' : 'var(--text-tertiary)', 
+                    letterSpacing: '-0.01em', 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    gap: 3, 
+                    flexShrink: 0,
+                    marginLeft: 4
+                  }}
+                >
+                  {periodContext.isRolledOver && <Check size={11} strokeWidth={2.5} />}
+                  {periodContext.label}
+                </span>
+              );
+            })()}
           </div>
 
           {/* Derecha: Gran Contador de tareas activas */}
@@ -342,30 +373,13 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                       HapticService.selection();
                       setIsDurationCardOpen(true);
                     }}
-                    className="apple-duration-chip"
+                    className="apple-list-duration-chip"
                     title="Toca para ver el desglose detallado de tiempo"
                     aria-label="Ver desglose de tiempo"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      height: 24,
-                      padding: '0 8px',
-                      borderRadius: 999,
-                      background: 'var(--bg-secondary, rgba(0,0,0,0.04))',
-                      border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
-                      color: 'var(--text-primary)',
-                      cursor: 'pointer',
-                      fontSize: '0.78rem',
-                      fontWeight: 650,
-                      fontVariantNumeric: 'tabular-nums',
-                      transition: 'all 0.15s ease',
-                      flexShrink: 0
-                    }}
                   >
-                    <Clock size={11} color={viewColor} />
-                    <span>~{totalDuration!.formattedActive}</span>
-                    <ChevronDown size={10} style={{ opacity: 0.5, marginLeft: 1 }} />
+                    <Clock size={11} strokeWidth={1.8} className="apple-list-duration-icon" />
+                    <span>{formatSummaryDuration(totalDuration!.activeMinutes)}</span>
+                    <ChevronDown size={10} strokeWidth={2} style={{ opacity: 0.45, marginLeft: 1 }} />
                   </button>
                 )}
 

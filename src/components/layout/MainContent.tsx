@@ -616,9 +616,22 @@ const CORE_CYCLES = [
       }
 
       if (willBeCompleted) {
-        setRecentlyCompletedIds(prev => [...prev, taskId]);
+        // Incluir también los descendientes en el período de gracia para que no desaparezcan de golpe
+        const childIds: string[] = [];
+        const queue = [taskId];
+        while (queue.length > 0) {
+          const pid = queue.shift()!;
+          Object.values(tasks).forEach(t => {
+            if (t.parentId === pid && !t.deleted_at) {
+              childIds.push(t.id);
+              queue.push(t.id);
+            }
+          });
+        }
+        const idsToGrace = [taskId, ...childIds];
+        setRecentlyCompletedIds(prev => Array.from(new Set([...prev, ...idsToGrace])));
         setTimeout(() => {
-          setRecentlyCompletedIds(prev => prev.filter(x => x !== taskId));
+          setRecentlyCompletedIds(prev => prev.filter(x => !idsToGrace.includes(x)));
         }, 3000);
 
         const remainingActive = Object.values(tasks).filter((t: any) => !t.deleted_at && !isTaskCompleted(t)).length;
@@ -634,7 +647,10 @@ const CORE_CYCLES = [
       } else {
         SoundService.playUncomplete();
         HapticService.selection();
-        setRecentlyCompletedIds(prev => prev.filter(x => x !== taskId));
+        // Si se destacha un hijo, retirar tanto al hijo como a sus ancestros del grace period
+        const idsToRemove = new Set<string>([taskId]);
+        if (task.parentId) idsToRemove.add(task.parentId);
+        setRecentlyCompletedIds(prev => prev.filter(x => !idsToRemove.has(x)));
       }
     }
     toggleTask(taskId, forceReverse);
