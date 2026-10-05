@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Calendar, Mail, FileText, Download, Copy, Check, ExternalLink } from 'lucide-react';
+import { X, Calendar, Mail, FileText, Download, Copy, Check, ExternalLink, GitBranch } from 'lucide-react';
 import { IntegrationService } from '../../services/IntegrationService';
 import type { TaskItem } from '../../models/Task';
 import { HapticService } from '../../services/HapticService';
@@ -19,6 +19,7 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
   listName = 'Recordatorios'
 }) => {
   const [copiedNotion, setCopiedNotion] = useState(false);
+  const [copiedGitHub, setCopiedGitHub] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -52,6 +53,19 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
   const handleOpenGmail = () => {
     HapticService.selection();
     window.open('https://mail.google.com', '_blank');
+  };
+
+  const handleCopyGitHubMarkdown = () => {
+    HapticService.selection();
+    const md = IntegrationService.exportToGitHubMarkdown(tasks, listName);
+    navigator.clipboard.writeText(md);
+    setCopiedGitHub(true);
+    setTimeout(() => setCopiedGitHub(false), 2000);
+  };
+
+  const handleOpenGitHub = () => {
+    HapticService.selection();
+    window.open('https://github.com', '_blank');
   };
 
   return (
@@ -138,7 +152,7 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
                     color: 'var(--text-secondary, #8e8e93)'
                   }}
                 >
-                  Conecta tus tareas con Google Calendar, Gmail y Notion
+                  Conecta tus tareas con Google Calendar, Gmail, Notion y GitHub
                 </p>
               </div>
 
@@ -365,6 +379,88 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
                     }}
                   >
                     <Download size={14} /> Descargar CSV Notion
+                  </button>
+                </div>
+              </div>
+
+              {/* 4. GitHub */}
+              <div
+                style={{
+                  padding: '16px 18px',
+                  borderRadius: 18,
+                  background: 'var(--bg-secondary, rgba(0,0,0,0.025))',
+                  border: '1px solid var(--border-subtle, rgba(0,0,0,0.06))'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                  <div
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 12,
+                      background: 'rgba(36, 41, 47, 0.12)',
+                      color: 'var(--text-primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <GitBranch size={20} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 650 }}>
+                      GitHub (Issues & Projects)
+                    </h4>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                      Exporta como checklist GFM o vincula repositorios
+                    </span>
+                  </div>
+                </div>
+
+                <p style={{ margin: '0 0 12px', fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                  Copia tus recordatorios en formato de tareas GitHub Markdown (- [ ] Tarea) listo para pegar en cualquier Issue, PR o Project board.
+                </p>
+
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={handleCopyGitHubMarkdown}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '8px 14px',
+                      borderRadius: 12,
+                      background: copiedGitHub ? 'rgba(48, 209, 88, 0.15)' : 'var(--bg-elevated, #ffffff)',
+                      color: copiedGitHub ? '#30d158' : 'var(--text-primary)',
+                      border: copiedGitHub ? '1px solid #30d158' : '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
+                      fontSize: '0.82rem',
+                      fontWeight: 650,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {copiedGitHub ? <Check size={14} /> : <Copy size={14} />}
+                    {copiedGitHub ? '¡Checklist copiada!' : 'Copiar checklist GitHub'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleOpenGitHub}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '8px 14px',
+                      borderRadius: 12,
+                      background: 'var(--bg-elevated, #ffffff)',
+                      color: 'var(--text-primary)',
+                      border: '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
+                      fontSize: '0.82rem',
+                      fontWeight: 650,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <ExternalLink size={14} /> Abrir GitHub
                   </button>
                 </div>
               </div>

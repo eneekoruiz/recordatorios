@@ -441,7 +441,30 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                 {list.isShared && <span className="subtitle">Esta lista es compartida.</span>}
               </div>
               
-              {getTaskCount && !list.isFolder && <span className="count">{getTaskCount(list.id) || 0}</span>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0, marginLeft: 'auto' }}>
+                {getTaskCount && !list.isFolder && <span className="count">{getTaskCount(list.id) || 0}</span>}
+
+                {!isMobile && !isEditMode && (
+                  <button 
+                    type="button"
+                    className="list-action-btn desktop-only-action"
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      if (activeMenuId === list.id) {
+                        setActiveMenuId(null);
+                        setMenuCoords(null);
+                      } else {
+                        triggerListMenu(e.currentTarget as HTMLElement);
+                      }
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 4 }}
+                    title="Acciones"
+                  >
+                    <MoreHorizontal size={14} />
+                  </button>
+                )}
+              </div>
               
               {(hasChildren || list.isFolder) && (
                 <button 
@@ -483,27 +506,6 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                 >
                   <GripVertical size={16} />
                 </div>
-              )}
-
-              {!isMobile && !isEditMode && (
-                <button 
-                  type="button"
-                  className="list-action-btn desktop-only-action"
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    if (activeMenuId === list.id) {
-                      setActiveMenuId(null);
-                      setMenuCoords(null);
-                    } else {
-                      triggerListMenu(e.currentTarget as HTMLElement);
-                    }
-                  }}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 4, marginLeft: 4 }}
-                  title="Acciones"
-                >
-                  <MoreHorizontal size={14} />
-                </button>
               )}
 
               {activeMenuId === list.id && menuCoords && createPortal(

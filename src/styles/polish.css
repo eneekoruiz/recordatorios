@@ -1416,26 +1416,26 @@ body.dark .cad-summary-cost strong {
   .meta-split__parts { transition: none; }
 }
 
-/* «···» de las listas en escritorio: flota sobre el contador en lugar de ocupar su propio hueco,
-   así todos los contadores del sidebar quedan en la misma columna. Al pasar el ratón, el «···»
-   sustituye al número. */
+/* «···» de las listas en escritorio: aparece suavemente al lado del contador al pasar el ratón,
+   conservando siempre visible el número de recordatorios. */
 @media (hover: hover) {
   .ios-list-block .ios-list-item .list-action-btn {
-    position: absolute !important;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    margin: 0 !important;
+    position: static !important;
+    margin-left: 6px !important;
+    opacity: 0 !important;
+    transition: opacity 0.15s ease, transform 0.15s ease;
   }
-  .ios-list-block .ios-list-item:has(.list-action-btn) .count {
+  .ios-list-block .ios-list-item:hover .list-action-btn,
+  .ios-list-block .ios-list-item .list-action-btn:focus-visible {
+    opacity: 0.85 !important;
+  }
+  .ios-list-block .ios-list-item .count {
+    opacity: 1 !important;
     transition: opacity 0.15s ease;
   }
-  .ios-list-block .ios-list-item:has(.list-action-btn):hover .count,
-  .ios-list-block .ios-list-item:has(.list-action-btn:focus-visible) .count {
-    opacity: 0;
-  }
   .ios-list-item:hover .list-action-btn:hover {
-    transform: translateY(-50%) scale(1.1);
+    transform: scale(1.1);
+    opacity: 1 !important;
   }
 }
 

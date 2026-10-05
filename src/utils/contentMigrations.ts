@@ -83,19 +83,34 @@ export function runContentMigrations(store: ContentMigrationStore): void {
       titleNorm === 'comer';
 
     if (isVital) {
-      store.updateTask(t.id, {
+      const updatePayload: any = {
         categoryId: vitalListId,
         sectionId: secHabitosVitales.id,
         duration: undefined,
         parallelDuration: undefined,
         disableDuration: true,
-        // Si la tarea fue marcada como borrada accidentalmente por eliminación previa del contenedor, restaurarla
         deleted_at: undefined
-      });
+      };
+      if (titleNorm.includes('agua')) {
+        updatePayload.title = 'Beber agua';
+        updatePayload.targetCount = 10;
+        if (t.currentCount === undefined) updatePayload.currentCount = 0;
+        updatePayload.cycle_id = 'cycle_day';
+      } else if (titleNorm === 'comer' || titleNorm === 'almorzar') {
+        updatePayload.cycle_id = 'cycle_day';
+        if (!t.timeOfDay) updatePayload.timeOfDay = 'afternoon';
+      } else if (titleNorm === 'desayunar') {
+        updatePayload.cycle_id = 'cycle_day';
+        if (!t.timeOfDay) updatePayload.timeOfDay = 'morning';
+      } else if (titleNorm === 'cenar') {
+        updatePayload.cycle_id = 'cycle_day';
+        if (!t.timeOfDay) updatePayload.timeOfDay = 'night';
+      }
+      store.updateTask(t.id, updatePayload);
     }
   });
 
-  // Asegurar que 'Beber agua' y 'Comer' existen con la subsección en la lista unificada
+  // Asegurar que 'Beber agua' (10 veces, diaria) y 'Comer' (diaria) existen con la subsección en la lista unificada
   const vitalTasks = Object.values(store.tasks || {}).filter(t => !t.deleted_at && (t.sectionId === secHabitosVitales.id || (t.categoryId === vitalListId && (normalize(t.title).includes('beber agua') || normalize(t.title).includes('comer')))));
   const hasAgua = vitalTasks.some(t => normalize(t.title).includes('beber agua'));
   const hasComer = vitalTasks.some(t => normalize(t.title).includes('comer'));
@@ -108,8 +123,22 @@ export function runContentMigrations(store: ContentMigrationStore): void {
       priority: 'none',
       status: 'pending',
       disableDuration: true,
-      duration: undefined
+      duration: undefined,
+      cycle_id: 'cycle_day',
+      targetCount: 10,
+      currentCount: 0
     });
+  } else {
+    const aguaTask = vitalTasks.find(t => normalize(t.title).includes('beber agua'));
+    if (aguaTask && (aguaTask.targetCount !== 10 || aguaTask.cycle_id !== 'cycle_day')) {
+      store.updateTask(aguaTask.id, {
+        targetCount: 10,
+        currentCount: aguaTask.currentCount ?? 0,
+        cycle_id: 'cycle_day',
+        disableDuration: true,
+        duration: undefined
+      });
+    }
   }
 
   if (!hasComer) {
@@ -120,8 +149,20 @@ export function runContentMigrations(store: ContentMigrationStore): void {
       priority: 'none',
       status: 'pending',
       disableDuration: true,
-      duration: undefined
+      duration: undefined,
+      cycle_id: 'cycle_day',
+      timeOfDay: 'afternoon'
     });
+  } else {
+    const comerTask = vitalTasks.find(t => normalize(t.title).includes('comer'));
+    if (comerTask && comerTask.cycle_id !== 'cycle_day') {
+      store.updateTask(comerTask.id, {
+        cycle_id: 'cycle_day',
+        timeOfDay: comerTask.timeOfDay || 'afternoon',
+        disableDuration: true,
+        duration: undefined
+      });
+    }
   }
 
   // ──────────────────────────────────────────────────────────────────────────

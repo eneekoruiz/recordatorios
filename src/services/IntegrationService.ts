@@ -133,4 +133,22 @@ export class IntegrationService {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
+
+  /**
+   * Formats a collection of tasks into GitHub Task List Markdown format (- [ ] Task).
+   */
+  public static exportToGitHubMarkdown(tasks: TaskItem[], listName: string = 'Recordatorios'): string {
+    const header = `### ${listName}\n\n`;
+    const rows = tasks.map(t => {
+      const isDone = t.status === 'completed';
+      const mark = isDone ? 'x' : ' ';
+      const meta = [
+        t.dueDate ? `📅 ${new Date(t.dueDate).toLocaleDateString()}` : null,
+        t.priority && t.priority !== 'none' ? `⚡ ${t.priority}` : null,
+        t.duration ? `⏱️ ${t.duration}m` : null
+      ].filter(Boolean).join(' · ');
+      return `- [${mark}] **${t.title}**${meta ? ` (${meta})` : ''}${t.description ? ` - ${t.description.replace(/\n+/g, ' ')}` : ''}`;
+    });
+    return header + rows.join('\n');
+  }
 }

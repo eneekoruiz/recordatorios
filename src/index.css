@@ -751,6 +751,14 @@ body.dark .ios-list-item.active {
   height: 0;
 }
 
+
+.user-profile-menu {
+  background: var(--bg-elevated, #ffffff) !important;
+}
+
+[data-theme="dark"] .user-profile-menu {
+  background: #1c1c1e !important;
+}
 [data-theme="dark"] .ios-dropdown-menu {
   background: rgba(28, 28, 30, 0.92) !important;
   border: 1px solid rgba(255, 255, 255, 0.12);

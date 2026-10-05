@@ -17,6 +17,7 @@ import { HapticService } from '../../services/HapticService';
 import { ListConfigModal } from './ListConfigModal';
 import { CycleConfigModal } from './CycleConfigModal';
 import { AppLogo } from '../ui/AppLogo';
+import { isQueHeHechoList, isCaducidadesList } from '../../utils/specialLists';
 import './Layout.css';
 
 // Modular sidebar subcomponents
@@ -104,6 +105,11 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
       }
       default: {
         const cleanListId = listId.replace('list_', '').replace('folder_', '');
+        const targetList = lists?.find(l => l.id === cleanListId);
+        const isQueHeHecho = isQueHeHechoList(cleanListId, targetList);
+        const shouldCountAll = isQueHeHecho || Boolean(targetList?.showCompleted);
+        const taskPool = shouldCountAll ? all : active;
+
         const descendantListIds = new Set<string>([cleanListId]);
         const queue = [cleanListId];
         while (queue.length > 0) {
@@ -114,7 +120,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
             queue.push(c.id);
           });
         }
-        return active.filter(t => {
+        return taskPool.filter(t => {
           if (t.categoryId === 'primeros_pasos') return false;
           const catId = t.categoryId || (t as any).category_id;
           return catId && descendantListIds.has(catId);
@@ -569,19 +575,35 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               style={{ marginLeft: 56 }} 
             />
 
-            <ListHierarchy 
-              lists={lists} 
-              currentView={currentView} 
-              onSelectView={onSelectView} 
-              getTaskCount={getTaskCount}
-              onAddSublist={(pId: string, isF?: boolean) => { setEditingListId(undefined); setParentListId(pId); setIsNewFolderDefault(!!isF); setIsListConfigOpen(true); }} 
-              onEditList={(listId: string) => { setEditingListId(listId); setParentListId(undefined); setIsListConfigOpen(true); }}
-              isEditMode={isEditMode}
-              activeMenuId={activeMenuId}
-              setActiveMenuId={setActiveMenuId}
-              menuCoords={menuCoords}
-              setMenuCoords={setMenuCoords}
-            />
+            {(() => {
+              const visibleLists = (lists || []).filter(l => {
+                if (isEditMode) return true;
+                const isTemplate = ['caducidades', 'que_he_hecho', 'primeros_pasos'].includes(l.id) ||
+                  isCaducidadesList(l.id, l) ||
+                  isQueHeHechoList(l.id, l) ||
+                  l.specialType === 'caducidades' || l.specialType === 'que_he_hecho' ||
+                  l.listType === 'caducidades' || l.listType === 'que_he_hecho';
+                if (isTemplate) {
+                  return getTaskCount(l.id) > 0 || l.isPinned;
+                }
+                return true;
+              });
+              return (
+                <ListHierarchy 
+                  lists={visibleLists} 
+                  currentView={currentView} 
+                  onSelectView={onSelectView} 
+                  getTaskCount={getTaskCount}
+                  onAddSublist={(pId: string, isF?: boolean) => { setEditingListId(undefined); setParentListId(pId); setIsNewFolderDefault(!!isF); setIsListConfigOpen(true); }} 
+                  onEditList={(listId: string) => { setEditingListId(listId); setParentListId(undefined); setIsListConfigOpen(true); }}
+                  isEditMode={isEditMode}
+                  activeMenuId={activeMenuId}
+                  setActiveMenuId={setActiveMenuId}
+                  menuCoords={menuCoords}
+                  setMenuCoords={setMenuCoords}
+                />
+              );
+            })()}
           </div>
         </div>
 

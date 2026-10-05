@@ -335,8 +335,16 @@ export function isEventsList(listIdOrView?: string | null, list?: CustomList | n
 export function isGoalsList(listIdOrView?: string | null, list?: CustomList | null): boolean {
   if (list?.listType) return list.listType === 'goals';
   if (!listIdOrView && !list) return false;
-  const cleanId = (listIdOrView || list?.id || '').replace(/^list_/, '').toLowerCase();
-  if (cleanId === 'propositos' || cleanId === 'metas' || cleanId === 'objetivos') return true;
+  const cleanId = (listIdOrView || list?.id || '').replace(/^list_/, '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (
+    cleanId.includes('proposito') ||
+    cleanId.includes('prop_sito') ||
+    cleanId.includes('meta') ||
+    cleanId.includes('objetivo') ||
+    cleanId.includes('resolucion')
+  ) {
+    return true;
+  }
   if (list) {
     const cleanName = (list.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     if (
@@ -359,6 +367,10 @@ export function isGoalsList(listIdOrView?: string | null, list?: CustomList | nu
 export function isRoutineList(listIdOrView?: string | null, list?: CustomList | null): boolean {
   if (isVitalHabitsList(listIdOrView) || isVitalHabitsList(list?.id)) return false;
   if (isShoppingList(listIdOrView, list)) return false;
+  if (isGoalsList(listIdOrView, list)) return false;
+  if (isLifeLibraryList(listIdOrView, list)) return false;
+  if (isCaducidadesList(listIdOrView, list)) return false;
+  if (isQueHeHechoList(listIdOrView, list)) return false;
   if (list?.listType) return list.listType === 'routines';
   if (!listIdOrView && !list) return false;
   const cleanId = (listIdOrView || '').replace(/^list_/, '').toLowerCase();

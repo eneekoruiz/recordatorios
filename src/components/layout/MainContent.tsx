@@ -17,7 +17,7 @@ import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
 import { extractPeopleFromText, calculateExpirationStatus, calculateSubscriptionCosts, findFlashbackMemories, isCompletedInCurrentPeriod } from '../../services/TaskService';
 import { AIService } from '../../services/AIService';
-import { isCaducidadesList, isQueHeHechoList, ensureCaducidadesSections, isLimpiezaList, isRoutineList, isShoppingList, isLifeLibraryList, getRoomForCleaningTask, getListType, doesListSupportSequenceMode } from '../../utils/specialLists';
+import { isCaducidadesList, isQueHeHechoList, isGoalsList, ensureCaducidadesSections, isLimpiezaList, isRoutineList, isShoppingList, isLifeLibraryList, getRoomForCleaningTask, getListType, doesListSupportSequenceMode } from '../../utils/specialLists';
 import { isVitalHabitsList } from '../../utils/vitalHabits';
 import { 
   getSectionPeriodicity, 
@@ -231,8 +231,14 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const [selectedPersonForProfile, setSelectedPersonForProfile] = useState<string | null>(null);
   // Resumen del mes IA (modal)
   const [monthlySummaryModal, setMonthlySummaryModal] = useState<{ open: boolean; title: string; text: string; loading: boolean }>({ open: false, title: '', text: '', loading: false });
-  // Modal de integraciones y vinculaciones externas (Google Calendar, Gmail, Notion)
+  // Modal de integraciones y vinculaciones externas (Google Calendar, Gmail, Notion, GitHub)
   const [isIntegrationsOpen, setIsIntegrationsOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpen = () => setIsIntegrationsOpen(true);
+    window.addEventListener('open-integrations-modal', handleOpen);
+    return () => window.removeEventListener('open-integrations-modal', handleOpen);
+  }, []);
 
   const handleOpenMonthlySummary = async () => {
     HapticService.selection();
@@ -2256,9 +2262,11 @@ const CORE_CYCLES = [
   const isVital = isVitalHabitsList(currentView) || isVitalHabitsList(currentList?.id);
   const isShopping = isShoppingList(currentView, currentList);
   const isLibrary = currentListType === 'library' || isLifeLibraryList(currentView, currentList);
-  const canRunExecutionMode = !isShopping && !isVital && !isLibrary;
-  // Empezar una tarea suelta: disponible en cualquier lista o vista excepto compras, hábitos vitales y biblioteca
-  const canStartIndividualTasks = canRunExecutionMode;
+  const isGoals = currentListType === 'goals' || isGoalsList(currentView, currentList);
+  const hasDurationToRun = Boolean(viewTasksDuration && viewTasksDuration.activeMinutes > 0);
+  const canRunExecutionMode = isRoutine && hasDurationToRun && !isShopping && !isVital && !isLibrary && !isGoals;
+  // Empezar una tarea suelta: disponible en listas de rutinas con temporización
+  const canStartIndividualTasks = isRoutine;
   const handleStartTask = useCallback((task: TaskItem) => {
     onStartSequence?.([task.id], task.title);
   }, [onStartSequence]);

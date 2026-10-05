@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { MoreHorizontal, ChevronDown, Check, Plus, Play, Clock } from 'lucide-react';
+import { MoreHorizontal, ChevronDown, Check, Plus, Clock } from 'lucide-react';
 import { DurationInfoCard } from '../../ui/DurationInfoCard';
 import { HapticService } from '../../../services/HapticService';
 import type { SectionMenuState } from './SectionContextMenu';
@@ -645,38 +645,6 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, justifyContent: 'flex-end' }}>
-          {/* Botón Empezar sección (excluido en Biblioteca de vida y compras) */}
-          {_onStartSectionSequence && !isLibrary && (data.pendingCount ?? pendingTaskCount ?? data.sectionTaskIds?.length ?? 1) > 0 && (
-            <button
-              type="button"
-              className="section-play-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                HapticService.selection();
-                _onStartSectionSequence();
-              }}
-              title={`Empezar sección: ${data.title}`}
-              aria-label={`Empezar sección ${data.title}`}
-              style={{
-                height: 24,
-                padding: '0 8px',
-                borderRadius: 999,
-                background: `color-mix(in srgb, ${data.color || 'var(--accent-primary)'} 14%, transparent)`,
-                border: `1px solid color-mix(in srgb, ${data.color || 'var(--accent-primary)'} 28%, transparent)`,
-                color: data.color || 'var(--accent-primary)',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                fontWeight: 650,
-                fontSize: '0.74rem',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <Play size={10} fill="currentColor" />
-              {!isMobile && <span>Empezar</span>}
-            </button>
-          )}
           {/* Incluir las frecuencias anteriores: una cápsula que se enciende (con la sección desplegada) */}
           {!isCatCollapsed(data.category) && data.routineCounts && data.routineCounts.full > data.routineCounts.only && (
             <button

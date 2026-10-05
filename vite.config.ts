@@ -64,8 +64,8 @@ export default defineConfig({
         short_name: 'Recordatorios',
         description: 'Recordatorios, listas, hábitos y caducidades. Funciona sin conexión y se sincroniza entre dispositivos.',
         lang: 'es',
-        theme_color: '#ffffff',
-        background_color: '#ffffff',
+        theme_color: '#0a84ff',
+        background_color: '#0a84ff',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',
@@ -74,8 +74,7 @@ export default defineConfig({
         icons: [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-          { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-          { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }
+          { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
         ],
         shortcuts: [
           { name: 'Nuevo recordatorio', short_name: 'Nuevo', url: '/?action=new', icons: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }] }

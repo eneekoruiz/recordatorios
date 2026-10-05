@@ -10,12 +10,11 @@ import {
   Wand2,
   Star,
   Trash2,
-  Play,
   ChevronDown
 } from 'lucide-react';
 import { DurationInfoCard } from '../../ui/DurationInfoCard';
 import { HapticService } from '../../../services/HapticService';
-import { isCaducidadesList, isQueHeHechoList, getListBadgeInfo, isShoppingList, isLifeLibraryList } from '../../../utils/specialLists';
+import { isCaducidadesList, isQueHeHechoList, getListBadgeInfo, isShoppingList } from '../../../utils/specialLists';
 import { confirmDialog } from '../../ui/confirmDialog';
 import { useAppStore } from '../../../store/useAppStore';
 import { deleteCycleWithUndo } from '../../../utils/undoToast';
@@ -296,40 +295,9 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
             })()}
           </div>
 
-          {/* Derecha: Botón Empezar + Gran Contador (en la misma fila) */}
+          {/* Derecha: Gran Contador de tareas activas */}
           {currentView !== 'TRASH' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-              {_onStartSequence && !isLifeLibraryList(currentView, currentList) && currentList?.listType !== 'library' && (activeVisibleCount > 0 || currentView.startsWith('cycle_')) && currentView !== 'compras' && currentView !== 'habitos_vitales' && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    HapticService.selection();
-                    _onStartSequence();
-                  }}
-                  title="Empezar lista en modo ejecución"
-                  aria-label="Empezar lista"
-                  className="apple-header-start-btn"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    height: 30,
-                    padding: _isMobile ? '0 9px' : '0 12px',
-                    borderRadius: 999,
-                    background: `color-mix(in srgb, ${viewColor} 14%, transparent)`,
-                    border: `1px solid color-mix(in srgb, ${viewColor} 28%, transparent)`,
-                    color: viewColor,
-                    fontWeight: 700,
-                    fontSize: '0.80rem',
-                    cursor: 'pointer',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-                    transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
-                  }}
-                >
-                  <Play size={11} fill="currentColor" />
-                  {!_isMobile && <span>Empezar</span>}
-                </button>
-              )}
               {currentView !== 'smart_calendar' && (activeVisibleCount > 0 || currentView.startsWith('cycle_')) && (
                 <span className="apple-large-counter" style={{ color: viewColor, fontSize: _isMobile ? '28px' : '34px', lineHeight: 1 }}>
                   {activeVisibleCount}

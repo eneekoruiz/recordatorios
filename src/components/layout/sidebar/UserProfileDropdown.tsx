@@ -14,7 +14,8 @@ import {
   Bell,
   UserPlus,
   Trash2,
-  ShieldCheck
+  ShieldCheck,
+  Share2
 } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { SoundService } from '../../../services/SoundService';
@@ -112,7 +113,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        style={{ position: 'fixed', inset: 0, zIndex: 99998 }} 
+        style={{ position: 'fixed', inset: 0, zIndex: 99998, background: 'rgba(0, 0, 0, 0.12)', backdropFilter: 'blur(3px)' }} 
         onClick={(e) => { e.stopPropagation(); onClose(); }}
       />
       <motion.div 
@@ -353,6 +354,22 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', cursor: 'pointer' }}
         >
           <BarChart size={16} /> Estadísticas y productividad
+        </div>
+        <div 
+          className="ios-dropdown-item"
+          onClick={(e) => {
+            e.stopPropagation();
+            HapticService.selection();
+            onClose();
+            window.dispatchEvent(new CustomEvent('open-integrations-modal'));
+          }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
+          title="Vincular con Notion, GitHub, Gmail y Google Calendar"
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Share2 size={16} color="var(--accent-purple, #af52de)" /> Conexiones e Integraciones
+          </span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>Notion, GitHub...</span>
         </div>
         <div className="ios-dropdown-divider" />
         <div 
