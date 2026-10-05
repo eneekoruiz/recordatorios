@@ -42,7 +42,7 @@ function findScrollableParent(el: HTMLElement | null): HTMLElement | Window {
 interface TaskCardProps {
   task: TaskItem;
   virtualStyle: React.CSSProperties;
-  onToggle: (id: string, forceReverse?: boolean, isRolledOver?: boolean) => void;
+  onToggle: (id: string, forceReverse?: boolean) => void;
   onDelete: (id: string) => void;
   onOpenZenMode?: (id: string) => void;
   onEdit: (id: string, initialFocus?: string) => void;
@@ -508,7 +508,7 @@ export const TaskCard = React.memo(function TaskCard({
       HapticService.notification('success');
       // Always toggle: if completed → uncomplete, if pending → complete
       if (!isEffectivelyDone) SoundService.playComplete(); else SoundService.playUncomplete();
-      onToggle(task.id, isEffectivelyDone, task._isRolledOver);
+      onToggle(task.id, isEffectivelyDone);
     } else if (offsetX < SWIPE_DELETE_THRESHOLD) {
       HapticService.impact('heavy');
       setIsDeleteConfirmOpen(true);
@@ -1039,7 +1039,7 @@ export const TaskCard = React.memo(function TaskCard({
               
               if (isEffectivelyDone) {
                 SoundService.playUncomplete();
-                onToggle(task.id, true, task._isRolledOver);
+                onToggle(task.id, true);
               } else {
                 const isNextFinal = hasTargetCount
                   ? (effectiveCurrentCount + 1 >= targetCount)
@@ -1053,7 +1053,7 @@ export const TaskCard = React.memo(function TaskCard({
                 } else {
                   SoundService.playPop();
                 }
-                onToggle(task.id, false, task._isRolledOver);
+                onToggle(task.id, false);
               }
             }}
             style={{
@@ -1454,7 +1454,7 @@ export const TaskCard = React.memo(function TaskCard({
                   e.stopPropagation();
                   HapticService.impact('light');
                   SoundService.playUncomplete();
-                  onToggle(task.id, true, task._isRolledOver);
+                  onToggle(task.id, true);
                 }}
                 style={{
                   display: 'inline-flex',
@@ -2095,3 +2095,4 @@ export const TaskCard = React.memo(function TaskCard({
     </div>
   );
 });
+

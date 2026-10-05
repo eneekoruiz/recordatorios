@@ -1,3 +1,4 @@
+import { CheckSquare } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
@@ -33,6 +34,7 @@ export interface SectionMenuState {
   sectionId?: string;
   sectionName?: string;
   pendingTaskCount?: number;
+  sectionTaskIds?: string[];
   color?: string;
   category?: string;
   /** Rectángulo de la cabecera de sección que abrió el menú. */
@@ -440,7 +442,23 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
             )}
 
             {/* GESTIÓN DE LA SECCIÓN («+ Diarias» está en la propia cabecera) */}
-            {onStartSequence && (sectionMenu.pendingTaskCount ?? 0) > 0 && (
+            
+              {sectionMenu.pendingTaskCount !== undefined && sectionMenu.pendingTaskCount > 0 && (
+                <button
+                  type="button"
+                  className="ios-dropdown-item"
+                  onClick={() => {
+                    HapticService.selection();
+                    window.dispatchEvent(new CustomEvent('complete-all-tasks', { detail: { taskIds: sectionMenu.sectionTaskIds } }));
+                    onClose();
+                  }}
+                >
+                  <CheckSquare size={16} color="var(--text-primary)" />
+                  <span>Marcar todas como hechas</span>
+                </button>
+              )}
+
+              {onStartSequence && (sectionMenu.pendingTaskCount ?? 0) > 0 && (
               <button 
                 type="button"
                 className="ios-dropdown-item" 
@@ -536,3 +554,4 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
     document.body
   );
 };
+
