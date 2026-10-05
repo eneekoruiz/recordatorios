@@ -41,6 +41,7 @@ interface UserProfileDropdownProps {
   toggleTheme: () => void;
   setIsListConfigOpen: (val: boolean) => void;
   setIsEditMode?: (val: boolean) => void;
+  onOpenManageLists?: () => void;
   onSelectView: (view: string) => void;
 }
 
@@ -59,8 +60,10 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
   toggleTheme,
   setIsListConfigOpen,
   setIsEditMode,
+  onOpenManageLists,
   onSelectView
 }) => {
+  void setIsListConfigOpen;
   const isSystemTheme = useAppStore((state) => state.useSystemTheme);
   // Modo sin cuenta: no hay nada que sincronizar y «cerrar sesión» significa borrar los datos del dispositivo.
   const isGuest = useAppStore((state) => !state.token || state.token.startsWith('local_offline'));
@@ -350,9 +353,10 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           onClick={(e) => { 
             e.stopPropagation(); 
             HapticService.selection();
-            if (setIsEditMode) setIsEditMode(true);
-            else setIsListConfigOpen(true); 
             onClose(); 
+            if (setIsEditMode) setIsEditMode(true);
+            if (onOpenManageLists) onOpenManageLists();
+            else window.dispatchEvent(new CustomEvent('open-manage-lists-modal'));
           }}
           style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', cursor: 'pointer' }}
         >
@@ -361,6 +365,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
         <div 
           className="ios-dropdown-item"
           data-testid="profile-item-analytics"
+          onPointerEnter={() => { void import('../../analytics/AnalyticsView'); }}
           onClick={(e) => { e.stopPropagation(); onSelectView('ANALYTICS'); onClose(); }}
           style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', cursor: 'pointer' }}
         >
@@ -369,6 +374,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
         <div 
           className="ios-dropdown-item"
           data-testid="profile-item-integrations"
+          onPointerEnter={() => { void import('../../integrations/IntegrationsModal'); }}
           onClick={(e) => {
             e.stopPropagation();
             HapticService.selection();

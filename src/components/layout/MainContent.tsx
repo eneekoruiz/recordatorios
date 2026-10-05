@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback, useEffect, lazy, Suspense, type ReactNode } from 'react';
+import { useState, useRef, useMemo, useCallback, useEffect, Suspense, type ReactNode } from 'react';
 import { safeGetJSON, safeSetJSON } from '../../utils/safeStorage';
 import { useTaskGrouping } from '../../hooks/useTaskGrouping';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -36,10 +36,11 @@ import { DeletedTaskToast } from './main/DeletedTaskToast';
 import { SectionContextMenu, type SectionMenuState } from './main/SectionContextMenu';
 import { MainPageHeader } from './main/MainPageHeader';
 import { DailyBriefingBanner } from './DailyBriefingBanner';
+import { lazyWithRetry } from '../../utils/lazyWithRetry';
 // Solo se necesitan al abrir el calendario, un perfil o el resumen del mes: no viajan con el arranque.
-const CalendarView = lazy(() => import('../views/CalendarView').then((m) => ({ default: m.CalendarView })));
-const PersonProfileModal = lazy(() => import('../people/PersonProfileModal').then((m) => ({ default: m.PersonProfileModal })));
-const MonthlySummaryModal = lazy(() => import('./main/MonthlySummaryModal').then((m) => ({ default: m.MonthlySummaryModal })));
+const CalendarView = lazyWithRetry(() => import('../views/CalendarView'), 'CalendarView');
+const PersonProfileModal = lazyWithRetry(() => import('../people/PersonProfileModal'), 'PersonProfileModal');
+const MonthlySummaryModal = lazyWithRetry(() => import('./main/MonthlySummaryModal'), 'MonthlySummaryModal');
 import { smartSortTasks } from '../../utils/smartSort';
 import { WeeklyStreakWidget } from './main/WeeklyStreakWidget';
 import { confirmDialog } from '../ui/confirmDialog';
@@ -2583,7 +2584,7 @@ const CORE_CYCLES = [
                         )}
                         {isCalendarView && (
                           <Suspense fallback={null}>
-                            <CalendarView onSelectView={(view) => onSelectView?.(view)} onEditTask={(taskId) => onEditTask?.(taskId)} />
+                            <CalendarView onSelectView={(view: string) => onSelectView?.(view)} onEditTask={(taskId: string) => onEditTask?.(taskId)} />
                           </Suspense>
                         )}
                       </div>

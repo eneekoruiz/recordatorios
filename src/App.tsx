@@ -1,4 +1,4 @@
-import { useState, useEffect, useEffectEvent, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useEffectEvent, useRef, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
@@ -32,18 +32,18 @@ import { useDataHygiene } from './hooks/useDataHygiene';
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts';
 
 
-// Piezas pesadas o de uso ocasional: se descargan cuando hacen falta, no al abrir la app.
-const lazyNamed = <T extends Record<string, any>>(load: () => Promise<T>, name: keyof T) =>
-  lazy(() => load().then((m) => ({ default: m[name] })));
-const UniversalImporter = lazyNamed(() => import('./components/views/UniversalImporter'), 'UniversalImporter');
-const AnalyticsView = lazyNamed(() => import('./components/analytics/AnalyticsView'), 'AnalyticsView');
-const ZenMode = lazyNamed(() => import('./components/tasks/ZenMode'), 'ZenMode');
-const ListSequenceMode = lazyNamed(() => import('./components/tasks/ListSequenceMode'), 'ListSequenceMode');
-const SecuritySheet = lazyNamed(() => import('./components/account/SecuritySheet'), 'SecuritySheet');
-const TaskDrawer = lazyNamed(() => import('./components/tasks/TaskDrawer'), 'TaskDrawer');
-const AIAssistantModal = lazyNamed(() => import('./components/ai/AIAssistantModal'), 'AIAssistantModal');
-const SharedListView = lazyNamed(() => import('./components/share/SharedListView'), 'SharedListView');
-const IntegrationsModal = lazyNamed(() => import('./components/integrations/IntegrationsModal'), 'IntegrationsModal');
+import { lazyWithRetry } from './utils/lazyWithRetry';
+
+// Piezas pesadas o de uso ocasional: se descargan bajo demanda con recuperación de chunks.
+const UniversalImporter = lazyWithRetry(() => import('./components/views/UniversalImporter'), 'UniversalImporter');
+const AnalyticsView = lazyWithRetry(() => import('./components/analytics/AnalyticsView'), 'AnalyticsView');
+const ZenMode = lazyWithRetry(() => import('./components/tasks/ZenMode'), 'ZenMode');
+const ListSequenceMode = lazyWithRetry(() => import('./components/tasks/ListSequenceMode'), 'ListSequenceMode');
+const SecuritySheet = lazyWithRetry(() => import('./components/account/SecuritySheet'), 'SecuritySheet');
+const TaskDrawer = lazyWithRetry(() => import('./components/tasks/TaskDrawer'), 'TaskDrawer');
+const AIAssistantModal = lazyWithRetry(() => import('./components/ai/AIAssistantModal'), 'AIAssistantModal');
+const SharedListView = lazyWithRetry(() => import('./components/share/SharedListView'), 'SharedListView');
+const IntegrationsModal = lazyWithRetry(() => import('./components/integrations/IntegrationsModal'), 'IntegrationsModal');
 
 function App() {
   useSystemTheme();
@@ -83,10 +83,14 @@ function App() {
     return () => window.removeEventListener('open-security-sheet', open);
   }, []);
   const [drawerEverOpened, setDrawerEverOpened] = useState(false);
-  // El editor se descarga en un momento libre tras arrancar, para que al abrirlo ya esté listo.
+  // Modales y vistas clave se precargan en idle para apertura instantánea sin latencia.
   useEffect(() => {
     const idle = (window as any).requestIdleCallback || ((cb: () => void) => window.setTimeout(cb, 1500));
-    const id = idle(() => { void import('./components/tasks/TaskDrawer'); });
+    const id = idle(() => { 
+      void import('./components/tasks/TaskDrawer');
+      void import('./components/analytics/AnalyticsView');
+      void import('./components/integrations/IntegrationsModal');
+    });
     return () => { (window as any).cancelIdleCallback?.(id); };
   }, []);
   if (isDrawerOpen && !drawerEverOpened) setDrawerEverOpened(true);
@@ -372,7 +376,15 @@ function App() {
             />
           )}
           {navView === 'UNIVERSAL_IMPORTER' && <Suspense fallback={null}><UniversalImporter onBack={handleBack} /></Suspense>}
-          {navView === 'ANALYTICS' && <Suspense fallback={null}><AnalyticsView onBack={handleBack} /></Suspense>}
+          {navView === 'ANALYTICS' && (
+            <Suspense fallback={
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+                <div style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid rgba(120,120,128,0.25)', borderTopColor: 'var(--accent-purple, #af52de)', animation: 'spin 0.8s linear infinite' }} />
+              </div>
+            }>
+              <AnalyticsView onBack={handleBack} />
+            </Suspense>
+          )}
         </NavigationFrame>
       </div>
 
@@ -398,7 +410,7 @@ function App() {
           <AIAssistantModal
             isOpen={isAIAssistantOpen}
             onClose={() => setIsAIAssistantOpen(false)}
-            onSelectView={(view) => handleSelectView(view)}
+            onSelectView={(view: string) => handleSelectView(view)}
           />
         </Suspense>
       )}
@@ -437,7 +449,11 @@ function App() {
       )}
       <ShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
       {isIntegrationsOpen && (
-        <Suspense fallback={null}>
+        <Suspense fallback={
+          <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid rgba(255,255,255,0.25)', borderTopColor: '#ffffff', animation: 'spin 0.8s linear infinite' }} />
+          </div>
+        }>
           <IntegrationsModal
             isOpen={isIntegrationsOpen}
             onClose={() => setIsIntegrationsOpen(false)}

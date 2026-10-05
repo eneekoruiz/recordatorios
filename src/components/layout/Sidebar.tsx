@@ -16,6 +16,7 @@ import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
 import { ListConfigModal } from './ListConfigModal';
 import { CycleConfigModal } from './CycleConfigModal';
+import { ManageListsModal } from './ManageListsModal';
 import { AppLogo } from '../ui/AppLogo';
 import { isQueHeHechoList, isCaducidadesList } from '../../utils/specialLists';
 import './Layout.css';
@@ -147,6 +148,14 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   const [editingListId, setEditingListId] = useState<string | undefined>(undefined);
   const [parentListId, setParentListId] = useState<string | undefined>(undefined);
   const [isNewFolderDefault, setIsNewFolderDefault] = useState(false);
+
+  const [isManageListsOpen, setIsManageListsOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpen = () => setIsManageListsOpen(true);
+    window.addEventListener('open-manage-lists-modal', handleOpen);
+    return () => window.removeEventListener('open-manage-lists-modal', handleOpen);
+  }, []);
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   // Posición del menú de perfil: se mide al abrirlo (no se leen refs al renderizar).
@@ -368,6 +377,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         toggleTheme={toggleTheme}
         setIsListConfigOpen={setIsListConfigOpen}
         setIsEditMode={setIsEditMode}
+        onOpenManageLists={() => setIsManageListsOpen(true)}
         onSelectView={onSelectView}
       />
 
@@ -674,6 +684,22 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         listId={editingListId} 
         parentId={parentListId} 
         defaultIsFolder={isNewFolderDefault}
+      />
+      <ManageListsModal
+        isOpen={isManageListsOpen}
+        onClose={() => setIsManageListsOpen(false)}
+        onEditList={(listId) => {
+          setEditingListId(listId);
+          setParentListId(undefined);
+          setIsNewFolderDefault(false);
+          setIsListConfigOpen(true);
+        }}
+        onCreateList={(isFolder) => {
+          setEditingListId(undefined);
+          setParentListId(undefined);
+          setIsNewFolderDefault(!!isFolder);
+          setIsListConfigOpen(true);
+        }}
       />
       <CycleConfigModal 
         isOpen={isCycleModalOpen}

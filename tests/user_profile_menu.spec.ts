@@ -81,7 +81,7 @@ test.describe('Menú del Perfil & Modal de Integraciones (Auditoría)', () => {
     await expect(modal).not.toBeVisible();
   });
 
-  test('Gestionar listas activa el modo de edición de la barra lateral', async ({ page }) => {
+  test('Gestionar listas abre el modal con selección múltiple y gestión de listas', async ({ page }) => {
     const profileTrigger = page.locator('[data-testid="user-profile-trigger"]');
     await profileTrigger.click();
 
@@ -89,13 +89,14 @@ test.describe('Menú del Perfil & Modal de Integraciones (Auditoría)', () => {
     await expect(manageListsBtn).toBeVisible({ timeout: 3000 });
     await manageListsBtn.click();
 
-    // El botón 'Hecho' debe aparecer indicando que el modo edición está activo
-    const doneBtn = page.locator('.apple-nav-text-btn:has-text("Hecho")');
-    await expect(doneBtn).toBeVisible({ timeout: 3000 });
+    const modal = page.locator('[data-testid="manage-lists-modal"]');
+    await expect(modal).toBeVisible({ timeout: 4000 });
+    await expect(modal.locator('text=Gestionar listas')).toBeVisible();
 
-    // Salir del modo edición
+    const doneBtn = modal.locator('[data-testid="manage-lists-done-btn"]');
+    await expect(doneBtn).toBeVisible();
     await doneBtn.click();
-    await expect(page.locator('.apple-nav-text-btn:has-text("Editar")')).toBeVisible();
+    await expect(modal).not.toBeVisible();
   });
 
   test('Estadísticas y productividad navega correctamente a la vista analítica', async ({ page }) => {
