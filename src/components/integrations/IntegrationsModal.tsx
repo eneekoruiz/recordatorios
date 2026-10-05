@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, Mail, FileText, Download, Copy, Check, ExternalLink, GitBranch } from 'lucide-react';
 import { IntegrationService } from '../../services/IntegrationService';
@@ -68,7 +69,9 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
     window.open('https://github.com', '_blank');
   };
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <div
@@ -102,6 +105,7 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
           {/* Modal flotante Apple */}
           <motion.div
             role="dialog"
+            data-testid="integrations-modal"
             aria-label="Vincular con Google Calendar, Gmail y Notion"
             aria-modal="true"
             initial={{ opacity: 0, scale: 0.94, y: 16 }}
@@ -468,6 +472,7 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };

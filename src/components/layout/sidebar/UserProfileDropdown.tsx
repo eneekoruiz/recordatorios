@@ -40,6 +40,7 @@ interface UserProfileDropdownProps {
   theme: string;
   toggleTheme: () => void;
   setIsListConfigOpen: (val: boolean) => void;
+  setIsEditMode?: (val: boolean) => void;
   onSelectView: (view: string) => void;
 }
 
@@ -57,6 +58,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
   theme,
   toggleTheme,
   setIsListConfigOpen,
+  setIsEditMode,
   onSelectView
 }) => {
   const isSystemTheme = useAppStore((state) => state.useSystemTheme);
@@ -285,6 +287,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
         </div>
         <div 
           className="ios-dropdown-item"
+          data-testid="profile-item-shortcuts"
           onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new Event('open-shortcuts-modal')); onClose(); }}
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
         >
@@ -343,13 +346,21 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
         <div className="ios-dropdown-divider" />
         <div 
           className="ios-dropdown-item"
-          onClick={(e) => { e.stopPropagation(); setIsListConfigOpen(true); onClose(); }}
+          data-testid="profile-item-manage-lists"
+          onClick={(e) => { 
+            e.stopPropagation(); 
+            HapticService.selection();
+            if (setIsEditMode) setIsEditMode(true);
+            else setIsListConfigOpen(true); 
+            onClose(); 
+          }}
           style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', cursor: 'pointer' }}
         >
           <Settings size={16} /> Gestionar listas
         </div>
         <div 
           className="ios-dropdown-item"
+          data-testid="profile-item-analytics"
           onClick={(e) => { e.stopPropagation(); onSelectView('ANALYTICS'); onClose(); }}
           style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', cursor: 'pointer' }}
         >
@@ -357,6 +368,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
         </div>
         <div 
           className="ios-dropdown-item"
+          data-testid="profile-item-integrations"
           onClick={(e) => {
             e.stopPropagation();
             HapticService.selection();

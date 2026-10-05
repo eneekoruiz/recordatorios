@@ -1,4 +1,5 @@
 import { useEffect, type FC } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SheetNavBar } from '../ui/SheetNavBar';
 import { modKey } from '../../utils/platform';
@@ -57,12 +58,15 @@ export const ShortcutsModal: FC<ShortcutsModalProps> = ({ isOpen, onClose }) => 
     },
   ];
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <div className="premium-overlay list-config-overlay" style={{ position: 'fixed', inset: 0, zIndex: 100000 }} onClick={onClose}>
           <motion.div
             role="dialog"
+            data-testid="shortcuts-modal"
             aria-modal="true"
             aria-label="Atajos de teclado"
             className="shortcuts-sheet form-sheet"
@@ -93,6 +97,7 @@ export const ShortcutsModal: FC<ShortcutsModalProps> = ({ isOpen, onClose }) => 
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };

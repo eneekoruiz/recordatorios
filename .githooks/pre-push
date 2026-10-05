@@ -1,0 +1,25 @@
+#!/bin/sh
+# Pre-push hook: garantiza que la calidad y el CI nunca fallen en GitHub
+
+echo "🛡️  [Git Pre-Push Hook] Verificando calidad y suites de CI antes de subir..."
+echo "📦 1/5 Prisma schema & Client"
+echo "🔍 2/5 TypeScript strict types (tsc -b)"
+echo "✨ 3/5 Linter & code quality (oxlint)"
+echo "🧪 4/5 Unit & integration tests (vitest)"
+echo "⚡ 5/5 Production bundle & CSS build (vite build)"
+
+npm run validate
+
+STATUS=$?
+if [ $STATUS -ne 0 ]; then
+    echo ""
+    echo "❌ [ERROR] La validación de calidad falló (código de salida $STATUS)."
+    echo "🚫 PUSH ABORTADO: Corrige los errores antes de subir para no romper el CI en GitHub."
+    echo ""
+    exit 1
+fi
+
+echo ""
+echo "✅ [Git Pre-Push Hook] ¡Todo aprobado al 100%! Subiendo cambios con seguridad a GitHub..."
+echo ""
+exit 0

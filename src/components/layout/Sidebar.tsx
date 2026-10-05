@@ -239,6 +239,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
 
               <div 
                 className="user-profile-trigger"
+                data-testid="user-profile-trigger"
                 onClick={(e) => {
                   e.stopPropagation();
                   setProfileAnchor(e.currentTarget.getBoundingClientRect());
@@ -366,6 +367,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         theme={theme}
         toggleTheme={toggleTheme}
         setIsListConfigOpen={setIsListConfigOpen}
+        setIsEditMode={setIsEditMode}
         onSelectView={onSelectView}
       />
 

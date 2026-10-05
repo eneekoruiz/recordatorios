@@ -43,12 +43,14 @@ const SecuritySheet = lazyNamed(() => import('./components/account/SecuritySheet
 const TaskDrawer = lazyNamed(() => import('./components/tasks/TaskDrawer'), 'TaskDrawer');
 const AIAssistantModal = lazyNamed(() => import('./components/ai/AIAssistantModal'), 'AIAssistantModal');
 const SharedListView = lazyNamed(() => import('./components/share/SharedListView'), 'SharedListView');
+const IntegrationsModal = lazyNamed(() => import('./components/integrations/IntegrationsModal'), 'IntegrationsModal');
 
 function App() {
   useSystemTheme();
   // ── All hooks FIRST (before any conditional returns) ──────────────
   const token = useAppStore((state) => state.token);
   const tasks = useAppStore((state) => state.tasks); // Subscribing to tasks
+  const lists = useAppStore((state) => state.lists);
   const [currentView, setCurrentView] = useState(() => {
     try {
       if (localStorage.getItem('hide_onboarding_guide') === 'true') return 'smart_today';
@@ -65,6 +67,12 @@ function App() {
   const [zenModeTaskId, setZenModeTaskId] = useState<string | null>(null);
   const [sequenceMode, setSequenceMode] = useState<{ taskIds: string[]; listName: string; listColor?: string } | null>(null);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+  const [isIntegrationsOpen, setIsIntegrationsOpen] = useState(false);
+  useEffect(() => {
+    const open = () => setIsIntegrationsOpen(true);
+    window.addEventListener('open-integrations-modal', open);
+    return () => window.removeEventListener('open-integrations-modal', open);
+  }, []);
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   const [aiAssistantEverOpened, setAiAssistantEverOpened] = useState(false);
   if (isAIAssistantOpen && !aiAssistantEverOpened) setAiAssistantEverOpened(true);
@@ -428,6 +436,16 @@ function App() {
         </Suspense>
       )}
       <ShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
+      {isIntegrationsOpen && (
+        <Suspense fallback={null}>
+          <IntegrationsModal
+            isOpen={isIntegrationsOpen}
+            onClose={() => setIsIntegrationsOpen(false)}
+            tasks={Object.values(tasks || {}).filter(t => !t.deleted_at)}
+            listName={lists?.find(l => l.id === currentView)?.name || 'Recordatorios'}
+          />
+        </Suspense>
+      )}
       <ConfirmHost />
 
       {globalToast && createPortal(

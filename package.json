@@ -16,11 +16,12 @@
     "build": "prisma generate && tsc -b && vite build",
     "typecheck": "tsc -b",
     "lint": "oxlint",
-    "validate": "tsc -b && oxlint && vitest run",
+    "validate": "prisma generate && tsc -b && oxlint && vitest run && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "prepare": "git config core.hooksPath .githooks || true"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
