@@ -374,11 +374,20 @@ const CORE_CYCLES = [
 
   // Selección múltiple de recordatorios para acciones en lote (mover sección, anidar, etc.)
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+  const [isExplicitSelectionMode, setIsExplicitSelectionMode] = useState(false);
+
+  useEffect(() => {
+    const handleEnterSelection = () => setIsExplicitSelectionMode(true);
+    window.addEventListener('enter-selection-mode', handleEnterSelection);
+    return () => window.removeEventListener('enter-selection-mode', handleEnterSelection);
+  }, []);
+
   const [prevView, setPrevView] = useState(currentView);
   if (prevView !== currentView) {
     setPrevView(currentView);
-    if (selectedTaskIds.size > 0) {
+    if (selectedTaskIds.size > 0 || isExplicitSelectionMode) {
       setSelectedTaskIds(new Set());
+      setIsExplicitSelectionMode(false);
     }
   }
 
@@ -2374,7 +2383,7 @@ const CORE_CYCLES = [
             onStartTask={canStartIndividualTasks ? handleStartTask : undefined}
             isSelected={selectedTaskIds.has(task.id)}
             onToggleSelect={handleToggleSelectTask}
-            isSelectionMode={selectedTaskIds.size > 0}
+            isSelectionMode={selectedTaskIds.size > 0 || isExplicitSelectionMode}
             {...({
               hasChildren,
               isExpanded,
@@ -3039,7 +3048,8 @@ const CORE_CYCLES = [
 
       <BatchTaskActionsBar
         selectedTaskIds={selectedTaskIds}
-        onClearSelection={() => setSelectedTaskIds(new Set())}
+        isExplicitSelectionMode={isExplicitSelectionMode}
+        onClearSelection={() => { setSelectedTaskIds(new Set()); setIsExplicitSelectionMode(false); }}
         listSections={listSections || []}
         tasks={tasks}
         currentListId={currentList?.id}

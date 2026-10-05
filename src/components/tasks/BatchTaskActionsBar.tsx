@@ -13,6 +13,7 @@ interface BatchTaskActionsBarProps {
   listSections: ListSection[];
   tasks: Record<string, TaskItem>;
   currentListId?: string;
+  isExplicitSelectionMode?: boolean;
 }
 
 export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
@@ -21,6 +22,7 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
   listSections,
   tasks,
   currentListId,
+  isExplicitSelectionMode,
 }) => {
   const updateTask = useAppStore(state => state.updateTask);
   const nestTask = useAppStore(state => state.nestTask);
@@ -29,7 +31,7 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
 
   const [activeModal, setActiveModal] = useState<'section' | 'nest' | 'delete' | null>(null);
 
-  if (selectedTaskIds.size === 0) return null;
+  if (selectedTaskIds.size === 0 && !isExplicitSelectionMode) return null;
 
   const count = selectedTaskIds.size;
 
