@@ -70,11 +70,13 @@ interface MainSectionHeaderProps {
   dragOverSectionId: string | null;
   onStartSectionSequence?: () => void;
   pendingTaskCount?: number;
+  totalTaskCount?: number;
   isMobile?: boolean;
   sectionMenu?: SectionMenuState;
   isPrevHeader?: boolean;
   isFirstAfterPageHeader?: boolean;
   isRoutine?: boolean;
+hidePeriodContext?: boolean;
   onReorderSections?: (sourceId: string, targetId: string, position: 'before' | 'after') => void;
 }
 
@@ -116,30 +118,33 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   dragOverSectionId,
   onStartSectionSequence: _onStartSectionSequence,
   pendingTaskCount,
+  totalTaskCount,
   isMobile,
   sectionMenu,
   isPrevHeader = false,
   isFirstAfterPageHeader = false,
   isRoutine: _isRoutine = false,
+hidePeriodContext,
   onReorderSections
 }) => {
   const currentSectionRoutineMode = sectionRoutineModes[data.category] || data.routineMode || 'only_section';
   const isShopping = isShoppingList(data.category);
   const isLibrary = isLifeLibraryList(data.category);
-  // Con «+ Diarias» activo, routineDurations.full ya incluye las mezcladas (mismo nivel, sin subcabecera).
+  // Con '+ Diarias' activo, routineDurations.full ya incluye las mezcladas (mismo nivel, sin subcabecera).
   const isFullRoutine = currentSectionRoutineMode === 'full_routine';
   const durSummary = !isShopping && !isLibrary ? (data.routineDurations ? (isFullRoutine ? data.routineDurations.full : data.routineDurations.only) : durationSummary) : null;
   const sectionDurationLabel = durSummary && durSummary.activeMinutes > 0 ? formatSummaryDuration(durSummary.activeMinutes) : null;
 
-  // Corto para caber en el móvil: «+ Diarias» en las semanales, «+ Acumuladas» en mensuales y anuales.
+  // Corto para caber en el móvil: '+ Diarias' en las semanales, '+ Acumuladas' en mensuales y anuales.
   const includeLabel = data.periodicity === 'week' ? 'Diarias' : 'Acumuladas';
 
   const periodContext = React.useMemo(() => {
+    if (hidePeriodContext) return null;
     const effPeriod = (data.periodicity as any) || null;
     if (!effPeriod) return null;
     if (/^\d{4}$/.test((data.title || '').trim())) return null;
-    return getPeriodContextLabel(effPeriod, pendingTaskCount ?? 0, sectionTotal);
-  }, [data.periodicity, data.title, pendingTaskCount, sectionTotal]);
+    return getPeriodContextLabel(effPeriod, pendingTaskCount ?? 0, totalTaskCount ?? (data.sectionTaskIds?.length || 0));
+  }, [data.periodicity, data.title, pendingTaskCount, totalTaskCount, data.sectionTaskIds]);
 
   const [isSectionDurationOpen, setIsSectionDurationOpen] = useState(false);
 

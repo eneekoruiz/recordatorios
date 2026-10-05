@@ -109,6 +109,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
         const isQueHeHecho = isQueHeHechoList(cleanListId, targetList);
         const shouldCountAll = isQueHeHecho || Boolean(targetList?.showCompleted);
         const taskPool = shouldCountAll ? all : active;
+          if (isQueHeHecho) return taskPool.filter(t => t.categoryId === 'que_he_hecho' || t.categoryId === cleanListId).length;
 
         const descendantListIds = new Set<string>([cleanListId]);
         const queue = [cleanListId];

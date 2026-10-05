@@ -32,7 +32,7 @@ export interface TaskContextMenuProps {
   previousTaskId?: string;
   setIsDeleteConfirmOpen: (open: boolean) => void;
   onOpenZenMode?: (id: string) => void;
-  onToggle: (id: string, forceReverse?: boolean) => void;
+  onToggle: (id: string, forceReverse?: boolean, isRolledOver?: boolean) => void;
   isCompleted: boolean;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
@@ -196,7 +196,7 @@ interface MenuActionsProps {
   setIsDeleteConfirmOpen: (open: boolean) => void;
   updateTask: (id: string, updates: Partial<TaskItem>) => void;
   onOpenZenMode?: (id: string) => void;
-  onToggle: (id: string, forceReverse?: boolean) => void;
+  onToggle: (id: string, forceReverse?: boolean, isRolledOver?: boolean) => void;
   isCompleted: boolean;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
@@ -670,7 +670,7 @@ function MenuActions({
         label={isCompleted ? "Marcar como pendiente" : "Marcar como completado"} 
         onClick={() => { 
           setContextMenuOpen(false); 
-          onToggle(task.id); 
+          onToggle(task.id, undefined, task._isRolledOver); 
         }} 
       />
 

@@ -2503,7 +2503,7 @@ body.dark .cad-summary-cost strong {
 }
 
 .section-duration-label:hover {
-  background: var(--apple-fill-quaternary, rgba(142, 142, 147, 0.12)) !important;
+  background: transparent !important;
   color: var(--text-secondary, #3a3a3c) !important;
 }
 
@@ -2531,8 +2531,8 @@ html.dark .section-duration-label:hover {
   height: 24px !important;
   padding: 0 8px !important;
   border-radius: 999px !important;
-  background: var(--apple-fill-quaternary, rgba(142, 142, 147, 0.12)) !important;
-  border: 0.5px solid rgba(0, 0, 0, 0.05) !important;
+  background: transparent !important;
+  border: none !important;
   color: var(--text-secondary, #3c3c43) !important;
   cursor: pointer !important;
   font-size: 0.77rem !important;
@@ -2568,8 +2568,8 @@ html.dark .section-duration-label:hover {
 [data-theme="dark"] .apple-duration-chip,
 html.dark .apple-list-duration-chip,
 html.dark .apple-duration-chip {
-  background: rgba(255, 255, 255, 0.09) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
+  background: transparent !important;
+  border: none !important;
   color: rgba(235, 235, 245, 0.75) !important;
 }
 

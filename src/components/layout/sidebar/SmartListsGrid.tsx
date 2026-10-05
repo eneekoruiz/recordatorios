@@ -28,7 +28,7 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
   const availableGridLists = SMART_LISTS.filter(list => {
     if (pinnedSmartLists.includes(list.id)) return false;
     if (list.id === 'smart_primeros_pasos' && getTaskCount('smart_primeros_pasos') === 0 && !isEditMode) return false;
-    return smartListVisibility[list.id] || isEditMode;
+    if (!isEditMode && getTaskCount(list.id) === 0 && list.id !== "smart_today" && list.id !== "smart_all") return false; return smartListVisibility[list.id] || isEditMode;
   });
 
   return (

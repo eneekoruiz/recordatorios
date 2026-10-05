@@ -25,6 +25,8 @@ export function isCompletedInCurrentPeriod(
   sections?: ListSection[],
   lists?: CustomList[]
 ): boolean {
+  if (task._isRolledOver) return false;
+
   // Si la tarea tiene meta de repeticiones (ej. 3 vasos de agua), no está completada hasta alcanzar la meta
   if (task.targetCount && task.targetCount > 1) {
     if ((task.currentCount || 0) < task.targetCount) {

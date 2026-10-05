@@ -82,6 +82,7 @@ export interface TaskItem {
   // Estructura Espacial (Subtareas y Orden)
   parentId?: string; // Si es null o undefined, es una tarea raíz
   order?: number; // Para ordenar libremente
+  _isRolledOver?: boolean; // Virtual flag para UI
   
   // Dependencias Topológicas (Bloqueadores)
   blockedBy?: string[]; // Opcional: dependencias complejas
