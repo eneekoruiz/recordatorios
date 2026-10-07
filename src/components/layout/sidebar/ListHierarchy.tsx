@@ -15,7 +15,8 @@ import { Share2, Link2Off,
   MoreHorizontal,
   GripVertical
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { SpotlightBackdrop } from '../../ui/SpotlightBackdrop';
 import { useAppStore } from '../../../store/useAppStore';
 import type { CustomList } from '../../../models/Task';
 import { confirmDialog } from '../../ui/confirmDialog';
@@ -61,6 +62,8 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [draggingListId, setDraggingListId] = useState<string | null>(null);
   const [dropFeedback, setDropFeedback] = useState<{ targetId: string; position: 'before' | 'after' | 'inside' } | null>(null);
+  const listSheetRef = useRef<HTMLDivElement>(null);
+  const dropFeedbackRef = useRef<{ targetId: string; position: 'before' | 'after' | 'inside' } | null>(null);
   const removeList = useAppStore((state) => state.removeList);
   const updateList = useAppStore((state) => state.updateList);
   const reorderLists = useAppStore((state) => state.reorderLists);
@@ -213,9 +216,7 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
               dragSnapToOrigin={true}
               whileDrag={{ scale: 1.02, zIndex: 999, boxShadow: '0 8px 24px rgba(0,0,0,0.3)', backgroundColor: 'var(--bg-elevated, #2c2c2e)', cursor: 'grabbing' }}
               animate={{
-                scale: activeMenuId === list.id ? 0.96 : 1,
-                zIndex: activeMenuId === list.id ? 99999 : (draggingListId === list.id ? 999 : 'auto'),
-                boxShadow: activeMenuId === list.id ? '0 16px 40px rgba(0,0,0,0.2)' : 'none',
+                zIndex: draggingListId === list.id ? 999 : 'auto',
               }}
               transition={{ type: 'spring', damping: 25, stiffness: 450 }}
               onDragStart={() => {
@@ -246,13 +247,13 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                   if (targetId && targetId !== list.id) {
                     const rect = row.getBoundingClientRect();
                     const relY = (info.point.y - rect.top) / rect.height;
-                    if (relY < 0.28) {
-                      setDropFeedback({ targetId, position: 'before' });
-                    } else if (relY > 0.72) {
-                      setDropFeedback({ targetId, position: 'after' });
-                    } else {
-                      setDropFeedback({ targetId, position: 'inside' });
-                    }
+                    // Anidar solo con un arrastre deliberado hacia la derecha; si no, la fila se parte en mitades
+                    // (antes y despues) para que soltar entre dos listas no exija precision.
+                    const fb: { targetId: string; position: 'before' | 'after' | 'inside' } = info.offset.x > 36
+                      ? { targetId, position: 'inside' }
+                      : { targetId, position: relY < 0.5 ? 'before' : 'after' };
+                    dropFeedbackRef.current = fb;
+                    setDropFeedback(fb);
                     return;
                   }
                 }
@@ -266,17 +267,21 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                   if (info.point.y > lastRect.bottom) {
                     const lastId = lastRow.getAttribute('data-list-id');
                     if (lastId) {
-                      setDropFeedback({ targetId: lastId, position: 'after' });
+                      const fbLast = { targetId: lastId, position: 'after' as const };
+                       dropFeedbackRef.current = fbLast;
+                       setDropFeedback(fbLast);
                       return;
                     }
                   }
                 }
 
+                dropFeedbackRef.current = null;
                 setDropFeedback(null);
               }}
               onDragEnd={(_e, info) => {
                 setDraggingListId(null);
-                const feedback = dropFeedback;
+                const feedback = dropFeedbackRef.current;
+                dropFeedbackRef.current = null;
                 setDropFeedback(null);
 
                 if (feedback) {
@@ -508,47 +513,56 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                 </div>
               )}
 
-              {activeMenuId === list.id && menuCoords && createPortal(
+              {createPortal(
+                <AnimatePresence>
+                {activeMenuId === list.id && menuCoords && (
                 <>
-                  <div 
-                    style={{ 
-                      position: 'fixed', 
-                      inset: 0, 
-                      zIndex: 99998, 
-                      background: isMobile ? 'var(--scrim)' : 'transparent',
-                      transition: 'all 0.2s ease'
-                    }} 
-                    onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); setMenuCoords(null); }} 
+                  <SpotlightBackdrop
+                    rect={(() => { const r = document.querySelector(`[data-list-id="${list.id}"]`)?.getBoundingClientRect(); return r ? { top: r.top, left: r.left, width: r.width, height: r.height } : null; })()}
+                    getTarget={() => document.querySelector(`[data-list-id="${list.id}"]`) as HTMLElement | null}
+                    sheetRef={isMobile ? listSheetRef : undefined}
+                    onClose={() => { setActiveMenuId(null); setMenuCoords(null); }}
+                    onWheel={() => { setActiveMenuId(null); setMenuCoords(null); }}
+                    radius={12}
+                    padding={0}
                   />
                   <motion.div 
+                    ref={listSheetRef}
                     initial={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.95, y: -6 }}
                     animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }}
                     exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.95, y: -6 }}
-                    transition={{ type: 'spring', damping: 28, stiffness: 450 }}
+                    transition={{ type: 'spring', damping: 30, stiffness: 380, mass: 0.9 }}
+                    drag={isMobile ? 'y' : false}
+                    dragConstraints={{ top: 0, bottom: 0 }}
+                    dragElastic={{ top: 0.05, bottom: 0.7 }}
+                    onDragEnd={isMobile ? (_e, info) => {
+                      if (info.offset.y > 80 || info.velocity.y > 400) { setActiveMenuId(null); setMenuCoords(null); }
+                    } : undefined}
                     className={isMobile ? undefined : "ios-dropdown-menu"}
                     style={isMobile ? { 
                       position: 'fixed',
                       left: 0,
                       right: 0,
                       bottom: 0,
-                      zIndex: 99999,
-                      background: 'var(--bg-elevated, #1c1c1e)',
+                      zIndex: 999995,
+                      background: 'var(--bg-material, rgba(255,255,255,0.85))',
                       backdropFilter: 'blur(30px) saturate(180%)',
                       WebkitBackdropFilter: 'blur(30px) saturate(180%)',
-                      borderTop: '1px solid var(--border-subtle, rgba(255,255,255,0.12))',
-                      borderRadius: '24px 24px 0 0',
-                      padding: '16px 16px max(24px, env(safe-area-inset-bottom))',
-                      boxShadow: '0 -10px 40px rgba(0,0,0,0.5)',
+                      borderTop: '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
+                      borderRadius: '20px 20px 0 0',
+                      padding: '12px 16px max(24px, env(safe-area-inset-bottom))',
+                      boxShadow: '0 -10px 40px rgba(0,0,0,0.3)',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: 8,
-                      maxHeight: '80vh',
-                      overflowY: 'auto'
+                      maxHeight: '85vh',
+                      overflowY: 'auto',
+                      overscrollBehavior: 'contain'
                     } : { 
                       position: 'fixed',
                       top: clampMenuTop(menuCoords.top),
                       left: Math.max(12, Math.min(menuCoords.left, window.innerWidth - MENU_WIDTH - 12)),
-                      zIndex: 99999,
+                      zIndex: 999995,
                       width: MENU_WIDTH,
                       maxHeight: window.innerHeight - clampMenuTop(menuCoords.top) - 12,
                       overflowY: 'auto',
@@ -749,7 +763,9 @@ export const ListHierarchy: React.FC<ListHierarchyProps> = ({
                       </button>
                     )}
                   </motion.div>
-                </>,
+                </>
+                )}
+                </AnimatePresence>,
                 document.body
               )}
             </motion.div>
