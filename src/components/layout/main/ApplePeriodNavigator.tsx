@@ -27,6 +27,8 @@ interface ApplePeriodNavigatorProps {
   style?: React.CSSProperties;
   /** Si es en vista móvil para ajustar espaciado */
   isMobile?: boolean;
+  /** Modo solo lectura (muestra la cápsula del período/mes sin botones de navegación ni selector emergente) */
+  readOnly?: boolean;
 }
 
 const MONTH_NAMES = [
@@ -41,7 +43,8 @@ export const ApplePeriodNavigator: React.FC<ApplePeriodNavigatorProps> = ({
   viewColor = '#007aff',
   className = '',
   style = {},
-  isMobile = false
+  isMobile = false,
+  readOnly = false
 }) => {
   const {
     temporalDate,
@@ -173,6 +176,39 @@ export const ApplePeriodNavigator: React.FC<ApplePeriodNavigatorProps> = ({
       });
     }
   }, [isPickerOpen]);
+
+  if (readOnly) {
+    return (
+      <div
+        data-testid="apple-period-navigator-readonly"
+        className={`apple-period-navigator-capsule apple-period-readonly ${className}`}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 5,
+          padding: '2px 8px',
+          borderRadius: 999,
+          background: 'var(--bg-material, rgba(255, 255, 255, 0.75))',
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          border: '1px solid var(--border-subtle, rgba(0, 0, 0, 0.1))',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+          fontSize: isMobile ? '0.74rem' : '0.78rem',
+          fontWeight: 600,
+          color: 'var(--text-secondary)',
+          letterSpacing: '-0.01em',
+          userSelect: 'none',
+          flexShrink: 0,
+          ...style
+        }}
+        title={`Mes actual: ${getFormattedLabel()}`}
+        aria-label={`Mes actual: ${getFormattedLabel()}`}
+      >
+        <Calendar size={12} strokeWidth={2} style={{ opacity: 0.75 }} />
+        <span>{getFormattedLabel()}</span>
+      </div>
+    );
+  }
 
   return (
     <>

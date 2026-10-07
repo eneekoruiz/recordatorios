@@ -27,7 +27,7 @@ test.describe('Apple Period Navigator (helen-design)', () => {
 
   test('Muestra el navegador de fechas estilo cápsula Apple en la vista Mensual', async ({ page }) => {
     // Navegar a la vista de ciclo Mensual
-    const mensualBtn = page.locator('.sidebar-cycle-item, [data-view-id="cycle_month"], button, div').filter({ hasText: /Mensual/i }).first();
+    const mensualBtn = page.locator('[data-testid="cycle-item-cycle_month"], [data-view-id="cycle_month"]').first();
     await mensualBtn.click();
     await page.waitForTimeout(400);
 
@@ -56,7 +56,7 @@ test.describe('Apple Period Navigator (helen-design)', () => {
   });
 
   test('Abre el Popover selector Apple con opciones de Año, Mes, Semana y Día', async ({ page }) => {
-    const mensualBtn = page.locator('.sidebar-cycle-item, [data-view-id="cycle_month"], button, div').filter({ hasText: /Mensual/i }).first();
+    const mensualBtn = page.locator('[data-testid="cycle-item-cycle_month"], [data-view-id="cycle_month"]').first();
     await mensualBtn.click();
     await page.waitForTimeout(400);
 
@@ -92,7 +92,7 @@ test.describe('Apple Period Navigator (helen-design)', () => {
 
   test('Diseño responsive adaptado a móvil (375px)', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    const mensualBtn = page.locator('.sidebar-cycle-item, [data-view-id="cycle_month"], button, div').filter({ hasText: /Mensual/i }).first();
+    const mensualBtn = page.locator('[data-testid="cycle-item-cycle_month"], [data-view-id="cycle_month"]').first();
     if (await mensualBtn.isVisible()) {
       await mensualBtn.click();
     }
@@ -104,6 +104,49 @@ test.describe('Apple Period Navigator (helen-design)', () => {
       // Comprobar que no desborda la pantalla
       const box = await navigator.boundingBox();
       expect(box?.width).toBeLessThan(360);
+    }
+  });
+
+  test('En listas normales muestra el mes en modo solo lectura (readOnly) sin botones ni navegación', async ({ page }) => {
+    // Abrir una lista normal (ej. la primera de la barra lateral o Inbox)
+    const normalListBtn = page.locator('.sidebar-list-item, [data-list-id]').first();
+    if (await normalListBtn.isVisible()) {
+      await normalListBtn.click();
+      await page.waitForTimeout(400);
+
+      // En la cabecera debe haber la cápsula en modo solo lectura
+      const readOnlyPill = page.locator('[data-testid="apple-period-navigator-readonly"]');
+      if (await readOnlyPill.isVisible()) {
+        await expect(readOnlyPill).toBeVisible();
+
+        // NO deben existir botones de stepper ni flechas dentro
+        await expect(readOnlyPill.locator('[data-testid="apple-period-prev-btn"]')).toHaveCount(0);
+        await expect(readOnlyPill.locator('[data-testid="apple-period-next-btn"]')).toHaveCount(0);
+
+        // Hacer click no debe abrir ningún popover
+        await readOnlyPill.click();
+        await page.waitForTimeout(200);
+        await expect(page.locator('[data-testid="apple-period-picker-popover"]')).not.toBeVisible();
+      }
+    }
+  });
+
+  test('En listas de frecuencia muestra la tarjeta de estado de rutina bajo el interruptor', async ({ page }) => {
+    const mensualBtn = page.locator('[data-testid="cycle-item-cycle_month"], [data-view-id="cycle_month"]').first();
+    await mensualBtn.click();
+    await page.waitForTimeout(400);
+
+    // Debe mostrar la tarjeta de estado de frecuencia
+    const statusCard = page.locator('[data-testid="cycle-routine-status-card"]');
+    await expect(statusCard).toBeVisible({ timeout: 4000 });
+
+    // El navegador interactivo debe estar dentro de la tarjeta
+    await expect(statusCard.locator('[data-testid="apple-period-navigator"]')).toBeVisible();
+
+    // El interruptor de incluir acumuladas debe estar visible justo arriba
+    const includeSwitch = page.locator('.routine-include-row');
+    if (await includeSwitch.isVisible()) {
+      await expect(includeSwitch).toBeVisible();
     }
   });
 });

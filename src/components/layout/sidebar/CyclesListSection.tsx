@@ -215,6 +215,8 @@ export const CyclesListSection: React.FC<CyclesListSectionProps> = ({
           return (
             <motion.div 
               key={cycle.id}
+              data-view-id={cycle.id}
+              data-testid={`cycle-item-${cycle.id}`}
               className={`ios-list-item ${isActive ? 'active' : ''}`}
               style={{ position: 'relative', opacity: isEditCyclesMode && !isVisible ? 0.5 : 1, transition: 'background-color 150ms ease' }}
             >

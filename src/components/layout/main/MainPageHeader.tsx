@@ -28,7 +28,7 @@ import type { RoutinePart } from '../../../utils/routineBreakdown';
 import { getReservedFrequencyColor } from '../../../constants/colors';
 
 import { ApplePeriodNavigator } from './ApplePeriodNavigator';
-import { useTemporalNavigationStore } from '../../../store/useTemporalNavigationStore';
+import { CycleRoutineStatusCard } from './CycleRoutineStatusCard';
 
 export interface CycleBreakdownInfo {
   ownCount: number;
@@ -133,7 +133,8 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   onToggleCycleRoutineMode
 }) => {
   const updateList = useAppStore((state) => state.updateList);
-  const temporalDate = useTemporalNavigationStore((state) => state.temporalDate);
+  const cycles = useAppStore((state) => state.cycles);
+  const globalCyclesEnabled = useAppStore((state) => state.globalCyclesEnabled);
 
   const [isEditingListName, setIsEditingListName] = React.useState(false);
   const [listEditName, setListEditName] = React.useState('');
@@ -301,26 +302,17 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
               );
             })()}
 
+            {/* Solo en listas normales: mostrar el mes actual en modo solo lectura si el usuario tiene frecuencias configuradas */}
             {(() => {
-              const effPeriod = currentCycle
-                ? (currentCycle.id === 'cycle_day' ? 'day' :
-                   currentCycle.id === 'cycle_week' ? 'week' :
-                   currentCycle.id === 'cycle_month' ? 'month' :
-                   currentCycle.id === 'cycle_year' ? 'year' : null)
-                : currentView === 'smart_today'
-                ? 'day'
-                : (currentList && !currentList.isFolder)
-                ? (currentList.name.toLowerCase().includes('anual') || currentList.name.toLowerCase().includes('propósito') ? 'year' :
-                   currentList.name.toLowerCase().includes('mensual') ? 'month' :
-                   currentList.name.toLowerCase().includes('semanal') ? 'week' :
-                   currentList.name.toLowerCase().includes('diari') ? 'day' : 'month')
-                : (temporalDate ? 'month' : null);
+              const isNormalList = Boolean(currentList && !currentList.isFolder);
+              const hasConfiguredFrequencies = Boolean(globalCyclesEnabled && cycles && cycles.length > 0);
 
-              if (!effPeriod) return null;
+              if (!isNormalList || !hasConfiguredFrequencies) return null;
 
               return (
                 <ApplePeriodNavigator
-                  defaultPeriodicity={effPeriod}
+                  defaultPeriodicity="month"
+                  readOnly={true}
                   viewColor={viewColor}
                   isMobile={_isMobile}
                   style={{ marginLeft: 6 }}
@@ -483,6 +475,18 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
               />
               <span className="slider round" />
             </label>
+          </div>
+        )}
+
+        {/* Navegación temporal y diagnóstico de la rutina de frecuencia (situado bajo «Incluir acumuladas/diarias») */}
+        {currentCycle && (
+          <div style={{ opacity: titleOpacity, width: '100%' }}>
+            <CycleRoutineStatusCard
+              currentCycle={currentCycle}
+              cycleRoutineMode={cycleRoutineMode}
+              viewColor={viewColor}
+              isMobile={_isMobile}
+            />
           </div>
         )}
 
