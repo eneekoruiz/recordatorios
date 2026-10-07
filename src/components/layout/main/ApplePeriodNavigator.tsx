@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -68,8 +68,9 @@ export const ApplePeriodNavigator: React.FC<ApplePeriodNavigatorProps> = ({
      defaultPeriodicity === 'week' ? 'week' :
      defaultPeriodicity === 'day' ? 'day' : 'month');
 
-  const activeDate = temporalDate ? new Date(temporalDate) : new Date();
+  const activeDate = useMemo(() => (temporalDate ? new Date(temporalDate) : new Date()), [temporalDate]);
   const isRealTime = isCurrentRealTime(effGranularity);
+  const isPast = useMemo(() => (temporalDate ? new Date(temporalDate).getTime() < new Date().getTime() : false), [temporalDate]);
 
   // Cerrar al pulsar fuera o al pulsar Escape
   useEffect(() => {
@@ -307,7 +308,7 @@ export const ApplePeriodNavigator: React.FC<ApplePeriodNavigatorProps> = ({
                 lineHeight: 1
               }}
             >
-              {activeDate.getFullYear() < new Date().getFullYear() ? 'Histórico' : 'Futuro'}
+              {isPast ? 'Histórico' : 'Futuro'}
             </span>
           )}
 

@@ -50,41 +50,21 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
     });
   }, [tasks, cycles, listSections, lists, currentCycle, cycleRoutineMode, referenceDate]);
 
-  // Icono y color según el estado
-  const { statusIcon, statusColor, statusBadgeBg } = useMemo(() => {
+  // Icono según el estado
+  const statusIcon = useMemo(() => {
     if (status.statusState === 'all_done') {
-      return {
-        statusIcon: <CheckCircle2 size={13} strokeWidth={2.4} />,
-        statusColor: '#34c759',
-        statusBadgeBg: 'color-mix(in srgb, #34c759 12%, transparent)',
-      };
+      return <CheckCircle2 size={13} strokeWidth={2.4} color="#34c759" />;
     }
     if (status.statusState === 'own_done_accumulated_pending') {
-      return {
-        statusIcon: <Clock size={13} strokeWidth={2.2} />,
-        statusColor: viewColor,
-        statusBadgeBg: `color-mix(in srgb, ${viewColor} 12%, transparent)`,
-      };
+      return <Clock size={13} strokeWidth={2.2} color={viewColor} />;
     }
     if (status.statusState === 'accumulated_done_own_pending') {
-      return {
-        statusIcon: <Sparkles size={13} strokeWidth={2.2} />,
-        statusColor: '#ff9500',
-        statusBadgeBg: 'color-mix(in srgb, #ff9500 12%, transparent)',
-      };
+      return <Sparkles size={13} strokeWidth={2.2} color="#ff9500" />;
     }
     if (status.statusState === 'both_pending' || status.statusState === 'own_pending') {
-      return {
-        statusIcon: <Clock size={13} strokeWidth={2.2} />,
-        statusColor: 'var(--text-secondary)',
-        statusBadgeBg: 'color-mix(in srgb, var(--text-primary) 8%, transparent)',
-      };
+      return <Clock size={13} strokeWidth={2.2} color="var(--text-secondary)" />;
     }
-    return {
-      statusIcon: <Calendar size={13} strokeWidth={2} />,
-      statusColor: 'var(--text-tertiary)',
-      statusBadgeBg: 'transparent',
-    };
+    return <Calendar size={13} strokeWidth={2} color="var(--text-tertiary)" />;
   }, [status.statusState, viewColor]);
 
   const progressPercent = useMemo(() => {
@@ -95,23 +75,23 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
   return (
     <div
       data-testid="cycle-routine-status-card"
-      className="cycle-routine-status-card"
+      className="cycle-routine-status-strip"
       style={{
         width: '100%',
         boxSizing: 'border-box',
-        marginTop: 6,
-        marginBottom: 8,
-        padding: isMobile ? '8px 10px' : '10px 14px',
-        borderRadius: 14,
-        background: 'var(--bg-secondary, rgba(0, 0, 0, 0.025))',
-        border: '1px solid var(--border-subtle, rgba(0, 0, 0, 0.08))',
+        padding: isMobile ? '8px 0 12px 0' : '10px 0 14px 0',
+        borderTop: currentCycle.id === 'cycle_day' ? '0.5px solid var(--separator)' : 'none',
+        borderBottom: '0.5px solid var(--separator)',
+        marginTop: currentCycle.id === 'cycle_day' ? 6 : 0,
+        marginBottom: 12,
+        background: 'transparent',
         display: 'flex',
         flexDirection: 'column',
         gap: 8,
         transition: 'all 0.2s ease',
       }}
     >
-      {/* Fila superior: Navegador de período a la izquierda + Resumen pill a la derecha */}
+      {/* Fila 1: Navegador de período a la izquierda + Resumen métrico sutil a la derecha */}
       <div
         style={{
           display: 'flex',
@@ -119,6 +99,7 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
           justifyContent: 'space-between',
           gap: 10,
           flexWrap: 'wrap',
+          minHeight: 28,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -136,134 +117,108 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
               display: 'inline-flex',
               alignItems: 'center',
               gap: 5,
-              fontSize: '0.74rem',
+              fontSize: isMobile ? '0.78rem' : '0.82rem',
               fontWeight: 600,
-              padding: '2px 8px',
-              borderRadius: 999,
-              color: statusColor,
-              background: statusBadgeBg,
+              color: status.statusState === 'all_done' ? '#34c759' : 'var(--text-secondary)',
               letterSpacing: '-0.01em',
-              flexShrink: 0,
+              fontVariantNumeric: 'tabular-nums',
             }}
           >
             {statusIcon}
             <span>
-              {status.statusState === 'all_done'
-                ? 'Completado'
-                : `${status.totalCompleted}/${status.totalGoal} (${progressPercent}%)`}
+              {status.statusState === 'all_done' ? (
+                'Todo al día'
+              ) : (
+                <>
+                  <span>{status.totalCompleted} de {status.totalGoal} hechas</span>
+                  <span style={{ color: viewColor, marginLeft: 4 }}>({progressPercent}%)</span>
+                </>
+              )}
             </span>
           </div>
         )}
       </div>
 
-      {/* Fila central: Diagnóstico exacto y claro */}
+      {/* Fila 2: Barra de progreso ultra-fina estilo Apple */}
       {status.totalGoal > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div
+          style={{
+            width: '100%',
+            height: 3,
+            borderRadius: 999,
+            background: 'var(--separator, rgba(60, 60, 67, 0.12))',
+            overflow: 'hidden',
+          }}
+        >
           <div
-            data-testid="cycle-status-headline"
             style={{
-              fontSize: isMobile ? '0.80rem' : '0.84rem',
-              fontWeight: 600,
-              color: 'var(--text-primary)',
-              letterSpacing: '-0.01em',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
+              height: '100%',
+              width: `${progressPercent}%`,
+              background: status.isAllDone ? '#34c759' : viewColor,
+              borderRadius: 999,
+              transition: 'width 0.35s cubic-bezier(0.25, 1, 0.5, 1)',
             }}
-          >
-            <span>{status.headline}</span>
-          </div>
+          />
+        </div>
+      )}
 
-          <div
-            style={{
-              fontSize: isMobile ? '0.72rem' : '0.76rem',
-              color: 'var(--text-secondary)',
-              letterSpacing: '-0.005em',
-            }}
-          >
-            {status.detailText}
-          </div>
-
-          {/* Chips de desglose específico: Propias vs Acumuladas */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              flexWrap: 'wrap',
-              marginTop: 4,
-            }}
-          >
-            {/* Chip de tareas propias */}
+      {/* Fila 3: Diagnóstico limpio y tipográfico sin cajas ni redundancias */}
+      {status.totalGoal > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+            flexWrap: 'wrap',
+            fontSize: isMobile ? '0.76rem' : '0.80rem',
+            letterSpacing: '-0.01em',
+            lineHeight: 1.35,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <span
+              data-testid="cycle-status-headline"
               style={{
-                fontSize: '0.70rem',
-                fontWeight: 600,
-                color: status.isOwnDone ? '#34c759' : viewColor,
-                background: status.isOwnDone
-                  ? 'color-mix(in srgb, #34c759 10%, transparent)'
-                  : `color-mix(in srgb, ${viewColor} 10%, transparent)`,
-                padding: '1px 6px',
-                borderRadius: 6,
+                fontWeight: 650,
+                color: status.isAllDone
+                  ? '#34c759'
+                  : status.statusState === 'own_done_accumulated_pending'
+                  ? viewColor
+                  : 'var(--text-primary)',
               }}
             >
-              ● {status.ownCycleName}: {status.ownCompleted}/{status.ownTotal} hechas
+              {status.headline}
             </span>
 
-            {/* Chip de tareas acumuladas (solo en rutina completa si existen) */}
-            {cycleRoutineMode === 'full_routine' && status.accumulatedTotal > 0 && (
-              <span
-                style={{
-                  fontSize: '0.70rem',
-                  fontWeight: 600,
-                  color: status.isAccumulatedDone ? '#34c759' : 'var(--accent-orange, #ff9500)',
-                  background: status.isAccumulatedDone
-                    ? 'color-mix(in srgb, #34c759 10%, transparent)'
-                    : 'color-mix(in srgb, #ff9500 10%, transparent)',
-                  padding: '1px 6px',
-                  borderRadius: 6,
-                }}
-              >
-                ● Acumuladas: {status.accumulatedCompleted}/{status.accumulatedTotal} hechas
-              </span>
-            )}
+            <span style={{ opacity: 0.35, color: 'var(--text-tertiary)' }}>·</span>
 
-            {/* Chip de qué falta exactamente */}
-            {status.totalPending > 0 && status.missingSummary && (
-              <span
-                style={{
-                  fontSize: '0.70rem',
-                  fontWeight: 500,
-                  color: 'var(--text-tertiary)',
-                  marginLeft: 2,
-                }}
-              >
-                ({status.missingSummary})
-              </span>
-            )}
+            <span style={{ color: 'var(--text-secondary)', fontWeight: 450 }}>
+              {status.detailText}
+            </span>
           </div>
 
-          {/* Mini barra de progreso Apple */}
-          <div
-            style={{
-              width: '100%',
-              height: 3,
-              borderRadius: 999,
-              background: 'var(--border-subtle, rgba(0, 0, 0, 0.06))',
-              overflow: 'hidden',
-              marginTop: 4,
-            }}
-          >
+          {/* Si estamos en rutina completa con acumuladas, mostrar desglose sintético */}
+          {cycleRoutineMode === 'full_routine' && status.accumulatedTotal > 0 && (
             <div
               style={{
-                height: '100%',
-                width: `${progressPercent}%`,
-                background: status.isAllDone ? '#34c759' : viewColor,
-                borderRadius: 999,
-                transition: 'width 0.3s cubic-bezier(0.25, 1, 0.5, 1)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: '0.72rem',
+                fontWeight: 600,
+                color: 'var(--text-tertiary)',
               }}
-            />
-          </div>
+            >
+              <span style={{ color: status.isOwnDone ? '#34c759' : viewColor }}>
+                ● {status.ownCycleName}: {status.ownCompleted}/{status.ownTotal}
+              </span>
+              <span style={{ opacity: 0.35 }}>·</span>
+              <span style={{ color: status.isAccumulatedDone ? '#34c759' : '#ff9500' }}>
+                ● Acumuladas: {status.accumulatedCompleted}/{status.accumulatedTotal}
+              </span>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -18,6 +18,18 @@ interface TemporalNavigationState {
   isCurrentRealTime: (granularity?: TemporalGranularity) => boolean;
 }
 
+function isSameIsoWeek(d1: Date, d2: Date): boolean {
+  const getMonday = (d: Date) => {
+    const copy = new Date(d);
+    const day = copy.getDay();
+    const diff = copy.getDate() - day + (day === 0 ? -6 : 1);
+    copy.setDate(diff);
+    copy.setHours(0, 0, 0, 0);
+    return copy.getTime();
+  };
+  return getMonday(d1) === getMonday(d2);
+}
+
 export const useTemporalNavigationStore = create<TemporalNavigationState>((set, get) => ({
   temporalDate: null,
   granularity: null,
@@ -54,6 +66,8 @@ export const useTemporalNavigationStore = create<TemporalNavigationState>((set, 
       matchesNow = nextDate.getFullYear() === now.getFullYear();
     } else if (g === 'month') {
       matchesNow = nextDate.getFullYear() === now.getFullYear() && nextDate.getMonth() === now.getMonth();
+    } else if (g === 'week') {
+      matchesNow = isSameIsoWeek(nextDate, now);
     } else if (g === 'day') {
       matchesNow = nextDate.toDateString() === now.toDateString();
     }
@@ -69,6 +83,7 @@ export const useTemporalNavigationStore = create<TemporalNavigationState>((set, 
     const g = explicitGranularity || granularity || 'month';
     if (g === 'year') return temporalDate.getFullYear() === now.getFullYear();
     if (g === 'month') return temporalDate.getFullYear() === now.getFullYear() && temporalDate.getMonth() === now.getMonth();
+    if (g === 'week') return isSameIsoWeek(temporalDate, now);
     if (g === 'day') return temporalDate.toDateString() === now.toDateString();
     return false;
   }
