@@ -118,7 +118,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        style={{ position: 'fixed', inset: 0, zIndex: 99998, background: 'rgba(0, 0, 0, 0.12)', backdropFilter: 'blur(3px)' }} 
+        style={{ position: 'fixed', inset: 0, zIndex: 99998, background: 'rgba(0, 0, 0, 0.28)', backdropFilter: 'blur(4px)' }} 
         onClick={(e) => { e.stopPropagation(); onClose(); }}
       />
       <motion.div 
@@ -141,8 +141,9 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           zIndex: 99999,
           borderRadius: 14,
           padding: 6,
-          border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
-          boxShadow: '0 10px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.04)'
+          background: 'var(--bg-elevated, #ffffff)',
+          border: '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
+          boxShadow: '0 16px 40px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.06)'
         }}
         onClick={(e) => e.stopPropagation()}
         onWheel={(e) => e.stopPropagation()}

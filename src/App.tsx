@@ -13,6 +13,7 @@ import { SpotlightModal } from './components/search/SpotlightModal';
 
 
 import { useAppStore, isTaskCompleted } from './store/useAppStore';
+import { useTemporalNavigationStore } from './store/useTemporalNavigationStore';
 import { useNavigation } from './hooks/useNavigation';
 import { NavigationFrame } from './components/layout/NavigationFrame';
 import { AuthScreen } from './components/auth/AuthScreen';
@@ -233,10 +234,16 @@ function App() {
 
   useSyncManager(token);
 
+  // Al cambiar de vista se resetea la fecha temporal para no arrastrar períodos anteriores
+  useEffect(() => {
+    useTemporalNavigationStore.getState().resetToNow();
+  }, [currentView]);
+
   // ── Helpers ──────────────────────────────────────────────────────
   const previousMobileView = useRef<'sidebar' | 'content'>('sidebar');
 
   const handleSelectView = (view: string) => {
+    useTemporalNavigationStore.getState().resetToNow();
     previousMobileView.current = mobileView;
     if (view === 'DATA' || view === 'BRAIN_DUMP') {
       navReset('UNIVERSAL_IMPORTER');

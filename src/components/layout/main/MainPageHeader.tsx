@@ -27,7 +27,6 @@ import { MetaSplit, MONEY_COLOR } from '../../ui/MetaSplit';
 import type { RoutinePart } from '../../../utils/routineBreakdown';
 import { getReservedFrequencyColor } from '../../../constants/colors';
 
-import { ApplePeriodNavigator } from './ApplePeriodNavigator';
 import { CycleRoutineStatusCard } from './CycleRoutineStatusCard';
 
 export interface CycleBreakdownInfo {
@@ -133,8 +132,6 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   onToggleCycleRoutineMode
 }) => {
   const updateList = useAppStore((state) => state.updateList);
-  const cycles = useAppStore((state) => state.cycles);
-  const globalCyclesEnabled = useAppStore((state) => state.globalCyclesEnabled);
 
   const [isEditingListName, setIsEditingListName] = React.useState(false);
   const [listEditName, setListEditName] = React.useState('');
@@ -302,23 +299,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
               );
             })()}
 
-            {/* Solo en listas normales: mostrar el mes actual en modo solo lectura si el usuario tiene frecuencias configuradas */}
-            {(() => {
-              const isNormalList = Boolean(currentList && !currentList.isFolder);
-              const hasConfiguredFrequencies = Boolean(globalCyclesEnabled && cycles && cycles.length > 0);
-
-              if (!isNormalList || !hasConfiguredFrequencies) return null;
-
-              return (
-                <ApplePeriodNavigator
-                  defaultPeriodicity="month"
-                  readOnly={true}
-                  viewColor={viewColor}
-                  isMobile={_isMobile}
-                  style={{ marginLeft: 6 }}
-                />
-              );
-            })()}
+            {/* Las listas normales mantienen su cabecera limpia sin selector temporal */}
           </div>
 
           {/* Derecha: Gran Contador de tareas activas */}

@@ -60,17 +60,51 @@ export const ApplePeriodNavigator: React.FC<ApplePeriodNavigatorProps> = ({
   const triggerRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
-  // Determinar la granularidad efectiva
+  // Sincronizar granularidad con la periodicidad por defecto de la vista
+  useEffect(() => {
+    if (defaultPeriodicity) {
+      const g: TemporalGranularity =
+        defaultPeriodicity === 'year' ? 'year' :
+        defaultPeriodicity === 'week' ? 'week' :
+        defaultPeriodicity === 'day' ? 'day' : 'month';
+      setGranularity(g);
+    }
+  }, [defaultPeriodicity, setGranularity]);
+
+  // Determinar la granularidad efectiva (el estado de navegación manda, con respaldo en la vista)
   const effGranularity: TemporalGranularity =
     granularity ||
-    (defaultPeriodicity === 'year' ? 'year' :
-     defaultPeriodicity === 'month' ? 'month' :
-     defaultPeriodicity === 'week' ? 'week' :
-     defaultPeriodicity === 'day' ? 'day' : 'month');
+    (defaultPeriodicity as TemporalGranularity) ||
+    'month';
 
   const activeDate = useMemo(() => (temporalDate ? new Date(temporalDate) : new Date()), [temporalDate]);
   const isRealTime = isCurrentRealTime(effGranularity);
-  const isPast = useMemo(() => (temporalDate ? new Date(temporalDate).getTime() < new Date().getTime() : false), [temporalDate]);
+  const isPast = useMemo(() => {
+    if (!temporalDate) return false;
+    const now = new Date();
+    if (effGranularity === 'year') {
+      return activeDate.getFullYear() < now.getFullYear();
+    }
+    if (effGranularity === 'month') {
+      return activeDate.getFullYear() < now.getFullYear() ||
+        (activeDate.getFullYear() === now.getFullYear() && activeDate.getMonth() < now.getMonth());
+    }
+    if (effGranularity === 'week') {
+      const getMonday = (d: Date) => {
+        const copy = new Date(d);
+        const day = copy.getDay();
+        const diff = copy.getDate() - day + (day === 0 ? -6 : 1);
+        copy.setDate(diff);
+        copy.setHours(0, 0, 0, 0);
+        return copy.getTime();
+      };
+      return getMonday(activeDate) < getMonday(now);
+    }
+    // day
+    const d1 = new Date(activeDate); d1.setHours(0, 0, 0, 0);
+    const d2 = new Date(now); d2.setHours(0, 0, 0, 0);
+    return d1.getTime() < d2.getTime();
+  }, [temporalDate, activeDate, effGranularity]);
 
   // Cerrar al pulsar fuera o al pulsar Escape
   useEffect(() => {

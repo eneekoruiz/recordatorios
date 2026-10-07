@@ -38,7 +38,7 @@ export const useTemporalNavigationStore = create<TemporalNavigationState>((set, 
   
   setGranularity: (granularity) => set({ granularity }),
 
-  resetToNow: () => set({ temporalDate: null }),
+  resetToNow: () => set({ temporalDate: null, granularity: null }),
 
   stepPeriod: (direction: -1 | 1, explicitGranularity?: TemporalGranularity) => {
     const { temporalDate, granularity } = get();

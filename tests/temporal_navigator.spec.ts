@@ -107,27 +107,18 @@ test.describe('Apple Period Navigator (helen-design)', () => {
     }
   });
 
-  test('En listas normales muestra el mes en modo solo lectura (readOnly) sin botones ni navegación', async ({ page }) => {
+  test('En listas normales la cabecera se mantiene limpia sin selector temporal', async ({ page }) => {
     // Abrir una lista normal (ej. la primera de la barra lateral o Inbox)
     const normalListBtn = page.locator('.sidebar-list-item, [data-list-id]').first();
     if (await normalListBtn.isVisible()) {
       await normalListBtn.click();
       await page.waitForTimeout(400);
 
-      // En la cabecera debe haber la cápsula en modo solo lectura
+      // En la cabecera de la lista no debe aparecer ningún navegador temporal
       const readOnlyPill = page.locator('[data-testid="apple-period-navigator-readonly"]');
-      if (await readOnlyPill.isVisible()) {
-        await expect(readOnlyPill).toBeVisible();
-
-        // NO deben existir botones de stepper ni flechas dentro
-        await expect(readOnlyPill.locator('[data-testid="apple-period-prev-btn"]')).toHaveCount(0);
-        await expect(readOnlyPill.locator('[data-testid="apple-period-next-btn"]')).toHaveCount(0);
-
-        // Hacer click no debe abrir ningún popover
-        await readOnlyPill.click();
-        await page.waitForTimeout(200);
-        await expect(page.locator('[data-testid="apple-period-picker-popover"]')).not.toBeVisible();
-      }
+      await expect(readOnlyPill).toHaveCount(0);
+      const activeNavigator = page.locator('.apple-main-page-header [data-testid="apple-period-navigator"]');
+      await expect(activeNavigator).toHaveCount(0);
     }
   });
 

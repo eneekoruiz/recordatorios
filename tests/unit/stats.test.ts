@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { completionTimestamps, completionsByDay, currentStreak, weeklySuccess, totals } from '../../src/utils/stats';
+import { completionTimestamps, completionsByDay, currentStreak, weeklySuccess, totals, bestStreak, timeOfDayDistribution, calculateCyclesBreakdown, calculateListBreakdown } from '../../src/utils/stats';
 import type { TaskItem } from '../../src/models/Task';
 
 const NOW = new Date(2026, 8, 29, 15, 0).getTime(); // martes 29-sep-2026 15:00
@@ -40,5 +40,72 @@ describe('estadísticas reales', () => {
 
   it('los totales suman finalizaciones y pendientes', () => {
     expect(totals([done('a', 0), T('p', {}), T('q', {})])).toEqual({ completed: 1, pending: 2 });
+  });
+
+  it('calcula la mejor racha histórica', () => {
+    // Finalizaciones en días: 5, 4, 3 (racha 3) y 1, 0 (racha 2)
+    const tasks = [
+      done('a', 5),
+      done('b', 4),
+      done('c', 3),
+      done('d', 1),
+      done('e', 0)
+    ];
+    expect(bestStreak(tasks)).toBe(3);
+    expect(bestStreak([])).toBe(0);
+  });
+
+  it('calcula la distribución del momento del día', () => {
+    const tasks = [
+      T('m1', { completionHistory: [new Date(2026, 8, 29, 9, 0).getTime()] }),
+      T('m2', { completionHistory: [new Date(2026, 8, 29, 10, 0).getTime()] }),
+      T('t1', { completionHistory: [new Date(2026, 8, 29, 16, 0).getTime()] }),
+    ];
+    const dist = timeOfDayDistribution(tasks);
+    expect(dist.morning).toBe(2);
+    expect(dist.afternoon).toBe(1);
+    expect(dist.night).toBe(0);
+    expect(dist.peakPeriod).toBe('morning');
+  });
+
+  it('desglosa ciclos por periodicidad Diarias, Semanales, Mensuales y Anuales', () => {
+    const tasks = [
+      T('d1', { cycle_id: 'cycle_day', status: 'completed' }),
+      T('d2', { cycle_id: 'cycle_day', status: 'pending' }),
+      T('w1', { cycle_id: 'cycle_week', status: 'pending' }),
+      T('m1', { cycle_id: 'cycle_month', status: 'completed' }),
+      T('y1', { cycle_id: 'cycle_year', status: 'completed' }),
+    ];
+    const breakdown = calculateCyclesBreakdown(tasks, [], [], [], new Date(NOW));
+    expect(breakdown.daily.total).toBe(2);
+    expect(breakdown.daily.completed).toBe(1);
+    expect(breakdown.daily.rate).toBe(50);
+    expect(breakdown.weekly.total).toBe(1);
+    expect(breakdown.weekly.completed).toBe(0);
+    expect(breakdown.monthly.total).toBe(1);
+    expect(breakdown.monthly.completed).toBe(1);
+    expect(breakdown.yearly.total).toBe(1);
+    expect(breakdown.yearly.completed).toBe(1);
+    expect(breakdown.allRoutinesGoal).toBe(5);
+    expect(breakdown.allRoutinesCompleted).toBe(3);
+    expect(breakdown.allRoutinesRate).toBe(60);
+  });
+
+  it('desglosa el cumplimiento por lista', () => {
+    const tasks = [
+      T('t1', { categoryId: 'list_limpieza', status: 'completed' }),
+      T('t2', { categoryId: 'list_limpieza', status: 'pending' }),
+      T('t3', { categoryId: 'list_compras', status: 'completed' }),
+    ];
+    const lists = [
+      { id: 'list_limpieza', name: 'Limpieza', color: '#007aff' } as any,
+      { id: 'list_compras', name: 'Compras', color: '#34c759' } as any,
+    ];
+    const res = calculateListBreakdown(tasks, lists);
+    expect(res).toHaveLength(2);
+    const limp = res.find(r => r.listId === 'list_limpieza');
+    expect(limp?.total).toBe(2);
+    expect(limp?.completed).toBe(1);
+    expect(limp?.rate).toBe(50);
   });
 });
