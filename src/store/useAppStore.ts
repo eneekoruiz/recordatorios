@@ -213,7 +213,7 @@ interface AppState {
 
   purgeOldDeletedTasks: () => void;
 
-  getTasksByCycle: (cycle_id: string, includeCompleted?: boolean, temporarilyShowIds?: string[]) => Record<string, TaskItem[]>;
+  getTasksByCycle: (cycle_id: string, includeCompleted?: boolean, temporarilyShowIds?: string[], referenceDate?: Date) => Record<string, TaskItem[]>;
   getTasksByList: (listId: string, includeCompleted?: boolean, temporarilyShowIds?: string[]) => Record<string, TaskItem[]>;
   getSmartSortTasks: (temporarilyShowIds?: string[]) => TaskItem[]; 
 
@@ -1428,7 +1428,7 @@ export const useAppStore = create<AppState>()(
       }),
 
       // Algoritmo de Cascada Matemático
-      getTasksByCycle: (cycleId, includeCompleted = false, temporarilyShowIds = []) => {
+      getTasksByCycle: (cycleId, includeCompleted = false, temporarilyShowIds = [], referenceDate?: Date) => {
         const tasks = get().tasks as Record<string, TaskItem>;
         const cycles = get().cycles as CustomCycle[];
         const targetCycle = cycles.find((c: any) => c.id === cycleId);
@@ -1444,7 +1444,7 @@ export const useAppStore = create<AppState>()(
             if (!effCycle) return false;
             return validCycles.includes(effCycle as string);
           })
-          .filter((t: any) => includeCompleted || temporarilyShowIds.includes(t.id) || !isCompletedInCurrentPeriod(t, cycles, get().listSections, get().lists));
+          .filter((t: any) => includeCompleted || temporarilyShowIds.includes(t.id) || !isCompletedInCurrentPeriod(t, cycles, get().listSections, get().lists, referenceDate));
 
         const tasksToInclude = new Map<string, TaskItem>();
         matchedTasks.forEach((t: any) => {

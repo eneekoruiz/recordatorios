@@ -26,7 +26,8 @@ export function useTaskGrouping({
   sortTaskList,
   lifeLogViewMode,
   selectedPersonFilter,
-  extractPeopleFromText
+  extractPeopleFromText,
+  referenceDate
 }: any) {
   return useMemo(() => {
     let rawGrouped: Record<string, TaskItem[]> = {};
@@ -135,7 +136,7 @@ export function useTaskGrouping({
         rawGrouped = getTasksByList(currentView.replace('list_', ''), resolvedShowCompleted, recentlyCompletedIds);
       }
     } else {
-      rawGrouped = getTasksByCycle(currentView, resolvedShowCompleted, recentlyCompletedIds);
+      rawGrouped = getTasksByCycle(currentView, resolvedShowCompleted, recentlyCompletedIds, referenceDate);
     }
 
     if (currentCycle) {
@@ -243,6 +244,6 @@ export function useTaskGrouping({
     currentView, isFolderView, isSmartView, isListView, getTasksForSmartView, getTasksByList, 
     getTasksByCycle, tasks, resolvedShowCompleted, recentlyCompletedIds, lists, listSections, cycles, 
     currentCycle, cycleViewMode, listSectionFilter, dailyTimeFilter, resolveTimeOfDay, currentList, 
-    sortTaskList, lifeLogViewMode, selectedPersonFilter, extractPeopleFromText
+    sortTaskList, lifeLogViewMode, selectedPersonFilter, extractPeopleFromText, referenceDate
   ]);
 }

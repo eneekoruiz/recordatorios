@@ -76,7 +76,8 @@ interface MainSectionHeaderProps {
   isPrevHeader?: boolean;
   isFirstAfterPageHeader?: boolean;
   isRoutine?: boolean;
-hidePeriodContext?: boolean;
+  hidePeriodContext?: boolean;
+  referenceDate?: Date;
   onReorderSections?: (sourceId: string, targetId: string, position: 'before' | 'after') => void;
 }
 
@@ -124,7 +125,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   isPrevHeader = false,
   isFirstAfterPageHeader = false,
   isRoutine: _isRoutine = false,
-hidePeriodContext,
+  hidePeriodContext,
+  referenceDate,
   onReorderSections
 }) => {
   const currentSectionRoutineMode = sectionRoutineModes[data.category] || data.routineMode || 'only_section';
@@ -143,8 +145,8 @@ hidePeriodContext,
     const effPeriod = (data.periodicity as any) || null;
     if (!effPeriod) return null;
     if (/^\d{4}$/.test((data.title || '').trim())) return null;
-    return getPeriodContextLabel(effPeriod, pendingTaskCount ?? 0, totalTaskCount ?? (data.sectionTaskIds?.length || 0));
-  }, [data.periodicity, data.title, pendingTaskCount, totalTaskCount, data.sectionTaskIds]);
+    return getPeriodContextLabel(effPeriod, pendingTaskCount ?? 0, totalTaskCount ?? (data.sectionTaskIds?.length || 0), referenceDate || new Date());
+  }, [data.periodicity, data.title, pendingTaskCount, totalTaskCount, data.sectionTaskIds, referenceDate, hidePeriodContext]);
 
   const [isSectionDurationOpen, setIsSectionDurationOpen] = useState(false);
 

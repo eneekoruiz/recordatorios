@@ -23,7 +23,8 @@ export function isCompletedInCurrentPeriod(
   task: Partial<TaskItem>, 
   cycles: CustomCycle[] = [],
   sections?: ListSection[],
-  lists?: CustomList[]
+  lists?: CustomList[],
+  referenceDate: Date = new Date()
 ): boolean {
   if (task._isRolledOver) return false;
 
@@ -48,63 +49,86 @@ export function isCompletedInCurrentPeriod(
     return false;
   }
 
-  const lastCompletion = task.completionHistory[task.completionHistory.length - 1];
-  const now = new Date();
-  const lastDate = new Date(lastCompletion);
+  const ref = referenceDate;
 
-  // 1. Ciclo diario: completada si la última finalización ocurrió HOY
+  // 1. Ciclo diario: completada si alguna finalización ocurrió en el día de referencia
   if (effCycleId === 'cycle_day') {
-    return lastDate.toDateString() === now.toDateString();
+    const refStr = ref.toDateString();
+    return task.completionHistory.some(ts => new Date(ts).toDateString() === refStr);
   }
 
-  // 2. Ciclo semanal: completada si la última finalización ocurrió durante la semana en curso (desde el lunes)
+  // 2. Ciclo semanal: completada si alguna finalización ocurrió durante la semana de referencia
   if (effCycleId === 'cycle_week') {
-    const startOfWeek = getStartOfWeek(now);
-    return lastCompletion >= startOfWeek.getTime();
+    const startOfWeek = getStartOfWeek(ref);
+    const endOfWeek = new Date(startOfWeek.getTime() + 7 * 86400000 - 1);
+    return task.completionHistory.some(ts => {
+      const time = typeof ts === 'number' ? ts : new Date(ts).getTime();
+      return time >= startOfWeek.getTime() && time <= endOfWeek.getTime();
+    });
   }
 
-  // 3. Ciclo mensual: completada si ocurrió en el mismo mes y año
+  // 3. Ciclo mensual: completada si ocurrió en el mismo mes y año de referencia
   if (effCycleId === 'cycle_month') {
-    return lastDate.getMonth() === now.getMonth() && lastDate.getFullYear() === now.getFullYear();
+    const refMonth = ref.getMonth();
+    const refYear = ref.getFullYear();
+    return task.completionHistory.some(ts => {
+      const d = new Date(ts);
+      return d.getMonth() === refMonth && d.getFullYear() === refYear;
+    });
   }
 
-  // 4. Ciclo anual: completada si ocurrió en el mismo año
+  // 4. Ciclo anual: completada si ocurrió en el mismo año de referencia
   if (effCycleId === 'cycle_year') {
-    return lastDate.getFullYear() === now.getFullYear();
+    const refYear = ref.getFullYear();
+    return task.completionHistory.some(ts => new Date(ts).getFullYear() === refYear);
   }
 
   // 5. Ciclo personalizado por daysValue
   const cycle = cycles.find((c) => c.id === effCycleId);
   if (cycle) {
-    return checkCyclePeriodMatch(cycle.daysValue, lastDate, now, lastCompletion);
+    return checkCyclePeriodMatch(cycle.daysValue, ref, task.completionHistory);
   }
 
-  return lastDate.toDateString() === now.toDateString();
+  const refStr = ref.toDateString();
+  return task.completionHistory.some(ts => new Date(ts).toDateString() === refStr);
 }
 
 /**
  * Función auxiliar pura para reducir complejidad cognitivo-ciclomática
  */
-function checkCyclePeriodMatch(daysValue: number, lastDate: Date, now: Date, lastCompletion: number): boolean {
+function checkCyclePeriodMatch(daysValue: number, ref: Date, completionHistory: (number | string)[]): boolean {
   if (daysValue === 1) {
-    return lastDate.toDateString() === now.toDateString();
+    const refStr = ref.toDateString();
+    return completionHistory.some(ts => new Date(ts).toDateString() === refStr);
   }
 
   if (daysValue === 7) {
-    const startOfWeek = getStartOfWeek(now);
-    return lastCompletion >= startOfWeek.getTime();
+    const startOfWeek = getStartOfWeek(ref);
+    const endOfWeek = new Date(startOfWeek.getTime() + 7 * 86400000 - 1);
+    return completionHistory.some(ts => {
+      const time = typeof ts === 'number' ? ts : new Date(ts).getTime();
+      return time >= startOfWeek.getTime() && time <= endOfWeek.getTime();
+    });
   }
 
   if (daysValue === 30) {
-    return lastDate.getMonth() === now.getMonth() && lastDate.getFullYear() === now.getFullYear();
+    const refMonth = ref.getMonth();
+    const refYear = ref.getFullYear();
+    return completionHistory.some(ts => {
+      const d = new Date(ts);
+      return d.getMonth() === refMonth && d.getFullYear() === refYear;
+    });
   }
 
   if (daysValue === 365) {
-    return lastDate.getFullYear() === now.getFullYear();
+    const refYear = ref.getFullYear();
+    return completionHistory.some(ts => new Date(ts).getFullYear() === refYear);
   }
 
   const cycleMs = daysValue * 24 * 60 * 60 * 1000;
-  return (Date.now() - lastCompletion) < cycleMs;
+  const lastTs = completionHistory[completionHistory.length - 1];
+  const lastCompletion = typeof lastTs === 'number' ? lastTs : new Date(lastTs).getTime();
+  return (ref.getTime() - lastCompletion) < cycleMs && (ref.getTime() - lastCompletion) >= 0;
 }
 
 /**

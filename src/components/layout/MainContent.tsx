@@ -36,6 +36,7 @@ import { DeletedTaskToast } from './main/DeletedTaskToast';
 import { SectionContextMenu, type SectionMenuState } from './main/SectionContextMenu';
 import { MainPageHeader } from './main/MainPageHeader';
 import { DailyBriefingBanner } from './DailyBriefingBanner';
+import { useTemporalNavigationStore } from '../../store/useTemporalNavigationStore';
 import { lazyWithRetry } from '../../utils/lazyWithRetry';
 // Solo se necesitan al abrir el calendario, un perfil o el resumen del mes: no viajan con el arranque.
 const CalendarView = lazyWithRetry(() => import('../views/CalendarView'), 'CalendarView');
@@ -138,6 +139,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const toggleTask = useAppStore((state) => state.toggleTask);
   const getTasksByList = useAppStore((state) => state.getTasksByList);
   const getTasksByCycle = useAppStore((state) => state.getTasksByCycle);
+  const temporalDate = useTemporalNavigationStore((state) => state.temporalDate);
 
   // Local state
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -405,7 +407,7 @@ const CORE_CYCLES = [
     allTasks.forEach(t => {
       if (t.deleted_at) return;
       if (t.categoryId === 'primeros_pasos') return;
-      const isDone = isTaskCompleted(t) || isCompletedInCurrentPeriod(t, cycles, listSections, lists);
+      const isDone = isTaskCompleted(t) || isCompletedInCurrentPeriod(t, cycles, listSections, lists, temporalDate || undefined);
       if (!resolvedShowCompleted && isDone && !recentlyCompletedIds.includes(t.id)) return;
 
       const effCycle = getEffectiveCycleId(t, listSections, lists);
@@ -422,7 +424,7 @@ const CORE_CYCLES = [
     });
 
     return counts;
-  }, [currentCycle, tasks, cycles, listSections, lists, resolvedShowCompleted, recentlyCompletedIds]);
+  }, [currentCycle, tasks, cycles, listSections, lists, resolvedShowCompleted, recentlyCompletedIds, temporalDate]);
 
   // Helper de ordenamiento: delega en la única función de orden de la app (ver sectionRoutine.ts)
   // para que el criterio sea siempre el mismo, se mezclen o no periodicidades distintas.
@@ -443,7 +445,8 @@ const CORE_CYCLES = [
         filteredTasks = validTasks.filter(t => t.categoryId === 'primeros_pasos');
         break;
       case 'smart_today': {
-        const todayStr = new Date().toDateString();
+        const targetDate = temporalDate || new Date();
+        const todayStr = targetDate.toDateString();
         filteredTasks = validTasks.filter(t => {
           if (!t.dueDate) return false;
           const d = new Date(t.dueDate);
@@ -504,13 +507,14 @@ const CORE_CYCLES = [
       grouped[catId].push(task);
     });
     return grouped;
-  }, [currentView, tasks]);
+  }, [currentView, tasks, temporalDate]);
 
   const groupedTasks = useTaskGrouping({
     currentView, isFolderView, isSmartView, isListView, getTasksForSmartView, getTasksByList, 
     getTasksByCycle, tasks, resolvedShowCompleted: true, recentlyCompletedIds, lists, listSections, cycles, 
     currentCycle, cycleViewMode, listSectionFilter, dailyTimeFilter, resolveTimeOfDay, currentList, 
-    sortTaskList, lifeLogViewMode, selectedPersonFilter, extractPeopleFromText
+    sortTaskList, lifeLogViewMode, selectedPersonFilter, extractPeopleFromText,
+    referenceDate: temporalDate || undefined
   });
 
     
@@ -626,7 +630,7 @@ const CORE_CYCLES = [
       const isTargetTask = Boolean(task.targetCount && task.targetCount > 1);
       const currentCount = task.currentCount || 0;
       const targetCount = task.targetCount || 1;
-      const isDone = isTaskCompleted(task) || isCompletedInCurrentPeriod(task, cycles, listSections, lists);
+      const isDone = isTaskCompleted(task) || isCompletedInCurrentPeriod(task, cycles, listSections, lists, temporalDate || undefined);
 
       let willBeCompleted = false;
       if (forceReverse) {
@@ -678,7 +682,7 @@ const CORE_CYCLES = [
       }
     }
     toggleTask(taskId, forceReverse);
-  }, [tasks, cycles, lists, listSections, toggleTask]);
+  }, [tasks, cycles, lists, listSections, toggleTask, temporalDate]);
 
   const handleDeleteTask = useCallback((taskId: string) => {
     const task = tasks[taskId];
@@ -835,13 +839,13 @@ const CORE_CYCLES = [
     const sectionTasksByKey: Record<string, TaskItem[]> = {};
     // Mismo criterio que el recuento de la barra lateral: lo hecho en su periodo no cuenta.
     const countPending = (list: TaskItem[]) =>
-      list.filter(t => !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists)).length;
+      list.filter(t => !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists, temporalDate || undefined)).length;
 
     const filterTasks = (tasks: TaskItem[]) => {
       let filtered = tasks;
       if (!resolvedShowCompleted) {
         filtered = tasks.filter(t => {
-          const isDone = isTaskCompleted(t) || isCompletedInCurrentPeriod(t, cycles, listSections, lists);
+          const isDone = isTaskCompleted(t) || isCompletedInCurrentPeriod(t, cycles, listSections, lists, temporalDate || undefined);
           return !isDone || recentlyCompletedIds.includes(t.id);
         });
       }
@@ -1825,7 +1829,7 @@ const CORE_CYCLES = [
     }
 
     return { flattenedData: flat, renderedSectionTasks: sectionTasksByKey };
-  }, [groupedTasks, currentView, currentCycle, cycleViewMode, collapsed, isListView, lists, listSections, cycles, currentList, listSectionFilter, sortBy, isCatCollapsed, isolatedSectionKey, sectionRoutineModes, cycleRoutineCounts]);
+  }, [groupedTasks, currentView, currentCycle, cycleViewMode, collapsed, isListView, lists, listSections, cycles, currentList, listSectionFilter, sortBy, isCatCollapsed, isolatedSectionKey, sectionRoutineModes, cycleRoutineCounts, temporalDate, resolvedShowCompleted, recentlyCompletedIds]);
 
   // Tareas visibles en pantalla respetando el orden visual exacto de renderizado
   const visibleTasks = useMemo(() => {
@@ -2110,14 +2114,14 @@ const CORE_CYCLES = [
 
   // Número del título: como en la barra lateral (lo hecho en su periodo no cuenta)
   const titleCount = useMemo(() => new Set(viewTasks.filter(t =>
-    !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists)
-  ).map(t => t.id)).size, [viewTasks, cycles, listSections, lists]);
+    !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists, temporalDate || undefined)
+  ).map(t => t.id)).size, [viewTasks, cycles, listSections, lists, temporalDate]);
   const completedVisibleCount = useMemo(() => new Set(viewTasks.filter(t => isTaskCompleted(t)).map(t => t.id)).size, [viewTasks]);
 
   const cycleBreakdown = useMemo(() => {
     if (!currentCycle || cycleViewMode !== 'full_routine') return undefined;
 
-    const pending = viewTasks.filter(t => !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists));
+    const pending = viewTasks.filter(t => !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists, temporalDate || undefined));
     const groups = new Map<string, { cycleId: string; cycleName: string; color?: string; count: number; durationMinutes: number; daysValue: number }>();
 
     for (const t of pending) {
@@ -2156,7 +2160,7 @@ const CORE_CYCLES = [
       accumulatedDurationMinutes,
       details: sortedGroups
     };
-  }, [currentCycle, cycleViewMode, viewTasks, cycles, listSections, lists]);
+  }, [currentCycle, cycleViewMode, viewTasks, cycles, listSections, lists, temporalDate]);
 
   // Vistas sin desglose por frecuencia: la duración total se reparte en puntuales y frecuencias (si hay mezcla).
   const viewMixParts = useMemo(
@@ -2385,7 +2389,7 @@ const CORE_CYCLES = [
         </div>
       </div>
     );
-  }, [parentIdsWithChildren, visibleIndexById, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, onSelectView, currentView, setSelectedPersonForProfile, recentlyCompletedIds, visibleTasks, handleMoveTaskUp, handleMoveTaskDown, handleReorderTasks, canStartIndividualTasks, handleStartTask, selectedTaskIds, handleToggleSelectTask, isMobile]);
+  }, [parentIdsWithChildren, visibleIndexById, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, onSelectView, currentView, setSelectedPersonForProfile, recentlyCompletedIds, visibleTasks, handleMoveTaskUp, handleMoveTaskDown, handleReorderTasks, canStartIndividualTasks, handleStartTask, selectedTaskIds, handleToggleSelectTask, isMobile, isExplicitSelectionMode]);
 
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
   const smartListInfo = isSmartView ? SMART_LISTS.find(l => l.id === currentView) : null;
@@ -2645,7 +2649,8 @@ const CORE_CYCLES = [
                         onOpenNewTask={onOpenNewTask}
                         onAddSection={handleAddSection}
                         deleteListSection={deleteListSection}
-                          hidePeriodContext={!!currentCycle}
+                        hidePeriodContext={!!currentCycle}
+                        referenceDate={temporalDate || undefined}
                         isolatedSectionKey={isolatedSectionKey}
                         setIsolatedSectionKey={setIsolatedSectionKey}
                         isolatedRoutineMode={isolatedRoutineMode}
@@ -2832,7 +2837,7 @@ const CORE_CYCLES = [
       {(() => {
         const sectionMenuTasks = (sectionMenu.category ? renderedSectionTasks[sectionMenu.category] : null)
           || (sectionMenu.category ? (groupedTasks[sectionMenu.category] || []) : []);
-        const pendingSectionTasks = sectionMenuTasks.filter(t => !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists));
+        const pendingSectionTasks = sectionMenuTasks.filter(t => !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists, temporalDate || undefined));
         const allCompleted = sectionMenuTasks.length > 0 && pendingSectionTasks.length === 0;
         const curSection = sectionMenu.sectionId ? (listSections || []).find(s => s.id === sectionMenu.sectionId) : null;
         const siblings = curSection ? (listSections || [])

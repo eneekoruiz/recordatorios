@@ -11,7 +11,8 @@ import {
   Star,
   Trash2,
   ChevronDown,
-  Check
+
+
 } from 'lucide-react';
 import { DurationInfoCard } from '../../ui/DurationInfoCard';
 import { HapticService } from '../../../services/HapticService';
@@ -25,7 +26,9 @@ import { formatEuro } from '../../../utils/format';
 import { MetaSplit, MONEY_COLOR } from '../../ui/MetaSplit';
 import type { RoutinePart } from '../../../utils/routineBreakdown';
 import { getReservedFrequencyColor } from '../../../constants/colors';
-import { getPeriodContextLabel } from '../../../utils/sectionRoutine';
+
+import { ApplePeriodNavigator } from './ApplePeriodNavigator';
+import { useTemporalNavigationStore } from '../../../store/useTemporalNavigationStore';
 
 export interface CycleBreakdownInfo {
   ownCount: number;
@@ -130,6 +133,8 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   onToggleCycleRoutineMode
 }) => {
   const updateList = useAppStore((state) => state.updateList);
+  const temporalDate = useTemporalNavigationStore((state) => state.temporalDate);
+
   const [isEditingListName, setIsEditingListName] = React.useState(false);
   const [listEditName, setListEditName] = React.useState('');
   const [isDurationCardOpen, setIsDurationCardOpen] = React.useState(false);
@@ -296,32 +301,30 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
               );
             })()}
 
-            {currentCycle && (() => {
-              const effPeriod = currentCycle.id === 'cycle_day' ? 'day' :
-                                currentCycle.id === 'cycle_week' ? 'week' :
-                                currentCycle.id === 'cycle_month' ? 'month' :
-                                currentCycle.id === 'cycle_year' ? 'year' : null;
-              const periodContext = getPeriodContextLabel(effPeriod, activeVisibleCount, activeVisibleCount);
-              if (!periodContext) return null;
+            {(() => {
+              const effPeriod = currentCycle
+                ? (currentCycle.id === 'cycle_day' ? 'day' :
+                   currentCycle.id === 'cycle_week' ? 'week' :
+                   currentCycle.id === 'cycle_month' ? 'month' :
+                   currentCycle.id === 'cycle_year' ? 'year' : null)
+                : currentView === 'smart_today'
+                ? 'day'
+                : (currentList && !currentList.isFolder)
+                ? (currentList.name.toLowerCase().includes('anual') || currentList.name.toLowerCase().includes('propósito') ? 'year' :
+                   currentList.name.toLowerCase().includes('mensual') ? 'month' :
+                   currentList.name.toLowerCase().includes('semanal') ? 'week' :
+                   currentList.name.toLowerCase().includes('diari') ? 'day' : 'month')
+                : (temporalDate ? 'month' : null);
+
+              if (!effPeriod) return null;
+
               return (
-                <span 
-                  className="section-period-context-badge"
-                  title={periodContext.isRolledOver ? 'Período actual completado' : 'Período en curso'}
-                  style={{ 
-                    fontSize: '0.72rem', 
-                    fontWeight: 500, 
-                    color: periodContext.isRolledOver ? 'var(--accent-green, #34c759)' : 'var(--text-tertiary)', 
-                    letterSpacing: '-0.01em', 
-                    display: 'inline-flex', 
-                    alignItems: 'center', 
-                    gap: 3, 
-                    flexShrink: 0,
-                    marginLeft: 4
-                  }}
-                >
-                  {periodContext.isRolledOver && <Check size={11} strokeWidth={2.5} />}
-                  {periodContext.label}
-                </span>
+                <ApplePeriodNavigator
+                  defaultPeriodicity={effPeriod}
+                  viewColor={viewColor}
+                  isMobile={_isMobile}
+                  style={{ marginLeft: 6 }}
+                />
               );
             })()}
           </div>
