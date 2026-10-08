@@ -1178,7 +1178,9 @@ const CORE_CYCLES = [
                 sectionId: sec.id, 
                 depth: depthLevel,
                 periodicity: secPeriodicity,
-                sectionTaskIds: secTasks.filter(t => !isTaskCompleted(t)).map(t => t.id)
+                sectionTaskIds: secTasks.filter(t => !isTaskCompleted(t)).map(t => t.id),
+                pendingCount: countPending(secTasks),
+                totalCount: secTasks.length
               });
               
               if (!isCatCollapsed(secKey)) {
@@ -2643,6 +2645,8 @@ const CORE_CYCLES = [
                         setSelectedPersonForProfile={setSelectedPersonForProfile}
                         sectionTotal={sectionTotal}
                         sectionCompletedTotal={sectionCompletedTotal}
+                        pendingTaskCount={data.pendingCount}
+                        totalTaskCount={data.totalCount}
                         durationSummary={sectionDurationSummary}
                         mixParts={sectionMixParts}
                         completedDurationSummary={sectionCompletedDurationSummary}
@@ -2670,7 +2674,6 @@ const CORE_CYCLES = [
                           const seqTitle = currentList ? `${currentList.name} · ${cleanTitle}${modeSuffix}` : `${cleanTitle}${modeSuffix}`;
                           onStartSequence(sectionPendingTaskIds, seqTitle, data.color);
                         } : undefined}
-                        pendingTaskCount={sectionPendingTaskIds.length}
                         isMobile={isMobile}
                         isPrevHeader={index > 0 && flattenedData[index - 1]?.type === 'header'}
                         isFirstAfterPageHeader={index > 0 && flattenedData[index - 1]?.type === 'page-header'}

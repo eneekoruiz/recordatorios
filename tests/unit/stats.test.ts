@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { completionTimestamps, completionsByDay, currentStreak, weeklySuccess, totals, bestStreak, timeOfDayDistribution, calculateCyclesBreakdown, calculateListBreakdown } from '../../src/utils/stats';
+import { completionTimestamps, completionsByDay, currentStreak, weeklySuccess, totals, bestStreak, timeOfDayDistribution, calculateCyclesBreakdown, calculateListBreakdown, calculateCycleStreaks, generatePerformanceReportMarkdown } from '../../src/utils/stats';
 import type { TaskItem } from '../../src/models/Task';
 
 const NOW = new Date(2026, 8, 29, 15, 0).getTime(); // martes 29-sep-2026 15:00
@@ -107,5 +107,42 @@ describe('estadísticas reales', () => {
     expect(limp?.total).toBe(2);
     expect(limp?.completed).toBe(1);
     expect(limp?.rate).toBe(50);
+  });
+  it('calcula la racha de semanas y meses por ciclo', () => {
+    const tasks = [
+      T('w1', { cycle_id: 'cycle_week', status: 'completed', completionHistory: [NOW] }),
+      T('m1', { cycle_id: 'cycle_month', status: 'completed', completionHistory: [NOW] }),
+    ];
+    const streaks = calculateCycleStreaks(tasks, [], [], [], NOW);
+    expect(streaks.weeklyStreak).toBeGreaterThanOrEqual(1);
+    expect(streaks.monthlyStreak).toBeGreaterThanOrEqual(1);
+  });
+
+  it('genera un informe Markdown de rendimiento con formato estructurado', () => {
+    const report = generatePerformanceReportMarkdown({
+      streak: 5,
+      best: 10,
+      weekRate: 85,
+      cyclesBreakdown: {
+        daily: { cycleId: 'd', cycleName: 'Diarias', periodicity: 'day', color: '#f00', total: 2, completed: 2, pending: 0, rate: 100, completedTasks: [], pendingTasks: [] },
+        weekly: { cycleId: 'w', cycleName: 'Semanales', periodicity: 'week', color: '#0f0', total: 5, completed: 4, pending: 1, rate: 80, completedTasks: [], pendingTasks: [] },
+        monthly: { cycleId: 'm', cycleName: 'Mensuales', periodicity: 'month', color: '#00f', total: 3, completed: 3, pending: 0, rate: 100, completedTasks: [], pendingTasks: [] },
+        yearly: { cycleId: 'y', cycleName: 'Anuales', periodicity: 'year', color: '#ff0', total: 1, completed: 1, pending: 0, rate: 100, completedTasks: [], pendingTasks: [] },
+        allRoutinesGoal: 11,
+        allRoutinesCompleted: 10,
+        allRoutinesPending: 1,
+        allRoutinesRate: 91
+      },
+      cycleStreaks: { weeklyStreak: 3, monthlyStreak: 2 },
+      timeDist: { morning: 5, afternoon: 3, night: 1, peakPeriod: 'morning', peakLabel: 'Mañanas (06:00–12:00)' },
+      listBreakdown: [{ listId: 'limp', listName: 'Limpieza', total: 10, completed: 9, pending: 1, rate: 90 }],
+      date: new Date(2026, 9, 8)
+    });
+
+    expect(report).toContain('Informe de Rendimiento y Rutinas');
+    expect(report).toContain('**Racha diaria actual:** 5 días');
+    expect(report).toContain('**Racha semanal:** 3 semanas');
+    expect(report).toContain('**Diarias:** 2/2 (100%)');
+    expect(report).toContain('**Limpieza:** 9/10 hechas');
   });
 });

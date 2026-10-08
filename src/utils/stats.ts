@@ -298,3 +298,106 @@ export function calculateListBreakdown(
   return result.sort((a, b) => b.total - a.total);
 }
 
+export interface CycleStreaksResult {
+  weeklyStreak: number;
+  monthlyStreak: number;
+}
+
+/** Calcula rachas consecutivas de cumplimiento de ciclos hacia atrás (semanas y meses). */
+export function calculateCycleStreaks(
+  tasks: TaskItem[],
+  cycles: CustomCycle[] = [],
+  listSections: ListSection[] = [],
+  lists: CustomList[] = [],
+  now = Date.now()
+): CycleStreaksResult {
+  const activeTasks = tasks.filter((t) => !t.deleted_at && t.categoryId !== 'primeros_pasos');
+  const weeklyTasks = activeTasks.filter((t) => {
+    const effId = getEffectiveCycleId(t, listSections, lists) || t.cycle_id;
+    return effId === 'cycle_week';
+  });
+  const monthlyTasks = activeTasks.filter((t) => {
+    const effId = getEffectiveCycleId(t, listSections, lists) || t.cycle_id;
+    return effId === 'cycle_month';
+  });
+
+  let weeklyStreak = 0;
+  if (weeklyTasks.length > 0) {
+    const curDate = new Date(now);
+    for (let w = 0; w < 52; w++) {
+      const checkDate = new Date(curDate);
+      checkDate.setDate(checkDate.getDate() - w * 7);
+      const isCompleted = weeklyTasks.every((t) =>
+        isCompletedInCurrentPeriod(t, cycles, listSections, lists, checkDate)
+      );
+      if (isCompleted) {
+        weeklyStreak++;
+      } else {
+        if (w === 0) continue;
+        break;
+      }
+    }
+  }
+
+  let monthlyStreak = 0;
+  if (monthlyTasks.length > 0) {
+    const curDate = new Date(now);
+    for (let m = 0; m < 12; m++) {
+      const checkDate = new Date(curDate);
+      checkDate.setDate(1);
+      checkDate.setMonth(checkDate.getMonth() - m);
+      const isCompleted = monthlyTasks.every((t) =>
+        isCompletedInCurrentPeriod(t, cycles, listSections, lists, checkDate)
+      );
+      if (isCompleted) {
+        monthlyStreak++;
+      } else {
+        if (m === 0) continue;
+        break;
+      }
+    }
+  }
+
+  return { weeklyStreak, monthlyStreak };
+}
+
+/** Genera un informe completo de rendimiento en formato Markdown estructurado. */
+export function generatePerformanceReportMarkdown(params: {
+  streak: number;
+  best: number;
+  weekRate: number | null;
+  cyclesBreakdown: CyclesBreakdownResult;
+  cycleStreaks: CycleStreaksResult;
+  timeDist: TimeDistribution;
+  listBreakdown: ListStatItem[];
+  date?: Date;
+}): string {
+  const d = params.date || new Date();
+  const dateStr = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+  const lines = [
+    '# 📊 Informe de Rendimiento y Rutinas — ' + dateStr,
+    '',
+    '## 🏆 Constancia y Hábitos',
+    '- **Racha diaria actual:** ' + params.streak + (params.streak === 1 ? ' día' : ' días') + ' consecutivos (Récord: ' + params.best + ' días)',
+    '- **Racha semanal:** ' + params.cycleStreaks.weeklyStreak + ' semanas al día',
+    '- **Racha mensual:** ' + params.cycleStreaks.monthlyStreak + ' meses al día',
+    '- **Éxito semanal:** ' + (params.weekRate !== null ? params.weekRate + '%' : 'Sin tareas medidas'),
+    '- **Momento más productivo:** ' + params.timeDist.peakLabel,
+    '',
+    '## 🔄 Cumplimiento por Ciclos de Frecuencia',
+    '- **Diarias:** ' + params.cyclesBreakdown.daily.completed + '/' + params.cyclesBreakdown.daily.total + ' (' + (params.cyclesBreakdown.daily.rate ?? 0) + '%)',
+    '- **Semanales:** ' + params.cyclesBreakdown.weekly.completed + '/' + params.cyclesBreakdown.weekly.total + ' (' + (params.cyclesBreakdown.weekly.rate ?? 0) + '%)',
+    '- **Mensuales:** ' + params.cyclesBreakdown.monthly.completed + '/' + params.cyclesBreakdown.monthly.total + ' (' + (params.cyclesBreakdown.monthly.rate ?? 0) + '%)',
+    '- **Anuales:** ' + params.cyclesBreakdown.yearly.completed + '/' + params.cyclesBreakdown.yearly.total + ' (' + (params.cyclesBreakdown.yearly.rate ?? 0) + '%)',
+    '- **Promedio global de rutinas:** ' + (params.cyclesBreakdown.allRoutinesRate ?? 0) + '%',
+    '',
+    '## 📋 Desglose por Listas Principales',
+  ];
+
+  for (const list of params.listBreakdown.slice(0, 6)) {
+    lines.push('- **' + list.listName + ':** ' + list.completed + '/' + list.total + ' hechas (' + list.rate + '%)');
+  }
+
+  lines.push('', '_Generado automáticamente desde Recordatorios Apple Style._');
+  return lines.join('\n');
+}

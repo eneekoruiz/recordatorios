@@ -29,6 +29,7 @@ interface SectionData {
   sectionTaskIds?: string[];
   /** Pendientes de esta cabecera (con las incluidas ya mezcladas, si «+ Diarias» está activo). */
   pendingCount?: number;
+  totalCount?: number;
 }
 
 interface MainSectionHeaderProps {
@@ -145,8 +146,10 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
     const effPeriod = (data.periodicity as any) || null;
     if (!effPeriod) return null;
     if (/^\d{4}$/.test((data.title || '').trim())) return null;
-    return getPeriodContextLabel(effPeriod, pendingTaskCount ?? 0, totalTaskCount ?? (data.sectionTaskIds?.length || 0), referenceDate || new Date());
-  }, [data.periodicity, data.title, pendingTaskCount, totalTaskCount, data.sectionTaskIds, referenceDate, hidePeriodContext]);
+    const effPending = pendingTaskCount !== undefined ? pendingTaskCount : (data.pendingCount !== undefined ? data.pendingCount : 0);
+    const effTotal = totalTaskCount !== undefined ? totalTaskCount : (data.totalCount !== undefined ? data.totalCount : (data.sectionTaskIds?.length || 0));
+    return getPeriodContextLabel(effPeriod, effPending, effTotal, referenceDate || new Date());
+  }, [data.periodicity, data.title, data.pendingCount, data.totalCount, pendingTaskCount, totalTaskCount, data.sectionTaskIds, referenceDate, hidePeriodContext]);
 
   const [isSectionDurationOpen, setIsSectionDurationOpen] = useState(false);
 
