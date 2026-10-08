@@ -630,7 +630,11 @@ const CORE_CYCLES = [
       const isTargetTask = Boolean(task.targetCount && task.targetCount > 1);
       const currentCount = task.currentCount || 0;
       const targetCount = task.targetCount || 1;
-      const isDone = isTaskCompleted(task) || isCompletedInCurrentPeriod(task, cycles, listSections, lists, temporalDate || undefined);
+      const refDate = temporalDate ? new Date(temporalDate) : new Date();
+      const effCycle = getEffectiveCycleId(task, listSections, lists);
+      const isDone = effCycle
+        ? isCompletedInCurrentPeriod(task, cycles, listSections, lists, refDate)
+        : isTaskCompleted(task);
 
       let willBeCompleted = false;
       if (forceReverse) {
@@ -681,7 +685,8 @@ const CORE_CYCLES = [
         setRecentlyCompletedIds(prev => prev.filter(x => !idsToRemove.has(x)));
       }
     }
-    toggleTask(taskId, forceReverse);
+    const refTimestamp = temporalDate ? new Date(temporalDate).getTime() : undefined;
+    toggleTask(taskId, forceReverse, refTimestamp);
   }, [tasks, cycles, lists, listSections, toggleTask, temporalDate]);
 
   const handleDeleteTask = useCallback((taskId: string) => {
@@ -838,14 +843,26 @@ const CORE_CYCLES = [
     // Tareas que pinta cada cabecera agrupada (habitaciones de Limpieza…), para su precio y su menú.
     const sectionTasksByKey: Record<string, TaskItem[]> = {};
     // Mismo criterio que el recuento de la barra lateral: lo hecho en su periodo no cuenta.
-    const countPending = (list: TaskItem[]) =>
-      list.filter(t => !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists, temporalDate || undefined)).length;
+    const countPending = (list: TaskItem[]) => {
+      const ref = temporalDate ? new Date(temporalDate) : new Date();
+      return list.filter(t => {
+        const effCycle = getEffectiveCycleId(t, listSections, lists);
+        const isDone = effCycle
+          ? isCompletedInCurrentPeriod(t, cycles, listSections, lists, ref)
+          : isTaskCompleted(t);
+        return !isDone;
+      }).length;
+    };
 
     const filterTasks = (tasks: TaskItem[]) => {
       let filtered = tasks;
       if (!resolvedShowCompleted) {
+        const ref = temporalDate ? new Date(temporalDate) : new Date();
         filtered = tasks.filter(t => {
-          const isDone = isTaskCompleted(t) || isCompletedInCurrentPeriod(t, cycles, listSections, lists, temporalDate || undefined);
+          const effCycle = getEffectiveCycleId(t, listSections, lists);
+          const isDone = effCycle
+            ? isCompletedInCurrentPeriod(t, cycles, listSections, lists, ref)
+            : isTaskCompleted(t);
           return !isDone || recentlyCompletedIds.includes(t.id);
         });
       }
@@ -1658,6 +1675,17 @@ const CORE_CYCLES = [
             }
           }
         } else {
+          // Procesar primero secciones prioritarias fijas que deben estar arriba del todo (ej. Hábitos vitales)
+          const prioritySections = sectionsForList
+            .filter(s => (
+              s.id === 'sec_habitos_vitales' ||
+              s.id === 'sec_habitos' ||
+              (s.name || '').toLowerCase().includes('habito') ||
+              (s.name || '').toLowerCase().includes('hábito')
+            ))
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+          prioritySections.forEach(ps => processSection(ps.id, 0));
+
           if (presentCycleKeys.length > 0) {
             const sortedCycles = presentCycleKeys.sort((a, b) => {
               const idA = a.replace('cycle_', '');
@@ -1675,6 +1703,7 @@ const CORE_CYCLES = [
               const purePeriod = cId.startsWith('cycle_') ? cId.replace('cycle_', '') : cId;
               const cObj = allCycles.find(c => c.id === cId || c.id === purePeriod || c.id === `cycle_${purePeriod}`);
               const manualSec = sectionsForList.find(s => !s.parentId && getPureCyclicPeriodicity(s.name) === purePeriod);
+              if (manualSec) visitedSectionIds.add(manualSec.id);
               const cName = manualSec ? manualSec.name : (cObj ? cObj.name : purePeriod);
               const categoryTasks = groupedTasks[catKey] || [];
 
@@ -1746,10 +1775,16 @@ const CORE_CYCLES = [
               
               let finalTasksToRender = filterTasks(tasksToRender);
 
-              const allSectionPendingTaskIds = countScope.filter(t => !isTaskCompleted(t)).map(t => t.id);
+              const ref = temporalDate ? new Date(temporalDate) : new Date();
+              const allSectionPendingTaskIds = countScope.filter(t => {
+                const effCycle = getEffectiveCycleId(t, listSections, lists);
+                return effCycle ? !isCompletedInCurrentPeriod(t, cycles, listSections, lists, ref) : !isTaskCompleted(t);
+              }).map(t => t.id);
 
               if (finalTasksToRender.length === 0 && childSections.length === 0) {
-                return;
+                if (!manualSec) {
+                  return;
+                }
               }
 
               flat.push({
@@ -1787,6 +1822,15 @@ const CORE_CYCLES = [
                     if (!visitedCycleTaskIds.has(t.id)) {
                       processNode(t, 0);
                     }
+                  });
+                } else if (manualSec) {
+                  flat.push({
+                    type: 'empty-section',
+                    title: 'No hay recordatorios en esta sección',
+                    category: catKey,
+                    sectionId: manualSec.id,
+                    color,
+                    depth: 0
                   });
                 }
 

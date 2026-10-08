@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useMotionValue, useTransform, AnimatePresence, useMotionValueEvent } from 'framer-motion';
 import {
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import type { TaskItem, ListSection } from '../../models/Task';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
+import { useTemporalNavigationStore } from '../../store/useTemporalNavigationStore';
 import { isCompletedInCurrentPeriod, calculateHabitStreak, calculateExpirationStatus } from '../../services/TaskService';
 import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
@@ -23,7 +24,7 @@ import { TaskSwipeBackground } from './card/TaskSwipeBackground';
 import { TaskMetaBadges } from './card/TaskMetaBadges';
 import { TaskHabitCounter } from './card/TaskHabitCounter';
 import { TaskNoteEditor } from './card/TaskNoteEditor';
-import { getTaskPeriodicity, getSectionPeriodicity, stripPeriodicityPrefix } from '../../utils/sectionRoutine';
+import { getTaskPeriodicity, getSectionPeriodicity, stripPeriodicityPrefix, getEffectiveCycleId } from '../../utils/sectionRoutine';
 import { extractPrice } from '../../utils/priceExtractor';
 import { classifyDropZone, DROP_GAP_PX } from '../../utils/dragDrop';
 
@@ -470,10 +471,17 @@ export const TaskCard = React.memo(function TaskCard({
     }
   };
 
+  const temporalDate = useTemporalNavigationStore((state) => state.temporalDate);
+  const referenceDate = useMemo(() => temporalDate ? new Date(temporalDate) : new Date(), [temporalDate]);
+
   const isBlocked = task.blockedBy && task.blockedBy.some(id => tasks[id] && tasks[id].status === 'pending');
-  const isCompletedPeriod = isCompletedInCurrentPeriod(task, cycles, listSections, lists);
+  const effCycleId = getEffectiveCycleId(task, listSections, lists);
+  const isRecurring = Boolean(effCycleId);
+  const isCompletedPeriod = isCompletedInCurrentPeriod(task, cycles, listSections, lists, referenceDate);
   const isJournalEntry = task.type === 'log' || isQueHeHechoList(task.categoryId, lists.find(l => l.id === task.categoryId));
-  const isEffectivelyDone = isCompletedPeriod || !!isGracePeriod || isTaskCompleted(task);
+  const isEffectivelyDone = isRecurring
+    ? (isCompletedPeriod || !!isGracePeriod)
+    : (isTaskCompleted(task) || !!isGracePeriod);
 
   // Background reveal: opacity tied to card x position
   const leftBgOpacity = useTransform(x, [0, 40, 80], [0, 0.7, 1]);

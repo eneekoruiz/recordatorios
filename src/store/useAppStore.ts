@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { idbStorage } from '../utils/idbStorage';
 import type { TaskItem, CustomCycle, CustomList, ListSection } from '../models/Task';
 import { TaskRepository } from '../repositories/TaskRepository';
-import { isCompletedInCurrentPeriod, wouldCreateDependencyCycle } from '../services/TaskService';
+import { isCompletedInCurrentPeriod, wouldCreateDependencyCycle, getStartOfWeek } from '../services/TaskService';
 import { getEffectiveCycleId, getPureCyclicPeriodicity } from '../utils/sectionRoutine';
 import { isValidWeekday, readStoredWeeklyDay, writeStoredWeeklyDay } from '../utils/routineDay';
 import { DEFAULT_SMART_LIST_VISIBILITY } from '../constants/smartLists';
@@ -183,7 +183,7 @@ interface AppState {
   addTask: (task: Partial<TaskItem>) => void;
   addTasksBatch: (tasks: Partial<TaskItem>[], options?: { createList?: CustomList }) => void;
   updateTaskRaw: (task: TaskItem) => void; // Para uso interno y SyncProvider
-  toggleTask: (id: string, forceReverse?: boolean) => void;
+  toggleTask: (id: string, forceReverse?: boolean, customTimestamp?: number | Date) => void;
   deleteTask: (id: string) => void;
   deleteTaskWithOptions: (id: string, options?: { keepSubtasks?: boolean; permanent?: boolean }) => void;
   updateTask: (id: string, updates: Partial<TaskItem>) => void;
@@ -214,7 +214,7 @@ interface AppState {
   purgeOldDeletedTasks: () => void;
 
   getTasksByCycle: (cycle_id: string, includeCompleted?: boolean, temporarilyShowIds?: string[], referenceDate?: Date) => Record<string, TaskItem[]>;
-  getTasksByList: (listId: string, includeCompleted?: boolean, temporarilyShowIds?: string[]) => Record<string, TaskItem[]>;
+  getTasksByList: (listId: string, includeCompleted?: boolean, temporarilyShowIds?: string[], referenceDate?: Date) => Record<string, TaskItem[]>;
   getSmartSortTasks: (temporarilyShowIds?: string[]) => TaskItem[]; 
 
   exportData: () => string;
@@ -524,7 +524,7 @@ export const useAppStore = create<AppState>()(
         }
       })),
 
-      toggleTask: (id, forceReverse?: boolean) => optimisticUpdate(get, set, (state) => {
+      toggleTask: (id, forceReverse?: boolean, customTimestamp?: number | Date) => optimisticUpdate(get, set, (state) => {
         const existingTask = state.tasks[id];
         if (!existingTask) return state;
         
@@ -537,8 +537,15 @@ export const useAppStore = create<AppState>()(
         const currentCount = existingTask.currentCount || 0;
         const targetCount = existingTask.targetCount || 1;
         
+        const targetDate = customTimestamp ? new Date(customTimestamp) : new Date();
+        const effectiveTimestamp = customTimestamp
+          ? (typeof customTimestamp === 'number' ? customTimestamp : customTimestamp.getTime())
+          : Date.now();
+
         // Auto-detect reverse if already completed or if forceReverse is explicitly passed
-        const isDone = isTaskCompleted(existingTask) || isCompletedInCurrentPeriod(existingTask, state.cycles, state.listSections, state.lists);
+        const isDone = !isOneOff
+          ? isCompletedInCurrentPeriod(existingTask, state.cycles, state.listSections, state.lists, targetDate)
+          : isTaskCompleted(existingTask);
         const shouldReverse = forceReverse !== undefined ? forceReverse : isDone;
         
         if (shouldReverse) {
@@ -562,8 +569,45 @@ export const useAppStore = create<AppState>()(
               currentCount: 0
             });
           } else if (newHistory.length > 0) {
-            // Uncheck full completion
-            newHistory.pop();
+            // Uncheck full completion: si es periódica, retirar la entrada del período de referencia
+            if (!isOneOff) {
+              const findIndexForPeriod = (hist: (number | string)[], cycleId: string | null | undefined, ref: Date) => {
+                if (!hist || hist.length === 0) return -1;
+                if (cycleId === 'cycle_day' || cycleId === 'day') {
+                  const refStr = ref.toDateString();
+                  return hist.findIndex(ts => new Date(ts).toDateString() === refStr);
+                }
+                if (cycleId === 'cycle_week' || cycleId === 'week') {
+                  const startOfWeek = getStartOfWeek(ref);
+                  const endOfWeek = new Date(startOfWeek.getTime() + 7 * 86400000 - 1);
+                  return hist.findIndex(ts => {
+                    const time = typeof ts === 'number' ? ts : new Date(ts).getTime();
+                    return time >= startOfWeek.getTime() && time <= endOfWeek.getTime();
+                  });
+                }
+                if (cycleId === 'cycle_month' || cycleId === 'month') {
+                  const refMonth = ref.getMonth();
+                  const refYear = ref.getFullYear();
+                  return hist.findIndex(ts => {
+                    const d = new Date(ts);
+                    return d.getMonth() === refMonth && d.getFullYear() === refYear;
+                  });
+                }
+                if (cycleId === 'cycle_year' || cycleId === 'year') {
+                  const refYear = ref.getFullYear();
+                  return hist.findIndex(ts => new Date(ts).getFullYear() === refYear);
+                }
+                return hist.findIndex(ts => new Date(ts).toDateString() === ref.toDateString());
+              };
+              const idxToRemove = findIndexForPeriod(newHistory, effCycle, targetDate);
+              if (idxToRemove !== -1) {
+                newHistory.splice(idxToRemove, 1);
+              } else {
+                newHistory.pop();
+              }
+            } else {
+              newHistory.pop();
+            }
             const restoredAlerts = alerts.length > 1 ? alerts.slice(0, -1).map(a => a.id).filter(Boolean) as string[] : [];
             updatedTask = TaskRepository.update(existingTask, {
               status: 'pending',
@@ -590,7 +634,7 @@ export const useAppStore = create<AppState>()(
               });
             } else {
               // Reached target count: mark as completed (or recurring pending with history)
-              const newCompletionHistory = [...(existingTask.completionHistory || []), Date.now()];
+              const newCompletionHistory = [...(existingTask.completionHistory || []), effectiveTimestamp];
               if (!isOneOff) {
                 updatedTask = TaskRepository.update(existingTask, {
                   cycle_id: existingTask.cycle_id || effCycle || undefined,
@@ -614,7 +658,7 @@ export const useAppStore = create<AppState>()(
               completedAlerts: [...completedAlerts, nextAlert.id] 
             });
           } else {
-            const newCompletionHistory = [...(existingTask.completionHistory || []), Date.now()];
+            const newCompletionHistory = [...(existingTask.completionHistory || []), effectiveTimestamp];
             const targetCountUpdate = existingTask.targetCount ? { currentCount: existingTask.targetCount } : {};
             if (!isOneOff) {
               updatedTask = TaskRepository.update(existingTask, { 
@@ -1490,12 +1534,13 @@ export const useAppStore = create<AppState>()(
         return grouped;
       },
 
-      getTasksByList: (listId, includeCompleted = false, temporarilyShowIds = []) => {
+      getTasksByList: (listId, includeCompleted = false, temporarilyShowIds = [], referenceDate?: Date) => {
         const tasks = get().tasks as Record<string, TaskItem>;
         const lists = get().lists as CustomList[];
         const cycles = get().cycles as CustomCycle[];
         const listSections = get().listSections as ListSection[];
         const validListIds = new Set(lists.map((l: any) => l.id));
+        const ref = referenceDate || new Date();
         const filtered = (Object.values(tasks) as TaskItem[]).filter((t: any) => {
           if (t.deleted_at) return false;
           const taskCat = t.categoryId || (t as any).category_id;
@@ -1506,7 +1551,10 @@ export const useAppStore = create<AppState>()(
           const matchesList = listId === 'inbox' 
             ? (effectiveCat === 'inbox' || !effectiveCat)
             : effectiveCat === listId;
-          const isDone = isTaskCompleted(t) || isCompletedInCurrentPeriod(t, cycles, listSections, lists);
+          const effCycle = getEffectiveCycleId(t, listSections, lists);
+          const isDone = effCycle
+            ? isCompletedInCurrentPeriod(t, cycles, listSections, lists, ref)
+            : isTaskCompleted(t);
           return matchesList && (includeCompleted || !isDone || temporarilyShowIds.includes(t.id));
         });
         

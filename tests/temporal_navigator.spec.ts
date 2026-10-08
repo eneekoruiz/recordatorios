@@ -140,4 +140,27 @@ test.describe('Apple Period Navigator (helen-design)', () => {
       await expect(includeSwitch).toBeVisible();
     }
   });
+
+  test('La píldora de diagnóstico abre el Modal de Diagnóstico de Rutina estilo Apple', async ({ page }) => {
+    const mensualBtn = page.locator('[data-testid="cycle-item-cycle_month"], [data-view-id="cycle_month"]').first();
+    await mensualBtn.click();
+    await page.waitForTimeout(400);
+
+    // Si hay píldora de estado, hacer click para abrir el modal
+    const pillBtn = page.locator('[data-testid="cycle-status-pill-btn"]');
+    if (await pillBtn.isVisible()) {
+      await pillBtn.click();
+      await page.waitForTimeout(300);
+
+      const modal = page.locator('[data-testid="routine-diagnostic-modal"]');
+      await expect(modal).toBeVisible({ timeout: 3000 });
+      await expect(modal).toContainText('Diagnóstico de Rutina');
+
+      // Cerrar con el botón X
+      const closeBtn = page.locator('[data-testid="routine-diagnostic-close-btn"]');
+      await closeBtn.click();
+      await page.waitForTimeout(300);
+      await expect(modal).not.toBeVisible();
+    }
+  });
 });

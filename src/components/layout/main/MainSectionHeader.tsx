@@ -591,7 +591,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                     margin: 0,
                     padding: '1px 0',
                     boxSizing: 'border-box',
-                    flexShrink: 1
+                    flexShrink: 0
                   }}
                   title={isCustomSection ? "Doble click para editar" : data.title}
                 >
@@ -610,7 +610,10 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 3,
-                      flexShrink: 0
+                      flexShrink: 1,
+                      minWidth: 0,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
                     }}
                   >
                     {periodContext.isRolledOver && <Check size={11} strokeWidth={2.5} />}

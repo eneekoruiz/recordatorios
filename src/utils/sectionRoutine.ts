@@ -148,10 +148,10 @@ export const sortTasksByRoutinePriority = (
 export function getPureCyclicPeriodicity(name?: string | null): PeriodicityType | null {
   if (!name || typeof name !== 'string') return null;
   const clean = name.replace(/^⏳\s*/, '').trim().toLowerCase();
-  if (['diaria', 'diarias', 'diario', 'diarios', 'recurrentes', 'recurrente'].includes(clean)) return 'day';
-  if (['semanal', 'semanales'].includes(clean)) return 'week';
-  if (['mensual', 'mensuales'].includes(clean)) return 'month';
-  if (['anual', 'anuales'].includes(clean)) return 'year';
+  if (['diaria', 'diarias', 'diario', 'diarios', 'recurrentes', 'recurrente', 'rutina diaria', 'rutinas diarias', 'quehaceres diarios'].includes(clean)) return 'day';
+  if (['semanal', 'semanales', 'rutina semanal', 'rutinas semanales', 'quehaceres semanales'].includes(clean)) return 'week';
+  if (['mensual', 'mensuales', 'rutina mensual', 'rutinas mensuales', 'quehaceres mensuales'].includes(clean)) return 'month';
+  if (['anual', 'anuales', 'rutina anual', 'rutinas anuales', 'quehaceres anuales'].includes(clean)) return 'year';
   return null;
 }
 

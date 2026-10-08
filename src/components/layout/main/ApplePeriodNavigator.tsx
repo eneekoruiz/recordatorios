@@ -29,6 +29,8 @@ interface ApplePeriodNavigatorProps {
   isMobile?: boolean;
   /** Modo solo lectura (muestra la cápsula del período/mes sin botones de navegación ni selector emergente) */
   readOnly?: boolean;
+  /** Si debe extenderse a todo el ancho disponible */
+  fullWidth?: boolean;
 }
 
 const MONTH_NAMES = [
@@ -44,7 +46,8 @@ export const ApplePeriodNavigator: React.FC<ApplePeriodNavigatorProps> = ({
   className = '',
   style = {},
   isMobile = false,
-  readOnly = false
+  readOnly = false,
+  fullWidth = false,
 }) => {
   const {
     temporalDate,
@@ -252,10 +255,13 @@ export const ApplePeriodNavigator: React.FC<ApplePeriodNavigatorProps> = ({
         data-testid="apple-period-navigator"
         className={`apple-period-navigator-capsule ${className}`}
         style={{
-          display: 'inline-flex',
+          display: fullWidth ? 'flex' : 'inline-flex',
+          width: fullWidth ? '100%' : undefined,
+          justifyContent: fullWidth ? 'space-between' : undefined,
+          boxSizing: 'border-box',
           alignItems: 'center',
           gap: 2,
-          padding: '2px 4px',
+          padding: fullWidth ? '3px 6px' : '2px 4px',
           borderRadius: 999,
           background: 'var(--bg-material, rgba(255, 255, 255, 0.75))',
           backdropFilter: 'blur(20px) saturate(180%)',
@@ -279,14 +285,15 @@ export const ApplePeriodNavigator: React.FC<ApplePeriodNavigatorProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: 22,
-            height: 22,
+            width: 24,
+            height: 24,
             borderRadius: '50%',
             border: 'none',
             background: 'transparent',
             color: 'var(--text-secondary)',
             cursor: 'pointer',
             padding: 0,
+            flexShrink: 0,
             transition: 'background 0.15s ease, color 0.15s ease'
           }}
           onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0,0,0,0.06)'; }}
@@ -305,6 +312,8 @@ export const ApplePeriodNavigator: React.FC<ApplePeriodNavigatorProps> = ({
           style={{
             display: 'inline-flex',
             alignItems: 'center',
+            justifyContent: fullWidth ? 'center' : 'flex-start',
+            flex: fullWidth ? 1 : undefined,
             gap: 5,
             padding: '2px 7px',
             borderRadius: 999,

@@ -1,9 +1,11 @@
-import React, { useMemo } from 'react';
-import { CheckCircle2, Clock, Sparkles, Calendar } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { CheckCircle2, Clock, Sparkles, Calendar, Info } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { useTemporalNavigationStore } from '../../../store/useTemporalNavigationStore';
 import { ApplePeriodNavigator } from './ApplePeriodNavigator';
+import { RoutineDiagnosticModal } from './RoutineDiagnosticModal';
 import { calculateCycleRoutineStatus } from '../../../utils/cycleRoutineStatus';
+import { HapticService } from '../../../services/HapticService';
 import type { CustomCycle } from '../../../models/Task';
 import type { PeriodicityType } from '../../../utils/sectionRoutine';
 
@@ -20,6 +22,8 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
   viewColor,
   isMobile = false,
 }) => {
+  const [isDiagnosticModalOpen, setIsDiagnosticModalOpen] = useState(false);
+
   const tasks = useAppStore((state) => state.tasks);
   const cycles = useAppStore((state) => state.cycles);
   const listSections = useAppStore((state) => state.listSections);
@@ -91,52 +95,14 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
         transition: 'all 0.2s ease',
       }}
     >
-      {/* Fila 1: Navegador de período a la izquierda + Resumen métrico sutil a la derecha */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 10,
-          flexWrap: 'wrap',
-          minHeight: 28,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <ApplePeriodNavigator
-            defaultPeriodicity={effPeriod}
-            viewColor={viewColor}
-            isMobile={isMobile}
-          />
-        </div>
-
-        {status.totalGoal > 0 && (
-          <div
-            data-testid="cycle-status-badge"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 5,
-              fontSize: isMobile ? '0.78rem' : '0.82rem',
-              fontWeight: 600,
-              color: status.statusState === 'all_done' ? '#34c759' : 'var(--text-secondary)',
-              letterSpacing: '-0.01em',
-              fontVariantNumeric: 'tabular-nums',
-            }}
-          >
-            {statusIcon}
-            <span>
-              {status.statusState === 'all_done' ? (
-                'Todo al día'
-              ) : (
-                <>
-                  <span>{status.totalCompleted} de {status.totalGoal} hechas</span>
-                  <span style={{ color: viewColor, marginLeft: 4 }}>({progressPercent}%)</span>
-                </>
-              )}
-            </span>
-          </div>
-        )}
+      {/* Fila 1: Navegador temporal ocupando todo el ancho de la pantalla de lado a lado */}
+      <div style={{ width: '100%' }}>
+        <ApplePeriodNavigator
+          defaultPeriodicity={effPeriod}
+          viewColor={viewColor}
+          isMobile={isMobile}
+          fullWidth={true}
+        />
       </div>
 
       {/* Fila 2: Barra de progreso ultra-fina estilo Apple */}
@@ -162,7 +128,7 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
         </div>
       )}
 
-      {/* Fila 3: Diagnóstico limpio y tipográfico sin cajas ni redundancias */}
+      {/* Fila 3: Píldora interactiva compacta estilo Apple que abre el modal de diagnóstico */}
       {status.totalGoal > 0 && (
         <div
           style={{
@@ -171,56 +137,77 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
             justifyContent: 'space-between',
             gap: 8,
             flexWrap: 'wrap',
-            fontSize: isMobile ? '0.76rem' : '0.80rem',
-            letterSpacing: '-0.01em',
-            lineHeight: 1.35,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            data-testid="cycle-status-pill-btn"
+            onClick={() => {
+              HapticService.selection();
+              setIsDiagnosticModalOpen(true);
+            }}
+            title="Toca para ver el desglose detallado de la rutina"
+            aria-label="Ver diagnóstico detallado de la rutina"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '4px 10px',
+              borderRadius: 999,
+              border: '1px solid var(--border-subtle, rgba(0, 0, 0, 0.08))',
+              background: 'var(--bg-material, rgba(255, 255, 255, 0.65))',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              color: status.isAllDone ? '#34c759' : 'var(--text-primary)',
+              fontSize: isMobile ? '0.76rem' : '0.80rem',
+              fontWeight: 600,
+              letterSpacing: '-0.01em',
+              cursor: 'pointer',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
+              transition: 'all 0.15s ease',
+              maxWidth: '100%',
+            }}
+          >
+            {statusIcon}
+            <span data-testid="cycle-status-badge">
+              {status.statusState === 'all_done' ? (
+                'Todo al día'
+              ) : (
+                <>
+                  <span>{status.totalCompleted} de {status.totalGoal} hechas</span>
+                  <span style={{ color: viewColor, marginLeft: 3 }}>({progressPercent}%)</span>
+                </>
+              )}
+            </span>
+            <span style={{ opacity: 0.35, margin: '0 2px' }}>·</span>
             <span
               data-testid="cycle-status-headline"
               style={{
-                fontWeight: 650,
-                color: status.isAllDone
-                  ? '#34c759'
-                  : status.statusState === 'own_done_accumulated_pending'
-                  ? viewColor
-                  : 'var(--text-primary)',
+                fontWeight: 500,
+                color: 'var(--text-secondary)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
               }}
             >
-              {status.headline}
+              {status.isAllDone ? 'Objetivo completado' : status.headline}
             </span>
-
-            <span style={{ opacity: 0.35, color: 'var(--text-tertiary)' }}>·</span>
-
-            <span style={{ color: 'var(--text-secondary)', fontWeight: 450 }}>
-              {status.detailText}
-            </span>
-          </div>
-
-          {/* Si estamos en rutina completa con acumuladas, mostrar desglose sintético */}
-          {cycleRoutineMode === 'full_routine' && status.accumulatedTotal > 0 && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                fontSize: '0.72rem',
-                fontWeight: 600,
-                color: 'var(--text-tertiary)',
-              }}
-            >
-              <span style={{ color: status.isOwnDone ? '#34c759' : viewColor }}>
-                ● {status.ownCycleName}: {status.ownCompleted}/{status.ownTotal}
-              </span>
-              <span style={{ opacity: 0.35 }}>·</span>
-              <span style={{ color: status.isAccumulatedDone ? '#34c759' : '#ff9500' }}>
-                ● Acumuladas: {status.accumulatedCompleted}/{status.accumulatedTotal}
-              </span>
-            </div>
-          )}
+            <Info size={12} strokeWidth={2.2} style={{ opacity: 0.55, marginLeft: 2, flexShrink: 0 }} />
+          </button>
         </div>
       )}
+
+      {/* Modal Apple de Diagnóstico detallado */}
+      <RoutineDiagnosticModal
+        isOpen={isDiagnosticModalOpen}
+        onClose={() => setIsDiagnosticModalOpen(false)}
+        status={status}
+        currentCycle={currentCycle}
+        cycleRoutineMode={cycleRoutineMode}
+        viewColor={viewColor}
+        referenceDate={referenceDate}
+        isMobile={isMobile}
+      />
     </div>
   );
 };

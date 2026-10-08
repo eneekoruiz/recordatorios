@@ -133,7 +133,12 @@ export function useTaskGrouping({
 
         rawGrouped = grouped;
       } else {
-        rawGrouped = getTasksByList(currentView.replace('list_', ''), resolvedShowCompleted, recentlyCompletedIds);
+        rawGrouped = getTasksByList(
+          currentView.replace('list_', ''),
+          resolvedShowCompleted,
+          recentlyCompletedIds,
+          referenceDate ? new Date(referenceDate) : undefined
+        );
       }
     } else {
       rawGrouped = getTasksByCycle(currentView, resolvedShowCompleted, recentlyCompletedIds, referenceDate);
