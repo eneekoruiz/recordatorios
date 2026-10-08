@@ -2,6 +2,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { readFileSync } from 'node:fs'
+
+const deployment = JSON.parse(readFileSync(new URL('./vercel.json', import.meta.url), 'utf8'))
+const productionCsp = deployment.headers[0].headers.find((header: { key: string; value: string }) => header.key === 'Content-Security-Policy').value
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -12,13 +16,16 @@ export default defineConfig({
   preview: {
     host: true,
     port: 5173,
+    proxy: { '/api': 'http://127.0.0.1:3001' },
     headers: {
-      'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self'; style-src-elem 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://nominatim.openstreetmap.org https://api.openai.com https://generativelanguage.googleapis.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+      'Content-Security-Policy': productionCsp
     }
   },
   test: {
     include: ['tests/unit/**/*.test.{js,ts}'],
     environment: 'node',
+    maxWorkers: 2,
+    testTimeout: 15000,
   },
   build: {
     chunkSizeWarningLimit: 1000,

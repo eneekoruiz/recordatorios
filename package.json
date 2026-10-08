@@ -11,6 +11,12 @@
     "url": "https://github.com/eneekoruiz/recordatorios/issues"
   },
   "type": "module",
+  "engines": {
+    "node": ">=22.22.2"
+  },
+  "overrides": {
+    "shell-quote": "^1.11.0"
+  },
   "scripts": {
     "dev": "concurrently \"vite\" \"tsx watch server/index.ts\"",
     "build": "prisma generate && tsc -b && vite build",

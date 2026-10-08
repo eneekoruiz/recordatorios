@@ -50,6 +50,7 @@ function App() {
   useSystemTheme();
   // ── All hooks FIRST (before any conditional returns) ──────────────
   const token = useAppStore((state) => state.token);
+  const userId = useAppStore((state) => state.userId);
   const tasks = useAppStore((state) => state.tasks); // Subscribing to tasks
   const lists = useAppStore((state) => state.lists);
   const [currentView, setCurrentView] = useState(() => {
@@ -84,6 +85,20 @@ function App() {
     return () => window.removeEventListener('open-security-sheet', open);
   }, []);
   const [drawerEverOpened, setDrawerEverOpened] = useState(false);
+  const previousAccount = useRef(userId);
+  useEffect(() => {
+    if (previousAccount.current === userId) return;
+    previousAccount.current = userId;
+    setIsIntegrationsOpen(false);
+    setIsAIAssistantOpen(false);
+    setAiAssistantEverOpened(false);
+    setIsDrawerOpen(false);
+    setDrawerEverOpened(false);
+    setEditingTaskId(null);
+    setZenModeTaskId(null);
+    setSequenceMode(null);
+    setSecurityOpen(false);
+  }, [userId]);
   // Modales y vistas clave se precargan en idle para apertura instantánea sin latencia.
   useEffect(() => {
     const idle = (window as any).requestIdleCallback || ((cb: () => void) => window.setTimeout(cb, 1500));
@@ -139,16 +154,6 @@ function App() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
-
-  // IndexedDB can be unavailable in privacy/restricted contexts. Never strand the
-  // user behind an infinite loader: continue with the safe in-memory defaults.
-  useEffect(() => {
-    if (hasHydrated) return;
-    const hydrationGuard = window.setTimeout(() => {
-      useAppStore.getState().setHasHydrated(true);
-    }, 4500); // 4500ms guard: allows mobile IndexedDB enough time to open without premature abort
-    return () => window.clearTimeout(hydrationGuard);
-  }, [hasHydrated]);
 
   // Limpieza higiénica al arrancar: purgar recordatorios vacíos residuales
   useEffect(() => {

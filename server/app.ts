@@ -13,21 +13,8 @@ import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { isMailConfigured } from './mail.js';
-import {
-  getSecurity, withSecurity, publicPreferences, newTotpSecret,
-  otpauthUrl, encryptSecret, decryptSecret, verifyTotp, generateRecoveryCodes, hashRecoveryCode,
-} from './security.js';
+import { getSecurity, withSecurity, publicPreferences } from './security.js';
 import webpush from 'web-push';
-import { planNotifications, safeTimeZone } from './notifications.js';
-import {
-  scopedId,
-  clientIdOf,
-  isValidClientId,
-  shouldApplyIncoming,
-  parseDeletedAt,
-  toClientPayload,
-  sanitizePayload,
-} from './syncUtils.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const MIN_PASSWORD_LENGTH = 8;
@@ -36,7 +23,6 @@ const SESSION_TTL = '30d';
 const bcryptCost = () => Math.max(4, Number(process.env.BCRYPT_COST) || 12);
 const hashPassword = (password: any) => bcrypt.hash(password, bcryptCost());
 const SESSION_REFRESH_AFTER_MS = 7 * DAY_MS;
-const RESET_TTL = '30m';
 const MAX_ITEMS_PER_COLLECTION = 2000;
 const CRON_CONCURRENCY = 8;
 const DEV_FALLBACK_SECRET = 'dev-only-insecure-secret-change-me';

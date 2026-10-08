@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { ViewHeader } from '../ui/ViewHeader';
 import { ArrowUpDown, Download, Upload, Info, CheckCircle2, Sparkles, Target, FileText, Clipboard, Loader2, Calendar, Printer, Database } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAppStore } from '../../store/useAppStore';
+import { useAppStore, sanitizeTaskHierarchy, sanitizeSectionHierarchy } from '../../store/useAppStore';
 import { detectFormatAndParse } from '../../utils/importerParser';
+import { validateJsonImport } from '../../utils/importValidation';
 import type { ParseResult } from '../../utils/importerParser';
 import { extractTextFromPdf } from '../../utils/pdfExtractor';
 import { downloadIcsFile } from '../../utils/icsExporter';
@@ -177,13 +178,16 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
 
   const handleConfirmImport = () => {
     if (!preview) return;
+    let validated: ParseResult;
+    try { validated = validateJsonImport(preview); }
+    catch (error) { notify(error instanceof Error ? error.message : 'Datos de importación inválidos.'); return; }
     const now = new Date().toISOString();
     
     useAppStore.setState((state) => {
       // 1. Merge de listas: conservar existentes e incorporar las nuevas del preview
       const listsMap = new Map<string, any>(state.lists.map(l => [l.id, l]));
-      if (preview.lists && preview.lists.length > 0) {
-        preview.lists.forEach(l => {
+      if (validated.lists.length > 0) {
+        validated.lists.forEach(l => {
           if (!listsMap.has(l.id)) {
             listsMap.set(l.id, { ...l, updated_at: now, _is_dirty: true });
           }
@@ -193,19 +197,19 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
 
       // 2. Merge de secciones: conservar existentes e incorporar las del preview
       const sectionsMap = new Map<string, any>((state.listSections || []).map(s => [s.id, s]));
-      if (preview.listSections && preview.listSections.length > 0) {
-        preview.listSections.forEach(s => {
+      if (validated.listSections && validated.listSections.length > 0) {
+        validated.listSections.forEach(s => {
           if (!sectionsMap.has(s.id)) {
             sectionsMap.set(s.id, { ...s, updated_at: now, _is_dirty: true });
           }
         });
       }
-      const finalSections = Array.from(sectionsMap.values());
+      const finalSections = sanitizeSectionHierarchy(Array.from(sectionsMap.values()));
 
       // 3. Deduplicar ciclos por identificador
       const cyclesMap = new Map<string, any>((state.cycles || []).map(c => [c.id, c]));
-      if (preview.cycles && preview.cycles.length > 0) {
-        preview.cycles.forEach(c => {
+      if (validated.cycles.length > 0) {
+        validated.cycles.forEach(c => {
           if (!cyclesMap.has(c.id)) {
             cyclesMap.set(c.id, { ...c, updated_at: now, _is_dirty: true });
           }
@@ -218,7 +222,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
       let importedCount = 0;
 
       // 4. Validar relaciones y marcar _is_dirty en cada tarea importada
-      preview.tasks.forEach(t => {
+      validated.tasks.forEach(t => {
         const rawCatId = t.categoryId || (t as any).listId;
         const shouldRouteToTarget = forceAllToList || targetListId !== 'inbox' || !rawCatId || rawCatId === 'inbox' || !finalLists.some(l => l.id === rawCatId);
         const resolvedCategoryId = shouldRouteToTarget ? destinationListId : (rawCatId || destinationListId);
@@ -230,9 +234,10 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
           ...t,
           categoryId: resolvedCategoryId,
           sectionId: isSectionValid ? t.sectionId : undefined,
+          cycle_id: finalCycles.some(c => c.id === t.cycle_id && !c.deleted_at) ? t.cycle_id : undefined,
           updated_at: now,
           _is_dirty: true,
-          version: (t.version || 0) + 1
+          version: Math.max(t.version || 0, state.tasks[t.id]?.version || 0) + 1
         };
 
         updatedTasks[taskToImport.id] = taskToImport;
@@ -243,7 +248,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
       window.dispatchEvent(new CustomEvent('show-toast', { detail: `Importados ${importedCount} recordatorios a "${destinationName}" (preparados para sincronizar)` }));
 
       return {
-        tasks: updatedTasks,
+        tasks: sanitizeTaskHierarchy(updatedTasks),
         cycles: finalCycles,
         lists: finalLists,
         listSections: finalSections,
@@ -433,6 +438,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
                   }}
                 >
                   <textarea 
+                    aria-label="Datos para importar"
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     placeholder="Arrastra aquí tu PDF o pega texto: Ej: Comprar pintura @Hogar #MiSemana..."

@@ -3,6 +3,8 @@ import { extractPrice } from '../utils/priceExtractor';
 import { detectFormatAndParse } from '../utils/importerParser';
 import { readExtendedDate } from '../utils/nlp';
 import { normalizeSpokenPrompt, stripRequestFrames, isFillerOnly, asPriorityModifier, parseWeekdayPhrase, parseClockTime, timeOfDayForHour, tidyTitle, leadingInfinitive, isBareNounPhrase } from '../utils/aiPhrasing';
+import { useAppStore } from '../store/useAppStore';
+import { getAccountSettings, saveAccountSettings } from '../utils/accountSettings';
 
 export interface ProposedTask {
   id: string;
@@ -98,27 +100,22 @@ const geminiRequest = (model: string, apiKey: string, body: unknown, signal: Abo
   });
 
 export class AIService {
-  public static getConfig(): AIConfig {
-    try {
-      const saved = localStorage.getItem('ai_assistant_config');
-      if (saved) {
-        const parsed: AIConfig = JSON.parse(saved);
-        if (parsed.apiKey && (!parsed.provider || parsed.provider === 'auto') && parsed.apiKey.startsWith('AIza')) {
-          parsed.provider = 'gemini';
-        }
-        return parsed;
-      }
-    } catch (err) { console.error('AIService error:', err); }
-
-    // Sin VITE_GEMINI_API_KEY: cualquier variable VITE_* acaba en el bundle público.
-    return { provider: 'auto' };
+  public static getConfig(userId: string | null = useAppStore.getState().userId): AIConfig {
+    const parsed = getAccountSettings<AIConfig>(userId, 'ai-assistant', { provider: 'auto' }, {
+      config: 'ai_assistant_config'
+    });
+    if (parsed.apiKey && (!parsed.provider || parsed.provider === 'auto') && parsed.apiKey.startsWith('AIza')) {
+      parsed.provider = 'gemini';
+    }
+    return parsed;
   }
 
-  public static saveConfig(config: AIConfig) {
-    if (config.apiKey && config.apiKey.startsWith('AIza') && config.provider === 'auto') {
-      config.provider = 'gemini';
+  public static saveConfig(config: AIConfig, userId: string | null = useAppStore.getState().userId): boolean {
+    const saved = { ...config };
+    if (saved.apiKey && saved.apiKey.startsWith('AIza') && saved.provider === 'auto') {
+      saved.provider = 'gemini';
     }
-    localStorage.setItem('ai_assistant_config', JSON.stringify(config));
+    return saveAccountSettings(userId, 'ai-assistant', saved, { config: 'ai_assistant_config' });
   }
 
   public static async testGeminiConnection(apiKey: string): Promise<{ ok: boolean; model?: string; error?: string }> {

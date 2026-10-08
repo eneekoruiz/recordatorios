@@ -21,6 +21,10 @@ export interface PdfReportOptions {
   rawText?: string;
 }
 
+const escapeHtml = (value: string | number): string => String(value).replace(/[&<>"']/g, character => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+}[character]!));
+
 /**
  * Genera un informe maquetado con diseño editorial Apple HIG y abre el diálogo nativo
  * de impresión / Guardar como PDF del navegador.
@@ -46,8 +50,8 @@ export function exportReportToPdf(options: PdfReportOptions): void {
     <div class="stats-grid">
       ${stats.map(s => `
         <div class="stat-card">
-          <div class="stat-value">${s.value}</div>
-          <div class="stat-label">${s.label}</div>
+          <div class="stat-value">${escapeHtml(s.value)}</div>
+          <div class="stat-label">${escapeHtml(s.label)}</div>
         </div>
       `).join('')}
     </div>
@@ -57,7 +61,7 @@ export function exportReportToPdf(options: PdfReportOptions): void {
   if (rawText) {
     bodyHtml = `
       <div class="raw-content">
-        ${rawText.replace(/\n\n/g, '<br/><br/>').replace(/\n/g, '<br/>')}
+        ${escapeHtml(rawText)}
       </div>
     `;
   } else if (items.length > 0) {
@@ -81,16 +85,16 @@ export function exportReportToPdf(options: PdfReportOptions): void {
             return `
               <tr class="${isDone ? 'done-row' : ''}">
                 <td>
-                  <div class="task-title ${isDone ? 'strikethrough' : ''}">${item.title}</div>
-                  ${item.notes ? `<div class="task-note">${item.notes}</div>` : ''}
-                  ${item.category ? `<span class="category-tag">${item.category}</span>` : ''}
+                  <div class="task-title ${isDone ? 'strikethrough' : ''}">${escapeHtml(item.title)}</div>
+                  ${item.notes ? `<div class="task-note">${escapeHtml(item.notes)}</div>` : ''}
+                  ${item.category ? `<span class="category-tag">${escapeHtml(item.category)}</span>` : ''}
                 </td>
                 <td>
                   <span class="status-badge ${isDone ? 'completed' : 'pending'}">
                     ${isDone ? 'Completado' : 'Pendiente'}
                   </span>
                 </td>
-                <td class="date-cell">${item.dueDate || '—'}</td>
+                <td class="date-cell">${escapeHtml(item.dueDate || '—')}</td>
                 <td style="text-align: right; font-weight: 600;">${metaStr || '—'}</td>
               </tr>
             `;
@@ -105,7 +109,7 @@ export function exportReportToPdf(options: PdfReportOptions): void {
     <html lang="es">
     <head>
       <meta charset="utf-8" />
-      <title>${title} — Recordatorios</title>
+      <title>${escapeHtml(title)} — Recordatorios</title>
       <style>
         @page {
           size: A4 portrait;
@@ -263,8 +267,8 @@ export function exportReportToPdf(options: PdfReportOptions): void {
     <body>
       <div class="header">
         <div class="title-block">
-          <h1>${title}</h1>
-          <p>${subtitle || 'Informe generado automáticamente'}</p>
+          <h1>${escapeHtml(title)}</h1>
+          <p>${escapeHtml(subtitle || 'Informe generado automáticamente')}</p>
         </div>
         <div class="app-badge">
           <strong>Recordatorios</strong>

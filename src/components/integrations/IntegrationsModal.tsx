@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -18,6 +18,19 @@ import { IntegrationService } from '../../services/IntegrationService';
 import type { TaskItem } from '../../models/Task';
 import { HapticService } from '../../services/HapticService';
 import { downloadIcsFile } from '../../utils/icsExporter';
+import { useAppStore } from '../../store/useAppStore';
+import { getAccountSettings, saveAccountSettings } from '../../utils/accountSettings';
+
+const NOTION_LEGACY_KEYS = { apiKey: 'notion_api_key', databaseId: 'notion_db_id' };
+const GITHUB_LEGACY_KEYS = { token: 'github_token', repo: 'github_repo', username: 'github_user' };
+interface IntegrationCredentials {
+  identity: string;
+  notionApiKey: string;
+  notionDbId: string;
+  githubToken: string;
+  githubRepo: string;
+  githubUser: string | null;
+}
 
 export interface IntegrationsModalProps {
   isOpen: boolean;
@@ -35,39 +48,147 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
   const [copiedNotion, setCopiedNotion] = useState(false);
   const [copiedGitHub, setCopiedGitHub] = useState(false);
   const [downloadedIcs, setDownloadedIcs] = useState(false);
+  const userId = useAppStore(state => state.userId);
+  const sessionGeneration = useAppStore(state => state.sessionGeneration);
+  const accountIdentity = `${userId ?? 'anonymous'}:${sessionGeneration}`;
 
   // Notion real connection state
   const [showNotionConfig, setShowNotionConfig] = useState(false);
-  const [notionApiKey, setNotionApiKey] = useState(() => {
-    try { return localStorage.getItem('notion_api_key') || ''; } catch { return ''; }
+  const [credentials, setCredentials] = useState<IntegrationCredentials>(() => {
+    const notion = getAccountSettings<{ apiKey?: string; databaseId?: string }>(userId, 'notion', {}, NOTION_LEGACY_KEYS);
+    const github = getAccountSettings<{ token?: string; repo?: string; username?: string }>(userId, 'github', {}, GITHUB_LEGACY_KEYS);
+    return {
+      identity: accountIdentity,
+      notionApiKey: notion.apiKey || '',
+      notionDbId: notion.databaseId || '',
+      githubToken: github.token || '',
+      githubRepo: github.repo || '',
+      githubUser: github.username || null
+    };
   });
-  const [notionDbId, setNotionDbId] = useState(() => {
-    try { return localStorage.getItem('notion_db_id') || ''; } catch { return ''; }
-  });
+  const activeCredentials = credentials.identity === accountIdentity ? credentials : {
+    identity: accountIdentity, notionApiKey: '', notionDbId: '', githubToken: '', githubRepo: '', githubUser: null
+  };
+  const { notionApiKey, notionDbId, githubToken, githubRepo, githubUser } = activeCredentials;
   const [notionSaved, setNotionSaved] = useState(false);
+  const [savedNotionCredentials, setSavedNotionCredentials] = useState(() => {
+    const notion = getAccountSettings<{ apiKey?: string; databaseId?: string }>(userId, 'notion', {}, NOTION_LEGACY_KEYS);
+    return { identity: accountIdentity, apiKey: notion.apiKey || '', databaseId: notion.databaseId || '' };
+  });
+  const [notionSaveError, setNotionSaveError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const modalLayerRef = useRef<HTMLDivElement>(null);
+  const openerRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   // GitHub real connection state
   const [showGitHubConfig, setShowGitHubConfig] = useState(false);
-  const [githubToken, setGithubToken] = useState(() => {
-    try { return localStorage.getItem('github_token') || ''; } catch { return ''; }
-  });
-  const [githubRepo, setGithubRepo] = useState(() => {
-    try { return localStorage.getItem('github_repo') || ''; } catch { return ''; }
-  });
-  const [githubUser, setGithubUser] = useState<string | null>(() => {
-    try { return localStorage.getItem('github_user') || null; } catch { return null; }
-  });
-  const [githubTesting, setGithubTesting] = useState(false);
-  const [githubStatusMessage, setGithubStatusMessage] = useState<string | null>(null);
+  const [githubTestingIdentity, setGithubTestingIdentity] = useState<string | null>(null);
+  const [githubStatus, setGithubStatus] = useState<{ identity: string; message: string } | null>(null);
+  const githubTesting = githubTestingIdentity === accountIdentity;
+  const githubStatusMessage = githubStatus?.identity === accountIdentity ? githubStatus.message : null;
+  const githubRequestIdRef = useRef(0);
+  const githubAbortRef = useRef<AbortController | null>(null);
+
+  const [prevIdentity, setPrevIdentity] = useState(accountIdentity);
+  if (prevIdentity !== accountIdentity) {
+    setPrevIdentity(accountIdentity);
+    const notion = getAccountSettings<{ apiKey?: string; databaseId?: string }>(userId, 'notion', {}, NOTION_LEGACY_KEYS);
+    const github = getAccountSettings<{ token?: string; repo?: string; username?: string }>(userId, 'github', {}, GITHUB_LEGACY_KEYS);
+    setCredentials({
+      identity: accountIdentity,
+      notionApiKey: notion.apiKey || '',
+      notionDbId: notion.databaseId || '',
+      githubToken: github.token || '',
+      githubRepo: github.repo || '',
+      githubUser: github.username || null
+    });
+    setNotionSaved(false);
+    setSavedNotionCredentials({ identity: accountIdentity, apiKey: notion.apiKey || '', databaseId: notion.databaseId || '' });
+    setNotionSaveError(null);
+    setGithubTestingIdentity(null);
+    setGithubStatus(null);
+  }
+
+  useEffect(() => {
+    githubRequestIdRef.current += 1;
+    githubAbortRef.current?.abort();
+    githubAbortRef.current = null;
+  }, [accountIdentity]);
+
+  const updateCredential = (key: keyof Omit<IntegrationCredentials, 'identity'>, value: string) => {
+    setCredentials(current => {
+      const base = current.identity === accountIdentity ? current : activeCredentials;
+      return { ...base, [key]: value, identity: accountIdentity };
+    });
+  };
+
+  const isCurrentAccount = (identity: string, expectedUserId: string | null, generation: number) => {
+    const current = useAppStore.getState();
+    return identity === `${current.userId ?? 'anonymous'}:${current.sessionGeneration}`
+      && current.userId === expectedUserId && current.sessionGeneration === generation;
+  };
 
   useEffect(() => {
     if (!isOpen) return;
+    openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const dialog = dialogRef.current;
+    const layer = modalLayerRef.current;
+    const inertSiblings = new Map<HTMLElement, boolean>();
+    if (layer) {
+      for (const child of Array.from(document.body.children)) {
+        if (child instanceof HTMLElement && child !== layer) {
+          inertSiblings.set(child, child.inert);
+          child.inert = true;
+        }
+      }
+    }
+
+    const focusableSelector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const focusInitialControl = () => {
+      const firstFocusable = dialog?.querySelector<HTMLElement>(focusableSelector);
+      (firstFocusable || dialog)?.focus();
+    };
+    focusInitialControl();
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+      if (e.key !== 'Tab' || !dialog) return;
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector))
+        .filter(element => element.getClientRects().length > 0);
+      if (focusable.length === 0) {
+        e.preventDefault();
+        dialog.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement))) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      for (const [element, wasInert] of inertSiblings) element.inert = wasInert;
+      const opener = openerRef.current;
+      const fallback = document.querySelector<HTMLElement>('[data-testid="user-profile-trigger"]');
+      const usableOpener = opener?.isConnected && opener.matches(focusableSelector)
+        && !opener.closest('.ios-dropdown-menu');
+      const target = usableOpener ? opener : fallback;
+      if (target?.isConnected) target.focus({ preventScroll: true });
+    };
+  }, [isOpen]);
 
   const handleCopyNotionMarkdown = () => {
     HapticService.selection();
@@ -83,48 +204,74 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
   };
 
   const handleSaveNotionConfig = () => {
+    const expectedUserId = userId;
+    const expectedGeneration = sessionGeneration;
+    if (activeCredentials.identity !== accountIdentity || !isCurrentAccount(accountIdentity, expectedUserId, expectedGeneration)) return;
     HapticService.selection();
-    try {
-      localStorage.setItem('notion_api_key', notionApiKey.trim());
-      localStorage.setItem('notion_db_id', notionDbId.trim());
-      setNotionSaved(true);
-      setTimeout(() => setNotionSaved(false), 2500);
-      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Credenciales de Notion guardadas' }));
-    } catch {
-      // storage unavailable
+    const saved = saveAccountSettings(expectedUserId, 'notion', {
+      apiKey: notionApiKey.trim(), databaseId: notionDbId.trim()
+    }, NOTION_LEGACY_KEYS);
+    if (!saved) {
+      setNotionSaved(false);
+      setNotionSaveError('No se pudieron guardar las credenciales. Revisa el almacenamiento e inténtalo de nuevo.');
+      return;
     }
+    setNotionSaveError(null);
+    setSavedNotionCredentials({ identity: accountIdentity, apiKey: notionApiKey.trim(), databaseId: notionDbId.trim() });
+    setNotionSaved(true);
+    setTimeout(() => setNotionSaved(false), 2500);
+    window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Credenciales de Notion guardadas' }));
   };
 
   const handleTestGitHubConnection = async () => {
+    const expectedUserId = userId;
+    const expectedGeneration = sessionGeneration;
+    const requestIdentity = accountIdentity;
+    if (!isCurrentAccount(requestIdentity, expectedUserId, expectedGeneration)) return;
     if (!githubToken.trim()) {
-      setGithubStatusMessage('Introduce un Personal Access Token para verificar.');
+      setGithubStatus({ identity: requestIdentity, message: 'Introduce un Personal Access Token para verificar.' });
       return;
     }
-    setGithubTesting(true);
-    setGithubStatusMessage(null);
+    githubAbortRef.current?.abort();
+    const controller = new AbortController();
+    githubAbortRef.current = controller;
+    const requestId = ++githubRequestIdRef.current;
+    const token = githubToken.trim();
+    const repo = githubRepo.trim();
+    const isActiveRequest = () => requestId === githubRequestIdRef.current
+      && isCurrentAccount(requestIdentity, expectedUserId, expectedGeneration);
+    setGithubTestingIdentity(requestIdentity);
+    setGithubStatus(null);
     try {
       const res = await fetch('https://api.github.com/user', {
         headers: {
-          Authorization: `Bearer ${githubToken.trim()}`,
+          Authorization: `Bearer ${token}`,
           Accept: 'application/vnd.github.v3+json'
-        }
+        },
+        signal: controller.signal
       });
+      if (!isActiveRequest()) return;
       if (res.ok) {
         const data = await res.json();
+        if (!isActiveRequest()) return;
         const username = data.login || 'Usuario';
-        setGithubUser(username);
-        localStorage.setItem('github_token', githubToken.trim());
-        localStorage.setItem('github_repo', githubRepo.trim());
-        localStorage.setItem('github_user', username);
-        setGithubStatusMessage(`¡Conectado exitosamente como @${username}!`);
+        const saved = saveAccountSettings(expectedUserId, 'github', { token, repo, username }, GITHUB_LEGACY_KEYS);
+        if (!saved) {
+          setGithubStatus({ identity: requestIdentity, message: 'GitHub verificó el token, pero no se pudieron guardar las credenciales. Inténtalo de nuevo.' });
+          return;
+        }
+        setCredentials(current => current.identity === requestIdentity
+          ? { ...current, githubToken: token, githubRepo: repo, githubUser: username }
+          : current);
+        setGithubStatus({ identity: requestIdentity, message: `¡Conectado exitosamente como @${username}!` });
         HapticService.selection();
       } else {
-        setGithubStatusMessage('Token no válido o sin permisos de lectura.');
+        setGithubStatus({ identity: requestIdentity, message: 'Token no válido o sin permisos de lectura.' });
       }
     } catch {
-      setGithubStatusMessage('No se pudo contactar con GitHub. Revisa tu conexión.');
+      if (isActiveRequest()) setGithubStatus({ identity: requestIdentity, message: 'No se pudo contactar con GitHub. Revisa tu conexión.' });
     } finally {
-      setGithubTesting(false);
+      if (isActiveRequest()) setGithubTestingIdentity(null);
     }
   };
 
@@ -169,13 +316,18 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
 
   if (typeof document === 'undefined') return null;
 
-  const isNotionConfigured = !!(notionApiKey && notionDbId);
+  const isNotionConfigured = savedNotionCredentials.identity === accountIdentity
+    && Boolean(savedNotionCredentials.apiKey && savedNotionCredentials.databaseId)
+    && savedNotionCredentials.apiKey === notionApiKey.trim()
+    && savedNotionCredentials.databaseId === notionDbId.trim();
   const isGitHubConfigured = !!(githubToken && githubUser);
 
   return createPortal(
     <AnimatePresence>
       {isOpen && (
         <div
+          ref={modalLayerRef}
+          data-testid="integrations-modal-layer"
           style={{
             position: 'fixed',
             inset: 0,
@@ -205,10 +357,12 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
 
           {/* Modal flotante Apple */}
           <motion.div
+            ref={dialogRef}
             role="dialog"
             data-testid="integrations-modal"
             aria-label="Vincular con Google Calendar, Gmail y Notion"
             aria-modal="true"
+            tabIndex={-1}
             initial={{ opacity: 0, scale: 0.94, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 12 }}
@@ -463,13 +617,13 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
                         Notion
                       </h4>
                       {isNotionConfigured && (
-                        <span style={{ fontSize: '0.7rem', padding: '1px 6px', borderRadius: 6, background: 'rgba(48, 209, 88, 0.15)', color: '#30d158', fontWeight: 700 }}>
-                          ✓ Vinculado
+                        <span data-testid="notion-configured-status" style={{ fontSize: '0.7rem', padding: '1px 6px', borderRadius: 6, background: 'var(--bg-tertiary, rgba(0, 0, 0, 0.08))', color: 'var(--text-secondary)', fontWeight: 700 }}>
+                          Credenciales guardadas · exportación manual
                         </span>
                       )}
                     </div>
                     <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                      Exporta como base de datos o tabla Markdown
+                      Exporta como Markdown o CSV para importar
                     </span>
                   </div>
                 </div>
@@ -488,14 +642,14 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
                       type="password"
                       placeholder="API Key (secret_...)"
                       value={notionApiKey}
-                      onChange={e => setNotionApiKey(e.target.value)}
+                      onChange={e => { setNotionSaveError(null); updateCredential('notionApiKey', e.target.value); }}
                       style={{ width: '100%', boxSizing: 'border-box', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border-subtle)', background: 'var(--bg-card)', fontSize: '0.82rem', marginBottom: 6 }}
                     />
                     <input
                       type="text"
                       placeholder="ID de base de datos Notion"
                       value={notionDbId}
-                      onChange={e => setNotionDbId(e.target.value)}
+                      onChange={e => { setNotionSaveError(null); updateCredential('notionDbId', e.target.value); }}
                       style={{ width: '100%', boxSizing: 'border-box', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border-subtle)', background: 'var(--bg-card)', fontSize: '0.82rem', marginBottom: 8 }}
                     />
                     <div style={{ display: 'flex', gap: 8 }}>
@@ -514,6 +668,11 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
                         Cerrar
                       </button>
                     </div>
+                    {notionSaveError && (
+                      <div role="alert" style={{ marginTop: 8, fontSize: '0.78rem', color: 'var(--accent-red, #c62828)' }}>
+                        {notionSaveError}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -576,7 +735,7 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
                       cursor: 'pointer'
                     }}
                   >
-                    <Key size={13} /> {isNotionConfigured ? 'Editar API' : 'Vincular API'}
+                    <Key size={13} /> {isNotionConfigured ? 'Editar credenciales' : 'Configurar credenciales'}
                   </button>
                 </div>
               </div>
@@ -636,14 +795,14 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
                       type="password"
                       placeholder="GitHub PAT (ghp_... o token clásico/fine-grained)"
                       value={githubToken}
-                      onChange={e => setGithubToken(e.target.value)}
+                      onChange={e => updateCredential('githubToken', e.target.value)}
                       style={{ width: '100%', boxSizing: 'border-box', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border-subtle)', background: 'var(--bg-card)', fontSize: '0.82rem', marginBottom: 6 }}
                     />
                     <input
                       type="text"
                       placeholder="Repositorio por defecto (ej: usuario/recordatorios)"
                       value={githubRepo}
-                      onChange={e => setGithubRepo(e.target.value)}
+                      onChange={e => updateCredential('githubRepo', e.target.value)}
                       style={{ width: '100%', boxSizing: 'border-box', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border-subtle)', background: 'var(--bg-card)', fontSize: '0.82rem', marginBottom: 8 }}
                     />
                     {githubStatusMessage && (

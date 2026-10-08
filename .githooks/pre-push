@@ -1,9 +1,9 @@
 #!/bin/sh
-# Pre-push hook: garantiza que la calidad y el CI nunca fallen en GitHub
+# Pre-push hook: ejecuta los controles locales de npm run validate.
 
 echo "🛡️  [Git Pre-Push Hook] Verificando calidad y suites de CI antes de subir..."
 echo "📦 1/5 Prisma schema & Client"
-echo "🔍 2/5 TypeScript strict types (tsc -b)"
+echo "🔍 2/5 TypeScript (tsc -b)"
 echo "✨ 3/5 Linter & code quality (oxlint)"
 echo "🧪 4/5 Unit & integration tests (vitest)"
 echo "⚡ 5/5 Production bundle & CSS build (vite build)"
@@ -20,6 +20,6 @@ if [ $STATUS -ne 0 ]; then
 fi
 
 echo ""
-echo "✅ [Git Pre-Push Hook] ¡Todo aprobado al 100%! Subiendo cambios con seguridad a GitHub..."
+echo "✅ [Git Pre-Push Hook] Validación local completada. E2E y auditoría de dependencias se ejecutan por separado."
 echo ""
 exit 0

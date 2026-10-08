@@ -33,8 +33,10 @@ export const isOfflineToken = (token: string | null | undefined) =>
   !token || token.startsWith('local_offline') || token.startsWith('offline_');
 
 class AuthExpiredError extends Error {}
+class StaleSyncError extends Error {}
 
 type Syncable = { id: string; updated_at?: string; version?: number; _is_dirty?: boolean };
+type SessionContext = { userId: string | null; generation: number };
 
 class SyncManager {
   private syncInterval: ReturnType<typeof setInterval> | null = null;
@@ -42,6 +44,7 @@ class SyncManager {
   private pendingResync = false;
   private isOnline = typeof navigator === 'undefined' ? true : navigator.onLine;
   private eventSource: EventSource | null = null;
+  private eventSourceGeneration: number | null = null;
   private realtimeUnsupported = false;
   private realtimeFailures = 0;
   private connectingRealtime = false;
@@ -97,6 +100,7 @@ class SyncManager {
     this.syncInterval = null;
     this.eventSource?.close();
     this.eventSource = null;
+    this.eventSourceGeneration = null;
     if (typeof window !== 'undefined') {
       window.removeEventListener('online', this.handleOnline);
       window.removeEventListener('offline', this.handleOffline);
@@ -108,19 +112,30 @@ class SyncManager {
   }
 
   /** Gestiona la respuesta común: renovación de token y sesión caducada. */
-  private handleAuth(response: Response) {
+  private isCurrentSession(context: SessionContext) {
+    const current = useAppStore.getState();
+    return current.userId === context.userId && current.sessionGeneration === context.generation;
+  }
+
+  private handleAuth(response: Response, context: SessionContext, requestToken: string) {
+    if (!this.isCurrentSession(context)) throw new StaleSyncError('Respuesta de una sesión anterior');
     const refreshed = response.headers.get('X-Refreshed-Token');
     if (refreshed) {
-      const { userId } = useAppStore.getState();
-      useAppStore.getState().setToken(refreshed, userId);
+      const current = useAppStore.getState();
+      // No dejamos que una respuesta anterior sustituya un token ya renovado.
+      if (current.token === requestToken) current.setToken(refreshed, context.userId);
     }
     if (response.status === 401 || response.status === 403) {
-      useAppStore.getState().expireSession();
+      const current = useAppStore.getState();
+      if (!this.isCurrentSession(context) || current.token !== requestToken) {
+        throw new StaleSyncError('Respuesta para un token anterior');
+      }
+      current.expireSession();
       throw new AuthExpiredError('Sesión caducada');
     }
   }
 
-  private async setupRealtime(token: string) {
+  private async setupRealtime(token: string, context: SessionContext) {
     if (this.realtimeUnsupported || isOfflineToken(token) || typeof EventSource === 'undefined' || this.connectingRealtime) return;
     this.eventSource?.close();
     this.connectingRealtime = true;
@@ -129,13 +144,14 @@ class SyncManager {
     let ticket = '';
     try {
       const res = await fetch(apiUrl('/api/sync/live-ticket'), { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
-      this.handleAuth(res);
+      this.handleAuth(res, context, token);
       if (res.ok) ticket = (await res.json())?.ticket || '';
     } catch {
       /* sin red o sesión caducada: se reintenta más abajo */
     } finally {
       this.connectingRealtime = false;
     }
+    if (!this.isCurrentSession(context)) return;
     if (!ticket) {
       this.realtimeFailures += 1;
       if (this.realtimeFailures >= 2) this.realtimeUnsupported = true;
@@ -144,6 +160,7 @@ class SyncManager {
 
     const source = new EventSource(`${apiUrl('/api/sync/live')}?ticket=${encodeURIComponent(ticket)}`);
     this.eventSource = source;
+    this.eventSourceGeneration = context.generation;
     let opened = false;
 
     source.onopen = () => {
@@ -151,11 +168,13 @@ class SyncManager {
       this.realtimeFailures = 0;
     };
     source.onmessage = (event) => {
-      if (event.data === 'check_sync') this.syncNow();
+      if (this.isCurrentSession(context) && event.data === 'check_sync') this.syncNow();
     };
     source.onerror = () => {
       source.close();
       if (this.eventSource === source) this.eventSource = null;
+      if (this.eventSourceGeneration === context.generation) this.eventSourceGeneration = null;
+      if (!this.isCurrentSession(context)) return;
       // Un 204 (servidor sin tiempo real, p. ej. Vercel) cierra sin llegar a abrir: dejamos de insistir.
       if (!opened) this.realtimeFailures += 1;
       if (this.realtimeFailures >= 2) {
@@ -164,7 +183,9 @@ class SyncManager {
       }
       setTimeout(() => {
         const current = useAppStore.getState().token;
-        if (current && this.isOnline && !isOfflineToken(current) && !this.eventSource) this.setupRealtime(current);
+        if (current && this.isOnline && !isOfflineToken(current) && !this.eventSource && this.isCurrentSession(context)) {
+          this.setupRealtime(current, context);
+        }
       }, 5000);
     };
   }
@@ -174,7 +195,8 @@ class SyncManager {
       useAppStore.getState().setSyncStatus('offline');
       return;
     }
-    const { token } = useAppStore.getState();
+    const initial = useAppStore.getState();
+    const { token } = initial;
     if (!token || isOfflineToken(token)) {
       useAppStore.getState().setSyncStatus('idle');
       return;
@@ -185,23 +207,34 @@ class SyncManager {
       return;
     }
 
-    if (!this.eventSource) this.setupRealtime(token);
+    const context = { userId: initial.userId, generation: initial.sessionGeneration };
+    if (this.eventSource && this.eventSourceGeneration !== context.generation) {
+      this.eventSource.close();
+      this.eventSource = null;
+      this.eventSourceGeneration = null;
+    }
+    if (!this.eventSource) this.setupRealtime(token, context);
 
     this.isSyncing = true;
     useAppStore.getState().setSyncStatus('syncing');
     try {
-      await this.push(token);
-      await this.pull(useAppStore.getState().token || token, forceFullPull);
+      await this.push(token, context);
+      if (!this.isCurrentSession(context)) return;
+      await this.pull(useAppStore.getState().token || token, context, forceFullPull);
+      if (!this.isCurrentSession(context)) return;
       useAppStore.getState().setSyncStatus('synced');
       useAppStore.getState().setLastSyncedAt(Date.now());
     } catch (error) {
-      if (!(error instanceof AuthExpiredError)) console.error('Sync failed:', error);
-      useAppStore.getState().setSyncStatus('error');
+      if (!(error instanceof AuthExpiredError) && !(error instanceof StaleSyncError)) console.error('Sync failed:', error);
+      if (this.isCurrentSession(context)) useAppStore.getState().setSyncStatus('error');
     } finally {
       this.isSyncing = false;
       if (this.pendingResync) {
         this.pendingResync = false;
-        this.triggerDebouncedSync();
+        const current = useAppStore.getState();
+        // The request that set pendingResync may belong to a different account.
+        // Always schedule from current state so the next sync captures its context.
+        if (this.isOnline && current.token && !isOfflineToken(current.token)) this.triggerDebouncedSync();
       }
     }
   }
@@ -213,6 +246,7 @@ class SyncManager {
       !!s._preferences_dirty ||
       s.tombstones.lists.length > 0 ||
       s.tombstones.cycles.length > 0 ||
+      (s.tombstones.tasks || []).length > 0 ||
       s.lists.some((l) => l._is_dirty) ||
       s.cycles.some((c) => c._is_dirty) ||
       (s.listSections || []).some((x) => x._is_dirty) ||
@@ -220,7 +254,8 @@ class SyncManager {
     );
   }
 
-  private async push(token: string) {
+  private async push(token: string, context: SessionContext) {
+    if (!this.isCurrentSession(context)) throw new StaleSyncError('Sesión cambiada antes del envío');
     const state = useAppStore.getState();
     const tasks = Object.values(state.tasks).filter((t) => t._is_dirty);
     const cycles = state.cycles.filter((c) => c._is_dirty);
@@ -234,6 +269,7 @@ class SyncManager {
     const allCycles = [...cycles, ...tombstones.cycles];
     if (!allTasks.length && !allCycles.length && !allLists.length && !listSections.length && !hasDirtyPrefs) return;
 
+    const preferencesUpdatedAt = state.preferences_updated_at || new Date().toISOString();
     const preferences = hasDirtyPrefs
       ? {
           smartListVisibility: state.smartListVisibility,
@@ -242,9 +278,10 @@ class SyncManager {
           hideOnboarding: safeLocalStorageGet('hide_onboarding_guide') === 'true',
           weeklyTasksDay: state.weeklyTasksDay,
           displayName: state.displayName,
-          updated_at: state.preferences_updated_at || new Date().toISOString(),
+          updated_at: preferencesUpdatedAt,
         }
       : undefined;
+    const serializedPreferences = preferences ? JSON.stringify(preferences) : undefined;
 
     // Listas, ciclos y secciones viajan en la primera petición; las tareas, en lotes.
     const taskChunks = allTasks.length ? chunk(allTasks, PUSH_CHUNK_SIZE) : [[]];
@@ -271,9 +308,10 @@ class SyncManager {
       } finally {
         clearTimeout(timeoutId);
       }
-      this.handleAuth(response);
+      this.handleAuth(response, context, token);
       if (!response.ok) throw new Error(`Push failed (${response.status})`);
       const data = await response.json().catch(() => ({}));
+      if (!this.isCurrentSession(context)) throw new StaleSyncError('Respuesta de una sesión anterior');
       if (data?.stale?.tasks) staleTasks.push(...data.stale.tasks);
       if (first) {
         staleLists = data?.stale?.lists || [];
@@ -284,6 +322,7 @@ class SyncManager {
 
     // Marcar como sincronizado solo lo que no cambió mientras la petición estaba en vuelo.
     useAppStore.setState((current) => {
+      if (!this.isCurrentSession(context)) return {};
       const nextTasks = { ...current.tasks };
       for (const sent of tasks) {
         const cleared = clearDirtyIfUnchanged(current.tasks[sent.id], sent);
@@ -307,10 +346,24 @@ class SyncManager {
       const nextLists = mergeServerCollection(clearArray(current.lists, lists), staleLists).items;
       const nextCycles = mergeServerCollection(clearArray(current.cycles, cycles), staleCycles).items;
       const nextSections = mergeServerCollection(clearArray(current.listSections || [], listSections), staleSections).items;
+      const currentPreferences = hasDirtyPrefs
+        ? {
+            smartListVisibility: current.smartListVisibility,
+            pinnedSmartLists: current.pinnedSmartLists,
+            cycleVisibility: current.cycleVisibility,
+            hideOnboarding: safeLocalStorageGet('hide_onboarding_guide') === 'true',
+            weeklyTasksDay: current.weeklyTasksDay,
+            displayName: current.displayName,
+            updated_at: current.preferences_updated_at || preferencesUpdatedAt,
+          }
+        : undefined;
+      const preferencesUnchanged = !!preferences && !!current._preferences_dirty &&
+        JSON.stringify(currentPreferences) === serializedPreferences;
 
-      const sentTombLists = new Set(tombstones.lists.map((t) => t.id));
-      const sentTombCycles = new Set(tombstones.cycles.map((t) => t.id));
-      const sentTombTasks = new Set((tombstones.tasks || []).map((t) => t.id));
+      const removeAcknowledged = <T extends { id: string }>(currentItems: T[], sentItems: T[]) => {
+        const sentById = new Map(sentItems.map((item) => [item.id, JSON.stringify(item)]));
+        return currentItems.filter((item) => sentById.get(item.id) !== JSON.stringify(item));
+      };
 
       return {
         tasks: nextTasks,
@@ -318,16 +371,17 @@ class SyncManager {
         cycles: nextCycles,
         listSections: nextSections,
         tombstones: {
-          lists: current.tombstones.lists.filter((t) => !sentTombLists.has(t.id)),
-          cycles: current.tombstones.cycles.filter((t) => !sentTombCycles.has(t.id)),
-          tasks: (current.tombstones.tasks || []).filter((t) => !sentTombTasks.has(t.id)),
+          lists: removeAcknowledged(current.tombstones.lists, tombstones.lists),
+          cycles: removeAcknowledged(current.tombstones.cycles, tombstones.cycles),
+          tasks: removeAcknowledged(current.tombstones.tasks || [], tombstones.tasks || []),
         },
-        ...(hasDirtyPrefs ? { _preferences_dirty: false } : {}),
+        ...(preferencesUnchanged ? { _preferences_dirty: false } : {}),
       };
     });
   }
 
-  private async pull(token: string, forceFullPull = false) {
+  private async pull(token: string, context: SessionContext, forceFullPull = false) {
+    if (!this.isCurrentSession(context)) throw new StaleSyncError('Sesión cambiada antes de la descarga');
     const state = useAppStore.getState();
     const tokenKey = `sync_token_${state.userId || token.slice(-16)}`;
     const isLocalEmpty = Object.keys(state.tasks).length === 0;
@@ -346,11 +400,13 @@ class SyncManager {
     } finally {
       clearTimeout(timeoutId);
     }
-    this.handleAuth(response);
+    this.handleAuth(response, context, token);
     if (!response.ok) throw new Error(`Pull failed (${response.status})`);
     const data = await response.json();
+    if (!this.isCurrentSession(context)) throw new StaleSyncError('Respuesta de una sesión anterior');
 
     useAppStore.setState((current) => {
+      if (!this.isCurrentSession(context)) return {};
       const update: Record<string, unknown> = {};
       const isSettings = (l: any) => typeof l?.id === 'string' && l.id.startsWith(SETTINGS_LIST_PREFIX);
 

@@ -1,15 +1,17 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { idbStorage } from '../utils/idbStorage';
+import { completePrimaryHydration, getPersistenceRecovery, idbStorage } from '../utils/idbStorage';
 import type { TaskItem, CustomCycle, CustomList, ListSection } from '../models/Task';
 import { TaskRepository } from '../repositories/TaskRepository';
-import { isCompletedInCurrentPeriod, wouldCreateDependencyCycle, getStartOfWeek } from '../services/TaskService';
+import { isCompletedInCurrentPeriod, wouldCreateDependencyCycle, getStartOfWeek, getStartOfNextWeek } from '../services/TaskService';
 import { getEffectiveCycleId, getPureCyclicPeriodicity } from '../utils/sectionRoutine';
+import { validateJsonImport } from '../utils/importValidation';
+import { isPersistedRecordSafe } from '../utils/persistedStateValidation';
 import { isValidWeekday, readStoredWeeklyDay, writeStoredWeeklyDay } from '../utils/routineDay';
 import { DEFAULT_SMART_LIST_VISIBILITY } from '../constants/smartLists';
 import { smartSortTasks } from '../utils/smartSort';
 import { readStoredDisplayName, writeStoredDisplayName } from '../utils/userIdentity';
-import { findDuplicateTask } from '../utils/taskDeduplication';
+import { findDuplicateTask, TaskDuplicateIndex } from '../utils/taskDeduplication';
 import { FREQUENCY_RESERVED_COLORS, getReservedFrequencyColor } from '../constants/colors';
 
 const optimisticUpdate = (
@@ -226,9 +228,12 @@ interface AppState {
 
   hasHydrated: boolean;
   setHasHydrated: (val: boolean) => void;
+  persistenceRecovery: ReturnType<typeof getPersistenceRecovery>;
 
   token: string | null;
   userId: string | null;
+  /** Transient guard that invalidates async responses from a previous session. */
+  sessionGeneration: number;
   setToken: (token: string | null, userId: string | null) => void;
   syncStatus: 'idle' | 'syncing' | 'synced' | 'error' | 'offline';
   lastSyncedAt: number | null;
@@ -261,6 +266,7 @@ export const useAppStore = create<AppState>()(
       sessionExpired: false,
       token: null,
       userId: null,
+      sessionGeneration: 0,
       syncStatus: 'idle',
       lastSyncedAt: null,
       setSyncStatus: (syncStatus) => set({ syncStatus }),
@@ -295,7 +301,10 @@ export const useAppStore = create<AppState>()(
       globalCyclesEnabled: true,
 
       setToken: (token, userId) => {
-        const prevUserId = get().userId;
+        const current = get();
+        const prevUserId = current.userId;
+        const sessionGeneration = current.sessionGeneration + (prevUserId === userId ? 0 : 1);
+        const persistenceRecovery = prevUserId === userId ? current.persistenceRecovery : null;
         const isRealUser = (id: string | null) => !!id && !id.startsWith('local_guest');
         // Si otra cuenta real inicia sesión en este dispositivo, no mezclamos sus datos.
         if (isRealUser(prevUserId) && isRealUser(userId) && prevUserId !== userId) {
@@ -305,6 +314,7 @@ export const useAppStore = create<AppState>()(
           set({
             token,
             userId,
+            sessionGeneration,
             sessionExpired: false,
             tasks: {},
             lists: INITIAL_LISTS,
@@ -312,12 +322,13 @@ export const useAppStore = create<AppState>()(
             listSections: [],
             tombstones: { lists: [], cycles: [], tasks: [] },
             _preferences_dirty: false,
+            persistenceRecovery,
           });
           return;
         }
-        set({ token, userId, sessionExpired: false });
+        set({ token, userId, sessionGeneration, sessionExpired: false, persistenceRecovery });
       },
-      expireSession: () => set({ token: null, sessionExpired: true }),
+      expireSession: () => set({ token: null, sessionGeneration: get().sessionGeneration + 1, sessionExpired: true }),
       logout: () => {
         // Clear sync token from localStorage before wiping state
         const currentUserId = useAppStore.getState().userId;
@@ -328,6 +339,7 @@ export const useAppStore = create<AppState>()(
         set({
           token: null,
           userId: null,
+          sessionGeneration: get().sessionGeneration + 1,
           tasks: {},
           lists: INITIAL_LISTS,
           cycles: INITIAL_CYCLES,
@@ -335,9 +347,11 @@ export const useAppStore = create<AppState>()(
           tombstones: { lists: [], cycles: [], tasks: [] },
           sessionExpired: false,
           _preferences_dirty: false,
+          persistenceRecovery: null,
         });
       },
       hasHydrated: false,
+      persistenceRecovery: null,
       setHasHydrated: (val) => set({ hasHydrated: val }),
 
       toggleGlobalCycles: () => set((state: AppState) => ({ globalCyclesEnabled: !state.globalCyclesEnabled })),
@@ -499,12 +513,14 @@ export const useAppStore = create<AppState>()(
 
         const newTasks = { ...state.tasks };
         let newCycleVisibility = { ...state.cycleVisibility };
+        const dedupIndex = new TaskDuplicateIndex(newTasks);
 
         tasksToCreate.forEach(payload => {
           // Skip if an identical task already exists (dedup guard)
-          if (findDuplicateTask(payload, newTasks)) return;
+          if (dedupIndex.findDuplicate(payload)) return;
           const newTask = TaskRepository.create(payload);
           newTasks[newTask.id] = newTask;
+          dedupIndex.addTask(newTask);
           if (newTask.cycle_id && newCycleVisibility[newTask.cycle_id] === undefined) {
             newCycleVisibility[newTask.cycle_id] = true;
           }
@@ -579,10 +595,10 @@ export const useAppStore = create<AppState>()(
                 }
                 if (cycleId === 'cycle_week' || cycleId === 'week') {
                   const startOfWeek = getStartOfWeek(ref);
-                  const endOfWeek = new Date(startOfWeek.getTime() + 7 * 86400000 - 1);
+                  const startOfNextWeek = getStartOfNextWeek(ref);
                   return hist.findIndex(ts => {
                     const time = typeof ts === 'number' ? ts : new Date(ts).getTime();
-                    return time >= startOfWeek.getTime() && time <= endOfWeek.getTime();
+                    return time >= startOfWeek.getTime() && time < startOfNextWeek.getTime();
                   });
                 }
                 if (cycleId === 'cycle_month' || cycleId === 'month') {
@@ -1631,20 +1647,31 @@ export const useAppStore = create<AppState>()(
       },
 
       importData: (jsonData: string) => {
-        try {
-          const parsed = JSON.parse(jsonData);
-          if (parsed.tasks && parsed.cycles) {
-            set({ 
-              tasks: parsed.tasks, 
-              cycles: parsed.cycles,
-              lists: parsed.lists || INITIAL_LISTS,
-              listSections: parsed.listSections || [],
-              smartListVisibility: parsed.smartListVisibility || get().smartListVisibility
-            });
+        const parsed: unknown = JSON.parse(jsonData);
+        const validated = validateJsonImport(parsed);
+        const backup = Array.isArray(parsed) ? { tasks: parsed } : parsed as Record<string, unknown>;
+        const has = (key: string) => Object.hasOwn(backup, key);
+        let smartListVisibility = get().smartListVisibility;
+        if (has('smartListVisibility')) {
+          const candidate = backup.smartListVisibility;
+          if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate) ||
+              Object.values(candidate).some((value) => typeof value !== 'boolean')) {
+            throw new Error('Visibilidad de listas inteligentes inválida.');
           }
-        } catch (e) {
-          console.error("Failed to import data", e);
+          smartListVisibility = candidate as Record<string, boolean>;
         }
+
+        const current = get();
+        const tasks = has('tasks')
+          ? Object.fromEntries(validated.tasks.map((task) => [task.id, task]))
+          : current.tasks;
+        set({
+          tasks,
+          cycles: has('cycles') ? validated.cycles : current.cycles,
+          lists: has('lists') ? validated.lists : INITIAL_LISTS,
+          listSections: has('listSections') ? validated.listSections : [],
+          smartListVisibility,
+        });
       },
 
       parsePlainTextTasks: (text: string) => {
@@ -1874,19 +1901,31 @@ export const useAppStore = create<AppState>()(
       name: 'reminders-storage',
       storage: createJSONStorage(() => idbStorage),
       version: 9,
-      onRehydrateStorage: () => (state) => {
+      onRehydrateStorage: () => (state, error) => {
+        if (error) return;
         state?.setHasHydrated(true);
+        void completePrimaryHydration();
       },
       partialize: (state) => {
         const rest = { ...state };
         delete (rest as Partial<AppState>).hasHydrated;
+        delete (rest as Partial<AppState>).sessionGeneration;
         return rest;
       },
       merge: (persistedState: any, currentState: any) => {
-        const rawLists = persistedState?.lists || currentState.lists || [];
-        const cleanLists = rawLists.filter((l: any) => !l.id?.startsWith('user_preferences_'));
+        const candidateRecovery = getPersistenceRecovery() || persistedState?.persistenceRecovery || currentState.persistenceRecovery || null;
+        const persistedUserId = typeof persistedState?.userId === 'string' ? persistedState.userId : null;
+        const activeUserId = typeof currentState.userId === 'string' ? currentState.userId : null;
+        const recovery = candidateRecovery && (candidateRecovery.accountUserId ?? null) === persistedUserId &&
+          (!activeUserId || activeUserId === persistedUserId)
+          ? candidateRecovery
+          : null;
+        const rawListsValue = persistedState?.lists || currentState.lists || [];
+        const rawLists = Array.isArray(rawListsValue) ? rawListsValue : [];
+        const cleanLists = rawLists.filter((l: any) => l && typeof l.id === 'string' && isPersistedRecordSafe('lists', l.id, l) && !l.id.startsWith('user_preferences_'));
         const uniqueLists: any[] = Array.from(new Map(cleanLists.map((l: any) => [l.id, l])).values());
-        const rawCycles = persistedState?.cycles || currentState.cycles || [];
+        const rawCyclesValue = persistedState?.cycles || currentState.cycles || [];
+        const rawCycles = Array.isArray(rawCyclesValue) ? rawCyclesValue : [];
         const canonicalCoreMap = new Map<string, any>();
         INITIAL_CYCLES.forEach(c => canonicalCoreMap.set(c.id, { ...c }));
 
@@ -1894,7 +1933,7 @@ export const useAppStore = create<AppState>()(
         const validCustomCycles: any[] = [];
 
         rawCycles.forEach((c: any) => {
-          if (!c || !c.id || c.deleted_at) return;
+          if (!c || typeof c.id !== 'string' || !isPersistedRecordSafe('cycles', c.id, c) || c.deleted_at) return;
           const norm = (c.name || '').trim().toLowerCase();
           const days = Number(c.daysValue);
 
@@ -1933,11 +1972,12 @@ export const useAppStore = create<AppState>()(
           canonicalCoreMap.get('cycle_year'),
           ...validCustomCycles
         ];
-        const rawSections = persistedState?.listSections || currentState.listSections || [];
+        const rawSectionsValue = persistedState?.listSections || currentState.listSections || [];
+        const rawSections = Array.isArray(rawSectionsValue) ? rawSectionsValue : [];
         const uniqueSections: any[] = Array.from(
           new Map(
             rawSections
-              .filter((s: any) => s && s.id)
+              .filter((s: any) => s && typeof s.id === 'string' && isPersistedRecordSafe('listSections', s.id, s))
               .map((s: any) => [
                 s.id,
                 {
@@ -1977,9 +2017,16 @@ export const useAppStore = create<AppState>()(
         const resolvedTheme = userExplicitTheme === 'dark' ? 'dark' : userExplicitTheme === 'light' ? 'light' : (systemPrefersDark ? 'dark' : 'light');
 
         // Cargar tareas locales/persistidas sin auto-eliminación
-        const cleanTasks: Record<string, TaskItem> = {
-          ...((persistedState?.tasks || currentState.tasks || {}) as Record<string, TaskItem>)
-        };
+        const rawTasks = persistedState?.tasks || currentState.tasks || {};
+        const cleanTasks: Record<string, TaskItem> = {};
+        if (rawTasks && typeof rawTasks === 'object' && !Array.isArray(rawTasks)) {
+          Object.entries(rawTasks as Record<string, unknown>).forEach(([id, value]) => {
+            if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+            const task = value as TaskItem;
+            if (!isPersistedRecordSafe('tasks', id, task)) return;
+            cleanTasks[id] = task;
+          });
+        }
 
         if (Object.keys(remappedCycleIds).length > 0) {
           for (const [tId, t] of Object.entries(cleanTasks)) {
@@ -1996,6 +2043,8 @@ export const useAppStore = create<AppState>()(
         return {
           ...currentState,
           ...persistedState,
+          sessionGeneration: currentState.sessionGeneration,
+          persistenceRecovery: recovery,
           tasks: sanitizeTaskHierarchy(cleanTasks),
           globalCyclesEnabled: true,
           _preferences_dirty: false,

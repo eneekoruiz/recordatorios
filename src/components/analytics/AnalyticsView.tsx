@@ -227,7 +227,7 @@ export function AnalyticsView({ onBack }: AnalyticsViewProps) {
                 style={{
                   fontSize: '0.80rem',
                   fontWeight: 700,
-                  color: isComplete ? '#34c759' : item.color,
+                  color: 'var(--text-primary)',
                   background: isComplete
                     ? 'color-mix(in srgb, #34c759 12%, transparent)'
                     : `color-mix(in srgb, ${item.color} 10%, transparent)`,
@@ -271,7 +271,7 @@ export function AnalyticsView({ onBack }: AnalyticsViewProps) {
               gap: 5,
               fontSize: '0.72rem',
               fontWeight: 650,
-              color: '#ff9500',
+              color: 'var(--accent-orange, #c95100)',
               background: 'color-mix(in srgb, #ff9500 12%, transparent)',
               border: '0.5px solid color-mix(in srgb, #ff9500 24%, transparent)',
               padding: '2px 8px',
@@ -291,7 +291,7 @@ export function AnalyticsView({ onBack }: AnalyticsViewProps) {
               gap: 5,
               fontSize: '0.72rem',
               fontWeight: 650,
-              color: '#af52de',
+              color: 'var(--accent-purple, #7928ca)',
               background: 'color-mix(in srgb, #af52de 12%, transparent)',
               border: '0.5px solid color-mix(in srgb, #af52de 24%, transparent)',
               padding: '2px 8px',
@@ -458,7 +458,7 @@ export function AnalyticsView({ onBack }: AnalyticsViewProps) {
               padding: '7px 14px',
               borderRadius: 20,
               background: 'color-mix(in srgb, var(--accent-purple, #af52de) 12%, transparent)',
-              color: 'var(--accent-purple, #af52de)',
+              color: 'var(--text-primary)',
               border: '0.5px solid color-mix(in srgb, var(--accent-purple, #af52de) 28%, transparent)',
               fontSize: '0.84rem',
               fontWeight: 650,
@@ -658,7 +658,7 @@ export function AnalyticsView({ onBack }: AnalyticsViewProps) {
           </div>
           <div
             className="stat-card-value"
-            style={{ color: cyclesBreakdown.allRoutinesRate !== null && cyclesBreakdown.allRoutinesRate >= 70 ? '#af52de' : undefined }}
+            style={{ color: cyclesBreakdown.allRoutinesRate !== null && cyclesBreakdown.allRoutinesRate >= 70 ? 'var(--accent-purple)' : undefined }}
           >
             {cyclesBreakdown.allRoutinesRate !== null ? `${cyclesBreakdown.allRoutinesRate}%` : '—'}
           </div>
@@ -1052,7 +1052,7 @@ export function AnalyticsView({ onBack }: AnalyticsViewProps) {
                       height: 38,
                       borderRadius: 11,
                       background: 'color-mix(in srgb, #ff9500 14%, transparent)',
-                      color: '#ff9500',
+                      color: 'var(--accent-orange, #c95100)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',

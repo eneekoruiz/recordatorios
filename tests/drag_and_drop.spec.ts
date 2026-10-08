@@ -1,22 +1,8 @@
 import { test, expect } from '@playwright/test';
+import { bootApp } from "./support/bootApp";
 
 async function ensureAppUnlocked(page: any) {
-  await page.goto('/');
-  await page.waitForLoadState('domcontentloaded');
-  await page.evaluate(() => {
-    (window as any).__E2E__ = true;
-    sessionStorage.setItem('__E2E__', 'true');
-    sessionStorage.setItem('daily_greeting_seen_session', 'true');
-    localStorage.setItem('daily_greeting_dismissed_day', new Date().toDateString());
-    (window as any).useAppStore?.getState()?.setToken('local_offline_token', 'local_guest_e2e');
-  });
-  const guestBtn = page.locator('button:has-text("Usar sin cuenta")').first();
-  try {
-    await guestBtn.click({ timeout: 1500 });
-  } catch {
-    // Ya desbloqueada
-  }
-  await page.waitForTimeout(400);
+    await bootApp(page);
 }
 
 async function seedTasks(page: any) {

@@ -1,9 +1,18 @@
 const https = require('https');
+const http = require('http');
 
 const targetUrl = process.env.DEPLOY_URL || 'http://localhost:3001/api/health';
 console.log(`🔍 Checking deployment health at: ${targetUrl}`);
 
-const req = https.get(targetUrl, { timeout: 15000 }, (res) => {
+let url;
+try { url = new URL(targetUrl); }
+catch { console.error('Health check FAILED: DEPLOY_URL no es una URL válida.'); process.exit(1); }
+if (!['http:', 'https:'].includes(url.protocol)) {
+  console.error('Health check FAILED: usa una URL HTTP o HTTPS.');
+  process.exit(1);
+}
+const client = url.protocol === 'https:' ? https : http;
+const req = client.get(url, { timeout: 15000 }, (res) => {
   let data = '';
   res.on('data', chunk => data += chunk);
   res.on('end', () => {

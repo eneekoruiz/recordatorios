@@ -1,21 +1,18 @@
-import type { AppContext } from '../context.js';
-import express from 'express';
-import crypto from 'node:crypto';
-import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import express from 'express';
+import jwt from 'jsonwebtoken';
+import { resetLinkBase } from '../app.js';
+import type { AppContext } from '../context.js';
 import { isMailConfigured, sendPasswordResetEmail, sendSecurityEmail } from '../mail.js';
-import { getSecurity, withSecurity, publicPreferences, stripSecurity, checkSecondFactor, noteDevice, deviceId, newTotpSecret, otpauthUrl, encryptSecret, decryptSecret, verifyTotp, generateRecoveryCodes, hashRecoveryCode } from '../security.js';
-import { planNotifications, safeTimeZone } from '../notifications.js';
-import { scopedId, clientIdOf, isValidClientId, shouldApplyIncoming, parseDeletedAt, toClientPayload, sanitizePayload } from '../syncUtils.js';
-import { getJwtSecret, resetLinkBase, isAllowedPushEndpoint, MIN_PASSWORD_LENGTH } from '../app.js';
+import { checkSecondFactor, consumeSecondFactor, decryptSecret, deviceId, encryptSecret, generateRecoveryCodes, getSecurity, hashRecoveryCode, newTotpSecret, noteDevice, otpauthUrl, persistDevice, updatePreferencesIfCurrent, updateSecurity, verifyTotp } from '../security.js';
 const RESET_TTL = '30m';
 
 export function createAuthRouter(context: AppContext) {
   const router = express.Router();
   const { 
-    prisma, pushSender, clients, hit, requireSecret, sessionResponse, authenticateToken, optionalAuthenticateToken, bumpedSessions, 
+    prisma, hit, requireSecret, sessionResponse, authenticateToken, bumpedSessions, 
     hashPassword, validatePassword, clientIp, 
-    apiLimiter, publicLimiter, authRateLimit, authIpLimiter, loginLimiter, changePasswordLimiter, forgotLimiter, createRateLimiter, safeEqual, emailRegex, normalizeEmail, MAX_ITEMS_PER_COLLECTION, CRON_CONCURRENCY, isProduction, bcryptCost
+    apiLimiter, authRateLimit, authIpLimiter, loginLimiter, changePasswordLimiter, forgotLimiter, createRateLimiter, emailRegex, normalizeEmail, isProduction, bcryptCost
   } = context;
 
   // --- AUTH ---
@@ -60,7 +57,7 @@ export function createAuthRouter(context: AppContext) {
       }
 
       const invalid = () => res.status(401).json({ error: 'Email o contraseña incorrectos.' });
-      const user = await prisma.user.findUnique({ where: { email: cleanEmail } });
+      let user = await prisma.user.findUnique({ where: { email: cleanEmail } });
       if (!user || !user.password) {
         await hashPassword(password); // tiempo constante: no revelar si la cuenta existe
         return invalid();
@@ -71,56 +68,79 @@ export function createAuthRouter(context: AppContext) {
         // Migración silenciosa de contraseñas heredadas en texto plano.
         valid = password === user.password;
         if (valid) {
-          await prisma.user.update({ where: { id: user.id }, data: { password: await hashPassword(password) } });
+          const oldPassword = user.password;
+          const upgraded = await hashPassword(password);
+          const saved = await prisma.user.updateMany({ where: { id: user.id, password: oldPassword }, data: { password: upgraded } });
+          user = saved.count === 1 ? { ...user, password: upgraded } : await prisma.user.findUnique({ where: { id: user.id } });
+          if (!user?.password) valid = false;
+          else valid = user.password.startsWith('$2')
+            ? await bcrypt.compare(password, user.password)
+            : password === user.password;
         }
       } else {
         valid = await bcrypt.compare(password, user.password);
         // Actualización silenciosa al coste actual (solo con la contraseña recién validada).
         if (valid && bcrypt.getRounds(user.password) < bcryptCost()) {
+          const oldPassword = user.password;
           const upgraded = await hashPassword(password);
-          await prisma.user.update({ where: { id: user.id }, data: { password: upgraded } });
-          user.password = upgraded;
+          const saved = await prisma.user.updateMany({ where: { id: user.id, password: oldPassword }, data: { password: upgraded } });
+          user = saved.count === 1 ? { ...user, password: upgraded } : await prisma.user.findUnique({ where: { id: user.id } });
+          if (!user?.password || !user.password.startsWith('$2')) valid = false;
+          else valid = await bcrypt.compare(password, user.password);
         }
       }
       if (!valid) return invalid();
+      if (!user) return invalid();
 
       // Segundo factor (solo se comprueba con la contraseña ya validada: no revela si la cuenta lo tiene).
       let security = getSecurity(user.preferences);
-      let securityChanged = false;
+      let authenticatedTotpSecret: string | null = null;
       if (security.totp?.enabled) {
         const code = typeof req.body?.code === 'string' ? req.body.code.trim() : '';
         if (!code) {
           return res.status(401).json({ error: 'Introduce el código de verificación de tu app.', twoFactorRequired: true });
         }
-        const second = checkSecondFactor(security, code, secret);
-        if (!second.ok) {
+        const second = await consumeSecondFactor(prisma, user, code, secret);
+        if (!second.ok || !second.user) {
           return res.status(401).json({ error: 'El código no es correcto o ha caducado.', twoFactorRequired: true });
         }
         security = second.security;
-        securityChanged = true; // último código usado / código de recuperación consumido
+        authenticatedTotpSecret = security.totp?.secret || null;
+        user = second.user;
+        if (!user) return res.status(401).json({ error: 'Sesión no válida.' });
       }
+      if (!user) return invalid();
 
       // Aviso de inicio de sesión desde un dispositivo nuevo
-      const seen = noteDevice(security, deviceId(req.headers['user-agent']));
-
-      // Si cambió el estado de seguridad (consumo de código de recuperación o replay de TOTP),
-      // la persistencia atómica en BD es OBLIGATORIA antes de emitir cualquier token de sesión.
-      if (securityChanged) {
-        user.preferences = withSecurity(user.preferences, seen.security);
-        await prisma.user.update({ where: { id: user.id }, data: { preferences: user.preferences } });
-      } else if (seen.changed) {
-        // El registro de dispositivo habitual es de mejor esfuerzo: nunca bloquea entrar
-        try {
-          user.preferences = withSecurity(user.preferences, seen.security);
-          await prisma.user.update({ where: { id: user.id }, data: { preferences: user.preferences } });
-        } catch (error: any) {
-          console.error('No se pudo registrar el dispositivo:', error?.message || error);
+      let seen = noteDevice(security, deviceId(req.headers['user-agent']));
+      try {
+        const recorded = await persistDevice(prisma, user.id, deviceId(req.headers['user-agent']));
+        if (recorded?.user) {
+          seen = recorded;
+          user = recorded.user;
         }
+      } catch (error: any) {
+        // El registro de dispositivo es de mejor esfuerzo y nunca bloquea entrar.
+        console.error('No se pudo registrar el dispositivo:', error?.message || error);
       }
+      if (!user) return invalid();
+
+      // persistDevice can overlap a password reset/change. Revalidate against the latest
+      // password and sessionVersion before minting a token, so an old credential cannot
+      // inherit the fresh sessionVersion written by the concurrent password operation.
+      const currentAccount = await prisma.user.findUnique({ where: { id: user.id } });
+      if (!currentAccount?.password) return invalid();
+      const stillAuthenticated = currentAccount.password.startsWith('$2')
+        ? await bcrypt.compare(password, currentAccount.password)
+        : password === currentAccount.password;
+      if (!stillAuthenticated) return invalid();
+      const currentTotp = getSecurity(currentAccount.preferences).totp;
+      if (currentTotp?.enabled && (!authenticatedTotpSecret || currentTotp.secret !== authenticatedTotpSecret)) return invalid();
+      user = currentAccount;
 
       if (seen.isNew) {
         try {
-          sendSecurityEmail(user.email, {
+          sendSecurityEmail(user!.email, {
             subject: 'Nuevo inicio de sesión en Recordatorios',
             heading: 'Has iniciado sesión desde un dispositivo nuevo',
             body: 'Acabamos de detectar un inicio de sesión en tu cuenta desde un navegador o dispositivo que no habíamos visto antes.',
@@ -177,7 +197,7 @@ export function createAuthRouter(context: AppContext) {
         return res.json({ message: genericMessage });
       }
       // Solo desarrollo/test: sin proveedor de email devolvemos el enlace para poder probar el flujo.
-      console.info(`🔑 Enlace de recuperación (dev) para ${user.email}: ${resetUrl}`);
+      console.info('🔑 Enlace de recuperación generado en modo desarrollo.');
       return res.json({ message: genericMessage, devResetUrl: resetUrl });
     } catch (error: any) {
       console.error('Forgot password error:', error);
@@ -199,18 +219,29 @@ export function createAuthRouter(context: AppContext) {
 
       const decoded = jwt.decode(token);
       if (!decoded || typeof decoded !== 'object' || decoded.purpose !== 'reset' || !decoded.sub) return invalidLink();
-      const user = await prisma.user.findUnique({ where: { id: String(decoded.sub) } });
-      if (!user) return invalidLink();
-      try {
-        jwt.verify(token, secret + user.password, { algorithms: ['HS256'] });
-      } catch {
-        return invalidLink();
+      let updated = null;
+      for (let attempt = 0; attempt < 4; attempt++) {
+        const user = await prisma.user.findUnique({ where: { id: String(decoded.sub) } });
+        if (!user) return invalidLink();
+        try {
+          jwt.verify(token, secret + user.password, { algorithms: ['HS256'] });
+        } catch {
+          return invalidLink();
+        }
+        const saved = await updatePreferencesIfCurrent(
+          prisma,
+          user,
+          bumpedSessions(user),
+          { password: user.password },
+          { password: await hashPassword(newPassword) },
+        );
+        if (saved.count === 1) {
+          // updateMany returns a count only; read the committed row for the response.
+          updated = await prisma.user.findUnique({ where: { id: user.id } });
+          break;
+        }
       }
-
-      const updated = await prisma.user.update({
-        where: { id: user.id },
-        data: { password: await hashPassword(newPassword), preferences: bumpedSessions(user) },
-      });
+      if (!updated) return res.status(409).json({ error: 'La cuenta cambió durante la operación. Vuelve a solicitar el enlace.' });
       sendSecurityEmail(updated.email, {
         subject: 'Tu contraseña de Recordatorios ha cambiado',
         heading: 'Tu contraseña se ha restablecido',
@@ -230,16 +261,28 @@ export function createAuthRouter(context: AppContext) {
       const { currentPassword, newPassword } = req.body || {};
       const pwError = validatePassword(newPassword);
       if (pwError) return res.status(400).json({ error: pwError });
-      const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
-      if (!user) return res.status(401).json({ error: 'Sesión no válida.' });
-      const ok = user.password.startsWith('$2')
-        ? await bcrypt.compare(String(currentPassword || ''), user.password)
-        : currentPassword === user.password;
-      if (!ok) return res.status(400).json({ error: 'La contraseña actual no es correcta.' });
-      const updated = await prisma.user.update({
-        where: { id: user.id },
-        data: { password: await hashPassword(newPassword), preferences: bumpedSessions(user) },
-      });
+      let updated = null;
+      for (let attempt = 0; attempt < 4; attempt++) {
+        const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+        if (!user) return res.status(401).json({ error: 'Sesión no válida.' });
+        const ok = user.password.startsWith('$2')
+          ? await bcrypt.compare(String(currentPassword || ''), user.password)
+          : currentPassword === user.password;
+        if (!ok) return res.status(400).json({ error: 'La contraseña actual no es correcta.' });
+        const nextPreferences = bumpedSessions(user);
+        const saved = await updatePreferencesIfCurrent(
+          prisma,
+          user,
+          nextPreferences,
+          { password: user.password },
+          { password: await hashPassword(newPassword) },
+        );
+        if (saved.count === 1) {
+          updated = await prisma.user.findUnique({ where: { id: user.id } });
+          break;
+        }
+      }
+      if (!updated) return res.status(409).json({ error: 'La cuenta cambió durante la operación. Inténtalo de nuevo.' });
       sendSecurityEmail(updated.email, {
         subject: 'Tu contraseña de Recordatorios ha cambiado',
         heading: 'Tu contraseña se ha cambiado',
@@ -262,8 +305,6 @@ export function createAuthRouter(context: AppContext) {
   });
 
   const loadAccount = (userId: string) => prisma.user.findUnique({ where: { id: userId } });
-  const saveSecurity = (user: any, security: any) =>
-    prisma.user.update({ where: { id: user.id }, data: { preferences: withSecurity(user.preferences, security) } });
   const passwordMatches = async (user: any, given: any) =>
     user.password.startsWith('$2') ? bcrypt.compare(String(given || ''), user.password) : given === user.password;
 
@@ -288,11 +329,11 @@ export function createAuthRouter(context: AppContext) {
     const secret = requireSecret(res);
     if (!secret) return;
     try {
-      const user = await loadAccount(req.user!.id);
-      if (!user) return res.status(401).json({ error: 'Sesión no válida.' });
-      const security = getSecurity(user.preferences);
-      const next = { ...security, sessionVersion: (security.sessionVersion || 0) + 1 };
-      const updated = await saveSecurity(user, next);
+      const updated = await updateSecurity(prisma, req.user!.id, (security) => ({
+        ...security,
+        sessionVersion: (security.sessionVersion || 0) + 1,
+      }));
+      if (!updated) return res.status(409).json({ error: 'La seguridad de la cuenta cambió. Inténtalo de nuevo.' });
       sendSecurityEmail(updated.email, {
         subject: 'Se cerró la sesión en todos tus dispositivos',
         heading: 'Sesión cerrada en todos los dispositivos',
@@ -312,10 +353,12 @@ export function createAuthRouter(context: AppContext) {
     try {
       const user = await loadAccount(req.user!.id);
       if (!user) return res.status(401).json({ error: 'Sesión no válida.' });
-      const security = getSecurity(user.preferences);
-      if (security.totp?.enabled) return res.status(409).json({ error: 'La verificación en dos pasos ya está activada.' });
       const totpSecret = newTotpSecret();
-      await saveSecurity(user, { ...security, totpPending: { secret: encryptSecret(totpSecret, secret), at: Date.now() } });
+      const pending = { secret: encryptSecret(totpSecret, secret), at: Date.now() };
+      const updated = await updateSecurity(prisma, user.id, (security) =>
+        security.totp?.enabled ? null : { ...security, totpPending: pending }
+      );
+      if (!updated) return res.status(409).json({ error: 'La verificación en dos pasos ya está activada o la cuenta cambió. Inténtalo de nuevo.' });
       res.json({ secret: totpSecret, otpauthUrl: otpauthUrl(user.email, totpSecret) });
     } catch (error: any) {
       console.error('2FA setup error:', error);
@@ -337,11 +380,16 @@ export function createAuthRouter(context: AppContext) {
       const step = verifyTotp(pendingSecret, req.body?.code);
       if (step === null) return res.status(400).json({ error: 'El código no es correcto. Revisa la hora del móvil e inténtalo de nuevo.' });
       const recoveryCodes = generateRecoveryCodes();
-      const { totpPending: _done, ...rest } = security;
-      await saveSecurity(user, {
-        ...rest,
-        totp: { enabled: true, secret: encryptSecret(pendingSecret, secret), lastStep: step, recovery: recoveryCodes.map(hashRecoveryCode) },
+      const updated = await updateSecurity(prisma, user.id, (latest) => {
+        const currentPending = latest.totpPending;
+        if (latest.totp?.enabled || currentPending?.secret !== pending.secret || currentPending?.at !== pending.at || Date.now() - currentPending.at >= 15 * 60 * 1000) return null;
+        const { totpPending: _done, ...rest } = latest;
+        return {
+          ...rest,
+          totp: { enabled: true, secret: encryptSecret(pendingSecret, secret), lastStep: step, recovery: recoveryCodes.map(hashRecoveryCode) },
+        };
       });
+      if (!updated) return res.status(409).json({ error: 'La configuración de la verificación en dos pasos cambió. Empieza de nuevo.' });
       sendSecurityEmail(user.email, {
         subject: 'Verificación en dos pasos activada',
         heading: 'Verificación en dos pasos activada',
@@ -361,13 +409,17 @@ export function createAuthRouter(context: AppContext) {
     try {
       const user = await loadAccount(req.user!.id);
       if (!user) return res.status(401).json({ error: 'Sesión no válida.' });
-      const security = getSecurity(user.preferences);
-      if (!security.totp?.enabled) return res.status(400).json({ error: 'La verificación en dos pasos no está activada.' });
       if (!(await passwordMatches(user, req.body?.password))) return res.status(400).json({ error: 'La contraseña no es correcta.' });
-      const second = checkSecondFactor(security, String(req.body?.code || ''), secret);
-      if (!second.ok) return res.status(400).json({ error: 'El código no es correcto o ha caducado.' });
-      const { totp: _off, totpPending: _pending, ...rest } = second.security;
-      await saveSecurity(user, rest);
+      let factorAccepted = false;
+      const updated = await updateSecurity(prisma, user.id, (latest) => {
+        if (!latest.totp?.enabled) return null;
+        const second = checkSecondFactor(latest, String(req.body?.code || ''), secret);
+        if (!second.ok) return null;
+        factorAccepted = true;
+        const { totp: _off, totpPending: _pending, ...rest } = second.security;
+        return rest;
+      });
+      if (!updated) return res.status(factorAccepted ? 409 : 400).json({ error: factorAccepted ? 'La seguridad de la cuenta cambió. Inténtalo de nuevo.' : 'El código no es correcto o ha caducado.' });
       sendSecurityEmail(user.email, {
         subject: 'Verificación en dos pasos desactivada',
         heading: 'Verificación en dos pasos desactivada',

@@ -70,16 +70,32 @@ function summarizeBatchForHistory(batch?: ProposedBatch): string {
 }
 
 export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantModalProps) {
+  const userId = useAppStore(state => state.userId);
+  const sessionGeneration = useAppStore(state => state.sessionGeneration);
+  const accountIdentity = `${userId ?? 'anonymous'}:${sessionGeneration}`;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [config, setConfig] = useState<AIConfig>(() => AIService.getConfig());
+  const [config, setConfig] = useState<AIConfig>(() => AIService.getConfig(userId));
+  const [configIdentity, setConfigIdentity] = useState(accountIdentity);
   const [tempApiKey, setTempApiKey] = useState(config.apiKey || '');
   const [tempProvider, setTempProvider] = useState(config.provider);
   const [testingConnection, setTestingConnection] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [settingsSaveError, setSettingsSaveError] = useState<string | null>(null);
+  // Reset secret-bearing settings before a render can expose them under another account.
+  if (configIdentity !== accountIdentity) {
+    const nextConfig = AIService.getConfig(userId);
+    setConfigIdentity(accountIdentity);
+    setConfig(nextConfig);
+    setTempApiKey(nextConfig.apiKey || '');
+    setTempProvider(nextConfig.provider);
+    setTestingConnection(false);
+    setTestResult(null);
+    setSettingsSaveError(null);
+  }
   // El dictado depende del navegador: se sabe desde el primer render.
   const [speechSupported] = useState(() =>
     typeof window !== 'undefined' && Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
@@ -647,6 +663,14 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
   };
 
   const handleTestConnection = async () => {
+    const expectedUserId = userId;
+    const expectedGeneration = sessionGeneration;
+    const expectedIdentity = accountIdentity;
+    const isCurrentAccount = () => {
+      const current = useAppStore.getState();
+      return current.userId === expectedUserId && current.sessionGeneration === expectedGeneration
+        && `${current.userId ?? 'anonymous'}:${current.sessionGeneration}` === expectedIdentity;
+    };
     if (!tempApiKey.trim()) {
       setTestResult({ ok: false, message: 'Introduce una clave de API primero' });
       return;
@@ -655,19 +679,23 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
     setTestResult(null);
     try {
       const res = await AIService.testGeminiConnection(tempApiKey);
+      if (!isCurrentAccount()) return;
       if (res.ok) {
         setTestResult({ ok: true, message: `Conexión exitosa con ${res.model || 'Gemini'}` });
       } else {
         setTestResult({ ok: false, message: res.error || 'Error de conexión' });
       }
     } catch (e: any) {
+      if (!isCurrentAccount()) return;
       setTestResult({ ok: false, message: e.message || 'Error de red' });
     } finally {
-      setTestingConnection(false);
+      if (isCurrentAccount()) setTestingConnection(false);
     }
   };
 
   const handleSaveSettings = () => {
+    const current = useAppStore.getState();
+    if (current.userId !== userId || current.sessionGeneration !== sessionGeneration) return;
     // Antes se podía guardar "Gemini"/"OpenAI" sin clave: cada mensaje lo respondía el
     // extractor local en silencio, mientras la cabecera del chat seguía diciendo "Google
     // Gemini LLM" — mejor avisar aquí, al guardar, que descubrirlo mensaje a mensaje.
@@ -681,8 +709,12 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
       provider: tempProvider,
       apiKey: tempApiKey.trim() || undefined
     };
+    if (!AIService.saveConfig(updated, userId)) {
+      setSettingsSaveError('No se pudo guardar la configuración. Revisa el almacenamiento e inténtalo de nuevo.');
+      return;
+    }
+    setSettingsSaveError(null);
     setConfig(updated);
-    AIService.saveConfig(updated);
     setShowSettings(false);
     HapticService.impact('medium');
   };
@@ -836,7 +868,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                       role="radio"
                       aria-checked={tempProvider === p}
                       className={tempProvider === p ? 'is-selected' : ''}
-                      onClick={() => setTempProvider(p)}
+                      onClick={() => { setTempProvider(p); setSettingsSaveError(null); }}
                     >
                       {p === 'auto' ? 'Este dispositivo' : p === 'gemini' ? 'Gemini' : 'OpenAI'}
                     </button>
@@ -889,6 +921,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                       onChange={e => {
                         const val = e.target.value;
                         setTempApiKey(val);
+                        setSettingsSaveError(null);
                         setTestResult(null);
                         if (val.startsWith('AIza') && tempProvider !== 'gemini') {
                           setTempProvider('gemini');
@@ -929,6 +962,11 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                   </div>
                 )}
 
+                {settingsSaveError && (
+                  <div role="alert" style={{ fontSize: '0.78rem', color: 'var(--accent-red, #c62828)' }}>
+                    {settingsSaveError}
+                  </div>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
                   <button
                     onClick={() => setShowSettings(false)}

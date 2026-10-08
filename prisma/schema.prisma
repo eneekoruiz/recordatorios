@@ -106,3 +106,12 @@ model RateLimit {
 
   @@index([resetAt])
 }
+
+// Lease distribuido para evitar que dos instancias serverless envíen el mismo cron.
+model CronLease {
+  key       String   @id
+  owner     String
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}

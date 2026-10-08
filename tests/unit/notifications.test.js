@@ -110,6 +110,29 @@ describe('alertas con hora', () => {
     expect(r.messages[0].body).toBe('Pan, Leche, Huevos y 1 más');
   });
 
+  it('cuenta una tarea una sola vez si varias de sus alertas coinciden en la misma pasada', () => {
+    const task = {
+      id: 'two-alerts',
+      title: 'Llamar al médico',
+      dueDate: '2026-09-27T08:00:00Z',
+      alerts: [
+        { id: 'one-hour', type: 'before', offsetMinutes: 60 },
+        { id: '55-minutes', type: 'before', offsetMinutes: 55 },
+      ],
+    };
+    const r = planNotifications({
+      tasks: [task],
+      prefs: { timeZone: TZ },
+      now: new Date('2026-09-27T07:06:00Z'),
+      since: new Date('2026-09-27T06:55:00Z'),
+      sentLog: { digest: '2026-09-27' },
+    });
+    expect(r.messages).toHaveLength(1);
+    expect(r.messages[0].title).toBe('Recordatorio');
+    expect(r.messages[0].body).toBe('Llamar al médico');
+    expect(Object.keys(r.messages[0].deliveryKeys)).toHaveLength(2);
+  });
+
   it('no dispara alertas antiguas en tromba tras mucho tiempo sin ejecutarse', () => {
     const task = { id: 't', title: 'Viejo', dueDate: '2026-09-20T08:00:00Z', alerts: [{ id: '1', type: 'at_time', time: '10:00' }] };
     const r = planNotifications({ tasks: [task], prefs: { timeZone: TZ }, now: saturday905, since: new Date('2026-09-01T00:00:00Z'), sentLog: { digest: '2026-09-26' } });

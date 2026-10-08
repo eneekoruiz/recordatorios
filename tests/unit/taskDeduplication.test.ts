@@ -6,7 +6,8 @@ import {
   isKnownRedundantTask,
   areSectionsEquivalent,
   findDuplicateTask,
-  deduplicateTaskList
+  deduplicateTaskList,
+  TaskDuplicateIndex
 } from '../../src/utils/taskDeduplication';
 import type { TaskItem } from '../../src/models/Task';
 
@@ -219,6 +220,131 @@ describe('taskDeduplication', () => {
       expect(isKnownRedundantTask('Lavarse los dientes 3 veces al dia')).toBe(false);
       expect(isKnownRedundantTask('Ducha fría y aseo')).toBe(false);
       expect(isKnownRedundantTask('Banda facial reafirmante')).toBe(false);
+    });
+  });
+
+  describe('TaskDuplicateIndex', () => {
+    const existingTasks: Record<string, TaskItem> = {
+      t1: {
+        id: 't1',
+        title: 'Hacer la cama / acomodar la cama',
+        categoryId: 'limpieza',
+        sectionId: 'sec_limp_diaria_hab',
+        status: 'pending',
+        version: 4
+      } as TaskItem,
+      t2: {
+        id: 't2',
+        title: 'Ventilar la habitación',
+        categoryId: 'limpieza',
+        sectionId: 'sec_limp_diaria_hab',
+        status: 'pending',
+        version: 1
+      } as TaskItem,
+      t3_deleted: {
+        id: 't3_deleted',
+        title: 'Barrer cocina',
+        categoryId: 'limpieza',
+        sectionId: 'sec_limp_diaria_cocina',
+        status: 'pending',
+        deleted_at: '2026-09-24T10:00:00Z'
+      } as TaskItem
+    };
+
+    it('reproduce con exactitud la detección de duplicados de findDuplicateTask', () => {
+      const index = new TaskDuplicateIndex(existingTasks);
+
+      // Duplicado con punto
+      const dupPunto = index.findDuplicate({
+        title: 'Hacer la cama / acomodar la cama.',
+        categoryId: 'limpieza',
+        sectionId: 'sec_limp_diaria_hab'
+      });
+      expect(dupPunto?.id).toBe('t1');
+
+      // Duplicado con ciclo y mayúsculas
+      const dupCiclo = index.findDuplicate({
+        title: '[D] HACER LA CAMA / ACOMODAR LA CAMA',
+        categoryId: 'limpieza',
+        sectionId: 'sec_limp_diaria_hab'
+      });
+      expect(dupCiclo?.id).toBe('t1');
+
+      // Duplicado con sección aliada
+      const dupAlias = index.findDuplicate({
+        title: 'Hacer la cama / acomodar la cama',
+        categoryId: 'limpieza',
+        sectionId: 'sec_limpieza_diaria_hab'
+      });
+      expect(dupAlias?.id).toBe('t1');
+
+      // Tarea borrada ignorada
+      const dupBorrada = index.findDuplicate({
+        title: 'Barrer cocina',
+        categoryId: 'limpieza',
+        sectionId: 'sec_limp_diaria_cocina'
+      });
+      expect(dupBorrada).toBeNull();
+    });
+
+    it('admite adiciones incrementales con addTask para deduplicar lotes en vuelo', () => {
+      const index = new TaskDuplicateIndex();
+      expect(index.findDuplicate({ title: 'Nueva tarea', categoryId: 'cat1' })).toBeNull();
+
+      index.addTask({
+        id: 't_nueva',
+        title: 'Nueva tarea',
+        categoryId: 'cat1',
+        status: 'pending'
+      } as TaskItem);
+
+      const found = index.findDuplicate({ title: 'Nueva tarea.', categoryId: 'cat1' });
+      expect(found?.id).toBe('t_nueva');
+    });
+
+    it('procesa 1000 tareas en milisegundos con complejidad O(N)', () => {
+      const initialTasks: Record<string, TaskItem> = {};
+      for (let i = 0; i < 500; i++) {
+        const num = String(i).padStart(4, '0');
+        initialTasks[`init_${i}`] = {
+          id: `init_${i}`,
+          title: `Comprar articulo alpha código ${num}`,
+          categoryId: `cat_${i % 5}`,
+          sectionId: `sec_${i % 10}`,
+          status: 'pending'
+        } as TaskItem;
+      }
+
+      const start = performance.now();
+      const index = new TaskDuplicateIndex(initialTasks);
+
+      let duplicatesCount = 0;
+      for (let i = 0; i < 500; i++) {
+        const num = String(i).padStart(4, '0');
+        // 250 duplicados, 250 nuevos
+        const isDup = i % 2 === 0;
+        const candidate = {
+          title: isDup ? `Comprar articulo alpha código ${num}.` : `Revisar documento omega código ${num}`,
+          categoryId: `cat_${i % 5}`,
+          sectionId: `sec_${i % 10}`
+        };
+        const dup = index.findDuplicate(candidate);
+        if (dup) {
+          duplicatesCount++;
+        } else {
+          index.addTask({
+            id: `fresh_${i}`,
+            title: candidate.title,
+            categoryId: candidate.categoryId,
+            sectionId: candidate.sectionId,
+            status: 'pending'
+          } as TaskItem);
+        }
+      }
+      const elapsed = performance.now() - start;
+
+      expect(duplicatesCount).toBe(250);
+      expect(elapsed).toBeLessThan(150); // Menos de 150ms frente a 12s en O(N^2)
     });
   });
 });

@@ -132,6 +132,16 @@ export function isKnownRedundantTask(title?: string | null): boolean {
   return KNOWN_REDUNDANT_TITLES.has(norm);
 }
 
+export function normalizeSectionId(s?: string | null): string {
+  if (!s) return '';
+  return s
+    .replace(/^sec_limpieza_/, 'sec_limp_')
+    .replace(/_diarias$/, '_diaria')
+    .replace(/_semanales$/, '_semanal')
+    .replace(/_mensuales$/, '_mensual')
+    .replace(/_anuales$/, '_anual');
+}
+
 /**
  * Checks if two section IDs are equivalent, taking into account
  * legacy alias naming conventions (e.g. sec_limpieza_ vs sec_limp_, plural vs singular).
@@ -140,15 +150,7 @@ export function areSectionsEquivalent(secA?: string | null, secB?: string | null
   if (!secA && !secB) return true;
   if (!secA || !secB) return false;
   if (secA === secB) return true;
-
-  const normalizeSec = (s: string) => s
-    .replace(/^sec_limpieza_/, 'sec_limp_')
-    .replace(/_diarias$/, '_diaria')
-    .replace(/_semanales$/, '_semanal')
-    .replace(/_mensuales$/, '_mensual')
-    .replace(/_anuales$/, '_anual');
-
-  return normalizeSec(secA) === normalizeSec(secB);
+  return normalizeSectionId(secA) === normalizeSectionId(secB);
 }
 
 /**
@@ -157,6 +159,103 @@ export function areSectionsEquivalent(secA?: string | null, secB?: string | null
  */
 function isTitleDuplicate(newNorm: string, existingNorm: string): boolean {
   return isSemanticDuplicate(newNorm, existingNorm);
+}
+
+interface ScopeBucket {
+  exactNorms: Map<string, TaskItem>;
+  semanticKeys: Map<string, TaskItem>;
+  longKeys: Array<{ semKey: string; task: TaskItem }>;
+}
+
+/**
+ * High-performance index for batch task deduplication.
+ * Partitions tasks by (categoryId, normalizedSectionId) and indexes
+ * exact normalized titles and semantic keys for O(1) lookups instead
+ * of quadratic O(N * M) full collection scans.
+ */
+export class TaskDuplicateIndex {
+  private buckets = new Map<string, ScopeBucket>();
+
+  constructor(initialTasks?: Record<string, TaskItem> | TaskItem[]) {
+    if (initialTasks) {
+      const items = Array.isArray(initialTasks) ? initialTasks : Object.values(initialTasks);
+      for (const item of items) {
+        this.addTask(item);
+      }
+    }
+  }
+
+  private getScopeKey(cat?: string | null, sec?: string | null): string {
+    return `${cat || ''}:::${normalizeSectionId(sec)}`;
+  }
+
+  public addTask(task: TaskItem): void {
+    if (task.deleted_at) return;
+    const norm = normalizeTitle(task.title || '');
+    if (!norm) return;
+
+    const cat = task.categoryId || (task as any).category_id || null;
+    const sec = task.sectionId || (task as any).section_id || null;
+    const scopeKey = this.getScopeKey(cat, sec);
+
+    let bucket = this.buckets.get(scopeKey);
+    if (!bucket) {
+      bucket = {
+        exactNorms: new Map(),
+        semanticKeys: new Map(),
+        longKeys: [],
+      };
+      this.buckets.set(scopeKey, bucket);
+    }
+
+    if (!bucket.exactNorms.has(norm)) {
+      bucket.exactNorms.set(norm, task);
+    }
+
+    const semKey = semanticKey(task.title || '');
+    if (semKey) {
+      if (!bucket.semanticKeys.has(semKey)) {
+        bucket.semanticKeys.set(semKey, task);
+      }
+      if (semKey.length >= 8) {
+        bucket.longKeys.push({ semKey, task });
+      }
+    }
+  }
+
+  public findDuplicate(candidate: Partial<TaskItem>): TaskItem | null {
+    const candTitle = normalizeTitle(candidate.title || '');
+    if (!candTitle) return null;
+
+    const candCat = candidate.categoryId || (candidate as any).category_id || null;
+    const candSec = candidate.sectionId || (candidate as any).section_id || null;
+    const scopeKey = this.getScopeKey(candCat, candSec);
+
+    const bucket = this.buckets.get(scopeKey);
+    if (!bucket) return null;
+
+    // 1. Exact normalized match: O(1)
+    const exact = bucket.exactNorms.get(candTitle);
+    if (exact) return exact;
+
+    // 2. Exact semantic key match: O(1)
+    const candSemKey = semanticKey(candidate.title || '');
+    if (candSemKey) {
+      const semMatch = bucket.semanticKeys.get(candSemKey);
+      if (semMatch) return semMatch;
+
+      // 3. Substring near-duplicate check for keys >= 8 chars
+      if (candSemKey.length >= 8) {
+        for (const entry of bucket.longKeys) {
+          if (candSemKey.includes(entry.semKey) || entry.semKey.includes(candSemKey)) {
+            return entry.task;
+          }
+        }
+      }
+    }
+
+    return null;
+  }
 }
 
 /**

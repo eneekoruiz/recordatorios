@@ -2650,3 +2650,51 @@ html.dark .apple-duration-chip:hover {
 }
 
 
+.stats-page .stat-card-label,
+.stats-page .stat-card-unit,
+.stats-page .stat-card-hint {
+  color: #59595f;
+}
+[data-theme="dark"] .stats-page .stat-card-label,
+[data-theme="dark"] .stats-page .stat-card-unit,
+[data-theme="dark"] .stats-page .stat-card-hint,
+html.dark .stats-page .stat-card-label,
+html.dark .stats-page .stat-card-unit,
+html.dark .stats-page .stat-card-hint,
+body.dark .stats-page .stat-card-label,
+body.dark .stats-page .stat-card-unit,
+body.dark .stats-page .stat-card-hint {
+  color: #b8b8bd;
+}
+
+.task-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 16px;
+  color: var(--text-primary);
+  font-size: 0.86rem;
+}
+.task-pagination button {
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 9px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+.task-pagination button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.task-pagination button:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+@media (max-width: 480px) {
+  .task-pagination { gap: 8px; font-size: 0.78rem; }
+  .task-pagination button { min-height: 40px; padding: 6px 10px; }
+}

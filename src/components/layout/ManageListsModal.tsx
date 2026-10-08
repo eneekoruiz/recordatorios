@@ -47,12 +47,14 @@ export const ManageListsModal: React.FC<ManageListsModalProps> = ({
   const [filterType, setFilterType] = useState<'all' | 'folders' | 'pinned'>('all');
 
   // Reset selection on open
-  useEffect(() => {
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
     if (isOpen) {
       setSelectedIds(new Set());
       setSearchQuery('');
     }
-  }, [isOpen]);
+  }
 
   // Escape listener
   useEffect(() => {

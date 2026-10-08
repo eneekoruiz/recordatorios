@@ -17,7 +17,7 @@ jobs:
   test:
     name: Build & E2E Verification
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:16
@@ -38,6 +38,7 @@ jobs:
       # Siempre la base de datos efímera del job: los tests crean usuarios y nunca deben tocar producción.
       DATABASE_URL: 'postgresql://test_user:test_password@localhost:5432/recordatorios_test?sslmode=disable'
       JWT_SECRET: 'ci-only-secret-not-used-anywhere-else'
+      BCRYPT_COST: 4
       PORT: 3001
 
     steps:
@@ -61,8 +62,8 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
 
-      - name: Push Database Schema
-        run: npx prisma db push --skip-generate
+      - name: Apply migrations to the disposable PostgreSQL database
+        run: npx prisma migrate deploy
 
       - name: Lint
         run: npm run lint
@@ -74,7 +75,7 @@ jobs:
         run: npm run build
 
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium webkit
 
       - name: Run E2E Playwright Tests (suite completa)
         run: npx playwright test

@@ -1,10 +1,12 @@
 // Seguridad de la cuenta sin tocar el esquema de la base de datos: todo vive en `User.preferences._security`,
 // que NUNCA se envía al cliente (ver publicPreferences) ni puede sobrescribirse desde el cliente.
 import crypto from 'node:crypto';
+import { Prisma } from '@prisma/client';
 
 export const SECURITY_KEY = '_security';
 const B32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 const sha256 = (s: string) => crypto.createHash('sha256').update(String(s)).digest('hex');
+export const preferencesEqualsFilter = (preferences: unknown) => ({ equals: preferences === null ? Prisma.DbNull : preferences as any });
 
 // ── Preferencias ↔ datos de seguridad ────────────────────────────────────────────────────────────
 const isObject = (v: any): v is Record<string, any> => v && typeof v === 'object' && !Array.isArray(v);
@@ -142,6 +144,76 @@ export function checkSecondFactor(security: any, code: string, serverSecret: str
     return { ok: true, usedRecovery: true, security: { ...security, totp: { ...totp, recovery: recovery.filter((_: any, i: number) => i !== idx) } } };
   }
   return { ok: false };
+}
+
+/**
+ * Consume a TOTP step or recovery code with compare-and-swap semantics. A plain
+ * read/check/write allows parallel login requests to accept the same one-time
+ * factor. Retrying after a conflicting preference write also avoids rejecting
+ * a valid login because an unrelated preference changed at the same time.
+ */
+export async function consumeSecondFactor(prisma: any, user: any, code: string, serverSecret: string, maxAttempts = 3) {
+  let current = user;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const checked = checkSecondFactor(getSecurity(current.preferences), code, serverSecret);
+    if (!checked.ok) return { ...checked, user: current };
+
+    const preferences = withSecurity(current.preferences, checked.security);
+    const consumed = await prisma.user.updateMany({
+      where: { id: current.id, preferences: preferencesEqualsFilter(current.preferences) },
+      data: { preferences },
+    });
+    if (consumed.count === 1) {
+      return { ...checked, user: { ...current, preferences } };
+    }
+
+    current = await prisma.user.findUnique({ where: { id: current.id } });
+    if (!current) return { ok: false, user: null };
+  }
+  return { ok: false, user: current };
+}
+
+/** Persist a known-device update without overwriting concurrent 2FA state. */
+export async function persistDevice(prisma: any, userId: string, id: string, maxAttempts = 3) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const current = await prisma.user.findUnique({ where: { id: userId } });
+    if (!current) return null;
+    const seen = noteDevice(getSecurity(current.preferences), id);
+    if (!seen.changed) return { ...seen, user: current };
+    const preferences = withSecurity(current.preferences, seen.security);
+    const saved = await prisma.user.updateMany({
+      where: { id: userId, preferences: preferencesEqualsFilter(current.preferences) },
+      data: { preferences },
+    });
+    if (saved.count === 1) return { ...seen, user: { ...current, preferences } };
+  }
+  return null;
+}
+
+/** Apply a security-state transition against the latest preferences, retrying CAS conflicts. */
+export async function updateSecurity(prisma: any, userId: string, transition: (security: any, user: any) => any, maxAttempts = 3) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const current = await prisma.user.findUnique({ where: { id: userId } });
+    if (!current) return null;
+    const security = getSecurity(current.preferences);
+    const nextSecurity = transition(security, current);
+    if (nextSecurity === null || nextSecurity === undefined) return null;
+    const preferences = withSecurity(current.preferences, nextSecurity);
+    const saved = await prisma.user.updateMany({
+      where: { id: userId, preferences: preferencesEqualsFilter(current.preferences) },
+      data: { preferences },
+    });
+    if (saved.count === 1) return { ...current, preferences };
+  }
+  return null;
+}
+
+/** Compare-and-swap a complete preference JSON value, optionally with extra row conditions. */
+export async function updatePreferencesIfCurrent(prisma: any, user: any, preferences: any, extraWhere: Record<string, unknown> = {}, extraData: Record<string, unknown> = {}) {
+  return prisma.user.updateMany({
+    where: { id: user.id, preferences: preferencesEqualsFilter(user.preferences), ...extraWhere },
+    data: { preferences, ...extraData },
+  });
 }
 
 // ── Dispositivos conocidos (aviso de «inicio de sesión desde un dispositivo nuevo») ──────────────

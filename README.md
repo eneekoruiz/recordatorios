@@ -18,7 +18,7 @@ PWA de recordatorios inspirada en Recordatorios de Apple: listas y carpetas, cic
 
 ## Puesta en marcha local
 
-Requisitos: Node.js 20+ y una base de datos PostgreSQL (Neon, Supabase, Railway, local…).
+Requisitos: Node.js 22.22.2 o posterior y una base de datos PostgreSQL (Neon, Supabase, Railway, local…).
 
 ```bash
 cp .env.example .env          # rellena DATABASE_URL y JWT_SECRET
@@ -29,13 +29,13 @@ npm run dev                   # frontend (Vite, :5173) + API (Express, :3001)
 
 Las claves de IA (Gemini/OpenAI) se guardan solo en el navegador de cada usuario; no las pongas en variables `VITE_*`, que acabarían en el bundle público.
 
-¿Sin PostgreSQL a mano? `node tests/support/memory-server.js` levanta la API con datos en memoria.
+¿Sin PostgreSQL a mano? `npx tsx tests/support/memory-server.js` levanta la API con datos en memoria.
 
 ## Despliegue en Vercel
 
 1. Conecta el repositorio en Vercel (detecta Vite automáticamente; `/api` se sirve como función).
 2. Añade las variables de entorno: `DATABASE_URL`, `JWT_SECRET` (obligatoria), `APP_URL` y, para recuperar contraseñas por email, `RESEND_API_KEY` y `MAIL_FROM`. Ver `.env.example`.
-3. Tras cambios en `prisma/schema.prisma`, ejecuta `npx prisma db push` contra la base de datos de producción.
+3. Aplica el esquema antes de publicar la función: la nueva tabla `CronLease` evita envíos simultáneos. Para bases existentes gestionadas con `db push`, sigue [las instrucciones de esquema y baseline](prisma/README.md).
 
 > Los límites de peticiones (login, registro, cambio de contraseña, recuperación) se cuentan en la tabla `RateLimit` de la base de datos, así que valen para todas las instancias serverless (ejecuta `npx prisma db push` para crearla; mientras no exista, se limita en memoria por instancia). `TRUST_PROXY_HOPS` (por defecto 1) indica cuántos proxies hay delante.
 
@@ -50,7 +50,7 @@ Para ponerlo en marcha:
 1. `npx web-push generate-vapid-keys` y guarda `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `VAPID_SUBJECT` en Vercel.
 2. Define `CRON_SECRET` en Vercel. `vercel.json` ya programa una llamada diaria a `/api/cron/notify` (vale para el resumen, también en el plan gratuito).
 3. Para que las alertas con hora lleguen puntuales, añade en GitHub los secretos `APP_URL` y `CRON_SECRET`: el flujo `.github/workflows/notify.yml` llama cada 10 minutos.
-4. `npx prisma db push` contra producción para crear la tabla de suscripciones, la de límites de peticiones (y los índices).
+4. Aplica el esquema para crear las suscripciones, los límites y el bloqueo `CronLease` (ver [prisma/README.md](prisma/README.md)).
 
 ## Scripts
 
@@ -61,6 +61,12 @@ Para ponerlo en marcha:
 | `npm run test:e2e` | Tests end-to-end con Playwright (`E2E_MEMORY_DB=1` para no necesitar PostgreSQL) |
 | `npm run lint` / `npm run typecheck` | Calidad estática |
 | `npm run build` | Build de producción |
+
+Playwright usa el build de producción, su CSP y la API local. Instala los motores con
+`npx playwright install chromium webkit`; para una ejecución sin PostgreSQL usa
+`E2E_MEMORY_DB=1` (en PowerShell: `$env:E2E_MEMORY_DB='1'`) y `npm run test:e2e`.
+`PW_DEV_SERVER=1` permite comprobar específicamente el servidor de desarrollo.
+La configuración conserva trazas de los fallos, aunque no haya reintentos.
 
 ## Estructura
 
@@ -74,3 +80,6 @@ Para ponerlo en marcha:
 - `tests/unit/` — Vitest · `tests/*.spec.ts` — Playwright.
 
 Más detalle técnico en [ARCHITECTURE.md](ARCHITECTURE.md).
+
+La revisión de calidad y seguridad, sus correcciones y los límites de verificación
+están en el [informe HELEN del 8 de octubre de 2026](docs/AUDITORIA-HELEN-2026-10-08.md).

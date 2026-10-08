@@ -13,6 +13,13 @@ export function getStartOfWeek(date: Date = new Date()): Date {
   return d;
 }
 
+/** Retorna el límite exclusivo de la semana local, respetando cambios de horario. */
+export function getStartOfNextWeek(date: Date = new Date()): Date {
+  const next = getStartOfWeek(date);
+  next.setDate(next.getDate() + 7);
+  return next;
+}
+
 /**
  * Servicio puro para determinar si una tarea recurrente
  * ya fue completada dentro de su periodo actual (hoy, esta semana, etc.).
@@ -60,10 +67,10 @@ export function isCompletedInCurrentPeriod(
   // 2. Ciclo semanal: completada si alguna finalización ocurrió durante la semana de referencia
   if (effCycleId === 'cycle_week') {
     const startOfWeek = getStartOfWeek(ref);
-    const endOfWeek = new Date(startOfWeek.getTime() + 7 * 86400000 - 1);
+    const startOfNextWeek = getStartOfNextWeek(ref);
     return task.completionHistory.some(ts => {
       const time = typeof ts === 'number' ? ts : new Date(ts).getTime();
-      return time >= startOfWeek.getTime() && time <= endOfWeek.getTime();
+      return time >= startOfWeek.getTime() && time < startOfNextWeek.getTime();
     });
   }
 
@@ -104,10 +111,10 @@ function checkCyclePeriodMatch(daysValue: number, ref: Date, completionHistory: 
 
   if (daysValue === 7) {
     const startOfWeek = getStartOfWeek(ref);
-    const endOfWeek = new Date(startOfWeek.getTime() + 7 * 86400000 - 1);
+    const startOfNextWeek = getStartOfNextWeek(ref);
     return completionHistory.some(ts => {
       const time = typeof ts === 'number' ? ts : new Date(ts).getTime();
-      return time >= startOfWeek.getTime() && time <= endOfWeek.getTime();
+      return time >= startOfWeek.getTime() && time < startOfNextWeek.getTime();
     });
   }
 

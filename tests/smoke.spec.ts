@@ -1,46 +1,28 @@
 import { test, expect } from '@playwright/test';
+import { bootApp } from "./support/bootApp";
 
 async function ensureAppUnlocked(page: any) {
-  await page.goto('/');
-  await page.waitForLoadState('domcontentloaded');
-  await page.evaluate(() => {
-    (window as any).__E2E__ = true;
-    sessionStorage.setItem('__E2E__', 'true');
-    sessionStorage.setItem('daily_greeting_seen_session', 'true');
-    localStorage.setItem('daily_greeting_dismissed_day', new Date().toDateString());
-    localStorage.setItem('hide_onboarding_guide', 'true');
-    (window as any).useAppStore?.getState()?.setToken('local_offline_token', 'local_guest_e2e');
-  });
-  const guestBtn = page.locator('button:has-text("Usar sin cuenta")').first();
-  try {
-    await guestBtn.click({ timeout: 1500 });
-  } catch {
-    // Ya desbloqueada
-  }
-  await page.waitForTimeout(400);
+    await bootApp(page);
 }
 
 test.describe('Recordatorios Élite - Complete Suite & Quality Audit', () => {
+  const errors = new WeakMap<object, string[]>();
   test.beforeEach(async ({ page }) => {
+    const messages: string[] = [];
+    errors.set(page, messages);
+    page.on('pageerror', error => messages.push(error.message));
+    page.on('console', message => { if (message.type() === 'error') messages.push(message.text()); });
     await ensureAppUnlocked(page);
   });
 
   test('App loads successfully with 0 fatal errors', async ({ page }) => {
-    const consoleErrors: string[] = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        consoleErrors.push(msg.text());
-      }
-    });
-
     await page.waitForLoadState('domcontentloaded');
 
     await expect(page).toHaveTitle(/Recordatorios/i);
     const body = page.locator('body');
     await expect(body).toBeVisible();
 
-    const hasDuplicateKeyError = consoleErrors.some(e => e.includes('Encountered two children with the same key'));
-    expect(hasDuplicateKeyError).toBeFalsy();
+    expect(errors.get(page)).toEqual([]);
   });
 
   test('Command Palette opens and supports search and navigation', async ({ page }) => {

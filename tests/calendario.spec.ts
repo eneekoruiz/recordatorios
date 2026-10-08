@@ -1,25 +1,8 @@
 import { test, expect } from '@playwright/test';
+import { bootApp } from "./support/bootApp";
 
 async function ensureAppUnlocked(page: any) {
-  await page.goto('/');
-  await page.waitForLoadState('domcontentloaded');
-
-  await page.evaluate(() => {
-    (window as any).__E2E__ = true;
-    sessionStorage.setItem('__E2E__', 'true');
-    sessionStorage.setItem('daily_greeting_seen_session', 'true');
-    localStorage.setItem('daily_greeting_dismissed_day', new Date().toDateString());
-    (window as any).useAppStore?.getState()?.setToken('local_offline_token', 'local_guest_e2e');
-  });
-
-  const guestBtn = page.locator('button:has-text("Usar sin cuenta")').first();
-  try {
-    await guestBtn.click({ timeout: 1500 });
-  } catch {
-    // Ya desbloqueada
-  }
-
-  await page.waitForTimeout(400);
+    await bootApp(page);
 }
 
 const keyFor = (offsetDays: number) => {
@@ -42,7 +25,7 @@ test.describe('Calendario', () => {
       store.addTask({ id: 'cal_dated', title: 'Revisión del coche', dueDate: inTwoDays.toISOString(), status: 'pending', created_at: new Date().toISOString() });
     });
 
-    await page.locator('.ios-smart-card', { hasText: 'Calendario' }).first().click();
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent('select-view', { detail: 'smart_calendar' })));
 
     // Hoy: la ronda semanal, con su recuento y su regla
     const agenda = page.locator('.cal-agenda');

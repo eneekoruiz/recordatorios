@@ -7,6 +7,7 @@ import App from './App.tsx'
 import './styles/polish.css'
 
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
+import { PersistenceStatusBanner } from './components/ui/PersistenceStatusBanner.tsx'
 
 // Sin maximum-scale: bloquear el zoom incumple WCAG 1.4.4. iOS solo amplía al enfocar campos con fuente < 16 px, y
 // los campos ya usan 16 px en móvil (lo comprueba tests/mobile.spec.ts).
@@ -21,6 +22,7 @@ if (typeof window !== 'undefined') {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
+    <PersistenceStatusBanner />
     <ErrorBoundary>
       {/* Respeta «Reducir movimiento» del sistema en todas las animaciones */}
       <MotionConfig reducedMotion="user">

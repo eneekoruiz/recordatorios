@@ -119,7 +119,7 @@ export const TaskHabitCounter: React.FC<TaskHabitCounterProps> = ({
           fontSize: '0.78rem',
           fontWeight: 600,
           background: isEffectivelyDone ? 'rgba(52, 199, 89, 0.15)' : 'rgba(0, 122, 255, 0.12)',
-          color: isEffectivelyDone ? '#34C759' : '#007AFF',
+          color: 'var(--text-primary)',
           border: 'none',
           cursor: 'pointer',
           verticalAlign: 'middle',

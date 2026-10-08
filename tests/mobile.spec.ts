@@ -1,23 +1,14 @@
 import { test, expect, type Page } from '@playwright/test';
+import { bootApp } from "./support/bootApp";
 
 async function boot(page: Page) {
-  await page.goto('/');
-  await page.evaluate(() => {
-    sessionStorage.setItem('__E2E__', 'true');
-    sessionStorage.setItem('daily_greeting_seen_session', 'true');
-    localStorage.setItem('daily_greeting_dismissed_day', new Date().toDateString());
-    localStorage.setItem('hide_onboarding_guide', 'true');
-    localStorage.setItem('pwa_prompt_dismissed', 'true');
-    (window as any).useAppStore?.getState()?.setToken('local_offline_token', 'local_guest_e2e');
-  });
-  await page.reload();
-  await page.waitForFunction(() => document.querySelectorAll('.ios-list-item').length > 0, null, { timeout: 8000 });
-  await page.evaluate(() => {
-    const st = (window as any).useAppStore.getState();
-    st.addList({ id: 'casa', name: 'Casa', color: '#ff9500' });
-    st.addTask({ id: 'a', title: 'Limpiar cocina con un título bastante largo para comprobar que no se sale de la pantalla', status: 'pending', categoryId: 'casa', duration: 30, price: 12.5 });
-    st.addTask({ id: 'b', title: 'Llamar al médico', status: 'pending', categoryId: 'casa', dueDate: new Date().toISOString(), priority: 'high' });
-  });
+    await bootApp(page);
+    await page.evaluate(() => {
+        const st = (window as any).useAppStore.getState();
+        st.addList({ id: 'casa', name: 'Casa', color: '#ff9500' });
+        st.addTask({ id: 'a', title: 'Limpiar cocina con un título bastante largo para comprobar que no se sale de la pantalla', status: 'pending', categoryId: 'casa', duration: 30, price: 12.5 });
+        st.addTask({ id: 'b', title: 'Llamar al médico', status: 'pending', categoryId: 'casa', dueDate: new Date().toISOString(), priority: 'high' });
+      });
 }
 
 const event = (page: Page, name: string, detail?: unknown) =>

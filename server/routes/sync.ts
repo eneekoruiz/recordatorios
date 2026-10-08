@@ -1,9 +1,9 @@
-import type { AppContext } from '../context.js';
 import express from 'express';
 import jwt from 'jsonwebtoken';
-import { publicPreferences, stripSecurity } from '../security.js';
-import { scopedId, clientIdOf, isValidClientId, shouldApplyIncoming, parseDeletedAt, toClientPayload, sanitizePayload } from '../syncUtils.js';
 import { getJwtSecret } from '../app.js';
+import type { AppContext } from '../context.js';
+import { preferencesEqualsFilter, publicPreferences, stripSecurity } from '../security.js';
+import { clientIdOf, isValidClientId, parseDeletedAt, sanitizePayload, scopedId, shouldApplyIncoming, toClientPayload } from '../syncUtils.js';
 
 
 export function createSyncRouter(context: AppContext) {
@@ -20,6 +20,35 @@ export function createSyncRouter(context: AppContext) {
     { key: 'lists', model: 'list' },
     { key: 'listSections', model: 'listSection' },
   ];
+
+  async function mergePreferencesWithCas(userId: string, incoming: Record<string, unknown>) {
+    const incomingRawAt = (incoming as any).updated_at ? new Date((incoming as any).updated_at).getTime() : Date.now();
+    const incomingAt = Number.isFinite(incomingRawAt) ? incomingRawAt : Date.now();
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const existing = await prisma.user.findUnique({ where: { id: userId }, select: { preferences: true } });
+      if (!existing) return false;
+      const oldPreferences = existing.preferences && typeof existing.preferences === 'object' && !Array.isArray(existing.preferences)
+        ? existing.preferences as Record<string, unknown>
+        : {};
+      const rawOldAt = oldPreferences.updated_at ? new Date(String(oldPreferences.updated_at)).getTime() : 0;
+      const oldAt = Number.isFinite(rawOldAt) ? rawOldAt : 0;
+      if (incomingAt < oldAt) return false;
+      const merged = { ...oldPreferences, ...incoming };
+      if (JSON.stringify(merged).length > 50_000) {
+        const error: any = new Error('Preferencias demasiado grandes');
+        error.status = 413;
+        throw error;
+      }
+      const result = await prisma.user.updateMany({
+        where: { id: userId, preferences: preferencesEqualsFilter(existing.preferences) },
+        data: { preferences: merged as any },
+      });
+      if (result.count === 1) return true;
+    }
+    const error: any = new Error('Las preferencias cambiaron durante la sincronización. Reintenta.');
+    error.status = 409;
+    throw error;
+  }
 
   /**
    * Prepara las escrituras de una colección respetando propiedad y LWW.
@@ -104,6 +133,8 @@ export function createSyncRouter(context: AppContext) {
     try {
       const transaction: any[] = [];
       const stale: Record<string, any> = {};
+      let preferenceCompareIndex = -1;
+      let incomingPreferences: Record<string, unknown> | undefined;
       for (const { key, model } of collections) {
         const plan = await planCollectionWrites(model as any, userId, req.body?.[key]);
         transaction.push(...plan.ops);
@@ -119,22 +150,33 @@ export function createSyncRouter(context: AppContext) {
           return res.status(413).json({ error: 'Preferencias demasiado grandes' });
         }
         const existing = await prisma.user.findUnique({ where: { id: userId }, select: { preferences: true } });
-        const existingUpdatedAt = (existing?.preferences as any)?.updated_at ? new Date((existing!.preferences as any).updated_at).getTime() : 0;
-        const incomingUpdatedAt = (preferences as any)?.updated_at ? new Date((preferences as any).updated_at).getTime() : Date.now();
-        if (incomingUpdatedAt >= existingUpdatedAt) {
-          const merged = {
-            ...(existing?.preferences && typeof existing.preferences === 'object' ? existing.preferences : {}),
-            ...preferences,
-          };
-          // Cada push trae ≤50 kB, pero la fusión acumula claves: se acota también el resultado.
+        const oldPreferences = existing?.preferences && typeof existing.preferences === 'object' && !Array.isArray(existing.preferences)
+          ? existing.preferences as Record<string, unknown>
+          : {};
+        const rawOldAt = oldPreferences.updated_at ? new Date(String(oldPreferences.updated_at)).getTime() : 0;
+        const oldAt = Number.isFinite(rawOldAt) ? rawOldAt : 0;
+        const rawIncomingAt = (preferences as any).updated_at ? new Date((preferences as any).updated_at).getTime() : Date.now();
+        const incomingAt = Number.isFinite(rawIncomingAt) ? rawIncomingAt : Date.now();
+        if (incomingAt >= oldAt && existing) {
+          const merged = { ...oldPreferences, ...preferences };
           if (JSON.stringify(merged).length > 50_000) {
             return res.status(413).json({ error: 'Preferencias demasiado grandes' });
           }
-          transaction.push(prisma.user.update({ where: { id: userId }, data: { preferences: merged } }));
+          incomingPreferences = preferences;
+          preferenceCompareIndex = transaction.length;
+          transaction.push(prisma.user.updateMany({
+            where: { id: userId, preferences: preferencesEqualsFilter(existing.preferences) },
+            data: { preferences: merged },
+          }));
         }
       }
 
-      if (transaction.length > 0) await prisma.$transaction(transaction);
+      if (transaction.length > 0) {
+        const results = await prisma.$transaction(transaction);
+        if (preferenceCompareIndex >= 0 && (results[preferenceCompareIndex] as any)?.count === 0 && incomingPreferences) {
+          await mergePreferencesWithCas(userId, incomingPreferences);
+        }
+      }
       res.json({ success: true, applied: transaction.length, stale });
 
       const userClients = clients.get(userId);

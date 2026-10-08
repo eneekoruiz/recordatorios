@@ -1,18 +1,11 @@
 import type { AppContext } from '../context.js';
 import express from 'express';
-import crypto from 'node:crypto';
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
-import { isMailConfigured, sendPasswordResetEmail, sendSecurityEmail } from '../mail.js';
-import { getSecurity, withSecurity, publicPreferences, stripSecurity, checkSecondFactor, noteDevice, deviceId, newTotpSecret, otpauthUrl, encryptSecret, decryptSecret, verifyTotp, generateRecoveryCodes, hashRecoveryCode } from '../security.js';
-import { planNotifications, safeTimeZone } from '../notifications.js';
-import { scopedId, clientIdOf, isValidClientId, shouldApplyIncoming, parseDeletedAt, toClientPayload, sanitizePayload } from '../syncUtils.js';
-import { getJwtSecret, resetLinkBase, isAllowedPushEndpoint, MIN_PASSWORD_LENGTH } from '../app.js';
-
+import { safeTimeZone } from '../notifications.js';
+import { isAllowedPushEndpoint } from '../app.js';
 
 export function createPushRouter(context: AppContext) {
   const router = express.Router();
-  const { prisma, pushSender, clients, hit, requireSecret, sessionResponse, authenticateToken, optionalAuthenticateToken, bumpedSessions, hashPassword, validatePassword, clientIp, apiLimiter, publicLimiter, authRateLimit, authIpLimiter, loginLimiter, changePasswordLimiter, forgotLimiter, safeEqual, emailRegex, normalizeEmail, MAX_ITEMS_PER_COLLECTION, CRON_CONCURRENCY } = context;
+  const { prisma, pushSender, authenticateToken, apiLimiter } = context;
 
   // --- AVISOS CON LA APP CERRADA (Web Push) ---
   router.get('/push/public-key', (req: express.Request, res: express.Response) => {

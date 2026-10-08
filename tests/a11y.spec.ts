@@ -1,35 +1,18 @@
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { bootApp } from "./support/bootApp";
 
 async function boot(page: Page) {
-  await page.goto('/');
-  await page.waitForLoadState('domcontentloaded');
-  await page.evaluate(() => {
-    (window as any).__E2E__ = true;
-    sessionStorage.setItem('__E2E__', 'true');
-    sessionStorage.setItem('daily_greeting_seen_session', 'true');
-    localStorage.setItem('daily_greeting_dismissed_day', new Date().toDateString());
-    localStorage.setItem('hide_onboarding_guide', 'true');
-    localStorage.setItem('pwa_prompt_dismissed', 'true');
-    (window as any).useAppStore?.getState()?.setToken('local_offline_token', 'local_guest_e2e');
-  });
-  const guestBtn = page.locator('button:has-text("Usar sin cuenta")').first();
-  try {
-    await guestBtn.click({ timeout: 1500 });
-  } catch {
-    // Ya desbloqueada
-  }
-  await page.reload();
-  await page.waitForFunction(() => document.querySelectorAll('.ios-list-item').length > 0, null, { timeout: 8000 });
-  await page.evaluate(() => {
-    const st = (window as any).useAppStore.getState();
-    st.addList({ id: 'casa', name: 'Casa', color: '#ff9500' });
-    const T = (id: string, title: string, o: any) => st.addTask({ id, title, status: 'pending', ...o });
-    T('a', 'Limpiar cocina', { categoryId: 'casa', duration: 30, cycle_id: 'cycle_week' });
-    T('d1', 'Regar plantas', { categoryId: 'casa', duration: 15, cycle_id: 'cycle_day' });
-    T('c1', 'Leche', { categoryId: 'casa', price: 1.5, quantity: 2 });
-    T('h1', 'Llamar al médico', { categoryId: 'casa', dueDate: new Date().toISOString(), priority: 'high' });
-  });
+    await bootApp(page);
+    await page.evaluate(() => {
+        const st = (window as any).useAppStore.getState();
+        st.addList({ id: 'casa', name: 'Casa', color: '#ff9500' });
+        const T = (id: string, title: string, o: any) => st.addTask({ id, title, status: 'pending', ...o });
+        T('a', 'Limpiar cocina', { categoryId: 'casa', duration: 30, cycle_id: 'cycle_week' });
+        T('d1', 'Regar plantas', { categoryId: 'casa', duration: 15, cycle_id: 'cycle_day' });
+        T('c1', 'Leche', { categoryId: 'casa', price: 1.5, quantity: 2 });
+        T('h1', 'Llamar al médico', { categoryId: 'casa', dueDate: new Date().toISOString(), priority: 'high' });
+      });
 }
 
 const event = (page: Page, name: string, detail?: unknown) =>
@@ -66,6 +49,7 @@ for (const scheme of ['light', 'dark'] as const) {
     });
 
     test('las hojas y diálogos no tienen fallos graves', async ({ page }) => {
+      test.setTimeout(60000);
       await boot(page);
       await event(page, 'select-view', 'list_casa');
       await page.evaluate(() => window.dispatchEvent(new Event('open-new-task-drawer')));

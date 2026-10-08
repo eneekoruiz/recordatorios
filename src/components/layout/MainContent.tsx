@@ -105,6 +105,7 @@ const getRoomIcon = (key: string): ReactNode => {
 };
 
 const NOOP = () => {};
+const TASKS_PER_PAGE = 100;
 
 const SMART_COLORS: Record<string, string> = {
   'smart_today': 'var(--accent-blue)',
@@ -145,6 +146,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [isScrolled, setIsScrolled] = useState(false);
   const [scrollTop, setScrollTop] = useState(0);
+  const [currentTaskPage, setCurrentTaskPage] = useState(0);
   const [isListConfigOpen, setIsListConfigOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [confirmProps, setConfirmProps] = useState<{ title: string; message: string; onConfirm: () => void }>({ title: '', message: '', onConfirm: () => {} });
@@ -523,11 +525,13 @@ const CORE_CYCLES = [
     [currentView, tasks, cycles, recentlyCompletedIds]
   );
 
-  // Índices precalculados: evitan recorrer todas las tareas por cada fila renderizada (O(n²)).
-  const parentIdsWithChildren = useMemo(() => {
-    const ids = new Set<string>();
-    for (const t of Object.values(tasks)) if (t.parentId && !t.deleted_at) ids.add(t.parentId);
-    return ids;
+  // Conteos precalculados: las tarjetas no recorren todo el almacén para contar subtareas.
+  const childCountByTaskId = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const t of Object.values(tasks)) {
+      if (t.parentId && !t.deleted_at) counts.set(t.parentId, (counts.get(t.parentId) || 0) + 1);
+    }
+    return counts;
   }, [tasks]);
 
 
@@ -1920,6 +1924,48 @@ const CORE_CYCLES = [
   }, [viewTasks, listSections, lists]);
 
   const visibleIndexById = useMemo(() => new Map(visibleTasks.map((t, i) => [t.id, i])), [visibleTasks]);
+  const taskPages = useMemo(() => {
+    if (visibleTasks.length <= TASKS_PER_PAGE) return null;
+    const clusters = new Map<string, string[]>();
+    for (const task of visibleTasks) {
+      let rootId = task.id;
+      let parentId = task.parentId;
+      const visited = new Set<string>();
+      while (parentId && tasks[parentId] && !visited.has(parentId)) {
+        visited.add(parentId);
+        rootId = parentId;
+        parentId = tasks[parentId].parentId;
+      }
+      const cluster = clusters.get(rootId) || [];
+      cluster.push(task.id);
+      clusters.set(rootId, cluster);
+    }
+
+    const pages: Set<string>[] = [];
+    let page = new Set<string>();
+    for (const cluster of clusters.values()) {
+      if (cluster.length > TASKS_PER_PAGE) {
+        if (page.size > 0) {
+          pages.push(page);
+          page = new Set<string>();
+        }
+        for (let start = 0; start < cluster.length; start += TASKS_PER_PAGE) {
+          pages.push(new Set(cluster.slice(start, start + TASKS_PER_PAGE)));
+        }
+        continue;
+      }
+      if (page.size > 0 && page.size + cluster.length > TASKS_PER_PAGE) {
+        pages.push(page);
+        page = new Set<string>();
+      }
+      cluster.forEach(id => page.add(id));
+    }
+    if (page.size > 0) pages.push(page);
+    return pages;
+  }, [visibleTasks, tasks]);
+  const taskPageCount = taskPages?.length || 1;
+  const effectiveTaskPage = Math.min(currentTaskPage, taskPageCount - 1);
+  const paginatedTaskIds = taskPages?.[effectiveTaskPage] || null;
 
   // Reordenación manual de tareas
   const handleMoveTaskUp = useCallback((taskId: string) => {
@@ -1936,8 +1982,10 @@ const CORE_CYCLES = [
     reordered[idx - 1] = temp;
 
     reorderTasks(reordered.map(t => t.id));
+    const destinationPage = taskPages?.findIndex(page => page.has(taskId));
+    if (destinationPage !== undefined && destinationPage >= 0) setCurrentTaskPage(destinationPage);
     HapticService.selection();
-  }, [visibleTasks, reorderTasks, sortBy]);
+  }, [visibleTasks, reorderTasks, sortBy, taskPages]);
 
   const handleMoveTaskDown = useCallback((taskId: string) => {
     const idx = visibleTasks.findIndex(t => t.id === taskId);
@@ -1953,8 +2001,10 @@ const CORE_CYCLES = [
     reordered[idx + 1] = temp;
 
     reorderTasks(reordered.map(t => t.id));
+    const destinationPage = taskPages?.findIndex(page => page.has(taskId));
+    if (destinationPage !== undefined && destinationPage >= 0) setCurrentTaskPage(destinationPage);
     HapticService.selection();
-  }, [visibleTasks, reorderTasks, sortBy]);
+  }, [visibleTasks, reorderTasks, sortBy, taskPages]);
 
   const handleReorderTasks = useCallback((sourceTaskId: string, targetTaskId: string, position: 'before' | 'after' = 'before') => {
     if (sourceTaskId === targetTaskId) return;
@@ -1962,15 +2012,16 @@ const CORE_CYCLES = [
     const targetIdx = visibleTasks.findIndex(t => t.id === targetTaskId);
     if (sourceIdx === -1 || targetIdx === -1) return;
 
+    const currentTasks = useAppStore.getState().tasks;
     // Verificar si el objetivo es descendiente de la tarea arrastrada (evitar ciclos)
     const isDescendant = (candidateId: string, rootId: string): boolean => {
-      let curr = tasks[candidateId];
+      let curr = currentTasks[candidateId];
       const visited = new Set<string>();
       while (curr && curr.parentId) {
         if (curr.parentId === rootId) return true;
         if (visited.has(curr.parentId)) break;
         visited.add(curr.parentId);
-        curr = tasks[curr.parentId];
+        curr = currentTasks[curr.parentId];
       }
       return false;
     };
@@ -1983,14 +2034,14 @@ const CORE_CYCLES = [
       setSortBy('manual');
     }
 
-    const sourceTask = tasks[sourceTaskId] || visibleTasks[sourceIdx];
-    const targetTask = tasks[targetTaskId] || visibleTasks[targetIdx];
+    const sourceTask = currentTasks[sourceTaskId] || visibleTasks[sourceIdx];
+    const targetTask = currentTasks[targetTaskId] || visibleTasks[targetIdx];
 
-    const hasChildren = Object.values(tasks).some(t => !t.deleted_at && t.parentId === sourceTaskId);
+    const hasChildren = Object.values(currentTasks).some(t => !t.deleted_at && t.parentId === sourceTaskId);
 
     // Mover la tarea fuente y todos sus descendientes visibles juntos como un bloque
     const clusterIds = new Set<string>([sourceTaskId]);
-    Object.values(tasks).forEach(t => {
+    Object.values(currentTasks).forEach(t => {
       if (!t.deleted_at && isDescendant(t.id, sourceTaskId)) {
         clusterIds.add(t.id);
       }
@@ -2045,7 +2096,7 @@ const CORE_CYCLES = [
       }
 
       // Sincronizar sección y lista
-      const effectiveParent = newParentId ? (tasks[newParentId] || visibleTasks.find(t => t.id === newParentId)) : undefined;
+      const effectiveParent = newParentId ? (currentTasks[newParentId] || visibleTasks.find(t => t.id === newParentId)) : undefined;
       // En vistas inteligentes (Hoy, Programados...), no reasignar lista ni sección de origen
       const newCategoryId = isSmartView
         ? sourceTask.categoryId
@@ -2066,7 +2117,7 @@ const CORE_CYCLES = [
         };
 
         // Mantener consistentes las subtareas de la tarea movida sin cambiarles el parentId
-        Object.values(tasks).forEach(c => {
+        Object.values(currentTasks).forEach(c => {
           if (!c.deleted_at && c.parentId === sourceTaskId) {
             taskUpdates[c.id] = {
               categoryId: newCategoryId,
@@ -2079,7 +2130,7 @@ const CORE_CYCLES = [
 
     reorderTasks(reordered.map(t => t.id), Object.keys(taskUpdates).length > 0 ? taskUpdates : undefined);
     HapticService.selection();
-  }, [visibleTasks, tasks, reorderTasks, sortBy, isSmartView, isListView, currentList]);
+  }, [visibleTasks, reorderTasks, sortBy, isSmartView, isListView, currentList]);
 
   const handleReorderSections = useCallback((sourceSectionId: string, targetSectionId: string, position: 'before' | 'after' = 'before') => {
     if (sourceSectionId === targetSectionId) return;
@@ -2318,6 +2369,7 @@ const CORE_CYCLES = [
   useEffect(() => {
     if (lastViewRef.current === currentView) return;
     lastViewRef.current = currentView;
+    setCurrentTaskPage(0);
     parentRef.current?.scrollTo({ top: 0 });
     const el = scrollContentRef.current;
     const reduce = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -2383,9 +2435,25 @@ const CORE_CYCLES = [
   const handleStartTask = useCallback((task: TaskItem) => {
     onStartSequence?.([task.id], task.title);
   }, [onStartSequence]);
+  const goToTaskPage = useCallback((page: number) => {
+    setCurrentTaskPage(Math.max(0, Math.min(page, taskPageCount - 1)));
+    parentRef.current?.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+  }, [taskPageCount]);
+  const renderTaskPagination = () => paginatedTaskIds ? (
+    <nav className="task-pagination" aria-label="Paginación de recordatorios" data-testid="task-pagination">
+      <button type="button" onClick={() => goToTaskPage(effectiveTaskPage - 1)} disabled={effectiveTaskPage === 0} aria-label="Página anterior">
+        Anterior
+      </button>
+      <span aria-live="polite">Página {effectiveTaskPage + 1} de {taskPageCount} · {visibleTasks.length} recordatorios</span>
+      <button type="button" onClick={() => goToTaskPage(effectiveTaskPage + 1)} disabled={effectiveTaskPage >= taskPageCount - 1} aria-label="Página siguiente">
+        Siguiente
+      </button>
+    </nav>
+  ) : null;
 
   const renderTask = useCallback((task: TaskItem, itemStyle: React.CSSProperties, index: number, depth: number, isFirst: boolean, isLast: boolean, previousTaskId?: string, itemKey?: React.Key) => {
-    const hasChildren = parentIdsWithChildren.has(task.id);
+    const childCount = childCountByTaskId.get(task.id) || 0;
+    const hasChildren = childCount > 0;
     const isExpanded = !isCatCollapsed(`task_${task.id}`);
     const taskIdxInVisible = visibleIndexById.get(task.id) ?? -1;
     const canMoveUp = taskIdxInVisible > 0;
@@ -2427,7 +2495,8 @@ const CORE_CYCLES = [
             onToggleSelect={handleToggleSelectTask}
             isSelectionMode={selectedTaskIds.size > 0 || isExplicitSelectionMode}
             {...({
-              hasChildren,
+            hasChildren,
+            childCount,
               isExpanded,
               onToggleExpand: () => toggleCategory(`task_${task.id}`)
             } as any)}
@@ -2435,7 +2504,7 @@ const CORE_CYCLES = [
         </div>
       </div>
     );
-  }, [parentIdsWithChildren, visibleIndexById, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, onSelectView, currentView, setSelectedPersonForProfile, recentlyCompletedIds, visibleTasks, handleMoveTaskUp, handleMoveTaskDown, handleReorderTasks, canStartIndividualTasks, handleStartTask, selectedTaskIds, handleToggleSelectTask, isMobile, isExplicitSelectionMode]);
+  }, [childCountByTaskId, visibleIndexById, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, onSelectView, currentView, setSelectedPersonForProfile, recentlyCompletedIds, visibleTasks, handleMoveTaskUp, handleMoveTaskDown, handleReorderTasks, canStartIndividualTasks, handleStartTask, selectedTaskIds, handleToggleSelectTask, isMobile, isExplicitSelectionMode]);
 
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
   const smartListInfo = isSmartView ? SMART_LISTS.find(l => l.id === currentView) : null;
@@ -2637,6 +2706,7 @@ const CORE_CYCLES = [
                             <CalendarView onSelectView={(view: string) => onSelectView?.(view)} onEditTask={(taskId: string) => onEditTask?.(taskId)} />
                           </Suspense>
                         )}
+                        {renderTaskPagination()}
                       </div>
                     );
                   } else if (data.type === 'header') {
@@ -2773,6 +2843,7 @@ const CORE_CYCLES = [
                       </div>
                     );
                   } else if (data.type === 'task') {
+                    if (paginatedTaskIds && !paginatedTaskIds.has(data.task.id)) return null;
                     const previousTaskId = index > 0 && flattenedData[index - 1]?.type === 'task' 
                       ? (flattenedData[index - 1] as any).task.id 
                       : undefined;
@@ -2820,6 +2891,7 @@ const CORE_CYCLES = [
 
           {/* Se añade desde la barra de abajo (una sola forma de añadir, siempre en el mismo sitio) */}
 
+          {renderTaskPagination()}
           {isActuallyEmpty && (
             <div style={{
               flex: 1,

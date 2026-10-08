@@ -1,20 +1,42 @@
-import type { AppContext } from '../context.js';
 import express from 'express';
-import crypto from 'node:crypto';
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
-import { isMailConfigured, sendPasswordResetEmail, sendSecurityEmail } from '../mail.js';
-import { getSecurity, withSecurity, publicPreferences, stripSecurity, checkSecondFactor, noteDevice, deviceId, newTotpSecret, otpauthUrl, encryptSecret, decryptSecret, verifyTotp, generateRecoveryCodes, hashRecoveryCode } from '../security.js';
-import { planNotifications, safeTimeZone } from '../notifications.js';
-import { scopedId, clientIdOf, isValidClientId, shouldApplyIncoming, parseDeletedAt, toClientPayload, sanitizePayload } from '../syncUtils.js';
-import { getJwtSecret, resetLinkBase, isAllowedPushEndpoint, MIN_PASSWORD_LENGTH } from '../app.js';
+import { randomUUID } from 'node:crypto';
+import type { AppContext } from '../context.js';
+import { planNotifications } from '../notifications.js';
+import { toClientPayload } from '../syncUtils.js';
 
 
-let isCronRunning = false;
+const CRON_LEASE_KEY = 'notify';
+const CRON_LEASE_TTL_MS = 5 * 60 * 1000;
+
+async function acquireCronLease(prisma: any, owner: string) {
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + CRON_LEASE_TTL_MS);
+  const reclaimed = await prisma.cronLease.updateMany({
+    where: { key: CRON_LEASE_KEY, expiresAt: { lte: now } },
+    data: { owner, expiresAt },
+  });
+  if (reclaimed.count === 1) return true;
+  try {
+    await prisma.cronLease.create({ data: { key: CRON_LEASE_KEY, owner, expiresAt } });
+    return true;
+  } catch (error) {
+    if ((error as any)?.code === 'P2002') return false;
+    throw error;
+  }
+}
+
+const renewCronLease = (prisma: any, owner: string) =>
+  prisma.cronLease.updateMany({
+    where: { key: CRON_LEASE_KEY, owner },
+    data: { expiresAt: new Date(Date.now() + CRON_LEASE_TTL_MS) },
+  });
+
+const releaseCronLease = (prisma: any, owner: string) =>
+  prisma.cronLease.deleteMany({ where: { key: CRON_LEASE_KEY, owner } });
 
 export function createCronRouter(context: AppContext) {
   const router = express.Router();
-  const { prisma, pushSender, clients, hit, requireSecret, sessionResponse, authenticateToken, optionalAuthenticateToken, bumpedSessions, hashPassword, validatePassword, clientIp, apiLimiter, publicLimiter, authRateLimit, authIpLimiter, loginLimiter, changePasswordLimiter, forgotLimiter, safeEqual, emailRegex, normalizeEmail, MAX_ITEMS_PER_COLLECTION, CRON_CONCURRENCY } = context;
+  const { prisma, pushSender, safeEqual, CRON_CONCURRENCY } = context;
 
   // Tarea programada (Vercel Cron o GitHub Actions): envía lo que toque desde la última pasada.
   // Se protege con CRON_SECRET (Vercel Cron manda «Authorization: Bearer <CRON_SECRET>»).
@@ -25,10 +47,32 @@ export function createCronRouter(context: AppContext) {
     }
     if (!pushSender) return res.status(503).json({ error: 'Faltan las claves VAPID' });
 
-    if (isCronRunning) {
-      return res.status(429).json({ error: 'Ejecución de avisos cron ya en curso' });
+    const leaseOwner = randomUUID();
+    try {
+      if (!(await acquireCronLease(prisma, leaseOwner))) {
+        return res.status(429).json({ error: 'Ejecución de avisos cron ya en curso' });
+      }
+    } catch (error) {
+      console.error('Cron lease error:', error);
+      return res.status(503).json({ error: 'No se pudo reservar la ejecución de avisos' });
     }
-    isCronRunning = true;
+
+    let leaseLost = false;
+    let renewing = false;
+    const heartbeat = setInterval(async () => {
+      if (renewing || leaseLost) return;
+      renewing = true;
+      try {
+        const renewed = await renewCronLease(prisma, leaseOwner);
+        if (renewed.count !== 1) leaseLost = true;
+      } catch (error) {
+        leaseLost = true;
+        console.error('Cron lease renewal error:', error);
+      } finally {
+        renewing = false;
+      }
+    }, Math.floor(CRON_LEASE_TTL_MS / 3));
+    heartbeat.unref?.();
 
     const now = new Date();
     let sent = 0;
@@ -62,6 +106,7 @@ export function createCronRouter(context: AppContext) {
 
       const processSubscription = async (sub: any) => {
         try {
+          if (leaseLost) return;
           const { data, weeklyDay } = await loadUser(sub.userId as string);
           const currentSentLog = (sub as any).sentLog || {};
           const { messages, sentLog: plannedSentLog } = planNotifications({
@@ -74,12 +119,21 @@ export function createCronRouter(context: AppContext) {
           let gone = false;
           let hasTransientFailure = false;
           const successfulTags = new Set<string>();
+          let successfulAlerts = false;
 
           for (const message of messages) {
+            if (leaseLost) {
+              hasTransientFailure = true;
+              break;
+            }
             try {
-              await pushSender({ endpoint: (sub as any).endpoint, keys: (sub as any).keys }, message);
+              const { deliveryKeys, ...pushMessage } = message as any;
+              await pushSender({ endpoint: (sub as any).endpoint, keys: (sub as any).keys }, pushMessage);
               sent++;
-              if (message.tag) successfulTags.add(message.tag);
+              if (pushMessage.tag) successfulTags.add(pushMessage.tag);
+              if (pushMessage.tag?.startsWith('alerts-') && deliveryKeys && typeof deliveryKeys === 'object') {
+                successfulAlerts = true;
+              }
             } catch (error) {
               // 404/410: el navegador anuló la suscripción; se borra para no reintentar.
               if ((error as any)?.statusCode === 404 || (error as any)?.statusCode === 410) {
@@ -104,10 +158,11 @@ export function createCronRouter(context: AppContext) {
                 }
               }
             }
+            if (successfulAlerts) updatedSentLog.alerts = (plannedSentLog as any)?.alerts || {};
 
-            // Si hubo fallos temporales y no se pudo enviar ningún mensaje, no avanzamos
-            // lastCheckedAt para que la siguiente pasada del cron pueda reintentar
-            const nextLastCheckedAt = hasTransientFailure && successfulTags.size === 0
+            // El cursor solo avanza cuando todos los mensajes de este intervalo se confirmaron.
+            // sentLog conserva los mensajes confirmados para reducir duplicados al reintentar.
+            const nextLastCheckedAt = hasTransientFailure || leaseLost
               ? (sub as any).lastCheckedAt
               : now;
 
@@ -134,7 +189,12 @@ export function createCronRouter(context: AppContext) {
       console.error('Cron notify error:', error);
       res.status(500).json({ error: 'No se pudieron enviar los avisos' });
     } finally {
-      isCronRunning = false;
+      clearInterval(heartbeat);
+      try {
+        await releaseCronLease(prisma, leaseOwner);
+      } catch (error) {
+        console.error('Cron lease release error:', error);
+      }
     }
   });
 

@@ -55,6 +55,7 @@ interface TaskCardProps {
   isLastInSection?: boolean;
   previousTaskId?: string;
   hasChildren?: boolean;
+  childCount?: number;
   isExpanded?: boolean;
   onToggleExpand?: () => void;
   indent?: number;
@@ -78,14 +79,13 @@ const SWIPE_COMPLETE_THRESHOLD = 65;
 const SWIPE_DELETE_THRESHOLD = -65;
 
 export const TaskCard = React.memo(function TaskCard({
-  task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, showListName = true, hideDueDate = false, isFirstInSection, isLastInSection, previousTaskId, hasChildren, isExpanded, onToggleExpand, indent = 0, onNavigateView, onPersonClick, isGracePeriod,
+  task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, showListName = true, hideDueDate = false, isFirstInSection, isLastInSection, previousTaskId, hasChildren, childCount = 0, isExpanded, onToggleExpand, indent = 0, onNavigateView, onPersonClick, isGracePeriod,
   onMoveUp, onMoveDown, canMoveUp, canMoveDown, onReorderTasks, onStartTask,
   isSelected, onToggleSelect, isSelectionMode
 }: TaskCardProps) {
   const cycles = useAppStore(state => state.cycles);
-  const tasks = useAppStore(state => state.tasks);
-  const directChildren = React.useMemo(() => Object.values(tasks).filter(t => t.parentId === task.id && !t.deleted_at), [tasks, task.id]);
-  const hasSubtasks = directChildren.length > 0;
+  const hasPendingBlocker = useAppStore(state => Boolean(task.blockedBy?.some(id => state.tasks[id]?.status === 'pending')));
+  const hasSubtasks = childCount > 0;
   const nestTask = useAppStore(state => state.nestTask);
   const lists = useAppStore(state => state.lists);
   const listSections = useAppStore(state => state.listSections);
@@ -256,7 +256,7 @@ export const TaskCard = React.memo(function TaskCard({
 
     setPriorityPopoverPos({ x, y });
     setIsPriorityPopoverOpen(true);
-  }, [isPriorityPopoverOpen]);
+  }, [isPriorityPopoverOpen, setIsPriorityPopoverOpen, setPriorityPopoverPos]);
 
   useEffect(() => {
     if (!isPriorityPopoverOpen) return;
@@ -305,7 +305,7 @@ export const TaskCard = React.memo(function TaskCard({
 
     setFrequencyPopoverPos({ x, y });
     setIsFrequencyPopoverOpen(true);
-  }, [isFrequencyPopoverOpen]);
+  }, [isFrequencyPopoverOpen, setIsFrequencyPopoverOpen, setFrequencyPopoverPos]);
 
   useEffect(() => {
     if (!isFrequencyPopoverOpen) return;
@@ -354,7 +354,7 @@ export const TaskCard = React.memo(function TaskCard({
       cycle_id: cycleId,
       sectionId: newSectionId,
     });
-  }, [task.id, task.title, task.categoryId, task.sectionId, listSections, lists, updateTask]);
+  }, [task.id, task.title, task.categoryId, task.sectionId, listSections, lists, updateTask, setIsFrequencyPopoverOpen]);
 
 
   // --- SWIPE (iOS-style: card physically moves) ---
@@ -402,7 +402,7 @@ export const TaskCard = React.memo(function TaskCard({
       setContextMenuPosition({ x: left, y: top, maxHeight: maxH });
     }
     setContextMenuOpen(true);
-  }, [x]);
+  }, [x, setContextMenuOpen, setContextMenuPosition]);
 
   // Si la tarea cambia desde fuera (otra pestaña, sincronización) y no se está editando,
   // los campos reflejan el valor guardado (se ajusta durante el render).
@@ -474,7 +474,7 @@ export const TaskCard = React.memo(function TaskCard({
   const temporalDate = useTemporalNavigationStore((state) => state.temporalDate);
   const referenceDate = useMemo(() => temporalDate ? new Date(temporalDate) : new Date(), [temporalDate]);
 
-  const isBlocked = task.blockedBy && task.blockedBy.some(id => tasks[id] && tasks[id].status === 'pending');
+  const isBlocked = hasPendingBlocker;
   const effCycleId = getEffectiveCycleId(task, listSections, lists);
   const isRecurring = Boolean(effCycleId);
   const isCompletedPeriod = isCompletedInCurrentPeriod(task, cycles, listSections, lists, referenceDate);
@@ -521,7 +521,7 @@ export const TaskCard = React.memo(function TaskCard({
       HapticService.impact('heavy');
       setIsDeleteConfirmOpen(true);
     }
-  }, [isBlocked, isEffectivelyDone, onToggle, task.id]);
+  }, [isBlocked, isEffectivelyDone, onToggle, task.id, setIsDeleteConfirmOpen]);
 
   const totalAlerts = task.alerts?.length || 0;
   const completedAlertsCount = task.completedAlerts?.length || 0;
@@ -1756,7 +1756,7 @@ export const TaskCard = React.memo(function TaskCard({
             aria-label={isExpanded ? "Contraer" : "Expandir"}
           >
             {(() => {
-              const count = tasks ? Object.values(tasks).filter(t => t && t.parentId === task.id && !t.deleted_at).length : 0;
+              const count = childCount;
               return count > 0 ? <span style={{ fontVariantNumeric: 'tabular-nums' }}>{count}</span> : null;
             })()}
             <motion.div style={{ display: 'flex', alignItems: 'center' }} animate={{ rotate: isExpanded ? 0 : -90 }} transition={{ type: 'spring', damping: 20, stiffness: 300 }}>
@@ -2030,7 +2030,7 @@ export const TaskCard = React.memo(function TaskCard({
         <DeleteParentModal
           isOpen={isDeleteConfirmOpen}
           parentTitle={task.title}
-          childCount={directChildren.length}
+          childCount={childCount}
           isPermanent={Boolean(task.deleted_at)}
           onDeleteAll={() => {
             setIsDeleteConfirmOpen(false);

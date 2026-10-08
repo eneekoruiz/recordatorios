@@ -54,7 +54,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             Algo salió mal
           </h1>
           <p style={{ color: '#a1a1aa', maxWidth: 400, lineHeight: 1.6 }}>
-            La aplicación encontró un error inesperado. Tus datos están seguros en almacenamiento local.
+            La aplicación encontró un error inesperado. Si aparece un aviso de guardado pendiente, mantén esta pestaña abierta hasta resolverlo.
           </p>
           {this.state.error && (
             <pre style={{

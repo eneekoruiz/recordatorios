@@ -12,6 +12,7 @@
 // La frecuencia de cada tarea se deduce igual que en la app (título, lista o sección:
 // ver shared/periodicity.js) y lo ya hecho en el periodo en curso no cuenta.
 import { getTaskPeriodicity, routineRoundsOn } from '../shared/periodicity.js';
+import { createHash } from 'node:crypto';
 
 const DEFAULT_TZ = 'Europe/Madrid';
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -173,6 +174,13 @@ export function planNotifications({ tasks, lists = [], sections = [], prefs = {}
   const local = { ...zonedParts(now, timeZone), timeZone };
   const messages = [];
   const nextLog = { ...(sentLog && typeof sentLog === 'object' ? sentLog : {}) };
+  const alertLog = nextLog.alerts && typeof nextLog.alerts === 'object' && !Array.isArray(nextLog.alerts)
+    ? nextLog.alerts as Record<string, unknown>
+    : {};
+  const recentAlertLog = Object.fromEntries(Object.entries(alertLog).filter(([, firedAt]) =>
+    Number.isFinite(Number(firedAt)) && Number(firedAt) >= now.getTime() - MAX_LOOKBACK_MS
+  ));
+  nextLog.alerts = recentAlertLog;
 
   // Pendientes de verdad: ni borradas, ni de la guía de inicio, ni hechas en su periodo.
   const pending = (Array.isArray(tasks) ? tasks : [])
@@ -188,19 +196,26 @@ export function planNotifications({ tasks, lists = [], sections = [], prefs = {}
   }
 
   // 2) Alertas con hora que caen en esta pasada, agrupadas.
-  const due = pending
-    .filter(({ task, periodicity }) => alertFireTimes(task, timeZone, from, now, periodicity).length > 0)
-    .map(({ task }) => (typeof task.title === 'string' && task.title.trim() ? task.title.trim() : 'Recordatorio'));
-  if (due.length === 1) {
-    messages.push({ title: 'Recordatorio', body: due[0], tag: `alert-${now.getTime()}`, url: '/' });
-  } else if (due.length > 1) {
-    const shown = due.slice(0, 3);
-    const rest = due.length - shown.length;
+  const due = pending.flatMap(({ task, periodicity }) =>
+    alertFireTimes(task, timeZone, from, now, periodicity)
+      .map((at) => ({ task, at, key: `${String(task.id)}:${at.getTime()}` }))
+      .filter(({ key }) => !(key in recentAlertLog))
+  );
+  const dueTasks = [...new Map(due.map(({ task }) => [String(task.id), task])).values()];
+  const dueTitles = dueTasks.map(({ title }) => typeof title === 'string' && title.trim() ? title.trim() : 'Recordatorio');
+  const deliveryKeys = Object.fromEntries(due.map(({ key, at }) => [key, at.getTime()]));
+  nextLog.alerts = { ...recentAlertLog, ...deliveryKeys };
+  if (dueTitles.length === 1) {
+    messages.push({ title: 'Recordatorio', body: dueTitles[0], tag: `alerts-${createHash('sha256').update(Object.keys(deliveryKeys).sort().join('|')).digest('hex').slice(0, 16)}`, url: '/', deliveryKeys });
+  } else if (dueTitles.length > 1) {
+    const shown = dueTitles.slice(0, 3);
+    const rest = dueTitles.length - shown.length;
     messages.push({
-      title: `${due.length} recordatorios`,
+      title: `${dueTitles.length} recordatorios`,
       body: rest > 0 ? `${shown.join(', ')} y ${plural(rest, 'más', 'más')}` : joinNatural(shown),
-      tag: `alert-${now.getTime()}`,
+      tag: `alerts-${createHash('sha256').update(Object.keys(deliveryKeys).sort().join('|')).digest('hex').slice(0, 16)}`,
       url: '/',
+      deliveryKeys,
     });
   }
 

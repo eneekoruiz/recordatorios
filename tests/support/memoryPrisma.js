@@ -1,16 +1,25 @@
 // Implementación en memoria del subconjunto de Prisma que usa el servidor.
 // Sirve para tests rápidos de la API y para levantar un backend local sin PostgreSQL.
 import { randomUUID } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
+import { Prisma } from '@prisma/client';
 
 const clone = (v) => (v === undefined ? v : structuredClone(v));
 
 function matches(row, where = {}) {
   for (const [key, cond] of Object.entries(where)) {
     const value = row[key];
+    if (cond === Prisma.DbNull) {
+      if (value !== null && value !== undefined) return false;
+      continue;
+    }
     if (cond && typeof cond === 'object' && !(cond instanceof Date)) {
       if ('in' in cond && !cond.in.includes(value)) return false;
       if ('lt' in cond && !(value instanceof Date && value.getTime() < new Date(cond.lt).getTime())) return false;
+      if ('lte' in cond && !(value instanceof Date && value.getTime() <= new Date(cond.lte).getTime())) return false;
       if ('gt' in cond && !(value instanceof Date && value.getTime() > new Date(cond.gt).getTime())) return false;
+      if ('equals' in cond && cond.equals === Prisma.DbNull && value !== null && value !== undefined) return false;
+      if ('equals' in cond && cond.equals !== Prisma.DbNull && !isDeepStrictEqual(value, cond.equals)) return false;
     } else if (cond === null) {
       if (value !== null && value !== undefined) return false;
     } else if (value !== cond) {
@@ -54,7 +63,16 @@ function createDelegate(store, { hasUpdatedAt = true, defaults = {} } = {}) {
       return rows.filter((r) => matches(r, where)).map((r) => project(r, select));
     },
     async create({ data }) {
-      if (data.id && rows.some((r) => r.id === data.id)) throw new Error(`Unique constraint failed on id ${data.id}`);
+      if (data.id && rows.some((r) => r.id === data.id)) {
+        const error = new Error(`Unique constraint failed on id ${data.id}`);
+        error.code = 'P2002';
+        throw error;
+      }
+      if (data.key && rows.some((r) => r.key === data.key)) {
+        const error = new Error(`Unique constraint failed on key ${data.key}`);
+        error.code = 'P2002';
+        throw error;
+      }
       const row = touch({ ...defaults, id: data.id || randomUUID(), createdAt: new Date(), deletedAt: null, ...clone(data) });
       rows.push(row);
       return clone(row);
@@ -107,6 +125,7 @@ export function createMemoryPrisma() {
     links: { rows: [] },
     push: { rows: [] },
     limits: { rows: [] },
+    cronLeases: { rows: [] },
   };
   stores.links.lists = stores.lists;
   return {
@@ -119,6 +138,7 @@ export function createMemoryPrisma() {
     sharedLink: createDelegate(stores.links, { hasUpdatedAt: false }),
     pushSubscription: createDelegate(stores.push, { hasUpdatedAt: false }),
     rateLimit: createDelegate(stores.limits, { hasUpdatedAt: false }),
+    cronLease: createDelegate(stores.cronLeases, { hasUpdatedAt: false }),
     async $transaction(ops) {
       return Promise.all(ops);
     },

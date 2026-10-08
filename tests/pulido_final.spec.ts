@@ -1,23 +1,8 @@
 import { test, expect } from '@playwright/test';
+import { bootApp } from "./support/bootApp";
 
 async function ensureAppUnlocked(page: any) {
-  await page.goto('/');
-  await page.waitForLoadState('domcontentloaded');
-  await page.evaluate(() => {
-    (window as any).__E2E__ = true;
-    sessionStorage.setItem('__E2E__', 'true');
-    sessionStorage.setItem('daily_greeting_seen_session', 'true');
-    localStorage.setItem('daily_greeting_dismissed_day', new Date().toDateString());
-    localStorage.setItem('hide_onboarding_guide', 'true');
-    (window as any).useAppStore?.getState()?.setToken('local_offline_token', 'local_guest_e2e');
-  });
-  const guestBtn = page.locator('button:has-text("Usar sin cuenta")').first();
-  try {
-    await guestBtn.click({ timeout: 1500 });
-  } catch {
-    // Ya desbloqueada
-  }
-  await page.waitForTimeout(400);
+    await bootApp(page);
 }
 
 async function seedCasa(page: any) {
@@ -121,7 +106,7 @@ test.describe('Pulido final', () => {
       window.dispatchEvent(new CustomEvent('select-view', { detail: 'smart_all' }));
     });
     const casa = page.locator('.group-header', { hasText: 'Casa E2E' });
-    const chip = casa.locator('.apple-duration-chip');
+    const chip = casa.getByRole('button', { name: 'Ver desglose de tiempo de sección' }).first();
     await expect(chip).toBeVisible();
     await chip.click();
 
@@ -165,7 +150,7 @@ test.describe('Pulido final', () => {
     await page.waitForTimeout(400);
 
     // Abrir modal de duración
-    const durationBtn = page.locator('.apple-duration-chip').first();
+    const durationBtn = page.locator('.section-duration-label').first();
     await expect(durationBtn).toBeVisible();
     await durationBtn.click();
 
@@ -188,6 +173,9 @@ test.describe('Pulido final', () => {
     test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
     test('deslizar desde el borde izquierdo vuelve a las listas; un arrastre corto no', async ({ page }) => {
+      // The two sampled pointer journeys can take >30s through Chromium on Windows.
+      // Preserve the slow short drag and the full threshold-crossing drag assertions.
+      test.setTimeout(60000);
       await ensureAppUnlocked(page);
       await seedCasa(page);
       await page.locator('.ios-list-item', { hasText: 'Casa E2E' }).first().tap();

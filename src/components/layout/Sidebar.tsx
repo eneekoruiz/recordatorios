@@ -249,10 +249,22 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
               <div 
                 className="user-profile-trigger"
                 data-testid="user-profile-trigger"
+                role="button"
+                tabIndex={0}
+                aria-haspopup="menu"
+                aria-expanded={isProfileOpen}
                 onClick={(e) => {
                   e.stopPropagation();
                   setProfileAnchor(e.currentTarget.getBoundingClientRect());
                   setIsProfileOpen((prev) => !prev);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setProfileAnchor(e.currentTarget.getBoundingClientRect());
+                    setIsProfileOpen((prev) => !prev);
+                  }
                 }}
                 style={{
                   display: 'flex',

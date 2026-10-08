@@ -12,9 +12,8 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: `http://localhost:${TEST_PORT}`,
-    trace: 'on-first-retry',
+    trace: 'retain-on-failure',
     viewport: { width: 1280, height: 720 },
-    launchOptions: process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {},
   },
   webServer: [
     {
@@ -22,15 +21,17 @@ export default defineConfig({
       command: process.env.E2E_MEMORY_DB ? 'npx tsx tests/support/memory-server.js' : 'npx tsx server/index.ts',
       url: 'http://127.0.0.1:3001/api/health',
       reuseExistingServer: !process.env.CI,
-      timeout: 60000,
+      timeout: 180000,
       stdout: 'pipe',
       stderr: 'pipe',
     },
     {
-      command: `npx vite --host 0.0.0.0 --port ${TEST_PORT}`,
+      command: process.env.PW_DEV_SERVER === '1'
+        ? `npx vite --host 127.0.0.1 --port ${TEST_PORT} --strictPort`
+        : `${process.env.PW_BUILD_READY === '1' ? '' : 'npm run build && '}npx vite preview --host 127.0.0.1 --port ${TEST_PORT} --strictPort`,
       url: `http://127.0.0.1:${TEST_PORT}`,
       reuseExistingServer: false,
-      timeout: 60000,
+      timeout: 180000,
       stdout: 'pipe',
       stderr: 'pipe',
     }
@@ -39,14 +40,18 @@ export default defineConfig({
     {
       name: 'chromium',
       testIgnore: /mobile\.spec\.ts/,
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        launchOptions: process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {},
+      },
     },
     {
-      // WebKit no viene en el entorno de CI: se emula un iPhone (pantalla, táctil, agente) sobre Chromium.
-      // Con `npx playwright install webkit` se puede cambiar `browserName` a 'webkit' para probar en el motor real.
       name: 'iphone',
       testMatch: /mobile\.spec\.ts/,
-      use: { ...devices['iPhone 14'], browserName: 'chromium', defaultBrowserType: 'chromium' },
+      // Trace on Windows shows >30s of cold startup before the six-view journey.
+      // This is a functional check; every layout assertion keeps its own limit.
+      timeout: 120000,
+      use: { ...devices['iPhone 14'], browserName: 'webkit' },
     },
   ],
 });

@@ -1,13 +1,6 @@
-import type { AppContext } from '../context.js';
 import express from 'express';
-import crypto from 'node:crypto';
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
-import { isMailConfigured, sendPasswordResetEmail, sendSecurityEmail } from '../mail.js';
-import { getSecurity, withSecurity, publicPreferences, stripSecurity, checkSecondFactor, noteDevice, deviceId, newTotpSecret, otpauthUrl, encryptSecret, decryptSecret, verifyTotp, generateRecoveryCodes, hashRecoveryCode } from '../security.js';
-import { planNotifications, safeTimeZone } from '../notifications.js';
-import { scopedId, clientIdOf, isValidClientId, shouldApplyIncoming, parseDeletedAt, toClientPayload, sanitizePayload } from '../syncUtils.js';
-import { getJwtSecret, resetLinkBase, isAllowedPushEndpoint, MIN_PASSWORD_LENGTH } from '../app.js';
+import type { AppContext } from '../context.js';
+import { clientIdOf, isValidClientId, scopedId, toClientPayload } from '../syncUtils.js';
 
 
 export function createShareRouter(context: AppContext) {
@@ -88,7 +81,7 @@ export function createShareRouter(context: AppContext) {
       // Lista blanca: la vista pública solo recibe lo que necesita pintar. Notas privadas, personas,
       // ubicaciones, enlaces de gestión o datos de tarjetas nunca salen por un enlace compartido.
       const pick = (p: any, keys: string[]) => Object.fromEntries(keys.filter((k) => p[k] !== undefined).map((k) => [k, p[k]]));
-      const TASK_KEYS = ['id', 'title', 'description', 'status', 'dueDate', 'sectionId', 'price', 'quantity', 'order', 'created_at'];
+      const TASK_KEYS = ['id', 'title', 'status', 'dueDate', 'sectionId', 'price', 'quantity', 'order', 'created_at'];
       const tasks = allTasks
         .map((t) => toClientPayload(ownerId, t))
         .filter((p) => (p.categoryId || p.category_id || p.listId) === clientListId && !p.deleted_at)
