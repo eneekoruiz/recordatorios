@@ -912,7 +912,12 @@ const CORE_CYCLES = [
           : getSectionPeriodicity(categoryOrCycle, headerTitle, listSections, lists);
         // «Incluir diarias» (o acumuladas): categoryTasks ya trae las de frecuencias más cortas
         // mezcladas (groupedTasks las filtra según cycleViewMode), al mismo nivel, sin subcabecera.
-        const rawTasksToRender = categoryTasks; let tasksToRender = filterTasks(rawTasksToRender);
+        const rawTasksToRender = categoryTasks; 
+        let tasksToRender = filterTasks(rawTasksToRender);
+        // Si todas las tareas están completadas (o vacías) y están ocultas, no mostrar cabecera vacía
+        if (tasksToRender.length === 0) {
+          return;
+        }
         let routineCounts = null;
         if (currentCycle && currentCycle.id !== 'cycle_day') {
           const rCounts = cycleRoutineCounts[categoryOrCycle];
@@ -1786,7 +1791,7 @@ const CORE_CYCLES = [
               }).map(t => t.id);
 
               if (finalTasksToRender.length === 0 && childSections.length === 0) {
-                if (!manualSec) {
+                if (!resolvedShowCompleted || !manualSec) {
                   return;
                 }
               }

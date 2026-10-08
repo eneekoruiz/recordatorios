@@ -37,7 +37,7 @@ export const PinnedListsSection: React.FC<PinnedListsSectionProps> = ({
   const visiblePinnedCustomLists = (lists || []).filter((l: any) => l.isPinned && l.id !== 'primeros_pasos');
   const hasAnyPinned = visiblePinnedSmartLists.length > 0 || visiblePinnedCustomLists.length > 0;
 
-  if (!hasAnyPinned && !isEditMode) return null;
+  if (!hasAnyPinned) return null;
 
   return (
     <div style={{ padding: '0 16px', marginBottom: 16 }}>
@@ -57,7 +57,21 @@ export const PinnedListsSection: React.FC<PinnedListsSectionProps> = ({
             <motion.div
               key={smartId}
               layoutId={"pinned-item-" + smartId}
+              role="button"
+              tabIndex={0}
+              aria-label={smartItem.name}
+              aria-pressed={isActive}
               className={`sidebar-item ${isActive ? 'active' : ''}`}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  if (isEditMode) {
+                    togglePinSmartList(smartId);
+                  } else {
+                    onSelectView(smartId);
+                  }
+                }
+              }}
               onClick={() => {
                 if (isEditMode) {
                   togglePinSmartList(smartId);
@@ -136,7 +150,17 @@ export const PinnedListsSection: React.FC<PinnedListsSectionProps> = ({
           return (
             <motion.div
               key={"pinned-custom-" + list.id}
+              role="button"
+              tabIndex={0}
+              aria-label={list.name}
+              aria-pressed={isActive}
               className={`sidebar-item ${isActive ? 'active' : ''}`}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onSelectView(`list_${list.id}`);
+                }
+              }}
               onClick={() => onSelectView(`list_${list.id}`)}
               style={{
                 display: 'flex',

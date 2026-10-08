@@ -99,6 +99,8 @@ export interface TaskItem {
   completedAlerts?: string[]; // IDs of AlertDefs that have fired
   completed_at?: string; // Cuándo se marcó como completada por última vez (ISO)
   completionHistory?: number[]; // Timestamps de cuando se ha completado en el pasado
+  skipHistory?: number[]; // Timestamps de cuando se ha omitido en el pasado para un período
+  consecutiveSkipCount?: number; // Conteo de omisiones consecutivas sin haber sido completada
   
   // --- APPLE REMINDERS FEATURES ---
   priority?: 'none' | 'low' | 'medium' | 'high';

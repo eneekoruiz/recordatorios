@@ -28,7 +28,7 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
   const availableGridLists = SMART_LISTS.filter(list => {
     if (pinnedSmartLists.includes(list.id)) return false;
     if (list.id === 'smart_primeros_pasos' && getTaskCount('smart_primeros_pasos') === 0 && !isEditMode) return false;
-    if (!isEditMode && getTaskCount(list.id) === 0 && list.id !== "smart_today" && list.id !== "smart_all") return false; return smartListVisibility[list.id] || isEditMode;
+    return smartListVisibility[list.id] || isEditMode;
   });
 
   return (
@@ -42,7 +42,7 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
         marginBottom: 4
       }}>
         {availableGridLists.length === 0 ? (
-          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 'var(--space-16) 0', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>
+          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '24px 0', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>
             No tienes listas inteligentes seleccionadas
           </div>
         ) : (
@@ -55,7 +55,21 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
               <motion.div 
                 key={list.id}
                 layoutId={"smart-card-" + list.id}
+                role="button"
+                tabIndex={0}
+                aria-label={list.name}
+                aria-pressed={isActive}
                 className={`ios-smart-card ${isActive ? 'is-active' : ''}`}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (isEditMode) {
+                      toggleSmartList(list.id);
+                    } else {
+                      onSelectView(list.id);
+                    }
+                  }
+                }}
                 onClick={() => {
                   if (isEditMode) {
                     toggleSmartList(list.id);

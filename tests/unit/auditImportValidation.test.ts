@@ -31,6 +31,19 @@ describe('untrusted imports', () => {
     expect(result.tasks[0]).not.toHaveProperty('unknown');
     expect(Number.isFinite(Date.parse(result.tasks[0].created_at))).toBe(true);
   });
+  it('preserves skipHistory and consecutiveSkipCount during validation', () => {
+    const result = validateJsonImport({
+      tasks: {
+        task1: {
+          title: 'Regar plantas',
+          skipHistory: [1700000000000],
+          consecutiveSkipCount: 2,
+        }
+      }
+    });
+    expect(result.tasks[0].skipHistory).toEqual([1700000000000]);
+    expect(result.tasks[0].consecutiveSkipCount).toBe(2);
+  });
   it('rejects malformed lists and duplicate task identifiers before returning any tasks', () => {
     expect(() => validateJsonImport({ tasks: [{ title: 'A' }], lists: [{ id: 'x', name: {} }] })).toThrow(/Listas/);
     expect(() => validateJsonImport([{ id: 'same', title: 'A' }, { id: 'same', title: 'B' }])).toThrow(/duplicados/);

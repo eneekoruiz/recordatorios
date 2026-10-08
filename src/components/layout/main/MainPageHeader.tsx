@@ -138,12 +138,12 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   const [isDurationCardOpen, setIsDurationCardOpen] = React.useState(false);
 
   const includeSwitchId = React.useId();
-  const scrollOffset = Math.min(60, Math.max(0, scrollTop || 0));
-  const titleProgress = Math.min(1, Math.max(0, (scrollOffset - 24) / 32));
+  const scrollOffset = Math.min(80, Math.max(0, scrollTop || 0));
+  const titleProgress = Math.min(1, Math.max(0, (scrollOffset - 36) / 36));
   const titleOpacity = Math.max(0, 1 - titleProgress);
-  const titleTranslateY = -titleProgress * 6;
-  const titleScale = 1 - titleProgress * 0.03;
-  const titleBlur = titleProgress * 1.5;
+  const titleTranslateY = -titleProgress * 4;
+  const titleScale = 1 - titleProgress * 0.02;
+  const titleBlur = 0;
 
   return (
     <>
@@ -461,7 +461,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
 
         {/* Navegación temporal y diagnóstico de la rutina de frecuencia (situado bajo «Incluir acumuladas/diarias») */}
         {currentCycle && (
-          <div style={{ opacity: titleOpacity, width: '100%' }}>
+          <div style={{ width: '100%' }}>
             <CycleRoutineStatusCard
               currentCycle={currentCycle}
               cycleRoutineMode={cycleRoutineMode}

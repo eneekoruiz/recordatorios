@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { completePrimaryHydration, getPersistenceRecovery, idbStorage } from '../utils/idbStorage';
 import type { TaskItem, CustomCycle, CustomList, ListSection } from '../models/Task';
 import { TaskRepository } from '../repositories/TaskRepository';
-import { isCompletedInCurrentPeriod, wouldCreateDependencyCycle, getStartOfWeek, getStartOfNextWeek } from '../services/TaskService';
+import { isCompletedInCurrentPeriod, isSkippedInCurrentPeriod, isTaskActuallyCompletedInCurrentPeriod, findPeriodIndexInHistory, wouldCreateDependencyCycle, getStartOfWeek, getStartOfNextWeek } from '../services/TaskService';
 import { getEffectiveCycleId, getPureCyclicPeriodicity } from '../utils/sectionRoutine';
 import { validateJsonImport } from '../utils/importValidation';
 import { isPersistedRecordSafe } from '../utils/persistedStateValidation';
@@ -186,6 +186,7 @@ interface AppState {
   addTasksBatch: (tasks: Partial<TaskItem>[], options?: { createList?: CustomList }) => void;
   updateTaskRaw: (task: TaskItem) => void; // Para uso interno y SyncProvider
   toggleTask: (id: string, forceReverse?: boolean, customTimestamp?: number | Date) => void;
+  skipTask: (id: string, forceReverse?: boolean, customTimestamp?: number | Date) => void;
   deleteTask: (id: string) => void;
   deleteTaskWithOptions: (id: string, options?: { keepSubtasks?: boolean; permanent?: boolean }) => void;
   updateTask: (id: string, updates: Partial<TaskItem>) => void;
@@ -560,7 +561,7 @@ export const useAppStore = create<AppState>()(
 
         // Auto-detect reverse if already completed or if forceReverse is explicitly passed
         const isDone = !isOneOff
-          ? isCompletedInCurrentPeriod(existingTask, state.cycles, state.listSections, state.lists, targetDate)
+          ? isTaskActuallyCompletedInCurrentPeriod(existingTask, state.cycles, state.listSections, state.lists, targetDate)
           : isTaskCompleted(existingTask);
         const shouldReverse = forceReverse !== undefined ? forceReverse : isDone;
         
@@ -651,11 +652,16 @@ export const useAppStore = create<AppState>()(
             } else {
               // Reached target count: mark as completed (or recurring pending with history)
               const newCompletionHistory = [...(existingTask.completionHistory || []), effectiveTimestamp];
+            const cleanedSkipHistory = [...(existingTask.skipHistory || [])];
+            const skipIdxInPeriod = findPeriodIndexInHistory(cleanedSkipHistory, effCycle, targetDate);
+            if (skipIdxInPeriod !== -1) cleanedSkipHistory.splice(skipIdxInPeriod, 1);
               if (!isOneOff) {
                 updatedTask = TaskRepository.update(existingTask, {
                   cycle_id: existingTask.cycle_id || effCycle || undefined,
                   completedAlerts: [],
                   completionHistory: newCompletionHistory,
+                  skipHistory: cleanedSkipHistory,
+                  consecutiveSkipCount: 0,
                   status: 'pending',
                   currentCount: targetCount
                 });
@@ -675,12 +681,17 @@ export const useAppStore = create<AppState>()(
             });
           } else {
             const newCompletionHistory = [...(existingTask.completionHistory || []), effectiveTimestamp];
+            const cleanedSkipHistory = [...(existingTask.skipHistory || [])];
+            const skipIdxInPeriod = findPeriodIndexInHistory(cleanedSkipHistory, effCycle, targetDate);
+            if (skipIdxInPeriod !== -1) cleanedSkipHistory.splice(skipIdxInPeriod, 1);
             const targetCountUpdate = existingTask.targetCount ? { currentCount: existingTask.targetCount } : {};
             if (!isOneOff) {
               updatedTask = TaskRepository.update(existingTask, { 
                 cycle_id: existingTask.cycle_id || effCycle || undefined,
                 completedAlerts: [], 
                 completionHistory: newCompletionHistory,
+                skipHistory: cleanedSkipHistory,
+                consecutiveSkipCount: 0,
                 status: 'pending',
                 ...targetCountUpdate
               });
@@ -796,6 +807,53 @@ export const useAppStore = create<AppState>()(
             ...parentUpdates,
             [id]: updatedTask,
             ...childUpdates
+          }
+        };
+      }),
+
+      skipTask: (id, forceReverse, customTimestamp) => optimisticUpdate(get, set, (state) => {
+        const existingTask = state.tasks[id];
+        if (!existingTask || existingTask.deleted_at) return state;
+
+        const effCycle = getEffectiveCycleId(existingTask, state.listSections, state.lists);
+        const targetDate = customTimestamp ? new Date(customTimestamp) : new Date();
+        const effectiveTimestamp = customTimestamp
+          ? (typeof customTimestamp === 'number' ? customTimestamp : customTimestamp.getTime())
+          : Date.now();
+
+        const isSkipped = isSkippedInCurrentPeriod(existingTask, state.cycles, state.listSections, state.lists, targetDate);
+        const shouldReverse = forceReverse !== undefined ? forceReverse : isSkipped;
+
+        let updatedTask: TaskItem;
+        if (shouldReverse) {
+          const newSkipHistory = [...(existingTask.skipHistory || [])];
+          const idxToRemove = findPeriodIndexInHistory(newSkipHistory, effCycle, targetDate);
+          if (idxToRemove !== -1) {
+            newSkipHistory.splice(idxToRemove, 1);
+          } else {
+            newSkipHistory.pop();
+          }
+          const decrementedSkipCount = Math.max(0, (existingTask.consecutiveSkipCount || 1) - 1);
+          updatedTask = TaskRepository.update(existingTask, {
+            skipHistory: newSkipHistory,
+            consecutiveSkipCount: decrementedSkipCount,
+            status: 'pending'
+          });
+        } else {
+          const newSkipHistory = [...(existingTask.skipHistory || []), effectiveTimestamp];
+          const newSkipCount = (existingTask.consecutiveSkipCount || 0) + 1;
+          updatedTask = TaskRepository.update(existingTask, {
+            cycle_id: existingTask.cycle_id || effCycle || undefined,
+            skipHistory: newSkipHistory,
+            consecutiveSkipCount: newSkipCount,
+            status: 'pending'
+          });
+        }
+
+        return {
+          tasks: {
+            ...state.tasks,
+            [id]: updatedTask
           }
         };
       }),

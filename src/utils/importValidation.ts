@@ -38,6 +38,8 @@ const taskSchema = z.object({
   }).refine(alert => alert.type === 'at_time' ? !!alert.time : alert.offsetMinutes !== undefined, 'Alerta incompleta'))),
   completedAlerts: optional(z.array(id)),
   completionHistory: optional(z.array(z.number().finite().nonnegative())),
+  skipHistory: optional(z.array(z.number().finite().nonnegative())),
+  consecutiveSkipCount: optional(z.number().int().nonnegative()),
   priority: optional(z.enum(['none', 'low', 'medium', 'high'])),
   flagged: flag, url: text, image: text, timeOfDay: optional(z.enum(['morning', 'afternoon', 'night'])),
   duration: nonnegative, disableDuration: flag, isParallel: flag, parallelDuration: nonnegative,

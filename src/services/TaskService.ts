@@ -26,14 +26,139 @@ export function getStartOfNextWeek(date: Date = new Date()): Date {
  *
  * Aplica principios de Clean Code, Guard Clauses y tipado estricto.
  */
-export function isCompletedInCurrentPeriod(
-  task: Partial<TaskItem>, 
-  cycles: CustomCycle[] = [],
+/**
+ * Comprueba si un historial de fechas contiene una entrada en el período de referencia.
+ */
+export function matchesPeriod(
+  history: (number | string)[] | undefined,
+  effCycleId: string,
+  ref: Date,
+  cycles: CustomCycle[] = []
+): boolean {
+  if (!history || history.length === 0) return false;
+
+  if (effCycleId === 'cycle_day' || effCycleId === 'day') {
+    const refStr = ref.toDateString();
+    return history.some(ts => new Date(ts).toDateString() === refStr);
+  }
+
+  if (effCycleId === 'cycle_week' || effCycleId === 'week') {
+    const startOfWeek = getStartOfWeek(ref);
+    const startOfNextWeek = getStartOfNextWeek(ref);
+    return history.some(ts => {
+      const time = typeof ts === 'number' ? ts : new Date(ts).getTime();
+      return time >= startOfWeek.getTime() && time < startOfNextWeek.getTime();
+    });
+  }
+
+  if (effCycleId === 'cycle_month' || effCycleId === 'month') {
+    const refMonth = ref.getMonth();
+    const refYear = ref.getFullYear();
+    return history.some(ts => {
+      const d = new Date(ts);
+      return d.getMonth() === refMonth && d.getFullYear() === refYear;
+    });
+  }
+
+  if (effCycleId === 'cycle_year' || effCycleId === 'year') {
+    const refYear = ref.getFullYear();
+    return history.some(ts => new Date(ts).getFullYear() === refYear);
+  }
+
+  const cycle = cycles.find((c) => c.id === effCycleId);
+  if (cycle) {
+    return checkCyclePeriodMatch(cycle.daysValue, ref, history);
+  }
+
+  const refStr = ref.toDateString();
+  return history.some(ts => new Date(ts).toDateString() === refStr);
+}
+
+/**
+ * Comprueba si una tarea periódica ha sido omitida en su período actual.
+ */
+export function findPeriodIndexInHistory(
+  hist: (number | string)[] | undefined,
+  cycleId: string | null | undefined,
+  ref: Date
+): number {
+  if (!hist || hist.length === 0) return -1;
+  if (cycleId === 'cycle_day' || cycleId === 'day') {
+    const refStr = ref.toDateString();
+    return hist.findIndex(ts => new Date(ts).toDateString() === refStr);
+  }
+  if (cycleId === 'cycle_week' || cycleId === 'week') {
+    const startOfWeek = getStartOfWeek(ref);
+    const startOfNextWeek = getStartOfNextWeek(ref);
+    return hist.findIndex(ts => {
+      const time = typeof ts === 'number' ? ts : new Date(ts).getTime();
+      return time >= startOfWeek.getTime() && time < startOfNextWeek.getTime();
+    });
+  }
+  if (cycleId === 'cycle_month' || cycleId === 'month') {
+    const refMonth = ref.getMonth();
+    const refYear = ref.getFullYear();
+    return hist.findIndex(ts => {
+      const d = new Date(ts);
+      return d.getMonth() === refMonth && d.getFullYear() === refYear;
+    });
+  }
+  if (cycleId === 'cycle_year' || cycleId === 'year') {
+    const refYear = ref.getFullYear();
+    return hist.findIndex(ts => new Date(ts).getFullYear() === refYear);
+  }
+  return hist.findIndex(ts => new Date(ts).toDateString() === ref.toDateString());
+}
+
+function parseCycleParams(
+  cyclesOrDate?: CustomCycle[] | Date,
+  sections?: ListSection[],
+  lists?: CustomList[],
+  referenceDate: Date = new Date()
+) {
+  if (cyclesOrDate instanceof Date) {
+    return {
+      cycles: [] as CustomCycle[],
+      sections,
+      lists,
+      refDate: cyclesOrDate,
+    };
+  }
+  return {
+    cycles: (cyclesOrDate as CustomCycle[]) || [],
+    sections,
+    lists,
+    refDate: referenceDate,
+  };
+}
+
+export function isSkippedInCurrentPeriod(
+  task: Partial<TaskItem>,
+  cycles?: CustomCycle[] | Date,
   sections?: ListSection[],
   lists?: CustomList[],
   referenceDate: Date = new Date()
 ): boolean {
   if (task._isRolledOver) return false;
+  const { cycles: cyclesList, sections: sec, lists: lst, refDate: ref } = parseCycleParams(cycles, sections, lists, referenceDate);
+  const effCycleId = getEffectiveCycleId(task, sec, lst);
+  if (!effCycleId) return false;
+  return matchesPeriod(task.skipHistory, effCycleId, ref, cyclesList);
+}
+
+export function isTaskActuallyCompletedInCurrentPeriod(
+  task: Partial<TaskItem>, 
+  cycles?: CustomCycle[] | Date,
+  sections?: ListSection[],
+  lists?: CustomList[],
+  referenceDate: Date = new Date()
+): boolean {
+  if (task._isRolledOver) return false;
+
+  const { cycles: cyclesList, sections: sec, lists: lst, refDate: ref } = parseCycleParams(cycles, sections, lists, referenceDate);
+  // Solo verifica finalización efectiva en el historial o estado puntual
+  // (Las omitidas se tratan aparte en isCompletedInCurrentPeriod)
+
 
   // Si la tarea tiene meta de repeticiones (ej. 3 vasos de agua), no está completada hasta alcanzar la meta
   if (task.targetCount && task.targetCount > 1) {
@@ -43,7 +168,7 @@ export function isCompletedInCurrentPeriod(
   }
 
   // Deducir ciclo efectivo (explícito o por sección Diarias/Semanales, título [D], etc.)
-  const effCycleId = getEffectiveCycleId(task, sections, lists);
+  const effCycleId = getEffectiveCycleId(task, sec, lst);
 
   // Si no es una tarea de ciclo (es puntual) y tiene status completed
   const isDone = task.status === 'completed' || !!(task as any).completed_at || !!(task as any).completed;
@@ -56,7 +181,7 @@ export function isCompletedInCurrentPeriod(
     return false;
   }
 
-  const ref = referenceDate;
+
 
   // 1. Ciclo diario: completada si alguna finalización ocurrió en el día de referencia
   if (effCycleId === 'cycle_day') {
@@ -91,13 +216,27 @@ export function isCompletedInCurrentPeriod(
   }
 
   // 5. Ciclo personalizado por daysValue
-  const cycle = cycles.find((c) => c.id === effCycleId);
+  const cycle = cyclesList.find((c) => c.id === effCycleId);
   if (cycle) {
     return checkCyclePeriodMatch(cycle.daysValue, ref, task.completionHistory);
   }
 
   const refStr = ref.toDateString();
   return task.completionHistory.some(ts => new Date(ts).toDateString() === refStr);
+}
+
+export function isCompletedInCurrentPeriod(
+  task: Partial<TaskItem>,
+  cycles?: CustomCycle[] | Date,
+  sections?: ListSection[],
+  lists?: CustomList[],
+  referenceDate: Date = new Date()
+): boolean {
+  const { cycles: cyclesList, sections: sec, lists: lst, refDate: ref } = parseCycleParams(cycles, sections, lists, referenceDate);
+  if (isSkippedInCurrentPeriod(task, cyclesList, sec, lst, ref)) {
+    return true;
+  }
+  return isTaskActuallyCompletedInCurrentPeriod(task, cyclesList, sec, lst, ref);
 }
 
 /**

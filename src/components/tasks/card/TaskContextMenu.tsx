@@ -7,7 +7,7 @@ import {
   AlertCircle, Flag, FolderInput, LayoutList, Copy, Play, Trash2, 
   ChevronRight, ArrowLeft, Sun, CalendarDays, Clock, CalendarX, Edit3,
   ArrowUp, ArrowDown, ChevronDown, SlidersHorizontal, Coins, RotateCcw,
-  CheckSquare, Mail
+  CheckSquare, Mail, SkipForward
 } from 'lucide-react';
 import type { TaskItem } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
@@ -41,6 +41,8 @@ export interface TaskContextMenuProps {
   /** Solo si la lista admite duración (rutinas): empezar esta tarea sola, como una sección o una lista. */
   onStartTask?: () => void;
   onToggleSelect?: () => void;
+  onSkipTask?: () => void;
+  isSkipped?: boolean;
 }
 
 export function TaskContextMenu({
@@ -62,7 +64,9 @@ export function TaskContextMenu({
   canMoveUp,
   canMoveDown,
   onStartTask,
-  onToggleSelect
+  onToggleSelect,
+  onSkipTask,
+  isSkipped
 }: TaskContextMenuProps) {
   const updateTask = useAppStore(state => state.updateTask);
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
@@ -178,6 +182,8 @@ export function TaskContextMenu({
               canMoveDown={canMoveDown}
               onStartTask={onStartTask}
               onToggleSelect={onToggleSelect}
+              onSkipTask={onSkipTask}
+              isSkipped={isSkipped}
             />
           </motion.div>
         </>
@@ -204,6 +210,8 @@ interface MenuActionsProps {
   canMoveDown?: boolean;
   onStartTask?: () => void;
   onToggleSelect?: () => void;
+  onSkipTask?: () => void;
+  isSkipped?: boolean;
 }
 
 function MenuActions({
@@ -222,7 +230,9 @@ function MenuActions({
   canMoveUp,
   canMoveDown,
   onStartTask,
-  onToggleSelect
+  onToggleSelect,
+  onSkipTask,
+  isSkipped
 }: MenuActionsProps) {
   const addTask = useAppStore(state => state.addTask);
   const restoreTask = useAppStore(state => state.restoreTask);
@@ -673,6 +683,19 @@ function MenuActions({
           onToggle(task.id, undefined, task._isRolledOver); 
         }} 
       />
+
+      {/* Omitir este período */}
+      {onSkipTask && (
+        <ActionRow 
+          icon={<SkipForward size={16} color={isSkipped ? 'var(--text-tertiary)' : '#ff9500'} />} 
+          label={isSkipped ? "Deshacer omisión" : "Omitir este período"} 
+          sublabel={task.consecutiveSkipCount && task.consecutiveSkipCount > 0 ? `Llevas ${task.consecutiveSkipCount} omitida${task.consecutiveSkipCount > 1 ? 's' : ''} seguida${task.consecutiveSkipCount > 1 ? 's' : ''}` : undefined}
+          onClick={() => { 
+            setContextMenuOpen(false); 
+            onSkipTask(); 
+          }} 
+        />
+      )}
 
       {/* 2. Editar recordatorio (Panel de metadatos) */}
       <ActionRow

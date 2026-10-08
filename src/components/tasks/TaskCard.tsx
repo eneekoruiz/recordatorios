@@ -5,16 +5,18 @@ import {
   Lock,
   ChevronDown, X, Info, RotateCcw, Flag,
   ShieldAlert, Clock, CheckCircle2, CreditCard,
-  Flame, User, MapPin, Link2, Check, GripVertical
+  Flame, User, MapPin, Link2, Check, GripVertical,
+  SkipForward
 } from 'lucide-react';
 import type { TaskItem, ListSection } from '../../models/Task';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { useTemporalNavigationStore } from '../../store/useTemporalNavigationStore';
-import { isCompletedInCurrentPeriod, calculateHabitStreak, calculateExpirationStatus } from '../../services/TaskService';
+import { isCompletedInCurrentPeriod, isSkippedInCurrentPeriod, calculateHabitStreak, calculateExpirationStatus } from '../../services/TaskService';
 import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
 import { ConfettiService } from '../../services/ConfettiService';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { confirmDialog } from '../ui/confirmDialog';
 import { DeleteParentModal } from './DeleteParentModal';
 import type { SpotlightRect } from '../ui/SpotlightBackdrop';
 import { isCaducidadesList, isQueHeHechoList, isLifeLibraryList } from '../../utils/specialLists';
@@ -89,6 +91,7 @@ export const TaskCard = React.memo(function TaskCard({
   const nestTask = useAppStore(state => state.nestTask);
   const lists = useAppStore(state => state.lists);
   const listSections = useAppStore(state => state.listSections);
+  const skipTask = useAppStore(state => state.skipTask);
   const taskList = lists?.find(l => l.id === task.categoryId);
   const taskColor = taskList?.color || 'var(--accent-primary, #007aff)';
 
@@ -478,6 +481,7 @@ export const TaskCard = React.memo(function TaskCard({
   const effCycleId = getEffectiveCycleId(task, listSections, lists);
   const isRecurring = Boolean(effCycleId);
   const isCompletedPeriod = isCompletedInCurrentPeriod(task, cycles, listSections, lists, referenceDate);
+  const isSkippedThisPeriod = isSkippedInCurrentPeriod(task, cycles, listSections, lists, referenceDate);
   const isJournalEntry = task.type === 'log' || isQueHeHechoList(task.categoryId, lists.find(l => l.id === task.categoryId));
   const isEffectivelyDone = isRecurring
     ? (isCompletedPeriod || !!isGracePeriod)
@@ -510,6 +514,43 @@ export const TaskCard = React.memo(function TaskCard({
       hasCrossedRightThreshold.current = false;
     }
   });
+
+
+  const handleSkipTask = useCallback(async () => {
+    if (isBlocked) return;
+    HapticService.selection();
+
+    if (isSkippedThisPeriod) {
+      skipTask(task.id, true, referenceDate);
+      window.dispatchEvent(new CustomEvent('show-toast', {
+        detail: `Recordatorio «${task.title}» reactivado como pendiente`
+      }));
+      return;
+    }
+
+    const currentSkips = task.consecutiveSkipCount || 0;
+    if (currentSkips >= 2) {
+      let freqUnit = 'veces';
+      if (effCycleId === 'cycle_day' || effCycleId === 'day') freqUnit = 'días';
+      else if (effCycleId === 'cycle_week' || effCycleId === 'week') freqUnit = 'semanas';
+      else if (effCycleId === 'cycle_month' || effCycleId === 'month') freqUnit = 'meses';
+      else if (effCycleId === 'cycle_year' || effCycleId === 'year') freqUnit = 'años';
+
+      const ok = await confirmDialog({
+        title: '¿Seguro que quieres omitir?',
+        message: `Llevas ${currentSkips} ${freqUnit} seguidos omitiendo "${task.title}". ¿Quieres omitirla también para este período?`,
+        confirmText: 'Omitir de todas formas',
+        cancelText: 'Hacerla ahora'
+      });
+      if (!ok) return;
+    }
+
+    skipTask(task.id, false, referenceDate);
+    const nextSkips = currentSkips + 1;
+    window.dispatchEvent(new CustomEvent('show-toast', {
+      detail: `Recordatorio «${task.title}» omitido este período (${nextSkips}ª vez consecutiva)`
+    }));
+  }, [isBlocked, isSkippedThisPeriod, skipTask, task.id, task.title, task.consecutiveSkipCount, referenceDate, effCycleId]);
 
   const handleSwipeEnd = useCallback((offsetX: number) => {
     if (offsetX > SWIPE_COMPLETE_THRESHOLD && !isBlocked) {
@@ -1132,7 +1173,7 @@ export const TaskCard = React.memo(function TaskCard({
             <motion.div
               animate={{
                 scale: isEffectivelyDone ? [1, 1.25, 0.94, 1] : 1,
-                backgroundColor: isEffectivelyDone ? taskColor : 'rgba(0,0,0,0)'
+                backgroundColor: isSkippedThisPeriod ? '#ff9500' : (isEffectivelyDone ? taskColor : 'rgba(0,0,0,0)')
               }}
               transition={{
                 scale: { type: 'spring', stiffness: 500, damping: 22 },
@@ -1147,7 +1188,10 @@ export const TaskCard = React.memo(function TaskCard({
                 transition: 'border-color 0.15s ease'
               }}
             >
-              <svg viewBox="0 0 24 24" width={14} height={14} style={{ overflow: 'visible' }}>
+              {isSkippedThisPeriod ? (
+                <SkipForward size={11} strokeWidth={2.6} color="white" />
+              ) : (
+                <svg viewBox="0 0 24 24" width={14} height={14} style={{ overflow: 'visible' }}>
                 <motion.path
                   d="M5 12L10 17L19 7"
                   stroke="white"
@@ -1165,7 +1209,8 @@ export const TaskCard = React.memo(function TaskCard({
                     opacity: { duration: 0.15 }
                   }}
                 />
-              </svg>
+                </svg>
+              )}
             </motion.div>
           </motion.button>
         )}
@@ -1450,6 +1495,35 @@ export const TaskCard = React.memo(function TaskCard({
                   }}
                 />
               </motion.span>
+            )}
+            {isSkippedThisPeriod && (
+              <span
+                className="apple-skip-pill"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSkipTask();
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3,
+                  padding: '1px 7px',
+                  borderRadius: 999,
+                  fontSize: '0.72rem',
+                  fontWeight: 600,
+                  background: 'rgba(255, 149, 0, 0.12)',
+                  border: '1px solid rgba(255, 149, 0, 0.28)',
+                  color: '#ff9500',
+                  cursor: 'pointer',
+                  marginLeft: 6,
+                  verticalAlign: 'middle',
+                  lineHeight: '1.2'
+                }}
+                title="Omitida para este período. Clic para reactivar como pendiente."
+              >
+                <SkipForward size={10} strokeWidth={2.4} />
+                <span>Omitida{task.consecutiveSkipCount && task.consecutiveSkipCount > 1 ? ` (${task.consecutiveSkipCount} seguidas)` : ''}</span>
+              </span>
             )}
             {isGracePeriod && (
               <motion.button
@@ -1849,6 +1923,8 @@ export const TaskCard = React.memo(function TaskCard({
         canMoveDown={canMoveDown}
         onStartTask={onStartTask ? () => onStartTask(task) : undefined}
         onToggleSelect={onToggleSelect ? () => onToggleSelect(task.id) : undefined}
+        onSkipTask={isRecurring ? handleSkipTask : undefined}
+        isSkipped={isSkippedThisPeriod}
       />
 
       {/* ── Priority Quick Picker Popover ── */}
