@@ -2,6 +2,20 @@ import type { TaskItem, CustomCycle, ListSection, CustomList } from '../models/T
 import { isTaskCompleted } from '../store/useAppStore';
 import { isCompletedInCurrentPeriod } from '../services/TaskService';
 import { getEffectiveCycleId } from './sectionRoutine';
+import { getReservedFrequencyColor } from '../constants/colors';
+
+export interface FrequencyBreakdownItem {
+  cycleId: string;
+  name: string;
+  singularName: string;
+  color?: string;
+  daysValue: number;
+  total: number;
+  completed: number;
+  pending: number;
+  isDone: boolean;
+  isOwn: boolean;
+}
 
 export interface CycleRoutineStatus {
   /** ID del ciclo propio de la vista (ej: 'cycle_month') */
@@ -17,11 +31,11 @@ export interface CycleRoutineStatus {
   /** Tareas del propio ciclo pendientes en este período */
   ownPending: number;
 
-  /** Total de tareas acumuladas (de frecuencias más cortas) */
+  /** Total de tareas de otras frecuencias (antes llamadas genéricamente acumuladas) */
   accumulatedTotal: number;
-  /** Tareas acumuladas completadas en sus períodos */
+  /** Tareas de otras frecuencias completadas */
   accumulatedCompleted: number;
-  /** Tareas acumuladas pendientes */
+  /** Tareas de otras frecuencias pendientes */
   accumulatedPending: number;
 
   /** Desglose de tareas diarias */
@@ -34,7 +48,12 @@ export interface CycleRoutineStatus {
   weeklyCompleted: number;
   weeklyPending: number;
 
-  /** Meta total de tareas (propias o propias + acumuladas según el modo) */
+  /** Desglose individual de todas las frecuencias activas */
+  frequencyBreakdown: FrequencyBreakdownItem[];
+  /** Desglose individual de las frecuencias distintas a la actual */
+  otherBreakdown: FrequencyBreakdownItem[];
+
+  /** Meta total de tareas (propias o propias + otras frecuencias según el modo) */
   totalGoal: number;
   /** Total de tareas completadas */
   totalCompleted: number;
@@ -45,7 +64,7 @@ export interface CycleRoutineStatus {
   isAllDone: boolean;
   /** Si las tareas propias están al día */
   isOwnDone: boolean;
-  /** Si las tareas acumuladas están al día */
+  /** Si las tareas de otras frecuencias están al día */
   isAccumulatedDone: boolean;
 
   /** Diagnóstico de estado */
@@ -82,11 +101,28 @@ const CORE_DAYS: Record<string, number> = {
   cycle_year: 365,
 };
 
+function getCycleDisplayName(id: string, customName?: string): string {
+  if (id === 'cycle_day') return 'Diarias';
+  if (id === 'cycle_week') return 'Semanales';
+  if (id === 'cycle_month') return 'Mensuales';
+  if (id === 'cycle_year') return 'Anuales';
+  if (customName) return customName;
+  return 'Otras';
+}
+
+function getCycleSingularName(id: string, customName?: string): string {
+  if (id === 'cycle_day') return 'diaria';
+  if (id === 'cycle_week') return 'semanal';
+  if (id === 'cycle_month') return 'mensual';
+  if (id === 'cycle_year') return 'anual';
+  if (customName) return customName.toLowerCase();
+  return 'otra';
+}
+
 /**
  * Calcula con precisión matemática el estado de cumplimiento de una lista de frecuencia:
- * - Distingue entre tareas del ciclo actual (mensuales en Mensual) y tareas acumuladas (semanales y diarias).
- * - Identifica si tienes todas las mensuales hechas, las acumuladas al día, ambas hechas (objetivo global)
- *   o qué falta exactamente por completar.
+ * - Distingue entre tareas del ciclo actual y cada una de las demás frecuencias individualmente.
+ * - Proporciona desglose por frecuencia sin agruparlas de forma opaca.
  */
 export function calculateCycleRoutineStatus({
   tasks,
@@ -106,17 +142,18 @@ export function calculateCycleRoutineStatus({
     currentCycle.daysValue || CORE_DAYS[currentCycle.id] || 999;
   const isFullRoutine = cycleRoutineMode === 'full_routine';
 
-  let ownTotal = 0;
-  let ownCompleted = 0;
+  interface CycleStat {
+    cycleId: string;
+    name: string;
+    singularName: string;
+    color?: string;
+    daysValue: number;
+    total: number;
+    completed: number;
+    isOwn: boolean;
+  }
 
-  let dailyTotal = 0;
-  let dailyCompleted = 0;
-
-  let weeklyTotal = 0;
-  let weeklyCompleted = 0;
-
-  let accumulatedTotal = 0;
-  let accumulatedCompleted = 0;
+  const statsMap = new Map<string, CycleStat>();
 
   for (const task of activeTasks) {
     const effCycleId =
@@ -126,16 +163,15 @@ export function calculateCycleRoutineStatus({
     const cycleObj =
       cycles.find((c) => c.id === effCycleId) ||
       (CORE_DAYS[effCycleId]
-        ? { id: effCycleId, daysValue: CORE_DAYS[effCycleId] }
+        ? { id: effCycleId, name: effCycleId, daysValue: CORE_DAYS[effCycleId] }
         : null);
 
     const taskDaysValue =
       cycleObj?.daysValue || CORE_DAYS[effCycleId] || 999;
 
     const isOwn = effCycleId === currentCycle.id;
-    const isAccumulated = taskDaysValue < ownDaysValue;
-
-    if (!isOwn && !isAccumulated) continue;
+    // En rutina completa se incluyen las propias y las demás frecuencias
+    if (!isOwn && !isFullRoutine && taskDaysValue >= ownDaysValue) continue;
 
     const isDone =
       isTaskCompleted(task) ||
@@ -147,26 +183,54 @@ export function calculateCycleRoutineStatus({
         referenceDate
       );
 
-    if (isOwn) {
-      ownTotal++;
-      if (isDone) ownCompleted++;
-    } else if (isAccumulated) {
-      accumulatedTotal++;
-      if (isDone) accumulatedCompleted++;
-
-      if (effCycleId === 'cycle_day') {
-        dailyTotal++;
-        if (isDone) dailyCompleted++;
-      } else if (effCycleId === 'cycle_week') {
-        weeklyTotal++;
-        if (isDone) weeklyCompleted++;
-      }
-    }
+    const stat = statsMap.get(effCycleId) || {
+      cycleId: effCycleId,
+      name: getCycleDisplayName(effCycleId, cycleObj?.name),
+      singularName: getCycleSingularName(effCycleId, cycleObj?.name),
+      color: (cycleObj && 'color' in cycleObj && cycleObj.color) ? cycleObj.color : getReservedFrequencyColor(effCycleId),
+      daysValue: taskDaysValue,
+      total: 0,
+      completed: 0,
+      isOwn,
+    };
+    stat.total++;
+    if (isDone) stat.completed++;
+    statsMap.set(effCycleId, stat);
   }
 
+  const allBreakdown: FrequencyBreakdownItem[] = Array.from(statsMap.values())
+    .map((s) => ({
+      cycleId: s.cycleId,
+      name: s.name,
+      singularName: s.singularName,
+      color: s.color,
+      daysValue: s.daysValue,
+      total: s.total,
+      completed: s.completed,
+      pending: s.total - s.completed,
+      isDone: s.total === 0 || s.total === s.completed,
+      isOwn: s.isOwn,
+    }))
+    .sort((a, b) => a.daysValue - b.daysValue);
+
+  const ownBreakdown = allBreakdown.find((b) => b.isOwn);
+  const ownTotal = ownBreakdown?.total || 0;
+  const ownCompleted = ownBreakdown?.completed || 0;
   const ownPending = ownTotal - ownCompleted;
+
+  const otherBreakdown = allBreakdown.filter((b) => !b.isOwn && b.total > 0);
+  const accumulatedTotal = otherBreakdown.reduce((sum, b) => sum + b.total, 0);
+  const accumulatedCompleted = otherBreakdown.reduce((sum, b) => sum + b.completed, 0);
   const accumulatedPending = accumulatedTotal - accumulatedCompleted;
+
+  const dailyStat = allBreakdown.find((b) => b.cycleId === 'cycle_day');
+  const dailyTotal = dailyStat?.total || 0;
+  const dailyCompleted = dailyStat?.completed || 0;
   const dailyPending = dailyTotal - dailyCompleted;
+
+  const weeklyStat = allBreakdown.find((b) => b.cycleId === 'cycle_week');
+  const weeklyTotal = weeklyStat?.total || 0;
+  const weeklyCompleted = weeklyStat?.completed || 0;
   const weeklyPending = weeklyTotal - weeklyCompleted;
 
   const totalGoal = isFullRoutine ? ownTotal + accumulatedTotal : ownTotal;
@@ -208,6 +272,16 @@ export function calculateCycleRoutineStatus({
       ? 'diaria'
       : ownCycleName.toLowerCase();
 
+  const otherMissingParts: string[] = otherBreakdown
+    .filter((b) => b.pending > 0)
+    .map((b) => `${b.pending} ${b.pending === 1 ? b.singularName : b.name.toLowerCase()}`);
+
+  const allMissingParts: string[] = [];
+  if (ownPending > 0) {
+    allMissingParts.push(`${ownPending} ${ownPending === 1 ? ownSingular : ownLowerName}`);
+  }
+  allMissingParts.push(...otherMissingParts);
+
   // Diagnóstico
   let statusState: CycleRoutineStatus['statusState'] = 'both_pending';
   let headline = '';
@@ -224,9 +298,9 @@ export function calculateCycleRoutineStatus({
   // 2. Todo completado
   else if (isAllDone) {
     statusState = 'all_done';
-    if (isFullRoutine && accumulatedTotal > 0) {
+    if (isFullRoutine && otherBreakdown.length > 0) {
       headline = `¡Objetivo ${ownSingular} completado!`;
-      detailText = `Todas las ${ownLowerName} (${ownCompleted}/${ownTotal}) y acumuladas (${accumulatedCompleted}/${accumulatedTotal}) están al día.`;
+      detailText = `Todas las ${ownLowerName} (${ownCompleted}/${ownTotal}) y demás frecuencias (${accumulatedCompleted}/${accumulatedTotal}) están al día.`;
     } else {
       headline = `Todas las ${ownLowerName} completadas`;
       detailText = `Has completado las ${ownTotal} ${ownLowerName} de este período (${ownCompleted}/${ownTotal}).`;
@@ -240,44 +314,26 @@ export function calculateCycleRoutineStatus({
     detailText = `${ownCompleted} de ${ownTotal} ${ownLowerName} completadas este período.`;
     missingSummary = `Faltan ${ownPending} ${ownPending === 1 ? ownSingular : ownLowerName}`;
   }
-  // 4. Modo rutina completa: Propias hechas, pero faltan acumuladas
+  // 4. Modo rutina completa: Propias hechas, pero faltan otras frecuencias
   else if (isOwnDone && accumulatedPending > 0) {
     statusState = 'own_done_accumulated_pending';
-    headline = `${capitalize(ownLowerName)} al día · Faltan ${accumulatedPending} acumuladas`;
+    headline = `${capitalize(ownLowerName)} al día · Faltan ${joinWithAnd(otherMissingParts)}`;
     detailText = `Todas las ${ownLowerName} (${ownCompleted}/${ownTotal}) están completadas.`;
-
-    const parts: string[] = [];
-    if (dailyPending > 0) {
-      parts.push(`${dailyPending} ${dailyPending === 1 ? 'diaria' : 'diarias'}`);
-    }
-    if (weeklyPending > 0) {
-      parts.push(`${weeklyPending} ${weeklyPending === 1 ? 'semanal' : 'semanales'}`);
-    }
-    missingSummary = parts.length > 0 ? `Faltan ${parts.join(' y ')}` : `Faltan ${accumulatedPending} acumuladas`;
+    missingSummary = `Faltan ${joinWithAnd(otherMissingParts)}`;
   }
-  // 5. Modo rutina completa: Acumuladas hechas, pero faltan propias
+  // 5. Modo rutina completa: Otras frecuencias hechas, pero faltan propias
   else if (isAccumulatedDone && ownPending > 0) {
     statusState = 'accumulated_done_own_pending';
-    headline = `Acumuladas al día · Faltan ${ownPending} ${ownPending === 1 ? ownSingular : ownLowerName}`;
-    detailText = `Las tareas acumuladas (${accumulatedCompleted}/${accumulatedTotal}) están al día.`;
+    headline = `Demás frecuencias al día · Faltan ${ownPending} ${ownPending === 1 ? ownSingular : ownLowerName}`;
+    detailText = `Las demás frecuencias (${accumulatedCompleted}/${accumulatedTotal}) están al día.`;
     missingSummary = `Faltan ${ownPending} ${ownPending === 1 ? ownSingular : ownLowerName}`;
   }
-  // 6. Modo rutina completa: Faltan tanto propias como acumuladas
+  // 6. Modo rutina completa: Faltan tanto propias como otras frecuencias
   else {
     statusState = 'both_pending';
-    headline = `Faltan ${ownPending} ${ownPending === 1 ? ownSingular : ownLowerName} y ${accumulatedPending} acumuladas`;
-    detailText = `${ownCompleted}/${ownTotal} ${ownLowerName} · ${accumulatedCompleted}/${accumulatedTotal} acumuladas hechas`;
-
-    const missingParts: string[] = [
-      `${ownPending} ${ownPending === 1 ? ownSingular : ownLowerName}`,
-    ];
-    if (dailyPending > 0) {
-      missingParts.push(`${dailyPending} ${dailyPending === 1 ? 'diaria' : 'diarias'}`);
-    }
-    if (weeklyPending > 0) {
-      missingParts.push(`${weeklyPending} ${weeklyPending === 1 ? 'semanal' : 'semanales'}`);
-    }
-    missingSummary = `Faltan: ${missingParts.join(', ')}`;
+    headline = `Faltan ${joinWithAnd(allMissingParts)}`;
+    detailText = `${ownCompleted}/${ownTotal} ${ownLowerName} · ${otherBreakdown.map((b) => `${b.completed}/${b.total} ${b.name.toLowerCase()}`).join(' · ')}`;
+    missingSummary = `Faltan: ${joinWithAnd(allMissingParts)}`;
   }
 
   return {
@@ -300,6 +356,9 @@ export function calculateCycleRoutineStatus({
     weeklyCompleted,
     weeklyPending,
 
+    frequencyBreakdown: allBreakdown,
+    otherBreakdown,
+
     totalGoal,
     totalCompleted,
     totalPending,
@@ -318,4 +377,11 @@ export function calculateCycleRoutineStatus({
 function capitalize(str: string): string {
   if (!str) return '';
   return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function joinWithAnd(parts: string[]): string {
+  if (parts.length === 0) return '';
+  if (parts.length === 1) return parts[0];
+  if (parts.length === 2) return `${parts[0]} y ${parts[1]}`;
+  return `${parts.slice(0, -1).join(', ')} y ${parts[parts.length - 1]}`;
 }

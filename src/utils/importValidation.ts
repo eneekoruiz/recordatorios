@@ -11,18 +11,55 @@ export interface ValidatedImport {
 // Import is an untrusted boundary. Validate the entire batch before any store write,
 // and strip unknown fields rather than copying arbitrary objects into persisted state.
 const id = z.string().min(1).max(200).refine(value => !['__proto__', 'constructor', 'prototype'].includes(value));
-const optional = <T extends z.ZodType>(schema: T) => z.preprocess(value => value === null ? undefined : value, schema.optional());
+const optional = <T extends z.ZodType>(schema: T) => z.preprocess(value => (value === null || value === '') ? undefined : value, schema.optional());
 const text = optional(z.string());
-const reference = optional(id);
+const reference = z.preprocess(value => (value === null || value === undefined || value === '') ? undefined : value, id.optional());
 const number = optional(z.number().finite());
 const nonnegative = optional(z.number().finite().nonnegative());
 const flag = optional(z.boolean());
-const date = z.string().refine(value => value.length > 0 && Number.isFinite(new Date(value).getTime()), 'Fecha inválida');
-const timestamp = optional(date);
+const date = z.preprocess(value => {
+  if (value === null || value === undefined || value === '') return undefined;
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return new Date(value).toISOString();
+  }
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return value.toISOString();
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+    const time = new Date(trimmed).getTime();
+    if (Number.isFinite(time)) return trimmed;
+  }
+  return value;
+}, z.string().refine(value => value.length > 0 && Number.isFinite(new Date(value).getTime()), 'Fecha inválida').optional());
+const timestamp = date;
+const historyArray = z.preprocess(value => {
+  if (value === null || value === undefined || value === '') return undefined;
+  if (!Array.isArray(value)) return value;
+  return value
+    .map(item => {
+      if (typeof item === 'number' && Number.isFinite(item) && item >= 0) return item;
+      if (typeof item === 'string') {
+        const num = Number(item);
+        if (Number.isFinite(num) && num >= 0) return num;
+        const dt = new Date(item).getTime();
+        if (Number.isFinite(dt) && dt >= 0) return dt;
+      }
+      return null;
+    })
+    .filter((item): item is number => item !== null);
+}, optional(z.array(z.number().finite().nonnegative())));
 const syncFields = {
   created_at: timestamp, updated_at: timestamp, deleted_at: timestamp,
   version: optional(z.number().int().nonnegative()), _is_dirty: flag,
 };
+const alertSchema = z.object({
+  id: z.preprocess(value => (value === null || value === undefined || value === '') ? crypto.randomUUID() : value, id),
+  type: z.enum(['at_time', 'before']),
+  time: z.preprocess(value => (value === null || value === undefined || value === '') ? undefined : value, optional(z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/))),
+  offsetMinutes: nonnegative, label: text,
+}).refine(alert => alert.type === 'at_time' ? !!alert.time : alert.offsetMinutes !== undefined, 'Alerta incompleta');
 const taskSchema = z.object({
   id: id.optional(), user_id: text,
   title: z.string().trim().min(1, 'El título no puede estar vacío'),
@@ -30,20 +67,17 @@ const taskSchema = z.object({
   status: z.enum(['pending', 'in_progress', 'completed']).default('pending'),
   description: text, notes: text, categoryId: reference, listId: reference,
   parentId: reference, sectionId: reference, cycle_id: reference, order: number,
-  blockedBy: optional(z.array(id)), dueDate: timestamp, completed_at: timestamp,
-  alerts: optional(z.array(z.object({
-    id, type: z.enum(['at_time', 'before']),
-    time: optional(z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)),
-    offsetMinutes: nonnegative, label: text,
-  }).refine(alert => alert.type === 'at_time' ? !!alert.time : alert.offsetMinutes !== undefined, 'Alerta incompleta'))),
-  completedAlerts: optional(z.array(id)),
-  completionHistory: optional(z.array(z.number().finite().nonnegative())),
-  skipHistory: optional(z.array(z.number().finite().nonnegative())),
+  blockedBy: z.preprocess(val => Array.isArray(val) ? val.filter(item => typeof item === 'string' && item.length > 0) : val, optional(z.array(id))),
+  dueDate: timestamp, completed_at: timestamp,
+  alerts: optional(z.array(alertSchema)),
+  completedAlerts: z.preprocess(val => Array.isArray(val) ? val.filter(item => typeof item === 'string' && item.length > 0) : val, optional(z.array(id))),
+  completionHistory: historyArray,
+  skipHistory: historyArray,
   consecutiveSkipCount: optional(z.number().int().nonnegative()),
   priority: optional(z.enum(['none', 'low', 'medium', 'high'])),
   flagged: flag, url: text, image: text, timeOfDay: optional(z.enum(['morning', 'afternoon', 'night'])),
   duration: nonnegative, disableDuration: flag, isParallel: flag, parallelDuration: nonnegative,
-  targetCount: optional(z.number().int().positive()), currentCount: optional(z.number().int().nonnegative()),
+  targetCount: optional(z.number().int().nonnegative()), currentCount: optional(z.number().int().nonnegative()),
   isDetailed: flag, price: nonnegative, quantity: nonnegative, brand: text,
   location: optional(z.object({
     lat: z.number().finite().min(-90).max(90), lng: z.number().finite().min(-180).max(180),
@@ -52,7 +86,7 @@ const taskSchema = z.object({
   locationName: text, people: optional(z.array(z.string())),
   expirationType: optional(z.enum(['card', 'subscription', 'other'])), issuerMask: text,
   autoRollover: flag, subscriptionPeriod: optional(z.enum(['monthly', 'yearly'])), managementUrl: text, vibe: text,
-  executionHistory: optional(z.array(z.number().finite().nonnegative())),
+  executionHistory: historyArray,
   suggestedDuration: nonnegative, postponeCount: nonnegative,
   mediaType: optional(z.enum(['series', 'movie', 'book', 'music', 'podcast', 'other'])),
   mediaStatus: optional(z.enum(['want_to_watch', 'in_progress', 'completed', 'dropped', 'favorite'])),

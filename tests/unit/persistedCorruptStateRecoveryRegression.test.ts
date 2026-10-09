@@ -70,4 +70,54 @@ describe('malformed persisted state recovery', () => {
     expect(put.mock.calls.map(call => call[1])).toEqual(['account-A-snapshot', 'logged-out-local-state']);
     expect(rows.get('reminders-storage')).toBe('logged-out-local-state');
   });
+
+  it('automatically restores quarantined tasks from backup if they pass resilient validation upon hydration', async () => {
+    const rows = new Map<string, string>();
+    const backupPayload = JSON.stringify({
+      state: {
+        tasks: {
+          t1: { id: 't1', title: 'Tarea previamente apartada', parentId: '', cycle_id: '', dueDate: 1712839200000, status: 'pending', categoryId: 'list-1' },
+          t2: { id: 't2', title: 'Segunda tarea', parentId: '', status: 'completed', categoryId: 'list-1' },
+        },
+        cycles: [], lists: [{ id: 'list-1', name: 'Lista' }], listSections: [],
+        userId: 'user-A',
+      },
+      version: 9,
+    });
+    const backupKey = 'reminders-storage-recovery-test-key';
+    rows.set(backupKey, backupPayload);
+
+    const currentPayload = JSON.stringify({
+      state: {
+        tasks: {},
+        cycles: [], lists: [{ id: 'list-1', name: 'Lista' }], listSections: [],
+        userId: 'user-A',
+        persistenceRecovery: {
+          backupKey,
+          reason: 'Se encontraron registros guardados con una estructura inválida',
+          quarantined: 2,
+          accountUserId: 'user-A',
+        },
+      },
+      version: 9,
+    });
+    rows.set('reminders-storage', currentPayload);
+
+    openDBMock.mockResolvedValue({
+      get: vi.fn(async (_store: string, key: string) => rows.get(key)),
+      put: vi.fn(async (_store: string, value: string, key: string) => { rows.set(key, value); }),
+      delete: vi.fn(async (_store: string, key: string) => { rows.delete(key); }),
+    });
+
+    const { idbStorage } = await import('../../src/utils/idbStorage');
+    await idbStorage.getItem('reminders-storage');
+    const { useAppStore } = await import('../../src/store/useAppStore');
+    await useAppStore.persist.rehydrate();
+
+    const state = useAppStore.getState();
+    expect(state.tasks.t1).toBeDefined();
+    expect(state.tasks.t1.title).toBe('Tarea previamente apartada');
+    expect(state.tasks.t2).toBeDefined();
+    expect(state.persistenceRecovery).toBeNull();
+  });
 });

@@ -89,7 +89,8 @@ describe('calculateCycleRoutineStatus', () => {
     expect(status.weeklyPending).toBe(1);
 
     expect(status.statusState).toBe('both_pending');
-    expect(status.headline).toContain('Faltan 1 mensual y 1 acumulada');
+    expect(status.headline).toContain('Faltan 1 mensual y 1 semanal');
+    expect(status.otherBreakdown).toHaveLength(2);
     expect(status.missingSummary).toContain('1 mensual');
     expect(status.missingSummary).toContain('1 semanal');
   });
@@ -125,7 +126,7 @@ describe('calculateCycleRoutineStatus', () => {
     expect(status.isOwnDone).toBe(true);
     expect(status.isAccumulatedDone).toBe(false);
     expect(status.statusState).toBe('own_done_accumulated_pending');
-    expect(status.headline).toContain('Mensuales al día · Faltan 1 acumuladas');
+    expect(status.headline).toContain('Mensuales al día · Faltan 1 diaria');
     expect(status.missingSummary).toContain('1 diaria');
   });
 
@@ -160,7 +161,7 @@ describe('calculateCycleRoutineStatus', () => {
     expect(status.isOwnDone).toBe(false);
     expect(status.isAccumulatedDone).toBe(true);
     expect(status.statusState).toBe('accumulated_done_own_pending');
-    expect(status.headline).toContain('Acumuladas al día · Faltan 1 mensual');
+    expect(status.headline).toContain('Demás frecuencias al día · Faltan 1 mensual');
     expect(status.missingSummary).toContain('1 mensual');
   });
 

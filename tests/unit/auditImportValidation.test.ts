@@ -49,6 +49,32 @@ describe('untrusted imports', () => {
     expect(() => validateJsonImport([{ id: 'same', title: 'A' }, { id: 'same', title: 'B' }])).toThrow(/duplicados/);
     expect(() => validateJsonImport({ tasks: { a: { id: 'b', title: 'A' } } })).toThrow(/no coincide/);
   });
+  it('accepts empty string references, numeric timestamps and string history without quarantining', () => {
+    const result = validateJsonImport({
+      tasks: {
+        t1: {
+          title: 'Tarea con cadenas vacías y fecha numérica',
+          parentId: '',
+          sectionId: '',
+          cycle_id: '',
+          dueDate: 1712839200000,
+          completed_at: '',
+          completionHistory: ['2026-10-01T12:00:00.000Z', 1700000000000],
+          alerts: [{ id: '', type: 'before', offsetMinutes: 60, time: '' }],
+          targetCount: 0,
+        }
+      }
+    });
+    expect(result.tasks).toHaveLength(1);
+    expect(result.tasks[0].title).toBe('Tarea con cadenas vacías y fecha numérica');
+    expect(result.tasks[0].parentId).toBeUndefined();
+    expect(result.tasks[0].sectionId).toBeUndefined();
+    expect(result.tasks[0].cycle_id).toBeUndefined();
+    expect(result.tasks[0].dueDate).toBe(new Date(1712839200000).toISOString());
+    expect(result.tasks[0].completed_at).toBeUndefined();
+    expect(result.tasks[0].completionHistory).toHaveLength(2);
+    expect(typeof result.tasks[0].completionHistory![0]).toBe('number');
+  });
 });
 
 describe('CSV and text fidelity', () => {

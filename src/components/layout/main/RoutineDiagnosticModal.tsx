@@ -70,10 +70,7 @@ export const RoutineDiagnosticModal: React.FC<RoutineDiagnosticModalProps> = ({
     return Math.min(100, Math.round((status.ownCompleted / status.ownTotal) * 100));
   }, [status.ownTotal, status.ownCompleted]);
 
-  const accumulatedPercent = useMemo(() => {
-    if (status.accumulatedTotal === 0) return 0;
-    return Math.min(100, Math.round((status.accumulatedCompleted / status.accumulatedTotal) * 100));
-  }, [status.accumulatedTotal, status.accumulatedCompleted]);
+
 
   if (typeof document === 'undefined') return null;
 
@@ -361,90 +358,75 @@ export const RoutineDiagnosticModal: React.FC<RoutineDiagnosticModalProps> = ({
                 </div>
               </div>
 
-              {/* Bloque 2: Tareas acumuladas (si estamos en rutina completa) */}
-              {cycleRoutineMode === 'full_routine' && status.accumulatedTotal > 0 && (
-                <div
-                  style={{
-                    borderRadius: 14,
-                    padding: '12px 14px',
-                    background: 'var(--card-bg, rgba(255, 255, 255, 0.6))',
-                    border: '1px solid var(--border-subtle, rgba(0, 0, 0, 0.08))',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 8,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div
-                        style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          background: status.isAccumulatedDone ? '#34c759' : '#ff9500',
-                        }}
-                      />
-                      <span style={{ fontSize: '0.86rem', fontWeight: 650 }}>
-                        Frecuencias Acumuladas
-                      </span>
-                    </div>
-                    <span
+              {/* Desglose individual de cada frecuencia no-propia */}
+              {cycleRoutineMode === 'full_routine' && status.otherBreakdown && status.otherBreakdown.length > 0 && (
+                status.otherBreakdown.map((item) => {
+                  const percent = item.total > 0 ? Math.min(100, Math.round((item.completed / item.total) * 100)) : 0;
+                  const itemColor = item.color || (item.cycleId === 'cycle_day' ? '#ff9500' : item.cycleId === 'cycle_week' ? '#af52de' : item.cycleId === 'cycle_month' ? '#007aff' : '#ff2d55');
+
+                  return (
+                    <div
+                      key={item.cycleId}
                       style={{
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        padding: '2px 8px',
-                        borderRadius: 999,
-                        background: status.isAccumulatedDone ? 'rgba(52, 199, 89, 0.15)' : 'rgba(255, 149, 0, 0.15)',
-                        color: status.isAccumulatedDone ? '#34c759' : '#ff9500',
+                        borderRadius: 14,
+                        padding: '12px 14px',
+                        background: 'var(--card-bg, rgba(255, 255, 255, 0.6))',
+                        border: '1px solid var(--border-subtle, rgba(0, 0, 0, 0.08))',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 8,
                       }}
                     >
-                      {status.isAccumulatedDone ? 'Al día ✓' : `${status.accumulatedCompleted}/${status.accumulatedTotal}`}
-                    </span>
-                  </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div
+                            style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: '50%',
+                              background: item.isDone ? '#34c759' : itemColor,
+                            }}
+                          />
+                          <span style={{ fontSize: '0.86rem', fontWeight: 650 }}>
+                            {item.name}
+                          </span>
+                        </div>
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: 999,
+                            background: item.isDone ? 'rgba(52, 199, 89, 0.15)' : 'rgba(0, 0, 0, 0.06)',
+                            color: item.isDone ? '#34c759' : 'var(--text-secondary)',
+                          }}
+                        >
+                          {item.isDone ? 'Al día ✓' : `${item.completed}/${item.total} (${item.pending} ${item.pending === 1 ? 'pendiente' : 'pendientes'})`}
+                        </span>
+                      </div>
 
-                  <div
-                    style={{
-                      width: '100%',
-                      height: 4,
-                      borderRadius: 999,
-                      background: 'var(--separator, rgba(60, 60, 67, 0.12))',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <div
-                      style={{
-                        height: '100%',
-                        width: `${accumulatedPercent}%`,
-                        background: status.isAccumulatedDone ? '#34c759' : '#ff9500',
-                        borderRadius: 999,
-                        transition: 'width 0.3s ease',
-                      }}
-                    />
-                  </div>
-
-                  {/* Subdetalle por diaria / semanal */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      fontSize: '0.75rem',
-                      color: 'var(--text-secondary)',
-                      marginTop: 2,
-                    }}
-                  >
-                    {status.dailyTotal > 0 && (
-                      <span>
-                        Diarias: <strong>{status.dailyCompleted}/{status.dailyTotal}</strong>
-                      </span>
-                    )}
-                    {status.weeklyTotal > 0 && (
-                      <span>
-                        Semanales: <strong>{status.weeklyCompleted}/{status.weeklyTotal}</strong>
-                      </span>
-                    )}
-                  </div>
-                </div>
+                      <div
+                        style={{
+                          width: '100%',
+                          height: 4,
+                          borderRadius: 999,
+                          background: 'var(--separator, rgba(60, 60, 67, 0.12))',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <div
+                          style={{
+                            height: '100%',
+                            width: `${percent}%`,
+                            background: item.isDone ? '#34c759' : itemColor,
+                            borderRadius: 999,
+                            transition: 'width 0.3s ease',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })
               )}
             </div>
 
@@ -457,7 +439,7 @@ export const RoutineDiagnosticModal: React.FC<RoutineDiagnosticModalProps> = ({
                 padding: '0 4px',
               }}
             >
-              Las tareas mensuales y acumuladas se evalúan de acuerdo al período seleccionado ({periodLabel}). Al cambiar de mes o semana, las tareas se reinician automáticamente para ese nuevo ciclo.
+              Cada frecuencia se evalúa de forma independiente para el período correspondiente ({periodLabel}). Al comenzar un nuevo período, las tareas se reinician automáticamente para ese ciclo.
             </div>
 
             {/* Botón principal inferior */}

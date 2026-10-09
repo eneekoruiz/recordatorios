@@ -151,8 +151,9 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
             style={{
               display: 'inline-flex',
               alignItems: 'center',
+              flexWrap: 'wrap',
               gap: 6,
-              padding: '4px 10px',
+              padding: '5px 12px',
               borderRadius: 999,
               border: '1px solid var(--border-subtle, rgba(0, 0, 0, 0.08))',
               background: 'var(--bg-material, rgba(255, 255, 255, 0.65))',
@@ -183,11 +184,10 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
             <span
               data-testid="cycle-status-headline"
               style={{
-                fontWeight: 500,
-                color: 'var(--text-secondary)',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
+                fontWeight: 600,
+                color: status.isAllDone ? '#34c759' : 'var(--text-secondary)',
+                whiteSpace: 'normal',
+                wordBreak: 'break-word',
               }}
             >
               {status.isAllDone ? 'Objetivo completado' : status.headline}

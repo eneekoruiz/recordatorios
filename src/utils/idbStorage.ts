@@ -46,6 +46,27 @@ export const readPersistenceRecoveryBackup = async (key: string): Promise<string
   return (await withTimeout(db.get('keyval', key))) ?? null;
 };
 
+export const clearPersistenceRecovery = () => {
+  recovery = null;
+};
+
+export const restoreQuarantinedRecords = async (key: string): Promise<Record<string, unknown> | null> => {
+  try {
+    const raw = await readPersistenceRecoveryBackup(key);
+    if (!raw) return null;
+    const envelope = JSON.parse(raw) as { state?: unknown };
+    if (!envelope?.state || typeof envelope.state !== 'object') return null;
+    const sanitized = sanitizePersistedCollections(envelope.state);
+    const db = await withTimeout(getDb());
+    await db.delete('keyval', key).catch(() => {});
+    recovery = null;
+    return sanitized.state;
+  } catch (err) {
+    console.error('Error recovering records from backup:', err);
+    return null;
+  }
+};
+
 export const subscribePersistenceFailure = (listener: () => void) => {
   listeners.add(listener);
   return () => listeners.delete(listener);
@@ -137,23 +158,64 @@ export const idbStorage: StateStorage = {
       if (typeof value === 'string' && name === 'reminders-storage') {
         const envelope = JSON.parse(value) as { state?: unknown; [key: string]: unknown };
         if (envelope?.state && typeof envelope.state === 'object' && !Array.isArray(envelope.state)) {
-          const sanitized = sanitizePersistedCollections(envelope.state);
+          let candidateState = envelope.state as Record<string, unknown>;
+          const existingRecovery = candidateState.persistenceRecovery as PersistenceRecovery | undefined;
+
+          // If there is an existing recovery backup, attempt auto-restoring records that now pass our resilient validation
+          if (existingRecovery?.backupKey) {
+            try {
+              const db = await withTimeout(getDb());
+              const backupRaw = await withTimeout(db.get('keyval', existingRecovery.backupKey));
+              if (typeof backupRaw === 'string') {
+                const backupEnvelope = JSON.parse(backupRaw) as { state?: unknown };
+                if (backupEnvelope?.state && typeof backupEnvelope.state === 'object') {
+                  const backupSanitized = sanitizePersistedCollections(backupEnvelope.state);
+                  if (backupSanitized.quarantined === 0) {
+                    const backupState = backupSanitized.state as Record<string, unknown>;
+                    candidateState = {
+                      ...candidateState,
+                      ...backupState,
+                      tasks: {
+                        ...((backupState.tasks as Record<string, unknown>) || {}),
+                        ...((candidateState.tasks as Record<string, unknown>) || {}),
+                      },
+                      persistenceRecovery: null,
+                    };
+                    recovery = null;
+                    const restoredEnvelope = { ...envelope, state: candidateState };
+                    const restoredRaw = JSON.stringify(restoredEnvelope);
+                    // Write restored state back to primary storage so subsequent reads get the restored tasks
+                    await withTimeout(db.put('keyval', restoredRaw, PRIMARY_STORAGE_KEY));
+                    await db.delete('keyval', existingRecovery.backupKey).catch(() => {});
+                  }
+                }
+              }
+            } catch (recoveryErr) {
+              console.warn('Error during auto-restoration of quarantined records:', recoveryErr);
+            }
+          }
+
+          const sanitized = sanitizePersistedCollections(candidateState);
           if (sanitized.quarantined > 0) {
-        const backupKey = `reminders-storage-recovery-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        const db = await withTimeout(getDb());
-        // Do not hand unsafe data to Zustand (which rewrites the merged state) until
-        // a recoverable byte-for-byte copy exists under a separate IndexedDB key.
-        await withTimeout(db.put('keyval', value, backupKey));
+            const backupKey = `reminders-storage-recovery-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+            const db = await withTimeout(getDb());
+            // Do not hand unsafe data to Zustand (which rewrites the merged state) until
+            // a recoverable byte-for-byte copy exists under a separate IndexedDB key.
+            await withTimeout(db.put('keyval', value, backupKey));
             recovery = {
               backupKey,
               reason: 'Se encontraron registros guardados con una estructura inválida; se apartaron para proteger el resto de los datos.',
               quarantined: sanitized.quarantined,
-              accountUserId: typeof (envelope.state as Record<string, unknown>).userId === 'string'
-                ? (envelope.state as Record<string, string>).userId
+              accountUserId: typeof candidateState.userId === 'string'
+                ? candidateState.userId as string
                 : null,
             };
             const safeState = { ...sanitized.state, persistenceRecovery: recovery };
             safeValue = JSON.stringify({ ...envelope, state: safeState });
+          } else {
+            recovery = null;
+            const cleanState = { ...sanitized.state, persistenceRecovery: null };
+            safeValue = JSON.stringify({ ...envelope, state: cleanState });
           }
         }
       }
