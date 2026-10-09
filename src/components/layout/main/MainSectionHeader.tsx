@@ -123,8 +123,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   totalTaskCount,
   isMobile,
   sectionMenu,
-  isPrevHeader = false,
-  isFirstAfterPageHeader = false,
+  isPrevHeader: _isPrevHeader = false,
+  isFirstAfterPageHeader: _isFirstAfterPageHeader = false,
   isRoutine: _isRoutine = false,
   hidePeriodContext,
   referenceDate,
@@ -153,24 +153,43 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
 
   const [isSectionDurationOpen, setIsSectionDurationOpen] = useState(false);
 
+  const hasAccumulatedBreakdown = isFullRoutine && Boolean(data.routineCounts && data.routineCounts.full > data.routineCounts.only);
+  const hasMixBreakdown = Boolean(mixParts && mixParts.length > 1);
+  const canShowDurationBreakdown = hasAccumulatedBreakdown || hasMixBreakdown;
+
   let durationNode: React.ReactNode = null;
   if (sectionDurationLabel && durSummary) {
-    durationNode = (
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          HapticService.selection();
-          setIsSectionDurationOpen(true);
-        }}
-        className="section-duration-label"
-        title="Toca para ver el desglose de tiempo"
-        aria-label="Ver desglose de tiempo de sección"
-      >
-        <Clock size={11} strokeWidth={1.8} className="section-duration-icon" />
-        <span>{sectionDurationLabel}</span>
-      </button>
-    );
+    if (canShowDurationBreakdown) {
+      durationNode = (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            HapticService.selection();
+            setIsSectionDurationOpen(true);
+          }}
+          className="section-duration-label"
+          title="Toca para ver el desglose de tiempo"
+          aria-label="Ver desglose de tiempo de sección"
+          style={{ cursor: 'pointer' }}
+        >
+          <Clock size={11} strokeWidth={1.8} className="section-duration-icon" />
+          <span>{sectionDurationLabel}</span>
+          <ChevronDown size={10} style={{ opacity: 0.5, marginLeft: 2 }} />
+        </button>
+      );
+    } else {
+      durationNode = (
+        <span
+          className="section-duration-label"
+          style={{ cursor: 'default', userSelect: 'none' }}
+          title={`Tiempo estimado: ~${sectionDurationLabel}`}
+        >
+          <Clock size={11} strokeWidth={1.8} className="section-duration-icon" />
+          <span>{sectionDurationLabel}</span>
+        </span>
+      );
+    }
   }
 
   let priceNode: React.ReactNode = null;
@@ -400,17 +419,18 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       style={{
         ...itemStyle,
         position: 'sticky',
-        top: data.depth === 0 ? 0 : 48,
-        zIndex: isMenuOpenForThisSection ? 999992 : (data.depth === 0 ? 30 : 25),
+        top: data.depth === 0 ? 0 : 44,
+        zIndex: isMenuOpenForThisSection ? 999992 : Math.max(10, 30 - data.depth),
         borderBottom: '1px solid var(--border-subtle)',
         borderTop: 'none',
         paddingLeft: `${16 + data.depth * 14}px`,
         paddingRight: '16px',
-        minHeight: data.depth === 0 ? 44 : 38,
-        paddingTop: data.depth === 0 ? (isFirstAfterPageHeader ? 6 : isPrevHeader ? 8 : 12) : 10,
-        paddingBottom: data.depth === 0 ? 8 : 6,
-        marginTop: data.depth === 0 ? (isFirstAfterPageHeader ? 2 : 12) : 8,
-        marginBottom: 2,
+        minHeight: data.depth === 0 ? 44 : 36,
+        height: data.depth === 0 ? 44 : 36,
+        paddingTop: 0,
+        paddingBottom: 0,
+        marginTop: 0,
+        marginBottom: 0,
         boxSizing: 'border-box',
         display: 'flex',
         flexDirection: 'column',
@@ -422,7 +442,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           ? 'var(--bg-elevated, #ffffff)'
           : isPressed
           ? 'var(--bg-hover, rgba(0,0,0,0.04))'
-          : 'var(--bg-base)',
+          : 'var(--bg-base, #ffffff)',
         cursor: 'pointer',
         userSelect: 'none',
         WebkitUserSelect: 'none',
@@ -788,7 +808,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         <span style={{ fontSize: '0.8rem', color: data.color }}>Mover aquí</span>
       )}
 
-      {durSummary && durSummary.activeMinutes > 0 && (
+      {canShowDurationBreakdown && durSummary && durSummary.activeMinutes > 0 && (
         <DurationInfoCard
           isOpen={isSectionDurationOpen}
           onClose={() => setIsSectionDurationOpen(false)}
@@ -796,8 +816,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           color={data.color}
           totalSummary={durSummary}
           completedSummary={completedDurationSummary}
-          routineParts={data.routineParts}
-          mixParts={mixParts}
+          routineParts={hasAccumulatedBreakdown ? data.routineParts : null}
+          mixParts={hasMixBreakdown ? mixParts : null}
           onStartSequence={_onStartSectionSequence}
           pendingCount={data.pendingCount ?? pendingTaskCount ?? data.sectionTaskIds?.length}
         />

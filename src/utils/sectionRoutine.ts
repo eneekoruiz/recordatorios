@@ -240,6 +240,35 @@ export interface PeriodContextInfo {
   shortLabel: string;
   isRolledOver: boolean;
   activePeriod: string;
+  nextPeriodDate?: Date;
+}
+
+/**
+ * Retorna la fecha de referencia representativa del siguiente período para una periodicidad dada.
+ * Se utiliza cuando una sección periódica ha completado todas sus tareas en el período actual y
+ * hace rollover para mostrar las tareas del siguiente período (limpias, sin tachar y listas para realizar).
+ */
+export function getNextPeriodDate(
+  periodicity: PeriodicityType,
+  referenceDate: Date = new Date()
+): Date {
+  const d = new Date(referenceDate);
+  if (periodicity === 'year') {
+    return new Date(d.getFullYear() + 1, 0, 1, 12, 0, 0);
+  }
+  if (periodicity === 'month') {
+    return new Date(d.getFullYear(), d.getMonth() + 1, 1, 12, 0, 0);
+  }
+  if (periodicity === 'week') {
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1) + 7;
+    const nextMon = new Date(d);
+    nextMon.setDate(diff);
+    nextMon.setHours(12, 0, 0, 0);
+    return nextMon;
+  }
+  // day
+  return new Date(d.getTime() + 86400000);
 }
 
 /**
@@ -272,7 +301,8 @@ export function getPeriodContextLabel(
         label: `${nextYear} · ${curYear} completado`,
         shortLabel: `${nextYear}`,
         isRolledOver: true,
-        activePeriod: `${nextYear}`
+        activePeriod: `${nextYear}`,
+        nextPeriodDate: getNextPeriodDate('year', referenceDate)
       };
     }
     return {
@@ -295,7 +325,8 @@ export function getPeriodContextLabel(
         label: `${nextName} ${nextYear} · ${curName} al día`,
         shortLabel: `${nextName}`,
         isRolledOver: true,
-        activePeriod: `${nextName}`
+        activePeriod: `${nextName}`,
+        nextPeriodDate: getNextPeriodDate('month', referenceDate)
       };
     }
     return {
@@ -332,7 +363,8 @@ export function getPeriodContextLabel(
         label: `Semana ${weekNo + 1} · Semana actual al día`,
         shortLabel: `Sem. ${weekNo + 1}`,
         isRolledOver: true,
-        activePeriod: `Semana ${weekNo + 1}`
+        activePeriod: `Semana ${weekNo + 1}`,
+        nextPeriodDate: getNextPeriodDate('week', referenceDate)
       };
     }
     return {
@@ -354,7 +386,8 @@ export function getPeriodContextLabel(
         label: `Mañana · ${tomDayName} ${tom.getDate()} ${tomMName} (Hoy al día)`,
         shortLabel: 'Mañana',
         isRolledOver: true,
-        activePeriod: 'Mañana'
+        activePeriod: 'Mañana',
+        nextPeriodDate: getNextPeriodDate('day', referenceDate)
       };
     }
     return {

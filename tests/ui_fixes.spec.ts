@@ -89,8 +89,8 @@ test('Notion settings keep the draft and show an error when account storage reje
   await expect(tokenInput).toHaveValue('retryable-draft');
 });
 
-test('Large task views mount one bounded page at a time', async ({ page }) => {
-  // Seed 1000 tasks and visit every page; this checks mounting, not a latency SLA.
+test('Large task views use continuous scrolling without pagination buttons', async ({ page }) => {
+  // Seed 1000 tasks and verify continuous rendering without pagination buttons
   test.setTimeout(90000);
   await unlockApp(page);
   await page.evaluate(() => {
@@ -104,25 +104,20 @@ test('Large task views mount one bounded page at a time', async ({ page }) => {
     window.dispatchEvent(new CustomEvent('select-view', { detail: 'smart_all' }));
   });
 
-  const pagination = page.locator('[data-testid="task-pagination"]').first();
-  await expect(pagination).toBeVisible({ timeout: 10000 });
+  const scrollContainer = page.locator('.content-scroll');
+  await expect(scrollContainer).toBeVisible({ timeout: 10000 });
   const mountedCards = page.locator('.content-scroll [data-index][data-task-id]');
-  await expect(mountedCards).toHaveCount(100);
-  await expect(pagination).toContainText('Página 1 de');
-  await expect(pagination).toContainText(/\d{4} recordatorios/);
-  let lastPageNumber = 1;
-  while (!(await pagination.getByRole('button', { name: 'Página siguiente' }).isDisabled())) {
-    if (++lastPageNumber > 20) throw new Error('The 1000-task view exposed too many pages');
-    await pagination.getByRole('button', { name: 'Página siguiente' }).click();
-    await expect(pagination).toContainText(`Página ${lastPageNumber} de`);
-    await expect.poll(() => mountedCards.count()).toBeLessThanOrEqual(100);
-  }
-  expect(lastPageNumber).toBeGreaterThanOrEqual(10);
+  // No pagination controls are present per Apple-style continuous experience
+  await expect(page.locator('[data-testid="task-pagination"]')).toHaveCount(0);
+  await expect.poll(() => mountedCards.count()).toBeGreaterThanOrEqual(100);
+
+  // Scroll to bottom to verify end of list is reached smoothly
+  await scrollContainer.evaluate((el) => { el.scrollTop = el.scrollHeight; });
   await expect(page.getByText('Scale regression task 1000', { exact: true })).toBeVisible();
-  await expect(mountedCards).toHaveCount(100);
+  await expect(page.locator('[data-testid="task-pagination"]')).toHaveCount(0);
 });
 
-test('a 300-child family is split across pages without unbounded card mounting', async ({ page }) => {
+test('a 300-child family renders and collapses/expands smoothly without pagination', async ({ page }) => {
   await unlockApp(page);
   await page.evaluate(() => {
     (window as any).useAppStore.setState({ tasks: {} });
@@ -140,24 +135,20 @@ test('a 300-child family is split across pages without unbounded card mounting',
     window.dispatchEvent(new CustomEvent('select-view', { detail: 'smart_all' }));
   });
 
-  const pagination = page.locator('[data-testid="task-pagination"]').first();
+  const scrollContainer = page.locator('.content-scroll');
+  await expect(scrollContainer).toBeVisible({ timeout: 10000 });
   const mountedCards = page.locator('.content-scroll [data-index][data-task-id]');
-  await expect(pagination).toBeVisible({ timeout: 10000 });
-  await expect(pagination).toContainText('Página 1 de');
-  await expect.poll(() => mountedCards.count()).toBeLessThanOrEqual(100);
+  await expect(page.locator('[data-testid="task-pagination"]')).toHaveCount(0);
+  await expect.poll(() => mountedCards.count()).toBeGreaterThan(0);
   const familyRoot = mountedCards.filter({ hasText: 'Oversized family root' }).first();
   await expect(page.getByText('Family child 001', { exact: true })).toBeVisible();
   await familyRoot.getByRole('button', { name: 'Contraer', exact: true }).click();
   await expect(page.getByText('Family child 001', { exact: true })).toHaveCount(0);
   await familyRoot.getByRole('button', { name: 'Expandir' }).click();
   await expect(page.getByText('Family child 001', { exact: true })).toBeVisible();
-  let lastPageNumber = 1;
-  while (!(await pagination.getByRole('button', { name: 'Página siguiente' }).isDisabled())) {
-    if (++lastPageNumber > 10) throw new Error('The oversized family exposed too many pages');
-    await pagination.getByRole('button', { name: 'Página siguiente' }).click();
-    await expect(pagination).toContainText(`Página ${lastPageNumber} de`);
-    await expect.poll(() => mountedCards.count()).toBeLessThanOrEqual(100);
-  }
-  expect(lastPageNumber).toBeGreaterThan(3);
+
+  // Scroll down to verify continuous scrolling without pagination
+  await scrollContainer.evaluate((el) => { el.scrollTop = el.scrollHeight; });
   await expect(page.getByText('Family child 305', { exact: true })).toBeVisible();
+  await expect(page.locator('[data-testid="task-pagination"]')).toHaveCount(0);
 });

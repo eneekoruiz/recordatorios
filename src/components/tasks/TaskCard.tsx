@@ -45,7 +45,7 @@ function findScrollableParent(el: HTMLElement | null): HTMLElement | Window {
 interface TaskCardProps {
   task: TaskItem;
   virtualStyle: React.CSSProperties;
-  onToggle: (id: string, forceReverse?: boolean) => void;
+  onToggle: (id: string, forceReverse?: boolean, customTimestamp?: number | Date) => void;
   onDelete: (id: string) => void;
   onOpenZenMode?: (id: string) => void;
   onEdit: (id: string, initialFocus?: string) => void;
@@ -74,6 +74,7 @@ interface TaskCardProps {
   isSelected?: boolean;
   onToggleSelect?: (taskId: string) => void;
   isSelectionMode?: boolean;
+  referenceDate?: Date;
 }
 
 // Recorrido del dedo (px) a partir del cual deslizar completa (→) o pide borrar (←).
@@ -83,7 +84,7 @@ const SWIPE_DELETE_THRESHOLD = -65;
 export const TaskCard = React.memo(function TaskCard({
   task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, showListName = true, hideDueDate = false, isFirstInSection, isLastInSection, previousTaskId, hasChildren, childCount = 0, isExpanded, onToggleExpand, indent = 0, onNavigateView, onPersonClick, isGracePeriod,
   onMoveUp, onMoveDown, canMoveUp, canMoveDown, onReorderTasks, onStartTask,
-  isSelected, onToggleSelect, isSelectionMode
+  isSelected, onToggleSelect, isSelectionMode, referenceDate: propReferenceDate
 }: TaskCardProps) {
   const cycles = useAppStore(state => state.cycles);
   const hasPendingBlocker = useAppStore(state => Boolean(task.blockedBy?.some(id => state.tasks[id]?.status === 'pending')));
@@ -475,7 +476,10 @@ export const TaskCard = React.memo(function TaskCard({
   };
 
   const temporalDate = useTemporalNavigationStore((state) => state.temporalDate);
-  const referenceDate = useMemo(() => temporalDate ? new Date(temporalDate) : new Date(), [temporalDate]);
+  const referenceDate = useMemo(() => {
+    if (propReferenceDate) return propReferenceDate;
+    return temporalDate ? new Date(temporalDate) : new Date();
+  }, [propReferenceDate, temporalDate]);
 
   const isBlocked = hasPendingBlocker;
   const effCycleId = getEffectiveCycleId(task, listSections, lists);
@@ -557,12 +561,12 @@ export const TaskCard = React.memo(function TaskCard({
       HapticService.notification('success');
       // Always toggle: if completed → uncomplete, if pending → complete
       if (!isEffectivelyDone) SoundService.playComplete(); else SoundService.playUncomplete();
-      onToggle(task.id, isEffectivelyDone);
+      onToggle(task.id, isEffectivelyDone, propReferenceDate ? propReferenceDate.getTime() : undefined);
     } else if (offsetX < SWIPE_DELETE_THRESHOLD) {
       HapticService.impact('heavy');
       setIsDeleteConfirmOpen(true);
     }
-  }, [isBlocked, isEffectivelyDone, onToggle, task.id, setIsDeleteConfirmOpen]);
+  }, [isBlocked, isEffectivelyDone, onToggle, task.id, setIsDeleteConfirmOpen, propReferenceDate]);
 
   const totalAlerts = task.alerts?.length || 0;
   const completedAlertsCount = task.completedAlerts?.length || 0;
@@ -1088,7 +1092,7 @@ export const TaskCard = React.memo(function TaskCard({
               
               if (isEffectivelyDone) {
                 SoundService.playUncomplete();
-                onToggle(task.id, true);
+                onToggle(task.id, true, propReferenceDate ? propReferenceDate.getTime() : undefined);
               } else {
                 const isNextFinal = hasTargetCount
                   ? (effectiveCurrentCount + 1 >= targetCount)
@@ -1102,7 +1106,7 @@ export const TaskCard = React.memo(function TaskCard({
                 } else {
                   SoundService.playPop();
                 }
-                onToggle(task.id, false);
+                onToggle(task.id, false, propReferenceDate ? propReferenceDate.getTime() : undefined);
               }
             }}
             style={{
@@ -1536,7 +1540,7 @@ export const TaskCard = React.memo(function TaskCard({
                   e.stopPropagation();
                   HapticService.impact('light');
                   SoundService.playUncomplete();
-                  onToggle(task.id, true);
+                  onToggle(task.id, true, propReferenceDate ? propReferenceDate.getTime() : undefined);
                 }}
                 style={{
                   display: 'inline-flex',
@@ -1915,7 +1919,7 @@ export const TaskCard = React.memo(function TaskCard({
         previousTaskId={previousTaskId}
         setIsDeleteConfirmOpen={setIsDeleteConfirmOpen}
         onOpenZenMode={onOpenZenMode}
-        onToggle={onToggle}
+        onToggle={(id, forceReverse) => onToggle(id, forceReverse, propReferenceDate ? propReferenceDate.getTime() : undefined)}
         isCompleted={isCompletedPeriod}
         onMoveUp={onMoveUp ? () => onMoveUp(task.id) : undefined}
         onMoveDown={onMoveDown ? () => onMoveDown(task.id) : undefined}

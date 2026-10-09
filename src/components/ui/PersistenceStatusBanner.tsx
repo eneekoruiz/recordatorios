@@ -141,6 +141,7 @@ export function PersistenceStatusBanner() {
             <button
               type="button"
               onClick={() => void downloadRecovery()}
+              aria-label="Descargar copia original"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -156,7 +157,7 @@ export function PersistenceStatusBanner() {
               }}
             >
               <Download size={14} />
-              Descargar copia
+              Descargar copia original
             </button>
           </>
         )}

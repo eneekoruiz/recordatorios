@@ -67,7 +67,7 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
         ? mixParts
         : null;
 
-    if (!parts) return null;
+    if (!parts || parts.length <= 1) return null;
 
     return parts.map(p => {
       const partColor = p.periodicity === 'none'
@@ -75,7 +75,7 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
         : getReservedFrequencyColor(p.periodicity);
       const label = routinePeriodLabel(p.periodicity);
       const capitalized = label ? label.charAt(0).toUpperCase() + label.slice(1) : 'General';
-      const pct = activeMinutes > 0 ? Math.round((p.minutes / activeMinutes) * 100) : 0;
+      const pct = activeMinutes > 0 ? Math.min(100, Math.round((p.minutes / activeMinutes) * 100)) : 0;
       return {
         key: p.periodicity,
         label: capitalized,

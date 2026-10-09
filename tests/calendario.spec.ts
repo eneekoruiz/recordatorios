@@ -57,7 +57,7 @@ test.describe('Calendario', () => {
     expect(dueKey).toBe(target);
 
     // «Hoy» vuelve al día de hoy
-    await page.getByRole('button', { name: 'Hoy', exact: true }).click();
+    await page.locator('button.cal-today-btn').click();
     await expect(page.locator(`[data-day="${keyFor(0)}"]`)).toHaveAttribute('aria-pressed', 'true');
 
     // La ronda lleva a su vista de frecuencia

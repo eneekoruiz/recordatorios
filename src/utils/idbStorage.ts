@@ -212,6 +212,10 @@ export const idbStorage: StateStorage = {
             };
             const safeState = { ...sanitized.state, persistenceRecovery: recovery };
             safeValue = JSON.stringify({ ...envelope, state: safeState });
+          } else if (existingRecovery) {
+            recovery = existingRecovery;
+            const safeState = { ...sanitized.state, persistenceRecovery: recovery };
+            safeValue = JSON.stringify({ ...envelope, state: safeState });
           } else {
             recovery = null;
             const cleanState = { ...sanitized.state, persistenceRecovery: null };

@@ -27,6 +27,7 @@ import {
   getPureCyclicPeriodicity,
   sortTasksByUserPreference,
   formatSectionTitle,
+  getNextPeriodDate,
   type PeriodicityType 
 } from '../../utils/sectionRoutine';
 import { MainEmptyState } from './main/MainEmptyState';
@@ -89,7 +90,7 @@ type VirtualItemType =
       totalCount?: number
     }
   | { type: 'empty-section', title: string, category: string, color: string, sectionId?: string, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean }
-  | { type: 'task', task: TaskItem, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean };
+  | { type: 'task', task: TaskItem, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean, referenceDate?: Date };
 
 
 const getRoomIcon = (key: string): ReactNode => {
@@ -624,7 +625,7 @@ const CORE_CYCLES = [
   }, [tasks, currentView, isSmartView, isFolderView, isListView, lists, currentCycle]);
 
   // Handlers
-  const handleToggleTask = useCallback(async (taskId: string, forceReverse?: boolean) => {
+  const handleToggleTask = useCallback(async (taskId: string, forceReverse?: boolean, customTimestamp?: number | Date) => {
     const task = tasks[taskId];
     if (task) {
       
@@ -632,7 +633,9 @@ const CORE_CYCLES = [
       const isTargetTask = Boolean(task.targetCount && task.targetCount > 1);
       const currentCount = task.currentCount || 0;
       const targetCount = task.targetCount || 1;
-      const refDate = temporalDate ? new Date(temporalDate) : new Date();
+      const refDate = customTimestamp !== undefined
+        ? (typeof customTimestamp === 'number' ? new Date(customTimestamp) : customTimestamp)
+        : (temporalDate ? new Date(temporalDate) : new Date());
       const effCycle = getEffectiveCycleId(task, listSections, lists);
       const isDone = effCycle
         ? isCompletedInCurrentPeriod(task, cycles, listSections, lists, refDate)
@@ -687,7 +690,9 @@ const CORE_CYCLES = [
         setRecentlyCompletedIds(prev => prev.filter(x => !idsToRemove.has(x)));
       }
     }
-    const refTimestamp = temporalDate ? new Date(temporalDate).getTime() : undefined;
+    const refTimestamp = customTimestamp !== undefined
+      ? (typeof customTimestamp === 'number' ? customTimestamp : customTimestamp.getTime())
+      : (temporalDate ? new Date(temporalDate).getTime() : undefined);
     toggleTask(taskId, forceReverse, refTimestamp);
   }, [tasks, cycles, lists, listSections, toggleTask, temporalDate]);
 
@@ -856,10 +861,10 @@ const CORE_CYCLES = [
       }).length;
     };
 
-    const filterTasks = (tasks: TaskItem[]) => {
+    const filterTasks = (tasks: TaskItem[], targetRefDate?: Date) => {
       let filtered = tasks;
       if (!resolvedShowCompleted) {
-        const ref = temporalDate ? new Date(temporalDate) : new Date();
+        const ref = targetRefDate || (temporalDate ? new Date(temporalDate) : new Date());
         filtered = tasks.filter(t => {
           const effCycle = getEffectiveCycleId(t, listSections, lists);
           const isDone = effCycle
@@ -1429,7 +1434,17 @@ const CORE_CYCLES = [
 
           const currentRoutineMode = sectionRoutineModes[categoryKey] || 'only_section';
           const sectionScopeForCounts = currentRoutineMode === 'full_routine' && routineCounts ? tasksToRender : thisSectionTasksTotal;
-          tasksToRender = filterTasks(tasksToRender);
+          const ref = temporalDate ? new Date(temporalDate) : new Date();
+          const isManualSecRolledOver = Boolean(
+            sectionPeriodicity &&
+            sectionScopeForCounts.length > 0 &&
+            countPending(sectionScopeForCounts) === 0
+          );
+          const effectiveManualSecRefDate = (isManualSecRolledOver && sectionPeriodicity)
+            ? getNextPeriodDate(sectionPeriodicity, ref)
+            : ref;
+
+          tasksToRender = filterTasks(tasksToRender, effectiveManualSecRefDate);
           const allSectionPendingTaskIds = sectionScopeForCounts.filter(t => !isTaskCompleted(t)).map(t => t.id);
 
           flat.push({
@@ -1442,7 +1457,7 @@ const CORE_CYCLES = [
             periodicity: sectionPeriodicity,
             routineCounts,
             routineDurations,
-            routineParts,
+            routineParts: currentRoutineMode === 'full_routine' ? routineParts : null,
             sectionTaskIds: allSectionPendingTaskIds,
             pendingCount: countPending(sectionScopeForCounts),
             totalCount: sectionScopeForCounts.length
@@ -1459,7 +1474,12 @@ const CORE_CYCLES = [
                 const processNode = (task: TaskItem, depthLevel: number) => {
                   if (visitedTaskIds.has(task.id)) return;
                   visitedTaskIds.add(task.id);
-                  flat.push({ type: 'task', task, depth: depthLevel });
+                  flat.push({
+                    type: 'task',
+                    task,
+                    depth: depthLevel,
+                    referenceDate: isManualSecRolledOver ? effectiveManualSecRefDate : undefined
+                  });
                   if (!isCatCollapsed(`task_${task.id}`)) {
                     const children = tasksToRender.filter(t => t.parentId === task.id);
                     children.forEach(c => processNode(c, depthLevel + 1));
@@ -1595,6 +1615,16 @@ const CORE_CYCLES = [
             // Cabecera de frecuencia (depth 0)
             const freqColor = getReservedFrequencyColor(cycleId) || color;
             sectionTasksByKey[freqCatKey] = tasksToGroup;
+            const ref = temporalDate ? new Date(temporalDate) : new Date();
+            const isLimpiezaRolledOver = Boolean(
+              periodicity &&
+              tasksToGroup.length > 0 &&
+              countPending(tasksToGroup) === 0
+            );
+            const effectiveLimpiezaRefDate = isLimpiezaRolledOver
+              ? getNextPeriodDate(periodicity as PeriodicityType, ref)
+              : ref;
+
             flat.push({
               type: 'header',
               title: formatSectionTitle(label),
@@ -1605,7 +1635,7 @@ const CORE_CYCLES = [
               periodicity: periodicity as PeriodicityType,
               routineCounts,
               routineDurations,
-              routineParts,
+              routineParts: mode === 'full_routine' ? routineParts : null,
               sectionTaskIds: freqPendingIds,
               pendingCount: countPending(tasksToGroup),
               totalCount: tasksToGroup.length
@@ -1643,7 +1673,12 @@ const CORE_CYCLES = [
                       flat.push({ type: 'empty-section', title: 'Sin tareas', category: roomCatKey, color: freqColor, sectionId: manualFreqSec?.id, depth: 1 });
                     } else {
                       roomTasks.forEach(task => {
-                        flat.push({ type: 'task', task, depth: task.parentId ? 1 : 0 });
+                        flat.push({
+                          type: 'task',
+                          task,
+                          depth: task.parentId ? 1 : 0,
+                          referenceDate: isLimpiezaRolledOver ? effectiveLimpiezaRefDate : undefined
+                        });
                       });
                     }
                   }
@@ -1779,13 +1814,23 @@ const CORE_CYCLES = [
               );
 
               const countScope = mode === 'full_routine' && routineCounts ? fullTasksTotal : thisSectionTasksTotal;
-              
-              let finalTasksToRender = filterTasks(tasksToRender);
-
               const ref = temporalDate ? new Date(temporalDate) : new Date();
+              const isSectionRolledOver = Boolean(
+                sectionPeriodicity &&
+                countScope.length > 0 &&
+                countPending(countScope) === 0
+              );
+              const effectiveSectionRefDate = isSectionRolledOver
+                ? getNextPeriodDate(sectionPeriodicity, ref)
+                : ref;
+
+              let finalTasksToRender = filterTasks(tasksToRender, effectiveSectionRefDate);
+
               const allSectionPendingTaskIds = countScope.filter(t => {
                 const effCycle = getEffectiveCycleId(t, listSections, lists);
-                return effCycle ? !isCompletedInCurrentPeriod(t, cycles, listSections, lists, ref) : !isTaskCompleted(t);
+                return effCycle
+                  ? !isCompletedInCurrentPeriod(t, cycles, listSections, lists, effectiveSectionRefDate)
+                  : !isTaskCompleted(t);
               }).map(t => t.id);
 
               if (finalTasksToRender.length === 0 && childSections.length === 0) {
@@ -1804,7 +1849,7 @@ const CORE_CYCLES = [
                 periodicity: sectionPeriodicity,
                 routineCounts,
                 routineDurations,
-                routineParts,
+                routineParts: mode === 'full_routine' ? routineParts : null,
                 sectionTaskIds: allSectionPendingTaskIds,
                 pendingCount: countPending(countScope),
                 totalCount: countScope.length
@@ -1818,7 +1863,12 @@ const CORE_CYCLES = [
                   const processNode = (task: TaskItem, depthLevel: number) => {
                     if (visitedCycleTaskIds.has(task.id)) return;
                     visitedCycleTaskIds.add(task.id);
-                    flat.push({ type: 'task', task, depth: depthLevel });
+                    flat.push({
+                      type: 'task',
+                      task,
+                      depth: depthLevel,
+                      referenceDate: isSectionRolledOver ? effectiveSectionRefDate : undefined
+                    });
                     if (!isCatCollapsed(`task_${task.id}`)) {
                       const children = finalTasksToRender.filter(t => t.parentId === task.id);
                       children.forEach(c => processNode(c, depthLevel + 1));
@@ -2219,8 +2269,8 @@ const CORE_CYCLES = [
 
   // Vistas sin desglose por frecuencia: la duración total se reparte en puntuales y frecuencias (si hay mezcla).
   const viewMixParts = useMemo(
-    () => (cycleBreakdown || isShoppingList(currentView, currentList) ? null : buildMixParts(viewTasks, listSections, lists, cycles)),
-    [cycleBreakdown, currentView, currentList, viewTasks, listSections, lists, cycles]
+    () => (currentCycle || cycleBreakdown || isShoppingList(currentView, currentList) ? null : buildMixParts(viewTasks, listSections, lists, cycles)),
+    [currentCycle, cycleBreakdown, currentView, currentList, viewTasks, listSections, lists, cycles]
   );
 
   // Group flattenedData into sections to enable native multi-tier CSS sticky push effect between sections
@@ -2394,7 +2444,7 @@ const CORE_CYCLES = [
   }, [onStartSequence]);
 
 
-  const renderTask = useCallback((task: TaskItem, itemStyle: React.CSSProperties, index: number, depth: number, isFirst: boolean, isLast: boolean, previousTaskId?: string, itemKey?: React.Key) => {
+  const renderTask = useCallback((task: TaskItem, itemStyle: React.CSSProperties, index: number, depth: number, isFirst: boolean, isLast: boolean, previousTaskId?: string, itemKey?: React.Key, referenceDate?: Date) => {
     const childCount = childCountByTaskId.get(task.id) || 0;
     const hasChildren = childCount > 0;
     const isExpanded = !isCatCollapsed(`task_${task.id}`);
@@ -2437,6 +2487,7 @@ const CORE_CYCLES = [
             isSelected={selectedTaskIds.has(task.id)}
             onToggleSelect={handleToggleSelectTask}
             isSelectionMode={selectedTaskIds.size > 0 || isExplicitSelectionMode}
+            referenceDate={referenceDate}
             {...({
             hasChildren,
             childCount,
@@ -2671,8 +2722,8 @@ const CORE_CYCLES = [
                     const sectionCompletedDurationSummary = !isShoppingList(currentView, currentList)
                       ? calculateCompletedTasksDuration(tasksForSection, listSections, lists)
                       : undefined;
-                    // Con «+ Diarias» ya hay desglose por frecuencia; si no, se reparte por tipo de tarea.
-                    const sectionMixParts = !isShoppingList(currentView, currentList) && !(activeMode === 'full_routine' && data.routineParts)
+                    // Con «+ Diarias» ya hay desglose por frecuencia; si no, se reparte por tipo de tarea (solo en listas sin periodicidad fija).
+                    const sectionMixParts = !isShoppingList(currentView, currentList) && !data.periodicity && !(activeMode === 'full_routine' && data.routineParts)
                       ? buildMixParts(tasksForSection, listSections, lists, cycles)
                       : null;
                     return (
@@ -2797,7 +2848,8 @@ const CORE_CYCLES = [
                       !!data.isFirstInSection, 
                       !!data.isLastInSection, 
                       previousTaskId, 
-                      itemKey
+                      itemKey,
+                      data.referenceDate
                     );
                   }
 

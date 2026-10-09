@@ -136,6 +136,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   const [isEditingListName, setIsEditingListName] = React.useState(false);
   const [listEditName, setListEditName] = React.useState('');
   const [isDurationCardOpen, setIsDurationCardOpen] = React.useState(false);
+  const canOpenDurationModal = Boolean((cycleBreakdown && cycleBreakdown.details && cycleBreakdown.details.length > 1) || (mixParts && mixParts.length > 1));
 
   const includeSwitchId = React.useId();
   const scrollOffset = Math.min(80, Math.max(0, scrollTop || 0));
@@ -319,6 +320,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
           const hasValidDuration = Boolean(totalDuration && totalDuration.activeMinutes > 0 && !isShoppingList(currentView, currentList) && !isCaducidadesList(currentView, currentList));
           const hasValidPrice = Boolean((totalCost > 0 || (completedCost !== undefined && completedCost > 0)) && !currentCycle && !isCaducidadesList(currentView, currentList));
           const hasBreakdown = Boolean(cycleBreakdown && cycleBreakdown.details && cycleBreakdown.details.length > 1);
+          const canOpenDurationModal = hasBreakdown || Boolean(mixParts && mixParts.length > 1);
 
           if (!hasValidDuration && !hasValidPrice && !hasBreakdown) return null;
 
@@ -343,20 +345,31 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, overflow: 'hidden' }}>
                 {hasValidDuration && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      HapticService.selection();
-                      setIsDurationCardOpen(true);
-                    }}
-                    className="apple-list-duration-chip"
-                    title="Toca para ver el desglose detallado de tiempo"
-                    aria-label="Ver desglose de tiempo"
-                  >
-                    <Clock size={11} strokeWidth={1.8} className="apple-list-duration-icon" />
-                    <span>{formatSummaryDuration(totalDuration!.activeMinutes)}</span>
-                    <ChevronDown size={10} strokeWidth={2} style={{ opacity: 0.45, marginLeft: 1 }} />
-                  </button>
+                  canOpenDurationModal ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        HapticService.selection();
+                        setIsDurationCardOpen(true);
+                      }}
+                      className="apple-list-duration-chip"
+                      title="Toca para ver el desglose detallado de tiempo"
+                      aria-label="Ver desglose de tiempo"
+                    >
+                      <Clock size={11} strokeWidth={1.8} className="apple-list-duration-icon" />
+                      <span>{formatSummaryDuration(totalDuration!.activeMinutes)}</span>
+                      <ChevronDown size={10} strokeWidth={2} style={{ opacity: 0.45, marginLeft: 1 }} />
+                    </button>
+                  ) : (
+                    <span
+                      className="apple-list-duration-chip"
+                      style={{ cursor: 'default' }}
+                      title={`Tiempo estimado: ${formatSummaryDuration(totalDuration!.activeMinutes)}`}
+                    >
+                      <Clock size={11} strokeWidth={1.8} className="apple-list-duration-icon" />
+                      <span>{formatSummaryDuration(totalDuration!.activeMinutes)}</span>
+                    </span>
+                  )
                 )}
 
                 {hasValidDuration && hasValidPrice && (
@@ -746,7 +759,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
         )}
       </header>
 
-      {totalDuration && totalDuration.activeMinutes > 0 && (
+      {canOpenDurationModal && totalDuration && totalDuration.activeMinutes > 0 && (
         <DurationInfoCard
           isOpen={isDurationCardOpen}
           onClose={() => setIsDurationCardOpen(false)}
