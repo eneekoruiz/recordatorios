@@ -75,6 +75,39 @@ describe('untrusted imports', () => {
     expect(result.tasks[0].completionHistory).toHaveLength(2);
     expect(typeof result.tasks[0].completionHistory![0]).toBe('number');
   });
+  it('accepts tombstones without title, empty titles, and numeric priorities without throwing or quarantining', () => {
+    const result = validateJsonImport({
+      tasks: {
+        tombstone: {
+          id: 'tombstone',
+          deleted_at: '2026-09-24T08:55:37.190Z',
+          _is_dirty: false,
+        },
+        emptyTitle: {
+          id: 'emptyTitle',
+          title: '',
+          priority: 0,
+          status: 'pending',
+        },
+        numericPriority: {
+          id: 'numericPriority',
+          title: 'Con prioridad numerica',
+          priority: 3,
+        },
+      },
+    });
+    expect(result.tasks).toHaveLength(3);
+    const tombstone = result.tasks.find(t => t.id === 'tombstone')!;
+    expect(tombstone.title).toBe('(Sin título)');
+    expect(tombstone.deleted_at).toBe('2026-09-24T08:55:37.190Z');
+
+    const empty = result.tasks.find(t => t.id === 'emptyTitle')!;
+    expect(empty.title).toBe('(Sin título)');
+    expect(empty.priority).toBe('none');
+
+    const numPrio = result.tasks.find(t => t.id === 'numericPriority')!;
+    expect(numPrio.priority).toBe('high');
+  });
 });
 
 describe('CSV and text fidelity', () => {

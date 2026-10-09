@@ -60,9 +60,24 @@ const alertSchema = z.object({
   time: z.preprocess(value => (value === null || value === undefined || value === '') ? undefined : value, optional(z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/))),
   offsetMinutes: nonnegative, label: text,
 }).refine(alert => alert.type === 'at_time' ? !!alert.time : alert.offsetMinutes !== undefined, 'Alerta incompleta');
+const taskTitle = z.preprocess(val => {
+  if (val === undefined || val === null || val === '') return '(Sin título)';
+  if (typeof val === 'string' && val.trim() === '') return '(Sin título)';
+  return val;
+}, z.string().trim().min(1, 'El título no puede estar vacío'));
+
+const priority = z.preprocess(val => {
+  if (val === 0 || val === '0') return 'none';
+  if (val === 1 || val === '1') return 'low';
+  if (val === 2 || val === '2') return 'medium';
+  if (val === 3 || val === '3') return 'high';
+  if (val === null || val === undefined || val === '') return undefined;
+  return val;
+}, optional(z.enum(['none', 'low', 'medium', 'high'])));
+
 const taskSchema = z.object({
   id: id.optional(), user_id: text,
-  title: z.string().trim().min(1, 'El título no puede estar vacío'),
+  title: taskTitle,
   type: z.enum(['task', 'log']).default('task'),
   status: z.enum(['pending', 'in_progress', 'completed']).default('pending'),
   description: text, notes: text, categoryId: reference, listId: reference,
@@ -74,7 +89,7 @@ const taskSchema = z.object({
   completionHistory: historyArray,
   skipHistory: historyArray,
   consecutiveSkipCount: optional(z.number().int().nonnegative()),
-  priority: optional(z.enum(['none', 'low', 'medium', 'high'])),
+  priority,
   flagged: flag, url: text, image: text, timeOfDay: optional(z.enum(['morning', 'afternoon', 'night'])),
   duration: nonnegative, disableDuration: flag, isParallel: flag, parallelDuration: nonnegative,
   targetCount: optional(z.number().int().nonnegative()), currentCount: optional(z.number().int().nonnegative()),
