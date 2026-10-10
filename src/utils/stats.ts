@@ -1,7 +1,8 @@
 import type { TaskItem, CustomCycle, ListSection, CustomList } from '../models/Task';
 import { isTaskCompleted } from '../store/useAppStore';
-import { isCompletedInCurrentPeriod } from '../services/TaskService';
+import { matchesPeriod } from '../services/TaskService';
 import { getEffectiveCycleId } from './sectionRoutine';
+import { getRoutinePeriod } from './routineAnalytics';
 
 // Estadísticas reales a partir de lo que la persona ha completado (nada inventado).
 // Un recordatorio puede aportar varias finalizaciones (las rutinas guardan su historial) y una sola
@@ -26,6 +27,11 @@ export function completionTimestamps(task: TaskItem): number[] {
   if (done !== null && ![...stamps].some((s) => Math.abs(s - done) < 2000)) stamps.add(done);
   return [...stamps];
 }
+
+/** Period evidence remains valid even after a routine's live status/count resets. */
+const routineCompletionMarks = (task: TaskItem): (number | string)[] => [
+  ...completionTimestamps(task), ...(task.completed_at ? [task.completed_at] : []),
+];
 
 export const startOfDay = (ms: number): number => {
   const d = new Date(ms);
@@ -155,9 +161,11 @@ export interface CycleStatItem {
   total: number;
   completed: number;
   pending: number;
+  skipped?: number;
   rate: number | null;
   completedTasks: TaskItem[];
   pendingTasks: TaskItem[];
+  skippedTasks?: TaskItem[];
 }
 
 export interface CyclesBreakdownResult {
@@ -168,6 +176,7 @@ export interface CyclesBreakdownResult {
   allRoutinesGoal: number;
   allRoutinesCompleted: number;
   allRoutinesPending: number;
+  allRoutinesSkipped?: number;
   allRoutinesRate: number | null;
 }
 
@@ -197,9 +206,11 @@ export function calculateCyclesBreakdown(
     total: 0,
     completed: 0,
     pending: 0,
+    skipped: 0,
     rate: null,
     completedTasks: [],
     pendingTasks: [],
+    skippedTasks: [],
   });
 
   const daily = createItem('cycle_day', 'Diarias', 'day', 'var(--accent-orange, #ff9500)');
@@ -220,10 +231,17 @@ export function calculateCyclesBreakdown(
     if (!target) continue;
 
     target.total++;
-    const isDone = isTaskCompleted(t) || isCompletedInCurrentPeriod(t, cycles, listSections, lists, referenceDate);
+    // Counts and global status belong to the live period, while timestamps identify the selected one.
+    const marks = routineCompletionMarks(t);
+    const hasDatedCompletion = marks.length > 0 || !!t.completed_at;
+    const isDone = matchesPeriod(marks, effId, referenceDate, cycles)
+      || (!hasDatedCompletion && !(t.skipHistory?.length) && t.status === 'completed');
     if (isDone) {
       target.completed++;
       target.completedTasks.push(t);
+    } else if (matchesPeriod(t.skipHistory, effId, referenceDate, cycles)) {
+      target.skipped = (target.skipped || 0) + 1;
+      target.skippedTasks?.push(t);
     } else {
       target.pending++;
       target.pendingTasks.push(t);
@@ -237,6 +255,7 @@ export function calculateCyclesBreakdown(
   const allRoutinesGoal = daily.total + weekly.total + monthly.total + yearly.total;
   const allRoutinesCompleted = daily.completed + weekly.completed + monthly.completed + yearly.completed;
   const allRoutinesPending = daily.pending + weekly.pending + monthly.pending + yearly.pending;
+  const allRoutinesSkipped = (daily.skipped || 0) + (weekly.skipped || 0) + (monthly.skipped || 0) + (yearly.skipped || 0);
   const allRoutinesRate = allRoutinesGoal === 0 ? null : Math.round((allRoutinesCompleted / allRoutinesGoal) * 100);
 
   return {
@@ -247,6 +266,7 @@ export function calculateCyclesBreakdown(
     allRoutinesGoal,
     allRoutinesCompleted,
     allRoutinesPending,
+    allRoutinesSkipped,
     allRoutinesRate,
   };
 }
@@ -327,8 +347,10 @@ export function calculateCycleStreaks(
     for (let w = 0; w < 52; w++) {
       const checkDate = new Date(curDate);
       checkDate.setDate(checkDate.getDate() - w * 7);
-      const isCompleted = weeklyTasks.every((t) =>
-        isCompletedInCurrentPeriod(t, cycles, listSections, lists, checkDate)
+      const { end } = getRoutinePeriod('week', checkDate);
+      const eligible = weeklyTasks.filter(t => !t.created_at || new Date(t.created_at).getTime() < end.getTime());
+      const isCompleted = eligible.length > 0 && eligible.every((t) =>
+        matchesPeriod(routineCompletionMarks(t), 'cycle_week', checkDate, cycles)
       );
       if (isCompleted) {
         weeklyStreak++;
@@ -346,8 +368,10 @@ export function calculateCycleStreaks(
       const checkDate = new Date(curDate);
       checkDate.setDate(1);
       checkDate.setMonth(checkDate.getMonth() - m);
-      const isCompleted = monthlyTasks.every((t) =>
-        isCompletedInCurrentPeriod(t, cycles, listSections, lists, checkDate)
+      const { end } = getRoutinePeriod('month', checkDate);
+      const eligible = monthlyTasks.filter(t => !t.created_at || new Date(t.created_at).getTime() < end.getTime());
+      const isCompleted = eligible.length > 0 && eligible.every((t) =>
+        matchesPeriod(routineCompletionMarks(t), 'cycle_month', checkDate, cycles)
       );
       if (isCompleted) {
         monthlyStreak++;
@@ -390,6 +414,10 @@ export function generatePerformanceReportMarkdown(params: {
     '- **Mensuales:** ' + params.cyclesBreakdown.monthly.completed + '/' + params.cyclesBreakdown.monthly.total + ' (' + (params.cyclesBreakdown.monthly.rate ?? 0) + '%)',
     '- **Anuales:** ' + params.cyclesBreakdown.yearly.completed + '/' + params.cyclesBreakdown.yearly.total + ' (' + (params.cyclesBreakdown.yearly.rate ?? 0) + '%)',
     '- **Promedio global de rutinas:** ' + (params.cyclesBreakdown.allRoutinesRate ?? 0) + '%',
+    '- **Omitidas en este período:** Diarias ' + (params.cyclesBreakdown.daily.skipped || 0)
+      + ' · Semanales ' + (params.cyclesBreakdown.weekly.skipped || 0)
+      + ' · Mensuales ' + (params.cyclesBreakdown.monthly.skipped || 0)
+      + ' · Anuales ' + (params.cyclesBreakdown.yearly.skipped || 0),
     '',
     '## 📋 Desglose por Listas Principales',
   ];

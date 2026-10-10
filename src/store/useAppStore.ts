@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { completePrimaryHydration, getPersistenceRecovery, idbStorage } from '../utils/idbStorage';
 import type { TaskItem, CustomCycle, CustomList, ListSection } from '../models/Task';
 import { TaskRepository } from '../repositories/TaskRepository';
-import { isCompletedInCurrentPeriod, isSkippedInCurrentPeriod, isTaskActuallyCompletedInCurrentPeriod, findPeriodIndexInHistory, wouldCreateDependencyCycle, getStartOfWeek, getStartOfNextWeek } from '../services/TaskService';
+import { isCompletedInCurrentPeriod, isSkippedInCurrentPeriod, isTaskActuallyCompletedInCurrentPeriod, findPeriodIndexInHistory, matchesPeriod, wouldCreateDependencyCycle, getStartOfWeek, getStartOfNextWeek } from '../services/TaskService';
 import { getEffectiveCycleId, getPureCyclicPeriodicity } from '../utils/sectionRoutine';
 import { validateJsonImport } from '../utils/importValidation';
 import { isPersistedRecordSafe } from '../utils/persistedStateValidation';
@@ -823,11 +823,17 @@ export const useAppStore = create<AppState>()(
 
         const isSkipped = isSkippedInCurrentPeriod(existingTask, state.cycles, state.listSections, state.lists, targetDate);
         const shouldReverse = forceReverse !== undefined ? forceReverse : isSkipped;
+        const skipHistory = existingTask.skipHistory || [];
+        const matchingSkipIndex = skipHistory.findIndex(timestamp => matchesPeriod([timestamp], effCycle || '', targetDate, state.cycles));
+        // Explicit history actions must be idempotent and confined to the selected period.
+        if (forceReverse === false && matchingSkipIndex !== -1) return state;
+        if (forceReverse === true && matchingSkipIndex === -1) return state;
+        const isCurrentPeriod = matchesPeriod([effectiveTimestamp], effCycle || '', new Date(), state.cycles);
 
         let updatedTask: TaskItem;
         if (shouldReverse) {
           const newSkipHistory = [...(existingTask.skipHistory || [])];
-          const idxToRemove = findPeriodIndexInHistory(newSkipHistory, effCycle, targetDate);
+          const idxToRemove = matchingSkipIndex;
           if (idxToRemove !== -1) {
             newSkipHistory.splice(idxToRemove, 1);
           } else {
@@ -836,17 +842,18 @@ export const useAppStore = create<AppState>()(
           const decrementedSkipCount = Math.max(0, (existingTask.consecutiveSkipCount || 1) - 1);
           updatedTask = TaskRepository.update(existingTask, {
             skipHistory: newSkipHistory,
-            consecutiveSkipCount: decrementedSkipCount,
-            status: 'pending'
+            ...(isCurrentPeriod ? { consecutiveSkipCount: decrementedSkipCount, status: 'pending' as const } : {})
           });
         } else {
           const newSkipHistory = [...(existingTask.skipHistory || []), effectiveTimestamp];
           const newSkipCount = (existingTask.consecutiveSkipCount || 0) + 1;
           updatedTask = TaskRepository.update(existingTask, {
-            cycle_id: existingTask.cycle_id || effCycle || undefined,
             skipHistory: newSkipHistory,
-            consecutiveSkipCount: newSkipCount,
-            status: 'pending'
+            ...(isCurrentPeriod ? {
+              cycle_id: existingTask.cycle_id || effCycle || undefined,
+              consecutiveSkipCount: newSkipCount,
+              status: 'pending' as const
+            } : {})
           });
         }
 

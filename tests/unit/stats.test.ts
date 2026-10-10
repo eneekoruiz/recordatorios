@@ -118,6 +118,31 @@ describe('estadísticas reales', () => {
     expect(streaks.monthlyStreak).toBeGreaterThanOrEqual(1);
   });
 
+  it('separa omisiones del cumplimiento y los pendientes del ciclo', () => {
+    const tasks = [
+      T('omitida', { cycle_id: 'cycle_week', skipHistory: [NOW] }),
+      T('hecha', { cycle_id: 'cycle_week', status: 'pending', completionHistory: [NOW] }),
+      T('antigua', { cycle_id: 'cycle_week', status: 'completed', completed_at: new Date(at(20)).toISOString() }),
+    ];
+    const result = calculateCyclesBreakdown(tasks, [], [], [], new Date(NOW));
+    expect(result.weekly).toMatchObject({ total: 3, completed: 1, skipped: 1, pending: 1, rate: 33 });
+    expect(result.weekly.skippedTasks?.map(t => t.id)).toEqual(['omitida']);
+    expect(result.allRoutinesSkipped).toBe(1);
+  });
+
+  it('una semana o mes omitido nunca alimenta la racha de completadas', () => {
+    const tasks = [
+      T('semana', { cycle_id: 'cycle_week', skipHistory: [NOW, at(7), at(14)] }),
+      T('mes', { cycle_id: 'cycle_month', skipHistory: [NOW, new Date(2026, 7, 1).getTime()] }),
+    ];
+    expect(calculateCycleStreaks(tasks, [], [], [], NOW)).toEqual({ weeklyStreak: 0, monthlyStreak: 0 });
+  });
+
+  it('la racha histórica no depende del contador de repeticiones reiniciado', () => {
+    const tasks = [T('semana', { cycle_id: 'cycle_week', targetCount: 3, currentCount: 0, completionHistory: [NOW, at(7)] })];
+    expect(calculateCycleStreaks(tasks, [], [], [], NOW).weeklyStreak).toBe(2);
+  });
+
   it('genera un informe Markdown de rendimiento con formato estructurado', () => {
     const report = generatePerformanceReportMarkdown({
       streak: 5,

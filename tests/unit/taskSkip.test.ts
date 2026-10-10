@@ -1,10 +1,12 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { useAppStore } from '../../src/store/useAppStore';
 import { isSkippedInCurrentPeriod, isCompletedInCurrentPeriod } from '../../src/services/TaskService';
 import type { TaskItem } from '../../src/models/Task';
 
 describe('Omitir tareas periódicas / por ciclo (Task Skip)', () => {
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 10, 12));
     useAppStore.setState({
       tasks: {},
       cycles: [
@@ -16,6 +18,8 @@ describe('Omitir tareas periódicas / por ciclo (Task Skip)', () => {
       tombstones: { lists: [], tasks: [], tags: [], sections: [], cycles: [], habits: [] },
     });
   });
+
+  afterEach(() => vi.useRealTimers());
 
   it('detecta correctamente si una tarea está omitida en el período actual', () => {
     const now = new Date();
@@ -98,6 +102,7 @@ describe('Omitir tareas periódicas / por ciclo (Task Skip)', () => {
 
     // Siguiente mes (Febrero 2026)
     const febDate = new Date(2026, 1, 15);
+    vi.setSystemTime(febDate);
     useAppStore.getState().skipTask(initialTask.id, false, febDate);
 
     const updated = useAppStore.getState().tasks[initialTask.id];
@@ -174,6 +179,76 @@ describe('Omitir tareas periódicas / por ciclo (Task Skip)', () => {
 
     expect((taskOnce.consecutiveSkipCount || 0) >= 2).toBe(false);
     expect((taskTwice.consecutiveSkipCount || 0) >= 2).toBe(true);
+  });
+
+  it.each([
+    ['cycle_day', new Date(2026, 9, 9, 12)],
+    ['cycle_week', new Date(2026, 9, 2, 12)],
+    ['cycle_month', new Date(2026, 8, 15, 12)],
+  ])('registrar y restaurar una omisión histórica de %s conserva la tarea actual', (cycleId, pastDate) => {
+    const now = new Date();
+    const unrelatedDate = new Date(2026, 7, 1, 12).getTime();
+    const task: TaskItem = {
+      id: 'historical-skip', title: 'Limpiar', cycle_id: cycleId,
+      status: 'completed', consecutiveSkipCount: 3,
+      completed_at: now.toISOString(), completionHistory: [now.getTime()],
+      skipHistory: [unrelatedDate],
+      created_at: new Date(2026, 0, 1).toISOString(), updated_at: now.toISOString(),
+    };
+    useAppStore.setState({ tasks: { [task.id]: task } });
+
+    useAppStore.getState().skipTask(task.id, false, pastDate);
+    const omitted = useAppStore.getState().tasks[task.id];
+    expect(omitted.skipHistory).toEqual([unrelatedDate, pastDate.getTime()]);
+    expect(omitted.status).toBe('completed');
+    expect(omitted.consecutiveSkipCount).toBe(3);
+    expect(omitted.completed_at).toBe(task.completed_at);
+    expect(omitted.completionHistory).toEqual(task.completionHistory);
+
+    useAppStore.getState().skipTask(task.id, true, pastDate);
+    const restored = useAppStore.getState().tasks[task.id];
+    expect(restored.skipHistory).toEqual([unrelatedDate]);
+    expect(restored.status).toBe('completed');
+    expect(restored.consecutiveSkipCount).toBe(3);
+    expect(restored.completed_at).toBe(task.completed_at);
+    expect(restored.completionHistory).toEqual(task.completionHistory);
+
+    useAppStore.getState().skipTask(task.id, true, pastDate);
+    expect(useAppStore.getState().tasks[task.id]).toBe(restored);
+  });
+
+  it('omitir explícitamente dos veces el mismo período no duplica el historial ni el contador', () => {
+    const now = new Date();
+    const task: TaskItem = {
+      id: 'idempotent-skip', title: 'Limpiar', cycle_id: 'cycle_week', status: 'pending',
+      created_at: now.toISOString(), updated_at: now.toISOString(),
+    };
+    useAppStore.setState({ tasks: { [task.id]: task } });
+    useAppStore.getState().skipTask(task.id, false, now);
+    const omitted = useAppStore.getState().tasks[task.id];
+    useAppStore.getState().skipTask(task.id, false, now);
+    expect(useAppStore.getState().tasks[task.id]).toBe(omitted);
+    expect(omitted.skipHistory).toEqual([now.getTime()]);
+    expect(omitted.consecutiveSkipCount).toBe(1);
+  });
+
+  it('respeta períodos de ciclos personalizados al restaurar y no elimina omisiones de otros períodos', () => {
+    const now = new Date();
+    const monday = new Date(2026, 9, 5, 12);
+    const previousWeek = new Date(2026, 9, 2, 12).getTime();
+    const task: TaskItem = {
+      id: 'custom-week-skip', title: 'Limpiar', cycle_id: 'custom_week', status: 'pending',
+      consecutiveSkipCount: 2, skipHistory: [previousWeek, monday.getTime()],
+      created_at: now.toISOString(), updated_at: now.toISOString(),
+    };
+    useAppStore.setState({ tasks: { [task.id]: task }, cycles: [
+      ...useAppStore.getState().cycles, { id: 'custom_week', name: 'Cada semana', daysValue: 7, isPinned: false, icon: 'calendar' },
+    ] });
+    useAppStore.getState().skipTask(task.id, false, now);
+    expect(useAppStore.getState().tasks[task.id]).toBe(task);
+    useAppStore.getState().skipTask(task.id, true, now);
+    expect(useAppStore.getState().tasks[task.id].skipHistory).toEqual([previousWeek]);
+    expect(useAppStore.getState().tasks[task.id].consecutiveSkipCount).toBe(1);
   });
 });
 
