@@ -116,7 +116,7 @@ export function PersistenceStatusBanner() {
         fontWeight: 500
       }}
     >
-      <span style={{ flex: '1 1 240px', lineHeight: 1.4, color: '#ff3b30', fontWeight: 600 }}>{message}</span>
+      <span style={{ flex: '1 1 240px', lineHeight: 1.4, textWrap: 'pretty', color: 'var(--accent-red, #ff3b30)', fontWeight: 600 }}>{message}</span>
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, maxWidth: '100%' }}>
         {recovery && (
           <>
@@ -201,7 +201,9 @@ export function PersistenceStatusBanner() {
             color: 'var(--text-tertiary, #c7c7cc)',
             cursor: 'pointer',
             padding: 12,
-            borderRadius: 6,
+            minWidth: 44,
+            minHeight: 44,
+            borderRadius: 22,
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',

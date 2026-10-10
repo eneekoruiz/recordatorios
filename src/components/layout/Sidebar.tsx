@@ -237,7 +237,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                   justifyContent: 'center',
                   cursor: 'pointer',
                   color: 'var(--text-secondary)',
-                  transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.18s ease',
+                  transition: 'background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, fill 0.18s ease, opacity 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease',
                   overflow: 'hidden'
                 }}
                 title={`Buscar (${modShortcut('K')})`}
@@ -523,7 +523,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
                     inset: 0, 
                     zIndex: 99998, 
                     background: isMobile ? 'var(--scrim)' : 'transparent',
-                    transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.2s ease'
+                    transition: 'background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, fill 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease'
                   }} 
                   onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); setMenuCoords(null); }} 
                 />

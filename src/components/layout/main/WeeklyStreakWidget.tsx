@@ -188,7 +188,7 @@ export function WeeklyStreakWidget() {
                       ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)')
                       : `rgba(52, 199, 89, ${0.3 + (d.count / maxCount) * 0.7})`,
                   border: d.isToday ? '1.5px solid #34c759' : 'none',
-                  transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.2s ease'
+                  transition: 'background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, fill 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease'
                 }}
               />
             ))}

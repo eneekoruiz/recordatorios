@@ -89,11 +89,11 @@ export function CustomSelect({ id, value, onChange, options, placeholder = 'Sele
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, minWidth: 0, textAlign: 'left' }}>
           {selectedOption?.color && (
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: selectedOption.color, flexShrink: 0 }} />
           )}
-          <span>{selectedOption?.label || placeholder}</span>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedOption?.label || placeholder}</span>
         </span>
         <ChevronDown size={15} aria-hidden="true" className={isOpen ? 'is-open' : ''} />
       </button>
@@ -138,7 +138,7 @@ export function CustomSelect({ id, value, onChange, options, placeholder = 'Sele
                         setIsOpen(false);
                       }}
                       onMouseEnter={() => setHighlightedIndex(idx)}
-                      style={{ background: highlighted ? 'var(--bg-hover)' : 'transparent' }}
+                      style={{ background: highlighted ? 'var(--bg-hover)' : 'transparent', minHeight: 44, textWrap: 'pretty' }}
                     >
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                         {option.color && (

@@ -268,7 +268,7 @@ export const ApplePeriodNavigator: React.FC<ApplePeriodNavigatorProps> = ({
           WebkitBackdropFilter: 'blur(20px) saturate(180%)',
           border: '1px solid var(--border-subtle, rgba(0, 0, 0, 0.1))',
           boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(0, 0, 0, 0.03)',
-          transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.2s cubic-bezier(0.25, 1, 0.5, 1)',
+          transition: 'background-color 0.2s cubic-bezier(0.25, 1, 0.5, 1), border-color 0.2s cubic-bezier(0.25, 1, 0.5, 1), color 0.2s cubic-bezier(0.25, 1, 0.5, 1), fill 0.2s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s cubic-bezier(0.25, 1, 0.5, 1), transform 0.2s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.2s cubic-bezier(0.25, 1, 0.5, 1)',
           userSelect: 'none',
           flexShrink: 0,
           ...style
@@ -452,11 +452,11 @@ export const ApplePeriodNavigator: React.FC<ApplePeriodNavigatorProps> = ({
                   left: popoverCoords.left,
                   zIndex: 999995,
                   width: Math.min(340, window.innerWidth - 24),
-                  background: 'var(--bg-elevated, #ffffff)',
+                  background: 'var(--glass-fill, var(--bg-material, rgba(255, 255, 255, 0.84)))',
                   backdropFilter: 'blur(40px) saturate(190%)',
                   WebkitBackdropFilter: 'blur(40px) saturate(190%)',
-                  borderRadius: 18,
-                  border: '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
+                  borderRadius: 24,
+                  border: '1px solid var(--glass-stroke, var(--border-subtle))',
                   boxShadow: '0 16px 40px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08)',
                   padding: 14,
                   display: 'flex',
@@ -499,7 +499,7 @@ export const ApplePeriodNavigator: React.FC<ApplePeriodNavigatorProps> = ({
                             fontSize: '0.74rem',
                             fontWeight: isSelected ? 650 : 500,
                             cursor: 'pointer',
-                            transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
+                            transition: 'background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, fill 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease'
                           }}
                         >
                           {gLabel}

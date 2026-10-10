@@ -79,8 +79,8 @@ export function EmptyState({
       >
         {/* Breathing background ambient glow */}
         <motion.div
-          animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.55, 0.3] }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          animate={{ scale: 1, opacity: 0.32 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
           style={{
             position: 'absolute',
             inset: -20,
@@ -126,7 +126,8 @@ export function EmptyState({
         color: 'var(--text-primary)',
         marginBottom: '6px',
         fontFamily: 'var(--font-display)',
-        letterSpacing: '-0.015em'
+        letterSpacing: '-0.025em',
+        textWrap: 'balance'
       }}>
         {title}
       </motion.h2>
@@ -140,6 +141,7 @@ export function EmptyState({
         color: 'var(--text-secondary)',
         maxWidth: 300,
         lineHeight: 1.45,
+        textWrap: 'pretty',
         marginBottom: resolvedCtaText && onAction ? '18px' : 0
       }}>
         {resolvedMessage}
@@ -150,11 +152,13 @@ export function EmptyState({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
-          whileHover={{ scale: 1.04 }}
+          whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.96 }}
           onClick={onAction}
           style={{
             padding: '12px 24px',
+            minWidth: 44,
+            minHeight: 44,
             background: accentColor || 'var(--accent-primary, #007AFF)',
             color: 'white',
             border: 'none',

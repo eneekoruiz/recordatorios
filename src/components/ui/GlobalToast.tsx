@@ -46,7 +46,7 @@ export function GlobalToast() {
         dragConstraints={{ left: -100, right: 100 }}
         onDragEnd={(_, info) => { if (Math.abs(info.offset.x) > 50) setGlobalToast(null); }}
       >
-        <span style={{ fontSize: '0.86rem', fontWeight: 550 }}>
+        <span style={{ fontSize: '0.86rem', fontWeight: 550, textWrap: 'pretty', minWidth: 0 }}>
           {typeof globalToast === 'string' ? globalToast : globalToast.message}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
@@ -61,7 +61,7 @@ export function GlobalToast() {
                 background: 'var(--accent-primary, #007aff)',
                 color: '#ffffff',
                 border: 'none',
-                borderRadius: 8,
+                borderRadius: 14,
                 padding: '8px 12px',
                 minHeight: 44,
                 fontSize: '0.78rem',
@@ -76,7 +76,7 @@ export function GlobalToast() {
           )}
           <button
             onClick={() => setGlobalToast(null)}
-            style={{ background: 'transparent', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', padding: 12 }}
+            style={{ background: 'transparent', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12, minWidth: 44, minHeight: 44, borderRadius: 22, flexShrink: 0 }}
             title="Cerrar"
           >
             <X size={16} />

@@ -25,7 +25,7 @@ export function SheetNavBar({ title, onCancel, onConfirm, confirmLabel, confirmD
           {cancelLabel}
         </button>
       ) : <span aria-hidden="true" />}
-      <h3 className="sheet-navbar-title">{title}</h3>
+      <h3 className="sheet-navbar-title" style={{ letterSpacing: '-0.02em', textWrap: 'balance' }}>{title}</h3>
       <button
         type="button"
         className="sheet-navbar-btn is-primary"

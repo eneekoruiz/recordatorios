@@ -106,7 +106,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
         borderBottom: isGlassActive ? '0.5px solid var(--border-subtle)' : '0.5px solid transparent',
         backdropFilter: isGlassActive ? 'blur(20px) saturate(180%)' : 'none',
         WebkitBackdropFilter: isGlassActive ? 'blur(20px) saturate(180%)' : 'none',
-        transition: 'background 0.2s ease, border-color 0.2s ease, backdrop-filter 0.2s ease, -webkit-backdrop-filter 0.2s ease'
+        transition: 'background-color 0.2s ease, border-color 0.2s ease'
       }}
     >
       {/* Top row: back button + title + actions */}
@@ -203,7 +203,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
               fontSize: '0.80rem',
               whiteSpace: 'nowrap',
               boxShadow: isStartDisabled ? 'none' : '0 1px 3px rgba(0,0,0,0.04)',
-              transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
+              transition: 'background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), color 0.18s cubic-bezier(0.16, 1, 0.3, 1), fill 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
           >
             <Play size={12} fill="currentColor" style={{ flexShrink: 0 }} />
@@ -238,7 +238,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
               border: '1px solid var(--border-subtle)',
               cursor: 'pointer',
               color: 'var(--accent-primary)',
-              transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
+              transition: 'background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, fill 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease'
             }}
           >
             <FolderPlus size={18} strokeWidth={2.2} />
@@ -265,7 +265,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                 border: '1px solid var(--border-subtle)',
                 cursor: 'pointer',
                 color: 'var(--accent-primary)',
-                transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
+                transition: 'background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, fill 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease'
               }}
             >
               <MoreHorizontal size={18} strokeWidth={2.2} />
@@ -306,7 +306,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                           left: 0, 
                           right: 0, 
                           zIndex: 9999, 
-                          background: 'var(--bg-material, rgba(255, 255, 255, 0.94))',
+                          background: 'var(--glass-fill, var(--bg-material, rgba(255, 255, 255, 0.88)))',
                           backdropFilter: 'blur(40px) saturate(180%)',
                           WebkitBackdropFilter: 'blur(40px) saturate(180%)',
                           borderTop: '1px solid var(--border-subtle)',
@@ -587,10 +587,10 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                         marginTop: 8, 
                         zIndex: 200, 
                         minWidth: 245,
-                        background: 'var(--bg-material, rgba(255,255,255,0.85))',
+                        background: 'var(--glass-fill, var(--bg-material, rgba(255,255,255,0.85)))',
                         backdropFilter: 'blur(30px) saturate(180%)',
                         WebkitBackdropFilter: 'blur(30px) saturate(180%)',
-                        border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
+                        border: '1px solid var(--glass-stroke, var(--border-subtle))',
                         boxShadow: '0 10px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.04)',
                         borderRadius: 14,
                         padding: 6,

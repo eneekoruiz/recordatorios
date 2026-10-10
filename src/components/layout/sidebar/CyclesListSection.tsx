@@ -151,8 +151,8 @@ export const CyclesListSection: React.FC<CyclesListSectionProps> = ({
                 }}>
                   <div style={{
                     width: '14px', height: '14px', borderRadius: '50%', background: '#ffffff',
-                    position: 'absolute', top: '2px', left: allVisible ? '16px' : '2px',
-                    transition: 'left 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                    position: 'absolute', top: '2px', left: '2px', transform: allVisible ? 'translateX(14px)' : 'translateX(0)',
+                    transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
                   }} />
                 </div>
               </div>

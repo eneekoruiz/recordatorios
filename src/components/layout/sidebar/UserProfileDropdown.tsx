@@ -240,8 +240,8 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           }}>
             <div style={{
               width: '18px', height: '18px', borderRadius: '50%', background: '#ffffff',
-              position: 'absolute', top: '2px', left: soundEnabled ? '16px' : '2px',
-              transition: 'left 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              position: 'absolute', top: '2px', left: '2px', transform: soundEnabled ? 'translateX(14px)' : 'translateX(0)',
+              transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
             }} />
           </div>
         </div>
@@ -264,8 +264,8 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           }}>
             <div style={{
               width: '18px', height: '18px', borderRadius: '50%', background: '#ffffff',
-              position: 'absolute', top: '2px', left: hapticEnabled ? '16px' : '2px',
-              transition: 'left 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              position: 'absolute', top: '2px', left: '2px', transform: hapticEnabled ? 'translateX(14px)' : 'translateX(0)',
+              transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
             }} />
           </div>
         </div>
@@ -284,8 +284,8 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           }}>
             <div style={{
               width: '18px', height: '18px', borderRadius: '50%', background: '#ffffff',
-              position: 'absolute', top: '2px', left: theme === 'dark' ? '16px' : '2px',
-              transition: 'left 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              position: 'absolute', top: '2px', left: '2px', transform: theme === 'dark' ? 'translateX(14px)' : 'translateX(0)',
+              transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
             }} />
           </div>
         </div>
@@ -342,8 +342,8 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           }}>
             <div style={{
               width: '18px', height: '18px', borderRadius: '50%', background: '#ffffff',
-              position: 'absolute', top: '2px', left: pushStatus === 'on' ? '16px' : '2px',
-              transition: 'left 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              position: 'absolute', top: '2px', left: '2px', transform: pushStatus === 'on' ? 'translateX(14px)' : 'translateX(0)',
+              transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
             }} />
           </div>
         </div>

@@ -33,7 +33,7 @@ export const MetaSplit: React.FC<MetaSplitProps> = ({ label, parts, description,
   const visible = parts.filter((p) => p.value > 0);
   return (
     <span className={`meta-split${className ? ` ${className}` : ''}`} tabIndex={0} title={description} aria-label={description} role="group">
-      <span className="meta-split__label">{label}</span>
+      <span className="meta-split__label" style={{ fontVariantNumeric: 'tabular-nums' }}>{label}</span>
       {visible.length > 0 && (
         <span className="meta-split__bar" aria-hidden="true">
           {visible.map((p) => (

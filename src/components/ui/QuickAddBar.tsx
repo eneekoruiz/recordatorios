@@ -160,10 +160,10 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
           background: 'var(--bg-material, rgba(255, 255, 255, 0.88))',
           backdropFilter: 'blur(35px) saturate(190%)',
           WebkitBackdropFilter: 'blur(35px) saturate(190%)',
-          border: isFocused ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
-          borderRadius: 22,
+          border: isFocused ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
+          borderRadius: 30,
           boxShadow: isFocused ? '0 12px 36px var(--accent-glow), 0 4px 16px rgba(0,0,0,0.1)' : '0 10px 32px rgba(0,0,0,0.12)',
-          padding: '8px 12px',
+          padding: 8,
           display: 'flex',
           flexDirection: 'column',
           gap: hasChips ? 8 : 0,
@@ -216,7 +216,7 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
                 </span>
               )}
               {nlp.suggestedPrice && (
-                <span className="qa-chip qa-chip--price" style={{ fontWeight: 600, color: 'var(--accent-primary)' }}>
+                <span className="qa-chip qa-chip--price" style={{ fontWeight: 600, color: 'var(--accent-primary)', fontVariantNumeric: 'tabular-nums' }}>
                   <Coins size={12} /> {formatEuro(nlp.suggestedPrice)}
                 </span>
               )}
@@ -238,6 +238,8 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
               padding: 10,
               minWidth: 44,
               minHeight: 44,
+              flexShrink: 0,
+              borderRadius: 22,
               color: text ? 'var(--accent-primary)' : isFocused ? 'var(--accent-primary)' : 'var(--text-tertiary)',
               display: 'flex',
               alignItems: 'center',
@@ -283,6 +285,8 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
             placeholder="Nuevo recordatorio"
             style={{
               flex: 1,
+              minWidth: 0,
+              minHeight: 44,
               border: 'none',
               background: 'transparent',
               outline: 'none',
@@ -313,7 +317,8 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
               padding: 12,
               minWidth: 44,
               minHeight: 44,
-              borderRadius: 8,
+              flexShrink: 0,
+              borderRadius: 22,
               transition: 'color 0.15s ease, background-color 0.15s ease'
             }}
           >
@@ -328,6 +333,7 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
             style={{
               width: 44,
               height: 44,
+              flexShrink: 0,
               borderRadius: '50%',
               background: text.trim() ? 'var(--accent-primary)' : 'var(--border-subtle, rgba(0,0,0,0.08))',
               color: text.trim() ? '#ffffff' : 'var(--text-tertiary)',

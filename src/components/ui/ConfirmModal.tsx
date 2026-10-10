@@ -81,8 +81,8 @@ export function ConfirmModal({
           onClick={(event) => event.stopPropagation()}
         >
           <div className="app-alert-copy">
-            <h2 id="confirm-title">{title}</h2>
-            <p id="confirm-description">{message}</p>
+            <h2 id="confirm-title" style={{ letterSpacing: '-0.025em', textWrap: 'balance' }}>{title}</h2>
+            <p id="confirm-description" style={{ textWrap: 'pretty' }}>{message}</p>
           </div>
           <div className="app-alert-actions premium-sheet-actions">
             <button ref={cancelRef} type="button" className="secondary" onClick={onCancel}>{cancelText}</button>

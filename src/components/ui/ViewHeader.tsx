@@ -23,11 +23,11 @@ export function ViewHeader({ title, subtitle, icon, color = 'var(--accent-primar
       </button>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div>
-          <h1 className="view-header-title">
+          <h1 className="view-header-title" style={{ letterSpacing: '-0.035em', textWrap: 'balance' }}>
             <span className="view-header-icon" aria-hidden="true">{icon}</span>
             {title}
           </h1>
-          {subtitle && <p className="view-header-sub">{subtitle}</p>}
+          {subtitle && <p className="view-header-sub" style={{ textWrap: 'pretty' }}>{subtitle}</p>}
         </div>
         {actions && <div className="view-header-actions" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>{actions}</div>}
       </div>

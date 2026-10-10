@@ -157,7 +157,9 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
               width: '100%',
               maxWidth: 'min(410px, calc(100vw - 28px))',
               borderRadius: '26px',
-              background: 'var(--bg-elevated, #ffffff)',
+              background: 'var(--bg-material, rgba(255, 255, 255, 0.84))',
+              backdropFilter: 'blur(28px) saturate(160%)',
+              WebkitBackdropFilter: 'blur(28px) saturate(160%)',
               color: 'var(--text-primary, #1c1c1e)',
               boxShadow: '0 28px 70px rgba(0, 0, 0, 0.32), 0 4px 16px rgba(0, 0, 0, 0.08)',
               border: '1px solid var(--border-subtle, rgba(0, 0, 0, 0.08))',
@@ -305,6 +307,7 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
                       justifyContent: 'center',
                       fontSize: '0.80rem',
                       fontWeight: 800,
+                      fontVariantNumeric: 'tabular-nums',
                       color: progressPercent > 0 ? '#30d158' : 'var(--text-secondary)'
                     }}
                   >
@@ -317,7 +320,7 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
                   <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 650, color: 'var(--text-tertiary, #8e8e93)' }}>
                     Tiempo activo restante
                   </span>
-                  <div style={{ fontSize: '1.55rem', fontWeight: 800, color: color, letterSpacing: '-0.03em', lineHeight: 1.15, marginTop: 1 }}>
+                  <div style={{ fontSize: '1.55rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: color, letterSpacing: '-0.03em', lineHeight: 1.15, marginTop: 1 }}>
                     ~{totalSummary.formattedActive}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
@@ -456,7 +459,7 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
                     justifyContent: 'center',
                     gap: 8,
                     boxShadow: `0 4px 16px ${color}40`,
-                    transition: 'all 0.15s ease'
+                    transition: 'transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease'
                   }}
                 >
                   <Play size={16} fill="white" />
