@@ -154,7 +154,7 @@ export function EmptyState({
           whileTap={{ scale: 0.96 }}
           onClick={onAction}
           style={{
-            padding: '10px 22px',
+            padding: '12px 24px',
             background: accentColor || 'var(--accent-primary, #007AFF)',
             color: 'white',
             border: 'none',
@@ -166,7 +166,7 @@ export function EmptyState({
             display: 'flex',
             alignItems: 'center',
             gap: 7,
-            transition: 'background 0.2s, transform 0.15s ease'
+            transition: 'background-color 0.2s ease, transform 0.15s ease'
           }}
         >
           {resolvedCtaText}

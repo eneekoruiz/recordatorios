@@ -130,12 +130,14 @@ export function PersistenceStatusBanner() {
                 gap: 5,
                 border: 0,
                 borderRadius: 14,
-                padding: '6px 14px',
+                padding: '10px 14px',
+                minHeight: 44,
                 color: 'var(--text-primary, #1c1c1e)',
                 background: 'var(--bg-secondary, rgba(0,0,0,0.05))',
                 fontWeight: 650,
                 cursor: restoring ? 'wait' : 'pointer',
                 fontSize: '0.85rem',
+                transition: 'background-color 0.15s ease'
               }}
             >
               <RotateCcw size={14} />
@@ -151,12 +153,14 @@ export function PersistenceStatusBanner() {
                 gap: 5,
                 border: 0,
                 borderRadius: 14,
-                padding: '6px 14px',
+                padding: '10px 14px',
+                minHeight: 44,
                 color: 'var(--accent-primary, #007aff)',
                 background: 'rgba(0, 122, 255, 0.12)',
                 fontWeight: 650,
                 cursor: 'pointer',
                 fontSize: '0.85rem',
+                transition: 'background-color 0.15s ease'
               }}
             >
               <Download size={14} />
@@ -173,12 +177,14 @@ export function PersistenceStatusBanner() {
               flexShrink: 0,
               border: 0,
               borderRadius: 14,
-              padding: '6px 14px',
+              padding: '10px 14px',
+              minHeight: 44,
               color: 'var(--accent-primary, #007aff)',
               background: 'rgba(0, 122, 255, 0.12)',
               fontWeight: 650,
               cursor: retrying ? 'wait' : 'pointer',
               fontSize: '0.85rem',
+              transition: 'background-color 0.15s ease'
             }}
           >
             {retrying ? 'Reintentando…' : 'Reintentar'}
@@ -194,11 +200,12 @@ export function PersistenceStatusBanner() {
             background: 'transparent',
             color: 'var(--text-tertiary, #c7c7cc)',
             cursor: 'pointer',
-            padding: 4,
+            padding: 12,
             borderRadius: 6,
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
+            transition: 'background-color 0.15s ease'
           }}
         >
           <X size={18} strokeWidth={2.4} />

@@ -167,7 +167,7 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
           display: 'flex',
           flexDirection: 'column',
           gap: hasChips ? 8 : 0,
-          transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+          transition: 'border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
           boxSizing: 'border-box'
         }}
       >
@@ -235,11 +235,14 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
-              padding: 4,
+              padding: 10,
+              minWidth: 44,
+              minHeight: 44,
               color: text ? 'var(--accent-primary)' : isFocused ? 'var(--accent-primary)' : 'var(--text-tertiary)',
               display: 'flex',
               alignItems: 'center',
-              transition: 'all 0.2s ease'
+              justifyContent: 'center',
+              transition: 'color 0.2s ease, transform 0.2s ease'
             }}
             title="Hablar con la IA / Asistente MCP (Ctrl+J)"
           >
@@ -307,9 +310,11 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: 6,
+              padding: 12,
+              minWidth: 44,
+              minHeight: 44,
               borderRadius: 8,
-              transition: 'all 0.15s ease'
+              transition: 'color 0.15s ease, background-color 0.15s ease'
             }}
           >
             <SlidersHorizontal size={17} />
@@ -321,8 +326,8 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
             disabled={!text.trim()}
             title="Añadir recordatorio rápido (Enter)"
             style={{
-              width: 30,
-              height: 30,
+              width: 44,
+              height: 44,
               borderRadius: '50%',
               background: text.trim() ? 'var(--accent-primary)' : 'var(--border-subtle, rgba(0,0,0,0.08))',
               color: text.trim() ? '#ffffff' : 'var(--text-tertiary)',
@@ -331,7 +336,7 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
               alignItems: 'center',
               justifyContent: 'center',
               cursor: text.trim() ? 'pointer' : 'default',
-              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+              transition: 'background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
               boxShadow: text.trim() ? '0 2px 8px rgba(0, 122, 255, 0.35)' : 'none',
               opacity: text.trim() ? 1 : 0.4
             }}

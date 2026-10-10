@@ -182,7 +182,7 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
       style={{
         background: 'var(--bg-elevated, rgba(120, 120, 128, 0.08))',
         border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
-        borderRadius: 14,
+        borderRadius: 24,
         padding: '12px 14px',
         display: 'flex',
         flexDirection: 'column',
@@ -248,7 +248,7 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
               border: 'none',
               color: 'var(--text-secondary)',
               cursor: 'pointer',
-              padding: 2,
+              padding: 12,
               borderRadius: 6,
               display: 'flex',
               alignItems: 'center',
@@ -301,7 +301,7 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
               border: 'none',
               color: hours <= 0 ? 'var(--border-strong, #c7c7cc)' : 'var(--text-secondary)',
               cursor: hours <= 0 ? 'default' : 'pointer',
-              padding: 2,
+              padding: 12,
               borderRadius: 6,
               display: 'flex',
               alignItems: 'center',
@@ -326,7 +326,7 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
               border: 'none',
               color: 'var(--text-secondary)',
               cursor: 'pointer',
-              padding: 2,
+              padding: 12,
               borderRadius: 6,
               display: 'flex',
               alignItems: 'center',
@@ -379,7 +379,7 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
               border: 'none',
               color: hours === 0 && minutes <= 0 ? 'var(--border-strong, #c7c7cc)' : 'var(--text-secondary)',
               cursor: hours === 0 && minutes <= 0 ? 'default' : 'pointer',
-              padding: 2,
+              padding: 12,
               borderRadius: 6,
               display: 'flex',
               alignItems: 'center',
@@ -404,7 +404,7 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
               border: 'none',
               color: 'var(--text-secondary)',
               cursor: 'pointer',
-              padding: 2,
+              padding: 12,
               borderRadius: 6,
               display: 'flex',
               alignItems: 'center',
@@ -457,7 +457,7 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
               border: 'none',
               color: hours === 0 && minutes === 0 && seconds <= 0 ? 'var(--border-strong, #c7c7cc)' : 'var(--text-secondary)',
               cursor: hours === 0 && minutes === 0 && seconds <= 0 ? 'default' : 'pointer',
-              padding: 2,
+              padding: 12,
               borderRadius: 6,
               display: 'flex',
               alignItems: 'center',
@@ -475,7 +475,8 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
           type="button"
           onClick={clearDuration}
           style={{
-            padding: '4px 10px',
+            padding: '8px 12px',
+            minHeight: '44px',
             borderRadius: 999,
             fontSize: '0.76rem',
             fontWeight: duration === 0 ? 700 : 500,
@@ -483,7 +484,7 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
             background: duration === 0 ? 'rgba(255, 59, 48, 0.14)' : 'var(--bg-card, rgba(0,0,0,0.03))',
             color: duration === 0 ? 'var(--accent-red, #ff3b30)' : 'var(--text-secondary)',
             cursor: 'pointer',
-            transition: 'all 0.15s ease'
+            transition: 'background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease'
           }}
         >
           Sin duración
@@ -515,7 +516,8 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
               type="button"
               onClick={() => applyPreset(p.mins, p.secs)}
               style={{
-                padding: '4px 10px',
+                padding: '8px 12px',
+                minHeight: '44px',
                 borderRadius: 999,
                 fontSize: '0.76rem',
                 fontWeight: isSelected ? 700 : 500,
@@ -523,7 +525,7 @@ export const AppleTimerPicker: React.FC<AppleTimerPickerProps> = ({
                 background: isSelected ? 'var(--accent-primary, #007aff)' : 'var(--bg-card, rgba(0,0,0,0.03))',
                 color: isSelected ? '#ffffff' : 'var(--text-primary)',
                 cursor: 'pointer',
-                transition: 'all 0.15s ease',
+                transition: 'background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease',
                 boxShadow: isSelected ? '0 1px 4px rgba(0, 122, 255, 0.3)' : 'none'
               }}
             >

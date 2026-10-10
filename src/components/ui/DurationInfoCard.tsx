@@ -237,9 +237,9 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
                 type="button"
                 onClick={onClose}
                 aria-label="Cerrar"
-                style={{
-                  width: 30,
-                  height: 30,
+              style={{
+                  width: 44,
+                  height: 44,
                   borderRadius: '50%',
                   border: 'none',
                   background: 'var(--bg-tertiary, rgba(0,0,0,0.06))',
@@ -249,7 +249,7 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
                   justifyContent: 'center',
                   cursor: 'pointer',
                   flexShrink: 0,
-                  transition: 'all 0.15s ease'
+                  transition: 'background-color 0.15s ease, transform 0.15s ease'
                 }}
               >
                 <X size={16} />

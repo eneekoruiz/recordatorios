@@ -62,11 +62,13 @@ export function GlobalToast() {
                 color: '#ffffff',
                 border: 'none',
                 borderRadius: 8,
-                padding: '4px 10px',
+                padding: '8px 12px',
+                minHeight: 44,
                 fontSize: '0.78rem',
                 fontWeight: 700,
                 cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(0, 122, 255, 0.3)'
+                boxShadow: '0 2px 8px rgba(0, 122, 255, 0.3)',
+                transition: 'background-color 0.15s ease'
               }}
             >
               Deshacer
@@ -74,7 +76,7 @@ export function GlobalToast() {
           )}
           <button
             onClick={() => setGlobalToast(null)}
-            style={{ background: 'transparent', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', padding: 4 }}
+            style={{ background: 'transparent', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', padding: 12 }}
             title="Cerrar"
           >
             <X size={16} />
