@@ -4,29 +4,30 @@
 ======================================================== */
 :root {
   /* Color Palette — Light Theme (Sober & Natural) */
-  --bg-base: #F9F9FB;
+  --bg-base: #F2F2F7; /* iOS system group background */
   --bg-surface: #FFFFFF;
-  --bg-surface-glass: rgba(255, 255, 255, 0.85);
+  --bg-surface-glass: rgba(255, 255, 255, 0.75);
   --bg-elevated: #FFFFFF;
   --bg-card: #FFFFFF;
-  --bg-hover: rgba(0, 0, 0, 0.03);
+  --bg-hover: rgba(0, 0, 0, 0.04);
+  --bg-pressed: rgba(0, 0, 0, 0.08);
 
-  --accent-primary: #000000;
-  --accent-blue: #0070F3;
-  --accent-glow: rgba(0, 0, 0, 0.05);
-  --accent-purple: #7928CA;
-  --accent-green: #10B981;
-  --accent-red: #EF4444;
-  --accent-orange: #F59E0B;
-  --accent-yellow: #FBBF24;
+  --accent-primary: #007AFF;
+  --accent-blue: #007AFF;
+  --accent-glow: rgba(0, 122, 255, 0.1);
+  --accent-purple: #AF52DE;
+  --accent-green: #34C759;
+  --accent-red: #FF3B30;
+  --accent-orange: #FF9500;
+  --accent-yellow: #FFCC00;
 
-  --text-primary: #111111;
-  --text-secondary: #666666;
-  --text-tertiary: #888888;
+  --text-primary: #1C1C1E;
+  --text-secondary: #8E8E93;
+  --text-tertiary: #C7C7CC;
 
-  --border-subtle: rgba(0, 0, 0, 0.06);
-  --border-focus: rgba(0, 0, 0, 0.15);
-  --border-color: rgba(0, 0, 0, 0.08);
+  --border-subtle: rgba(60, 60, 67, 0.12);
+  --border-focus: rgba(0, 122, 255, 0.5);
+  --border-color: rgba(60, 60, 67, 0.12);
 
   /* Spacing Scale (Mathematical — 4px base) */
   --space-2: 0.125rem;
@@ -39,11 +40,11 @@
   --space-48: 3rem;
   --space-64: 4rem;
 
-  /* Border Radius (Sober) */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  /* Border Radius (Apple continuous curves approx) */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
   --radius-full: 9999px;
 
   /* Typography */
@@ -52,10 +53,10 @@
 
   /* Shadows & Depth (Crisp & Tight) */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.02);
-  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.06), 0 4px 8px rgba(0, 0, 0, 0.03);
-  --shadow-xl: 0 24px 48px rgba(0, 0, 0, 0.08);
-  --shadow-glow: 0 0 0 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.08);
+  --shadow-glow: 0 0 0 2px rgba(0, 122, 255, 0.1);
 
   --card-bg: rgba(255, 255, 255, 1);
 }
@@ -84,21 +85,9 @@ body {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.015em;
 }
-/* Premium Cinematic Noise Texture */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 999999;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-  opacity: 0.035;
-}
-
-[data-theme="dark"] body::before {
-  opacity: 0.02;
-}
+/* Premium Cinematic Noise Texture - Removed (Apple design relies on pure clean backgrounds, not noise) */
 
 /* Blindaje Táctil Universal contra Selección Nativa de iOS */
 body, .app-container, .main-container, .sidebar-container, .ios-task-row, .task-card-shell, .section-header, button, [role="button"] {
@@ -470,13 +459,13 @@ input:checked + .slider::before {
   min-height: 94px;
   justify-content: space-between;
   border: 1px solid var(--border-subtle);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Apple standard slight elevation */
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
 
 @media (hover: hover) {
   .ios-smart-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
   }
 }
 .ios-smart-card .icon-circle {
@@ -551,20 +540,20 @@ input:checked + .slider::before {
   border: 1px solid var(--border-subtle);
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  box-shadow: var(--shadow-sm);
 }
 .ios-list-item {
   display: flex;
   align-items: center;
-  min-height: 42px;
-  padding: 6px 12px;
+  min-height: 44px;
+  padding: 8px 12px;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 10px;
   margin: 1px 6px;
   position: relative;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition: background-color 0.1s ease, color 0.1s ease;
   box-shadow: none;
 }
 .ios-list-item:not(:last-child)::after {

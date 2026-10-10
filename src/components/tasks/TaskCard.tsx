@@ -1186,7 +1186,7 @@ export const TaskCard = React.memo(function TaskCard({
               style={{
                 width: 22, height: 22,
                 borderRadius: '50%',
-                border: (isEffectivelyDone || isPartial) ? 'none' : `1.5px solid ${isHovered ? taskColor : 'var(--border-color)'}`,
+                border: (isEffectivelyDone || isPartial) ? 'none' : `1.5px solid var(--border-subtle)`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 boxShadow: isEffectivelyDone ? `0 2px 8px ${taskColor}40` : 'none',
                 transition: 'border-color 0.15s ease'
