@@ -144,7 +144,7 @@
   padding: 10px 14px;
   border-radius: 10px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease, font-weight 0.2s ease;
   font-weight: 500;
   color: var(--text-secondary);
   gap: 10px;
@@ -208,7 +208,7 @@
   align-items: center;
   padding: var(--space-12) var(--space-16);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background-color 0.2s, border-color 0.2s;
   background-color: transparent;
 }
 
@@ -234,7 +234,7 @@
   border-radius: 8px;
   cursor: pointer;
   color: var(--text-secondary);
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease, font-weight 0.2s ease;
   font-size: 0.9rem;
 }
 
@@ -536,7 +536,7 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   backdrop-filter: blur(24px) saturate(1.2);
   -webkit-backdrop-filter: blur(24px) saturate(1.2);
-  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
@@ -694,7 +694,7 @@
   justify-content: center;
   margin-right: 12px;
   flex-shrink: 0;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, border-style 0.2s ease;
 }
 @media (hover: hover) and (pointer: fine) {
   .apple-inline-add-row:hover .apple-inline-add-circle {
@@ -799,7 +799,7 @@
   background: var(--bg-surface-glass);
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-sm);
-  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 @media (hover: hover) and (pointer: fine) {
   .icon-btn:hover, .btn-icon:hover {
@@ -863,7 +863,7 @@
   box-shadow: var(--shadow-md);
   backdrop-filter: blur(20px) saturate(1.2);
   -webkit-backdrop-filter: blur(20px) saturate(1.2);
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 @media (hover: hover) and (pointer: fine) {
   .ios-task-row:hover {
@@ -941,3 +941,21 @@
   background: transparent !important;
 }
 
+
+/* ECC: Typography & Smoothing */
+html, body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6, .content-display, .text-display, .group-header h3 {
+  text-wrap: balance;
+}
+
+p, .description, .note, li, .category-item, .nav-item, .ios-list-item {
+  text-wrap: pretty;
+}
+
+.count, .tabular-nums, .timer, .apple-large-counter, .stat-chip {
+  font-variant-numeric: tabular-nums;
+}

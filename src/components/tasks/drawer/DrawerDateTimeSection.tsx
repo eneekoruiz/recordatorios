@@ -190,7 +190,7 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                           color: isSelected ? item.color : 'var(--text-secondary)',
                           border: `1px solid ${isSelected ? `color-mix(in srgb, ${item.color} 40%, transparent)` : 'var(--border-subtle)'}`,
                           cursor: 'pointer',
-                          transition: 'all 0.15s ease'
+                          transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
                         }}
                       >
                         <item.Icon size={15} strokeWidth={2.2} />
@@ -425,7 +425,7 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                     borderRadius: 14,
                     background: isParallel ? 'rgba(255, 149, 0, 0.08)' : 'var(--bg-elevated)',
                     border: isParallel ? '1px solid rgba(255, 149, 0, 0.28)' : '1px solid var(--border-subtle)',
-                    transition: 'all 0.2s ease'
+                    transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.2s ease'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
@@ -503,7 +503,7 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                                   color: isSelected ? '#ffffff' : 'var(--text-secondary)',
                                   border: isSelected ? '1px solid #ff9500' : '1px solid var(--border-subtle)',
                                   cursor: 'pointer',
-                                  transition: 'all 0.15s ease'
+                                  transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
                                 }}
                               >
                                 {formatDuration(mins)}

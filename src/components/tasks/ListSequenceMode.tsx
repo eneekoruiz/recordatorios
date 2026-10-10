@@ -126,7 +126,7 @@ function DurationPicker({
                 fontWeight: 600,
                 fontSize: '0.88rem',
                 cursor: 'pointer',
-                transition: 'all 0.15s ease'
+                transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
               }}
             >
               {p} min
@@ -652,7 +652,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                       width: i < index ? 20 : (i === index ? 28 : 12),
                       height: 4, borderRadius: 2,
                       background: i < index ? '#30d158' : i === index ? listColor : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'),
-                      transition: 'all 0.3s ease'
+                      transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.3s ease'
                     }}
                   />
                 ))}
@@ -825,7 +825,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                       color: isActive ? (isDark ? 'white' : 'var(--text-secondary, #636366)') : 'white',
                       fontSize: '0.74rem', fontWeight: 700,
                       boxShadow: isActive ? 'none' : `0 4px 14px ${listColor}60`,
-                      transition: 'all 0.2s ease'
+                      transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.2s ease'
                     }}>
                       {isActive ? <><Pause size={11} fill={isDark ? "white" : "currentColor"} /> Pausar</> : <><Play size={11} fill="white" style={{ marginLeft: 2 }} /> Reanudar</>}
                     </div>
@@ -855,7 +855,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 4,
-                      transition: 'all 0.15s ease'
+                      transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
                     }}
                     title="Añadir 1 minuto más a esta tarea"
                   >
@@ -880,7 +880,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 4,
-                      transition: 'all 0.15s ease'
+                      transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
                     }}
                     title="Añadir 5 minutos más a esta tarea"
                   >
@@ -906,7 +906,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 4,
-                      transition: 'all 0.15s ease'
+                      transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
                     }}
                     title="Añadir 10 minutos más a esta tarea"
                   >
@@ -965,7 +965,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                       fontSize: '0.74rem', fontWeight: 600, cursor: 'pointer',
                       display: 'flex', alignItems: 'center', gap: 4,
                       boxShadow: ambient === type ? `0 2px 8px ${listColor}40` : 'none',
-                      transition: 'all 0.15s ease'
+                      transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
                     }}
                   >
                     {type === 'off' && <VolumeX size={11} />}
@@ -1008,7 +1008,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                       fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                       boxShadow: isActive ? 'none' : `0 6px 20px ${listColor}45`,
-                      transition: 'all 0.18s ease'
+                      transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.18s ease'
                     }}
                   >
                     {isActive ? <><Pause size={17} fill="#ff9500" /> Pausar</> : <><Play size={17} fill="white" style={{ marginLeft: 2 }} /> Reanudar</>}
@@ -1042,7 +1042,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
                     fontWeight: 600, fontSize: '0.82rem',
                     whiteSpace: 'nowrap',
-                    transition: 'all 0.15s ease'
+                    transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
                   }}
                   title="Mover esta tarea al final de la lista"
                   aria-label="Dejar para luego"

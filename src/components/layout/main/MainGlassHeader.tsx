@@ -203,7 +203,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
               fontSize: '0.80rem',
               whiteSpace: 'nowrap',
               boxShadow: isStartDisabled ? 'none' : '0 1px 3px rgba(0,0,0,0.04)',
-              transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
+              transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
           >
             <Play size={12} fill="currentColor" style={{ flexShrink: 0 }} />
@@ -238,7 +238,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
               border: '1px solid var(--border-subtle)',
               cursor: 'pointer',
               color: 'var(--accent-primary)',
-              transition: 'all 0.15s ease'
+              transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
             }}
           >
             <FolderPlus size={18} strokeWidth={2.2} />
@@ -265,7 +265,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                 border: '1px solid var(--border-subtle)',
                 cursor: 'pointer',
                 color: 'var(--accent-primary)',
-                transition: 'all 0.15s ease'
+                transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
               }}
             >
               <MoreHorizontal size={18} strokeWidth={2.2} />

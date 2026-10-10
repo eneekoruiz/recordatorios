@@ -195,7 +195,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              transition: 'all 0.2s ease'
+              transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.2s ease'
             }}
             title="Cerrar (Esc)"
             aria-label="Cerrar modo zen"
@@ -256,7 +256,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                     fontWeight: 600,
                     fontSize: '0.9rem',
                     cursor: 'pointer',
-                    transition: 'all 0.15s ease'
+                    transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
                   }}
                 >
                   {mins} min
@@ -411,7 +411,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   fontSize: '0.78rem',
                   fontWeight: 700,
                   boxShadow: isActive ? 'none' : '0 4px 14px rgba(10, 132, 255, 0.4)',
-                  transition: 'all 0.2s ease'
+                  transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.2s ease'
                 }}>
                   {isActive ? <><Pause size={12} fill={isDark ? "white" : "currentColor"} /> EN PROGRESO</> : <><Play size={12} fill="white" style={{ marginLeft: 2 }} /> REANUDAR</>}
                 </div>
@@ -440,7 +440,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 4,
-                  transition: 'all 0.15s ease'
+                  transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
                 }}
                 title="Añadir 1 minuto más a esta tarea"
               >
@@ -466,7 +466,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 4,
-                  transition: 'all 0.15s ease'
+                  transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
                 }}
                 title="Añadir 5 minutos más a esta tarea"
               >
@@ -492,7 +492,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 4,
-                  transition: 'all 0.15s ease'
+                  transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
                 }}
                 title="Añadir 10 minutos más a esta tarea"
               >
@@ -562,7 +562,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: 3,
-                    transition: 'all 0.15s ease'
+                    transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
                   }}
                 >
                   <VolumeX size={15} /> Silencio
@@ -583,7 +583,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: 3,
-                    transition: 'all 0.15s ease'
+                    transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
                   }}
                 >
                   <CloudRain size={15} /> Lluvia
@@ -604,7 +604,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: 3,
-                    transition: 'all 0.15s ease'
+                    transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
                   }}
                 >
                   <Waves size={15} /> Olas
@@ -625,7 +625,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: 3,
-                    transition: 'all 0.15s ease'
+                    transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
                   }}
                 >
                   <Volume2 size={15} /> Binaural
@@ -646,7 +646,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: 3,
-                    transition: 'all 0.15s ease'
+                    transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
                   }}
                 >
                   <Headphones size={15} /> Foco
@@ -673,7 +673,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   fontWeight: 700,
                   cursor: 'pointer',
                   boxShadow: isActive ? 'none' : '0 8px 24px rgba(10, 132, 255, 0.4)',
-                  transition: 'all 0.18s ease'
+                  transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.18s ease'
                 }}
               >
                 {isActive ? <><Pause size={20} fill="currentColor" /> Pausar</> : <><Play size={20} fill="white" style={{ marginLeft: 2 }} /> Reanudar</>}
@@ -696,7 +696,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   fontWeight: 700,
                   cursor: 'pointer',
                   boxShadow: '0 8px 24px rgba(48, 209, 88, 0.4)',
-                  transition: 'all 0.18s ease'
+                  transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.18s ease'
                 }}
               >
                 <CheckCircle size={20} /> Completar

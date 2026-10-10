@@ -268,7 +268,7 @@ export const ApplePeriodNavigator: React.FC<ApplePeriodNavigatorProps> = ({
           WebkitBackdropFilter: 'blur(20px) saturate(180%)',
           border: '1px solid var(--border-subtle, rgba(0, 0, 0, 0.1))',
           boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(0, 0, 0, 0.03)',
-          transition: 'all 0.2s cubic-bezier(0.25, 1, 0.5, 1)',
+          transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.2s cubic-bezier(0.25, 1, 0.5, 1)',
           userSelect: 'none',
           flexShrink: 0,
           ...style
@@ -499,7 +499,7 @@ export const ApplePeriodNavigator: React.FC<ApplePeriodNavigatorProps> = ({
                             fontSize: '0.74rem',
                             fontWeight: isSelected ? 650 : 500,
                             cursor: 'pointer',
-                            transition: 'all 0.15s ease'
+                            transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
                           }}
                         >
                           {gLabel}

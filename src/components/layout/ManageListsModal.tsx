@@ -544,7 +544,7 @@ export const ManageListsModal: React.FC<ManageListsModalProps> = ({
                         cursor: 'pointer',
                         flexShrink: 0,
                         padding: 0,
-                        transition: 'all 0.15s ease',
+                        transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease',
                       }}
                     >
                       {isSelected && <Check size={14} strokeWidth={3} />}

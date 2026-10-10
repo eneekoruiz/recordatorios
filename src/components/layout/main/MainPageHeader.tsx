@@ -616,7 +616,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                     background: lifeLogViewMode === 'people' ? 'var(--bg-elevated, #fff)' : 'transparent',
                     color: lifeLogViewMode === 'people' ? '#5856d6' : 'var(--text-secondary)',
                     boxShadow: lifeLogViewMode === 'people' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
-                    transition: 'all 0.15s ease'
+                    transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
                   }}
                 >
                   <Users size={14} />
@@ -638,7 +638,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                     background: lifeLogViewMode === 'timeline' ? 'var(--bg-elevated, #fff)' : 'transparent',
                     color: lifeLogViewMode === 'timeline' ? '#5856d6' : 'var(--text-secondary)',
                     boxShadow: lifeLogViewMode === 'timeline' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
-                    transition: 'all 0.15s ease'
+                    transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
                   }}
                 >
                   <Clock size={14} />
@@ -660,7 +660,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                     cursor: 'pointer',
                     background: 'rgba(255, 149, 0, 0.12)',
                     color: '#ff9500',
-                    transition: 'all 0.15s ease'
+                    transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
                   }}
                   title="Generar memoria y resumen mensual con IA"
                 >

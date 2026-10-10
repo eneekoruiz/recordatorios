@@ -89,7 +89,7 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
                     : `0 2px 8px color-mix(in srgb, ${list.color} 14%, transparent)`,
                   ['--card-color' as string]: list.color,
                   opacity: isEditMode && !smartListVisibility[list.id] ? 0.5 : 1,
-                  transition: 'all 180ms cubic-bezier(0.16, 1, 0.3, 1)'
+                  transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1)'
                 }}
               >
                 {isEditMode && (
@@ -128,7 +128,7 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
                     backgroundColor: isActive ? 'rgba(255, 255, 255, 0.28)' : list.color,
                     boxShadow: isActive ? 'none' : `0 3px 8px color-mix(in srgb, ${list.color} 30%, transparent)`,
                     border: 'none',
-                    transition: 'all 150ms ease'
+                    transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 150ms ease'
                   }}
                 >
                   <Icon size={20} color="white" />
