@@ -88,6 +88,7 @@ export class NotificationService {
   }
 
   public checkAndSendWeeklyNotification(pendingDaily: number, pendingWeekly: number) {
+    if (typeof Notification === 'undefined') return;
     if (!this.hasPermission && Notification.permission !== 'granted') return;
     this.hasPermission = true;
 
