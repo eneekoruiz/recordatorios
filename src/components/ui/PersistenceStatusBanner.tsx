@@ -104,17 +104,20 @@ export function PersistenceStatusBanner() {
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: 12,
-        padding: '12px 16px',
-        borderRadius: 14,
-        color: '#7f1d1d',
-        background: '#fff1f2',
-        border: '1px solid #fecdd3',
-        boxShadow: '0 8px 28px rgba(127, 29, 29, 0.16)',
-        fontSize: 14,
+        padding: '14px 18px',
+        borderRadius: 18,
+        color: 'var(--text-primary, #1c1c1e)',
+        background: 'var(--bg-surface-glass, rgba(255, 255, 255, 0.85))',
+        backdropFilter: 'blur(30px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(30px) saturate(180%)',
+        border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
+        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04)',
+        fontSize: '0.9rem',
+        fontWeight: 500
       }}
     >
-      <span style={{ flex: '1 1 240px', lineHeight: 1.4 }}>{message}</span>
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, maxWidth: '100%' }}>
+      <span style={{ flex: '1 1 240px', lineHeight: 1.4, color: '#ff3b30', fontWeight: 600 }}>{message}</span>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, maxWidth: '100%' }}>
         {recovery && (
           <>
             <button
@@ -126,17 +129,17 @@ export function PersistenceStatusBanner() {
                 alignItems: 'center',
                 gap: 5,
                 border: 0,
-                borderRadius: 8,
-                padding: '7px 11px',
-                color: '#fff',
-                background: '#15803d',
+                borderRadius: 14,
+                padding: '6px 14px',
+                color: 'var(--text-primary, #1c1c1e)',
+                background: 'var(--bg-secondary, rgba(0,0,0,0.05))',
                 fontWeight: 650,
                 cursor: restoring ? 'wait' : 'pointer',
-                fontSize: 13,
+                fontSize: '0.85rem',
               }}
             >
               <RotateCcw size={14} />
-              {restoring ? 'Restaurando…' : 'Restaurar registros'}
+              {restoring ? 'Restaurando…' : 'Restaurar'}
             </button>
             <button
               type="button"
@@ -147,17 +150,17 @@ export function PersistenceStatusBanner() {
                 alignItems: 'center',
                 gap: 5,
                 border: 0,
-                borderRadius: 8,
-                padding: '7px 11px',
-                color: '#fff',
-                background: '#7f1d1d',
+                borderRadius: 14,
+                padding: '6px 14px',
+                color: 'var(--accent-primary, #007aff)',
+                background: 'rgba(0, 122, 255, 0.12)',
                 fontWeight: 650,
                 cursor: 'pointer',
-                fontSize: 13,
+                fontSize: '0.85rem',
               }}
             >
               <Download size={14} />
-              Descargar copia original
+              Descargar copia
             </button>
           </>
         )}
@@ -169,13 +172,13 @@ export function PersistenceStatusBanner() {
             style={{
               flexShrink: 0,
               border: 0,
-              borderRadius: 8,
-              padding: '7px 11px',
-              color: '#fff',
-              background: '#b91c1c',
+              borderRadius: 14,
+              padding: '6px 14px',
+              color: 'var(--accent-primary, #007aff)',
+              background: 'rgba(0, 122, 255, 0.12)',
               fontWeight: 650,
               cursor: retrying ? 'wait' : 'pointer',
-              fontSize: 13,
+              fontSize: '0.85rem',
             }}
           >
             {retrying ? 'Reintentando…' : 'Reintentar'}
@@ -189,18 +192,16 @@ export function PersistenceStatusBanner() {
           style={{
             border: 0,
             background: 'transparent',
-            color: '#7f1d1d',
+            color: 'var(--text-tertiary, #c7c7cc)',
             cursor: 'pointer',
-            padding: 6,
+            padding: 4,
             borderRadius: 6,
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            opacity: 0.8,
-            transition: 'opacity 0.15s ease',
           }}
         >
-          <X size={18} strokeWidth={2.2} />
+          <X size={18} strokeWidth={2.4} />
         </button>
       </div>
     </div>

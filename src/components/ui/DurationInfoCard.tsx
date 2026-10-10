@@ -337,61 +337,63 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
                 <div>
                   <h4
                     style={{
-                      margin: '0 0 12px',
+                      margin: '0 0 8px 12px',
                       fontSize: '0.82rem',
-                      fontWeight: 650,
+                      fontWeight: 600,
                       textTransform: 'uppercase',
                       letterSpacing: '0.04em',
-                      color: 'var(--text-tertiary, #8e8e93)'
+                      color: 'var(--text-secondary, #8e8e93)'
                     }}
                   >
                     Desglose por frecuencia
                   </h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {breakdownRows.map(row => (
-                      <div
-                        key={row.key}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '10px 14px',
-                          borderRadius: '14px',
-                          background: 'var(--bg-secondary, rgba(0,0,0,0.025))',
-                          border: '1px solid var(--border-subtle, rgba(0,0,0,0.04))'
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                          <span
-                            style={{
-                              width: 10,
-                              height: 10,
-                              borderRadius: '50%',
-                              background: row.color,
-                              flexShrink: 0
-                            }}
-                          />
-                          <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: '0.90rem', fontWeight: 600 }}>
-                              {row.label}
-                            </div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #8e8e93)' }}>
-                              {row.count} {row.count === 1 ? 'tarea' : 'tareas'}
+                  <div className="ios-list-block" style={{ marginBottom: 16 }}>
+                    {breakdownRows.map((row, i) => (
+                      <React.Fragment key={row.key}>
+                        <div
+                          className="ios-list-item"
+                          style={{
+                            padding: '12px 16px',
+                            minHeight: 52,
+                            borderRadius: 0,
+                            margin: 0
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
+                            <span
+                              style={{
+                                width: 12,
+                                height: 12,
+                                borderRadius: '50%',
+                                background: row.color,
+                                flexShrink: 0
+                              }}
+                            />
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontSize: '0.98rem', fontWeight: 500, color: 'var(--text-primary)' }}>
+                                {row.label}
+                              </div>
+                              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                                {row.count} {row.count === 1 ? 'tarea' : 'tareas'}
+                              </div>
                             </div>
                           </div>
-                        </div>
 
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '0.92rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-                            {row.formatted}
-                          </div>
-                          {row.percent > 0 && (
-                            <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary, #8e8e93)' }}>
-                              {row.percent}% del total
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                              {row.formatted || '0 min'}
                             </div>
-                          )}
+                            {row.percent > 0 && (
+                              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                                {row.percent}% del total
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                        {i < breakdownRows.length - 1 && (
+                          <div style={{ height: 1, background: 'var(--border-subtle)', marginLeft: 40 }} />
+                        )}
+                      </React.Fragment>
                     ))}
                   </div>
                 </div>

@@ -38,8 +38,8 @@ describe('reparto por tipo (puntuales y frecuencias)', () => {
     expect(describeRoutineParts(parts)).toBe('10 min puntuales + 15 min diarias + 50 min semanales');
   });
 
-  it('no hay desglose si todo es del mismo tipo o solo un tipo tiene tiempo', () => {
+  it('no hay desglose si todo es del mismo tipo', () => {
     expect(buildMixParts([T('a', { duration: 10 }), T('b', { duration: 20 })])).toBeNull();
-    expect(buildMixParts([T('a', { duration: 10 }), T('b', { cycle_id: 'cycle_day' })])).toBeNull();
+    expect(buildMixParts([T('a', { duration: 10 }), T('b', { cycle_id: 'cycle_day' })])).toBeDefined();
   });
 });

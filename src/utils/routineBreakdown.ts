@@ -75,5 +75,5 @@ export function buildMixParts(
     count: groups.get(p)!.length,
     minutes: calculateTasksDuration(groups.get(p)!, sections, lists).activeMinutes,
   }));
-  return parts.filter((p) => p.minutes > 0).length >= 2 ? parts : null;
+  return parts.length >= 2 ? parts : null;
 }
