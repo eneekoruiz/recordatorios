@@ -2691,7 +2691,7 @@ const CORE_CYCLES = [
                         />
                         {currentView === 'smart_today' && (
                           <>
-                            <DailyBriefingBanner />
+                            <DailyBriefingBanner onOpenTask={onEditTask} onSelectView={onSelectView} />
                             <WeeklyStreakWidget />
                           </>
                         )}

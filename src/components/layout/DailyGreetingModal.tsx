@@ -8,6 +8,7 @@ import { HapticService } from '../../services/HapticService';
 import { getUserFirstName } from '../../utils/userIdentity';
 import { formatRelativeDay, formatTime, plural } from '../../utils/format';
 import './DailyGreetingModal.css';
+import { RoutineRecovery } from './RoutineRecovery';
 
 interface DailyGreetingModalProps {
   onSelectView?: (view: string) => void;
@@ -42,6 +43,8 @@ const write = (storage: Storage, key: string, value: string) => {
 export const DailyGreetingModal: React.FC<DailyGreetingModalProps> = ({ onSelectView, onOpenTask }) => {
   const tasks = useAppStore((state) => state.tasks);
   const cycles = useAppStore((state) => state.cycles);
+  const listSections = useAppStore((state) => state.listSections);
+  const lists = useAppStore((state) => state.lists);
 
   const [isOpen, setIsOpen] = useState(false);
   const [muted, setMuted] = useState(() => read(localStorage, MUTED_KEY) === 'true');
@@ -49,8 +52,8 @@ export const DailyGreetingModal: React.FC<DailyGreetingModalProps> = ({ onSelect
   const previouslyFocused = useRef<Element | null>(null);
 
   const briefing = useMemo(
-    () => buildDailyBriefing(tasks, cycles, { name: getUserFirstName() }),
-    [tasks, cycles]
+    () => buildDailyBriefing(tasks, cycles, { name: getUserFirstName(), listSections, lists }),
+    [tasks, cycles, listSections, lists]
   );
 
   const handleClose = useCallback(() => {
@@ -203,6 +206,8 @@ export const DailyGreetingModal: React.FC<DailyGreetingModalProps> = ({ onSelect
                 {briefing.detail ? ` ${briefing.detail}` : ''}
               </p>
             </header>
+
+            <RoutineRecovery groups={briefing.recovery} onOpenTask={openTask} onSelectView={onSelectView ? view => { setIsOpen(false); onSelectView(view); } : undefined} />
 
             {briefing.focus.length > 0 && (
               <section className="greeting-focus">

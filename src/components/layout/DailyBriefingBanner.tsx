@@ -8,6 +8,7 @@ import { PushService } from '../../services/PushService';
 import { getUserFirstName } from '../../utils/userIdentity';
 import { formatRelativeDay, plural } from '../../utils/format';
 import './DailyBriefingBanner.css';
+import { RoutineRecovery } from './RoutineRecovery';
 
 const PERIOD_STYLE = {
   morning: { Icon: Sun, accent: '#ff9f0a' },
@@ -15,7 +16,7 @@ const PERIOD_STYLE = {
   evening: { Icon: Moon, accent: '#5e5ce6' },
 } as const;
 
-export function DailyBriefingBanner() {
+export function DailyBriefingBanner({ onOpenTask, onSelectView }: { onOpenTask?: (taskId: string) => void; onSelectView?: (view: string) => void }) {
   const tasks = useAppStore((state) => state.tasks);
   const cycles = useAppStore((state) => state.cycles);
   const listSections = useAppStore((state) => state.listSections);
@@ -98,6 +99,8 @@ export function DailyBriefingBanner() {
               <strong>{briefing.headline}</strong>
               {briefing.detail ? ` ${briefing.detail}` : ''}
             </p>
+
+            <RoutineRecovery groups={briefing.recovery} onOpenTask={onOpenTask} onSelectView={onSelectView} />
 
             {/* Solo lo que la frase no dice: la caducidad cercana, la racha y activar avisos */}
             {(expiring || briefing.topStreak >= 2 || canAskNotifications) && (

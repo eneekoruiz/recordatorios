@@ -394,7 +394,7 @@ function App() {
                 <div style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid rgba(120,120,128,0.25)', borderTopColor: 'var(--accent-purple, #af52de)', animation: 'spin 0.8s linear infinite' }} />
               </div>
             }>
-              <AnalyticsView onBack={handleBack} />
+              <AnalyticsView onBack={handleBack} onOpenTask={(taskId: string) => { setEditingTaskId(taskId); setDrawerInitialFocus(undefined); setIsDrawerOpen(true); }} />
             </Suspense>
           )}
         </NavigationFrame>

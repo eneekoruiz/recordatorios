@@ -25,6 +25,7 @@ import {
 import { useAppStore } from '../../store/useAppStore';
 import { useNavigation } from '../../hooks/useNavigation';
 import { ViewHeader } from '../ui/ViewHeader';
+import { RoutineAnalytics } from './RoutineAnalytics';
 import { HapticService } from '../../services/HapticService';
 import {
   completionsByDay,
@@ -43,6 +44,7 @@ import { plural } from '../../utils/format';
 
 interface AnalyticsViewProps {
   onBack?: () => void;
+  onOpenTask?: (taskId: string) => void;
 }
 
 const weekday = (ms: number) => {
@@ -50,7 +52,7 @@ const weekday = (ms: number) => {
   return label.charAt(0).toUpperCase() + label.slice(1);
 };
 
-export function AnalyticsView({ onBack }: AnalyticsViewProps) {
+export function AnalyticsView({ onBack, onOpenTask }: AnalyticsViewProps) {
   const { reset } = useNavigation();
   const tasks = useAppStore((state) => state.tasks);
   const cycles = useAppStore((state) => state.cycles);
@@ -177,7 +179,7 @@ export function AnalyticsView({ onBack }: AnalyticsViewProps) {
   const renderCycleCard = (item: CycleStatItem) => {
     const IconComp = cycleIcons[item.cycleId] || Repeat;
     const isExpanded = expandedCycle === item.cycleId;
-    const isComplete = item.total > 0 && item.pending === 0;
+    const isComplete = item.total > 0 && item.completed === item.total;
 
     return (
       <div
@@ -215,7 +217,7 @@ export function AnalyticsView({ onBack }: AnalyticsViewProps) {
               </div>
               <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
                 {item.total > 0
-                  ? `${item.completed} de ${item.total} hechas este período`
+                  ? `${item.completed} de ${item.total} hechas este período · ${item.skipped ?? 0} omitidas`
                   : 'Sin tareas configuradas'}
               </div>
             </div>
@@ -475,7 +477,7 @@ export function AnalyticsView({ onBack }: AnalyticsViewProps) {
       {/* ── Banners Inteligentes de Reconocimiento y Cierre de Período ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
         {/* Reconocimiento mensual al 100% */}
-        {cyclesBreakdown.monthly.total > 0 && cyclesBreakdown.monthly.pending === 0 && (
+        {cyclesBreakdown.monthly.total > 0 && cyclesBreakdown.monthly.completed === cyclesBreakdown.monthly.total && (
           <motion.aside
             variants={itemAnim}
             initial="hidden"
@@ -685,6 +687,8 @@ export function AnalyticsView({ onBack }: AnalyticsViewProps) {
           </div>
         </motion.section>
       </motion.div>
+
+      <RoutineAnalytics onOpenTask={onOpenTask} />
 
       {/* ── 2. Desglose Exhaustivo por Ciclos y Frecuencias (Apple Style) ──── */}
       <section style={{ marginTop: 22 }}>

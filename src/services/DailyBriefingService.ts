@@ -2,10 +2,11 @@
 // tarjeta de resumen. Devuelve frases ya redactadas (nada de "1 tarea(s)").
 import type { TaskItem, CustomCycle, ListSection, CustomList } from '../models/Task';
 import { isTaskCompleted } from '../store/useAppStore';
-import { calculateHabitStreak, isCompletedInCurrentPeriod } from './TaskService';
+import { calculateHabitStreak, isCompletedInCurrentPeriod, isTaskActuallyCompletedInCurrentPeriod } from './TaskService';
 import { getTaskPeriodicity } from '../utils/sectionRoutine';
 import { formatLongDate, joinNatural, numberWord, pluralWord } from '../utils/format';
 import { readStoredWeeklyDay } from '../utils/routineDay';
+import { buildRoutineRecovery, type RoutineRecoveryGroup } from '../utils/routineRecovery';
 
 export type DayPeriod = 'morning' | 'afternoon' | 'evening';
 
@@ -32,6 +33,7 @@ export interface DailyBriefing {
   expiring: TaskItem[];
   /** Día sin nada que contar: no merece interrumpir al usuario. */
   isQuiet: boolean;
+  recovery: RoutineRecoveryGroup[];
 }
 
 const PRIORITY_WEIGHT: Record<string, number> = { high: 3, medium: 2, low: 1, none: 0 };
@@ -60,7 +62,9 @@ export function buildDailyBriefing(
 
   // La guía de inicio no cuenta: son ejemplos, no cosas por hacer.
   const all = Object.values(tasksMap || {}).filter((t) => !t.deleted_at && t.categoryId !== 'primeros_pasos');
-  const isDoneNow = (t: TaskItem) => isTaskCompleted(t) || isCompletedInCurrentPeriod(t, cycles, options.listSections, options.lists);
+  const isDoneNow = (t: TaskItem) => isCompletedInCurrentPeriod(t, cycles, options.listSections, options.lists, now);
+  const isActuallyDone = (t: TaskItem) => isTaskActuallyCompletedInCurrentPeriod(t, cycles, options.listSections, options.lists, now);
+  const recovery = buildRoutineRecovery(all, cycles, options.listSections, options.lists, now);
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const dueDay = (t: TaskItem) => {
     const d = new Date(t.dueDate!);
@@ -68,7 +72,7 @@ export function buildDailyBriefing(
   };
   const today = all.filter((t) => t.dueDate && new Date(t.dueDate).toDateString() === todayStr);
   const pendingToday = today.filter((t) => !isDoneNow(t));
-  const completedToday = today.filter((t) => isDoneNow(t)).length;
+  const completedToday = today.filter(isActuallyDone).length;
   const overdue = all.filter((t) => t.dueDate && !Number.isNaN(new Date(t.dueDate).getTime()) && dueDay(t) < startOfToday && !isDoneNow(t));
 
   // ── Rutinas: diarias (y hábitos) y semanales. Una tarea con fecha de hoy no es «diaria». ──
@@ -78,7 +82,7 @@ export function buildDailyBriefing(
   });
 
   const pendingDaily = dailyTasks.filter((t) => !isDoneNow(t));
-  const completedDailyToday = dailyTasks.filter((t) => isDoneNow(t)).length;
+  const completedDailyToday = dailyTasks.filter(isActuallyDone).length;
 
   const weeklyTasks = all.filter((t) => {
     if (t.cycle_id === 'cycle_week') return true;
@@ -96,7 +100,7 @@ export function buildDailyBriefing(
     : currentDayOfWeek === weeklyDayPref;
 
   const habits = all.filter((t) => t.cycle_id === 'cycle_day' || (t.targetCount && t.targetCount > 1));
-  const habitsDone = habits.filter((t) => isDoneNow(t)).length;
+  const habitsDone = habits.filter(isActuallyDone).length;
   const topStreak = habits.reduce((max, habit) => Math.max(max, calculateHabitStreak(habit, cycles).count), 0);
 
   const expiring = all.filter((t) => {
@@ -136,7 +140,7 @@ export function buildDailyBriefing(
   } else if (pendingDaily.length > 0) {
     headline = pendingDaily.length === 1 ? 'Hoy te queda una diaria.' : `Hoy te quedan ${daily}.`;
   } else {
-    headline = completedDailyToday + completedToday > 0 ? 'Todo hecho por hoy.' : 'Hoy no tienes nada pendiente.';
+    headline = recovery.length ? 'Hoy puedes retomar una sección, a tu ritmo.' : completedDailyToday + completedToday > 0 ? 'Todo hecho por hoy.' : 'Hoy no tienes nada pendiente.';
   }
 
   const details: string[] = [];
@@ -165,6 +169,7 @@ export function buildDailyBriefing(
     habitsTotal: habits.length,
     topStreak,
     expiring,
-    isQuiet: plate.length === 0 && completedDailyToday === 0 && completedToday === 0 && habits.length === 0 && expiring.length === 0,
+    recovery,
+    isQuiet: plate.length === 0 && completedDailyToday === 0 && completedToday === 0 && habits.length === 0 && expiring.length === 0 && recovery.length === 0,
   };
 }

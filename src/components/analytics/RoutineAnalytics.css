@@ -1,0 +1,59 @@
+.routine-analytics { margin-top: 22px; padding: 20px; border: 1px solid var(--separator); border-radius: 22px; background: var(--bg-card); }
+.routine-heading, .routine-selected-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.routine-heading h2 { margin: 0; font-size: 1.08rem; }
+.routine-heading p, .routine-history-note, .routine-empty, .routine-group-actions p { color: var(--text-secondary); font-size: .82rem; line-height: 1.5; text-wrap: pretty; }
+.routine-heading p { margin: 4px 0 0; }
+.routine-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--glass-stroke); border-radius: 12px; color: var(--accent-primary); background: var(--glass-fill); font: inherit; font-size: .85rem; cursor: pointer; flex-shrink: 0; }
+.routine-button, .routine-frequency button, .routine-periods button { transition: transform 140ms ease, background-color 180ms ease, border-color 180ms ease; }
+.routine-button:active, .routine-frequency button:active, .routine-periods button:active { transform: scale(.98); }
+.routine-frequency { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 3px; margin: 18px 0; background: var(--bg-hover); border-radius: 15px; }
+.routine-frequency button { min-width: 44px; min-height: 44px; padding: 6px; border: 0; border-radius: 12px; background: transparent; color: var(--text-secondary); font: inherit; font-size: .84rem; cursor: pointer; }
+.routine-frequency button[aria-pressed="true"] { background: var(--bg-elevated); color: var(--text-primary); font-weight: 650; box-shadow: var(--shadow-sm); }
+.routine-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.routine-toolbar label { display: flex; flex-direction: column; gap: 5px; min-width: 0; font-size: .76rem; color: var(--text-secondary); }
+.routine-date-controls { display: flex; align-items: flex-end; gap: 6px; min-width: 0; }
+.routine-toolbar input, .routine-toolbar select { min-width: 0; min-height: 44px; max-width: 100%; border: 1px solid var(--border-subtle); padding: 8px; border-radius: 12px; background: var(--bg-elevated); color: var(--text-primary); font: inherit; font-size: .88rem; }
+.routine-filter { flex: 1 1 200px; }
+.routine-periods { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.routine-periods--day { grid-template-columns: repeat(7, minmax(44px, 1fr)); gap: 4px; overflow-x: auto; }
+.routine-periods--month { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.routine-periods button { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 44px; min-height: 68px; padding: 8px 4px; border: 1px solid var(--border-subtle); border-radius: 12px; background: transparent; color: var(--text-primary); font: inherit; font-variant-numeric: tabular-nums; cursor: pointer; }
+.routine-periods button[aria-pressed="true"] { border-color: var(--accent-primary); background: var(--accent-glow); box-shadow: inset 0 0 0 1px var(--accent-primary); }
+.routine-period-label { font-size: .78rem; text-wrap: balance; }
+.routine-period-value { font-size: 1rem; font-weight: 650; }
+.routine-period-caption, .routine-weekday { font-size: .7rem; color: var(--text-secondary); }
+.routine-weekday { text-align: center; padding-bottom: 4px; }
+.routine-omission-dot { width: 4px; height: 4px; background: var(--accent-orange); border-radius: 50%; }
+.routine-selected-heading { margin: 20px 0 12px; flex-wrap: wrap; }
+.routine-selected-heading h3 { margin: 0; font-size: .96rem; }
+.routine-selected-heading > span { color: var(--text-secondary); font-size: .78rem; }
+.routine-group { border-top: 1px solid var(--separator); }
+.routine-group summary { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; min-height: 60px; padding: 12px 0; cursor: pointer; list-style: none; }
+.routine-group summary::-webkit-details-marker { display: none; }
+.routine-group summary::after { content: '+'; font-size: 1.1rem; color: var(--accent-primary); }
+.routine-group[open] summary::after { content: '−'; }
+.routine-group summary:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; border-radius: 8px; }
+.routine-group-name { display: flex; flex-direction: column; gap: 2px; flex: 1 1 140px; min-width: 0; overflow-wrap: anywhere; }
+.routine-group-name strong { font-size: .9rem; font-weight: 650; }
+.routine-group-name > span, .routine-group-summary { font-size: .78rem; color: var(--text-secondary); line-height: 1.5; }
+.routine-group-summary { font-variant-numeric: tabular-nums; flex: 1 1 220px; }
+.routine-tasks { list-style: none; margin: 0; padding: 0; }
+.routine-tasks li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; font-size: .86rem; border-top: 1px solid var(--border-subtle); }
+.routine-tasks li > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.routine-status { flex-shrink: 0; padding: 4px 8px; border-radius: 8px; font-size: .73rem; background: var(--bg-hover); color: var(--text-secondary); }
+.routine-status--completed { color: var(--text-primary); background: color-mix(in srgb, var(--accent-green) 14%, transparent); }
+.routine-status--skipped { color: var(--text-primary); background: color-mix(in srgb, var(--accent-orange) 14%, transparent); }
+.routine-group-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 12px 0; }
+.routine-group-actions p { flex-basis: 100%; margin: 0 0 4px; }
+.routine-suggestion { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.routine-suggestion p { flex: 1 1 220px; margin: 0; color: var(--text-secondary); font-size: .82rem; line-height: 1.5; }
+@media (max-width: 600px) {
+  .routine-analytics { padding: 12px; border-radius: 18px; }
+  .routine-heading { align-items: flex-start; }
+  .routine-periods--week, .routine-periods--year { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .routine-date-controls { width: 100%; }
+  .routine-date-controls label { flex: 1; }
+  .routine-group-summary { flex-basis: calc(100% - 28px); }
+  .routine-periods--day button { min-height: 60px; border-radius: 8px; }
+  .routine-periods--day { column-gap: 1px; }
+}

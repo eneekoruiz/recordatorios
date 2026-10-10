@@ -102,4 +102,24 @@ describe('resumen del día', () => {
     expect(briefing.pendingDaily).toHaveLength(0);
     expect(briefing.isQuiet).toBe(true);
   });
+
+  it('resuelve las omitidas de hoy sin presentarlas como completadas', () => {
+    const briefing = build([task({ title: 'Omitida', cycle_id: 'cycle_day', skipHistory: [at(8).getTime()] })]);
+    expect(briefing.pendingDaily).toHaveLength(0);
+    expect(briefing.completedDailyToday).toBe(0);
+    expect(briefing.habitsDone).toBe(0);
+    expect(briefing.headline).not.toBe('Todo hecho por hoy.');
+  });
+
+  it('el resumen inicial usa las secciones y conecta el historial con retomar hoy', () => {
+    const now = new Date(2026, 9, 10, 10);
+    const briefing = build([task({ categoryId: 'limpieza', sectionId: 'cocina', cycle_id: 'cycle_week', created_at: new Date(2026, 7, 1).toISOString() })], {
+      now, weeklyDayOfWeek: 1,
+      lists: [{ id: 'limpieza', name: 'Limpieza', color: '#000' }],
+      listSections: [{ id: 'cocina', listId: 'limpieza', name: 'Cocina' }],
+    });
+    expect(briefing.recovery[0].label).toBe('Limpieza · Cocina');
+    expect(briefing.headline).toBe('Hoy puedes retomar una sección, a tu ritmo.');
+    expect(briefing.isQuiet).toBe(false);
+  });
 });

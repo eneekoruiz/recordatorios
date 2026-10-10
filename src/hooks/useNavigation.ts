@@ -2,7 +2,15 @@ import { create } from 'zustand';
 
 export type ViewType = 'HOME' | 'UNIVERSAL_IMPORTER' | 'ANALYTICS';
 
+export interface RoutineAnalyticsFocus {
+  frequency: 'day' | 'week' | 'month' | 'year';
+  reference: string;
+  groupId: string;
+}
+
 interface NavigationState {
+  routineAnalyticsFocus: RoutineAnalyticsFocus | null;
+  setRoutineAnalyticsFocus: (focus: RoutineAnalyticsFocus | null) => void;
   stack: ViewType[];
   push: (view: ViewType) => void;
   pop: () => void;
@@ -11,6 +19,8 @@ interface NavigationState {
 }
 
 export const useNavigation = create<NavigationState>((set, get) => ({
+  routineAnalyticsFocus: null,
+  setRoutineAnalyticsFocus: (routineAnalyticsFocus) => set({ routineAnalyticsFocus }),
   stack: ['HOME'],
   push: (view) => set((state) => ({ stack: [...state.stack, view] })),
   pop: () => set((state) => {
