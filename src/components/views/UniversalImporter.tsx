@@ -322,7 +322,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-8)', 
               background: 'linear-gradient(135deg, #007aff, #af52de)', color: 'white', border: 'none', 
               padding: '14px 24px', borderRadius: 'var(--radius-md)', fontWeight: 650, 
-              cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 16px rgba(0, 122, 255, 0.3)',
+              cursor: 'pointer', transition: 'transform 0.2s, opacity 0.2s, background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s', boxShadow: '0 4px 16px rgba(0, 122, 255, 0.3)',
               alignSelf: 'flex-start'
             }}
             whileHover={{ scale: 1.02 }}
@@ -349,7 +349,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-8)', 
               width: '100%', background: 'var(--accent-fill, var(--accent-primary))', color: 'white', border: 'none', 
               padding: 'var(--space-16)', borderRadius: 'var(--radius-md)', fontWeight: 600, 
-              cursor: 'pointer', transition: 'all 0.2s', boxShadow: 'var(--shadow-md)'
+              cursor: 'pointer', transition: 'transform 0.2s, opacity 0.2s, background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s', boxShadow: 'var(--shadow-md)'
             }}
             onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
             onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
@@ -434,7 +434,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
                     borderRadius: 'var(--radius-md)',
                     background: isDragging ? 'color-mix(in srgb, var(--accent-primary) 8%, var(--bg-base))' : 'var(--bg-base)',
                     marginBottom: 'var(--space-24)',
-                    transition: 'all 0.2s ease'
+                    transition: 'transform 0.2s ease, opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease'
                   }}
                 >
                   <textarea 
@@ -483,7 +483,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
                       flex: 1, minWidth: 160, background: inputText.trim() ? 'var(--text-primary)' : 'var(--bg-elevated)', 
                       color: inputText.trim() ? 'var(--bg-base)' : 'var(--text-tertiary)', border: 'none', 
                       padding: 'var(--space-16)', borderRadius: 'var(--radius-md)', fontWeight: 600, 
-                      cursor: inputText.trim() ? 'pointer' : 'not-allowed', transition: 'all 0.2s' 
+                      cursor: inputText.trim() ? 'pointer' : 'not-allowed', transition: 'transform 0.2s, opacity 0.2s, background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s'
                     }}
                   >
                     <Upload size={20} /> Procesar Datos
@@ -495,7 +495,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-8)',
                       background: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--border-subtle)',
                       padding: 'var(--space-16)', borderRadius: 'var(--radius-md)', fontWeight: 600,
-                      cursor: 'pointer', transition: 'all 0.2s'
+                      cursor: 'pointer', transition: 'transform 0.2s, opacity 0.2s, background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s'
                     }}
                     title="Pegar texto copiado del portapapeles"
                   >
@@ -507,7 +507,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
                       flex: 1, minWidth: 180, background: 'var(--bg-elevated)', 
                       color: 'var(--text-primary)', border: '1px solid var(--border-subtle)', 
                       padding: 'var(--space-16)', borderRadius: 'var(--radius-md)', fontWeight: 600, 
-                      cursor: 'pointer', transition: 'all 0.2s' 
+                      cursor: 'pointer', transition: 'transform 0.2s, opacity 0.2s, background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s'
                     }}
                     onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-elevated)'}
@@ -558,7 +558,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
                   </button>
                   <button 
                     onClick={handleConfirmImport}
-                    style={{ flex: 1, padding: 'var(--space-16)', background: 'var(--accent-green)', border: 'none', color: 'white', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s', boxShadow: 'var(--shadow-md)' }}
+                    style={{ flex: 1, padding: 'var(--space-16)', background: 'var(--accent-green)', border: 'none', color: 'white', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: 600, transition: 'transform 0.2s, opacity 0.2s, background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s', boxShadow: 'var(--shadow-md)' }}
                     onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
                     onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
                   >

@@ -49,13 +49,12 @@ test.describe('iPhone (emulado)', () => {
     }
   });
 
-  test('los controles tienen un área táctil razonable (≥ 32 px) y el texto de entrada no provoca zoom en iOS', async ({ page }) => {
+  test('los controles tienen un área táctil de 44 px y el texto de entrada no provoca zoom en iOS', async ({ page }) => {
     await boot(page);
     for (const view of ['smart_today', 'list_casa']) {
       await event(page, 'select-view', view);
       await page.waitForTimeout(700);
-      // Área realmente pulsable: se comprueba a 15 px del centro (32 px en total), porque muchos botones amplían su
-      // zona táctil con un pseudo-elemento sin cambiar lo que se ve.
+      // Comprobar cajas reales y que ningún vecino robe el toque a 21 px del centro.
       const small = await page.evaluate(() => {
         const hits = (el: Element, dx: number, dy: number) => {
           const r = el.getBoundingClientRect();
@@ -70,10 +69,14 @@ test.describe('iPhone (emulado)', () => {
         return [...document.querySelectorAll('button, [role="button"], a[href]')]
           .filter((el) => (el as HTMLElement).offsetParent !== null && el.getBoundingClientRect().width > 0)
           .filter((el) => !el.classList.contains('task-title'))
-          .filter((el) => !(hits(el, -15, 0) && hits(el, 15, 0) && hits(el, 0, -15) && hits(el, 0, 15)))
+          .filter((el) => {
+            const r = el.getBoundingClientRect();
+            return r.width < 43.9 || r.height < 43.9 ||
+              !(hits(el, -21, 0) && hits(el, 21, 0) && hits(el, 0, -21) && hits(el, 0, 21));
+          })
           .map((el) => (el.getAttribute('aria-label') || el.getAttribute('title') || el.textContent || el.className).toString().trim().slice(0, 40));
       });
-      expect(small, `${view}: controles con zona táctil < 32 px: ${small.join(' | ')}`).toEqual([]);
+      expect(small, `${view}: controles con zona táctil < 44 px: ${small.join(' | ')}`).toEqual([]);
     }
     // iOS Safari amplía la página al enfocar campos con fuente < 16 px.
     await event(page, 'open-new-task-drawer');

@@ -295,7 +295,7 @@ html, body, #root, .app-container, .main-container, .main-content, .sidebar-cont
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   box-shadow: none;
-  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s cubic-bezier(0.2, 0, 0, 1), border-color 0.2s cubic-bezier(0.2, 0, 0, 1), color 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -376,7 +376,7 @@ html, body, #root, .app-container, .main-container, .main-content, .sidebar-cont
   cursor: pointer;
   inset: 0;
   background-color: var(--border-subtle);
-  transition: 0.3s;
+  transition: background-color 0.3s ease, transform 0.3s ease;
 }
 .slider::before {
   position: absolute;
@@ -386,7 +386,7 @@ html, body, #root, .app-container, .main-container, .main-content, .sidebar-cont
   left: 3px;
   bottom: 3px;
   background-color: white;
-  transition: 0.3s;
+  transition: background-color 0.3s ease, transform 0.3s ease;
   box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 input:checked + .slider {
@@ -874,7 +874,7 @@ body.dark .ios-list-item.active {
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
   line-height: 1.2;
 }
@@ -1428,7 +1428,7 @@ button:disabled {
   align-items: center !important;
   justify-content: center !important;
   cursor: pointer !important;
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.22s cubic-bezier(0.16, 1, 0.3, 1), color 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06) !important;
   padding: 0 !important;
 }
@@ -1585,7 +1585,7 @@ button:disabled {
   cursor: pointer;
   white-space: nowrap;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.2s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s cubic-bezier(0.22, 1, 0.36, 1), color 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 @media (hover: hover) and (pointer: fine) {
   .custom-select-trigger:hover {

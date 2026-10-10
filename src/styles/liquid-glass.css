@@ -1,0 +1,192 @@
+/* Shared material layer. Keep content surfaces quiet; glass belongs to navigation
+   and floating controls. Existing structure and interaction selectors stay intact. */
+:root {
+  --glass-fill: rgba(255, 255, 255, 0.78);
+  --glass-stroke: rgba(60, 60, 67, 0.14);
+  --glass-highlight: rgba(255, 255, 255, 0.85);
+  --glass-shadow: 0 8px 24px rgba(24, 35, 52, 0.08), 0 2px 6px rgba(24, 35, 52, 0.04);
+  --glass-blur: blur(24px) saturate(160%);
+  --control-radius: 12px;
+  --control-inset: 6px;
+  --control-group-radius: calc(var(--control-radius) + var(--control-inset));
+  --motion-press: 140ms;
+  --motion-state: 180ms;
+  --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+[data-theme="dark"], html.dark, body.dark {
+  --glass-fill: rgba(38, 38, 42, 0.82);
+  --glass-stroke: rgba(235, 235, 245, 0.18);
+  --glass-highlight: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 8px 24px rgba(0, 0, 0, 0.22), 0 2px 6px rgba(0, 0, 0, 0.14);
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+:where(h1, h2, h3, .text-display, .view-title, .sheet-navbar-title) {
+  font-family: var(--font-display);
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+:where(.text-body, .text-muted, .empty-state p, .form-hint) {
+  text-wrap: pretty;
+}
+
+:where(.count, .time-pill, .stat-chip, .cad-summary, .section-total-count,
+  .apple-large-counter, .apple-period-navigator-capsule) {
+  font-variant-numeric: tabular-nums;
+}
+
+.content-header .text-display {
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+}
+
+/* One material per group avoids a stack of expensive, competing blur layers. */
+.sidebar-container,
+[data-theme="dark"] .sidebar-container,
+body.dark .sidebar-container {
+  background: color-mix(in srgb, var(--bg-grouped) 88%, transparent) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+}
+
+.quick-add-shell,
+.apple-sidebar-ai-btn,
+.ios-dropdown-menu,
+.premium-select-menu,
+.spotlight-panel {
+  background: var(--glass-fill) !important;
+  border: 1px solid var(--glass-stroke) !important;
+  box-shadow: inset 0 1px 0 var(--glass-highlight), var(--glass-shadow) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+}
+
+.sheet-navbar {
+  background: color-mix(in srgb, var(--form-bg, var(--bg-base)) 82%, transparent);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+.icon-btn, .btn-icon, .apple-nav-action-btn {
+  min-width: 44px !important;
+  min-height: 44px !important;
+  box-shadow: inset 0 1px 0 var(--glass-highlight), 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+  transition: transform var(--motion-press) var(--motion-ease),
+    opacity var(--motion-state) ease, background-color var(--motion-state) ease,
+    color var(--motion-state) ease, border-color var(--motion-state) ease !important;
+}
+
+.custom-select-trigger, .premium-select-menu [role="option"], .sheet-navbar-btn,
+.apple-sidebar-ai-btn {
+  min-height: 44px;
+}
+
+/* Radius = child radius + inset, shared by grouped rows and menu items. */
+.ios-list-block {
+  border-radius: var(--control-group-radius) !important;
+  padding: var(--control-inset) 0 !important;
+}
+
+.ios-list-block .ios-list-item {
+  margin: 0 var(--control-inset) !important;
+  border-radius: var(--control-radius) !important;
+}
+
+.ios-dropdown-menu, .premium-select-menu {
+  padding: var(--control-inset);
+  border-radius: var(--control-group-radius) !important;
+}
+
+.ios-dropdown-item, .premium-select-menu [role="option"] {
+  border-radius: var(--control-radius);
+}
+
+.segmented {
+  --segment-inset: 3px;
+  --segment-radius: 9px;
+  padding: var(--segment-inset);
+  border-radius: calc(var(--segment-radius) + var(--segment-inset));
+}
+
+.segmented > button { border-radius: var(--segment-radius); }
+
+:where(.sheet-navbar-btn, .custom-select-trigger, .custom-select-option,
+  .ios-dropdown-item, .apple-sidebar-ai-btn, .segmented > button) {
+  transition: transform var(--motion-press) var(--motion-ease),
+    opacity var(--motion-state) ease, background-color var(--motion-state) ease,
+    color var(--motion-state) ease;
+}
+
+:where(.sheet-navbar-btn, .apple-sidebar-ai-btn, .segmented > button):active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+:where(button, [role="button"], a[href], [role="option"]):focus-visible {
+  outline: 2px solid var(--accent-primary) !important;
+  outline-offset: 3px;
+}
+
+.apple-timer-picker input:focus-visible {
+  outline: 2px solid var(--accent-primary) !important;
+  outline-offset: 2px;
+}
+
+/* The switch keeps its 42 × 26 visual track inside a 44 × 44 label. */
+.switch {
+  width: 44px;
+  height: 44px;
+}
+
+.switch .slider { inset: 9px 1px; }
+.switch input:focus-visible + .slider {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .icon-btn:hover, .btn-icon:hover {
+    transform: translateY(-1px) !important;
+  }
+}
+
+/* Real boxes, rather than overlapping invisible targets, preserve hit testing. */
+@media (pointer: coarse) {
+  button, [role="button"], a[href], [role="option"] {
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+
+  select, input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]):not([type="file"]) {
+    min-height: 44px;
+  }
+
+  .header-actions { gap: 6px !important; }
+  .task-info-btn { opacity: 1; }
+}
+
+/* Legible solid fallback for browsers without materials and OS transparency preferences. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root { --glass-fill: var(--bg-elevated); }
+  [data-theme="dark"], html.dark, body.dark { --glass-fill: var(--bg-elevated); }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root, [data-theme="dark"], html.dark, body.dark {
+    --glass-fill: var(--bg-elevated);
+    --glass-blur: none;
+  }
+  .sidebar-container { background: var(--bg-grouped) !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(button, [role="button"], .ios-smart-card):hover,
+  :where(button, [role="button"], .ios-smart-card):active {
+    transform: none !important;
+  }
+}

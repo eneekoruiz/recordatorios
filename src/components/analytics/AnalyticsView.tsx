@@ -190,7 +190,7 @@ export function AnalyticsView({ onBack }: AnalyticsViewProps) {
           display: 'flex',
           flexDirection: 'column',
           gap: 12,
-          transition: 'all 0.2s ease',
+          transition: 'transform 0.2s ease, opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -463,7 +463,7 @@ export function AnalyticsView({ onBack }: AnalyticsViewProps) {
               fontSize: '0.84rem',
               fontWeight: 650,
               cursor: 'pointer',
-              transition: 'all 0.15s ease',
+              transition: 'transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease',
             }}
           >
             <Share2 size={15} strokeWidth={2.2} />
@@ -958,7 +958,7 @@ export function AnalyticsView({ onBack }: AnalyticsViewProps) {
                     background: copiedToast ? 'color-mix(in srgb, #34c759 12%, transparent)' : 'var(--bg-surface, rgba(0,0,0,0.02))',
                     cursor: 'pointer',
                     textAlign: 'left',
-                    transition: 'all 0.15s ease',
+                    transition: 'transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease',
                   }}
                 >
                   <div
@@ -972,7 +972,7 @@ export function AnalyticsView({ onBack }: AnalyticsViewProps) {
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0,
-                      transition: 'all 0.2s ease',
+                      transition: 'transform 0.2s ease, opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease',
                     }}
                   >
                     {copiedToast ? <Check size={18} strokeWidth={2.4} /> : <Copy size={18} />}
@@ -1001,7 +1001,7 @@ export function AnalyticsView({ onBack }: AnalyticsViewProps) {
                     background: 'var(--bg-surface, rgba(0,0,0,0.02))',
                     cursor: 'pointer',
                     textAlign: 'left',
-                    transition: 'all 0.15s ease',
+                    transition: 'transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease',
                   }}
                 >
                   <div
@@ -1043,7 +1043,7 @@ export function AnalyticsView({ onBack }: AnalyticsViewProps) {
                     background: 'var(--bg-surface, rgba(0,0,0,0.02))',
                     cursor: 'pointer',
                     textAlign: 'left',
-                    transition: 'all 0.15s ease',
+                    transition: 'transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease',
                   }}
                 >
                   <div

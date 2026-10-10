@@ -1060,7 +1060,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                           cursor: 'pointer',
                           flexShrink: 0,
                           marginBottom: 4,
-                          transition: 'all 0.15s ease'
+                          transition: 'transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease'
                         }}
                         title={speakingMsgId === msg.id ? 'Detener voz' : 'Escuchar respuesta en voz alta'}
                       >
@@ -1144,7 +1144,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                           alignItems: 'center',
                           gap: 6,
                           boxShadow: '0 2px 6px rgba(0, 122, 255, 0.08)',
-                          transition: 'all 0.15s ease'
+                          transition: 'transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease'
                         }}
                       >
                         <span>{replyText}</span>
@@ -1512,7 +1512,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                               border: '1px solid var(--border-subtle)',
                               cursor: 'pointer',
                               opacity: child.selected ? 1 : 0.6,
-                              transition: 'all 0.15s ease'
+                              transition: 'transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease'
                             }}
                           >
                             <div style={{
