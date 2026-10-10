@@ -150,7 +150,7 @@ test.describe('Pulido final', () => {
     await page.waitForTimeout(400);
 
     // Abrir modal de duración
-    const durationBtn = page.locator('.section-duration-label').first();
+    const durationBtn = page.getByRole('button', { name: /Ver desglose/i }).first();
     await expect(durationBtn).toBeVisible();
     await durationBtn.click();
 
