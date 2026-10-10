@@ -56,7 +56,7 @@ export const DrawerExpirationSection: React.FC<DrawerExpirationSectionProps> = (
                   onClick={() => setExpirationType(expirationType === 'card' ? undefined : 'card')}
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '10px 6px',
-                    borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s ease',
+                    borderRadius: 10, cursor: 'pointer', transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease',
                     background: expirationType === 'card' ? 'rgba(255, 149, 0, 0.16)' : 'var(--bg-surface)',
                     border: expirationType === 'card' ? '1.5px solid #ff9500' : '1px solid var(--border-subtle)',
                     color: expirationType === 'card' ? '#ff9500' : 'var(--text-secondary)',
@@ -71,7 +71,7 @@ export const DrawerExpirationSection: React.FC<DrawerExpirationSectionProps> = (
                   onClick={() => setExpirationType(expirationType === 'subscription' ? undefined : 'subscription')}
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '10px 6px',
-                    borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s ease',
+                    borderRadius: 10, cursor: 'pointer', transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease',
                     background: expirationType === 'subscription' ? 'rgba(0, 122, 255, 0.16)' : 'var(--bg-surface)',
                     border: expirationType === 'subscription' ? '1.5px solid #007aff' : '1px solid var(--border-subtle)',
                     color: expirationType === 'subscription' ? '#007aff' : 'var(--text-secondary)',
@@ -86,7 +86,7 @@ export const DrawerExpirationSection: React.FC<DrawerExpirationSectionProps> = (
                   onClick={() => setExpirationType(expirationType === 'other' ? undefined : 'other')}
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '10px 6px',
-                    borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s ease',
+                    borderRadius: 10, cursor: 'pointer', transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease',
                     background: expirationType === 'other' ? 'rgba(142, 142, 147, 0.16)' : 'var(--bg-surface)',
                     border: expirationType === 'other' ? '1.5px solid #8e8e93' : '1px solid var(--border-subtle)',
                     color: expirationType === 'other' ? 'var(--text-primary)' : 'var(--text-secondary)',

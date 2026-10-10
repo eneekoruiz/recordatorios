@@ -123,7 +123,7 @@ export const DrawerLibrarySection: React.FC<DrawerLibrarySectionProps> = ({
                           background: isSelected ? 'color-mix(in srgb, var(--accent-primary) 12%, var(--bg-surface))' : 'var(--bg-surface)',
                           color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
                           cursor: 'pointer',
-                          transition: 'all 0.15s ease'
+                          transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
                         }}
                       >
                         <Icon size={16} />
@@ -168,7 +168,7 @@ export const DrawerLibrarySection: React.FC<DrawerLibrarySectionProps> = ({
                           background: isSelected ? `color-mix(in srgb, ${s.color} 14%, var(--bg-surface))` : 'var(--bg-surface)',
                           color: isSelected ? s.color : 'var(--text-secondary)',
                           cursor: 'pointer',
-                          transition: 'all 0.15s ease'
+                          transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
                         }}
                       >
                         <Icon size={15} />

@@ -266,7 +266,7 @@
   font-size: 0.82rem;
   font-weight: 550;
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: background-color, border-color, color, fill, opacity, transform, box-shadow 0.18s ease;
 }
 
 .freq-btn:hover {

@@ -92,7 +92,7 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
         display: 'flex',
         flexDirection: 'column',
         gap: 8,
-        transition: 'all 0.2s ease',
+        transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.2s ease',
       }}
     >
       {/* Fila 1: Navegador temporal ocupando todo el ancho de la pantalla de lado a lado */}
@@ -165,7 +165,7 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
               letterSpacing: '-0.01em',
               cursor: 'pointer',
               boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
-              transition: 'all 0.15s ease',
+              transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease',
               maxWidth: '100%',
             }}
           >

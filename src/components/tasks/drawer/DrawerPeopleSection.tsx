@@ -124,7 +124,7 @@ export const DrawerPeopleSection: React.FC<DrawerPeopleSectionProps> = ({
                         border: vibe === v ? '1.5px solid #ff9500' : '1px solid var(--border-subtle)',
                         background: vibe === v ? 'rgba(255, 149, 0, 0.16)' : 'var(--bg-surface)',
                         color: vibe === v ? '#ff9500' : 'var(--text-secondary)',
-                        transition: 'all 0.15s ease'
+                        transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
                       }}
                     >
                       {v}

@@ -419,15 +419,15 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       style={{
         ...itemStyle,
         position: 'sticky',
-        top: data.depth === 0 ? 0 : 44,
+        top: data.depth === 0 ? 0 : 56,
         zIndex: isMenuOpenForThisSection ? 999992 : Math.max(10, 30 - data.depth),
         borderBottom: '1px solid var(--border-subtle)',
         borderTop: 'none',
         paddingLeft: `${16 + data.depth * 14}px`,
         paddingRight: '16px',
-        minHeight: data.depth === 0 ? 44 : 38,
+        minHeight: data.depth === 0 ? 56 : 38,
         
-        paddingTop: data.depth === 0 ? (isFirstAfterPageHeader ? 16 : 28) : 20,
+        paddingTop: data.depth === 0 ? (isFirstAfterPageHeader ? 16 : 28) : 12,
         paddingBottom: data.depth === 0 ? 8 : 6,
         marginTop: 0,
         marginBottom: 4,

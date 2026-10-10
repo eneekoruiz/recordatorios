@@ -316,7 +316,7 @@ export const MainInlineAdd: React.FC<MainInlineAddProps> = ({
             color: 'var(--text-tertiary)',
             fontSize: '0.95rem',
             background: 'transparent',
-            transition: 'all 0.15s ease'
+            transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
           }}
         >
           <div style={{
