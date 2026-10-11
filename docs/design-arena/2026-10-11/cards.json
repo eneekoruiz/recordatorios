@@ -1,0 +1,702 @@
+[
+  {
+    "id": "i001",
+    "persona": "first-time user",
+    "productPerspective": "action-first interaction",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i002",
+    "persona": "first-time user",
+    "productPerspective": "context-first information",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i003",
+    "persona": "first-time user",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i004",
+    "persona": "first-time user",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  },
+  {
+    "id": "i005",
+    "persona": "experienced routine planner",
+    "productPerspective": "action-first interaction",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i006",
+    "persona": "experienced routine planner",
+    "productPerspective": "context-first information",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i007",
+    "persona": "experienced routine planner",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  },
+  {
+    "id": "i008",
+    "persona": "experienced routine planner",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i009",
+    "persona": "distracted user",
+    "productPerspective": "action-first interaction",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i010",
+    "persona": "distracted user",
+    "productPerspective": "context-first information",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  },
+  {
+    "id": "i011",
+    "persona": "distracted user",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i012",
+    "persona": "distracted user",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i013",
+    "persona": "screen reader user",
+    "productPerspective": "action-first interaction",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  },
+  {
+    "id": "i014",
+    "persona": "screen reader user",
+    "productPerspective": "context-first information",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i015",
+    "persona": "screen reader user",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i016",
+    "persona": "screen reader user",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i017",
+    "persona": "keyboard-only user",
+    "productPerspective": "action-first interaction",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i018",
+    "persona": "keyboard-only user",
+    "productPerspective": "context-first information",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i019",
+    "persona": "keyboard-only user",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i020",
+    "persona": "keyboard-only user",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  },
+  {
+    "id": "i021",
+    "persona": "one-handed mobile user",
+    "productPerspective": "action-first interaction",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i022",
+    "persona": "one-handed mobile user",
+    "productPerspective": "context-first information",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i023",
+    "persona": "one-handed mobile user",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  },
+  {
+    "id": "i024",
+    "persona": "one-handed mobile user",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i025",
+    "persona": "large-text user",
+    "productPerspective": "action-first interaction",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i026",
+    "persona": "large-text user",
+    "productPerspective": "context-first information",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  },
+  {
+    "id": "i027",
+    "persona": "large-text user",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i028",
+    "persona": "large-text user",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i029",
+    "persona": "low-vision user",
+    "productPerspective": "action-first interaction",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  },
+  {
+    "id": "i030",
+    "persona": "low-vision user",
+    "productPerspective": "context-first information",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i031",
+    "persona": "low-vision user",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i032",
+    "persona": "low-vision user",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i033",
+    "persona": "busy caregiver",
+    "productPerspective": "action-first interaction",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i034",
+    "persona": "busy caregiver",
+    "productPerspective": "context-first information",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i035",
+    "persona": "busy caregiver",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i036",
+    "persona": "busy caregiver",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  },
+  {
+    "id": "i037",
+    "persona": "shared-house organizer",
+    "productPerspective": "action-first interaction",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i038",
+    "persona": "shared-house organizer",
+    "productPerspective": "context-first information",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i039",
+    "persona": "shared-house organizer",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  },
+  {
+    "id": "i040",
+    "persona": "shared-house organizer",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i041",
+    "persona": "time-constrained worker",
+    "productPerspective": "action-first interaction",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i042",
+    "persona": "time-constrained worker",
+    "productPerspective": "context-first information",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  },
+  {
+    "id": "i043",
+    "persona": "time-constrained worker",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i044",
+    "persona": "time-constrained worker",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i045",
+    "persona": "weekly cleaner",
+    "productPerspective": "action-first interaction",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  },
+  {
+    "id": "i046",
+    "persona": "weekly cleaner",
+    "productPerspective": "context-first information",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i047",
+    "persona": "weekly cleaner",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i048",
+    "persona": "weekly cleaner",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i049",
+    "persona": "monthly maintenance planner",
+    "productPerspective": "action-first interaction",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i050",
+    "persona": "monthly maintenance planner",
+    "productPerspective": "context-first information",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i051",
+    "persona": "monthly maintenance planner",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i052",
+    "persona": "monthly maintenance planner",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  },
+  {
+    "id": "i053",
+    "persona": "shopping budget planner",
+    "productPerspective": "action-first interaction",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i054",
+    "persona": "shopping budget planner",
+    "productPerspective": "context-first information",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i055",
+    "persona": "shopping budget planner",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  },
+  {
+    "id": "i056",
+    "persona": "shopping budget planner",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i057",
+    "persona": "user with many nested sections",
+    "productPerspective": "action-first interaction",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i058",
+    "persona": "user with many nested sections",
+    "productPerspective": "context-first information",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  },
+  {
+    "id": "i059",
+    "persona": "user with many nested sections",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i060",
+    "persona": "user with many nested sections",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i061",
+    "persona": "person returning after missed periods",
+    "productPerspective": "action-first interaction",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  },
+  {
+    "id": "i062",
+    "persona": "person returning after missed periods",
+    "productPerspective": "context-first information",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i063",
+    "persona": "person returning after missed periods",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i064",
+    "persona": "person returning after missed periods",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i065",
+    "persona": "user reviewing historical work",
+    "productPerspective": "action-first interaction",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i066",
+    "persona": "user reviewing historical work",
+    "productPerspective": "context-first information",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i067",
+    "persona": "user reviewing historical work",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i068",
+    "persona": "user reviewing historical work",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  },
+  {
+    "id": "i069",
+    "persona": "user deciding by task duration",
+    "productPerspective": "action-first interaction",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i070",
+    "persona": "user deciding by task duration",
+    "productPerspective": "context-first information",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i071",
+    "persona": "user deciding by task duration",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  },
+  {
+    "id": "i072",
+    "persona": "user deciding by task duration",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i073",
+    "persona": "user with parallel tasks",
+    "productPerspective": "action-first interaction",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i074",
+    "persona": "user with parallel tasks",
+    "productPerspective": "context-first information",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  },
+  {
+    "id": "i075",
+    "persona": "user with parallel tasks",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i076",
+    "persona": "user with parallel tasks",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i077",
+    "persona": "user managing urgent deadlines",
+    "productPerspective": "action-first interaction",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  },
+  {
+    "id": "i078",
+    "persona": "user managing urgent deadlines",
+    "productPerspective": "context-first information",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i079",
+    "persona": "user managing urgent deadlines",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i080",
+    "persona": "user managing urgent deadlines",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i081",
+    "persona": "user preferring minimal interfaces",
+    "productPerspective": "action-first interaction",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i082",
+    "persona": "user preferring minimal interfaces",
+    "productPerspective": "context-first information",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i083",
+    "persona": "user preferring minimal interfaces",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i084",
+    "persona": "user preferring minimal interfaces",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  },
+  {
+    "id": "i085",
+    "persona": "user preferring dense interfaces",
+    "productPerspective": "action-first interaction",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i086",
+    "persona": "user preferring dense interfaces",
+    "productPerspective": "context-first information",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i087",
+    "persona": "user preferring dense interfaces",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  },
+  {
+    "id": "i088",
+    "persona": "user preferring dense interfaces",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i089",
+    "persona": "user who needs visible reminders",
+    "productPerspective": "action-first interaction",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i090",
+    "persona": "user who needs visible reminders",
+    "productPerspective": "context-first information",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  },
+  {
+    "id": "i091",
+    "persona": "user who needs visible reminders",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i092",
+    "persona": "user who needs visible reminders",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i093",
+    "persona": "person managing mixed recurrence lists",
+    "productPerspective": "action-first interaction",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  },
+  {
+    "id": "i094",
+    "persona": "person managing mixed recurrence lists",
+    "productPerspective": "context-first information",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i095",
+    "persona": "person managing mixed recurrence lists",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i096",
+    "persona": "person managing mixed recurrence lists",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i097",
+    "persona": "user browsing a small 320px screen",
+    "productPerspective": "action-first interaction",
+    "reasoning": "first principles",
+    "skill": "frontend-design-direction"
+  },
+  {
+    "id": "i098",
+    "persona": "user browsing a small 320px screen",
+    "productPerspective": "context-first information",
+    "reasoning": "inversion",
+    "skill": "make-interfaces-feel-better"
+  },
+  {
+    "id": "i099",
+    "persona": "user browsing a small 320px screen",
+    "productPerspective": "progressive disclosure",
+    "reasoning": "constraint-first",
+    "skill": "liquid-glass-design"
+  },
+  {
+    "id": "i100",
+    "persona": "user browsing a small 320px screen",
+    "productPerspective": "adaptive visual hierarchy",
+    "reasoning": "adversarial",
+    "skill": "frontend-a11y"
+  }
+]

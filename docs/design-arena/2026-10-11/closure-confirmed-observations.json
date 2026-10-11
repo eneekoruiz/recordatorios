@@ -1,0 +1,364 @@
+[
+  {
+    "variant": "narrow",
+    "surface": "manage",
+    "assets": [
+      "http://127.0.0.1:5182/assets/index-l-6DzwUR.js",
+      "http://127.0.0.1:5182/registerSW.js"
+    ],
+    "scrollWidth": 286,
+    "clientWidth": 286,
+    "offPanel": [],
+    "rows": [
+      {
+        "text": "Compras\n0 tareas pendientes\nOpciones",
+        "width": 250,
+        "height": 122
+      },
+      {
+        "text": "Personal\n0 tareas pendientes\nOpciones",
+        "width": 250,
+        "height": 122
+      },
+      {
+        "text": "Trabajo\n0 tareas pendientes\nOpciones",
+        "width": 250,
+        "height": 122
+      }
+    ]
+  },
+  {
+    "variant": "narrow",
+    "surface": "config",
+    "scrollWidth": 320,
+    "clientWidth": 320,
+    "nav": [
+      {
+        "text": "Cancelar",
+        "r": {
+          "x": 10,
+          "y": 107.40625,
+          "width": 88.828125,
+          "height": 44,
+          "top": 107.40625,
+          "right": 98.828125,
+          "bottom": 151.40625,
+          "left": 10
+        }
+      },
+      {
+        "text": "Editar lista",
+        "r": {
+          "x": 10,
+          "y": 89.40625,
+          "width": 300,
+          "height": 20,
+          "top": 89.40625,
+          "right": 310,
+          "bottom": 109.40625,
+          "left": 10
+        }
+      },
+      {
+        "text": "Guardar",
+        "r": {
+          "x": 225.84375,
+          "y": 107.40625,
+          "width": 84.15625,
+          "height": 44,
+          "top": 107.40625,
+          "right": 310,
+          "bottom": 151.40625,
+          "left": 225.84375
+        }
+      }
+    ],
+    "overlaps": [
+      [
+        "Cancelar",
+        "Editar lista"
+      ],
+      [
+        "Editar lista",
+        "Guardar"
+      ]
+    ],
+    "typeLabels": [
+      {
+        "text": "Checklist",
+        "scrollWidth": 260,
+        "clientWidth": 260
+      },
+      {
+        "text": "Rutinas",
+        "scrollWidth": 260,
+        "clientWidth": 260
+      },
+      {
+        "text": "Eventos",
+        "scrollWidth": 260,
+        "clientWidth": 260
+      },
+      {
+        "text": "Propósitos",
+        "scrollWidth": 260,
+        "clientWidth": 260
+      },
+      {
+        "text": "Caducidades",
+        "scrollWidth": 260,
+        "clientWidth": 260
+      },
+      {
+        "text": "Bitácora",
+        "scrollWidth": 260,
+        "clientWidth": 260
+      }
+    ],
+    "offPanel": []
+  },
+  {
+    "variant": "large390",
+    "surface": "manage",
+    "assets": [
+      "http://127.0.0.1:5182/assets/index-l-6DzwUR.js",
+      "http://127.0.0.1:5182/registerSW.js"
+    ],
+    "scrollWidth": 428,
+    "clientWidth": 356,
+    "offPanel": [
+      "Buscar listas"
+    ],
+    "rows": [
+      {
+        "text": "Compras\n0 tareas pendientes\nOpciones",
+        "width": 320,
+        "height": 209
+      },
+      {
+        "text": "Personal\n0 tareas pendientes\nOpciones",
+        "width": 320,
+        "height": 209
+      },
+      {
+        "text": "Trabajo\n0 tareas pendientes\nOpciones",
+        "width": 320,
+        "height": 209
+      }
+    ]
+  },
+  {
+    "variant": "large390",
+    "surface": "config",
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "nav": [
+      {
+        "text": "Cancelar",
+        "r": {
+          "x": 10,
+          "y": 101.40625,
+          "width": 157.65625,
+          "height": 56,
+          "top": 101.40625,
+          "right": 167.65625,
+          "bottom": 157.40625,
+          "left": 10
+        }
+      },
+      {
+        "text": "Editar lista",
+        "r": {
+          "x": 10,
+          "y": 79.40625,
+          "width": 370,
+          "height": 40,
+          "top": 79.40625,
+          "right": 380,
+          "bottom": 119.40625,
+          "left": 10
+        }
+      },
+      {
+        "text": "Guardar",
+        "r": {
+          "x": 231.6875,
+          "y": 101.40625,
+          "width": 148.3125,
+          "height": 56,
+          "top": 101.40625,
+          "right": 380,
+          "bottom": 157.40625,
+          "left": 231.6875
+        }
+      }
+    ],
+    "overlaps": [
+      [
+        "Cancelar",
+        "Editar lista"
+      ],
+      [
+        "Editar lista",
+        "Guardar"
+      ]
+    ],
+    "typeLabels": [
+      {
+        "text": "Checklist",
+        "scrollWidth": 330,
+        "clientWidth": 330
+      },
+      {
+        "text": "Rutinas",
+        "scrollWidth": 330,
+        "clientWidth": 330
+      },
+      {
+        "text": "Eventos",
+        "scrollWidth": 330,
+        "clientWidth": 330
+      },
+      {
+        "text": "Propósitos",
+        "scrollWidth": 330,
+        "clientWidth": 330
+      },
+      {
+        "text": "Caducidades",
+        "scrollWidth": 330,
+        "clientWidth": 330
+      },
+      {
+        "text": "Bitácora",
+        "scrollWidth": 330,
+        "clientWidth": 330
+      }
+    ],
+    "offPanel": []
+  },
+  {
+    "variant": "large320",
+    "surface": "manage",
+    "assets": [
+      "http://127.0.0.1:5182/assets/index-l-6DzwUR.js",
+      "http://127.0.0.1:5182/registerSW.js"
+    ],
+    "scrollWidth": 428,
+    "clientWidth": 286,
+    "offPanel": [
+      "Buscar listas"
+    ],
+    "rows": [
+      {
+        "text": "Compras\n0 tareas pendientes\nOpciones",
+        "width": 250,
+        "height": 248
+      },
+      {
+        "text": "Personal\n0 tareas pendientes\nOpciones",
+        "width": 250,
+        "height": 248
+      },
+      {
+        "text": "Trabajo\n0 tareas pendientes\nOpciones",
+        "width": 250,
+        "height": 248
+      }
+    ]
+  },
+  {
+    "variant": "large320",
+    "surface": "config",
+    "scrollWidth": 320,
+    "clientWidth": 320,
+    "nav": [
+      {
+        "text": "Cancelar",
+        "r": {
+          "x": 10,
+          "y": 101.40625,
+          "width": 157.65625,
+          "height": 56,
+          "top": 101.40625,
+          "right": 167.65625,
+          "bottom": 157.40625,
+          "left": 10
+        }
+      },
+      {
+        "text": "Editar lista",
+        "r": {
+          "x": 10,
+          "y": 79.40625,
+          "width": 300,
+          "height": 40,
+          "top": 79.40625,
+          "right": 310,
+          "bottom": 119.40625,
+          "left": 10
+        }
+      },
+      {
+        "text": "Guardar",
+        "r": {
+          "x": 161.6875,
+          "y": 101.40625,
+          "width": 148.3125,
+          "height": 56,
+          "top": 101.40625,
+          "right": 310,
+          "bottom": 157.40625,
+          "left": 161.6875
+        }
+      }
+    ],
+    "overlaps": [
+      [
+        "Cancelar",
+        "Editar lista"
+      ],
+      [
+        "Cancelar",
+        "Guardar"
+      ],
+      [
+        "Editar lista",
+        "Guardar"
+      ]
+    ],
+    "typeLabels": [
+      {
+        "text": "Checklist",
+        "scrollWidth": 260,
+        "clientWidth": 260
+      },
+      {
+        "text": "Rutinas",
+        "scrollWidth": 260,
+        "clientWidth": 260
+      },
+      {
+        "text": "Eventos",
+        "scrollWidth": 260,
+        "clientWidth": 260
+      },
+      {
+        "text": "Propósitos",
+        "scrollWidth": 260,
+        "clientWidth": 260
+      },
+      {
+        "text": "Caducidades",
+        "scrollWidth": 260,
+        "clientWidth": 260
+      },
+      {
+        "text": "Bitácora",
+        "scrollWidth": 260,
+        "clientWidth": 260
+      }
+    ],
+    "offPanel": []
+  }
+]

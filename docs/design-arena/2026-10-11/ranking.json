@@ -1,0 +1,803 @@
+{
+  "method": "Elimination-stage ranks; ties within each stage. Scores from different pairings are not global preference measurements.",
+  "proposals": [
+    {
+      "id": "i004",
+      "title": "Exception-led metadata with stable details",
+      "rank": 1,
+      "eliminatedRound": null
+    },
+    {
+      "id": "i044",
+      "title": "Steady metadata rail",
+      "eliminatedRound": 7,
+      "rank": 2,
+      "match": "r7-m01",
+      "reason": "A stable rail can leave duration, date and recurrence equally prominent in its closed summary."
+    },
+    {
+      "id": "i016",
+      "title": "Semantic one-line status replacement",
+      "eliminatedRound": 6,
+      "rank": 3,
+      "match": "r6-m02",
+      "reason": "Status-only direction does not organize price, duration and recurrence editors."
+    },
+    {
+      "id": "i027",
+      "title": "Native details groups",
+      "eliminatedRound": 6,
+      "rank": 3,
+      "match": "r6-m01",
+      "reason": "Native disclosure alone does not identify which fields should stay visible."
+    },
+    {
+      "id": "i036",
+      "title": "Exception gutter",
+      "eliminatedRound": 5,
+      "rank": 5,
+      "match": "r5-m02",
+      "reason": "Gutter exceptions can fill every row in historical views."
+    },
+    {
+      "id": "i084",
+      "title": "Stable essential spine",
+      "eliminatedRound": 5,
+      "rank": 5,
+      "match": "r5-m03",
+      "reason": "Essential spine needs a rule for choosing essential fields."
+    },
+    {
+      "id": "i098",
+      "title": "Context-first mobile folio",
+      "eliminatedRound": 5,
+      "rank": 5,
+      "match": "r5-m01",
+      "reason": "Global context folio is less concrete for complex form settings."
+    },
+    {
+      "id": "i033",
+      "title": "Resume-work compact header",
+      "eliminatedRound": 4,
+      "rank": 8,
+      "match": "r4-m04",
+      "reason": "Start-first header does not handle clutter in non-execution modals."
+    },
+    {
+      "id": "i035",
+      "title": "One calm context tray",
+      "eliminatedRound": 4,
+      "rank": 8,
+      "match": "r4-m02",
+      "reason": "A context tray combines several unrelated control groups."
+    },
+    {
+      "id": "i038",
+      "title": "Inherited context line",
+      "eliminatedRound": 4,
+      "rank": 8,
+      "match": "r4-m06",
+      "reason": "Shared inherited captions require proof every descendant matches."
+    },
+    {
+      "id": "i045",
+      "title": "Completion lane",
+      "eliminatedRound": 4,
+      "rank": 8,
+      "match": "r4-m03",
+      "reason": "Trailing inspection lane steals width from deep nested titles."
+    },
+    {
+      "id": "i052",
+      "title": "Persistent scope watermark",
+      "eliminatedRound": 4,
+      "rank": 8,
+      "match": "r4-m05",
+      "reason": "Scope watermark does not organize other optional facts."
+    },
+    {
+      "id": "i100",
+      "title": "Measured wrapping priority",
+      "eliminatedRound": 4,
+      "rank": 8,
+      "match": "r4-m01",
+      "reason": "Wrapping adapts geometry but can leave every field visible."
+    },
+    {
+      "id": "i001",
+      "title": "Named summary drawer",
+      "eliminatedRound": 3,
+      "rank": 14,
+      "match": "r3-m09",
+      "reason": "Summary drawer introduces focus handoff for simple fields."
+    },
+    {
+      "id": "i003",
+      "title": "Three disclosure shelves",
+      "eliminatedRound": 3,
+      "rank": 14,
+      "match": "r3-m04",
+      "reason": "Three shelves add competing disclosure labels at each nesting level."
+    },
+    {
+      "id": "i020",
+      "title": "Stable focus emphasis",
+      "eliminatedRound": 3,
+      "rank": 14,
+      "match": "r3-m12",
+      "reason": "Focus emphasis does not actually reduce repeated metadata."
+    },
+    {
+      "id": "i032",
+      "title": "Shape-and-text hierarchy",
+      "eliminatedRound": 3,
+      "rank": 14,
+      "match": "r3-m08",
+      "reason": "Shape plus text may still repeat progress in several places."
+    },
+    {
+      "id": "i050",
+      "title": "Period provenance captions",
+      "eliminatedRound": 3,
+      "rank": 14,
+      "match": "r3-m02",
+      "reason": "Provenance captions do not resolve repeated progress bars."
+    },
+    {
+      "id": "i058",
+      "title": "Depth-independent context rows",
+      "eliminatedRound": 3,
+      "rank": 14,
+      "match": "r3-m05",
+      "reason": "Context outside indentation can appear attached to the wrong sibling."
+    },
+    {
+      "id": "i059",
+      "title": "Outline with inline inspector",
+      "eliminatedRound": 3,
+      "rank": 14,
+      "match": "r3-m10",
+      "reason": "Inspector before every section pushes tasks farther down."
+    },
+    {
+      "id": "i062",
+      "title": "Origin ledger",
+      "eliminatedRound": 3,
+      "rank": 14,
+      "match": "r3-m07",
+      "reason": "Origin ledger increases reading load when many frequencies contribute."
+    },
+    {
+      "id": "i077",
+      "title": "Deadline action row",
+      "eliminatedRound": 3,
+      "rank": 14,
+      "match": "r3-m06",
+      "reason": "A separate deadline row remains vertically expensive."
+    },
+    {
+      "id": "i081",
+      "title": "One summary sentence",
+      "eliminatedRound": 3,
+      "rank": 14,
+      "match": "r3-m03",
+      "reason": "Deadline and estimate sentence is lengthy with mixed metadata."
+    },
+    {
+      "id": "i086",
+      "title": "Ledger with single material toolbar",
+      "eliminatedRound": 3,
+      "rank": 14,
+      "match": "r3-m01",
+      "reason": "Ledger totals compete with titles on small screens."
+    },
+    {
+      "id": "i091",
+      "title": "Reminder synopsis controls",
+      "eliminatedRound": 3,
+      "rank": 14,
+      "match": "r3-m11",
+      "reason": "Synopsis can become overloaded with contextual text."
+    },
+    {
+      "id": "i002",
+      "title": "Context sentence and fact ledger",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m01",
+      "reason": "A fact ledger plus Options can repeat scope information for every nested section."
+    },
+    {
+      "id": "i007",
+      "title": "Scope transaction popover",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m08",
+      "reason": "Transaction popover implies confirmation for a boolean inclusion setting."
+    },
+    {
+      "id": "i009",
+      "title": "Single task action lane",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m19",
+      "reason": "A nested task at 320px cannot accommodate completion, title, due exception and a trailing information lane without compressing text or adding repeated controls."
+    },
+    {
+      "id": "i010",
+      "title": "Period watermark heading",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m15",
+      "reason": "A current-month title with a rolled-over section can imply that the section completion belongs to the visible month unless its exception remains explicit."
+    },
+    {
+      "id": "i019",
+      "title": "Focusable side inspector",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m14",
+      "reason": "Opening an inspector beside a five-level list shrinks already constrained task rows; an unrelated selected object can remain displayed while the user acts elsewhere."
+    },
+    {
+      "id": "i024",
+      "title": "Sticky active-section context",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m25",
+      "reason": "A sticky active section can cover focused task controls at high zoom, especially when global navigation also remains fixed above it."
+    },
+    {
+      "id": "i034",
+      "title": "Caregiver scope confirmation sentence",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m17",
+      "reason": "Repeated global and local scope sentences can consume the entire initial viewport before any cleaning task appears on a 320px phone."
+    },
+    {
+      "id": "i037",
+      "title": "Section action shelf",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m18",
+      "reason": "A long list with several open section action shelves puts repeated controls before tasks and makes collapse look like a management command."
+    },
+    {
+      "id": "i039",
+      "title": "Two separate disclosures",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m06",
+      "reason": "Two 44px disclosures crowd a nested section's short header."
+    },
+    {
+      "id": "i040",
+      "title": "Household ledger",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m02",
+      "reason": "Quiet context columns still compress a long shared-house title."
+    },
+    {
+      "id": "i043",
+      "title": "Read and plan tabs",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m09",
+      "reason": "Plan tab conceals task context during repeated scope changes."
+    },
+    {
+      "id": "i051",
+      "title": "Maintenance inspector dock",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m05",
+      "reason": "Inspector subject may change while an editor is open."
+    },
+    {
+      "id": "i061",
+      "title": "Return-to-work checkpoint",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m22",
+      "reason": "A returning user's monthly list can accumulate a checkpoint, a period navigator and a Start confirmation sentence that repeat the same context three times."
+    },
+    {
+      "id": "i063",
+      "title": "Context before options",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m23",
+      "reason": "Context opens a read-only summary that then routes to controls; changing a simple scope switch requires inspection and a second navigation decision."
+    },
+    {
+      "id": "i066",
+      "title": "History margin notes",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m04",
+      "reason": "Margin notes create a second scan path for each nested section."
+    },
+    {
+      "id": "i067",
+      "title": "Historical evidence sheet",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m12",
+      "reason": "Tabs split history evidence across multiple invisible panels."
+    },
+    {
+      "id": "i072",
+      "title": "Duration emphasis without movement",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m24",
+      "reason": "Duration tiers can dominate a list containing an urgent unpaid bill with no duration, making a five-minute optional task seem more actionable."
+    },
+    {
+      "id": "i076",
+      "title": "Parallel contrast mode",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m13",
+      "reason": "A monthly list with three parallel tasks gains a mode selector before the user can identify the actual elapsed estimate; this adds another decision rather than reducing clutter."
+    },
+    {
+      "id": "i079",
+      "title": "Deadline exceptions shelf",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m21",
+      "reason": "A task due on the last day of a selected month may look redundant with month context despite its precise deadline being important for planning."
+    },
+    {
+      "id": "i082",
+      "title": "Flat inspector hierarchy",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m07",
+      "reason": "Deletion makes the single inspector reference a stale subject."
+    },
+    {
+      "id": "i083",
+      "title": "Unified glass context capsule",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m03",
+      "reason": "One capsule obscures whether changing period also changes inclusion."
+    },
+    {
+      "id": "i095",
+      "title": "Frequency map disclosure",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m16",
+      "reason": "A frequency map spanning twenty nested sections can become a second navigation hierarchy that users must search just to change one section's inclusion."
+    },
+    {
+      "id": "i096",
+      "title": "Scope typography tiers",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m10",
+      "reason": "Typography tiers require learning weight distinctions."
+    },
+    {
+      "id": "i097",
+      "title": "Single-column command stack",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m20",
+      "reason": "Opening several full-width command stacks in a monthly list places dozens of 44px rows between tasks, weakening comparison and completion scanning."
+    },
+    {
+      "id": "i099",
+      "title": "Mobile object sheets",
+      "eliminatedRound": 2,
+      "rank": 26,
+      "match": "r2-m11",
+      "reason": "Opening a focused editor from an object sheet can lose the original trigger."
+    },
+    {
+      "id": "i005",
+      "title": "Explicit planning mode",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m09",
+      "reason": "Returning in Ejecutar hides that accumulated scope remains enabled."
+    },
+    {
+      "id": "i006",
+      "title": "Two-column scope ledger",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m14",
+      "reason": "Propias/Incluidas duration columns imply additive elapsed time for parallel work."
+    },
+    {
+      "id": "i008",
+      "title": "Estimated-work spine",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m20",
+      "reason": "Workload spine hides scope in Summary and squeezes nested titles."
+    },
+    {
+      "id": "i011",
+      "title": "Details-on-demand row expansion",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m47",
+      "reason": "After opening six task Details regions, the list recreates the original metadata wall."
+    },
+    {
+      "id": "i012",
+      "title": "Persistent calm density preference",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m32",
+      "reason": "A user switches Compacta in one list then unexpectedly sees another list become compact after navigation."
+    },
+    {
+      "id": "i013",
+      "title": "Scoped action lists",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m17",
+      "reason": "Inspecting duration through Actions mixes facts with destructive commands."
+    },
+    {
+      "id": "i014",
+      "title": "Heading-first spoken outline",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m35",
+      "reason": "A screen reader announces the same long period and recurrence description on every task."
+    },
+    {
+      "id": "i015",
+      "title": "Definition-sheet information architecture",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m04",
+      "reason": "Three generic Info buttons conceal where accumulated routines can be changed."
+    },
+    {
+      "id": "i017",
+      "title": "Keyboard command toolbar",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m08",
+      "reason": "Comandos opened beside Cocina implies global inclusion changes Cocina alone."
+    },
+    {
+      "id": "i018",
+      "title": "Breadcrumb context rail",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m45",
+      "reason": "Clicking a breadcrumb period segment appears to navigate to a parent rather than open a selector."
+    },
+    {
+      "id": "i021",
+      "title": "Thumb-reachable context dock",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m11",
+      "reason": "The bottom dock collides with existing navigation and hides the last checkbox."
+    },
+    {
+      "id": "i022",
+      "title": "Date-first bottom sheet",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m05",
+      "reason": "Closing the date sheet leaves accumulated inclusion impossible to identify."
+    },
+    {
+      "id": "i023",
+      "title": "Touch-safe information gutters",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m01",
+      "reason": "Five nested levels and two 44px gutters leave a long title barely readable."
+    },
+    {
+      "id": "i025",
+      "title": "Single-column action stack",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m26",
+      "reason": "At 320px and 200% text, three separate 44px header rows push the first task below the fold."
+    },
+    {
+      "id": "i026",
+      "title": "Context paragraphs with labeled edits",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m02",
+      "reason": "Date, recurrence, price and related-list paragraphs become taller than task titles."
+    },
+    {
+      "id": "i028",
+      "title": "Typography-driven contextual scaling",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m19",
+      "reason": "Oversized titles and full sentences bury the list's selected period."
+    },
+    {
+      "id": "i029",
+      "title": "High-contrast command bands",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m46",
+      "reason": "Opaque command bands on six expanded sections become the strongest visual feature on the page."
+    },
+    {
+      "id": "i030",
+      "title": "Structured receipt layout",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m33",
+      "reason": "A nonshopping section's receipt subtotal looks like a monetary total despite representing active minutes."
+    },
+    {
+      "id": "i031",
+      "title": "Magnifiable information panel",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m41",
+      "reason": "Full-width edit buttons require much scrolling before a low-vision user finds section Options."
+    },
+    {
+      "id": "i041",
+      "title": "Start scope gate",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m16",
+      "reason": "Duration inspection requires opening Start, which looks like immediate launch."
+    },
+    {
+      "id": "i042",
+      "title": "Time accounting sentence",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m13",
+      "reason": "Active, parallel, inherited and period qualifiers create four mobile lines."
+    },
+    {
+      "id": "i046",
+      "title": "Week notebook",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m31",
+      "reason": "A notebook annotation looks like noninteractive prose, so the user never finds period navigation."
+    },
+    {
+      "id": "i047",
+      "title": "Unfolded cleaning checklist",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m28",
+      "reason": "A first-time cleaner sees every section collapsed and must open each before completing one reminder."
+    },
+    {
+      "id": "i048",
+      "title": "One material per hierarchy",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m27",
+      "reason": "On a patterned background, matte sections blend together and plain count links appear inert."
+    },
+    {
+      "id": "i049",
+      "title": "Maintenance action itinerary",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m42",
+      "reason": "A section with 40 tasks hides its Start footer below several screens."
+    },
+    {
+      "id": "i053",
+      "title": "Shopping receipt footer",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m03",
+      "reason": "A receipt beneath 100 tasks hides totals and active routine scope."
+    },
+    {
+      "id": "i054",
+      "title": "Dual context receipt",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m49",
+      "reason": "A routine list with no prices still renders Pending euros and a second receipt line."
+    },
+    {
+      "id": "i055",
+      "title": "Explicit field chooser",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m29",
+      "reason": "A user changing time-of-day must open Edit details, choose a field, then find the original cycling control."
+    },
+    {
+      "id": "i056",
+      "title": "Value-first typographic rows",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m10",
+      "reason": "A large page cost dominates a reminder list with one priced task."
+    },
+    {
+      "id": "i057",
+      "title": "Section breadcrumb actions",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m12",
+      "reason": "Five breadcrumb ancestors occupy three lines above every nested section."
+    },
+    {
+      "id": "i060",
+      "title": "Ancestor summary transfer",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m36",
+      "reason": "The highest ancestor shows 90 minutes while a child appears to own that total after its sibling collapses."
+    },
+    {
+      "id": "i064",
+      "title": "Current-context ribbon",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m07",
+      "reason": "Sticky ribbon plus navigation covers the first row at large text."
+    },
+    {
+      "id": "i065",
+      "title": "Historical action caption",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m24",
+      "reason": "Thirty repeated historical captions overwhelm a review task list."
+    },
+    {
+      "id": "i068",
+      "title": "Historical context guardrail",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m23",
+      "reason": "The historical masthead consumes phone height even for today's view."
+    },
+    {
+      "id": "i069",
+      "title": "Duration selection gutter",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m37",
+      "reason": "At 320px a 44px duration gutter beside deeply nested titles leaves only a few characters."
+    },
+    {
+      "id": "i070",
+      "title": "Estimate ledger strip",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m15",
+      "reason": "Two estimate columns conceal current inclusion until the selector opens."
+    },
+    {
+      "id": "i071",
+      "title": "One open time calculator",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m40",
+      "reason": "Opening task B's Time calculator closes task A's breakdown while keyboard focus remains inside A."
+    },
+    {
+      "id": "i073",
+      "title": "Parallel lane pair",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m44",
+      "reason": "The two time lanes suggest active 30 plus parallel 20 means 50 elapsed minutes."
+    },
+    {
+      "id": "i074",
+      "title": "Concurrency explanation rail",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m30",
+      "reason": "A list with no parallel tasks still shows a Parallel label and total at every section."
+    },
+    {
+      "id": "i075",
+      "title": "Parallel footnote drawer",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m48",
+      "reason": "A parallel-only task shows zero Active estimate and a footnote the user misses before Start."
+    },
+    {
+      "id": "i078",
+      "title": "Calendar sentence hierarchy",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m22",
+      "reason": "Calendar sentences repeat dates on every task while inclusion remains unclear."
+    },
+    {
+      "id": "i080",
+      "title": "Urgency-weighted caption line",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m34",
+      "reason": "A long deadline plus duration produces three caption lines on every routine task at 320px."
+    },
+    {
+      "id": "i085",
+      "title": "Dense action matrix",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m06",
+      "reason": "Mobile stacking produces date, estimate and Options controls on every nested row."
+    },
+    {
+      "id": "i087",
+      "title": "Expandable dense columns",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m21",
+      "reason": "Users disable recurrence columns, then hunt settings to restore them."
+    },
+    {
+      "id": "i088",
+      "title": "Baseline grid density",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m25",
+      "reason": "Five 44px metadata targets recreate multiple dense lines per task."
+    },
+    {
+      "id": "i089",
+      "title": "Visible commitment ribbon",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m43",
+      "reason": "Every recurring task repeats a commitment ribbon, restoring the routine-heavy wall of metadata."
+    },
+    {
+      "id": "i090",
+      "title": "Scope annotation margins",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m18",
+      "reason": "Left annotations plus nesting leave just a few title characters at 320px."
+    },
+    {
+      "id": "i092",
+      "title": "User-pinned context fields",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m50",
+      "reason": "A user pins duration globally and unintentionally reveals it on every shopping task in another list."
+    },
+    {
+      "id": "i093",
+      "title": "Recurrence route selectors",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m38",
+      "reason": "Every daily task repeats frequency beside Details, rebuilding the original routine-heavy clutter."
+    },
+    {
+      "id": "i094",
+      "title": "Recurrence inheritance sentence",
+      "eliminatedRound": 1,
+      "rank": 51,
+      "match": "r1-m39",
+      "reason": "A section says Weekly while one custom-cycle task is incorrectly treated as inheriting Weekly."
+    }
+  ]
+}

@@ -1,0 +1,1256 @@
+{
+  "round": 1,
+  "bye": null,
+  "matches": [
+    {
+      "match": "r1-m01",
+      "a": {
+        "id": "i023",
+        "title": "Touch-safe information gutters",
+        "mechanism": "Adversarially prevent one-handed accidental completion: move every task metadata edit behind a separate 44px right information gutter; leave left completion isolated. Headers use matching wide summary gutters and explicit section menus.",
+        "visible": "Completion and title lanes; due exception; selected period and scope line.",
+        "disclosed": "Information gutter reveals full metadata; summary gutter opens estimates/status; separate section menus preserve inclusion and configuration.",
+        "access": "44px nonoverlapping targets, labels and focus rings; no swipe/long-press-only route.",
+        "benefit": "Keeps dense inline values from intercepting broad thumb taps.",
+        "risk": "Gutters reduce title width in nested tasks.",
+        "verification": "Test deep nesting at 320px, touch event propagation, metadata editing and every existing long-press alternative."
+      },
+      "b": {
+        "id": "i027",
+        "title": "Native details groups",
+        "mechanism": "From first principles for large-text users, organize page, section and task secondary content using native details/summary groups with descriptive names. Keep date range and completion outside disclosures.",
+        "visible": "Titles, selected period, completion and labelled summaries.",
+        "disclosed": "Opened groups retain scope, duration, diagnostics and metadata editors; menus retain their current objects and callbacks.",
+        "access": "44px native summary targets, full keyboard semantics, wrapping labels and no animation required.",
+        "benefit": "Uses predictable browser disclosure behavior with resilient text reflow.",
+        "risk": "Virtualized list measurement must account for open details.",
+        "verification": "Open nested groups at zoom, verify focus and heights, and test section collapse independently of metadata disclosure."
+      }
+    },
+    {
+      "match": "r1-m02",
+      "a": {
+        "id": "i026",
+        "title": "Context paragraphs with labeled edits",
+        "mechanism": "Adversarially reject large-text truncation: show selected period and accumulated scope as wrapping paragraphs, then section name and pending statement. Task metadata becomes a concise text paragraph with a separate Edit details control.",
+        "visible": "Complete context text and task titles; completion remains direct.",
+        "disclosed": "Edit details opens existing property actions, links and breakdowns; page/section options expose remaining commands.",
+        "access": "44px edit routes, no fixed-height text containers, full accessible text and visible focus.",
+        "benefit": "Retains meaningful context without forcing badge-sized typography.",
+        "risk": "Paragraphs can dominate sparse lists.",
+        "verification": "Test long localized date ranges, all accumulated states, 200% zoom, shopping cost and related-list links."
+      },
+      "b": {
+        "id": "i010",
+        "title": "Period watermark heading",
+        "mechanism": "Adversarially prevent a distracted user acting in the wrong period: give the selected date range a persistent textual heading above all tasks. Page metrics become secondary; sections show only context differing from that heading.",
+        "visible": "Prominent exact period, list title, scope and completion.",
+        "disclosed": "A Periodo button reveals the existing navigator; summary retains status/estimates; task details retains all properties and section menus remain visible.",
+        "access": "44px period trigger, accessible date range, headings in order and no low-contrast decorative watermark.",
+        "benefit": "Makes temporal orientation stronger than ornamental badges.",
+        "risk": "Persistent date text consumes header height.",
+        "verification": "Navigate to past weeks/months and confirm status, section context and task completion all use the same reference date."
+      }
+    },
+    {
+      "match": "r1-m03",
+      "a": {
+        "id": "i050",
+        "title": "Period provenance captions",
+        "mechanism": "The planner inverts context redundancy by giving each section a provenance caption: selected month plus included shorter frequencies. Tasks omit repeated frequency badges only when matching; differing frequency remains written out.",
+        "visible": "Header period, section provenance, counts, task completion and mismatching dates/frequency.",
+        "disclosed": "Provenance button opens navigator, scope settings and diagnostic; task Details exposes full metadata including hidden matches; Options remains available. Preserve all existing data and callback semantics.",
+        "access": "44px caption target, full accessible context and text-based distinctions.",
+        "benefit": "Shows where accumulated maintenance work comes from.",
+        "risk": "Repeated provenance captions can be lengthy.",
+        "verification": "Verify own/accumulated totals, mixed-frequency sections, custom cycles, reference dates and mobile wrapping."
+      },
+      "b": {
+        "id": "i053",
+        "title": "Shopping receipt footer",
+        "mechanism": "The budget planner inverts action placement using a receipt footer: page and section costs live below their scoped content rather than beside titles; task row preserves completion and a compact price-edit button where meaningful.",
+        "visible": "Titles, completion, pending price, selected-period context where applicable and footer trigger.",
+        "disclosed": "Receipt expands pending/paid/original totals and quantity/subtask splits; Details retains other metadata; Options retains management and accumulated controls for routine contexts. Preserve all existing data and callback semantics.",
+        "access": "44px price/footer controls, tabular numerals and semantic cost descriptions.",
+        "benefit": "Purchasing actions and subtotals align with their scope.",
+        "risk": "Users may overlook a footer below a long list.",
+        "verification": "Verify shopping duration suppression, quantity multiplication, paid totals, task editors and mobile layout."
+      }
+    },
+    {
+      "match": "r1-m04",
+      "a": {
+        "id": "i015",
+        "title": "Definition-sheet information architecture",
+        "mechanism": "Invert inaccessible compactness by using a single property sheet pattern for each scope. Page, section and task Info opens a definition list; each value has an adjacent explicit Editar action where editing already exists.",
+        "visible": "Title, period, completion and small but 44px Info controls.",
+        "disclosed": "Sheets retain scope toggle, totals, diagnostics, dates, frequency, estimates, prices and special metadata without implicit clickable text.",
+        "access": "Labelled dialog and definition list, focus trap/return, 44px actions and readable text at zoom.",
+        "benefit": "Turns facts and actions into predictable pairs.",
+        "risk": "Repeated Editar labels need contextual accessible names.",
+        "verification": "Read each field/value/action sequence; verify own/subtask/parallel values, related-list navigation and historical status."
+      },
+      "b": {
+        "id": "i095",
+        "title": "Frequency map disclosure",
+        "mechanism": "For mixed recurrence users, inversion avoids repeating four frequency badges across summary levels. Header shows a labeled Frequency map button plus active scope; opening map displays existing frequency/count breakdown; sections and tasks use neutral captions.",
+        "visible": "Period, active inclusion scope, section title/count, task title/check and recurrence exceptions.",
+        "disclosed": "Map provides page/section composition and inclusion control; task Details retains original frequency picker and every metadata action; diagnostic and menus remain dedicated.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "One map gives composition a meaningful home.",
+        "risk": "Map can become too large for small mobile screens.",
+        "verification": "Check daily/weekly/monthly/yearly contributions, collapsed sections and map focus restoration."
+      }
+    },
+    {
+      "match": "r1-m05",
+      "a": {
+        "id": "i022",
+        "title": "Date-first bottom sheet",
+        "mechanism": "For one-handed context-first interaction under narrow width, make the displayed date range a 44px button opening a bottom sheet with the existing navigator and current routine scope above estimates. Sections show abbreviated reference context.",
+        "visible": "Date range, title, count and task completion.",
+        "disclosed": "Sheet contains inclusion, diagnostics and duration links; task details use a similar bottom sheet while section menus stay local.",
+        "access": "44px sheet rows, labelled modal, focus return, safe-area scrolling and opaque fallback to a single glass toolbar.",
+        "benefit": "Makes temporal context inspectable with broad touch targets.",
+        "risk": "Combining period and scope in one sheet may be dense.",
+        "verification": "Switch dates then scope, confirm independent callbacks, test history totals and sheet scrolling at 375px."
+      },
+      "b": {
+        "id": "i096",
+        "title": "Scope typography tiers",
+        "mechanism": "For mixed lists under constraints, use typographic tiers to distinguish own and included work: header scope summary, section own/included caption, task recurrence text; retain one neutral navigation glass layer and no per-frequency backgrounds.",
+        "visible": "Period, textual own/included state, counts and task recurrence where relevant.",
+        "disclosed": "Summary disclosure reveals original colored breakdown without changing calculations; Details preserves metadata editors, links and time-of-day actions; all options/diagnostic/inclusion remain available.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Visually separates origins without turning every frequency into a competing chip.",
+        "risk": "Weight alone cannot communicate inclusion to screen readers.",
+        "verification": "Pair weights with words; verify own/included counts, contrast and nested task durations."
+      }
+    },
+    {
+      "match": "r1-m06",
+      "a": {
+        "id": "i085",
+        "title": "Dense action matrix",
+        "mechanism": "For dense-interface users, inversion avoids smaller hit targets as a route to compactness. Use a desktop matrix with completion/title, date, estimate and Options columns; header totals and section subtotal rows align to those columns.",
+        "visible": "Structured date/time values, titles/checks, scope and count.",
+        "disclosed": "Metadata Details row expands within matrix; mobile turns columns into stacked 44px controls; page/section menus retain all commands, diagnostic, links and recurrence editing.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Alignment provides density without clusters of colored chips.",
+        "risk": "Table-like layout can reduce flexibility for rich links/subtasks.",
+        "verification": "Test nested tasks, long names, quantities and mobile matrix-to-stack reading order."
+      },
+      "b": {
+        "id": "i058",
+        "title": "Depth-independent context rows",
+        "mechanism": "An adversarial nested context design stops indentation from consuming metadata width. Section titles retain a small depth cue, while period and scope appear in a full-width context row below; tasks likewise place Details outside indentation.",
+        "visible": "Section hierarchy cue, full-width context text, counts, titles and completion.",
+        "disclosed": "Context row exposes period, duration and inclusion; Options opens existing section menu; task Details retains every editor and navigation link. Preserve all existing data and callback semantics.",
+        "access": "44px independent targets; heading order and full path accessible name.",
+        "benefit": "Metadata remains readable even at deep nesting.",
+        "risk": "Reduced indentation can weaken parent-child recognition.",
+        "verification": "Verify five-level nesting, screen-reader path, drag affordances, mixed periods and mobile widths."
+      }
+    },
+    {
+      "match": "r1-m07",
+      "a": {
+        "id": "i079",
+        "title": "Deadline exceptions shelf",
+        "mechanism": "For urgency, inversion removes repetitive normal dates but forbids hiding exceptions. Header provides shared reference date; each section repeats only divergent/rolled-over context; tasks show due dates whenever different or overdue.",
+        "visible": "Shared period, explicit scope, exception deadlines, title and completion.",
+        "disclosed": "A Dates disclosure lists every omitted date and original date editor; task Details keeps remaining metadata; estimate, diagnostic, inclusion and options controls remain discoverable.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Eliminates repeated date badges while retaining urgent exceptions.",
+        "risk": "Incorrect equivalence rules could conceal a meaningful date.",
+        "verification": "Verify reference-date comparisons, weekly/monthly contexts and date restoration in disclosures."
+      },
+      "b": {
+        "id": "i064",
+        "title": "Current-context ribbon",
+        "mechanism": "Constraint-first hierarchy gives the selected period and routine scope one narrow glass ribbon below navigation, while all task and section data stays matte. Ribbon persists during scrolling; section scope deviations remain inline textual exceptions.",
+        "visible": "Persistent period/scope ribbon, titles, counts, completion and deviations.",
+        "disclosed": "Ribbon opens navigator, inclusion and diagnostic; section Details opens duration and local scope; task Details exposes full metadata; Options retains commands. Preserve all existing data and callback semantics.",
+        "access": "44px ribbon controls, contrast fallback, reduced motion and focus rings.",
+        "benefit": "Temporal context remains present without repeating large header blocks.",
+        "risk": "Persistent ribbon reduces available mobile height.",
+        "verification": "Verify sticky overlaps, historical context, local/global scope, completion, all menus and 320px."
+      }
+    },
+    {
+      "match": "r1-m08",
+      "a": {
+        "id": "i037",
+        "title": "Section action shelf",
+        "mechanism": "The household organizer inverts toolbar clutter: place section actions in a disclosed shelf directly below the section title rather than competing beside its count. Header retains global navigation and list options; tasks retain completion plus a named metadata opener.",
+        "visible": "Section title, total count, collapse button and Actions trigger; task title and meaningful date.",
+        "disclosed": "Shelf contains existing section menu route, include-frequency control, duration breakdown and start callback; global options and task metadata remain available. Preserve all existing data and callback semantics.",
+        "access": "44px shelf controls; expansion order follows document order; no hover dependency.",
+        "benefit": "Scope of every action becomes spatially explicit.",
+        "risk": "Open shelves can make long lists taller.",
+        "verification": "Check sibling actions never affect another section, drag behavior, accumulated scope and keyboard collapse."
+      },
+      "b": {
+        "id": "i017",
+        "title": "Keyboard command toolbar",
+        "mechanism": "Derive an action-first keyboard interface with a visible page Comandos button opening a grouped toolbar of existing commands. Sections and tasks keep local action triggers; main content emphasizes completion and headings.",
+        "visible": "Title, selected period, completion and visible Comandos/Detalles routes.",
+        "disclosed": "Toolbar groups period, scope, sort and configuration; local panels hold metadata and section operations, with no invented backend actions.",
+        "access": "44px triggers, logical Tab order and native controls; optional shortcut always has visible route; Escape returns focus.",
+        "benefit": "Shortens searching among scattered controls for a keyboard-only user.",
+        "risk": "A global toolbar can obscure which section a command affects.",
+        "verification": "Navigate solely with Tab/Enter/Escape; assert explicit page/section names and completion unaffected by toolbar focus."
+      }
+    },
+    {
+      "match": "r1-m09",
+      "a": {
+        "id": "i005",
+        "title": "Explicit planning mode",
+        "mechanism": "Invert the experienced planner's fear of losing controls with a page-level Planificar toggle. Default Ejecutar shows clean titles and completion; Planificar reveals header scope, estimates, section configuration and full task metadata simultaneously.",
+        "visible": "Selected period and Ejecutar/Planificar state; task title and completion.",
+        "disclosed": "Planning mode exposes existing controls inline with their original callback semantics; list and section options remain reachable in both modes.",
+        "access": "44px native toggle, state announcement, stable DOM identifiers and focus retention.",
+        "benefit": "Offers a coherent intentional switch between doing and arranging routines.",
+        "risk": "A hidden planning state can confuse a returning user.",
+        "verification": "Reload each mode, test every menu and metadata edit, and compare 320px execution layout with full desktop planning."
+      },
+      "b": {
+        "id": "i076",
+        "title": "Parallel contrast mode",
+        "mechanism": "For parallel planning, inversion avoids assuming every list needs concurrency emphasis. Offer a visible Estimates view selector: ordinary list captions or parallel contrast, changing typography and alignment only, never task membership.",
+        "visible": "Current estimate view, period and scope; contrast view displays both effort types.",
+        "disclosed": "Both views retain per-task Details, section options/inclusion and header diagnostics/breakdowns; no duration setting changes merely from switching views.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Lets complex concurrency be inspected without making every list equally dense.",
+        "risk": "An extra presentation selector adds one control.",
+        "verification": "Switch views with open disclosures, complete a task, edit duration and verify all totals/data remain identical."
+      }
+    },
+    {
+      "match": "r1-m10",
+      "a": {
+        "id": "i044",
+        "title": "Steady metadata rail",
+        "mechanism": "A worker inverts badge movement by reserving one fixed metadata rail under each task title. It contains a single context summary button rather than variable chips; expanding it inserts details below. Headers use the same fixed summary rail; sections preserve collapse and Options.",
+        "visible": "Task title, completion, chosen-period header and one wrapping summary.",
+        "disclosed": "Rail opens all metadata with direct duration/price/date/frequency editing and time-of-day cycling; section/page rails expose breakdowns and scope controls. Preserve all existing data and callback semantics.",
+        "access": "44px rail opener, bounded transitions, no animation under reduced motion.",
+        "benefit": "Stable control positions support fast scanning as data changes.",
+        "risk": "Reserved rail space can waste room on sparse tasks.",
+        "verification": "Verify empty metadata, changing completion/counts, subtask totals, menus and virtualized row sizing."
+      },
+      "b": {
+        "id": "i056",
+        "title": "Value-first typographic rows",
+        "mechanism": "A first-principles budget hierarchy makes each monetary total a quiet aligned numeral, removing individual badge containers. Page total is largest; section subtotal medium; task amount smallest. Temporal/routine context remains plain captions.",
+        "visible": "Titles, aligned cost numbers, completion, selected period and scope caption.",
+        "disclosed": "Numeric buttons open complete cost splits; Details retains all task metadata; summary opens time/routine panels; Options keeps commands and inclusion controls. Preserve all existing data and callback semantics.",
+        "access": "44px numeric hit areas, tabular digits, labels and visible focus.",
+        "benefit": "Clear relative scale communicates scope without decorative chips.",
+        "risk": "Strong cost hierarchy can dominate nonshopping tasks.",
+        "verification": "Verify conditional shopping context, paid amounts, duration preservation, long titles and narrow stacking."
+      }
+    },
+    {
+      "match": "r1-m11",
+      "a": {
+        "id": "i099",
+        "title": "Mobile object sheets",
+        "mechanism": "For narrow screens under constraints, use one explicit Details button per scope to open an object sheet. Header retains period and active inclusion; section retains name/count; task retains title/check and urgent date; glass belongs only to sheet navigation.",
+        "visible": "Essential context and named Details/Options affordances.",
+        "disclosed": "Sheets contain every original datum/action, grouped as Context, Estimates and Options; period navigator, inclusion toggle, diagnostic, metadata editors, links and time-of-day cycling retain callbacks.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Full-width sheet rows solve 44px target and metadata overflow together.",
+        "risk": "Nested existing editors need reliable focus handoff.",
+        "verification": "Test opening editor from sheet, cancel/return focus, historic period completion and light/dark contrast."
+      },
+      "b": {
+        "id": "i021",
+        "title": "Thumb-reachable context dock",
+        "mechanism": "Invert unreachable upper controls for one-handed use: add a compact bottom Contexto dock housing period and page summary; top page retains identity; sections keep local options and tasks keep completion/details.",
+        "visible": "List identity, current period mirrored in dock and task completion.",
+        "disclosed": "Dock opens period navigator and scope/estimate/status sheet; section and task details retain all remaining operations.",
+        "access": "44px dock buttons, safe-area padding, semantic labels and keyboard access; content bottom padding prevents occlusion.",
+        "benefit": "Moves context inspection into thumb reach without adding task badges.",
+        "risk": "Dock competes with existing bottom navigation.",
+        "verification": "Check overlap with app floating bars, keyboard, 320px viewport and last-row completion; ensure one canonical period state."
+      }
+    },
+    {
+      "match": "r1-m12",
+      "a": {
+        "id": "i057",
+        "title": "Section breadcrumb actions",
+        "mechanism": "For deeply nested sections, constrained action hierarchy places current section path in a compact breadcrumb action strip. Page retains global Options; each section has one Actions button whose panel starts with its full path; task completion stays local.",
+        "visible": "Page period/scope, section name/count, breadcrumb context and completion.",
+        "disclosed": "Actions panel preserves section menu, inclusion, duration and start; task Details includes parent path plus complete original metadata. Preserve all existing data and callback semantics.",
+        "access": "44px breadcrumb/action targets, wrapping paths and semantic navigation only where supported.",
+        "benefit": "Prevents acting on the wrong nested section.",
+        "risk": "Breadcrumb paths can occupy several lines.",
+        "verification": "Verify deeply nested scope IDs, drag/nesting, callback target, historical dates and 320px overflow."
+      },
+      "b": {
+        "id": "i072",
+        "title": "Duration emphasis without movement",
+        "mechanism": "For duration decisions, first principles makes estimate legibility the hierarchy variable rather than rearranging tasks. Use larger tabular duration text in the header, medium section totals and small aligned task estimates; all other facts use neutral captions.",
+        "visible": "Estimates, task titles/checks, selected dates and explicit accumulated scope.",
+        "disclosed": "Each estimate opens DurationInfoCard; task Details retains full metadata editing and links; section Options and page Options retain all existing commands.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Emphasizes time while preserving ordering and spatial memory.",
+        "risk": "Strong estimate hierarchy may overshadow deadlines.",
+        "verification": "Verify overdue captions remain legible, unknown estimates are not zero and completion callbacks are unchanged."
+      }
+    },
+    {
+      "match": "r1-m13",
+      "a": {
+        "id": "i062",
+        "title": "Origin ledger",
+        "mechanism": "First-principles return context uses a plain origin ledger under the header: own routines and included shorter frequencies as named rows with counts. Sections show one source summary; task metadata becomes a Details disclosure.",
+        "visible": "Selected period, ledger summary, titles, completion and exceptional due dates.",
+        "disclosed": "Ledger expansion shows original routine breakdown, duration and diagnostic; section Details exposes inclusion; task Details retains all editors; Options preserves menus. Preserve all existing data and callback semantics.",
+        "access": "44px ledger opener, text labels, semantic table/list and tabular counts.",
+        "benefit": "Accumulated work stops looking like unexplained arithmetic.",
+        "risk": "Source rows could be mistaken for overdue backlog.",
+        "verification": "Verify labels match actual frequency accumulation, historical referenceDate, all-done states and widths."
+      },
+      "b": {
+        "id": "i042",
+        "title": "Time accounting sentence",
+        "mechanism": "The worker's adversarial context design replaces compact unexplained numbers with one sentence: estimated active time plus parallel time, explicitly tied to the selected period and scope. Sections repeat only their own sentence; tasks show time through a sentence opener.",
+        "visible": "Title, chosen period, scope and 'Estimated 35 min' summary; task completion and deadlines.",
+        "disclosed": "Summary opens existing DurationInfoCard with own/subtask and accumulated splits; Details retain price, schedule, links; Options retain commands. Preserve all existing data and callback semantics.",
+        "access": "44px summary buttons, descriptive names, tabular figures and wrapping text.",
+        "benefit": "Prevents parallel or historical work from looking like current active time.",
+        "risk": "Long explanatory sentences can consume height.",
+        "verification": "Verify active/parallel distinction, completed totals, inherited duration, historical dates and 320px."
+      }
+    },
+    {
+      "match": "r1-m14",
+      "a": {
+        "id": "i006",
+        "title": "Two-column scope ledger",
+        "mechanism": "For an experienced planner under preservation constraints, use one shared ledger under the page title: Propias and Incluidas rows rather than several badges. Sections follow the ledger rhythm; tasks align name and optional estimate in quiet columns.",
+        "visible": "Selected period, total pending and explicit scope state.",
+        "disclosed": "Ledger expansion reveals frequency contributions, completed figures and parallel estimates; task info opens other properties; existing menus remain intact.",
+        "access": "44px ledger disclosure, responsive stacked rows, tabular numbers and an opaque fallback to restrained toolbar glass.",
+        "benefit": "Makes accumulated mathematics auditable at a glance.",
+        "risk": "Columns can suggest additive elapsed time when some work is parallel.",
+        "verification": "Verify own/full duration totals, active versus parallel terminology, shopping totals and wrapping at 320px."
+      },
+      "b": {
+        "id": "i081",
+        "title": "One summary sentence",
+        "mechanism": "For minimal-interface users, first principles combines visible facts into readable prose: header names period and scope; section names count; task names deadline or estimate in one neutral sentence after its title.",
+        "visible": "Title/check, period, inclusion state and concise context sentence.",
+        "disclosed": "A labeled Details button per object reveals count composition, estimates and all original metadata actions; page and section Options preserve complete menus and diagnostics.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Removes badge boundaries while keeping meaningful context.",
+        "risk": "Sentence generation needs robust empty and mixed-data handling.",
+        "verification": "Check no estimates, custom recurrence, prices with quantity, task links and historical rollover."
+      }
+    },
+    {
+      "match": "r1-m15",
+      "a": {
+        "id": "i098",
+        "title": "Context-first mobile folio",
+        "mechanism": "For 320px browsing, inversion avoids making shrinking title text the answer. Give header a wrapping context caption before title; section uses a wrapping period caption before name; tasks put due-date exceptions above title in one column.",
+        "visible": "Context captions, titles/checks, inclusion state and count.",
+        "disclosed": "A full-width Details row opens existing metadata actions and breakdowns; Options and routine inclusion use separate controls rather than competing trailing icons; estimates/diagnostic remain obvious.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Readable context establishes meaning before dense titles.",
+        "risk": "More lines may delay the first task on initial load.",
+        "verification": "Test long list/section/task titles, historical dates, rollover and scrolling without stale captions."
+      },
+      "b": {
+        "id": "i070",
+        "title": "Estimate ledger strip",
+        "mechanism": "For duration planning under constraints, render a plain ledger underneath one restrained glass navigation toolbar. Header states active and parallel totals separately; section strips state their own subtotals; task captions follow the same two-column vocabulary.",
+        "visible": "Active estimate and parallel estimate, selected period, completion/title.",
+        "disclosed": "A disclosure at each ledger level reveals estimate sources and breakdown; labeled scope selector and Options keep accumulated routines and commands available.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Consistent units reduce interpretation effort across three levels.",
+        "risk": "Two columns may require stacked labels on narrow screens.",
+        "verification": "Check estimated versus explicit durations, parallel-only tasks, inherited estimates and long labels."
+      }
+    },
+    {
+      "match": "r1-m16",
+      "a": {
+        "id": "i041",
+        "title": "Start scope gate",
+        "mechanism": "For constrained work time, one glass Start button opens a compact scope gate showing existing duration and included routines before calling the unchanged sequence callback. Headers stop duplicating duration beside unrelated controls; section Start uses the same scoped gate; task completion stays immediate.",
+        "visible": "Title, selected date, current scope and Start; task title, completion and deadline.",
+        "disclosed": "Gate contains duration breakdown, accumulated toggle and Start confirmation; Options and task Details retain remaining editors and commands. Preserve all existing data and callback semantics.",
+        "access": "44px gate actions, dialog focus trap and restored trigger; reduced-motion opening.",
+        "benefit": "Work effort becomes visible exactly before starting.",
+        "risk": "Adds one step to sequence launch.",
+        "verification": "Verify Start uses current scope, disabling rules, estimates, all menus and task completion."
+      },
+      "b": {
+        "id": "i091",
+        "title": "Reminder synopsis controls",
+        "mechanism": "For visible reminders, first principles treats a short synopsis as both context and disclosure trigger. Header synopsis names period/scope; section synopsis names count and inclusion; task synopsis names date/recurrence, with separate completion.",
+        "visible": "Synopsis buttons, titles/checks and clear Options controls.",
+        "disclosed": "Synopsis expands its complete semantic detail block: dates, estimates, frequency, source list, price and links with original actions; routine diagnostic and inclusion remain available.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "A visible reminder also provides a natural route to deeper information.",
+        "risk": "Overloading synopsis text can obscure that it is interactive.",
+        "verification": "Test chevron affordance, keyboard expansion, direct editors and completion remaining independent."
+      }
+    },
+    {
+      "match": "r1-m17",
+      "a": {
+        "id": "i100",
+        "title": "Measured wrapping priority",
+        "mechanism": "For 320px users, adversarially test extreme titles and labels rather than assuming one line fits. Implement container-width wrapping rules: header commands move below context, section counts move below title, task metadata becomes a labeled Details row before overflow occurs.",
+        "visible": "Title/check, selected period, scope, count and deadline exceptions stay visible.",
+        "disclosed": "Details retains full metadata action rows; header/section summary reveals estimates and breakdown; all options, diagnostics, inclusion and navigational links stay reachable.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Responsive layout follows content pressure without trimming essential context.",
+        "risk": "Threshold changes can cause distracting layout shifts.",
+        "verification": "Resize with open menus and keyboard focus; test 320px/375px, long labels, reduced motion and selector preservation."
+      },
+      "b": {
+        "id": "i013",
+        "title": "Scoped action lists",
+        "mechanism": "Adversarially assume a screen-reader user cannot infer icon scope: every page, section and task has an Actions button named with its object. Completion remains direct; shared action-list structure reduces visual chrome.",
+        "visible": "List title, period, task title and direct completion.",
+        "disclosed": "Action lists retain header controls, section operations and metadata editor shortcuts; inspectable facts appear as labelled values before related commands.",
+        "access": "44px named triggers; keyboard-operable lists; Escape and restored focus; no positive tabindex.",
+        "benefit": "Provides uniform access with explicit object scope in both visual and spoken interfaces.",
+        "risk": "Menus can mix factual inspection with mutation.",
+        "verification": "Read actions for two identically named sections/tasks; verify distinct accessible names, duration breakdown and unaltered callbacks."
+      }
+    },
+    {
+      "match": "r1-m18",
+      "a": {
+        "id": "i090",
+        "title": "Scope annotation margins",
+        "mechanism": "For reminder visibility, adversarially assume a user forgets an expanded scope. Place textual annotations in a left margin: page selected period, section included frequencies, task due-date exceptions; annotations align with titles rather than becoming badges.",
+        "visible": "Scope/period annotations, reminders, checks and counts.",
+        "disclosed": "A Details button at each level reveals duration, count composition and metadata editing; explicit Options keeps menus, diagnostic and navigation links discoverable.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Context stays attached to the item it governs.",
+        "risk": "A left margin reduces available width on phones.",
+        "verification": "At 320px transform margins into above-title annotations and test reading order and historical scope."
+      },
+      "b": {
+        "id": "i003",
+        "title": "Three disclosure shelves",
+        "mechanism": "Under narrow-width constraints, arrange independent shelves: page Resumen, section Alcance, task Propiedades. Each opens directly below its own row; never stack glass cards inside glass cards.",
+        "visible": "Period remains visible; completion and titles remain on plain content surfaces.",
+        "disclosed": "Page shelf exposes diagnostic and duration routes; section shelf exposes inclusion and breakdown; task shelf contains all metadata actions and links.",
+        "access": "44px expanded-state buttons with aria-controls; keyboard focus stays at trigger; reduced-motion shelf expansion.",
+        "benefit": "Keeps object scope local and makes hidden information predictable.",
+        "risk": "Expanded shelves can lengthen the virtualized list.",
+        "verification": "Measure shelf-height integration, 320px wrapping, inclusion toggles and completion without accidental shelf activation."
+      }
+    },
+    {
+      "match": "r1-m19",
+      "a": {
+        "id": "i028",
+        "title": "Typography-driven contextual scaling",
+        "mechanism": "Invert large-text crowding by letting typography, rather than pill size, set hierarchy: page title medium, period normal, section headings normal-weight, task title largest within the row; secondary metadata becomes a compact wrapping sentence.",
+        "visible": "Titles, completion, period and one contextual sentence.",
+        "disclosed": "Named More information routes reveal all metrics and edits; existing option menus remain 44px even when their visible glyph is small.",
+        "access": "Em-based spacing, no shrinking fonts, strong focus and minimum targets.",
+        "benefit": "Creates hierarchy without hiding meaning behind microscopic badges.",
+        "risk": "Task titles may visually outrank the page identity.",
+        "verification": "Compare large text on mixed task types, inherited frequency context and every menu at 320px and desktop."
+      },
+      "b": {
+        "id": "i059",
+        "title": "Outline with inline inspector",
+        "mechanism": "First-principles nested disclosure uses an outline: sections collapse normally, and a section Details control inserts one inline inspector before its tasks. Tasks each disclose their own metadata without creating cards within cards.",
+        "visible": "Outline headings/counts, selected period/scope, completion and Details.",
+        "disclosed": "Inline inspector includes estimates, accumulated control and section Options; task details contains all original metadata actions; global menu remains visible. Preserve all existing data and callback semantics.",
+        "access": "44px controls, aria-controls, unboxed separators and reduced-motion resizing.",
+        "benefit": "Supporting information stays beside the correct hierarchy node.",
+        "risk": "Many open inspectors could become visually dense.",
+        "verification": "Verify collapse/disclosure independence, virtualized sizes, all actions, referenceDate and 320px."
+      }
+    },
+    {
+      "match": "r1-m20",
+      "a": {
+        "id": "i034",
+        "title": "Caregiver scope confirmation sentence",
+        "mechanism": "Invert the risk of misreading accumulated duties: page and each routine section show a concise sentence stating selected period and whether shorter-frequency reminders are included. Task rows show only identity, completion and specific due context.",
+        "visible": "Exact period, explicit included/not-included wording and task completion.",
+        "disclosed": "A Cambiar alcance control opens existing scope choices plus counts; Resumen contains estimates/status; Detalles and scoped menus retain all actions.",
+        "access": "44px scope controls, full labels, radio state and focus return; tabular summary figures.",
+        "benefit": "Makes the boundary of today's visible work explicit for interrupted reading.",
+        "risk": "Repeated scope sentences can still feel dense.",
+        "verification": "Compare page/section overrides, full versus own totals, historical references and task date/frequency/duration actions at 375px."
+      },
+      "b": {
+        "id": "i008",
+        "title": "Estimated-work spine",
+        "mechanism": "Derive hierarchy from a planner's need to judge workload: put the active estimate on a consistent right-hand spine for page, section and task rows; count and period sit beneath headings, not beside every icon.",
+        "visible": "Titles, completion, reference period and one aligned workload estimate where meaningful.",
+        "disclosed": "Estimate disclosure retains own/subtask/parallel breakdown; page summary holds scope and status; task details holds other editable properties and links.",
+        "access": "44px estimate controls; stack spine below names on mobile; tabular figures and visible focus.",
+        "benefit": "Makes workload comparable across levels without many competing badges.",
+        "risk": "A right column can squeeze long titles.",
+        "verification": "Test long titles at 320px, zero duration, shopping exclusion and inherited/subtask estimates without changing calculation logic."
+      }
+    },
+    {
+      "match": "r1-m21",
+      "a": {
+        "id": "i087",
+        "title": "Expandable dense columns",
+        "mechanism": "For dense users, adversarially avoid a collapsed column silently losing data. Provide visible Columns disclosure with checked labels for date, duration, recurrence, price and time of day; only presentation changes.",
+        "visible": "Chosen columns, persistent title/check and Details fallback; header period/scope.",
+        "disclosed": "Unshown fields remain in task Details; header and section Summary retain all totals and breakdown; Options/inclusion/diagnostic routes are invariant across column configurations.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Explicit column choice makes compactness reviewable.",
+        "risk": "Additional presentation settings increase maintenance and cognitive load.",
+        "verification": "Toggle every column, navigate lists, verify hidden fields are editable and full metadata survives."
+      },
+      "b": {
+        "id": "i016",
+        "title": "Semantic one-line status replacement",
+        "mechanism": "Under screen-reader and glass constraints, replace progress bar plus percent plus headline with one status sentence button in CycleRoutineStatusCard. Page and sections adopt the same count-first sentence; tasks use plain metadata text.",
+        "visible": "Selected period, count sentence, completion and relevant due text.",
+        "disclosed": "Status sentence opens existing diagnostic; secondary disclosures retain duration, scope and task editing; options remain separately scoped.",
+        "access": "44px status control with complete accessible text, restrained glass only on navigation, polite updates without duplicate announcements.",
+        "benefit": "Removes redundant progress signals while keeping spoken information complete.",
+        "risk": "A sentence may wrap differently as counts change.",
+        "verification": "Test all_done, own-done/accumulated-pending, zero-goal and historical states; confirm diagnostic selectors and duration routes survive."
+      }
+    },
+    {
+      "match": "r1-m22",
+      "a": {
+        "id": "i038",
+        "title": "Inherited context line",
+        "mechanism": "For shared-house context-first constraints, print selected period and included frequencies once above each contiguous section block. Task rows display only metadata that differs from that line. Page header provides source context; section headers show inheritance exceptions and a context button.",
+        "visible": "Period line, scope phrase, counts, task completion and differing deadlines.",
+        "disclosed": "Context button exposes period navigation, include controls and duration; task Details always expose complete original metadata; Options retain all menus. Preserve all existing data and callback semantics.",
+        "access": "44px named context buttons; task accessible descriptions include inherited context.",
+        "benefit": "Removes repeated information while making the source legible.",
+        "risk": "Inherited context could be mistaken for a task's own setting.",
+        "verification": "Verify differing frequencies, historical dates, same-period tasks, metadata editors and narrow wrapping."
+      },
+      "b": {
+        "id": "i078",
+        "title": "Calendar sentence hierarchy",
+        "mechanism": "For urgent-deadline work, first principles gives each scope one calendar sentence: page reference range, section period statement, task due-date statement. Use one accent only on overdue dates, with flat typography elsewhere.",
+        "visible": "Reference range, section rollover explanation, task deadline/title/check.",
+        "disclosed": "Time estimate and routine breakdown disclosures sit after calendar sentences; Details preserves frequency, price, time of day and links; Options remains labeled at each applicable scope.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Makes dates the first readable contextual signal.",
+        "risk": "Date-heavy views may demote effort estimates too much.",
+        "verification": "Test no due date, today, tomorrow, overdue, historical dates and editing without altering scope."
+      }
+    },
+    {
+      "match": "r1-m23",
+      "a": {
+        "id": "i004",
+        "title": "Exception-led metadata with stable details",
+        "mechanism": "Adversarially test a beginner missing important information: show the selected period and scope at page level, section counts, and a task's due date when it differs from surrounding context; keep a stable labelled details route everywhere.",
+        "visible": "Completion, title, exceptional dates and active-filter context.",
+        "disclosed": "All nonexception metadata remains in Detalles; page/section options and summary preserve every statistic and edit action.",
+        "access": "44px details buttons; full date accessible name; visible focus; never rely on color to denote an exception.",
+        "benefit": "Reduces repeated signals while keeping unusual obligations visible.",
+        "risk": "A mistaken context comparison could suppress a needed date.",
+        "verification": "Test mixed dates, overdue tasks, inherited frequencies and history; verify details always reveals complete values."
+      },
+      "b": {
+        "id": "i068",
+        "title": "Historical context guardrail",
+        "mechanism": "For historical review, adversarially assume a completed period looks like today. Keep a static reference-date masthead; reduce repetition only below it. Section rollover labels remain explicit; task date labels resolve against the displayed reference period.",
+        "visible": "Date range, scope state, section name/count, task title and completion state.",
+        "disclosed": "A labeled Review controls panel contains period navigator, diagnostic history, estimates and view options; each task has Details with original metadata actions.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Prevents quiet styling from concealing which period completion affects.",
+        "risk": "Prominent date can consume header height.",
+        "verification": "Exercise historical completion and skip, rollover sections, date editing and return to current period."
+      }
+    },
+    {
+      "match": "r1-m24",
+      "a": {
+        "id": "i065",
+        "title": "Historical action caption",
+        "mechanism": "For history review, first-principles action hierarchy places the selected historical period immediately above completion and restoration controls as a caption. Page and section action labels include their actual scope; supporting totals move behind Details.",
+        "visible": "Historical date caption, task titles, completion/restoration and scope text.",
+        "disclosed": "Details reveals duration, price, routine diagnostics and all metadata editors; Options preserves commands, accumulated settings and existing exports where present. Preserve all existing data and callback semantics.",
+        "access": "44px actions, explicit accessible dates, visible focus and unchanged callbacks.",
+        "benefit": "Actions stay understandable during review of past work.",
+        "risk": "Repeated date captions may feel heavy.",
+        "verification": "Verify historical referenceDate propagation, completed restoration, scope toggles, exports and narrow rows."
+      },
+      "b": {
+        "id": "i020",
+        "title": "Stable focus emphasis",
+        "mechanism": "Adversarially assume visually quiet controls become undiscoverable to keyboard users: maintain all essential routes in fixed positions, but emphasize the containing page/section/task row on focus-within; never reveal access exclusively on focus.",
+        "visible": "Stable completion, title, period and low-chrome options/detail triggers.",
+        "disclosed": "Expanded summaries expose dense facts; focused row gains contrast and descriptive hint while metadata actions remain accessible through details.",
+        "access": "44px routes, clear 2px focus outline, no layout shifts, no hover-only commands.",
+        "benefit": "Helps users locate keyboard position in a restrained visual hierarchy.",
+        "risk": "Overemphasis could turn every tab stop into visual noise.",
+        "verification": "Tab through nested tasks and menus; compare unfocused/focused screenshots and ensure controls remain visible on touch."
+      }
+    },
+    {
+      "match": "r1-m25",
+      "a": {
+        "id": "i088",
+        "title": "Baseline grid density",
+        "mechanism": "For dense users, first principles derives compactness from shared baselines and spacing, not feature hiding. Header, section and task metadata use the same caption baseline with textual separators; visually grouped controls keep separate hit areas.",
+        "visible": "All currently relevant date/time/recurrence/price facts, scope, counts and task checks.",
+        "disclosed": "Only explanatory breakdowns and menus disclose; date/frequency/duration/price actions remain direct, with diagnostic and inclusion plainly reachable.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Retains scan breadth while reducing inconsistent badge shapes.",
+        "risk": "44px targets may make the caption row taller than expected.",
+        "verification": "Inspect hit-area overlap, dynamic numbers, price quantity, parallel time and long-label wrapping."
+      },
+      "b": {
+        "id": "i097",
+        "title": "Single-column command stack",
+        "mechanism": "For a 320px user, first principles treats width as scarce and vertical space as available. Header title, period/scope and command row stack; section title/count precede its control row; each task keeps checkbox/title above Details.",
+        "visible": "Task title/check, explicit period/scope, section count and named commands.",
+        "disclosed": "Details unfolds metadata as full-width 44px action rows; summary/diagnostic, inclusion and original page/section options use the same stack, retaining rich links.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "No horizontal competition or tiny tappable metadata.",
+        "risk": "Vertical height increases in expanded states.",
+        "verification": "Inspect 320px/375px long Spanish labels, zoom, options reachability and completion targets."
+      }
+    },
+    {
+      "match": "r1-m26",
+      "a": {
+        "id": "i025",
+        "title": "Single-column action stack",
+        "mechanism": "Constrain large-text layouts to one column: page identity and period occupy separate rows; section heading precedes a labelled summary disclosure; tasks place completion/title above one Details control instead of horizontal badge clusters.",
+        "visible": "Readable titles, completion, exact period and minimal scoped controls.",
+        "disclosed": "Disclosure stacks reveal all metrics and metadata as wrapping rows; existing options remain named entries.",
+        "access": "44px minimum heights, unrestricted line wrapping, semantic buttons and reduced motion; one shared toolbar glass.",
+        "benefit": "Protects text size without horizontal overflow or tiny symbols.",
+        "risk": "Rows become taller and fewer tasks fit on screen.",
+        "verification": "At 200% text size and 320px, verify every value/action fits, long section names and task completion remain usable."
+      },
+      "b": {
+        "id": "i001",
+        "title": "Named summary drawer",
+        "mechanism": "For a first-time user, build from the action of completing a reminder: MainPageHeader presents identity and one Resumen disclosure; sections show their own heading and options; TaskCard retains completion, title and Detalles.",
+        "visible": "Title, selected period, task completion and explicit Resumen/Detalles labels.",
+        "disclosed": "A summary drawer groups accumulated scope, estimates and diagnostics; task details retain each metadata edit; existing list and section menus stay separately named.",
+        "access": "Native 44px buttons, labelled dialog, focus return and visible focus.",
+        "benefit": "Makes the next action obvious without requiring icon literacy.",
+        "risk": "A drawer may add a step to planning.",
+        "verification": "Complete a task; open scope and duration breakdown; change a historical period and edit every metadata field at 320px."
+      }
+    },
+    {
+      "match": "r1-m27",
+      "a": {
+        "id": "i045",
+        "title": "Completion lane",
+        "mechanism": "The weekly cleaner's adversarial action design gives completion a dedicated leading lane, with all inspection controls trailing. Header and section Start remain labeled; duration and accumulated details enter a separate inspection drawer.",
+        "visible": "Leading completion targets, titles, selected week, included-scope phrase and Start.",
+        "disclosed": "Trailing Details opens task metadata; Inspection opens existing duration diagnostics and inclusion controls; Options exposes unchanged menus. Preserve all existing data and callback semantics.",
+        "access": "44px nonoverlapping lanes, descriptive completion names and keyboard order.",
+        "benefit": "Reduces accidental editing while marking many household tasks complete.",
+        "risk": "Trailing controls may be distant on wide screens.",
+        "verification": "Test partial repetitions, blocked tasks, accidental propagation, scope toggles and narrow lanes."
+      },
+      "b": {
+        "id": "i048",
+        "title": "One material per hierarchy",
+        "mechanism": "A cleaner's constrained hierarchy uses glass only for the page navigation band, matte section backgrounds and unboxed task rows. Count, scope and duration become plain text links; only expanded details acquire an elevated panel.",
+        "visible": "Navigation, selected period, titles, counts and completion; small scope summary.",
+        "disclosed": "44px Details routes reveal all metadata and original editors; existing duration cards, diagnostics, include switches and menus stay reachable. Preserve all existing data and callback semantics.",
+        "access": "Contrast fallback, visible focus, no nested blur and scoped reduced-motion transitions.",
+        "benefit": "Material distinguishes navigation from work without adding controls.",
+        "risk": "Flat sections might lose grouping on busy backgrounds.",
+        "verification": "Verify light/dark contrast, counts, menu layering, accumulated scope and 320/375px."
+      }
+    },
+    {
+      "match": "r1-m28",
+      "a": {
+        "id": "i047",
+        "title": "Unfolded cleaning checklist",
+        "mechanism": "The cleaner inverts disclosure by initially showing only section titles with meaningful counts; opening a section reveals tasks plus one shared context footer. Existing section collapse state drives this, avoiding new completion logic.",
+        "visible": "Page title, selected period, scope, section headings/counts and disclosure controls.",
+        "disclosed": "Expanded section footer exposes duration, inclusion and Options; task Details exposes frequency, date, price, time-of-day and links. Preserve all existing data and callback semantics.",
+        "access": "44px collapse controls, aria-expanded, focus stays on heading and reduced-motion expansion.",
+        "benefit": "Long routine lists begin as an understandable map.",
+        "risk": "Collapsed tasks require an extra step to complete.",
+        "verification": "Verify category collapse contracts, nested sections, include mode, historical dates and menu access."
+      },
+      "b": {
+        "id": "i063",
+        "title": "Context before options",
+        "mechanism": "The returning user inverts menu-first disclosure: a Context button opens a read-only summary first, with separate named links to Change period, Included routines, Estimates and Options. Sections and tasks use the same structure with their actual available fields.",
+        "visible": "Title, selected period, scope summary, completion and Context.",
+        "disclosed": "Summary provides full data and routes to unchanged navigator, toggles, menus and focused task editors; no summary click directly mutates. Preserve all existing data and callback semantics.",
+        "access": "44px links, accessible dialog heading and reliable focus return.",
+        "benefit": "Inspection is safe while remembering the app after absence.",
+        "risk": "Extra routing increases taps to management commands.",
+        "verification": "Verify every preserved command route, changing context freshness, historical dates and mobile sheet."
+      }
+    },
+    {
+      "match": "r1-m29",
+      "a": {
+        "id": "i009",
+        "title": "Single task action lane",
+        "mechanism": "For a distracted user constrained by small targets, reserve the left lane for completion and the right lane for one labelled information button. MainGlassHeader groups navigation and options on one restrained material; section commands occupy their own 44px trailing lane.",
+        "visible": "Completion, title, due exception, period and separate scope text.",
+        "disclosed": "Information opens metadata editor routes; page summary opens durations/status; section options retains inclusion and configuration.",
+        "access": "Nonoverlapping 44px lanes; keyboard order completion then information; reduced-motion scoped feedback.",
+        "benefit": "Separates completing from inspecting so dense metadata cannot steal a tap.",
+        "risk": "Information buttons repeat on every task.",
+        "verification": "Verify rapid adjacent completion taps, nested subtasks, list navigation links and no propagation into row actions."
+      },
+      "b": {
+        "id": "i055",
+        "title": "Explicit field chooser",
+        "mechanism": "The budget planner's adversarial disclosure forbids ambiguous whole-row editing. Each task has a named 'Edit details' button opening a field chooser; page and section Summary buttons similarly choose Cost, Time or Routine before existing panels.",
+        "visible": "Title, completion, cost or deadline summary and named edit opener.",
+        "disclosed": "Chooser routes directly to original duration/price/date/frequency editors, time-of-day toggle and links; header options preserve management and inclusion. Preserve all existing data and callback semantics.",
+        "access": "44px chooser rows, dialog naming, Escape and focus return.",
+        "benefit": "Hidden metadata still has a predictable editing route.",
+        "risk": "A chooser can add a step to simple edits.",
+        "verification": "Test all field routes, quantity, subtasks, inclusion, diagnostics and task completion without propagation."
+      }
+    },
+    {
+      "match": "r1-m30",
+      "a": {
+        "id": "i074",
+        "title": "Concurrency explanation rail",
+        "mechanism": "For parallel tasks, adversarially assume symbols are misunderstood. Add a persistent textual Parallel label at page/section summary, then connect relevant task estimates through aligned text rather than color alone.",
+        "visible": "Period, active total, separately labeled parallel total, task names/checks.",
+        "disclosed": "An Explain estimates disclosure reveals original totals and source details; task Details retains duration/date/frequency/price, time-of-day cycling and links; options stay scoped.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Clarifies concurrent effort without requiring icon knowledge.",
+        "risk": "Repeated words can lengthen mobile rows.",
+        "verification": "Inspect zoom, screen-reader reading order, mixed concurrency, accumulated sections and historical periods."
+      },
+      "b": {
+        "id": "i032",
+        "title": "Shape-and-text hierarchy",
+        "mechanism": "Under low-vision and material constraints, use one restrained glass navigation surface; plain section/task content uses textual state and shape: checkbox circle, labelled summary chevron, named options button. Remove colored micro-icon emphasis.",
+        "visible": "Titles, exact period, completion shape/state and scope sentence.",
+        "disclosed": "Summary and details expose every statistic, property and command with labelled rows; diagnostics remain on the existing route.",
+        "access": "44px controls, opaque contrast fallback, text labels for status and no color-only accumulated distinction.",
+        "benefit": "Reduces optical clutter while preserving distinguishable controls.",
+        "risk": "Extra text labels can consume narrow width.",
+        "verification": "Compare light/dark/reduced-transparency screenshots at 320px; exercise accumulated status, estimates and completion."
+      }
+    },
+    {
+      "match": "r1-m31",
+      "a": {
+        "id": "i046",
+        "title": "Week notebook",
+        "mechanism": "A first-principles cleaner context view uses a notebook composition: a dated heading, plain section headings, ruled task rows and small prose annotations. Replace badges with text; keep a clearly marked Details link-sized button for each row.",
+        "visible": "Selected week heading, routine-scope phrase, section counts, task titles and exceptional due dates.",
+        "disclosed": "Header annotation opens navigator and diagnostics; section annotation opens duration and scope; task Details holds full metadata and editors; menus stay named. Preserve all existing data and callback semantics.",
+        "access": "44px controls despite small text; headings and list semantics; monochrome contrast.",
+        "benefit": "One editorial rhythm makes cleaning work feel ordered.",
+        "risk": "Plain text affordances may look noninteractive.",
+        "verification": "Verify focus/pressed styling, duration data, all menus, 320px text fit and completion."
+      },
+      "b": {
+        "id": "i033",
+        "title": "Resume-work compact header",
+        "mechanism": "From first principles for a busy caregiver, prioritize returning to unfinished work: page shows pending count with exact period and a direct Empezar action; section headings show pending count; tasks show completion and due exceptions.",
+        "visible": "Empezar, list identity, period and pending tasks.",
+        "disclosed": "Resumen exposes full scope, diagnostic and estimates; section options and task details retain all properties, links and configuration.",
+        "access": "44px Start, summary and detail controls; explicit disabled state when no pending reminders; visible focus.",
+        "benefit": "Makes resumption immediate without requiring a scan of every metric.",
+        "risk": "Starting must retain existing eligibility and section scope.",
+        "verification": "Verify disabled Start, section versus page start, historical periods, mixed routines and metadata editing without changing sequence semantics."
+      }
+    },
+    {
+      "match": "r1-m32",
+      "a": {
+        "id": "i002",
+        "title": "Context sentence and fact ledger",
+        "mechanism": "Invert beginner confusion by putting a plain sentence beneath the page title: selected period, own versus included routine scope, and pending count. Section headings use matching sentences; tasks use one due-context sentence.",
+        "visible": "Identity and concise factual context without separate pills.",
+        "disclosed": "Ver datos opens a labelled definition list with duration, price, frequency and time-of-day actions, while Opciones retains existing commands.",
+        "access": "44px data disclosures and menu controls; definition terms precede values in reading order.",
+        "benefit": "Explains what the current list contains before the user changes it.",
+        "risk": "Sentences become long for mixed routines.",
+        "verification": "Test long Spanish labels at 375px, historical reference dates, own/full counts and the unchanged time-of-day cycling callback."
+      },
+      "b": {
+        "id": "i012",
+        "title": "Persistent calm density preference",
+        "mechanism": "Invert distraction by letting the user choose Compacta or Detallada once through list options. Compacta hides redundant task badges into existing information routes; Detallada restores complete inline metadata with softened spacing.",
+        "visible": "Title, completion, period and an unobtrusive current density indication.",
+        "disclosed": "Compacta preserves page/section summary and all task editor actions; special-list facts stay available through labelled details.",
+        "access": "44px preference choices; focus remains after rerender; both densities use native accessible controls.",
+        "benefit": "Gives predictable hierarchy without adaptive rearrangement during work.",
+        "risk": "A density preference adds configuration and persistence decisions.",
+        "verification": "Toggle densities with completed, skipped, shopping and life-library tasks; verify no data is lost and 320px fit."
+      }
+    },
+    {
+      "match": "r1-m33",
+      "a": {
+        "id": "i030",
+        "title": "Structured receipt layout",
+        "mechanism": "From first principles, low-vision context is clearest in a receipt-like structure: page title and date, one horizontal separator, labelled totals; sections repeat a small subtotal; tasks show title plus relevant due line.",
+        "visible": "Strong labels, tabular pending totals, date range and completion.",
+        "disclosed": "Receipt Details expands duration, accumulated contributions and status; task information retains frequency, price, time-of-day and links.",
+        "access": "44px details buttons, clear label/value relationships, no reliance on striped/color-only MetaSplit parts.",
+        "benefit": "Makes numbers and scope legible with minimal decoration.",
+        "risk": "Receipt styling may imply monetary totals in ordinary routines.",
+        "verification": "Test shopping and nonshopping labels, active/parallel wording, historical dates and low-vision zoom."
+      },
+      "b": {
+        "id": "i043",
+        "title": "Read and plan tabs",
+        "mechanism": "First-principles disclosure for constrained workers divides supporting header content into two labeled tabs: Tasks is default; Plan shows scope, duration, selected-period navigation and diagnostics. Section Plan disclosures sit inline; task Details remain local.",
+        "visible": "Tasks tab shows title, selected period, scope summary, completion and deadline.",
+        "disclosed": "Plan exposes existing inclusion switch and breakdowns; global Options remains visible; task Details exposes every metadata editor and link. Preserve all existing data and callback semantics.",
+        "access": "44px tabs with keyboard semantics, visible selected state and no loss of task focus.",
+        "benefit": "Task reading and planning each receive a coherent surface.",
+        "risk": "Tab changes could obscure the active planning scope.",
+        "verification": "Check shared scope state across tabs, all callbacks, date persistence and small-screen fit."
+      }
+    },
+    {
+      "match": "r1-m34",
+      "a": {
+        "id": "i051",
+        "title": "Maintenance inspector dock",
+        "mechanism": "Constraint-first disclosure uses one inspector dock attached below the page header on desktop and a sheet on mobile. Page, section and task Details select the inspector's subject without duplicating panels; completion stays on rows.",
+        "visible": "Titles, selected period, scope, counts and labeled Details triggers.",
+        "disclosed": "Inspector shows existing duration/diagnostic views or complete task metadata, with focused editors; Options keeps all original commands and inclusion controls. Preserve all existing data and callback semantics.",
+        "access": "44px triggers, subject heading announced, focus restoration and no hidden tab stops.",
+        "benefit": "One support surface keeps a large maintenance list quiet.",
+        "risk": "Subject switches could cause edits to the wrong item.",
+        "verification": "Verify subject IDs, callback targets, focus, historical period and sheet fit at 320px."
+      },
+      "b": {
+        "id": "i080",
+        "title": "Urgency-weighted caption line",
+        "mechanism": "For urgent work under visual constraints, use a single wrapping task caption with deadline first, duration second and a plain Details link; header/sections use the same ordered context line, with one glass navigation surface.",
+        "visible": "Deadline, duration when enabled, title/check, period and scope.",
+        "disclosed": "Details exposes every remaining metadata action and breakdown; section/page Options include original commands and routine diagnostics, with explicit inclusion state.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "One consistent caption replaces multiple competing shapes.",
+        "risk": "Long deadlines and duration can wrap into several lines.",
+        "verification": "Test 320px long titles/dates, shopping prices, accumulated counts and reduced-motion disclosure."
+      }
+    },
+    {
+      "match": "r1-m35",
+      "a": {
+        "id": "i007",
+        "title": "Scope transaction popover",
+        "mechanism": "Challenge accidental changes by making routine scope a labelled selector: Alcance: propias or acumuladas. Open a local popover showing both alternatives and their counts before activation. Page and section selectors are distinct; tasks retain direct completion.",
+        "visible": "Current period, chosen scope and current task titles.",
+        "disclosed": "Popover contains the existing inclusion callback choices and duration/diagnostic links; Detalles holds all task properties; options remain scoped.",
+        "access": "44px trigger and choices, native radio semantics, Escape and focus return; no hover dependency.",
+        "benefit": "Clarifies the consequence of adding routines before changing scope.",
+        "risk": "A preview must use existing summaries without inventing totals.",
+        "verification": "Switch page and section scope independently; compare displayed contributions, history dates and selection after closing."
+      },
+      "b": {
+        "id": "i014",
+        "title": "Heading-first spoken outline",
+        "mechanism": "From first principles, screen-reader navigation should mirror the real hierarchy: page h1 with period description, section h2 with scope description, tasks as labelled list items. Visually replace badges with quiet description lines.",
+        "visible": "Clear heading outline, completion and one contextual secondary line.",
+        "disclosed": "Details regions retain metadata edits and links; summary regions retain estimates and diagnostics; all options have explicit scoped labels.",
+        "access": "44px controls, aria-labelledby/ describedby relationships and decorative icons hidden; focus visible.",
+        "benefit": "Makes structural navigation dependable while reducing isolated visual symbols.",
+        "risk": "Overlong descriptions could become repetitive speech.",
+        "verification": "Inspect heading order, descriptions for historical periods, completed task state and every property action through keyboard navigation."
+      }
+    },
+    {
+      "match": "r1-m36",
+      "a": {
+        "id": "i060",
+        "title": "Ancestor summary transfer",
+        "mechanism": "A nested user inverts repeated hierarchy summaries by placing aggregate duration/count in the highest expanded ancestor and showing descendant summaries only through Details. Each descendant retains its own name, scope exception and Options route; task metadata is likewise disclosed.",
+        "visible": "Ancestor totals, descendant titles, scope differences, selected date and completion.",
+        "disclosed": "Details returns every descendant estimate and breakdown, inclusion control and metadata editor; Options preserves existing commands. Preserve all existing data and callback semantics.",
+        "access": "44px named targets; accessible descriptions state aggregate scope; no altered calculations.",
+        "benefit": "Removes repeated totals while preserving ownership cues.",
+        "risk": "Aggregate totals may be misread as own-section totals.",
+        "verification": "Verify no double counting changes, parent/child labels, collapse transitions, duration and mobile menus."
+      },
+      "b": {
+        "id": "i083",
+        "title": "Unified glass context capsule",
+        "mechanism": "For minimal users under constraints, consolidate related header navigation into one restrained glass capsule with period label, scope label and disclosure; sections/tasks stay opaque, flat and compact.",
+        "visible": "Header period/scope, section count/title, task title/check and date exceptions.",
+        "disclosed": "Capsule opens grouped period, inclusion, estimates and diagnostic controls; section/task Details and Options preserve existing editors, links, menus and callbacks.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "One material boundary signals navigation without decorating every fact.",
+        "risk": "A unified control could blur scope if its labels are vague.",
+        "verification": "Verify capsule groups reference dates and full-routine state explicitly; inspect light/dark contrast and 320px wrapping."
+      }
+    },
+    {
+      "match": "r1-m37",
+      "a": {
+        "id": "i069",
+        "title": "Duration selection gutter",
+        "mechanism": "For duration decisions, inversion asks what prevents comparing time before starting. Reserve a narrow numeric gutter for task active estimates, aligned with header total and section estimates; remove competing metadata from that gutter.",
+        "visible": "Title, completion, active minutes, date exceptions and section subtotal.",
+        "disclosed": "The gutter button opens existing duration editing and own/subtask/parallel breakdown; named Details and scope controls retain remaining metadata, routine inclusion and options.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "A single visual column supports comparison without badge clutter.",
+        "risk": "Long duration formats could squeeze titles.",
+        "verification": "Compare own plus nested subtask durations, parallel time and shopping exceptions at 320px."
+      },
+      "b": {
+        "id": "i035",
+        "title": "One calm context tray",
+        "mechanism": "For a busy caregiver, constraint-first disclosure reserves one glass navigation tray for date, routine scope and Details. MainPageHeader removes separate switches into this tray; section headers mirror its summary and task rows use a Details button.",
+        "visible": "Title, selected period, scope label, completion and essential deadline.",
+        "disclosed": "Tray expands existing period navigator, accumulated switch, duration breakdown and diagnostic; list and section options retain named routes; task panel contains all metadata editors. Preserve all existing data and callback semantics.",
+        "access": "44px buttons, semantic expansion, restored focus; keyboard access and opaque glass fallback.",
+        "benefit": "A single stable place carries supporting information.",
+        "risk": "Combining scope and date could imply they share state.",
+        "verification": "Check independent scope/date callbacks, duration, menus, completion and 320/375px."
+      }
+    },
+    {
+      "match": "r1-m38",
+      "a": {
+        "id": "i067",
+        "title": "Historical evidence sheet",
+        "mechanism": "Constraint-first historical disclosure uses one Evidence sheet with tabs for Period, Routine and Estimates, opened from header/section Details. Task Details opens full original metadata with the same selected-period caption. Navigation alone receives glass.",
+        "visible": "Historical period caption, scope, titles, counts, completion and Details.",
+        "disclosed": "Sheet retains navigator, diagnostic, accumulated controls and duration splits; Options preserves commands; task editors and links keep original callbacks. Preserve all existing data and callback semantics.",
+        "access": "44px tab/buttons, semantic tabs, focus trap/return, opaque fallback and reduced motion.",
+        "benefit": "Several historical signals become one inspectable supporting surface.",
+        "risk": "Tabs can hide cross-category relationships.",
+        "verification": "Verify period persists across tabs, own/accumulated totals, focused editors, completion and mobile fit."
+      },
+      "b": {
+        "id": "i093",
+        "title": "Recurrence route selectors",
+        "mechanism": "For mixed recurrence lists, adversarially prevent a scope switch from feeling like completion or filtering by date. Give page and section recurrence scope a dedicated labeled selector, while tasks show their own frequency beside Details.",
+        "visible": "Selected inclusion scope, period, task frequency/title/check.",
+        "disclosed": "Selector opens original only-section/full-routine action with explanatory count composition; task frequency invokes existing picker; estimates, diagnostic and all menus remain named.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Scope changes are visible and distinct from task recurrence editing.",
+        "risk": "Two related recurrence controls may still require careful wording.",
+        "verification": "Test page versus section callbacks, mixed frequencies, no recurrence and historical completion."
+      }
+    },
+    {
+      "match": "r1-m39",
+      "a": {
+        "id": "i094",
+        "title": "Recurrence inheritance sentence",
+        "mechanism": "For mixed lists, first principles explains only information that cannot be inferred. Header says selected scope; section says included frequencies; task frequency appears only when differing from its section, with explicit Mixed label where needed.",
+        "visible": "Inherited section recurrence, differing task frequency, date/check/title and period.",
+        "disclosed": "Details shows every task's full recurrence and original picker even when inherited; estimates, count breakdown, routine toggle, diagnostic and options remain accessible.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Reduces repetitive recurrence text while keeping exceptions obvious.",
+        "risk": "Incorrect inheritance could misrepresent manually assigned cycles.",
+        "verification": "Test computed periodicity from list, section, title and cycle, including custom cycles."
+      },
+      "b": {
+        "id": "i066",
+        "title": "History margin notes",
+        "mechanism": "The historical reviewer inverts current-date assumptions through margin notes: header gives selected period, section captions give period-specific status, and task notes expose differing due dates. All decorative capsules become plain text; complete metadata is disclosed.",
+        "visible": "Selected period, section context status, differing due dates, titles and completion.",
+        "disclosed": "Context-note buttons open navigator/diagnostic and duration; task Details retains every editor and link; named Options retains management and inclusion. Preserve all existing data and callback semantics.",
+        "access": "44px note hit areas, noncolor date cues, wrapping text and restored focus.",
+        "benefit": "Period-specific explanations remain visible during historical scanning.",
+        "risk": "Margin layout may require stacking at small widths.",
+        "verification": "Verify rollover labels use referenceDate, past mixed frequencies, all-done/partial states and 320/375px."
+      }
+    },
+    {
+      "match": "r1-m40",
+      "a": {
+        "id": "i039",
+        "title": "Two separate disclosures",
+        "mechanism": "The organizer's adversarial disclosure separates information from commands: every page, section and task has a Details route and an Options route, eliminating ambiguity over whether summaries change state. Keep completion outside both.",
+        "visible": "Titles, selected period, count, completion, Details and Options.",
+        "disclosed": "Details show full duration, accumulated breakdown and all metadata editors; Options retain existing list/section/task command menus and scope toggles with current state. Preserve all existing data and callback semantics.",
+        "access": "Each route is 44px, visibly labeled, keyboard operable and focus-restoring.",
+        "benefit": "Users can inspect shared work without accidentally invoking commands.",
+        "risk": "Two routes may still occupy considerable width.",
+        "verification": "Test no metadata opener completes a task, every original command remains reachable and 320px layout stacks."
+      },
+      "b": {
+        "id": "i071",
+        "title": "One open time calculator",
+        "mechanism": "For duration decisions, adversarially test a task whose quiet estimate hides substantial subtask time. Allow one inline duration disclosure per scope, replacing badges with a labeled Time button that expands a complete breakdown.",
+        "visible": "Header total and period, section count, task title, Time value.",
+        "disclosed": "Expanded calculator shows own/subtask active time, parallel time and edit-duration action; adjacent Details preserves date, frequency, price and navigation; scope/options remain named.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Comparison stays available while detail occupies space only when requested.",
+        "risk": "Opening another calculator can close needed comparison context.",
+        "verification": "Test opening via keyboard, switching rows without completing tasks and inherited plus parallel estimates."
+      }
+    },
+    {
+      "match": "r1-m41",
+      "a": {
+        "id": "i019",
+        "title": "Focusable side inspector",
+        "mechanism": "Under keyboard constraints, use a persistent inspector on desktop opened by page, section or task Inspeccionar controls; mobile uses the same content in a sheet. Headers become compact and tasks retain completion.",
+        "visible": "Identity, period, scope summary and completion.",
+        "disclosed": "Inspector shows all object-specific facts and existing actions, including diagnostic, estimates, section menus and metadata editor shortcuts.",
+        "access": "44px inspectors; labelled panel, explicit close, predictable focus return; no focus-triggered automatic opening.",
+        "benefit": "Avoids shifting the list whenever a keyboard user inspects properties.",
+        "risk": "Desktop panel reduces available task width.",
+        "verification": "Test selected object changes, deleted task focus fallback, mobile sheet trapping and every metadata action."
+      },
+      "b": {
+        "id": "i031",
+        "title": "Magnifiable information panel",
+        "mechanism": "Invert low-vision overload by opening all secondary facts in a generous information panel with larger text, explicit labels and full-width edit buttons. Page and section rows contain one named inspect route; tasks retain completion/title.",
+        "visible": "Period and scope, titles, completion and large Inspectar controls.",
+        "disclosed": "Panel retains all exact counts, estimates, metadata, diagnostic and option links appropriate to the chosen object.",
+        "access": "44px actions, scrollable labelled panel, focus management and minimum contrast; no decorative nested glass.",
+        "benefit": "Makes dense facts readable without increasing every task's visual load.",
+        "risk": "Inspecting different objects requires additional navigation.",
+        "verification": "Open panel from task/section/page, test zoom and focus return, then verify all existing property edit callbacks."
+      }
+    },
+    {
+      "match": "r1-m42",
+      "a": {
+        "id": "i049",
+        "title": "Maintenance action itinerary",
+        "mechanism": "A maintenance planner's first-principles action view makes existing Start sequence the anchor of a section itinerary. Header shows selected month; sections show ordered tasks and a final Start/Details footer; task completion remains individually available.",
+        "visible": "Month, scope, section title/count, task titles and completion.",
+        "disclosed": "Itinerary footer opens estimates, accumulated breakdown and Start; Options preserves management; task Details preserves every metadata action. Preserve all existing data and callback semantics.",
+        "access": "44px controls, list order remains unchanged, semantic footer and restored focus.",
+        "benefit": "Planning and execution connect to the exact section.",
+        "risk": "Footers below long sections can be missed.",
+        "verification": "Verify global and section Start scope, duration, ordering, keyboard routes and narrow overflow."
+      },
+      "b": {
+        "id": "i077",
+        "title": "Deadline action row",
+        "mechanism": "For urgent deadlines, adversarially protect against accidental completion from metadata taps. Separate each task into a completion/title row and a labeled deadline button row; header date and section period context remain fixed while summaries disclose.",
+        "visible": "Completion target, title, urgent deadline in words, selected period and scope.",
+        "disclosed": "Deadline button invokes date editing; Details provides all other task actions; header Estimates/Options and section Scope/Options retain totals, diagnostics and commands.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Urgency is actionable and visually distinct from finishing the task.",
+        "risk": "Two-row tasks use more vertical space.",
+        "verification": "Test touching deadline versus checkbox, past-period overdue context and keyboard focus order."
+      }
+    },
+    {
+      "match": "r1-m43",
+      "a": {
+        "id": "i024",
+        "title": "Sticky active-section context",
+        "mechanism": "From first principles, a one-handed user needs the current section's context near current tasks. A restrained sticky section header keeps name, summary and options visible; global period remains in the top rail.",
+        "visible": "Current section heading, small scope/count summary, selected period and completion.",
+        "disclosed": "Section summary opens estimates/inclusion; page summary and task details retain full data and actions.",
+        "access": "44px sticky controls, bounded z-index, semantic headings and scroll margin for focused elements; no decorative blur on content.",
+        "benefit": "Keeps section operations reachable after scrolling without repeating metadata on tasks.",
+        "risk": "Stacked nested sticky headings can cover content.",
+        "verification": "Test nested section depths, focus scrolling, existing drag/drop menus, 320px height and historical context labels."
+      },
+      "b": {
+        "id": "i089",
+        "title": "Visible commitment ribbon",
+        "mechanism": "For users needing visible reminders, constraint-first preserves deadline and recurrence as an explicit ribbon under task titles; header/section ribbons display their current period and accumulated scope using plain words.",
+        "visible": "Title/check, deadline/recurrence ribbon, scope and section count.",
+        "disclosed": "One Estimates button reveals durations/breakdowns; task Details retains all editors, time-of-day cycling, prices and links; page/section menus and diagnostic remain labeled.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Required reminders remain visibly present while ornamental metadata recedes.",
+        "risk": "Ribbon repetition can still be busy in routine-heavy lists.",
+        "verification": "Check recurring tasks without dates, historical references, rollover context and unchanged completion semantics."
+      }
+    },
+    {
+      "match": "r1-m44",
+      "a": {
+        "id": "i073",
+        "title": "Parallel lane pair",
+        "mechanism": "For parallel-task planning, constraint-first separates active effort from concurrent effort without changing calculations. Header and section summaries use two labeled lanes; task metadata follows the same active/parallel pair inside a flat row, with glass reserved for navigation.",
+        "visible": "Active minutes, parallel minutes when present, period, scope and completion.",
+        "disclosed": "Lane headings expose existing breakdowns; Details contains duration editing and other metadata; each section has a dedicated menu and inclusion control.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Parallel work remains distinguishable without repeated lightning badges.",
+        "risk": "Users may mistakenly add the lanes into elapsed time.",
+        "verification": "Test parallel-only, mixed and subtask estimates; verify lane wording makes no elapsed-time claim."
+      },
+      "b": {
+        "id": "i040",
+        "title": "Household ledger",
+        "mechanism": "A first-principles household view uses an aligned ledger: page header is a caption, section headers are ledger dividers, task rows share a title column and one quiet context column. At mobile width the context column becomes a disclosed line.",
+        "visible": "Caption with period, section count, completion and a concise deadline or context value.",
+        "disclosed": "A Context button expands complete metadata; summary footer opens duration and routine diagnostics; named menus preserve all commands and scope settings. Preserve all existing data and callback semantics.",
+        "access": "44px controls, semantic lists, tabular counters and readable opaque rows.",
+        "benefit": "Shared alignment replaces many independent badge shapes.",
+        "risk": "Fixed columns can squeeze long household titles.",
+        "verification": "Verify long titles, nested rows, price/duration totals, historical reference dates and desktop/mobile conversion."
+      }
+    },
+    {
+      "match": "r1-m45",
+      "a": {
+        "id": "i084",
+        "title": "Stable essential spine",
+        "mechanism": "For minimal users, adversarially test quiet UI with keyboard and screen reader. Maintain an identical visible spine: scope heading, selected period, task checkbox/title, named Details, named Options; metadata appears inline only after explicit disclosure.",
+        "visible": "Essential spine and nonredundant date exceptions; inclusion state always stated.",
+        "disclosed": "Details expands semantic definition lists containing every datum and original action; header/section summaries use the same disclosure pattern, with diagnostic and inclusion controls retained.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Predictable focus structure keeps minimalism operable.",
+        "risk": "Many Details buttons need object-specific accessible names.",
+        "verification": "Verify tab order, expanded state, focus ring, all commands and no invisible focus targets."
+      },
+      "b": {
+        "id": "i018",
+        "title": "Breadcrumb context rail",
+        "mechanism": "Invert keyboard disorientation by showing a textual context rail: list, selected period, routine scope. Each segment is a separate labelled control; sections add their local scope underneath and tasks suppress inherited repetition.",
+        "visible": "Context rail and task completion; section headings remain semantic.",
+        "disclosed": "Rail disclosures expose existing period navigator, inclusion and summary routes; task details and scoped options retain all actions.",
+        "access": "44px nonoverlapping segments that wrap; visible focus; native buttons and descriptive labels.",
+        "benefit": "Offers a stable path to context changes without cycling through many badges.",
+        "risk": "Breadcrumb styling can falsely suggest navigation hierarchy.",
+        "verification": "Check each segment's behavior, selected historical period, section override scope and 320px wrapping."
+      }
+    },
+    {
+      "match": "r1-m46",
+      "a": {
+        "id": "i029",
+        "title": "High-contrast command bands",
+        "mechanism": "Adversarially assume low vision makes translucent controls disappear: use opaque command bands for page and section actions, with one high-contrast summary control; task rows use a strong completion outline and labelled details.",
+        "visible": "Period, headings, completion state and obvious action bands.",
+        "disclosed": "Summary opens scope/estimates/status; task details retains all editable facts and links; section commands retain existing menus.",
+        "access": "44px targets, non-color state text, visible focus and no blur beneath text; contrast tested in both themes.",
+        "benefit": "Makes interactions identifiable without scattering colored badges.",
+        "risk": "Bands can visually compete if every section is expanded.",
+        "verification": "Check contrast, forced colors, all routine status states, mobile wrapping and untouched business calculations."
+      },
+      "b": {
+        "id": "i061",
+        "title": "Return-to-work checkpoint",
+        "mechanism": "An adversarial action view for missed periods places a compact checkpoint before Start: selected historical/current period and own-versus-accumulated scope remain explicit. Sections have scoped checkpoints; tasks retain immediate completion and visible period exceptions.",
+        "visible": "Checkpoint, title, counts, scope and task completion.",
+        "disclosed": "Checkpoint opens existing navigator, diagnostics, accumulated setting and estimates; Start calls original callback; Details and Options preserve all remaining actions. Preserve all existing data and callback semantics.",
+        "access": "44px controls, explicit date labels, focus management and unchanged completion semantics.",
+        "benefit": "Returning users can understand what they are about to act on.",
+        "risk": "Extra checkpoint may feel repetitive across sections.",
+        "verification": "Verify missed periods, partial targets, selected dates, scope callback independence and 320px."
+      }
+    },
+    {
+      "match": "r1-m47",
+      "a": {
+        "id": "i052",
+        "title": "Persistent scope watermark",
+        "mechanism": "The planner's adversarial hierarchy treats mistaken accumulated scope as the main hazard. A restrained textual scope watermark sits underneath the page title and every section whose scope differs; other metadata stays quiet.",
+        "visible": "Selected month, explicit own/combined scope text, titles and completion.",
+        "disclosed": "Watermark opens scope toggle with current state plus duration and diagnostic; task Details opens original metadata; list/section Options remains visible. Preserve all existing data and callback semantics.",
+        "access": "44px watermark button, text rather than color signal, semantic state and keyboard access.",
+        "benefit": "Scope survives even when supporting controls are disclosed.",
+        "risk": "Too many differing scopes can repeat context.",
+        "verification": "Verify section/global independence, own-done/accumulated-pending state, menus, dates and small widths."
+      },
+      "b": {
+        "id": "i011",
+        "title": "Details-on-demand row expansion",
+        "mechanism": "From first principles, inspecting a reminder should reveal its facts next to its name. TaskCard gains an explicit Detalles expander; page and section summaries use the same inline disclosure grammar without changing task completion.",
+        "visible": "Completion, title, due date and disclosure chevron with text.",
+        "disclosed": "Expanded row exposes duration, price, frequency, day-part and links; page/section expansions retain scope, diagnostics, period navigation and options.",
+        "access": "44px separate expander, aria-expanded, semantic property buttons and visible focus; no automatic collapse on blur.",
+        "benefit": "Keeps attention anchored to the selected reminder.",
+        "risk": "Many expanded rows can create clutter again.",
+        "verification": "Open two nested task details, edit duration and frequency, collapse safely and verify virtualized heights on mobile."
+      }
+    },
+    {
+      "match": "r1-m48",
+      "a": {
+        "id": "i082",
+        "title": "Flat inspector hierarchy",
+        "mechanism": "For minimal users, inversion removes nested cards and ornamental surfaces. Keep the primary list flat; header Summary, section Summary and task Details populate one adjacent inspector on desktop or dialog on mobile, always displaying object name.",
+        "visible": "Titles/checks, period, inclusion state, count and clear inspect triggers.",
+        "disclosed": "Inspector includes original estimate/breakdown, routine diagnostic, metadata editors and object options; action groups state page/section/task scope explicitly.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "One secondary surface absorbs complexity without ambiguous unlabeled icons.",
+        "risk": "Selection context may become stale when tasks are removed.",
+        "verification": "Test inspector scope after navigation, deletion, completion and mobile focus restoration."
+      },
+      "b": {
+        "id": "i075",
+        "title": "Parallel footnote drawer",
+        "mechanism": "For parallel-task planning, first principles keeps active execution on the list and supplementary concurrent duration in a clearly labeled footnote. Header and sections show Active estimate; a Parallel detail button summarizes additional work; tasks show a small parallel text marker.",
+        "visible": "Task completion/title, active estimate, Parallel indicator, date and scope.",
+        "disclosed": "Parallel drawer lists existing parallel breakdown by page, section or task; metadata editors, routine inclusion, diagnostic and all options remain accessible through named controls.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Reduces competition while preserving the meaning of concurrent work.",
+        "risk": "Footnotes may make parallel effort too easy to overlook.",
+        "verification": "Ensure marker remains present for parallel-only tasks and each drawer has explicit object scope."
+      }
+    },
+    {
+      "match": "r1-m49",
+      "a": {
+        "id": "i036",
+        "title": "Exception gutter",
+        "mechanism": "A caregiver's adversarial hierarchy treats hidden overdue context as a failure. Keep a narrow textual exception gutter for out-of-period dates, accumulated origin and urgent expiry; normal metadata moves into task Details. Headers show selected period and plain summaries; section options remain visible.",
+        "visible": "Titles, completion, selected period and explicit exceptional context.",
+        "disclosed": "Details reveal duration, frequency, price, links and time-of-day; header summaries open existing diagnostics and scope controls. Preserve all existing data and callback semantics.",
+        "access": "44px named buttons and focus rings; exception text is never color-only.",
+        "benefit": "Quiet everyday rows while retaining consequential differences.",
+        "risk": "Too many exceptional tasks can refill the gutter.",
+        "verification": "Test overdue, historical, partial and all-done states, metadata callbacks and mobile wrapping."
+      },
+      "b": {
+        "id": "i054",
+        "title": "Dual context receipt",
+        "mechanism": "A constrained budget context design shows two plain receipt lines: current cost state and temporal/routine scope. Header carries total; sections carry subtotal; tasks keep one price summary and completion, with glass reserved for navigation.",
+        "visible": "Pending euros, selected period/scope, titles and completion.",
+        "disclosed": "Receipt line opens pending/paid split and existing duration where applicable; Details retains full task data and edit callbacks; Options retains every command. Preserve all existing data and callback semantics.",
+        "access": "44px summary buttons, readable matte text and no color-only cost status.",
+        "benefit": "Separates money from time without a field of badges.",
+        "risk": "Dual summaries still add height in nonshopping views.",
+        "verification": "Verify price/subtask calculations, nonshopping duration, include modes, historical period and 320px."
+      }
+    },
+    {
+      "match": "r1-m50",
+      "a": {
+        "id": "i092",
+        "title": "User-pinned context fields",
+        "mechanism": "For users needing reminders, inversion rejects a universal assumption about essential metadata. A visible Context display control lets users pin date, recurrence or duration; header/section summarize chosen fields without changing task membership.",
+        "visible": "Pinned fields, title/check, current period, accumulated state and Details.",
+        "disclosed": "Every unpinned field stays in Details; original menus, inclusion, diagnostics and metadata actions remain available regardless of presentation preference.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Personal emphasis can keep personally meaningful reminders visible.",
+        "risk": "Persistence needs clear per-list or global scope.",
+        "verification": "Verify display preferences never modify tasks, duration visibility policy or historical reference dates."
+      },
+      "b": {
+        "id": "i086",
+        "title": "Ledger with single material toolbar",
+        "mechanism": "For dense users under constraints, put all summaries into one flat ledger: page total line, section subtotal line, task detail line. Reserve restrained glass for the top command toolbar; use dividers and tabular numbers for density.",
+        "visible": "Dates, count, duration and price in labeled aligned ledger fields.",
+        "disclosed": "Field buttons reveal original editors and source breakdowns; scope selector, routine diagnostic and full menus remain in toolbar/section controls; supplemental metadata expands beneath task.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested.",
+        "benefit": "Keeps substantial information visible without visual surface inflation.",
+        "risk": "Many fields may require responsive column priorities.",
+        "verification": "Check 320px field stacking, shopping exceptions, parallel versus active totals and focus targets."
+      }
+    }
+  ]
+}

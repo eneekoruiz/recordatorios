@@ -1,0 +1,116 @@
+[
+  {
+    "match": "r5-m01",
+    "winner": "i027",
+    "judge": "root; non-author fallback after worker usage limit",
+    "a": {
+      "attack": "Native summaries can be accidentally placed inside clickable section headers.",
+      "response": "Use independent disclosure siblings and preserve existing collapse targets.",
+      "fatal": false,
+      "scores": [
+        30,
+        24,
+        19,
+        15,
+        9
+      ],
+      "scoreReason": "Native local disclosure gives a precise cross-surface implementation with dependable keyboard semantics."
+    },
+    "b": {
+      "attack": "Global context folio is less concrete for complex form settings.",
+      "response": "Apply local summaries to optional form groups.",
+      "fatal": false,
+      "scores": [
+        30,
+        24,
+        18,
+        14,
+        9
+      ],
+      "scoreReason": "Global context folio is less concrete for complex form settings."
+    },
+    "revisedWinner": {
+      "id": "i027",
+      "mechanism": "Use native Details groups with scope-specific names outside clickable collapse regions; remeasure expanded rows and preserve independent section collapse and unchanged action callbacks. Place native Details outside clickable collapse regions. Place disclosures outside interactive parents and measure rows. Use independent disclosure siblings and preserve existing collapse targets.",
+      "visible": "Titles, exact period, active scope, completion and named disclosure summaries.",
+      "disclosed": "Opened groups retain inclusion, duration, diagnostics and every metadata editor/link; existing menus retain their original subjects and callbacks.",
+      "access": "44px native summaries, isolated events, visible keyboard focus, resilient text reflow and measured virtualized heights at zoom and 320px."
+    }
+  },
+  {
+    "match": "r5-m02",
+    "winner": "i016",
+    "judge": "root; non-author fallback after worker usage limit",
+    "a": {
+      "attack": "One-line status must account for own done and included pending.",
+      "response": "Use the existing exact own/included counts and diagnosis.",
+      "fatal": false,
+      "scores": [
+        30,
+        24,
+        19,
+        14,
+        9
+      ],
+      "scoreReason": "Accurate count-first status directly removes known duplication without relying on exception density."
+    },
+    "b": {
+      "attack": "Gutter exceptions can fill every row in historical views.",
+      "response": "Retain exceptions but disclose supporting metadata separately.",
+      "fatal": false,
+      "scores": [
+        30,
+        24,
+        18,
+        14,
+        9
+      ],
+      "scoreReason": "Gutter exceptions can fill every row in historical views."
+    },
+    "revisedWinner": {
+      "id": "i016",
+      "mechanism": "Replace duplicated progress indicators with one count-first status sentence that distinguishes own completion from included pending work using unchanged status calculations. Name both scopes explicitly using existing counts. Retain scope explanation in the existing diagnostic. Use the existing exact own/included counts and diagnosis.",
+      "visible": "Exact selected period, active inclusion scope, meaningful count sentence, task completion and relevant deadlines.",
+      "disclosed": "The semantic status control opens the existing diagnostic; secondary disclosure preserves duration, inclusion and all task metadata; original menus stay separately scoped.",
+      "access": "44px status button, complete accessible name, wrapping count text, stable focus and keyboard access without duplicate spoken progress."
+    }
+  },
+  {
+    "match": "r5-m03",
+    "winner": "i004",
+    "judge": "root; non-author fallback after worker usage limit",
+    "a": {
+      "attack": "Essential spine needs a rule for choosing essential fields.",
+      "response": "Use deadline and differing-context precedence.",
+      "fatal": false,
+      "scores": [
+        30,
+        24,
+        19,
+        14,
+        9
+      ],
+      "scoreReason": "Essential spine needs a rule for choosing essential fields."
+    },
+    "b": {
+      "attack": "A mistaken equality test may suppress needed task context.",
+      "response": "Omit only context proven redundant; retain uncertain and overdue dates.",
+      "fatal": false,
+      "scores": [
+        30,
+        25,
+        19,
+        15,
+        9
+      ],
+      "scoreReason": "Exception-led metadata supplies concrete visibility rules plus stable Details, stronger than a generic essential spine."
+    },
+    "revisedWinner": {
+      "id": "i004",
+      "mechanism": "Suppress only safely redundant metadata; always show overdue/divergent dates and keep labeled Details stable at each scope. Unknown or divergent context remains visible; Details is always explicit. Retain dates when context cannot be proven identical. Use selected reference context, never wall-clock assumptions. Omit only context proven redundant; retain uncertain and overdue dates.",
+      "visible": "Completion, title, exceptional dates, exact selected period and active scope/filter context.",
+      "disclosed": "All nonexception metadata remains in Detalles; page/section options and summary preserve every statistic and edit action.",
+      "access": "44px nonoverlapping targets, scoped labels, keyboard disclosure, visible focus/return, 320px wrapping and reduced motion."
+    }
+  }
+]

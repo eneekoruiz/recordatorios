@@ -1,0 +1,81 @@
+{
+  "round": 5,
+  "bye": "i044",
+  "matches": [
+    {
+      "match": "r5-m01",
+      "a": {
+        "id": "i027",
+        "title": "Native details groups",
+        "mechanism": "Use native Details groups with scope-specific names outside clickable collapse regions; remeasure expanded rows and preserve independent section collapse and unchanged action callbacks. Place native Details outside clickable collapse regions. Place disclosures outside interactive parents and measure rows.",
+        "visible": "Titles, exact period, active scope, completion and named disclosure summaries.",
+        "disclosed": "Opened groups retain inclusion, duration, diagnostics and every metadata editor/link; existing menus retain their original subjects and callbacks.",
+        "access": "44px native summaries, isolated events, visible keyboard focus, resilient text reflow and measured virtualized heights at zoom and 320px.",
+        "benefit": "Uses predictable browser disclosure behavior with resilient text reflow.",
+        "risk": "Virtualized list measurement must account for open details.",
+        "verification": "Open nested groups at zoom, verify focus and heights, and test section collapse independently of metadata disclosure."
+      },
+      "b": {
+        "id": "i098",
+        "title": "Context-first mobile folio",
+        "mechanism": "Place a wrapping global context line before the task list in one column; repeat local captions only for real differences and retain meaningful deadlines next to their tasks. Repeat only true local differences. Always show true local overrides next to their section.",
+        "visible": "Exact period, inclusion scope, title/completion, counts and due exceptions.",
+        "disclosed": "Full-width Details retains metadata actions and breakdowns; separate Options and inclusion controls preserve original commands and diagnostic routes.",
+        "access": "44px nonoverlapping controls, explicit local names, readable long Spanish captions, keyboard disclosure and focus return at 320px.",
+        "benefit": "Readable context establishes meaning before dense titles.",
+        "risk": "More lines may delay the first task on initial load.",
+        "verification": "Test long list/section/task titles, historical dates, rollover and scrolling without stale captions."
+      }
+    },
+    {
+      "match": "r5-m02",
+      "a": {
+        "id": "i016",
+        "title": "Semantic one-line status replacement",
+        "mechanism": "Replace duplicated progress indicators with one count-first status sentence that distinguishes own completion from included pending work using unchanged status calculations. Name both scopes explicitly using existing counts. Retain scope explanation in the existing diagnostic.",
+        "visible": "Exact selected period, active inclusion scope, meaningful count sentence, task completion and relevant deadlines.",
+        "disclosed": "The semantic status control opens the existing diagnostic; secondary disclosure preserves duration, inclusion and all task metadata; original menus stay separately scoped.",
+        "access": "44px status button, complete accessible name, wrapping count text, stable focus and keyboard access without duplicate spoken progress.",
+        "benefit": "Removes redundant progress signals while keeping spoken information complete.",
+        "risk": "A sentence may wrap differently as counts change.",
+        "verification": "Test all_done, own-done/accumulated-pending, zero-goal and historical states; confirm diagnostic selectors and duration routes survive."
+      },
+      "b": {
+        "id": "i036",
+        "title": "Exception gutter",
+        "mechanism": "Keep the exception gutter on roomy layouts and stack one concise exception line on mobile; derive warnings from selected reference dates, retain accumulated origin where meaningful, and preserve all original data, editors, diagnostics and menus. Use selected reference dates rather than today's date for historical warnings. Stack wrapping exceptions without clipping meaningful dates.",
+        "visible": "Titles, completion, selected period and explicit exceptional context. Exact reference period and current inclusion scope remain readable.",
+        "disclosed": "Details reveal duration, frequency, price, links and time-of-day; header summaries open existing diagnostics and scope controls. Preserve all existing data and callback semantics. Retain every existing editor, action, link, diagnostic and scoped menu without duplicating command menus.",
+        "access": "44px named buttons and focus rings; exception text is never color-only. Minimum 44px targets; visible keyboard focus; no hover-only routes; wrap at 320/375px; scoped reduced motion.",
+        "benefit": "Quiet everyday rows while retaining consequential differences.",
+        "risk": "Too many exceptional tasks can refill the gutter.",
+        "verification": "Test overdue, historical, partial and all-done states, metadata callbacks and mobile wrapping."
+      }
+    },
+    {
+      "match": "r5-m03",
+      "a": {
+        "id": "i084",
+        "title": "Stable essential spine",
+        "mechanism": "Retain the stable essential spine and inline definition lists; use object-specific accessible names, persistent selected period and inclusion state, separate completion targets, and existing Options menus with no hidden keyboard destinations. Keep completion separate and give every disclosure an object-specific name. Use object-specific accessible names and local definition lists. Use one shared disclosure pattern and object-specific names.",
+        "visible": "Essential spine and nonredundant date exceptions; inclusion state always stated. Exact reference period and current inclusion scope remain readable.",
+        "disclosed": "Details expands semantic definition lists containing every datum and original action; header/section summaries use the same disclosure pattern, with diagnostic and inclusion controls retained. Retain every existing editor, action, link, diagnostic and scoped menu without duplicating command menus.",
+        "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested. Minimum 44px targets; visible keyboard focus; no hover-only routes; wrap at 320/375px; scoped reduced motion.",
+        "benefit": "Predictable focus structure keeps minimalism operable.",
+        "risk": "Many Details buttons need object-specific accessible names.",
+        "verification": "Verify tab order, expanded state, focus ring, all commands and no invisible focus targets."
+      },
+      "b": {
+        "id": "i004",
+        "title": "Exception-led metadata with stable details",
+        "mechanism": "Suppress only safely redundant metadata; always show overdue/divergent dates and keep labeled Details stable at each scope. Unknown or divergent context remains visible; Details is always explicit. Retain dates when context cannot be proven identical. Use selected reference context, never wall-clock assumptions.",
+        "visible": "Completion, title, exceptional dates, exact selected period and active scope/filter context.",
+        "disclosed": "All nonexception metadata remains in Detalles; page/section options and summary preserve every statistic and edit action.",
+        "access": "44px nonoverlapping targets, scoped labels, keyboard disclosure, visible focus/return, 320px wrapping and reduced motion.",
+        "benefit": "Reduces repeated signals while keeping unusual obligations visible.",
+        "risk": "A mistaken context comparison could suppress a needed date.",
+        "verification": "Test mixed dates, overdue tasks, inherited frequencies and history; verify details always reveals complete values."
+      }
+    }
+  ]
+}

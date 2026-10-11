@@ -1,0 +1,230 @@
+[
+  {
+    "match": "r4-m01",
+    "winner": "i044",
+    "judge": "root; non-author fallback after worker usage limit",
+    "a": {
+      "attack": "Wrapping adapts geometry but can leave every field visible.",
+      "response": "Disclose optional metadata while retaining trigger identity.",
+      "fatal": false,
+      "scores": [
+        30,
+        23,
+        19,
+        14,
+        9
+      ],
+      "scoreReason": "Wrapping adapts geometry but can leave every field visible."
+    },
+    "b": {
+      "attack": "Summary rail could crowd a title on sparse tasks.",
+      "response": "Do not reserve space for empty metadata.",
+      "fatal": false,
+      "scores": [
+        30,
+        24,
+        19,
+        14,
+        9
+      ],
+      "scoreReason": "Concrete local rail reduces clutter and retains measured expansion; wrapping is a compatible graft."
+    },
+    "revisedWinner": {
+      "id": "i044",
+      "mechanism": "Keep one stable summary rail below each title; use a simple Details label for sparse metadata and remeasure expansion. Re-measure virtualized rows when local details expand. Skip empty rails and retain row measurements. Do not reserve space for empty metadata.",
+      "visible": "Title, completion, exact period, active scope and wrapping summary.",
+      "disclosed": "Rail opens all metadata with direct duration/price/date/frequency editing and time-of-day cycling; section/page rails expose breakdowns and scope controls. Preserve all existing data and callback semantics.",
+      "access": "44px nonoverlapping targets, scoped labels, keyboard disclosure, visible focus/return, 320px wrapping and reduced motion."
+    }
+  },
+  {
+    "match": "r4-m02",
+    "winner": "i084",
+    "judge": "root; non-author fallback after worker usage limit",
+    "a": {
+      "attack": "Essential labels could be selected inconsistently across surfaces.",
+      "response": "Use one shared disclosure pattern and object-specific names.",
+      "fatal": false,
+      "scores": [
+        30,
+        24,
+        19,
+        14,
+        9
+      ],
+      "scoreReason": "Stable essential spine generalizes beyond routine pages with fewer scope-group ambiguities."
+    },
+    "b": {
+      "attack": "A context tray combines several unrelated control groups.",
+      "response": "Keep explicit subgroup names and independent callbacks.",
+      "fatal": false,
+      "scores": [
+        30,
+        23,
+        18,
+        14,
+        9
+      ],
+      "scoreReason": "A context tray combines several unrelated control groups."
+    },
+    "revisedWinner": {
+      "id": "i084",
+      "mechanism": "Retain the stable essential spine and inline definition lists; use object-specific accessible names, persistent selected period and inclusion state, separate completion targets, and existing Options menus with no hidden keyboard destinations. Keep completion separate and give every disclosure an object-specific name. Use object-specific accessible names and local definition lists. Use one shared disclosure pattern and object-specific names.",
+      "visible": "Essential spine and nonredundant date exceptions; inclusion state always stated. Exact reference period and current inclusion scope remain readable.",
+      "disclosed": "Details expands semantic definition lists containing every datum and original action; header/section summaries use the same disclosure pattern, with diagnostic and inclusion controls retained. Retain every existing editor, action, link, diagnostic and scoped menu without duplicating command menus.",
+      "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested. Minimum 44px targets; visible keyboard focus; no hover-only routes; wrap at 320/375px; scoped reduced motion."
+    }
+  },
+  {
+    "match": "r4-m03",
+    "winner": "i016",
+    "judge": "root; non-author fallback after worker usage limit",
+    "a": {
+      "attack": "Count-first status may still omit why included tasks remain.",
+      "response": "Retain scope explanation in the existing diagnostic.",
+      "fatal": false,
+      "scores": [
+        30,
+        24,
+        19,
+        14,
+        9
+      ],
+      "scoreReason": "One accurate status eliminates repeated progress without changing layout ownership."
+    },
+    "b": {
+      "attack": "Trailing inspection lane steals width from deep nested titles.",
+      "response": "Wrap inspection below narrow rows without moving completion.",
+      "fatal": false,
+      "scores": [
+        30,
+        23,
+        18,
+        14,
+        8
+      ],
+      "scoreReason": "Trailing inspection lane steals width from deep nested titles."
+    },
+    "revisedWinner": {
+      "id": "i016",
+      "mechanism": "Replace duplicated progress indicators with one count-first status sentence that distinguishes own completion from included pending work using unchanged status calculations. Name both scopes explicitly using existing counts. Retain scope explanation in the existing diagnostic.",
+      "visible": "Exact selected period, active inclusion scope, meaningful count sentence, task completion and relevant deadlines.",
+      "disclosed": "The semantic status control opens the existing diagnostic; secondary disclosure preserves duration, inclusion and all task metadata; original menus stay separately scoped.",
+      "access": "44px status button, complete accessible name, wrapping count text, stable focus and keyboard access without duplicate spoken progress."
+    }
+  },
+  {
+    "match": "r4-m04",
+    "winner": "i027",
+    "judge": "root; non-author fallback after worker usage limit",
+    "a": {
+      "attack": "Start-first header does not handle clutter in non-execution modals.",
+      "response": "Keep Start direct only where eligible.",
+      "fatal": false,
+      "scores": [
+        30,
+        24,
+        18,
+        14,
+        9
+      ],
+      "scoreReason": "Start-first header does not handle clutter in non-execution modals."
+    },
+    "b": {
+      "attack": "Native Details nested in existing controls creates conflicting activation.",
+      "response": "Place disclosures outside interactive parents and measure rows.",
+      "fatal": false,
+      "scores": [
+        30,
+        24,
+        19,
+        14,
+        9
+      ],
+      "scoreReason": "Native local disclosure provides a common solution across lists, forms and modals while preserving Start."
+    },
+    "revisedWinner": {
+      "id": "i027",
+      "mechanism": "Use native Details groups with scope-specific names outside clickable collapse regions; remeasure expanded rows and preserve independent section collapse and unchanged action callbacks. Place native Details outside clickable collapse regions. Place disclosures outside interactive parents and measure rows.",
+      "visible": "Titles, exact period, active scope, completion and named disclosure summaries.",
+      "disclosed": "Opened groups retain inclusion, duration, diagnostics and every metadata editor/link; existing menus retain their original subjects and callbacks.",
+      "access": "44px native summaries, isolated events, visible keyboard focus, resilient text reflow and measured virtualized heights at zoom and 320px."
+    }
+  },
+  {
+    "match": "r4-m05",
+    "winner": "i098",
+    "judge": "root; non-author fallback after worker usage limit",
+    "a": {
+      "attack": "Global folio could hide section-specific inclusion.",
+      "response": "Always show true local overrides next to their section.",
+      "fatal": false,
+      "scores": [
+        30,
+        24,
+        19,
+        14,
+        9
+      ],
+      "scoreReason": "Context-first folio covers dates, scope and layout without centering everything on one toggle."
+    },
+    "b": {
+      "attack": "Scope watermark does not organize other optional facts.",
+      "response": "Put estimates and origin breakdown in local Details.",
+      "fatal": false,
+      "scores": [
+        30,
+        23,
+        19,
+        14,
+        9
+      ],
+      "scoreReason": "Scope watermark does not organize other optional facts."
+    },
+    "revisedWinner": {
+      "id": "i098",
+      "mechanism": "Place a wrapping global context line before the task list in one column; repeat local captions only for real differences and retain meaningful deadlines next to their tasks. Repeat only true local differences. Always show true local overrides next to their section.",
+      "visible": "Exact period, inclusion scope, title/completion, counts and due exceptions.",
+      "disclosed": "Full-width Details retains metadata actions and breakdowns; separate Options and inclusion controls preserve original commands and diagnostic routes.",
+      "access": "44px nonoverlapping controls, explicit local names, readable long Spanish captions, keyboard disclosure and focus return at 320px."
+    }
+  },
+  {
+    "match": "r4-m06",
+    "winner": "i004",
+    "judge": "root; non-author fallback after worker usage limit",
+    "a": {
+      "attack": "Shared inherited captions require proof every descendant matches.",
+      "response": "Conservatively keep differing or unknown context visible.",
+      "fatal": false,
+      "scores": [
+        30,
+        24,
+        18,
+        14,
+        9
+      ],
+      "scoreReason": "Shared inherited captions require proof every descendant matches."
+    },
+    "b": {
+      "attack": "Exception suppression could hide relevant dates during history navigation.",
+      "response": "Use selected reference context, never wall-clock assumptions.",
+      "fatal": false,
+      "scores": [
+        30,
+        24,
+        19,
+        14,
+        9
+      ],
+      "scoreReason": "Exception-led rules are safer for mixed nested recurrence and preserve stable access to every field."
+    },
+    "revisedWinner": {
+      "id": "i004",
+      "mechanism": "Suppress only safely redundant metadata; always show overdue/divergent dates and keep labeled Details stable at each scope. Unknown or divergent context remains visible; Details is always explicit. Retain dates when context cannot be proven identical. Use selected reference context, never wall-clock assumptions.",
+      "visible": "Completion, title, exceptional dates, exact selected period and active scope/filter context.",
+      "disclosed": "All nonexception metadata remains in Detalles; page/section options and summary preserve every statistic and edit action.",
+      "access": "44px nonoverlapping targets, scoped labels, keyboard disclosure, visible focus/return, 320px wrapping and reduced motion."
+    }
+  }
+]

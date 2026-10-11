@@ -1,0 +1,56 @@
+[
+  {
+    "variant": "desktop",
+    "surface": "list",
+    "h1": [
+      "Casa revisión"
+    ],
+    "details": [
+      "Información ",
+      "Detalles "
+    ],
+    "horizontalOverflow": false
+  },
+  {
+    "variant": "desktop",
+    "surface": "task",
+    "dialog": "Cancelar\nDetalles\nListo\nLista\nCasa revisión\nFecha y hora\nFecha\nHora\nMomento del día\nRestablecer (Auto)\nMañana\nTarde\nNoche\nAlertas preventivas rápidas:\n+ 1 mes antes\n+ 15 días antes\n+ 3 días antes\n+ 1 día antes\nDuración\nTiempo estimado o asignado\nDuración estimada\n25 min\nhoras\nmin\nseg\nSin duración\n5m\n15m\n25m\n30m\n45m\n1h\n1h 30m\n2h\nQuitar\nTarea en segundo plano\nLavadora, mascarilla, secadora... se ejecuta sola mientras haces otras tareas\nRepetición y ubicación\nRequisitos y dependencias\nDetalles adicionales"
+  },
+  {
+    "variant": "desktop",
+    "surface": "manage",
+    "text": "Gestionar listas\n\n8 listas · Selecciona para acciones en lote\n\nSeleccionar todo\nTodas (8)\nFijadas (0)\nCarpetas (0)\nCompras\n0 tareas pendientes\nOpciones\nPersonal\n0 tareas pendientes\nOpciones\nTrabajo\n0 tareas pendientes\nOpciones\nLimpieza\n0 tareas pendientes\nOpciones\nQuehaceres\n10 tareas pendientes\nOpciones\nCare\n0 tareas pendientes\nOpciones\nBiblioteca de vida\n0 tareas pendientes\nOpciones\nCasa revisión\n1 tarea pendiente\nOpciones\nNueva lista\nNueva carpeta\nListo"
+  },
+  {
+    "variant": "desktop",
+    "surface": "config",
+    "text": "Cancelar\nEditar lista\nGuardar\n\nTIPO\n\nChecklist\nRutinas\nEventos\nPropósitos\nCaducidades\nBitácora\n\nLimpieza y hogar: estima el tiempo, admite tareas en segundo plano y modo secuencia.\n\nColor\n›\nIcono\n›\n\nOPCIONES\n\nEs una carpeta\nAgrupa listas en lugar de recordatorios\nEstimar duración\nCalcula cuánto lleva cada tarea por su nombre"
+  },
+  {
+    "variant": "mobile",
+    "surface": "list",
+    "h1": [
+      "Casa revisión"
+    ],
+    "details": [
+      "Información ",
+      "Detalles "
+    ],
+    "horizontalOverflow": false
+  },
+  {
+    "variant": "mobile",
+    "surface": "task",
+    "dialog": "Cancelar\nDetalles\nListo\nLista\nCasa revisión\nFecha y hora\nFecha\nHora\nMomento del día\nRestablecer (Auto)\nMañana\nTarde\nNoche\nAlertas preventivas rápidas:\n+ 1 mes antes\n+ 15 días antes\n+ 3 días antes\n+ 1 día antes\nDuración\nTiempo estimado o asignado\nDuración estimada\n25 min\nhoras\nmin\nseg\nSin duración\n5m\n15m\n25m\n30m\n45m\n1h\n1h 30m\n2h\nQuitar\nTarea en segundo plano\nLavadora, mascarilla, secadora... se ejecuta sola mientras haces otras tareas\nRepetición y ubicación\nRequisitos y dependencias\nDetalles adicionales"
+  },
+  {
+    "variant": "mobile",
+    "surface": "manage",
+    "text": "Gestionar listas\n\n8 listas · Selecciona para acciones en lote\n\nSeleccionar todo\nTodas (8)\nFijadas (0)\nCarpetas (0)\nCompras\n0 tareas pendientes\nOpciones\nPersonal\n0 tareas pendientes\nOpciones\nTrabajo\n0 tareas pendientes\nOpciones\nLimpieza\n0 tareas pendientes\nOpciones\nQuehaceres\n10 tareas pendientes\nOpciones\nCare\n0 tareas pendientes\nOpciones\nBiblioteca de vida\n0 tareas pendientes\nOpciones\nCasa revisión\n1 tarea pendiente\nOpciones\nNueva lista\nNueva carpeta\nListo"
+  },
+  {
+    "variant": "mobile",
+    "surface": "config",
+    "text": "Cancelar\nEditar lista\nGuardar\n\nTIPO\n\nChecklist\nRutinas\nEventos\nPropósitos\nCaducidades\nBitácora\n\nLimpieza y hogar: estima el tiempo, admite tareas en segundo plano y modo secuencia.\n\nColor\n›\nIcono\n›\n\nOPCIONES\n\nEs una carpeta\nAgrupa listas en lugar de recordatorios\nEstimar duración\nCalcula cuánto lleva cada tarea por su nombre"
+  }
+]

@@ -1,0 +1,648 @@
+[
+  {
+    "surface": "Smart: Today",
+    "file": "src/components/layout/MainContent.tsx",
+    "evidence": "smart_today renders DailyBriefingBanner and TaskCard hideDueDate only for Today; source list remains contextual.",
+    "weakness": "Ordinary badges can crowd the recovery action, while an overdue or exceptional date must remain discoverable.",
+    "severity": "high",
+    "repairHypothesis": "Shared exception-led metadata and explicit recovery action; preserve Today filtering.",
+    "chosenRepair": "Shared exception-led metadata and explicit recovery action; preserve Today filtering.",
+    "proposalRef": "i004, i062",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "tests/a11y.spec.ts; tests/e2e.spec.ts #11/#18; tests/daily_recovery.spec.ts",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 1,
+    "inventoryOrder": 1
+  },
+  {
+    "surface": "Smart: Scheduled",
+    "file": "src/components/layout/MainContent.tsx",
+    "evidence": "SMART_LISTS smart_scheduled routes through groupedTasks and shared TaskCard.",
+    "weakness": "Actual scheduling date is essential; hiding all dates would erase the purpose of this view.",
+    "severity": "high",
+    "repairHypothesis": "Retain due date, move optional estimates/context into stable task Details.",
+    "chosenRepair": "Retain due date, move optional estimates/context into stable task Details.",
+    "proposalRef": "i004",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "No dedicated scheduled-view assertion identified; shared TaskCard hierarchy tests exist.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 1,
+    "inventoryOrder": 2
+  },
+  {
+    "surface": "Smart: All",
+    "file": "src/components/layout/MainContent.tsx",
+    "evidence": "smart_all uses list/category groups, MainSectionHeader and TaskCard; sourceListName supplied to cards.",
+    "weakness": "List origin and secondary metadata compete with the task title.",
+    "severity": "medium",
+    "repairHypothesis": "Keep list origin and action hierarchy; apply shared local Details and section Options.",
+    "chosenRepair": "Keep list origin and action hierarchy; apply shared local Details and section Options.",
+    "proposalRef": "i004, i100",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "tests/a11y.spec.ts covers smart_all; tests/ui_fixes.spec.ts large task views.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 2,
+    "inventoryOrder": 3
+  },
+  {
+    "surface": "Smart: Flagged",
+    "file": "src/components/layout/MainContent.tsx",
+    "evidence": "smart_flagged routes through common grouped tasks and TaskCard flagged presentation.",
+    "weakness": "Removing the flag for visual simplicity would lose this scope signal.",
+    "severity": "medium",
+    "repairHypothesis": "Retain flag signal and shared metadata disclosure.",
+    "chosenRepair": "Retain flag signal and shared metadata disclosure.",
+    "proposalRef": "i004",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "Source review only for this specific route.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 2,
+    "inventoryOrder": 4
+  },
+  {
+    "surface": "Smart: Completed",
+    "file": "src/components/layout/MainContent.tsx",
+    "evidence": "smart_completed returns all count and common task renderer; completed status still handled by isTaskCompleted.",
+    "weakness": "Completion history must not be mistaken for current-period omissions.",
+    "severity": "medium",
+    "repairHypothesis": "Preserve completed filtering/status and full metadata route.",
+    "chosenRepair": "Preserve completed filtering/status and full metadata route.",
+    "proposalRef": "i004, i052",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "Source review only for this specific route.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 2,
+    "inventoryOrder": 5
+  },
+  {
+    "surface": "Smart: Overdue",
+    "file": "src/components/layout/MainContent.tsx",
+    "evidence": "smart_overdue is a SMART_LISTS entry and uses shared renderer; date hue/status stays on TaskMetaBadges.",
+    "weakness": "Overdue date is an exception worth showing before Details.",
+    "severity": "high",
+    "repairHypothesis": "Keep overdue date visible; retain source list to explain ownership.",
+    "chosenRepair": "Keep overdue date visible; retain source list to explain ownership.",
+    "proposalRef": "i004, i062",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "Source review; independent reviewer observed overdue fixture on shared list surface.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 1,
+    "inventoryOrder": 6
+  },
+  {
+    "surface": "Smart: Getting started",
+    "file": "src/components/layout/MainContent.tsx",
+    "evidence": "primeros_pasos maps to guide tasks and has dedicated empty-state completion text.",
+    "weakness": "Guide and recurring tasks have different completion purposes.",
+    "severity": "none",
+    "repairHypothesis": "Retain instructional task semantics and option to hide completed guide.",
+    "chosenRepair": "Retain instructional task semantics and option to hide completed guide.",
+    "proposalRef": "i004",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "Source review only.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 3,
+    "inventoryOrder": 7
+  },
+  {
+    "surface": "Custom: Inbox/simple checklist",
+    "file": "src/components/layout/MainContent.tsx",
+    "evidence": "isListView and getListType derive view behavior; simple supportsDuration=false and supportsSequence=false in specialLists.",
+    "weakness": "Artificial estimates would add clutter to a checklist.",
+    "severity": "medium",
+    "repairHypothesis": "Preserve capability distinctions; stable Details gives access to manually supplied fields.",
+    "chosenRepair": "Preserve capability distinctions; stable Details gives access to manually supplied fields.",
+    "proposalRef": "i004",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "tests/a11y.spec.ts list_casa; tests/design_hierarchy.spec.ts empty metadata route.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 2,
+    "inventoryOrder": 8
+  },
+  {
+    "surface": "Custom: Routines/cleaning",
+    "file": "src/components/layout/MainContent.tsx",
+    "evidence": "isLimpiezaList room groups and periodic child sections retain group/sub-group DOM test IDs.",
+    "weakness": "Multiple nested duration/count/scope rows obscure the action and room identity.",
+    "severity": "high",
+    "repairHypothesis": "Compact shared headers, explicit scope, local section Details/Options; keep room and frequency groups intact.",
+    "chosenRepair": "Compact shared headers, explicit scope, local section Details/Options; keep room and frequency groups intact.",
+    "proposalRef": "i004, i016, i052",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "tests/frecuencia_and_context_menu.spec.ts #2/#3/#4; tests/design_hierarchy.spec.ts mobile headers.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 1,
+    "inventoryOrder": 9
+  },
+  {
+    "surface": "Custom: Shopping",
+    "file": "src/components/layout/MainContent.tsx",
+    "evidence": "isShopping suppresses aggregate duration and preserves view cost and price/quantity metadata.",
+    "weakness": "Price is task-relevant rather than optional decorative metadata in purchasing.",
+    "severity": "high",
+    "repairHypothesis": "Retain price and quantity-derived totals; optional duration/context in Details.",
+    "chosenRepair": "Retain price and quantity-derived totals; optional duration/context in Details.",
+    "proposalRef": "i004",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "tests/pulido_final.spec.ts and tests/a11y.spec.ts price-bearing fixtures; no full shopping-only preference study.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 1,
+    "inventoryOrder": 10
+  },
+  {
+    "surface": "Custom: Events/birthdays",
+    "file": "src/components/layout/MainContent.tsx",
+    "evidence": "getListType events suppresses sequence capability; dated cards use common renderer.",
+    "weakness": "Dates remain crucial; a blanket compact mode would hide the reason for a reminder.",
+    "severity": "medium",
+    "repairHypothesis": "Preserve real date outside Details and original alerts.",
+    "chosenRepair": "Preserve real date outside Details and original alerts.",
+    "proposalRef": "i004",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "Source review only for events-specific route.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 2,
+    "inventoryOrder": 11
+  },
+  {
+    "surface": "Custom: Goals",
+    "file": "src/components/layout/MainContent.tsx",
+    "evidence": "isGoals and list type goals route common TaskCard capabilities without artificial routine sequence.",
+    "weakness": "Goal information should not acquire routine-only controls.",
+    "severity": "none",
+    "repairHypothesis": "Retain list capability checks and existing priority/details access.",
+    "chosenRepair": "Retain list capability checks and existing priority/details access.",
+    "proposalRef": "i004",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "Source review only.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 3,
+    "inventoryOrder": 12
+  },
+  {
+    "surface": "Custom: Expiry/subscriptions",
+    "file": "src/components/layout/MainContent.tsx",
+    "evidence": "calculateExpirationStatus and calculateSubscriptionCosts drive countdown and financial information; expiration sections ensured.",
+    "weakness": "Deadline and renewal amount are exceptions that should not disappear behind a generic overflow.",
+    "severity": "high",
+    "repairHypothesis": "Retain countdown/renewal signals, management URL and totals; separate optional explanatory fields.",
+    "chosenRepair": "Retain countdown/renewal signals, management URL and totals; separate optional explanatory fields.",
+    "proposalRef": "i004, i062",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "tests/e2e.spec.ts #12/#15/#18/#21.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 1,
+    "inventoryOrder": 13
+  },
+  {
+    "surface": "Custom: Life log/memories/people",
+    "file": "src/components/layout/MainContent.tsx",
+    "evidence": "isQueHeHechoList preserves flashbacks, person sections, timeline grouping and PersonProfile route.",
+    "weakness": "People identity and timeline dates are meaningful organization, not excess badges.",
+    "severity": "medium",
+    "repairHypothesis": "Preserve people/timeline groups; collapse optional task fields without losing memory/profile access.",
+    "chosenRepair": "Preserve people/timeline groups; collapse optional task fields without losing memory/profile access.",
+    "proposalRef": "i004, i084",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "tests/e2e.spec.ts #13/#16/#19.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 2,
+    "inventoryOrder": 14
+  },
+  {
+    "surface": "Custom: Library",
+    "file": "src/components/layout/MainContent.tsx",
+    "evidence": "isLibrary derives list type library and common card metadata for mediaType/status/rating/platform.",
+    "weakness": "Multiple media attributes can overwhelm the title; editing must remain available.",
+    "severity": "medium",
+    "repairHypothesis": "Shared stable Details retains all media fields and drawer editing route.",
+    "chosenRepair": "Shared stable Details retains all media fields and drawer editing route.",
+    "proposalRef": "i004, i027",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "Source review only for library-specific route.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 2,
+    "inventoryOrder": 15
+  },
+  {
+    "surface": "Custom: Vital habits",
+    "file": "src/components/layout/MainContent.tsx",
+    "evidence": "isVital derives special list capabilities; TaskCard retains intermediate counter behavior and habit fields.",
+    "weakness": "Hiding progress or converting completion to binary loses habit functionality.",
+    "severity": "high",
+    "repairHypothesis": "Retain counters and repetitions; tabular counts, optional configuration in Details.",
+    "chosenRepair": "Retain counters and repetitions; tabular counts, optional configuration in Details.",
+    "proposalRef": "i004, i016",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "tests/e2e.spec.ts #9.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 1,
+    "inventoryOrder": 16
+  },
+  {
+    "surface": "Folder and nested section lists",
+    "file": "src/components/layout/MainContent.tsx",
+    "evidence": "isFolderView supports folder_ and list_ isFolder; render tree preserves section-container/sub-section-container IDs.",
+    "weakness": "Flattening groups for neatness destroys provenance and isolation controls.",
+    "severity": "medium",
+    "repairHypothesis": "Keep tree/group DOM; apply shared section header hierarchy rather than flattening.",
+    "chosenRepair": "Keep tree/group DOM; apply shared section header hierarchy rather than flattening.",
+    "proposalRef": "i004, i084",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "tests/drag_and_drop.spec.ts and tests/ui_fixes.spec.ts cover task family nesting; folder-specific route is source-only.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 2,
+    "inventoryOrder": 17
+  },
+  {
+    "surface": "Frequency: Daily/weekly/monthly/yearly/custom",
+    "file": "src/components/layout/MainContent.tsx",
+    "evidence": "currentView cycle_ derives currentCycle; cycleRoutineCounts, breakdown and temporalDate feed shared MainPageHeader.",
+    "weakness": "Accumulated scope, period status, estimates and navigation previously compete as peers.",
+    "severity": "high",
+    "repairHypothesis": "Selected period and accumulated inclusion stay visible; optional totals in Information, mixed-status exceptions remain visible.",
+    "chosenRepair": "Selected period and accumulated inclusion stay visible; optional totals in Information, mixed-status exceptions remain visible.",
+    "proposalRef": "i004, i016, i052",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "tests/temporal_navigator.spec.ts; tests/frecuencia_and_context_menu.spec.ts; custom cycle creation #5.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 1,
+    "inventoryOrder": 18
+  },
+  {
+    "surface": "Trash",
+    "file": "src/components/layout/MainContent.tsx",
+    "evidence": "TRASH produces Papelera tasks sorted by deletion and preserves restore/permanent delete actions.",
+    "weakness": "Restore/destructive distinction must remain obvious even in reduced clutter.",
+    "severity": "high",
+    "repairHypothesis": "Retain all trash actions and 30-day explanation; shared Details does not replace restore.",
+    "chosenRepair": "Retain all trash actions and 30-day explanation; shared Details does not replace restore.",
+    "proposalRef": "i004, i084",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "tests/a11y.spec.ts includes TRASH; no permanent-delete fixture cited.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 1,
+    "inventoryOrder": 19
+  },
+  {
+    "surface": "Calendar",
+    "file": "src/components/views/CalendarView.tsx",
+    "evidence": "Calendar month grid uses named native buttons, aria-pressed/current, separate Rutinas/Recordatorios agenda and weekly-day select.",
+    "weakness": "Seven-column grid can fall below 44px width at 320px despite 50px height; dot markers alone are insufficient context.",
+    "severity": "medium",
+    "repairHypothesis": "Retain selected-day agenda and accessible labels; root scoped small-width padding repair.",
+    "chosenRepair": "Retain selected-day agenda and accessible labels; root scoped small-width padding repair.",
+    "proposalRef": "i004, i100",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "tests/calendario.spec.ts; tests/a11y.spec.ts includes calendar; exact 320px cells require measured follow-up.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 2,
+    "inventoryOrder": 20
+  },
+  {
+    "surface": "Statistics overview",
+    "file": "src/components/analytics/AnalyticsView.tsx",
+    "evidence": "Main stats page has four named summary cards, RoutineAnalytics before seven-day chart, cycle drill-down and export route.",
+    "weakness": "Multiple metrics compete, but deleting global history would lose requested analytics.",
+    "severity": "medium",
+    "repairHypothesis": "Retain broad metrics; granular period-by-section history provides primary diagnosis, export in named focused sheet.",
+    "chosenRepair": "Retain broad metrics; granular period-by-section history provides primary diagnosis, export in named focused sheet.",
+    "proposalRef": "i004, i052",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "tests/a11y.spec.ts ANALYTICS; tests/user_profile_menu.spec.ts analytics navigation.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 2,
+    "inventoryOrder": 21
+  },
+  {
+    "surface": "Statistics: routine periods/section history",
+    "file": "src/components/analytics/RoutineAnalytics.tsx",
+    "evidence": "Frequency, date reference, selected period and section select are explicit; group Details separates completed/manual/automatic skipped/unknown.",
+    "weakness": "Closed-period omissions must remain distinguished from unknown history and current pending tasks.",
+    "severity": "high",
+    "repairHypothesis": "Retain existing explicit filters, selected-period heading, per-section omission and restore actions; no visibility or business simplification.",
+    "chosenRepair": "Retain existing explicit filters, selected-period heading, per-section omission and restore actions; no visibility or business simplification.",
+    "proposalRef": "i004, i052",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "tests/routine_analytics.spec.ts five granular history/skip/restore/mobile assertions.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 1,
+    "inventoryOrder": 22
+  },
+  {
+    "surface": "Import/export",
+    "file": "src/components/views/UniversalImporter.tsx",
+    "evidence": "Backup JSON action remains primary; import target, format detection and preview precede mutation; export format cards now under native Details.",
+    "weakness": "Four parallel advanced export choices add avoidable decision load.",
+    "severity": "medium",
+    "repairHypothesis": "Keep JSON backup visible; four formats inside named Elegir formato disclosure.",
+    "chosenRepair": "Keep JSON backup visible; four formats inside named Elegir formato disclosure.",
+    "proposalRef": "i004, i027",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "tests/audit_data.spec.ts invalid JSON, CSP PDF, responsive import; tests/a11y.spec.ts DATA.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 2,
+    "inventoryOrder": 23
+  },
+  {
+    "surface": "Authentication",
+    "file": "src/components/auth/AuthScreen.tsx",
+    "evidence": "Labeled form inputs, named password visibility, mode tabs, status/error messages and guest action coexist.",
+    "weakness": "Small auxiliary actions had weaker touch targets; failures must not be hidden as optional detail.",
+    "severity": "medium",
+    "repairHypothesis": "44px auth buttons through scoped CSS; retain mode forms, guest/reset/MFA and visible errors.",
+    "chosenRepair": "44px auth buttons through scoped CSS; retain mode forms, guest/reset/MFA and visible errors.",
+    "proposalRef": "i100",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "tests/e2e.spec.ts #2 API auth only; tests/security.spec.ts UI two-step login; no complete all-mode visual claim.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": true,
+    "priority": 2,
+    "inventoryOrder": 24
+  },
+  {
+    "surface": "Public shared read-only list",
+    "file": "src/components/share/SharedListView.tsx",
+    "evidence": "Fetch token, loading/unavailable/empty states, ordered section groups, readonly completion icons, date/price metadata and exit action.",
+    "weakness": "Long descriptions add repeated dense blocks; price and due date remain purposeful.",
+    "severity": "medium",
+    "repairHypothesis": "Native Notes per task, original readonly semantics and all text retained.",
+    "chosenRepair": "Native Notes per task, original readonly semantics and all text retained.",
+    "proposalRef": "i004, i027",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "Source review only; token-based fetch not contacted during independent fixture audit.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": true,
+    "priority": 2,
+    "inventoryOrder": 25
+  },
+  {
+    "surface": "Widget dashboard",
+    "file": "src/components/layout/WidgetDashboard.tsx",
+    "evidence": "smartSortTasks retains top three tasks; completion callback/vibration now attached to named native button; empty state retained.",
+    "weakness": "Old clickable checkbox div had poor keyboard semantics and 20px hit target.",
+    "severity": "medium",
+    "repairHypothesis": "Native named completion button with 44px scoped hit area, unchanged top-three ranking.",
+    "chosenRepair": "Native named completion button with 44px scoped hit area, unchanged top-three ranking.",
+    "proposalRef": "i084, i100",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "Source review only; no widget-only browser assertion identified.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 2,
+    "inventoryOrder": 26
+  },
+  {
+    "surface": "Zen focus mode",
+    "file": "src/components/tasks/ZenMode.tsx",
+    "evidence": "Single task, circular timer, presets, ambient controls and completion/postpone are retained; central timer was onClick div only.",
+    "weakness": "Timer affordance should be operable from keyboard; extra mode controls must remain discoverable without changing timer math.",
+    "severity": "medium",
+    "repairHypothesis": "Native named timer button, semantic focused full-screen dialog; original timer, ambient and completion callbacks preserved.",
+    "chosenRepair": "Native named timer button, semantic focused full-screen dialog; original timer, ambient and completion callbacks preserved.",
+    "proposalRef": "i084",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "Source review; no dedicated Zen-mode E2E identified.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 2,
+    "inventoryOrder": 27
+  },
+  {
+    "surface": "List sequence focus mode",
+    "file": "src/components/tasks/ListSequenceMode.tsx",
+    "evidence": "Circular timer already role=button, tabIndex, named Pause/Resume and Enter/Space; next/parallel/complete/postpone/omit actions separate.",
+    "weakness": "Removing skip or parallel choice would lose mode behavior; no need to inject glass into task content.",
+    "severity": "none",
+    "repairHypothesis": "Retain timer semantics and distinct mode action hierarchy.",
+    "chosenRepair": "Retain timer semantics and distinct mode action hierarchy.",
+    "proposalRef": "i004, i033",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "tests/frecuencia_and_context_menu.spec.ts #4 starts sequence and checks parallel behavior.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 3,
+    "inventoryOrder": 28
+  },
+  {
+    "surface": "Error recovery screen",
+    "file": "src/components/ErrorBoundary.tsx",
+    "evidence": "Recovery and reload callbacks preserved; raw error previously always visible in pre, hardcoded dark palette.",
+    "weakness": "Technical message dominated user recovery; nowrap action row could crowd narrow screens.",
+    "severity": "medium",
+    "repairHypothesis": "Native Detalles del error, theme variables, balanced heading, wrapped 44px recovery actions; full error text retained.",
+    "chosenRepair": "Native Detalles del error, theme variables, balanced heading, wrapped 44px recovery actions; full error text retained.",
+    "proposalRef": "i004, i027",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "Source repair only; forced React error fixture not run in this audit.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 2,
+    "inventoryOrder": 29
+  },
+  {
+    "surface": "Empty states",
+    "file": "src/components/layout/main/MainEmptyState.tsx",
+    "evidence": "Dedicated concise messages exist for every smart view, inbox, trash, four frequencies, folders and custom lists; common quick-add location retained.",
+    "weakness": "A generic empty CTA would misrepresent filtered or readonly views.",
+    "severity": "none",
+    "repairHypothesis": "Retain context-specific explanations and single consistent add route; no churn.",
+    "chosenRepair": "Retain context-specific explanations and single consistent add route; no churn.",
+    "proposalRef": "i004",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "tests/e2e.spec.ts #23 checks mobile empty scrolling; route-specific copy otherwise source-reviewed.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 3,
+    "inventoryOrder": 30
+  },
+  {
+    "surface": "Sidebar navigation",
+    "file": "src/components/layout/Sidebar.tsx",
+    "evidence": "Smart cards, pinned frequency/list order, edit mode, inbox/trash, search and account trigger all remain; account options use improved disclosures.",
+    "weakness": "Account preferences and global navigation should not overwhelm task selection; profile trigger currently announces menu while panel is dialog.",
+    "severity": "medium",
+    "repairHypothesis": "Retain ordered smart/list sections and user preferences; align profile trigger popup semantics with dialog.",
+    "chosenRepair": "Retain ordered smart/list sections and user preferences; align profile trigger popup semantics with dialog.",
+    "proposalRef": "i004, i044",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "tests/e2e.spec.ts #4; tests/smoke.spec.ts smart sidebar inventory; tests/user_profile_menu.spec.ts.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 2,
+    "inventoryOrder": 31
+  },
+  {
+    "surface": "Back/swipe navigation",
+    "file": "src/components/layout/NavigationFrame.tsx",
+    "evidence": "Named back button and canGoBack conditional drag routes preserve native navigation affordances.",
+    "weakness": "Concealing navigation to gain space would break users return path; no hierarchy defect established.",
+    "severity": "none",
+    "repairHypothesis": "Retain explicit back plus gesture and reduced-motion shared primitives.",
+    "chosenRepair": "Retain explicit back plus gesture and reduced-motion shared primitives.",
+    "proposalRef": "i100",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "tests/e2e.spec.ts #20 top navigation back.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 3,
+    "inventoryOrder": 32
+  },
+  {
+    "surface": "Batch selection toolbar and three sheets",
+    "file": "src/components/tasks/BatchTaskActionsBar.tsx",
+    "evidence": "Contextual selected count and move/nest/toggle/delete/cancel callbacks preserved; three named modal panels now share focus hook.",
+    "weakness": "Small toolbar targets and previously unnamed/untrapped nested sheets made hidden actions difficult to operate.",
+    "severity": "high",
+    "repairHypothesis": "44px named controls; three focused semantic dialogs; original candidates/mutation/undo logic unchanged.",
+    "chosenRepair": "44px named controls; three focused semantic dialogs; original candidates/mutation/undo logic unchanged.",
+    "proposalRef": "i084, i100",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "Source repair; tests/design_hierarchy.spec.ts forthcoming root batch coverage should be recorded only after added.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 1,
+    "inventoryOrder": 33
+  },
+  {
+    "surface": "Deletion/undo feedback",
+    "file": "src/components/ui/GlobalToast.tsx",
+    "evidence": "role=status, timed disappearance, 44px undo and dismiss, draggable dismissal all exist; DeletedTaskToast retains onUndo/onDismiss.",
+    "weakness": "Undo must remain accessible when optional metadata is hidden; unrelated toast should not steal focus.",
+    "severity": "none",
+    "repairHypothesis": "Retain existing nonmodal status and undo actions; no extra modal or unnecessary hierarchy changes.",
+    "chosenRepair": "Retain existing nonmodal status and undo actions; no extra modal or unnecessary hierarchy changes.",
+    "proposalRef": "i004, i044",
+    "coverage": {
+      "source": "Reviewed actual component and relevant shared routing/capability source",
+      "existingE2E": "tests/drag_and_drop.spec.ts existing task mutations; no dedicated toast restoration assertion cited.",
+      "liveAudit": "Not separately exercised by this source auditor; consult independent-review.md and final root test report for executed evidence"
+    },
+    "validation": "Preserve original actions/data callbacks; verify applicable existing fixtures and disclosure keyboard/touch behavior. No usage-frequency ranking inferred.",
+    "requiresCredentials": false,
+    "priority": 3,
+    "inventoryOrder": 34
+  }
+]

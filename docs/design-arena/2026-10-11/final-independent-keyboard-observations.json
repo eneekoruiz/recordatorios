@@ -1,0 +1,53 @@
+[
+  {
+    "variant": "keyboard",
+    "surface": "list",
+    "assets": [
+      "http://127.0.0.1:5182/assets/index-Dyybs836.js",
+      "http://127.0.0.1:5182/registerSW.js"
+    ],
+    "overflow": false,
+    "emptySummary": 1
+  },
+  {
+    "variant": "keyboard",
+    "surface": "empty-details",
+    "text": "Tarea sin metadatos\nDetalles\nEditar detalles"
+  },
+  {
+    "variant": "keyboard",
+    "surface": "drawer",
+    "text": "Cancelar\nDetalles\nListo\nLista\nCasa revisión final\nFecha y hora\nAyer\nDuración\n25 min\nDuración\nTiempo estimado o asignado\nDuración estimada\n25 min\nhoras\nmin\nseg\nSin duración\n5m\n15m\n25m\n30m\n45m\n1h\n1h 30m\n2h\nQuitar\nTarea en segundo plano\nLavadora, mascarilla, secadora... se ejecuta sola mientras haces otras tareas\nRepetición y ubicación\nRequisitos y dependencias\nDetalles adicionales"
+  },
+  {
+    "variant": "keyboard",
+    "surface": "drawer-keyboard",
+    "tabs": 16,
+    "escapedFocus": 0
+  },
+  {
+    "variant": "keyboard",
+    "surface": "nested-select",
+    "dialogRemaining": 1,
+    "popupRemaining": 0
+  },
+  {
+    "variant": "keyboard",
+    "surface": "management",
+    "rows": [
+      {
+        "height": 81,
+        "width": 320
+      },
+      {
+        "height": 81,
+        "width": 320
+      },
+      {
+        "height": 81,
+        "width": 320
+      }
+    ],
+    "overflow": false
+  }
+]

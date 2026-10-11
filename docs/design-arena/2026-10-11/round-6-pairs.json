@@ -1,0 +1,56 @@
+{
+  "round": 6,
+  "bye": null,
+  "matches": [
+    {
+      "match": "r6-m01",
+      "a": {
+        "id": "i027",
+        "title": "Native details groups",
+        "mechanism": "Use native Details groups with scope-specific names outside clickable collapse regions; remeasure expanded rows and preserve independent section collapse and unchanged action callbacks. Place native Details outside clickable collapse regions. Place disclosures outside interactive parents and measure rows. Use independent disclosure siblings and preserve existing collapse targets.",
+        "visible": "Titles, exact period, active scope, completion and named disclosure summaries.",
+        "disclosed": "Opened groups retain inclusion, duration, diagnostics and every metadata editor/link; existing menus retain their original subjects and callbacks.",
+        "access": "44px native summaries, isolated events, visible keyboard focus, resilient text reflow and measured virtualized heights at zoom and 320px.",
+        "benefit": "Uses predictable browser disclosure behavior with resilient text reflow.",
+        "risk": "Virtualized list measurement must account for open details.",
+        "verification": "Open nested groups at zoom, verify focus and heights, and test section collapse independently of metadata disclosure."
+      },
+      "b": {
+        "id": "i004",
+        "title": "Exception-led metadata with stable details",
+        "mechanism": "Suppress only safely redundant metadata; always show overdue/divergent dates and keep labeled Details stable at each scope. Unknown or divergent context remains visible; Details is always explicit. Retain dates when context cannot be proven identical. Use selected reference context, never wall-clock assumptions. Omit only context proven redundant; retain uncertain and overdue dates.",
+        "visible": "Completion, title, exceptional dates, exact selected period and active scope/filter context.",
+        "disclosed": "All nonexception metadata remains in Detalles; page/section options and summary preserve every statistic and edit action.",
+        "access": "44px nonoverlapping targets, scoped labels, keyboard disclosure, visible focus/return, 320px wrapping and reduced motion.",
+        "benefit": "Reduces repeated signals while keeping unusual obligations visible.",
+        "risk": "A mistaken context comparison could suppress a needed date.",
+        "verification": "Test mixed dates, overdue tasks, inherited frequencies and history; verify details always reveals complete values."
+      }
+    },
+    {
+      "match": "r6-m02",
+      "a": {
+        "id": "i016",
+        "title": "Semantic one-line status replacement",
+        "mechanism": "Replace duplicated progress indicators with one count-first status sentence that distinguishes own completion from included pending work using unchanged status calculations. Name both scopes explicitly using existing counts. Retain scope explanation in the existing diagnostic. Use the existing exact own/included counts and diagnosis.",
+        "visible": "Exact selected period, active inclusion scope, meaningful count sentence, task completion and relevant deadlines.",
+        "disclosed": "The semantic status control opens the existing diagnostic; secondary disclosure preserves duration, inclusion and all task metadata; original menus stay separately scoped.",
+        "access": "44px status button, complete accessible name, wrapping count text, stable focus and keyboard access without duplicate spoken progress.",
+        "benefit": "Removes redundant progress signals while keeping spoken information complete.",
+        "risk": "A sentence may wrap differently as counts change.",
+        "verification": "Test all_done, own-done/accumulated-pending, zero-goal and historical states; confirm diagnostic selectors and duration routes survive."
+      },
+      "b": {
+        "id": "i044",
+        "title": "Steady metadata rail",
+        "mechanism": "Keep one stable summary rail below each title; use a simple Details label for sparse metadata and remeasure expansion. Re-measure virtualized rows when local details expand. Skip empty rails and retain row measurements. Do not reserve space for empty metadata.",
+        "visible": "Title, completion, exact period, active scope and wrapping summary.",
+        "disclosed": "Rail opens all metadata with direct duration/price/date/frequency editing and time-of-day cycling; section/page rails expose breakdowns and scope controls. Preserve all existing data and callback semantics.",
+        "access": "44px nonoverlapping targets, scoped labels, keyboard disclosure, visible focus/return, 320px wrapping and reduced motion.",
+        "benefit": "Stable control positions support fast scanning as data changes.",
+        "risk": "Reserved rail space can waste room on sparse tasks.",
+        "verification": "Verify empty metadata, changing completion/counts, subtask totals, menus and virtualized row sizing."
+      }
+    }
+  ]
+}

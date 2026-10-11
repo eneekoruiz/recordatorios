@@ -1,0 +1,14 @@
+[
+  {
+    "variant": "narrow",
+    "error": "TimeoutError: locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('dialog', { name: 'Gestionar listas' }) to be visible\u001b[22m\n"
+  },
+  {
+    "variant": "large390",
+    "error": "TimeoutError: locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('dialog', { name: 'Gestionar listas' }) to be visible\u001b[22m\n"
+  },
+  {
+    "variant": "large320",
+    "error": "TimeoutError: locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('dialog', { name: 'Gestionar listas' }) to be visible\u001b[22m\n"
+  }
+]

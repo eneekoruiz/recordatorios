@@ -1,0 +1,458 @@
+[
+  {
+    "match": "r2-m01",
+    "winner": "i081",
+    "judge": "root (not a candidate author; fallback after worker usage limit)",
+    "a": {
+      "attack": "A fact ledger plus Options can repeat scope information for every nested section.",
+      "response": "Show only divergent section context in the ledger.",
+      "fatal": false,
+      "scores": [
+        30,
+        22,
+        17,
+        13,
+        8
+      ],
+      "scoreReason": "Complete access but ledger expansion adds repeated facts."
+    },
+    "b": {
+      "attack": "A long context sentence may wrap into a paragraph at 320px.",
+      "response": "Keep deadline precedence and move optional values into Details.",
+      "fatal": false,
+      "scores": [
+        30,
+        23,
+        18,
+        13,
+        9
+      ],
+      "scoreReason": "Explicit empty-data and deadline rules reduce the same clutter with less structure."
+    },
+    "revisedWinner": {
+      "id": "i081",
+      "mechanism": "Use one short context sentence with deadline precedence and explicit empty-data rules; wrap without truncation. Limit the synopsis to consequential context; no truncated period labels.",
+      "visible": "Title/check, exact period, active inclusion, section count and deadline or estimate.",
+      "disclosed": "A labeled Details button per object reveals count composition, estimates and all original metadata actions; page and section Options preserve complete menus and diagnostics.",
+      "access": "44px nonoverlapping targets, scoped labels, keyboard disclosure, visible focus/return, 320px wrapping and reduced motion."
+    }
+  },
+  {
+    "match": "r2-m02",
+    "winner": "i062",
+    "judge": "root (not a candidate author; fallback after worker usage limit)",
+    "a": {
+      "attack": "Origin rows could make included daily tasks appear overdue.",
+      "response": "Label origins as included frequencies rather than missed work.",
+      "fatal": false,
+      "scores": [
+        30,
+        24,
+        18,
+        14,
+        9
+      ],
+      "scoreReason": "Explains the user's accumulated-work ambiguity directly with actual sources."
+    },
+    "b": {
+      "attack": "Quiet context columns still compress a long shared-house title.",
+      "response": "Use local disclosure at narrow widths.",
+      "fatal": false,
+      "scores": [
+        30,
+        21,
+        17,
+        12,
+        8
+      ],
+      "scoreReason": "Responsive ledger entails more layout modes without clearer accumulation meaning."
+    },
+    "revisedWinner": {
+      "id": "i062",
+      "mechanism": "Use a plain origin ledger naming shorter-frequency contributions; distinguish inclusion from overdue backlog. Never use overdue wording for frequency inclusion.",
+      "visible": "Exact period, compact origin summary, active scope, titles, completion and due exceptions.",
+      "disclosed": "Ledger expansion shows original routine breakdown, duration and diagnostic; section Details exposes inclusion; task Details retains all editors; Options preserves menus. Preserve all existing data and callback semantics.",
+      "access": "44px nonoverlapping targets, scoped labels, keyboard disclosure, visible focus/return, 320px wrapping and reduced motion."
+    }
+  },
+  {
+    "match": "r2-m03",
+    "winner": "i004",
+    "judge": "root (not a candidate author; fallback after worker usage limit)",
+    "a": {
+      "attack": "Suppressing an inherited date could hide a historical exception.",
+      "response": "Suppress only exact context equality; retain uncertain dates.",
+      "fatal": false,
+      "scores": [
+        30,
+        24,
+        18,
+        14,
+        9
+      ],
+      "scoreReason": "Removes repeated metadata while retaining urgent and uncertain context."
+    },
+    "b": {
+      "attack": "One capsule obscures whether changing period also changes inclusion.",
+      "response": "Separate labelled groups inside and persistent state outside.",
+      "fatal": false,
+      "scores": [
+        30,
+        22,
+        17,
+        13,
+        8
+      ],
+      "scoreReason": "Repaired capsule preserves access but makes everyday context one step farther away."
+    },
+    "revisedWinner": {
+      "id": "i004",
+      "mechanism": "Suppress only safely redundant metadata; always show overdue/divergent dates and keep labeled Details stable at each scope. Unknown or divergent context remains visible; Details is always explicit.",
+      "visible": "Completion, title, exceptional dates, exact selected period and active scope/filter context.",
+      "disclosed": "All nonexception metadata remains in Detalles; page/section options and summary preserve every statistic and edit action.",
+      "access": "44px nonoverlapping targets, scoped labels, keyboard disclosure, visible focus/return, 320px wrapping and reduced motion."
+    }
+  },
+  {
+    "match": "r2-m04",
+    "winner": "i033",
+    "judge": "root (not a candidate author; fallback after worker usage limit)",
+    "a": {
+      "attack": "Margin notes create a second scan path for each nested section.",
+      "response": "Stack only differing context at mobile widths.",
+      "fatal": false,
+      "scores": [
+        30,
+        21,
+        18,
+        12,
+        8
+      ],
+      "scoreReason": "Strong history fidelity but weak immediate task prioritization."
+    },
+    "b": {
+      "attack": "Disabled Start could leave a user unable to understand eligibility.",
+      "response": "Retain original eligibility and concise disabled reason.",
+      "fatal": false,
+      "scores": [
+        30,
+        24,
+        18,
+        13,
+        9
+      ],
+      "scoreReason": "Existing Start keeps resumption direct without introducing new execution logic."
+    },
+    "revisedWinner": {
+      "id": "i033",
+      "mechanism": "Keep the resume-work header and pending counts; use existing Start eligibility, show a concise disabled reason, keep historical period and inclusion scope visible, and retain named Summary, section Options and task Details. Start remains governed by existing eligible pending tasks.",
+      "visible": "Empezar, list identity, period and pending tasks. Exact reference period and current inclusion scope remain readable.",
+      "disclosed": "Resumen exposes full scope, diagnostic and estimates; section options and task details retain all properties, links and configuration. Retain every existing editor, action, link, diagnostic and scoped menu without duplicating command menus.",
+      "access": "44px Start, summary and detail controls; explicit disabled state when no pending reminders; visible focus. Minimum 44px targets; visible keyboard focus; no hover-only routes; wrap at 320/375px; scoped reduced motion."
+    }
+  },
+  {
+    "match": "r2-m05",
+    "winner": "i052",
+    "judge": "root (not a candidate author; fallback after worker usage limit)",
+    "a": {
+      "attack": "Watermark may look decorative rather than interactive.",
+      "response": "Use plain scope text with labelled 44px change control.",
+      "fatal": false,
+      "scores": [
+        30,
+        23,
+        18,
+        14,
+        9
+      ],
+      "scoreReason": "Persistent scope addresses accidental accumulation assumptions cheaply."
+    },
+    "b": {
+      "attack": "Inspector subject may change while an editor is open.",
+      "response": "Pin identity and guard subject transitions.",
+      "fatal": false,
+      "scores": [
+        30,
+        21,
+        16,
+        12,
+        8
+      ],
+      "scoreReason": "A shared inspector introduces context synchronization risk absent in the local scope route."
+    },
+    "revisedWinner": {
+      "id": "i052",
+      "mechanism": "Keep the persistent scope watermark as readable text and a 44px labelled scope button, show exact period nearby, and repeat only differing section scopes; its disclosure retains existing inclusion, estimate and diagnostic actions. Treat scope as explicit readable state, never a decorative watermark alone.",
+      "visible": "Selected month, explicit own/combined scope text, titles and completion. Exact reference period and current inclusion scope remain readable.",
+      "disclosed": "Watermark opens scope toggle with current state plus duration and diagnostic; task Details opens original metadata; list/section Options remains visible. Preserve all existing data and callback semantics. Retain every existing editor, action, link, diagnostic and scoped menu without duplicating command menus.",
+      "access": "44px watermark button, text rather than color signal, semantic state and keyboard access. Minimum 44px targets; visible keyboard focus; no hover-only routes; wrap at 320/375px; scoped reduced motion."
+    }
+  },
+  {
+    "match": "r2-m06",
+    "winner": "i084",
+    "judge": "root (not a candidate author; fallback after worker usage limit)",
+    "a": {
+      "attack": "Two 44px disclosures crowd a nested section's short header.",
+      "response": "Stack controls and retain scoped Options.",
+      "fatal": false,
+      "scores": [
+        30,
+        22,
+        18,
+        13,
+        8
+      ],
+      "scoreReason": "Clear distinction but persistent double controls consume mobile space."
+    },
+    "b": {
+      "attack": "Repeated Details labels can lose object identity for a screen reader.",
+      "response": "Name each disclosure with its task or section title.",
+      "fatal": false,
+      "scores": [
+        30,
+        24,
+        19,
+        14,
+        9
+      ],
+      "scoreReason": "Stable essential spine and local semantic detail preserve predictability across surfaces."
+    },
+    "revisedWinner": {
+      "id": "i084",
+      "mechanism": "Retain the stable essential spine and inline definition lists; use object-specific accessible names, persistent selected period and inclusion state, separate completion targets, and existing Options menus with no hidden keyboard destinations. Keep completion separate and give every disclosure an object-specific name.",
+      "visible": "Essential spine and nonredundant date exceptions; inclusion state always stated. Exact reference period and current inclusion scope remain readable.",
+      "disclosed": "Details expands semantic definition lists containing every datum and original action; header/section summaries use the same disclosure pattern, with diagnostic and inclusion controls retained. Retain every existing editor, action, link, diagnostic and scoped menu without duplicating command menus.",
+      "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested. Minimum 44px targets; visible keyboard focus; no hover-only routes; wrap at 320/375px; scoped reduced motion."
+    }
+  },
+  {
+    "match": "r2-m07",
+    "winner": "i032",
+    "judge": "root (not a candidate author; fallback after worker usage limit)",
+    "a": {
+      "attack": "Deletion makes the single inspector reference a stale subject.",
+      "response": "Invalidate subject and return focus safely.",
+      "fatal": false,
+      "scores": [
+        30,
+        21,
+        16,
+        12,
+        8
+      ],
+      "scoreReason": "A new shared selection state adds risk and implementation cost."
+    },
+    "b": {
+      "attack": "Explicit scope text may overflow long headings.",
+      "response": "Wrap controls below the heading, never clip context.",
+      "fatal": false,
+      "scores": [
+        30,
+        23,
+        18,
+        14,
+        9
+      ],
+      "scoreReason": "Shape plus text improves status clarity without shared inspector state."
+    },
+    "revisedWinner": {
+      "id": "i032",
+      "mechanism": "Keep shape-and-text hierarchy with one glass navigation surface; let heading controls wrap underneath long names, state exact period and own/accumulated scope, and show concurrent calculations with explicit labels inside Summary. Use glass for navigation and opaque readable content fallback.",
+      "visible": "Titles, exact period, completion shape/state and scope sentence. Exact reference period and current inclusion scope remain readable.",
+      "disclosed": "Summary and details expose every statistic, property and command with labelled rows; diagnostics remain on the existing route. Retain every existing editor, action, link, diagnostic and scoped menu without duplicating command menus.",
+      "access": "44px controls, opaque contrast fallback, text labels for status and no color-only accumulated distinction. Minimum 44px targets; visible keyboard focus; no hover-only routes; wrap at 320/375px; scoped reduced motion."
+    }
+  },
+  {
+    "match": "r2-m08",
+    "winner": "i036",
+    "judge": "root (not a candidate author; fallback after worker usage limit)",
+    "a": {
+      "attack": "Transaction popover implies confirmation for a boolean inclusion setting.",
+      "response": "Retain immediate existing callbacks and explicit page/section names.",
+      "fatal": false,
+      "scores": [
+        30,
+        22,
+        17,
+        13,
+        8
+      ],
+      "scoreReason": "Useful scope explanation but adds a planning interaction to a simple toggle."
+    },
+    "b": {
+      "attack": "A list of many exceptions can refill the gutter.",
+      "response": "Allow natural wrapping and Details for ordinary metadata.",
+      "fatal": false,
+      "scores": [
+        30,
+        23,
+        18,
+        14,
+        9
+      ],
+      "scoreReason": "Preserves meaningful exceptions while removing redundant everyday context."
+    },
+    "revisedWinner": {
+      "id": "i036",
+      "mechanism": "Keep the exception gutter on roomy layouts and stack one concise exception line on mobile; derive warnings from selected reference dates, retain accumulated origin where meaningful, and preserve all original data, editors, diagnostics and menus. Use selected reference dates rather than today's date for historical warnings.",
+      "visible": "Titles, completion, selected period and explicit exceptional context. Exact reference period and current inclusion scope remain readable.",
+      "disclosed": "Details reveal duration, frequency, price, links and time-of-day; header summaries open existing diagnostics and scope controls. Preserve all existing data and callback semantics. Retain every existing editor, action, link, diagnostic and scoped menu without duplicating command menus.",
+      "access": "44px named buttons and focus rings; exception text is never color-only. Minimum 44px targets; visible keyboard focus; no hover-only routes; wrap at 320/375px; scoped reduced motion."
+    }
+  },
+  {
+    "match": "r2-m09",
+    "winner": "i077",
+    "judge": "root (not a candidate author; fallback after worker usage limit)",
+    "a": {
+      "attack": "Dedicated deadline row adds height to every dated task.",
+      "response": "Render it only for meaningful due context.",
+      "fatal": false,
+      "scores": [
+        30,
+        23,
+        18,
+        14,
+        9
+      ],
+      "scoreReason": "Deadline editing stays direct and independent of completion."
+    },
+    "b": {
+      "attack": "Plan tab conceals task context during repeated scope changes.",
+      "response": "Pin shared period and inclusion context across tabs.",
+      "fatal": false,
+      "scores": [
+        30,
+        21,
+        17,
+        12,
+        8
+      ],
+      "scoreReason": "Mode switching adds steps without serving most reading actions."
+    },
+    "revisedWinner": {
+      "id": "i077",
+      "mechanism": "Retain the dedicated deadline action row for meaningful due context, omit empty deadline rows, and keep full date editing in Details; header period, section scope, estimates, diagnostics and original commands remain available. Keep ordinary date editing reachable in Details even when no urgent row is shown.",
+      "visible": "Completion target, title, urgent deadline in words, selected period and scope. Exact reference period and current inclusion scope remain readable.",
+      "disclosed": "Deadline button invokes date editing; Details provides all other task actions; header Estimates/Options and section Scope/Options retain totals, diagnostics and commands. Retain every existing editor, action, link, diagnostic and scoped menu without duplicating command menus.",
+      "access": "Use semantic buttons, 44px nonoverlapping targets, visible focus, keyboard disclosure, scope-specific names and focus return; disable scoped motion when requested. Minimum 44px targets; visible keyboard focus; no hover-only routes; wrap at 320/375px; scoped reduced motion."
+    }
+  },
+  {
+    "match": "r2-m10",
+    "winner": "i091",
+    "judge": "root (not a candidate author; fallback after worker usage limit)",
+    "a": {
+      "attack": "Typography tiers require learning weight distinctions.",
+      "response": "Pair tiers with explicit Propias/Incluidas words.",
+      "fatal": false,
+      "scores": [
+        30,
+        22,
+        17,
+        13,
+        8
+      ],
+      "scoreReason": "Origin semantics improve but do not resolve metadata volume alone."
+    },
+    "b": {
+      "attack": "A synopsis can look like static text.",
+      "response": "Use persistent chevron, visible focus and explicit disclosure state.",
+      "fatal": false,
+      "scores": [
+        30,
+        24,
+        18,
+        14,
+        9
+      ],
+      "scoreReason": "Synopsis is both concise context and discoverable access to details."
+    },
+    "revisedWinner": {
+      "id": "i091",
+      "mechanism": "Use short scoped synopsis buttons with persistent chevrons; expand semantic detail locally and keep completion separate. Do not pack optional fields into the closed synopsis.",
+      "visible": "Period/scope synopsis, section count/inclusion, task date/recurrence, title/check and Options.",
+      "disclosed": "Synopsis expands its complete semantic detail block: dates, estimates, frequency, source list, price and links with original actions; routine diagnostic and inclusion remain available.",
+      "access": "44px nonoverlapping targets, scoped labels, keyboard disclosure, visible focus/return, 320px wrapping and reduced motion."
+    }
+  },
+  {
+    "match": "r2-m11",
+    "winner": "i044",
+    "judge": "root (not a candidate author; fallback after worker usage limit)",
+    "a": {
+      "attack": "Reserved rail wastes space when a task has no metadata.",
+      "response": "Do not render an empty rail; keep positions stable when populated.",
+      "fatal": false,
+      "scores": [
+        30,
+        23,
+        18,
+        14,
+        9
+      ],
+      "scoreReason": "Inline metadata rail avoids a new nested modal handoff."
+    },
+    "b": {
+      "attack": "Opening a focused editor from an object sheet can lose the original trigger.",
+      "response": "Coordinate focus handoff and close the intermediary sheet.",
+      "fatal": false,
+      "scores": [
+        30,
+        22,
+        16,
+        12,
+        8
+      ],
+      "scoreReason": "Full-width targets help mobile but nested sheets add focus and navigation risk."
+    },
+    "revisedWinner": {
+      "id": "i044",
+      "mechanism": "Keep one stable summary rail below each title; use a simple Details label for sparse metadata and remeasure expansion. Re-measure virtualized rows when local details expand.",
+      "visible": "Title, completion, exact period, active scope and wrapping summary.",
+      "disclosed": "Rail opens all metadata with direct duration/price/date/frequency editing and time-of-day cycling; section/page rails expose breakdowns and scope controls. Preserve all existing data and callback semantics.",
+      "access": "44px nonoverlapping targets, scoped labels, keyboard disclosure, visible focus/return, 320px wrapping and reduced motion."
+    }
+  },
+  {
+    "match": "r2-m12",
+    "winner": "i035",
+    "judge": "root (not a candidate author; fallback after worker usage limit)",
+    "a": {
+      "attack": "Tabs split history evidence across multiple invisible panels.",
+      "response": "Pin period and scope above all tabs.",
+      "fatal": false,
+      "scores": [
+        30,
+        21,
+        17,
+        12,
+        8
+      ],
+      "scoreReason": "Tab hierarchy increases inspection steps for already-related context."
+    },
+    "b": {
+      "attack": "Combined tray may suggest inclusion and date are linked.",
+      "response": "Separate labelled navigator and scope groups within it.",
+      "fatal": false,
+      "scores": [
+        30,
+        23,
+        18,
+        14,
+        9
+      ],
+      "scoreReason": "One calm tray groups existing controls with less mode overhead."
+    },
+    "revisedWinner": {
+      "id": "i035",
+      "mechanism": "Retain the calm context tray; show selected period and current inclusion scope in the closed tray, separate navigator and inclusion groups inside, and keep original summaries, diagnostics, menus and task editors reachable. Each scope and date control retains its independent callback and state.",
+      "visible": "Title, selected period, scope label, completion and essential deadline. Exact reference period and current inclusion scope remain readable.",
+      "disclosed": "Tray expands existing period navigator, accumulated switch, duration breakdown and diagnostic; list and section options retain named routes; task panel contains all metadata editors. Preserve all existing data and callback semantics. Retain every existing editor, action, link, diagnostic and scoped menu without duplicating command menus.",
+      "access": "44px buttons, semantic expansion, restored focus; keyboard access and opaque glass fallback. Minimum 44px targets; visible keyboard focus; no hover-only routes; wrap at 320/375px; scoped reduced motion."
+    }
+  }
+]

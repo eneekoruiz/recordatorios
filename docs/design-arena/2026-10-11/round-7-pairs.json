@@ -1,0 +1,31 @@
+{
+  "round": 7,
+  "bye": null,
+  "matches": [
+    {
+      "match": "r7-m01",
+      "a": {
+        "id": "i004",
+        "title": "Exception-led metadata with stable details",
+        "mechanism": "Suppress only safely redundant metadata; always show overdue/divergent dates and keep labeled Details stable at each scope. Unknown or divergent context remains visible; Details is always explicit. Retain dates when context cannot be proven identical. Use selected reference context, never wall-clock assumptions. Omit only context proven redundant; retain uncertain and overdue dates. Retain uncertain context and make Details a stable local route.",
+        "visible": "Completion, title, exceptional dates, exact selected period and active scope/filter context.",
+        "disclosed": "All nonexception metadata remains in Detalles; page/section options and summary preserve every statistic and edit action.",
+        "access": "44px nonoverlapping targets, scoped labels, keyboard disclosure, visible focus/return, 320px wrapping and reduced motion.",
+        "benefit": "Reduces repeated signals while keeping unusual obligations visible.",
+        "risk": "A mistaken context comparison could suppress a needed date.",
+        "verification": "Test mixed dates, overdue tasks, inherited frequencies and history; verify details always reveals complete values."
+      },
+      "b": {
+        "id": "i044",
+        "title": "Steady metadata rail",
+        "mechanism": "Keep one stable summary rail below each title; use a simple Details label for sparse metadata and remeasure expansion. Re-measure virtualized rows when local details expand. Skip empty rails and retain row measurements. Do not reserve space for empty metadata. Omit empty rails and verify expanded row measurements.",
+        "visible": "Title, completion, exact period, active scope and wrapping summary.",
+        "disclosed": "Rail opens all metadata with direct duration/price/date/frequency editing and time-of-day cycling; section/page rails expose breakdowns and scope controls. Preserve all existing data and callback semantics.",
+        "access": "44px nonoverlapping targets, scoped labels, keyboard disclosure, visible focus/return, 320px wrapping and reduced motion.",
+        "benefit": "Stable control positions support fast scanning as data changes.",
+        "risk": "Reserved rail space can waste room on sparse tasks.",
+        "verification": "Verify empty metadata, changing completion/counts, subtask totals, menus and virtualized row sizing."
+      }
+    }
+  ]
+}

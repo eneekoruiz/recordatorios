@@ -1,0 +1,78 @@
+[
+  {
+    "match": "r6-m01",
+    "winner": "i004",
+    "judge": "root; non-author fallback after worker usage limit",
+    "a": {
+      "attack": "Native disclosure alone does not identify which fields should stay visible.",
+      "response": "Apply conservative exception precedence to the closed summary.",
+      "fatal": false,
+      "scores": [
+        30,
+        24,
+        19,
+        15,
+        9
+      ],
+      "scoreReason": "Native disclosure alone does not identify which fields should stay visible."
+    },
+    "b": {
+      "attack": "Exception rules need exact context and can be overaggressive.",
+      "response": "Retain uncertain context and make Details a stable local route.",
+      "fatal": false,
+      "scores": [
+        30,
+        25,
+        19,
+        15,
+        9
+      ],
+      "scoreReason": "Visibility policy plus stable access solves the observed clutter; native disclosure remains a compatible implementation graft."
+    },
+    "revisedWinner": {
+      "id": "i004",
+      "mechanism": "Suppress only safely redundant metadata; always show overdue/divergent dates and keep labeled Details stable at each scope. Unknown or divergent context remains visible; Details is always explicit. Retain dates when context cannot be proven identical. Use selected reference context, never wall-clock assumptions. Omit only context proven redundant; retain uncertain and overdue dates. Retain uncertain context and make Details a stable local route.",
+      "visible": "Completion, title, exceptional dates, exact selected period and active scope/filter context.",
+      "disclosed": "All nonexception metadata remains in Detalles; page/section options and summary preserve every statistic and edit action.",
+      "access": "44px nonoverlapping targets, scoped labels, keyboard disclosure, visible focus/return, 320px wrapping and reduced motion."
+    }
+  },
+  {
+    "match": "r6-m02",
+    "winner": "i044",
+    "judge": "root; non-author fallback after worker usage limit",
+    "a": {
+      "attack": "Status-only direction does not organize price, duration and recurrence editors.",
+      "response": "Use count-first status within a wider local detail system.",
+      "fatal": false,
+      "scores": [
+        30,
+        24,
+        19,
+        14,
+        9
+      ],
+      "scoreReason": "Status-only direction does not organize price, duration and recurrence editors."
+    },
+    "b": {
+      "attack": "Rail may waste height and disturb virtualization.",
+      "response": "Omit empty rails and verify expanded row measurements.",
+      "fatal": false,
+      "scores": [
+        30,
+        24,
+        19,
+        15,
+        9
+      ],
+      "scoreReason": "Steady local metadata access covers more of the task UI than status replacement alone."
+    },
+    "revisedWinner": {
+      "id": "i044",
+      "mechanism": "Keep one stable summary rail below each title; use a simple Details label for sparse metadata and remeasure expansion. Re-measure virtualized rows when local details expand. Skip empty rails and retain row measurements. Do not reserve space for empty metadata. Omit empty rails and verify expanded row measurements.",
+      "visible": "Title, completion, exact period, active scope and wrapping summary.",
+      "disclosed": "Rail opens all metadata with direct duration/price/date/frequency editing and time-of-day cycling; section/page rails expose breakdowns and scope controls. Preserve all existing data and callback semantics.",
+      "access": "44px nonoverlapping targets, scoped labels, keyboard disclosure, visible focus/return, 320px wrapping and reduced motion."
+    }
+  }
+]

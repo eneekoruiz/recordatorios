@@ -1,0 +1,206 @@
+[
+  {
+    "variant": "desktop",
+    "surface": "list",
+    "assets": [
+      "http://127.0.0.1:5182/assets/index-Dyybs836.js",
+      "http://127.0.0.1:5182/registerSW.js"
+    ],
+    "overflow": false,
+    "emptySummary": 1
+  },
+  {
+    "variant": "desktop",
+    "surface": "empty-details",
+    "text": "Tarea sin metadatos\nDetalles\nEditar detalles"
+  },
+  {
+    "variant": "desktop",
+    "surface": "drawer",
+    "text": "Cancelar\nDetalles\nListo\nLista\nCasa revisión final\nFecha y hora\nAyer\nDuración\n25 min\nDuración\nTiempo estimado o asignado\nDuración estimada\n25 min\nhoras\nmin\nseg\nSin duración\n5m\n15m\n25m\n30m\n45m\n1h\n1h 30m\n2h\nQuitar\nTarea en segundo plano\nLavadora, mascarilla, secadora... se ejecuta sola mientras haces otras tareas\nRepetición y ubicación\nRequisitos y dependencias\nDetalles adicionales"
+  },
+  {
+    "variant": "desktop",
+    "surface": "drawer-keyboard",
+    "tabs": 16,
+    "escapedFocus": 0
+  },
+  {
+    "variant": "desktop",
+    "surface": "nested-select",
+    "dialogRemaining": 1,
+    "popupRemaining": 1
+  },
+  {
+    "variant": "desktop",
+    "surface": "management",
+    "rows": [
+      {
+        "height": 66,
+        "width": 522
+      },
+      {
+        "height": 66,
+        "width": 522
+      },
+      {
+        "height": 66,
+        "width": 522
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "variant": "mobile",
+    "surface": "list",
+    "assets": [
+      "http://127.0.0.1:5182/assets/index-Dyybs836.js",
+      "http://127.0.0.1:5182/registerSW.js"
+    ],
+    "overflow": false,
+    "emptySummary": 1
+  },
+  {
+    "variant": "mobile",
+    "surface": "empty-details",
+    "text": "Tarea sin metadatos\nDetalles\nEditar detalles"
+  },
+  {
+    "variant": "mobile",
+    "surface": "drawer",
+    "text": "Cancelar\nDetalles\nListo\nLista\nCasa revisión final\nFecha y hora\nAyer\nDuración\n25 min\nDuración\nTiempo estimado o asignado\nDuración estimada\n25 min\nhoras\nmin\nseg\nSin duración\n5m\n15m\n25m\n30m\n45m\n1h\n1h 30m\n2h\nQuitar\nTarea en segundo plano\nLavadora, mascarilla, secadora... se ejecuta sola mientras haces otras tareas\nRepetición y ubicación\nRequisitos y dependencias\nDetalles adicionales"
+  },
+  {
+    "variant": "mobile",
+    "surface": "drawer-keyboard",
+    "tabs": 16,
+    "escapedFocus": 0
+  },
+  {
+    "variant": "mobile",
+    "surface": "nested-select",
+    "dialogRemaining": 1,
+    "popupRemaining": 1
+  },
+  {
+    "variant": "mobile",
+    "surface": "management",
+    "rows": [
+      {
+        "height": 81,
+        "width": 320
+      },
+      {
+        "height": 81,
+        "width": 320
+      },
+      {
+        "height": 81,
+        "width": 320
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "variant": "narrow",
+    "surface": "list",
+    "assets": [
+      "http://127.0.0.1:5182/assets/index-Dyybs836.js",
+      "http://127.0.0.1:5182/registerSW.js"
+    ],
+    "overflow": false,
+    "emptySummary": 1
+  },
+  {
+    "variant": "narrow",
+    "surface": "empty-details",
+    "text": "Tarea sin metadatos\nDetalles\nEditar detalles"
+  },
+  {
+    "variant": "narrow",
+    "surface": "drawer",
+    "text": "Cancelar\nDetalles\nListo\nLista\nCasa revisión final\nFecha y hora\nAyer\nDuración\n25 min\nDuración\nTiempo estimado o asignado\nDuración estimada\n25 min\nhoras\nmin\nseg\nSin duración\n5m\n15m\n25m\n30m\n45m\n1h\n1h 30m\n2h\nQuitar\nTarea en segundo plano\nLavadora, mascarilla, secadora... se ejecuta sola mientras haces otras tareas\nRepetición y ubicación\nRequisitos y dependencias\nDetalles adicionales"
+  },
+  {
+    "variant": "narrow",
+    "surface": "drawer-keyboard",
+    "tabs": 16,
+    "escapedFocus": 0
+  },
+  {
+    "variant": "narrow",
+    "surface": "nested-select",
+    "dialogRemaining": 1,
+    "popupRemaining": 1
+  },
+  {
+    "variant": "narrow",
+    "surface": "management",
+    "rows": [
+      {
+        "height": 101,
+        "width": 250
+      },
+      {
+        "height": 101,
+        "width": 250
+      },
+      {
+        "height": 101,
+        "width": 250
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "variant": "large-text",
+    "surface": "list",
+    "assets": [
+      "http://127.0.0.1:5182/assets/index-Dyybs836.js",
+      "http://127.0.0.1:5182/registerSW.js"
+    ],
+    "overflow": false,
+    "emptySummary": 1
+  },
+  {
+    "variant": "large-text",
+    "surface": "empty-details",
+    "text": "Tarea sin metadatos\nDetalles\nEditar detalles"
+  },
+  {
+    "variant": "large-text",
+    "surface": "drawer",
+    "text": "Cancelar\nDetalles\nListo\nLista\nCasa revisión final\nFecha y hora\nAyer\nDuración\n25 min\nDuración\nTiempo estimado o asignado\nDuración estimada\n25 min\nhoras\nmin\nseg\nSin duración\n5m\n15m\n25m\n30m\n45m\n1h\n1h 30m\n2h\nQuitar\nTarea en segundo plano\nLavadora, mascarilla, secadora... se ejecuta sola mientras haces otras tareas\nRepetición y ubicación\nRequisitos y dependencias\nDetalles adicionales"
+  },
+  {
+    "variant": "large-text",
+    "surface": "drawer-keyboard",
+    "tabs": 16,
+    "escapedFocus": 0
+  },
+  {
+    "variant": "large-text",
+    "surface": "nested-select",
+    "dialogRemaining": 1,
+    "popupRemaining": 1
+  },
+  {
+    "variant": "large-text",
+    "surface": "management",
+    "rows": [
+      {
+        "height": 175,
+        "width": 320
+      },
+      {
+        "height": 175,
+        "width": 320
+      },
+      {
+        "height": 175,
+        "width": 320
+      }
+    ],
+    "overflow": true
+  }
+]
