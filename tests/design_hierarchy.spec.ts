@@ -15,16 +15,19 @@ async function seed(page: Page) {
   await event(page, 'select-view', 'list_hierarchy');
 }
 
-test('task details preserve fields, callbacks and independent completion', async ({ page }) => {
+test('task metadata is directly actionable without a redundant disclosure', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
   await seed(page);
   const section = page.locator('.group-header', { hasText: 'Cocina' });
   const expand = section.getByRole('button', { name: 'Desplegar sección', exact: true });
   if (await expand.count()) await expand.click();
-  const details = page.locator('.task-context-details').filter({ has: page.getByLabel('Detalles de Revisar la cocina', { exact: true }) });
-  await expect(details).not.toHaveAttribute('open', '');
-  await details.locator('summary').focus();
-  await page.keyboard.press('Enter');
-  await expect(details).toHaveAttribute('open', '');
+  const details = page.locator('[data-task-id="hierarchy-task"]').first().locator('.task-context');
+  await expect(details.locator('details')).toHaveCount(0);
+  for (const button of await details.getByRole('button').all()) {
+    const box = await button.boundingBox();
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+    expect(box?.width).toBeGreaterThanOrEqual(44);
+  }
   await expect(details).toContainText('15 min');
   await expect(details).toContainText('24');
   await details.getByRole('button', { name: /Mañana/ }).click();
@@ -71,13 +74,13 @@ test('sheets contain keyboard focus and restore the trigger', async ({ page }) =
   }
 });
 
-test('mobile section options and details use real nonoverlapping hit areas', async ({ page }) => {
+test('mobile section options remain directly accessible', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await seed(page);
   const section = page.locator('.group-header', { hasText: 'Cocina' });
   const options = section.getByRole('button', { name: 'Opciones de sección', exact: true });
   await expect(options).toBeVisible();
-  for (const target of [options, section.locator('.section-context-details > summary')]) {
+  for (const target of [options]) {
     const bounds = await target.boundingBox();
     expect(bounds?.height).toBeGreaterThanOrEqual(44);
     expect(bounds?.width).toBeGreaterThanOrEqual(44);
@@ -86,12 +89,12 @@ test('mobile section options and details use real nonoverlapping hit areas', asy
   await expect(page.getByText('Renombrar sección', { exact: true }).first()).toBeVisible();
 });
 
- test('empty metadata retains a stable edit route', async ({ page }) => {
+ test('empty tasks have no extra metadata row and use the existing editor', async ({ page }) => {
   await seed(page);
   await page.evaluate(() => (window as any).useAppStore.getState().addTask({id:'empty-meta',title:'Sin datos secundarios',categoryId:'hierarchy',status:'pending'}));
-  const details=page.locator('.task-context-details').filter({has:page.getByLabel('Detalles de Sin datos secundarios',{exact:true})});
-  await details.locator('summary').click();
-  await details.getByRole('button',{name:'Editar detalles',exact:true}).click();
+  const row=page.locator('[data-task-id="empty-meta"]').first();
+  await expect(row.locator('.task-context')).toHaveCount(0);
+  await row.getByRole('button',{name:'Detalles del recordatorio',exact:true}).click();
   await expect(page.getByRole('dialog',{name:'Detalles',exact:true})).toBeVisible();
   expect(await page.evaluate(()=>(window as any).useAppStore.getState().tasks['empty-meta'].status)).toBe('pending');
 });

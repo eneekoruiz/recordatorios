@@ -9,18 +9,19 @@ vi.mock('../../src/store/useAppStore', () => ({
 }));
 
 describe('task metadata visibility with a redundant-date hint', () => {
-  it.each([[-1, '#ff3b30'], [1, 'var(--text-tertiary)']])('keeps an exceptional date outside Details (%s days)', (offset, color) => {
+  it.each([[-1, '#ff3b30'], [1, 'var(--text-tertiary)']])('keeps an exceptional date directly visible (%s days)', (offset, color) => {
     const due = new Date(); due.setDate(due.getDate() + Number(offset));
     const task: TaskItem = { id: 'exception', title: 'Fecha importante', status: 'pending', created_at: new Date().toISOString(), version: 1, user_id: 'guest', type: 'task', dueDate: due.toISOString() };
     const html = renderToStaticMarkup(createElement(TaskMetaBadges, { task, hideDueDate: true, dueDateColor: String(color), onEdit: vi.fn() }));
     const date = html.indexOf('title="Fecha de vencimiento');
     expect(date).toBeGreaterThan(-1);
-    expect(date).toBeLessThan(html.indexOf('<details'));
+    expect(html).not.toContain('<details');
   });
 
-  it('keeps the redundant current date available inside Details', () => {
+  it('omits a redundant current date from the metadata row', () => {
     const task: TaskItem = { id: 'current', title: 'Hoy', status: 'pending', created_at: new Date().toISOString(), version: 1, user_id: 'guest', type: 'task', dueDate: new Date().toISOString() };
     const html = renderToStaticMarkup(createElement(TaskMetaBadges, { task, hideDueDate: true, dueDateColor: '#007aff', onEdit: vi.fn() }));
-    expect(html.indexOf('title="Fecha de vencimiento')).toBeGreaterThan(html.indexOf('<details'));
+    expect(html).not.toContain('title="Fecha de vencimiento');
+    expect(html).not.toContain('task-context');
   });
 });

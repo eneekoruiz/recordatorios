@@ -1866,8 +1866,8 @@ export const TaskCard = React.memo(function TaskCard({
                 border: 'none',
                 cursor: 'pointer',
                 color: taskColor || 'var(--accent-primary)',
-                opacity: isMobile ? (isEditingTitle || isEditingNote || contextMenuOpen ? 0.85 : 0) : (isHovered || contextMenuOpen ? 0.85 : 0),
-                pointerEvents: isMobile && !(isEditingTitle || isEditingNote || contextMenuOpen) ? 'none' : 'auto',
+                opacity: isMobile ? 0.55 : (isHovered || contextMenuOpen ? 0.85 : 0.35),
+                pointerEvents: 'auto',
                 transition: 'opacity 0.15s ease, background-color 0.15s ease, transform 0.12s ease',
                 WebkitTapHighlightColor: 'transparent',
                 flexShrink: 0

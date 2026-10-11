@@ -318,9 +318,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
 
         {/* Línea 2: Metadatos (Duración, Presupuesto y Desglose de Frecuencias) - Máximo 1 línea */}
         <div className="page-context-row">{((totalDuration && totalDuration.activeMinutes > 0) || totalCost > 0 || (completedCost ?? 0) > 0 || (cycleBreakdown?.details?.length ?? 0) > 1) && (
-                            <details className="context-details page-context-details">
-                            <summary aria-label="Detalles de lista">Información <ChevronDown size={13} aria-hidden="true" /></summary>
-                            <div className="context-details-body">{(() => {
+                            <div className="page-context-metadata">{(() => {
                                       const hasValidDuration = Boolean(totalDuration && totalDuration.activeMinutes > 0 && !isShoppingList(currentView, currentList) && !isCaducidadesList(currentView, currentList));
                                       const hasValidPrice = Boolean((totalCost > 0 || (completedCost !== undefined && completedCost > 0)) && !currentCycle && !isCaducidadesList(currentView, currentList));
                                       const hasBreakdown = Boolean(cycleBreakdown && cycleBreakdown.details && cycleBreakdown.details.length > 1);
@@ -422,7 +420,6 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                                         </div>
                                       );
                                     })()}</div>
-                            </details>
                             )}{currentCycle && currentCycle.id !== 'cycle_day' && onToggleCycleRoutineMode && (
                         <div className="routine-include-row compact-scope-row">
                           <label htmlFor={includeSwitchId} className="routine-include-text">
@@ -478,7 +475,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
         )}
 
         {/* Incluir las frecuencias anteriores en esta vista: una fila con interruptor, como en Ajustes */}
-        {/* Scope is grouped beside the information disclosure. */}
+        {/* El alcance se mantiene junto al tiempo y presupuesto de esta vista. */}
 
         {/* Navegación temporal y diagnóstico de la rutina de frecuencia (situado bajo «Incluir acumuladas/diarias») */}
         {currentCycle && (

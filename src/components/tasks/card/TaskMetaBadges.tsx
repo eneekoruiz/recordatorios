@@ -1,4 +1,4 @@
-import { Fragment, useMemo, type ReactNode, isValidElement } from 'react';
+import { useMemo, type ReactNode, isValidElement } from 'react';
 import { Calendar, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen, Zap, Tag } from 'lucide-react';
 import type { TaskItem, CustomList } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
@@ -202,7 +202,7 @@ export function TaskMetaBadges({
                   title={`Frecuencia: ${cycleBadge.label} (Toca para editar)`} type="button" className="task-meta-action"
                 >
                   <Repeat size={11} strokeWidth={2.5} style={{ color: freqColor, flexShrink: 0 }} />
-                  <span>{cycleBadge.label}</span>
+                  <span className="sr-only">{cycleBadge.label}</span>
                 </button>
               );
             }
@@ -380,22 +380,12 @@ export function TaskMetaBadges({
               );
             }
 
-            const essential = items.filter(item => isValidElement(item) && (
-              (item.key === 'due-date' && !dateIsRedundant) || item.key === 'list-name' ||
-              item.key === 'in-app-list' || (item.key === 'price' && isShopping)
-            ));
-            const optional = items.filter(item => !essential.includes(item));
-            return (
-              <div className="task-context" onClick={event => event.stopPropagation()}>
-                {essential.length > 0 && <div className="task-context-essential">{essential}</div>}
-                {(
-                  <details className="context-details task-context-details">
-                    <summary aria-label={`Detalles de ${task.title}`}>Detalles <ChevronRight size={13} aria-hidden="true" /></summary>
-                    <div className="context-details-body task-meta-fields">{optional.map((item, index) => <Fragment key={index}>{item}</Fragment>)}<button type="button" className="task-meta-action" onClick={() => onEdit(task.id)}>Editar detalles</button></div>
-                  </details>
-                )}
+            const visible = items.filter(item => !isValidElement(item) || item.key !== 'due-date' || !dateIsRedundant);
+            return visible.length > 0 ? (
+              <div className="task-context task-meta-fields" onClick={event => event.stopPropagation()}>
+                {visible}
               </div>
-            );
+            ) : null;
           })()}
 
       {/* Rich Links (External URLs) */}

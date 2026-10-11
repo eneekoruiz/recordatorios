@@ -332,7 +332,6 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     await expect(coladaHeader).toBeVisible({ timeout: 5000 });
 
     const sectionDuration = coladaHeader.locator('.section-duration');
-    await coladaHeader.locator('.section-context-details > summary').click();
     await expect(sectionDuration).toBeVisible({ timeout: 5000 });
 
     // The sequence is started from the list header ("▶ Empezar")

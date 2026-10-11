@@ -646,7 +646,11 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
             </div>
           )}
 
-          {(durationNode || priceNode) && (<details className="context-details section-context-details" onClick={event => event.stopPropagation()}><summary aria-label={`Detalles de ${data.title}`}>Detalles <ChevronDown size={12} aria-hidden="true" /></summary><div className="context-details-body section-duration section-meta">{durationNode}{priceNode}</div></details>)}
+          {(durationNode || priceNode) && (
+            <div className="section-duration section-meta" onClick={event => event.stopPropagation()}>
+              {durationNode}{priceNode}
+            </div>
+          )}
           {data.category.startsWith('persona_') && data.category !== 'persona_solo' && (
             <button
               type="button"
