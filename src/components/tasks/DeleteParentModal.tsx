@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useModalFocus } from "../../hooks/useModalFocus";
 
 interface DeleteParentModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export function DeleteParentModal({
 }: DeleteParentModalProps) {
   const cancelRef = useRef<HTMLButtonElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+    useModalFocus(modalRef, isOpen, onCancel);
 
   useEffect(() => {
     if (!isOpen) return;

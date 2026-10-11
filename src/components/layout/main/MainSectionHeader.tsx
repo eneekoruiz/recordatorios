@@ -426,7 +426,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         paddingLeft: `${16 + data.depth * 14}px`,
         paddingRight: '16px',
         minHeight: data.depth === 0 ? 56 : 38,
-        
+
         paddingTop: data.depth === 0 ? (isFirstAfterPageHeader ? 16 : 28) : 12,
         paddingBottom: data.depth === 0 ? 8 : 6,
         marginTop: 0,
@@ -572,10 +572,10 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       )}
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-          {isCustomSection && editingSectionId === data.sectionId ? (
-            <input 
-              type="text" 
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }} className="section-title-row">
+{isCustomSection && editingSectionId === data.sectionId ? (
+            <input
+              type="text"
               value={editingSectionName}
               onChange={e => setEditingSectionName(e.target.value)}
               onBlur={(e) => saveSectionName(e as any, data.sectionId!)}
@@ -594,10 +594,10 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                     {data.titleIcon}
                   </span>
                 )}
-                <h3 
+                <h3
                   aria-level={2}
                   onDoubleClick={(e) => isCustomSection && startEditingSection(e, data.sectionId!, data.title)}
-                  style={{ 
+                  style={{
                     cursor: isCustomSection ? 'text' : 'pointer',
                     fontWeight: data.depth === 0 ? 700 : 600,
                     color: data.depth === 0 ? 'var(--text-primary)' : 'var(--text-secondary)',
@@ -618,7 +618,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                   {data.title}
                 </h3>
                 {periodContext && (
-                  <span 
+                  <span
                     className="section-period-context-badge"
                     title={periodContext.isRolledOver ? 'Período actual completado · Mostrando siguiente ciclo' : 'Período en curso'}
                     style={{
@@ -640,23 +640,13 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                     {periodContext.label}
                   </span>
                 )}
-                {!isMobile && durationNode && (
-                  <div className="section-duration section-meta" style={{ marginLeft: 6, flexShrink: 0, display: 'inline-flex', alignItems: 'center' }}>
-                    {durationNode}
-                  </div>
-                )}
+
               </div>
-              {((isMobile && durationNode) || priceNode) && (
-                <div
-                  className="section-duration section-meta"
-                  style={{ fontSize: data.depth === 0 ? '0.8rem' : '0.74rem', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 3 }}
-                >
-                  {isMobile && durationNode}
-                  {priceNode}
-                </div>
-              )}
+
             </div>
           )}
+
+          {(durationNode || priceNode) && (<details className="context-details section-context-details" onClick={event => event.stopPropagation()}><summary aria-label={`Detalles de ${data.title}`}>Detalles <ChevronDown size={12} aria-hidden="true" /></summary><div className="context-details-body section-duration section-meta">{durationNode}{priceNode}</div></details>)}
           {data.category.startsWith('persona_') && data.category !== 'persona_solo' && (
             <button
               type="button"
@@ -683,11 +673,11 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               <span>Ficha</span>
             </button>
           )}
-          {isCustomSection && !isMobile && (
-            <button 
+          {isCustomSection && (
+            <button
               ref={moreBtnRef}
               type="button"
-              className="desktop-only-action section-more-btn"
+              className="section-more-btn"
               onClick={(e) => {
                 e.stopPropagation();
                 openSectionMenu();
@@ -704,7 +694,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, justifyContent: 'flex-end' }}>
           {/* Incluir las frecuencias anteriores: una cápsula que se enciende (con la sección desplegada) */}
-          {!isCatCollapsed(data.category) && data.routineCounts && data.routineCounts.full > data.routineCounts.only && (
+          {data.routineCounts && data.routineCounts.full > data.routineCounts.only && (
             <button
               type="button"
               className={`routine-chip${isFullRoutine ? ' is-on' : ''}`}
@@ -747,13 +737,13 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               : `${count} tareas pendientes`;
 
             return (
-              <span 
+              <span
                 className="section-total-count"
                 title={tooltipText}
               >
                 <span className="section-main-count">{count}</span>
                 {hasRoutineBreakdown && countParts.length > 0 && (
-                  <span 
+                  <span
                     className="section-routine-breakdown"
                   >
                     <span style={{ opacity: 0.35 }}>(</span>
@@ -792,13 +782,13 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               flexShrink: 0
             }}
           >
-            <ChevronDown 
-              size={18} 
-              color="currentColor" 
-              style={{ 
-                transform: isCatCollapsed(data.category) ? 'rotate(-90deg)' : 'rotate(0deg)', 
-                transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)', 
-                flexShrink: 0 
+            <ChevronDown
+              size={18}
+              color="currentColor"
+              style={{
+                transform: isCatCollapsed(data.category) ? 'rotate(-90deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                flexShrink: 0
               }}
             />
           </button>

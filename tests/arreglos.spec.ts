@@ -67,6 +67,7 @@ test.describe('En el móvil', () => {
     await ensureAppUnlocked(page);
     await addCasaList(page);
     const card = page.locator('[data-task-id="foco_6"]').first();
+    await card.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
     const before = await card.boundingBox();
     await card.click({ button: 'right' });
     const sheet = page.locator('.ios-dropdown-menu');

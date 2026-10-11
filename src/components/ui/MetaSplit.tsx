@@ -15,6 +15,7 @@ export interface MetaPart {
 }
 
 interface MetaSplitProps {
+  interactive?: boolean;
   /** Valor principal, siempre visible («~2 h 30 min», «84,00 €»). */
   label: React.ReactNode;
   parts: MetaPart[];
@@ -29,10 +30,10 @@ interface MetaSplitProps {
  * (también con toque en móvil); la misma información va en el tooltip y en aria-label.
  * Convención visual en toda la app: sólido = propio, rayado = acumulado, atenuado = hecho.
  */
-export const MetaSplit: React.FC<MetaSplitProps> = ({ label, parts, description, className }) => {
+export const MetaSplit: React.FC<MetaSplitProps> = ({ label, parts, description, className, interactive = true }) => {
   const visible = parts.filter((p) => p.value > 0);
   return (
-    <span className={`meta-split${className ? ` ${className}` : ''}`} tabIndex={0} title={description} aria-label={description} role="group">
+    <span className={`meta-split${className ? ` ${className}` : ''}`} tabIndex={interactive ? 0 : undefined} title={description} aria-label={description} role="group">
       <span className="meta-split__label" style={{ fontVariantNumeric: 'tabular-nums' }}>{label}</span>
       {visible.length > 0 && (
         <span className="meta-split__bar" aria-hidden="true">

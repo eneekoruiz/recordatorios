@@ -41,43 +41,49 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          height: '100vh',
-          background: '#09090b',
-          color: '#f4f4f5',
-          fontFamily: "'Inter', system-ui, sans-serif",
+          minHeight: '100dvh',
+          boxSizing: 'border-box',
+          background: 'var(--bg-primary, #09090b)',
+          color: 'var(--text-primary, #f4f4f5)',
+          fontFamily: 'inherit',
           gap: 24,
           padding: 32,
           textAlign: 'center'
         }}>
           <AlertTriangle size={48} color="#ff453a" />
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, letterSpacing: '-0.025em', textWrap: 'balance' }}>
             Algo salió mal
           </h1>
-          <p style={{ color: '#a1a1aa', maxWidth: 400, lineHeight: 1.6 }}>
+          <p style={{ color: 'var(--text-secondary, #a1a1aa)', maxWidth: 400, lineHeight: 1.6 }}>
             La aplicación encontró un error inesperado. Si aparece un aviso de guardado pendiente, mantén esta pestaña abierta hasta resolverlo.
           </p>
           {this.state.error && (
+            <details style={{ width: '100%', maxWidth: 500, minWidth: 0 }}>
+              <summary style={{ minHeight: 44, cursor: 'pointer', lineHeight: '44px', color: 'var(--text-secondary, #a1a1aa)' }}>Detalles del error</summary>
             <pre style={{
-              background: '#18181b',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 8,
+              background: 'var(--bg-elevated, #18181b)',
+              border: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
+              borderRadius: 12,
               padding: 16,
               fontSize: '0.8rem',
               color: '#ff453a',
-              maxWidth: 500,
+              maxWidth: '100%',
+              boxSizing: 'border-box',
               overflow: 'auto',
               textAlign: 'left'
             }}>
               {this.state.error.message}
             </pre>
+            </details>
           )}
-          <div style={{ display: 'flex', gap: 12 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 12 }}>
             <button
               onClick={this.handleRecover}
               style={{
                 background: 'transparent',
-                border: '1px solid rgba(255,255,255,0.15)',
-                color: '#f4f4f5',
+                border: '1px solid var(--border-subtle, rgba(255,255,255,0.15))',
+                color: 'var(--text-primary, #f4f4f5)',
+                minHeight: 44,
                 padding: '10px 20px',
                 borderRadius: 8,
                 cursor: 'pointer',
@@ -90,7 +96,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             <button
               onClick={this.handleReload}
               style={{
-                background: '#0a84ff',
+                background: 'var(--accent-primary, #0a84ff)',
+                minHeight: 44,
                 border: 'none',
                 color: 'white',
                 padding: '10px 20px',

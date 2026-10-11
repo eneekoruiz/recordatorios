@@ -35,7 +35,7 @@ export const DrawerMetaSection: React.FC<DrawerMetaSectionProps> = ({
 }) => {
   return (
     <div className="section-card">
-      <button 
+      <button
         type="button"
         className="section-card-header"
         onClick={() => setCardDetailsOpen(!cardDetailsOpen)}
@@ -53,7 +53,7 @@ export const DrawerMetaSection: React.FC<DrawerMetaSectionProps> = ({
             <div className="section-card-content">
               <div className="detail-row" style={{ padding: '8px 0' }}>
                 <span className="detail-label">Prioridad</span>
-                <CustomSelect 
+                <CustomSelect
                   className="detail-select"
                   value={priority}
                   onChange={val => setPriority(val as any)}
@@ -62,7 +62,7 @@ export const DrawerMetaSection: React.FC<DrawerMetaSectionProps> = ({
                     { value: 'low', label: 'Baja' },
                     { value: 'medium', label: 'Media' },
                     { value: 'high', label: 'Alta' }
-                  ]}
+                  ]} aria-label="Prioridad"
                 />
               </div>
 
@@ -71,7 +71,7 @@ export const DrawerMetaSection: React.FC<DrawerMetaSectionProps> = ({
               <div className="detail-row" style={{ padding: '8px 0' }}>
                 <span className="detail-label">Destacado</span>
                 <label className="switch">
-                  <input type="checkbox" checked={flagged} onChange={e => setFlagged(e.target.checked)} />
+                  <input type="checkbox" checked={flagged} onChange={e => setFlagged(e.target.checked)} aria-label="Destacado" />
                   <span className="slider round"></span>
                 </label>
               </div>
@@ -80,12 +80,12 @@ export const DrawerMetaSection: React.FC<DrawerMetaSectionProps> = ({
 
               <div className="detail-row" style={{ padding: '8px 0' }}>
                 <span className="detail-label">URL del enlace</span>
-                <input 
+                <input
                   type="url"
                   placeholder="https://example.com"
                   value={url}
                   onChange={e => setUrl(e.target.value)}
-                  style={{ width: '60%', textAlign: 'right', border: 'none', background: 'transparent', outline: 'none', color: 'var(--text-secondary)' }}
+                  style={{ width: '60%', textAlign: 'right', border: 'none', background: 'transparent', outline: 'none', color: 'var(--text-secondary)' }} aria-label="URL del enlace"
                 />
               </div>
 
@@ -94,19 +94,19 @@ export const DrawerMetaSection: React.FC<DrawerMetaSectionProps> = ({
               <div className="detail-row" style={{ padding: '8px 0' }}>
                 <span className="detail-label">Adjuntar Imagen</span>
                 <label className="switch">
-                  <input type="checkbox" checked={!!image} onChange={e => setImage(e.target.checked ? 'https://picsum.photos/200/300' : '')} />
+                  <input type="checkbox" checked={!!image} onChange={e => setImage(e.target.checked ? 'https://picsum.photos/200/300' : '')} aria-label="Adjuntar imagen" />
                   <span className="slider round"></span>
                 </label>
               </div>
               {!!image && (
                 <div className="detail-row" style={{ padding: '4px 0', marginTop: -8 }}>
-                  <input 
-                    type="text" 
-                    className="detail-select" 
+                  <input
+                    type="text"
+                    className="detail-select"
                     placeholder="URL de imagen..."
                     value={image === 'https://picsum.photos/200/300' ? '' : image}
                     onChange={e => setImage(e.target.value)}
-                    style={{ width: '100%', textAlign: 'right', borderBottom: '1px solid var(--border-subtle)' }}
+                    style={{ width: '100%', textAlign: 'right', borderBottom: '1px solid var(--border-subtle)' }} aria-label="URL de la imagen"
                   />
                 </div>
               )}
@@ -115,14 +115,14 @@ export const DrawerMetaSection: React.FC<DrawerMetaSectionProps> = ({
 
               <div className="detail-row" style={{ padding: '8px 0' }}>
                 <span className="detail-label">Repeticiones diarias (Hábito)</span>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   min="1"
                   max="100"
-                  placeholder="Ej: 10 (veces)" 
-                  value={targetCount || ''} 
+                  placeholder="Ej: 10 (veces)"
+                  value={targetCount || ''}
                   onChange={e => setTargetCount(e.target.value ? parseInt(e.target.value) : undefined)}
-                  style={{ width: 90, textAlign: 'right', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-primary)' }}
+                  style={{ width: 90, textAlign: 'right', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-primary)' }} aria-label="Repeticiones diarias"
                 />
               </div>
             </div>

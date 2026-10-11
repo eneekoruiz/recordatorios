@@ -13,6 +13,7 @@ import { useAppStore } from '../../../store/useAppStore';
 interface DrawerDateTimeSectionProps {
   task?: TaskItem;
   cardTimeOpen: boolean;
+  durationInitiallyOpen?: boolean;
   setCardTimeOpen: (open: boolean) => void;
   hasDate: boolean;
   setHasDate: (has: boolean) => void;
@@ -41,6 +42,7 @@ interface DrawerDateTimeSectionProps {
 export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
   task,
   cardTimeOpen,
+  durationInitiallyOpen = false,
   setCardTimeOpen,
   hasDate,
   setHasDate,
@@ -69,8 +71,9 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
   const isRoutineList = doesListSupportDuration(getListType(list, category));
 
   return (
+    <>
     <div className="section-card">
-      <button 
+      <button
         type="button"
         className="section-card-header"
         onClick={() => setCardTimeOpen(!cardTimeOpen)}
@@ -89,32 +92,32 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
               <div className="detail-row" style={{ padding: '8px 0' }}>
                 <span className="detail-label">Fecha</span>
                 <label className="switch">
-                  <input type="checkbox" checked={hasDate} onChange={e => setHasDate(e.target.checked)} />
+                  <input type="checkbox" checked={hasDate} onChange={e => setHasDate(e.target.checked)} aria-label="Activar fecha" />
                   <span className="slider round"></span>
                 </label>
               </div>
               {hasDate && (
                 <div className="detail-row" style={{ padding: '4px 0', marginTop: -8 }}>
-                  <input 
-                    type="date" 
+                  <input
+                    type="date"
                     id="drawer-date-input"
-                    className="detail-select drawer-date-input" 
+                    className="detail-select drawer-date-input"
                     value={dueDate.toISOString().split('T')[0]}
                     onChange={e => setDueDate(new Date(e.target.value))}
-                    style={{ width: '100%', textAlign: 'right' }}
+                    style={{ width: '100%', textAlign: 'right' }} aria-label="Fecha de la tarea"
                   />
                 </div>
               )}
-              
+
               <div className="divider"></div>
-              
+
               <div className="detail-row" style={{ padding: '8px 0' }}>
                 <span className="detail-label">Hora</span>
                 <label className="switch">
                   <input type="checkbox" checked={hasTime} onChange={e => {
                     setHasTime(e.target.checked);
                     if (e.target.checked && alerts.length === 0) setAlerts([{ id: `alert_${Date.now()}`, type: 'at_time', time: '09:00' }]);
-                  }} />
+                  }} aria-label="Activar hora" />
                   <span className="slider round"></span>
                 </label>
               </div>
@@ -122,23 +125,23 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 8 }}>
                   {alerts.map((alert, idx) => (
                     <div key={alert.id || idx} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <input 
-                        type="time" 
-                        className="detail-select" 
+                      <input
+                        type="time"
+                        className="detail-select"
                         value={alert.time || '09:00'}
                         onChange={e => {
                           const newAlerts = [...alerts];
                           newAlerts[idx] = { ...newAlerts[idx], time: e.target.value };
                           setAlerts(newAlerts);
                         }}
-                        style={{ flex: 1 }}
+                        style={{ flex: 1 }} aria-label="Hora de la alerta"
                       />
-                      <button className="icon-btn" onClick={() => removeAlert(alert.id)} style={{ background: 'var(--bg-surface)' }}>
+                      <button className="icon-btn" onClick={() => removeAlert(alert.id)} style={{ background: 'var(--bg-surface)' }} aria-label={`Eliminar alerta ${alert.time || alert.label || "programada"}`}>
                         <X size={16} color="var(--text-tertiary)" />
                       </button>
                     </div>
                   ))}
-                  <button 
+                  <button
                     type="button"
                     className="add-alert-btn"
                     onClick={() => setAlerts([...alerts, { id: `alert_${Date.now()}`, type: 'at_time', time: '12:00' }])}
@@ -150,7 +153,7 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
               )}
 
               <div className="divider"></div>
-              
+
               {/* Franja Horaria Diaria (Mañana, Tarde, Noche) */}
               <div className="detail-row" style={{ padding: '8px 0', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
@@ -210,7 +213,7 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                     <div className="chips-container" style={{ marginTop: 8 }}>
                       <AnimatePresence>
                         {alerts.map((alert) => (
-                          <motion.div 
+                          <motion.div
                             key={alert.id}
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -219,7 +222,7 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                           >
                             <Clock size={14} />
                             <span>{alert.label || alert.time || `${formatDuration(alert.offsetMinutes || 0)} antes`}</span>
-                            <button className="chip-remove" onClick={() => removeAlert(alert.id)}>
+                            <button className="chip-remove" onClick={() => removeAlert(alert.id)} aria-label={`Eliminar alerta ${alert.time || alert.label || "programada"}`}>
                               <X size={14} />
                             </button>
                           </motion.div>
@@ -269,10 +272,22 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                 </div>
               )}
 
-              <div className="divider" style={{ margin: '10px 0' }}></div>
 
-              {/* Selector de Duración Nativo estilo Temporizador Apple */}
-              <div id="drawer-duration-row" style={{ padding: '4px 0 2px' }}>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+    <details className="section-card drawer-duration-details" open={durationInitiallyOpen}>
+      <summary className="section-card-header" aria-label="Duración de la tarea">
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Clock size={16} color="var(--accent-primary)" />
+          Duración
+        </span>
+        <SectionTrailing open={false} summary={disableDuration ? 'Desactivada' : typeof duration === 'number' && duration > 0 ? formatDuration(duration) : 'Sin asignar'} />
+      </summary>
+      <div className="section-card-content">
+        <div id="drawer-duration-row" style={{ padding: '4px 0 2px' }}>
                 {/* Cabecera con switch para activar/desactivar duración explícitamente */}
                 <div style={{
                   display: 'flex',
@@ -308,6 +323,7 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                     <input
                       type="checkbox"
                       checked={!disableDuration}
+                      aria-label="Activar duración"
                       onChange={(e) => {
                         const enabled = e.target.checked;
                         setDisableDuration?.(!enabled);
@@ -449,6 +465,7 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                         <input
                           type="checkbox"
                           checked={Boolean(isParallel)}
+                          aria-label="Tarea en segundo plano"
                           onChange={(e) => {
                             setIsParallel(e.target.checked);
                             if (e.target.checked && (!parallelDuration || parallelDuration <= 0)) {
@@ -536,7 +553,7 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 cursor: 'pointer', color: 'var(--text-primary)'
                               }}
-                              title="-5 min"
+                              title="-5 min" aria-label="Reducir tiempo en paralelo"
                             >
                               <Minus size={13} />
                             </button>
@@ -558,7 +575,7 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                                 background: 'transparent',
                                 color: 'var(--text-primary)',
                                 outline: 'none'
-                              }}
+                              }} aria-label="Tiempo en paralelo"
                             />
                             <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>min</span>
                             <button
@@ -571,7 +588,7 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 cursor: 'pointer', color: 'var(--text-primary)'
                               }}
-                              title="+5 min"
+                              title="+5 min" aria-label="Aumentar tiempo en paralelo"
                             >
                               <Plus size={13} />
                             </button>
@@ -611,10 +628,8 @@ export const DrawerDateTimeSection: React.FC<DrawerDateTimeSectionProps> = ({
               </>
             )}
           </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+      </div>
+    </details>
+    </>
   );
 };

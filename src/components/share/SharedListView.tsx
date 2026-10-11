@@ -77,14 +77,19 @@ export function SharedListView({ token, onExit }: { token: string; onExit: () =>
                         {done ? <CheckCircle2 size={20} color={color} /> : <Circle size={20} />}
                         <div>
                           <span className="shared-title">{t.title}</span>
-                          {(t.description || t.dueDate || t.price) && (
+                          {(t.dueDate || t.price) && (
                             <span className="shared-meta">
                               {[
                                 t.dueDate && new Date(t.dueDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
                                 t.price != null && `${(t.price * (t.quantity || 1)).toFixed(2)} €`,
-                                t.description,
                               ].filter(Boolean).join(' · ')}
                             </span>
+                          )}
+                          {t.description && (
+                            <details className="context-details">
+                              <summary aria-label={`Notas de ${t.title}`}>Notas <span aria-hidden="true">›</span></summary>
+                              <p className="shared-muted">{t.description}</p>
+                            </details>
                           )}
                         </div>
                       </li>

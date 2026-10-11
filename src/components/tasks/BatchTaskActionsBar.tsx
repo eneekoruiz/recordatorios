@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { useModalFocus } from '../../hooks/useModalFocus';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutList, IndentIncrease, CheckCircle2, Trash2, X, FolderInput } from 'lucide-react';
 import type { TaskItem, ListSection } from '../../models/Task';
@@ -30,6 +31,9 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
   const toggleTask = useAppStore(state => state.toggleTask);
 
   const [activeModal, setActiveModal] = useState<'section' | 'nest' | 'delete' | null>(null);
+
+  const sheetRef = useRef<HTMLDivElement>(null);
+  useModalFocus(sheetRef, activeModal !== null, () => setActiveModal(null));
 
   if (selectedTaskIds.size === 0 && !isExplicitSelectionMode) return null;
 
@@ -138,7 +142,7 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
           type="button"
           onClick={() => setActiveModal('section')}
           title="Mover todos a otra sección"
-          style={{
+          style={{ minWidth: 44, minHeight: 44,
             display: 'inline-flex',
             alignItems: 'center',
             gap: 5,
@@ -152,7 +156,7 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
             cursor: 'pointer',
             whiteSpace: 'nowrap',
             transition: 'background 0.15s ease'
-          }}
+          }} aria-label="Mover todos a otra sección"
         >
           <LayoutList size={15} color="var(--accent-primary)" />
           <span>Sección</span>
@@ -163,7 +167,7 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
           type="button"
           onClick={() => setActiveModal('nest')}
           title="Anidar todos como subtareas de otra tarea"
-          style={{
+          style={{ minWidth: 44, minHeight: 44,
             display: 'inline-flex',
             alignItems: 'center',
             gap: 5,
@@ -177,7 +181,7 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
             cursor: 'pointer',
             whiteSpace: 'nowrap',
             transition: 'background 0.15s ease'
-          }}
+          }} aria-label="Anidar todos como subtareas de otra tarea"
         >
           <IndentIncrease size={15} color="var(--accent-primary)" />
           <span>Anidar</span>
@@ -188,7 +192,7 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
           type="button"
           onClick={handleBatchToggle}
           title="Alternar estado de completado"
-          style={{
+          style={{ minWidth: 44, minHeight: 44,
             display: 'inline-flex',
             alignItems: 'center',
             gap: 5,
@@ -201,7 +205,7 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
             fontWeight: 600,
             cursor: 'pointer',
             whiteSpace: 'nowrap'
-          }}
+          }} aria-label="Alternar estado de completado"
         >
           <CheckCircle2 size={16} color="#30d158" />
         </button>
@@ -211,7 +215,7 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
           type="button"
           onClick={() => setActiveModal('delete')}
           title="Eliminar recordatorios seleccionados"
-          style={{
+          style={{ minWidth: 44, minHeight: 44,
             display: 'inline-flex',
             alignItems: 'center',
             gap: 5,
@@ -224,7 +228,7 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
             fontWeight: 600,
             cursor: 'pointer',
             whiteSpace: 'nowrap'
-          }}
+          }} aria-label="Eliminar recordatorios seleccionados"
         >
           <Trash2 size={15} />
         </button>
@@ -234,7 +238,7 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
           type="button"
           onClick={onClearSelection}
           title="Cancelar selección"
-          style={{
+          style={{ minWidth: 44, minHeight: 44,
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -246,7 +250,7 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
             color: 'var(--text-tertiary)',
             cursor: 'pointer',
             marginLeft: 2
-          }}
+          }} aria-label="Cancelar selección"
         >
           <X size={15} />
         </button>
@@ -282,7 +286,7 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
                 border: '1px solid var(--border-subtle)',
                 boxShadow: '0 20px 50px rgba(0,0,0,0.25)',
                 overflow: 'hidden'
-              }}
+              }} role="dialog" aria-modal="true" aria-label="Mover selección a una sección" ref={sheetRef}
             >
               <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>
@@ -291,7 +295,7 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
                 <button
                   type="button"
                   onClick={() => setActiveModal(null)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
+                  style={{ minWidth: 44, minHeight: 44, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }} aria-label="Cerrar diálogo"
                 >
                   <X size={18} />
                 </button>
@@ -303,7 +307,7 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
                   type="button"
                   className="ios-dropdown-item"
                   onClick={() => handleMoveToSection(undefined)}
-                  style={{
+                  style={{ minWidth: 44, minHeight: 44,
                     width: '100%',
                     padding: '10px 14px',
                     borderRadius: 10,
@@ -329,7 +333,7 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
                     type="button"
                     className="ios-dropdown-item"
                     onClick={() => handleMoveToSection(sec.id)}
-                    style={{
+                    style={{ minWidth: 44, minHeight: 44,
                       width: '100%',
                       padding: '10px 14px',
                       borderRadius: 10,
@@ -385,7 +389,7 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
                 border: '1px solid var(--border-subtle)',
                 boxShadow: '0 20px 50px rgba(0,0,0,0.25)',
                 overflow: 'hidden'
-              }}
+              }} role="dialog" aria-modal="true" aria-label="Anidar selección en una tarea" ref={sheetRef}
             >
               <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>
@@ -394,7 +398,7 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
                 <button
                   type="button"
                   onClick={() => setActiveModal(null)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
+                  style={{ minWidth: 44, minHeight: 44, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }} aria-label="Cerrar diálogo"
                 >
                   <X size={18} />
                 </button>
@@ -412,7 +416,7 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
                       type="button"
                       className="ios-dropdown-item"
                       onClick={() => handleNestInTask(t.id)}
-                      style={{
+                      style={{ minWidth: 44, minHeight: 44,
                         width: '100%',
                         padding: '10px 14px',
                         borderRadius: 10,
@@ -472,7 +476,7 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
                 boxShadow: '0 20px 50px rgba(0,0,0,0.25)',
                 padding: '20px',
                 textAlign: 'center'
-              }}
+              }} role="dialog" aria-modal="true" aria-label="Eliminar recordatorios seleccionados" ref={sheetRef}
             >
               <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>
                 ¿Eliminar {count} {count === 1 ? 'recordatorio' : 'recordatorios'}?
@@ -484,7 +488,7 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
                 <button
                   type="button"
                   onClick={() => setActiveModal(null)}
-                  style={{
+                  style={{ minWidth: 44, minHeight: 44,
                     flex: 1,
                     padding: '10px 14px',
                     borderRadius: 10,
@@ -500,7 +504,7 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
                 <button
                   type="button"
                   onClick={handleBatchDelete}
-                  style={{
+                  style={{ minWidth: 44, minHeight: 44,
                     flex: 1,
                     padding: '10px 14px',
                     borderRadius: 10,

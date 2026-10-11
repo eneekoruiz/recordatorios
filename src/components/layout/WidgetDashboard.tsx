@@ -20,11 +20,11 @@ export function WidgetDashboard() {
   return (
     <div style={{ padding: '16px', background: 'transparent', width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
       <h3 style={{ margin: '0 0 16px 0', fontSize: '1rem', color: '#0a84ff' }}>A continuación</h3>
-      
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <AnimatePresence>
           {topTasks.map(task => (
-            <motion.div 
+            <motion.div
               key={task.id}
               layout
               initial={{ opacity: 0, x: -20 }}
@@ -32,13 +32,12 @@ export function WidgetDashboard() {
               exit={{ opacity: 0, scale: 0.9, height: 0 }}
               style={{ background: 'var(--card-bg)', padding: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
             >
-              <div 
-                className="checkbox" 
+              <button
                 onClick={() => {
                   if (navigator.vibrate) navigator.vibrate([30]);
                   toggleTask(task.id);
                 }}
-                style={{ width: '20px', height: '20px', minWidth: '20px', cursor: 'pointer' }}
+                style={{ width: '20px', height: '20px', minWidth: '20px', cursor: 'pointer' }} type="button" aria-label={`Completar ${task.title}`} className="checkbox widget-check"
               />
               <div style={{ flex: 1, overflow: 'hidden' }}>
                 <div style={{ fontSize: '0.9rem', fontWeight: 500, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{task.title}</div>

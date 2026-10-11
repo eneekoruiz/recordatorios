@@ -5,6 +5,8 @@ import { SheetNavBar } from '../ui/SheetNavBar';
 import { confirmDialog, notify } from '../ui/confirmDialog';
 import { apiUrl } from '../../sync/syncManager';
 import { useAppStore } from '../../store/useAppStore';
+import { useRef as useSheetRef } from "react";
+import { useModalFocus } from "../../hooks/useModalFocus";
 
 type Status = { twoFactorEnabled: boolean; recoveryCodesLeft: number; emailAlerts: boolean };
 type Step = 'idle' | 'setup' | 'codes' | 'disable' | 'password';
@@ -12,6 +14,8 @@ type Step = 'idle' | 'setup' | 'codes' | 'disable' | 'password';
 const groupKey = (secret: string) => secret.replace(/(.{4})/g, '$1 ').trim();
 
 export function SecuritySheet({ onClose }: { onClose: () => void }) {
+    const focusSheetRef = useSheetRef<HTMLDivElement>(null);
+    useModalFocus(focusSheetRef, true, onClose);
   const token = useAppStore((s) => s.token);
   const setToken = useAppStore((s) => s.setToken);
   const userId = useAppStore((s) => s.userId);
@@ -112,7 +116,7 @@ export function SecuritySheet({ onClose }: { onClose: () => void }) {
 
   return createPortal(
     <div className="premium-overlay list-config-overlay" style={{ position: 'fixed', inset: 0, zIndex: 100000 }} onClick={onClose}>
-      <div className="security-sheet form-sheet" role="dialog" aria-modal="true" aria-label="Seguridad" onClick={(e) => e.stopPropagation()}>
+      <div className="security-sheet form-sheet" role="dialog" aria-modal="true" aria-label="Seguridad" onClick={(e) => e.stopPropagation()} ref={focusSheetRef}>
         <SheetNavBar title="Seguridad" onConfirm={onClose} confirmLabel="Listo" />
         <div className="form-sheet-body">
           {error && <div className="form-group is-padded security-error" role="alert">{error}</div>}

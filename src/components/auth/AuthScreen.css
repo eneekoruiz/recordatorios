@@ -16,6 +16,7 @@
     var(--bg-base);
   overflow-y: auto;
 }
+.auth-stage button { min-width: 44px; min-height: 44px; }
 
 .auth-hero-panel,
 .auth-card {

@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { AlertCircle } from 'lucide-react';
 import { AppLogo } from '../ui/AppLogo';
+import { useRef as useSheetRef } from "react";
+import { useModalFocus } from "../../hooks/useModalFocus";
 
 type InstallInfo = { title: string; desc: string; isError?: boolean };
 
@@ -50,6 +52,8 @@ function detectInstallInfo(): InstallInfo | null {
 
 export function InstallPromptModal() {
   const [isOpen, setIsOpen] = useState(false);
+    const focusSheetRef = useSheetRef<HTMLDivElement>(null);
+    useModalFocus(focusSheetRef, isOpen, () => setIsOpen(false));
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [installInfo] = useState<InstallInfo | null>(detectInstallInfo);
 
@@ -115,7 +119,7 @@ export function InstallPromptModal() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.96 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()} ref={focusSheetRef}
           >
             <div className="app-alert-copy">
               {installInfo.isError

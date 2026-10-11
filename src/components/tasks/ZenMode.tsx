@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
+import { useModalFocus } from '../../hooks/useModalFocus';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Play, Pause, CheckCircle, X, Sparkles, CloudRain, Waves, 
-  Headphones, Volume2, VolumeX, Clock, ArrowRight, Plus 
+import {
+  Play, Pause, CheckCircle, X, Sparkles, CloudRain, Waves,
+  Headphones, Volume2, VolumeX, Clock, ArrowRight, Plus
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { SoundService } from '../../services/SoundService';
@@ -29,7 +30,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
   const [timeLeft, setTimeLeft] = useState<number>(25 * 60);
   const [isActive, setIsActive] = useState<boolean>(false);
   const [ambientType, setAmbientType] = useState<'off' | 'rain' | 'waves' | 'binaural' | 'focus'>('off');
-  
+
   // Acumulador de segundos activos trabajados (inmune a pausas y a botones de +1 min / +5 min)
   const activeElapsedRef = useRef<number>(0);
 
@@ -103,6 +104,12 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
+  const focusRef = useRef<HTMLDivElement>(null);
+  useModalFocus(focusRef, Boolean(taskId && task), () => {
+    SoundService.stopAmbientSound();
+    onClose();
+  });
+
   if (!taskId || !task) return null;
 
   const handleStartWithDuration = (mins: number) => {
@@ -119,7 +126,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
   const handleComplete = () => {
     SoundService.stopAmbientSound();
     SoundService.playComplete();
-    
+
     // Registrar los segundos reales trabajados de forma limpia e inmune a pausas o extensiones
     const elapsedSeconds = activeElapsedRef.current;
     if (elapsedSeconds > 0) {
@@ -171,7 +178,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
           padding: 'clamp(16px, 3vh, 32px) clamp(20px, 4vw, 40px)',
           boxSizing: 'border-box',
           overflow: 'hidden'
-        }}
+        }} ref={focusRef} role="dialog" aria-modal="true" aria-label="Modo Enfoque Zen"
       >
         {/* Top Header Bar */}
         <div style={{ width: '100%', maxWidth: 760, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -346,19 +353,19 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
             )}
 
             {/* Circular SVG Timer (INTERACTIVO al hacer clic en el anillo) */}
-            <div 
+            <button
               onClick={handleToggleTimer}
-              style={{ 
-                position: 'relative', 
-                width: 220, 
-                height: 220, 
-                margin: '6px 0 16px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                cursor: 'pointer'
-              }}
-              title={isActive ? "Pausar temporizador" : "Iniciar/Reanudar temporizador"}
+              style={{ background: "transparent", border: "none", padding: 0, font: "inherit",
+                                                                        position: 'relative',
+                                                                        width: 220,
+                                                                        height: 220,
+                                                                        margin: '6px 0 16px',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        cursor: 'pointer'
+                                                                      }}
+              title={isActive ? "Pausar temporizador" : "Iniciar/Reanudar temporizador"} type="button" aria-label={isActive ? "Pausar temporizador" : "Reanudar temporizador"}
             >
               <svg width="220" height="220" style={{ transform: 'rotate(-90deg)', position: 'absolute', inset: 0 }}>
                 {/* Background circle */}
@@ -396,7 +403,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                 }}>
                   {formatTime(timeLeft)}
                 </span>
-                
+
                 {/* Botón flotante central dentro del anillo */}
                 <div style={{
                   display: 'flex',
@@ -404,8 +411,8 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   gap: 5,
                   padding: '5px 12px',
                   borderRadius: 999,
-                  background: isActive 
-                    ? (isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)') 
+                  background: isActive
+                    ? (isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)')
                     : 'var(--accent-primary, #0a84ff)',
                   color: isActive ? (isDark ? 'white' : 'var(--text-secondary, #636366)') : 'white',
                   fontSize: '0.78rem',
@@ -416,7 +423,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   {isActive ? <><Pause size={12} fill={isDark ? "white" : "currentColor"} /> EN PROGRESO</> : <><Play size={12} fill="white" style={{ marginLeft: 2 }} /> REANUDAR</>}
                 </div>
               </div>
-            </div>
+            </button>
 
             {/* Botones para alargar tiempo durante la tarea */}
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', marginBottom: 18 }}>

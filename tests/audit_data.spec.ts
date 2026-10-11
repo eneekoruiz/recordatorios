@@ -178,6 +178,7 @@ test('PDF export displays an HTML task title as literal text under production CS
     window.dispatchEvent(new CustomEvent('select-view', { detail: 'DATA' }));
   }, payload);
   const popupPromise = page.waitForEvent('popup');
+  await page.getByLabel('Formatos de exportación', { exact: true }).click();
   await page.getByRole('button', { name: 'Imprimir / PDF' }).click();
   const popup = await popupPromise;
   await popup.waitForLoadState('domcontentloaded');

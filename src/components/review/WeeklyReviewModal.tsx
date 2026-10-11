@@ -9,6 +9,8 @@ import { ReviewAgentService, type WeeklyReviewReport } from '../../services/Revi
 import { formatDuration } from '../../utils/taskDuration';
 import { HapticService } from '../../services/HapticService';
 import { ConfettiService } from '../../services/ConfettiService';
+import { useRef as useSheetRef } from "react";
+import { useModalFocus } from "../../hooks/useModalFocus";
 
 export interface WeeklyReviewModalProps {
   isOpen: boolean;
@@ -16,6 +18,8 @@ export interface WeeklyReviewModalProps {
 }
 
 export const WeeklyReviewModal: React.FC<WeeklyReviewModalProps> = ({ isOpen, onClose }) => {
+    const focusSheetRef = useSheetRef<HTMLDivElement>(null);
+    useModalFocus(focusSheetRef, isOpen, onClose);
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
   const tasks = useAppStore(state => state.tasks);
@@ -130,7 +134,7 @@ export const WeeklyReviewModal: React.FC<WeeklyReviewModalProps> = ({ isOpen, on
               display: 'flex',
               flexDirection: 'column',
               maxHeight: '90vh'
-            }}
+            }} ref={focusSheetRef}
           >
             {/* Cabecera */}
             <div

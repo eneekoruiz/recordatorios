@@ -8,6 +8,8 @@ import type { RoutinePart } from '../../utils/routineBreakdown';
 import { routinePeriodLabel } from '../../utils/routineBreakdown';
 import { getReservedFrequencyColor } from '../../constants/colors';
 import { HapticService } from '../../services/HapticService';
+import { useRef as useSheetRef } from "react";
+import { useModalFocus } from "../../hooks/useModalFocus";
 
 export interface DurationInfoCardProps {
   isOpen: boolean;
@@ -34,6 +36,8 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
   onStartSequence,
   pendingCount
 }) => {
+    const sheetRef = useSheetRef<HTMLDivElement>(null);
+    useModalFocus(sheetRef, isOpen, onClose);
   // Cierra cualquier menú contextual previo al abrirse
   useEffect(() => {
     if (!isOpen) return;
@@ -167,7 +171,7 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
               display: 'flex',
               flexDirection: 'column',
               maxHeight: 'min(82vh, 540px)'
-            }}
+            }} ref={sheetRef}
           >
             {/* Grabber pill para móviles */}
             <div

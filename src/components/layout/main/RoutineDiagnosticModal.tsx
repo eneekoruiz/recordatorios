@@ -5,6 +5,8 @@ import { X, Layers } from 'lucide-react';
 import { HapticService } from '../../../services/HapticService';
 import type { CycleRoutineStatus } from '../../../utils/cycleRoutineStatus';
 import type { CustomCycle } from '../../../models/Task';
+import { useRef as useSheetRef } from "react";
+import { useModalFocus } from "../../../hooks/useModalFocus";
 
 interface RoutineDiagnosticModalProps {
   isOpen: boolean;
@@ -32,6 +34,8 @@ export const RoutineDiagnosticModal: React.FC<RoutineDiagnosticModalProps> = ({
   referenceDate,
   isMobile = false,
 }) => {
+    const sheetRef = useSheetRef<HTMLDivElement>(null);
+    useModalFocus(sheetRef, isOpen, onClose);
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -124,7 +128,7 @@ export const RoutineDiagnosticModal: React.FC<RoutineDiagnosticModalProps> = ({
               gap: 18,
               boxSizing: 'border-box',
               color: 'var(--text-primary)',
-            }}
+            }} ref={sheetRef}
           >
             {/* Header con icono, título y botón cerrar estilo Apple */}
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>

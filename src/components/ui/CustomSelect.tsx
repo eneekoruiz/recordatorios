@@ -10,6 +10,7 @@ interface Option {
 }
 
 interface CustomSelectProps {
+  'aria-label'?: string;
   id?: string;
   value: string;
   onChange: (val: string) => void;
@@ -18,7 +19,7 @@ interface CustomSelectProps {
   className?: string;
 }
 
-export function CustomSelect({ id, value, onChange, options, placeholder = 'Seleccionar…', className = '' }: CustomSelectProps) {
+export function CustomSelect({ id, value, onChange, options, placeholder = 'Seleccionar…', className = '', 'aria-label': ariaLabel }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [coords, setCoords] = useState({ x: 0, y: 0, width: 0, openUp: false });
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -42,17 +43,22 @@ export function CustomSelect({ id, value, onChange, options, placeholder = 'Sele
   useEffect(() => {
     if (!isOpen) return;
     const close = () => setIsOpen(false);
-    
+
     let scrollStartY = window.scrollY;
-    
+
     const handleScroll = () => {
       if (Math.abs(window.scrollY - scrollStartY) > 30) {
         close();
       }
     };
-    
+
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') close();
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        close();
+        buttonRef.current?.focus();
+      }
       else if (event.key === 'ArrowDown') {
         event.preventDefault();
         setHighlightedIndex(prev => (prev + 1) % options.length);
@@ -67,14 +73,14 @@ export function CustomSelect({ id, value, onChange, options, placeholder = 'Sele
         close();
       }
     };
-    
+
     window.addEventListener('scroll', handleScroll, true);
     window.addEventListener('resize', close);
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown, true);
     return () => {
       window.removeEventListener('scroll', handleScroll, true);
       window.removeEventListener('resize', close);
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keydown', handleKeyDown, true);
     };
   }, [isOpen, highlightedIndex, options, onChange]);
 
@@ -88,6 +94,7 @@ export function CustomSelect({ id, value, onChange, options, placeholder = 'Sele
         className={`custom-select-trigger ${className}`}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
+        aria-label={ariaLabel}
       >
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, minWidth: 0, textAlign: 'left' }}>
           {selectedOption?.color && (

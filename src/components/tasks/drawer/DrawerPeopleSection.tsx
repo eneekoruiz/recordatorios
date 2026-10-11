@@ -34,7 +34,7 @@ export const DrawerPeopleSection: React.FC<DrawerPeopleSectionProps> = ({
 
   return (
     <div id="drawer-people-card" className="section-card">
-      <button 
+      <button
         type="button"
         className="section-card-header"
         onClick={() => setCardPeopleOpen(!cardPeopleOpen)}
@@ -52,19 +52,19 @@ export const DrawerPeopleSection: React.FC<DrawerPeopleSectionProps> = ({
             <div className="section-card-content">
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: people.length > 0 ? 10 : 0 }}>
                 {people.map(p => (
-                  <span 
-                    key={p} 
-                    style={{ 
-                      display: 'inline-flex', alignItems: 'center', gap: 4, 
+                  <span
+                    key={p}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
                       padding: '3px 10px', borderRadius: 12, fontSize: '0.8rem', fontWeight: 600,
-                      background: 'rgba(88, 86, 214, 0.14)', color: '#5856d6', border: '1px solid rgba(88, 86, 214, 0.25)' 
+                      background: 'rgba(88, 86, 214, 0.14)', color: '#5856d6', border: '1px solid rgba(88, 86, 214, 0.25)'
                     }}
                   >
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><User size={11} strokeWidth={2.4} /> {p}</span>
                     <button
                       type="button"
                       onClick={() => setPeople(people.filter(x => x !== p))}
-                      style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
+                      style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }} aria-label={`Quitar a ${p}`}
                     >
                       <X size={13} />
                     </button>
@@ -85,7 +85,7 @@ export const DrawerPeopleSection: React.FC<DrawerPeopleSectionProps> = ({
                       handleAddPerson();
                     }
                   }}
-                  style={{ flex: 1, padding: '7px 12px', borderRadius: 8, border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', fontSize: '0.85rem', color: 'var(--text-primary)' }}
+                  style={{ flex: 1, padding: '7px 12px', borderRadius: 8, border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', fontSize: '0.85rem', color: 'var(--text-primary)' }} aria-label="Nombre de la persona"
                 />
                 <button
                   type="button"
@@ -125,7 +125,7 @@ export const DrawerPeopleSection: React.FC<DrawerPeopleSectionProps> = ({
                         background: vibe === v ? 'rgba(255, 149, 0, 0.16)' : 'var(--bg-surface)',
                         color: vibe === v ? '#ff9500' : 'var(--text-secondary)',
                         transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
-                      }}
+                      }} aria-pressed={vibe === v}
                     >
                       {v}
                     </button>

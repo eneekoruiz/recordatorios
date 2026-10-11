@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useModalFocus } from "../../hooks/useModalFocus";
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export function ConfirmModal({
 }: ConfirmModalProps) {
   const cancelRef = useRef<HTMLButtonElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+    useModalFocus(modalRef, isOpen, onCancel);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -30,7 +32,7 @@ export function ConfirmModal({
         onCancel();
         return;
       }
-      
+
       if (event.key === 'Tab' && modalRef.current) {
         const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
           'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'

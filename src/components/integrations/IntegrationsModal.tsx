@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  X, 
-  Calendar, 
-  Mail, 
-  FileText, 
-  Download, 
-  Copy, 
-  Check, 
-  ExternalLink, 
-  GitBranch, 
-  Key, 
+import {
+  X,
+  Calendar,
+  Mail,
+  FileText,
+  Download,
+  Copy,
+  Check,
+  ExternalLink,
+  GitBranch,
+  Key,
   RefreshCw
 } from 'lucide-react';
 import { IntegrationService } from '../../services/IntegrationService';
@@ -360,7 +360,7 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
             ref={dialogRef}
             role="dialog"
             data-testid="integrations-modal"
-            aria-label="Vincular con Google Calendar, Gmail y Notion"
+            aria-label="Vincular con Google Calendar, Gmail, Notion y GitHub"
             aria-modal="true"
             tabIndex={-1}
             initial={{ opacity: 0, scale: 0.94, y: 16 }}
@@ -477,9 +477,9 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
                   </div>
                 </div>
 
-                <p style={{ margin: '0 0 12px', fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                  Exporta tus recordatorios a formato estándar .ics para importarlos o suscribirte con un toque en Google Calendar, Apple Calendar u Outlook.
-                </p>
+                <details className="context-details integration-instructions"><summary aria-label="Instrucciones de conexión">Cómo utilizarlo <span aria-hidden="true">›</span></summary><p style={{ margin: '0 0 12px', fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                                                Exporta tus recordatorios a formato estándar .ics para importarlos o suscribirte con un toque en Google Calendar, Apple Calendar u Outlook.
+                                              </p></details>
 
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <button
@@ -560,9 +560,9 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
                   </div>
                 </div>
 
-                <p style={{ margin: '0 0 12px', fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                  Búsqueda directa en tu bandeja de entrada de Gmail mediante palabras clave y asuntos de tus tareas.
-                </p>
+                <details className="context-details integration-instructions"><summary aria-label="Instrucciones de conexión">Cómo utilizarlo <span aria-hidden="true">›</span></summary><p style={{ margin: '0 0 12px', fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                                                Búsqueda directa en tu bandeja de entrada de Gmail mediante palabras clave y asuntos de tus tareas.
+                                              </p></details>
 
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <button
@@ -628,9 +628,9 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
                   </div>
                 </div>
 
-                <p style={{ margin: '0 0 12px', fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                  Pega directamente la tabla en cualquier página de Notion o descarga el archivo CSV para importar en una base de datos con columnas estructuradas.
-                </p>
+                <details className="context-details integration-instructions"><summary aria-label="Instrucciones de conexión">Cómo utilizarlo <span aria-hidden="true">›</span></summary><p style={{ margin: '0 0 12px', fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                                                Pega directamente la tabla en cualquier página de Notion o descarga el archivo CSV para importar en una base de datos con columnas estructuradas.
+                                              </p></details>
 
                 {/* Notion credentials toggle */}
                 {showNotionConfig && (
@@ -781,9 +781,9 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
                   </div>
                 </div>
 
-                <p style={{ margin: '0 0 12px', fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                  Copia tus recordatorios en formato de tareas GitHub Markdown (- [ ] Tarea) listo para pegar en cualquier Issue, PR o Project board.
-                </p>
+                <details className="context-details integration-instructions"><summary aria-label="Instrucciones de conexión">Cómo utilizarlo <span aria-hidden="true">›</span></summary><p style={{ margin: '0 0 12px', fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                                                Copia tus recordatorios en formato de tareas GitHub Markdown (- [ ] Tarea) listo para pegar en cualquier Issue, PR o Project board.
+                                              </p></details>
 
                 {/* GitHub configuration drawer */}
                 {showGitHubConfig && (

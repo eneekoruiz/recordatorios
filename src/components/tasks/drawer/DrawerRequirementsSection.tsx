@@ -22,7 +22,7 @@ export const DrawerRequirementsSection: React.FC<DrawerRequirementsSectionProps>
 }) => {
   return (
     <div className="section-card">
-      <button 
+      <button
         type="button"
         className="section-card-header"
         onClick={() => setCardReqOpen(!cardReqOpen)}
@@ -41,24 +41,24 @@ export const DrawerRequirementsSection: React.FC<DrawerRequirementsSectionProps>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '4px 0 8px 0', lineHeight: 1.3 }}>
                 Esta tarea estará bloqueada y no se podrá marcar como completada hasta que se finalicen primero los requisitos seleccionados abajo:
               </p>
-              
+
               {blockedBy.length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
                   {blockedBy.map(tId => {
                     const bTask = availableTasks.find(t => t.id === tId);
                     if (!bTask) return null;
                     return (
-                      <div key={tId} style={{ 
-                        display: 'flex', alignItems: 'center', gap: 4, 
-                        background: 'var(--bg-surface)', padding: '4px 10px', 
+                      <div key={tId} style={{
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        background: 'var(--bg-surface)', padding: '4px 10px',
                         borderRadius: 16, fontSize: '0.85rem', border: '1px solid var(--border-subtle)'
                       }}>
                         <span>{bTask.title}</span>
-                        <button 
+                        <button
                           type="button"
-                          className="chip-remove" 
-                          onClick={() => setBlockedBy(blockedBy.filter(id => id !== tId))} 
-                          style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 2 }}
+                          className="chip-remove"
+                          onClick={() => setBlockedBy(blockedBy.filter(id => id !== tId))}
+                          style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 2 }} aria-label={`Eliminar requisito ${bTask.title}`}
                         >
                           <X size={14} />
                         </button>
@@ -68,7 +68,8 @@ export const DrawerRequirementsSection: React.FC<DrawerRequirementsSectionProps>
                 </div>
               )}
 
-              <CustomSelect 
+              <CustomSelect
+                aria-label="Añadir requisito"
                 className="detail-select"
                 value=""
                 onChange={val => {

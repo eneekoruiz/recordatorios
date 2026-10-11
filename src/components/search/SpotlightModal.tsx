@@ -9,6 +9,8 @@ import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import type { TaskItem } from '../../models/Task';
 import { formatEuro } from '../../utils/format';
 import { modShortcut } from '../../utils/platform';
+import { useRef as useSheetRef } from "react";
+import { useModalFocus } from "../../hooks/useModalFocus";
 
 interface SpotlightModalProps {
   isOpen?: boolean;
@@ -67,6 +69,8 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
   }, [onClose]);
 
   const [query, setQuery] = useState('');
+    const focusSheetRef = useSheetRef<HTMLDivElement>(null);
+    useModalFocus(focusSheetRef, isModalOpen, handleClose);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listContainerRef = useRef<HTMLDivElement>(null);
@@ -253,7 +257,7 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
           role="dialog"
           aria-modal="true"
           aria-label="Buscar"
-          onClick={e => e.stopPropagation()}
+          onClick={e => e.stopPropagation()} ref={focusSheetRef}
         >
           <div className="spotlight-field">
             <Search size={18} className="spotlight-field-icon" />

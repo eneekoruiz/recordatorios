@@ -1,15 +1,15 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  RefreshCw, 
-  Download, 
-  Volume2, 
-  Smartphone, 
-  Moon, 
-  HelpCircle, 
-  Settings, 
-  BarChart, 
+import {
+  RefreshCw,
+  Download,
+  Volume2,
+  Smartphone,
+  Moon,
+  HelpCircle,
+  Settings,
+  BarChart,
   LogOut,
   Bell,
   UserPlus,
@@ -24,6 +24,7 @@ import { syncManager } from '../../../sync/syncManager';
 import { confirmDialog } from '../../ui/confirmDialog';
 import { PushService, type PushStatus } from '../../../services/PushService';
 import { usePromptStore } from '../../../store/usePromptStore';
+import { useModalFocus } from '../../../hooks/useModalFocus';
 
 interface UserProfileDropdownProps {
   isOpen: boolean;
@@ -77,6 +78,8 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
 
   const [pushStatus, setPushStatus] = React.useState<PushStatus>('off');
   const [pushBusy, setPushBusy] = React.useState(false);
+  const panelRef = React.useRef<HTMLDivElement>(null);
+  useModalFocus(panelRef, isOpen, onClose);
   React.useEffect(() => {
     if (isOpen) PushService.status().then(setPushStatus);
   }, [isOpen]);
@@ -113,26 +116,30 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
 
   return createPortal(
     <AnimatePresence>
-      <motion.div 
+      <motion.div
         key="sidebar-backdrop"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        style={{ position: 'fixed', inset: 0, zIndex: 99998, background: 'rgba(0, 0, 0, 0.28)', backdropFilter: 'blur(4px)' }} 
+        style={{ position: 'fixed', inset: 0, zIndex: 99998, background: 'rgba(0, 0, 0, 0.28)', backdropFilter: 'blur(4px)' }}
         onClick={(e) => { e.stopPropagation(); onClose(); }}
       />
-      <motion.div 
+      <motion.div
         key="sidebar-dropdown"
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Cuenta y ajustes"
         initial={{ opacity: 0, scale: 0.95, y: -10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: -10 }}
         transition={{ duration: 0.15 }}
-        className="ios-dropdown-menu"
-        style={{ 
-          position: 'fixed', 
-          top, 
-          left, 
-          width: 290, 
+        className="ios-dropdown-menu account-options"
+        style={{
+          position: 'fixed',
+          top,
+          left,
+          width: 290,
           maxHeight: `calc(100dvh - ${top + 16}px)`,
           overflowY: 'auto',
           overscrollBehavior: 'contain',
@@ -163,7 +170,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
         </button>
 
         {isGuest ? (
-          <div
+          <button
             className="ios-dropdown-item"
             onClick={(e) => {
               e.stopPropagation();
@@ -173,137 +180,163 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
               // lo que ya hay en este dispositivo se sube a ella (setToken no vacía el estado de un invitado).
               useAppStore.setState({ token: null });
             }}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }} type="button"
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <UserPlus size={16} />
               Crear cuenta o iniciar sesión
             </span>
             <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>Conserva tus datos</span>
-          </div>
+          </button>
         ) : (
-        <div 
+        <button
             className="ios-dropdown-item"
-            onClick={(e) => { 
-              e.stopPropagation(); 
+            onClick={(e) => {
+              e.stopPropagation();
               HapticService.selection();
               syncManager.syncNow(true);
             }}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }} type="button"
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <RefreshCw size={16} style={{ animation: syncStatus === 'syncing' ? 'spin-anim 1s linear infinite' : 'none' }} /> 
+              <RefreshCw size={16} style={{ animation: syncStatus === 'syncing' ? 'spin-anim 1s linear infinite' : 'none' }} />
               Sincronizar ahora
             </span>
             <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>
               {lastSyncedAt ? new Date(lastSyncedAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : 'Pendiente'}
             </span>
-          </div>
+          </button>
         )}
         {!isGuest && (
-          <div
+          <button
             className="ios-dropdown-item"
             onClick={(e) => { e.stopPropagation(); HapticService.selection(); window.dispatchEvent(new Event('open-security-sheet')); onClose(); }}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }} type="button"
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <ShieldCheck size={16} /> Seguridad
             </span>
-          </div>
+          </button>
         )}
-        <div 
+        <button
           className="ios-dropdown-item"
-          onClick={(e) => { 
-            e.stopPropagation(); 
-            localStorage.removeItem('pwa_prompt_dismissed'); 
+          onClick={(e) => {
+            e.stopPropagation();
+            localStorage.removeItem('pwa_prompt_dismissed');
             window.dispatchEvent(new Event('open-install-modal'));
-            onClose(); 
+            onClose();
           }}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }} type="button"
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Download size={16} /> Instalar como app
           </span>
-        </div>
-        <div 
-          className="ios-dropdown-item"
-          onClick={(e) => { e.stopPropagation(); HapticService.selection(); const next = SoundService.toggleSound(); setSoundEnabled(next); }}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
-        >
-          <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Volume2 size={16} /> Sonidos de la interfaz
-          </span>
-          <div style={{
-            width: '36px', height: '22px', borderRadius: '11px',
-            background: soundEnabled ? 'var(--accent-primary)' : 'rgba(120,120,128,0.3)',
-            position: 'relative', transition: 'background-color 0.2s ease', flexShrink: 0
-          }}>
-            <div style={{
-              width: '18px', height: '18px', borderRadius: '50%', background: '#ffffff',
-              position: 'absolute', top: '2px', left: '2px', transform: soundEnabled ? 'translateX(14px)' : 'translateX(0)',
-              transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-            }} />
-          </div>
-        </div>
-        <div 
-          className="ios-dropdown-item"
-          onClick={(e) => { 
-            e.stopPropagation(); 
-            const next = HapticService.toggle(); 
-            setHapticEnabled(next); 
-          }}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
-        >
-          <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Smartphone size={16} /> Vibración
-          </span>
-          <div style={{
-            width: '36px', height: '22px', borderRadius: '11px',
-            background: hapticEnabled ? 'var(--accent-primary)' : 'rgba(120,120,128,0.3)',
-            position: 'relative', transition: 'background-color 0.2s ease', flexShrink: 0
-          }}>
-            <div style={{
-              width: '18px', height: '18px', borderRadius: '50%', background: '#ffffff',
-              position: 'absolute', top: '2px', left: '2px', transform: hapticEnabled ? 'translateX(14px)' : 'translateX(0)',
-              transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-            }} />
-          </div>
-        </div>
-        <div 
-          className="ios-dropdown-item"
-          onClick={(e) => { e.stopPropagation(); HapticService.selection(); toggleTheme(); }}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
-        >
-          <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Moon size={16} /> Modo oscuro {isSystemTheme && <span className="theme-auto-badge" style={{ marginLeft: 4 }}>(auto)</span>}
-          </span>
-          <div style={{
-            width: '36px', height: '22px', borderRadius: '11px',
-            background: theme === 'dark' ? 'var(--accent-primary)' : 'rgba(120,120,128,0.3)',
-            position: 'relative', transition: 'background-color 0.2s ease', flexShrink: 0
-          }}>
-            <div style={{
-              width: '18px', height: '18px', borderRadius: '50%', background: '#ffffff',
-              position: 'absolute', top: '2px', left: '2px', transform: theme === 'dark' ? 'translateX(14px)' : 'translateX(0)',
-              transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-            }} />
-          </div>
-        </div>
-        <div 
+        </button>
+        <details className="context-details account-preferences"><summary>Preferencias de este dispositivo <span aria-hidden="true">›</span></summary><button
+                        className="ios-dropdown-item"
+                        onClick={(e) => { e.stopPropagation(); HapticService.selection(); const next = SoundService.toggleSound(); setSoundEnabled(next); }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }} role="switch" aria-checked={soundEnabled} type="button"
+                      >
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <Volume2 size={16} /> Sonidos de la interfaz
+                        </span>
+                        <div style={{
+                          width: '36px', height: '22px', borderRadius: '11px',
+                          background: soundEnabled ? 'var(--accent-primary)' : 'rgba(120,120,128,0.3)',
+                          position: 'relative', transition: 'background-color 0.2s ease', flexShrink: 0
+                        }}>
+                          <div style={{
+                            width: '18px', height: '18px', borderRadius: '50%', background: '#ffffff',
+                            position: 'absolute', top: '2px', left: '2px', transform: soundEnabled ? 'translateX(14px)' : 'translateX(0)',
+                            transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                          }} />
+                        </div>
+                      </button>
+              <button
+                        className="ios-dropdown-item"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const next = HapticService.toggle();
+                          setHapticEnabled(next);
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }} role="switch" aria-checked={hapticEnabled} type="button"
+                      >
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <Smartphone size={16} /> Vibración
+                        </span>
+                        <div style={{
+                          width: '36px', height: '22px', borderRadius: '11px',
+                          background: hapticEnabled ? 'var(--accent-primary)' : 'rgba(120,120,128,0.3)',
+                          position: 'relative', transition: 'background-color 0.2s ease', flexShrink: 0
+                        }}>
+                          <div style={{
+                            width: '18px', height: '18px', borderRadius: '50%', background: '#ffffff',
+                            position: 'absolute', top: '2px', left: '2px', transform: hapticEnabled ? 'translateX(14px)' : 'translateX(0)',
+                            transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                          }} />
+                        </div>
+                      </button>
+              <button
+                        className="ios-dropdown-item"
+                        onClick={(e) => { e.stopPropagation(); HapticService.selection(); toggleTheme(); }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }} role="switch" aria-checked={theme === "dark"} type="button"
+                      >
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <Moon size={16} /> Modo oscuro {isSystemTheme && <span className="theme-auto-badge" style={{ marginLeft: 4 }}>(auto)</span>}
+                        </span>
+                        <div style={{
+                          width: '36px', height: '22px', borderRadius: '11px',
+                          background: theme === 'dark' ? 'var(--accent-primary)' : 'rgba(120,120,128,0.3)',
+                          position: 'relative', transition: 'background-color 0.2s ease', flexShrink: 0
+                        }}>
+                          <div style={{
+                            width: '18px', height: '18px', borderRadius: '50%', background: '#ffffff',
+                            position: 'absolute', top: '2px', left: '2px', transform: theme === 'dark' ? 'translateX(14px)' : 'translateX(0)',
+                            transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                          }} />
+                        </div>
+                      </button>
+              <button
+                        className="ios-dropdown-item"
+                        role="switch"
+                        aria-checked={pushStatus === 'on'}
+                        onClick={(e) => { e.stopPropagation(); togglePush(); }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer', opacity: pushBusy ? 0.6 : 1 }}
+                        title={pushStatus === 'unsupported' ? 'En iPhone, añade la app a la pantalla de inicio para recibir avisos' : 'Un resumen al día y las alertas con hora, aunque cierres la app'} type="button"
+                      >
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <Bell size={16} /> Avisos con la app cerrada
+                        </span>
+                        <div aria-hidden="true" style={{
+                          width: '36px', height: '22px', borderRadius: '11px',
+                          background: pushStatus === 'on' ? 'var(--accent-primary)' : 'rgba(120,120,128,0.3)',
+                          position: 'relative', transition: 'background-color 0.2s ease', flexShrink: 0,
+                          opacity: pushStatus === 'unsupported' || pushStatus === 'denied' ? 0.45 : 1
+                        }}>
+                          <div style={{
+                            width: '18px', height: '18px', borderRadius: '50%', background: '#ffffff',
+                            position: 'absolute', top: '2px', left: '2px', transform: pushStatus === 'on' ? 'translateX(14px)' : 'translateX(0)',
+                            transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                          }} />
+                        </div>
+                      </button></details>
+        {/* Included in device preferences disclosure above. */}
+        {/* Included in device preferences disclosure above. */}
+        <button
           className="ios-dropdown-item"
           data-testid="profile-item-shortcuts"
           onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new Event('open-shortcuts-modal')); onClose(); }}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }} type="button"
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <HelpCircle size={16} /> Atajos de teclado
           </span>
           <kbd style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-color)', borderRadius: 4, padding: '2px 6px', fontSize: '0.75rem', fontWeight: 600 }}>?</kbd>
-        </div>
-        <div 
+        </button>
+        <button
           className="ios-dropdown-item"
-          onClick={(e) => { 
-            e.stopPropagation(); 
+          onClick={(e) => {
+            e.stopPropagation();
             HapticService.selection();
             const data = useAppStore.getState().exportData();
             const blob = new Blob([data], { type: 'application/json' });
@@ -316,63 +349,40 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
             onClose();
           }}
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
-          title="Descargar copia de seguridad en JSON"
+          title="Descargar copia de seguridad en JSON" type="button"
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Download size={16} /> Copia de seguridad rápida
           </span>
           <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>JSON</span>
-        </div>
-        <div
-          className="ios-dropdown-item"
-          role="switch"
-          aria-checked={pushStatus === 'on'}
-          onClick={(e) => { e.stopPropagation(); togglePush(); }}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer', opacity: pushBusy ? 0.6 : 1 }}
-          title={pushStatus === 'unsupported' ? 'En iPhone, añade la app a la pantalla de inicio para recibir avisos' : 'Un resumen al día y las alertas con hora, aunque cierres la app'}
-        >
-          <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Bell size={16} /> Avisos con la app cerrada
-          </span>
-          <div aria-hidden="true" style={{
-            width: '36px', height: '22px', borderRadius: '11px',
-            background: pushStatus === 'on' ? 'var(--accent-primary)' : 'rgba(120,120,128,0.3)',
-            position: 'relative', transition: 'background-color 0.2s ease', flexShrink: 0,
-            opacity: pushStatus === 'unsupported' || pushStatus === 'denied' ? 0.45 : 1
-          }}>
-            <div style={{
-              width: '18px', height: '18px', borderRadius: '50%', background: '#ffffff',
-              position: 'absolute', top: '2px', left: '2px', transform: pushStatus === 'on' ? 'translateX(14px)' : 'translateX(0)',
-              transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-            }} />
-          </div>
-        </div>
+        </button>
+        {/* Included in device preferences disclosure above. */}
         <div className="ios-dropdown-divider" />
-        <div 
+        <button
           className="ios-dropdown-item"
           data-testid="profile-item-manage-lists"
-          onClick={(e) => { 
-            e.stopPropagation(); 
+          onClick={(e) => {
+            e.stopPropagation();
             HapticService.selection();
-            onClose(); 
+            onClose();
             if (setIsEditMode) setIsEditMode(true);
             if (onOpenManageLists) onOpenManageLists();
             else window.dispatchEvent(new CustomEvent('open-manage-lists-modal'));
           }}
-          style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', cursor: 'pointer' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', cursor: 'pointer' }} type="button"
         >
           <Settings size={16} /> Gestionar listas
-        </div>
-        <div 
+        </button>
+        <button
           className="ios-dropdown-item"
           data-testid="profile-item-analytics"
           onPointerEnter={() => { void import('../../analytics/AnalyticsView'); }}
           onClick={(e) => { e.stopPropagation(); onSelectView('ANALYTICS'); onClose(); }}
-          style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', cursor: 'pointer' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', cursor: 'pointer' }} type="button"
         >
           <BarChart size={16} /> Estadísticas y productividad
-        </div>
-        <div 
+        </button>
+        <button
           className="ios-dropdown-item"
           data-testid="profile-item-integrations"
           onPointerEnter={() => { void import('../../integrations/IntegrationsModal'); }}
@@ -383,15 +393,15 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
             window.dispatchEvent(new CustomEvent('open-integrations-modal'));
           }}
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}
-          title="Vincular con Notion, GitHub, Gmail y Google Calendar"
+          title="Vincular con Notion, GitHub, Gmail y Google Calendar" type="button"
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Share2 size={16} color="var(--accent-purple, #af52de)" /> Conexiones e Integraciones
           </span>
           <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>Notion, GitHub...</span>
-        </div>
+        </button>
         <div className="ios-dropdown-divider" />
-        <div 
+        <button
           className="ios-dropdown-item delete"
           onClick={async (e) => {
             e.stopPropagation();
@@ -425,10 +435,10 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
             syncManager.stop();
             useAppStore.getState().logout();
           }}
-          style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', cursor: 'pointer' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', cursor: 'pointer' }} type="button"
         >
           {isGuest ? <><Trash2 size={16} /> Borrar datos y salir</> : <><LogOut size={16} /> Cerrar sesión</>}
-        </div>
+        </button>
       </motion.div>
     </AnimatePresence>,
     document.body

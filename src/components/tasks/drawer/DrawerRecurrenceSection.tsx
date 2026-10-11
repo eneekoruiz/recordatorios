@@ -43,7 +43,7 @@ export const DrawerRecurrenceSection: React.FC<DrawerRecurrenceSectionProps> = (
 }) => {
   return (
     <div id="drawer-recurrence-card" className="section-card">
-      <button 
+      <button
         type="button"
         className="section-card-header"
         onClick={() => setCardRepeatOpen(!cardRepeatOpen)}
@@ -73,15 +73,15 @@ export const DrawerRecurrenceSection: React.FC<DrawerRecurrenceSectionProps> = (
                       label: c.name,
                       color: c.color || (c.id === 'cycle_day' ? '#ff9500' : c.id === 'cycle_week' ? '#007aff' : c.id === 'cycle_month' ? '#af52de' : c.id === 'cycle_year' ? '#34c759' : undefined)
                     }))
-                  ]}
+                  ]} aria-label="Repetir (ciclo)"
                 />
               </div>
-              
+
               <div className="divider"></div>
-              
+
               <div className="detail-row" style={{ padding: '8px 0' }}>
                 <span className="detail-label">Sección de Lista</span>
-                <CustomSelect 
+                <CustomSelect
                   className="detail-select"
                   value={sectionId || ''}
                   onChange={val => {
@@ -98,21 +98,21 @@ export const DrawerRecurrenceSection: React.FC<DrawerRecurrenceSectionProps> = (
                     ...listSections
                       .filter(s => s.listId === category && !s.deleted_at)
                       .map(s => ({ value: s.id, label: formatSectionTitle(s.name) }))
-                  ]}
+                  ]} aria-label="Sección de lista"
                 />
-                
+
                 {showInlineInput && (
                   <div style={{ marginTop: '12px', padding: '12px', background: 'var(--bg-elevated)', borderRadius: '8px', border: '1px solid var(--border-subtle)', display: 'flex', gap: '8px', flexDirection: 'column' }}>
                     <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>Nueva sección</span>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <input 
+                      <input
                         autoFocus
-                        value={inlineInputValue} 
-                        onChange={e => setInlineInputValue(e.target.value)} 
-                        placeholder="Nombre de sección" 
-                        style={{ flex: 1, padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border-subtle)', fontSize: '0.9rem' }}
+                        value={inlineInputValue}
+                        onChange={e => setInlineInputValue(e.target.value)}
+                        placeholder="Nombre de sección"
+                        style={{ flex: 1, padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border-subtle)', fontSize: '0.9rem' }} aria-label="Nombre de la nueva sección"
                       />
-                      <button 
+                      <button
                         type="button"
                         onClick={() => {
                           if (inlineInputValue.trim()) {
@@ -124,7 +124,7 @@ export const DrawerRecurrenceSection: React.FC<DrawerRecurrenceSectionProps> = (
                       >
                         Guardar
                       </button>
-                      <button 
+                      <button
                         type="button"
                         onClick={() => setShowInlineInput(false)}
                         style={{ background: 'transparent', color: 'var(--text-secondary)', border: 'none', padding: '6px 8px', cursor: 'pointer' }}

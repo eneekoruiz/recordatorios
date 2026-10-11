@@ -1,20 +1,20 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  X, 
-  Search, 
-  Check, 
-  Folder, 
-  List, 
-  Trash2, 
-  Pin, 
-  PinOff, 
-  ChevronUp, 
-  ChevronDown, 
-  Edit2, 
-  Plus, 
-  FolderPlus, 
+import {
+  X,
+  Search,
+  Check,
+  Folder,
+  List,
+  Trash2,
+  Pin,
+  PinOff,
+  ChevronUp,
+  ChevronDown,
+  Edit2,
+  Plus,
+  FolderPlus,
   AlertCircle
 } from 'lucide-react';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -22,6 +22,8 @@ import { HapticService } from '../../services/HapticService';
 import { confirmDialog } from '../ui/confirmDialog';
 import { LIST_ICON_MAP } from '../../constants/icons';
 import type { CustomList } from '../../models/Task';
+import { useRef as useSheetRef } from "react";
+import { useModalFocus } from "../../hooks/useModalFocus";
 
 export interface ManageListsModalProps {
   isOpen: boolean;
@@ -36,6 +38,8 @@ export const ManageListsModal: React.FC<ManageListsModalProps> = ({
   onEditList,
   onCreateList,
 }) => {
+    const sheetRef = useSheetRef<HTMLDivElement>(null);
+    useModalFocus(sheetRef, isOpen, onClose);
   const lists = useAppStore((state) => state.lists);
   const tasks = useAppStore((state) => state.tasks);
   const removeList = useAppStore((state) => state.removeList);
@@ -285,10 +289,10 @@ export const ManageListsModal: React.FC<ManageListsModalProps> = ({
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
-          }}
+          }} ref={sheetRef}
         >
           {/* Header */}
-          <div
+          <div className="manage-header"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -396,7 +400,7 @@ export const ManageListsModal: React.FC<ManageListsModalProps> = ({
                   outline: 'none',
                   fontSize: '0.88rem',
                   color: 'var(--text-primary)',
-                }}
+                }} aria-label="Buscar listas"
               />
               {searchQuery && (
                 <button
@@ -523,7 +527,7 @@ export const ManageListsModal: React.FC<ManageListsModalProps> = ({
                         ? '1.5px solid var(--accent-primary, #007aff)'
                         : '1px solid var(--border-subtle, rgba(0,0,0,0.05))',
                       transition: 'background-color 0.15s ease, border-color 0.15s ease',
-                    }}
+                    }} className="manage-list-row"
                   >
                     {/* Multi-select checkbox */}
                     <button
@@ -545,7 +549,7 @@ export const ManageListsModal: React.FC<ManageListsModalProps> = ({
                         flexShrink: 0,
                         padding: 0,
                         transition: 'background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, fill 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
-                      }}
+                      }} role="checkbox" aria-checked={isSelected}
                     >
                       {isSelected && <Check size={14} strokeWidth={3} />}
                     </button>
@@ -569,7 +573,7 @@ export const ManageListsModal: React.FC<ManageListsModalProps> = ({
 
                     {/* Info */}
                     <div
-                      style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}
+                      className="manage-list-identity" style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}
                       onClick={() => toggleSelect(list.id)}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -626,129 +630,129 @@ export const ManageListsModal: React.FC<ManageListsModalProps> = ({
                     </div>
 
                     {/* Item controls: Reorder & Edit & Pin & Delete */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                      {/* Reorder Up */}
-                      <button
-                        type="button"
-                        aria-label="Subir orden"
-                        disabled={index === 0}
-                        onClick={() => handleMove(index, 'up')}
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: 6,
-                          border: 'none',
-                          background: 'transparent',
-                          color: index === 0 ? 'var(--border-subtle)' : 'var(--text-secondary)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: index === 0 ? 'default' : 'pointer',
-                        }}
-                      >
-                        <ChevronUp size={16} />
-                      </button>
+                    <details className="context-details manage-list-options"><summary aria-label={`Opciones de ${list.name}`}>Opciones <ChevronDown size={14} aria-hidden="true" /></summary><div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} className="manage-list-commands">
+                                              {/* Reorder Up */}
+                                              <button
+                                                type="button"
+                                                aria-label="Subir orden"
+                                                disabled={index === 0}
+                                                onClick={() => handleMove(index, 'up')}
+                                                style={{
+                                                  width: 28,
+                                                  height: 28,
+                                                  borderRadius: 6,
+                                                  border: 'none',
+                                                  background: 'transparent',
+                                                  color: index === 0 ? 'var(--border-subtle)' : 'var(--text-secondary)',
+                                                  display: 'flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'center',
+                                                  cursor: index === 0 ? 'default' : 'pointer',
+                                                }}
+                                              >
+                                                <ChevronUp size={16} />
+                                              </button>
 
-                      {/* Reorder Down */}
-                      <button
-                        type="button"
-                        aria-label="Bajar orden"
-                        disabled={index === displayedLists.length - 1}
-                        onClick={() => handleMove(index, 'down')}
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: 6,
-                          border: 'none',
-                          background: 'transparent',
-                          color:
-                            index === displayedLists.length - 1
-                              ? 'var(--border-subtle)'
-                              : 'var(--text-secondary)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: index === displayedLists.length - 1 ? 'default' : 'pointer',
-                        }}
-                      >
-                        <ChevronDown size={16} />
-                      </button>
+                                              {/* Reorder Down */}
+                                              <button
+                                                type="button"
+                                                aria-label="Bajar orden"
+                                                disabled={index === displayedLists.length - 1}
+                                                onClick={() => handleMove(index, 'down')}
+                                                style={{
+                                                  width: 28,
+                                                  height: 28,
+                                                  borderRadius: 6,
+                                                  border: 'none',
+                                                  background: 'transparent',
+                                                  color:
+                                                    index === displayedLists.length - 1
+                                                      ? 'var(--border-subtle)'
+                                                      : 'var(--text-secondary)',
+                                                  display: 'flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'center',
+                                                  cursor: index === displayedLists.length - 1 ? 'default' : 'pointer',
+                                                }}
+                                              >
+                                                <ChevronDown size={16} />
+                                              </button>
 
-                      {/* Pin Toggle */}
-                      <button
-                        type="button"
-                        aria-label={list.isPinned ? 'Desfijar lista' : 'Fijar lista'}
-                        onClick={() => {
-                          HapticService.selection();
-                          updateList(list.id, { isPinned: !list.isPinned });
-                        }}
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: 6,
-                          border: 'none',
-                          background: 'transparent',
-                          color: list.isPinned ? '#ff9500' : 'var(--text-tertiary)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: 'pointer',
-                        }}
-                        title={list.isPinned ? 'Desfijar' : 'Fijar'}
-                      >
-                        {list.isPinned ? <Pin size={15} /> : <PinOff size={15} />}
-                      </button>
+                                              {/* Pin Toggle */}
+                                              <button
+                                                type="button"
+                                                aria-label={list.isPinned ? 'Desfijar lista' : 'Fijar lista'}
+                                                onClick={() => {
+                                                  HapticService.selection();
+                                                  updateList(list.id, { isPinned: !list.isPinned });
+                                                }}
+                                                style={{
+                                                  width: 28,
+                                                  height: 28,
+                                                  borderRadius: 6,
+                                                  border: 'none',
+                                                  background: 'transparent',
+                                                  color: list.isPinned ? '#ff9500' : 'var(--text-tertiary)',
+                                                  display: 'flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'center',
+                                                  cursor: 'pointer',
+                                                }}
+                                                title={list.isPinned ? 'Desfijar' : 'Fijar'}
+                                              >
+                                                {list.isPinned ? <Pin size={15} /> : <PinOff size={15} />}
+                                              </button>
 
-                      {/* Edit (opens ListConfigModal for this list) */}
-                      {onEditList && (
-                        <button
-                          type="button"
-                          aria-label={`Editar ${list.name}`}
-                          onClick={() => {
-                            HapticService.selection();
-                            onClose();
-                            onEditList(list.id);
-                          }}
-                          style={{
-                            width: 28,
-                            height: 28,
-                            borderRadius: 6,
-                            border: 'none',
-                            background: 'transparent',
-                            color: 'var(--text-secondary)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                          }}
-                          title="Personalizar nombre, icono o color"
-                        >
-                          <Edit2 size={15} />
-                        </button>
-                      )}
+                                              {/* Edit (opens ListConfigModal for this list) */}
+                                              {onEditList && (
+                                                <button
+                                                  type="button"
+                                                  aria-label={`Editar ${list.name}`}
+                                                  onClick={() => {
+                                                    HapticService.selection();
+                                                    onClose();
+                                                    onEditList(list.id);
+                                                  }}
+                                                  style={{
+                                                    width: 28,
+                                                    height: 28,
+                                                    borderRadius: 6,
+                                                    border: 'none',
+                                                    background: 'transparent',
+                                                    color: 'var(--text-secondary)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    cursor: 'pointer',
+                                                  }}
+                                                  title="Personalizar nombre, icono o color"
+                                                >
+                                                  <Edit2 size={15} />
+                                                </button>
+                                              )}
 
-                      {/* Delete */}
-                      <button
-                        type="button"
-                        aria-label={`Eliminar ${list.name}`}
-                        onClick={() => handleDeleteSingle(list)}
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: 6,
-                          border: 'none',
-                          background: 'transparent',
-                          color: 'var(--accent-red, #ff3b30)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: 'pointer',
-                        }}
-                        title="Eliminar lista"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
+                                              {/* Delete */}
+                                              <button
+                                                type="button"
+                                                aria-label={`Eliminar ${list.name}`}
+                                                onClick={() => handleDeleteSingle(list)}
+                                                style={{
+                                                  width: 28,
+                                                  height: 28,
+                                                  borderRadius: 6,
+                                                  border: 'none',
+                                                  background: 'transparent',
+                                                  color: 'var(--accent-red, #ff3b30)',
+                                                  display: 'flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'center',
+                                                  cursor: 'pointer',
+                                                }}
+                                                title="Eliminar lista"
+                                              >
+                                                <Trash2 size={15} />
+                                              </button>
+                                            </div></details>
                   </motion.div>
                 );
               })
@@ -825,7 +829,7 @@ export const ManageListsModal: React.FC<ManageListsModalProps> = ({
           </AnimatePresence>
 
           {/* Bottom Footer with Add buttons */}
-          <div
+          <div className="manage-footer"
             style={{
               padding: '12px 20px',
               borderTop: selectedIds.size > 0 ? 'none' : '1px solid var(--border-subtle, rgba(0,0,0,0.06))',

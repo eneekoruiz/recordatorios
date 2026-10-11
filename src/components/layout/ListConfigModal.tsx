@@ -21,25 +21,29 @@ const COLORS = LIST_AVAILABLE_COLORS;
 // Una fila completa de muestras (7 columnas) antes de «Ver más»: sin muestras huérfanas.
 const COLOR_PREVIEW_COUNT = 7;
 
-import { 
-  isCaducidadesList, 
-  isLimpiezaList, 
-  ensureCaducidadesSections, 
+import {
+  isCaducidadesList,
+  isLimpiezaList,
+  ensureCaducidadesSections,
   isRoutineList,
   getListType,
   LIST_TYPE_CONFIG
 } from '../../utils/specialLists';
 import type { ListType } from '../../models/Task';
+import { useRef as useSheetRef } from "react";
+import { useModalFocus } from "../../hooks/useModalFocus";
 
 export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFolder }: ListConfigModalProps) {
+    const sheetRef = useSheetRef<HTMLDivElement>(null);
+    useModalFocus(sheetRef, isOpen, onClose);
   const lists = useAppStore(state => state.lists);
   const addList = useAppStore(state => state.addList);
   const updateList = useAppStore(state => state.updateList);
   const addListSection = useAppStore(state => state.addListSection);
   const listSections = useAppStore(state => state.listSections);
-  
+
   const existingList = listId ? lists.find(l => l.id === listId) : null;
-  
+
   const [name, setName] = useState('');
   const [color, setColor] = useState<string>(COLORS[0]);
   const [icon, setIcon] = useState('list');
@@ -112,8 +116,8 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
 
   const handleSave = () => {
     if (!name.trim()) return;
-    
-    const resolvedSpecialType: 'caducidades' | 'que_he_hecho' | undefined = 
+
+    const resolvedSpecialType: 'caducidades' | 'que_he_hecho' | undefined =
       listType === 'caducidades' ? 'caducidades' : (listType === 'que_he_hecho' ? 'que_he_hecho' : undefined);
 
     if (existingList) {
@@ -130,7 +134,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
         ensureCaducidadesSections(existingList.id, listSections, addListSection);
       }
       if (isRoutineList(existingList.id, { ...existingList, name: name.trim(), listType }) || isLimpiezaList(existingList.id, { ...existingList, name: name.trim() })) {
-        
+
       }
       window.dispatchEvent(new CustomEvent('show-toast', { detail: `${isFolder ? 'Carpeta' : 'Lista'} "${name.trim()}" actualizada` }));
     } else {
@@ -153,7 +157,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
         ensureCaducidadesSections(newId, listSections, addListSection);
       }
       if (isRoutineList(newId, listData) || isLimpiezaList(newId, listData)) {
-        
+
       }
       window.dispatchEvent(new CustomEvent('show-toast', { detail: parentId ? `${isFolder ? 'Subcarpeta' : 'Lista anidada'} "${name.trim()}" creada con éxito` : `${isFolder ? 'Carpeta' : 'Lista'} "${name.trim()}" creada con éxito` }));
     }
@@ -196,7 +200,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
           transition={{ type: 'spring', damping: 30, stiffness: 400 }}
           onClick={e => e.stopPropagation()}
           onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
-          style={{ ['--hero-color' as string]: color } as React.CSSProperties}
+          style={{ ['--hero-color' as string]: color } as React.CSSProperties} ref={sheetRef}
         >
           <SheetNavBar
             title={title}
@@ -219,7 +223,13 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                 onChange={e => handleNameChange(e.target.value)}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
-                onKeyDown={e => { if (e.key === 'Enter' && name.trim()) handleSave(); }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && name.trim() && !e.nativeEvent.isComposing) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSave();
+                  }
+                }}
                 placeholder={isFolder ? 'Nombre de la carpeta' : 'Nombre de la lista'}
                 aria-label={isFolder ? 'Nombre de la carpeta' : 'Nombre de la lista'}
                 data-focused={isFocused || undefined}
@@ -269,60 +279,60 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
             )}
 
             {/* Color */}
-            <div>
-              <p className="form-group-label">Color</p>
-              <div className="form-group is-padded">
-                <div className="swatch-grid color-grid">
-                  {(showAllColors ? COLORS : COLORS.slice(0, COLOR_PREVIEW_COUNT)).map(c => {
-                    const isSelected = color === c;
-                    return (
-                      <button
-                        key={c}
-                        type="button"
-                        className={`swatch${isSelected ? ' is-selected' : ''}`}
-                        style={{ background: c, ['--swatch' as string]: c } as React.CSSProperties}
-                        onClick={() => setColor(c)}
-                        aria-label={`Color ${c}`}
-                        aria-pressed={isSelected}
-                      >
-                        {isSelected && <Check size={16} color="white" strokeWidth={3} />}
-                      </button>
-                    );
-                  })}
-                </div>
-                <button type="button" className="form-more-btn" onClick={() => setShowAllColors(!showAllColors)}>
-                  {showAllColors ? 'Menos colores' : 'Más colores'}
-                </button>
-              </div>
-            </div>
+            <details className="context-details appearance-details"><summary>Color <span aria-hidden="true">›</span></summary><div>
+                                    <p className="form-group-label">Color</p>
+                                    <div className="form-group is-padded">
+                                      <div className="swatch-grid color-grid">
+                                        {(showAllColors ? COLORS : COLORS.slice(0, COLOR_PREVIEW_COUNT)).map(c => {
+                                          const isSelected = color === c;
+                                          return (
+                                            <button
+                                              key={c}
+                                              type="button"
+                                              className={`swatch${isSelected ? ' is-selected' : ''}`}
+                                              style={{ background: c, ['--swatch' as string]: c } as React.CSSProperties}
+                                              onClick={() => setColor(c)}
+                                              aria-label={`Color ${c}`}
+                                              aria-pressed={isSelected}
+                                            >
+                                              {isSelected && <Check size={16} color="white" strokeWidth={3} />}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                      <button type="button" className="form-more-btn" onClick={() => setShowAllColors(!showAllColors)}>
+                                        {showAllColors ? 'Menos colores' : 'Más colores'}
+                                      </button>
+                                    </div>
+                                  </div></details>
 
             {/* Icono */}
-            <div>
-              <p className="form-group-label">Icono</p>
-              <div className="form-group is-padded">
-                <div className="swatch-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(42px, 1fr))' }}>
-                  {visibleIcons.map(k => {
-                    const IconComp = ICONS[k];
-                    const isActive = icon === k;
-                    return (
-                      <button
-                        key={k}
-                        type="button"
-                        className={`icon-choice${isActive ? ' is-selected' : ''}`}
-                        onClick={() => setIcon(k)}
-                        aria-label={`Icono ${k}`}
-                        aria-pressed={isActive}
-                      >
-                        <IconComp size={20} />
-                      </button>
-                    );
-                  })}
-                </div>
-                <button type="button" className="form-more-btn" onClick={() => setShowAllIcons(!showAllIcons)}>
-                  {showAllIcons ? 'Menos iconos' : 'Más iconos'}
-                </button>
-              </div>
-            </div>
+            <details className="context-details appearance-details"><summary>Icono <span aria-hidden="true">›</span></summary><div>
+                                    <p className="form-group-label">Icono</p>
+                                    <div className="form-group is-padded">
+                                      <div className="swatch-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(42px, 1fr))' }}>
+                                        {visibleIcons.map(k => {
+                                          const IconComp = ICONS[k];
+                                          const isActive = icon === k;
+                                          return (
+                                            <button
+                                              key={k}
+                                              type="button"
+                                              className={`icon-choice${isActive ? ' is-selected' : ''}`}
+                                              onClick={() => setIcon(k)}
+                                              aria-label={`Icono ${k}`}
+                                              aria-pressed={isActive}
+                                            >
+                                              <IconComp size={20} />
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                      <button type="button" className="form-more-btn" onClick={() => setShowAllIcons(!showAllIcons)}>
+                                        {showAllIcons ? 'Menos iconos' : 'Más iconos'}
+                                      </button>
+                                    </div>
+                                  </div></details>
 
             {/* Opciones */}
             <div>

@@ -6,6 +6,8 @@ import type { TaskItem } from '../../models/Task';
 import { getPersonRelationshipStats } from '../../services/TaskService';
 import { HapticService } from '../../services/HapticService';
 import { SheetNavBar } from '../ui/SheetNavBar';
+import { useRef as useSheetRef } from "react";
+import { useModalFocus } from "../../hooks/useModalFocus";
 
 interface PersonProfileModalProps {
   personName: string | null;
@@ -24,6 +26,8 @@ export const PersonProfileModal: React.FC<PersonProfileModalProps> = ({
   onEditTask,
   onAddMemoryWithPerson
 }) => {
+    const sheetRef = useSheetRef<HTMLDivElement>(null);
+    useModalFocus(sheetRef, isOpen, onClose);
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -101,7 +105,7 @@ export const PersonProfileModal: React.FC<PersonProfileModalProps> = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 12 }}
           transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-          onClick={e => e.stopPropagation()}
+          onClick={e => e.stopPropagation()} ref={sheetRef}
         >
           <SheetNavBar title={personName} onConfirm={onClose} confirmLabel="Listo" confirmTitle="Cerrar" />
 

@@ -5,6 +5,8 @@ import { ChevronLeft, MoreHorizontal, Check, Settings, FolderPlus, Play, Calenda
 import type { CustomList } from '../../../models/Task';
 import { HapticService } from '../../../services/HapticService';
 import { getListType, LIST_TYPE_CONFIG } from '../../../utils/specialLists';
+import { useRef as useSheetRef } from "react";
+import { useModalFocus } from "../../../hooks/useModalFocus";
 
 const SMART_COLORS: Record<string, string> = {
   'smart_today': 'var(--accent-blue)',
@@ -75,20 +77,22 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
   onExportPdf,
   onOpenIntegrations,
 }) => {
-  const listAccentColor = isSmartView 
-    ? (SMART_COLORS[currentView] || 'var(--accent-blue, #007AFF)') 
+    const focusSheetRef = useSheetRef<HTMLDivElement>(null);
+    useModalFocus(focusSheetRef, isMobile && isMenuOpen, () => setIsMenuOpen(false));
+  const listAccentColor = isSmartView
+    ? (SMART_COLORS[currentView] || 'var(--accent-blue, #007AFF)')
     : (currentList?.color || 'var(--accent-blue, #007AFF)');
 
   const isGlassActive = scrollTop !== undefined ? scrollTop > 36 : isScrolled;
-  const glassProgress = scrollTop !== undefined 
+  const glassProgress = scrollTop !== undefined
     ? Math.min(1, Math.max(0, (scrollTop - 36) / 28))
     : (isScrolled ? 1 : 0);
 
   return (
-    <header 
-      className="glass-header" 
-      style={{ 
-        position: 'relative', 
+    <header
+      className="glass-header"
+      style={{
+        position: 'relative',
         flexShrink: 0,
         paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)',
         paddingBottom: '12px',
@@ -97,9 +101,9 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
         minHeight: 'calc(env(safe-area-inset-top, 0px) + 56px)',
         display: 'flex',
         flexDirection: 'column',
-        width: '100%', 
-        alignItems: 'stretch', 
-        justifyContent: 'center', 
+        width: '100%',
+        alignItems: 'stretch',
+        justifyContent: 'center',
         zIndex: 1000,
         boxSizing: 'border-box',
         background: isGlassActive ? 'var(--bg-surface-glass)' : 'transparent',
@@ -113,23 +117,23 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
       <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between' }}>
       {/* Left: Back button ("Atrás para más listas") */}
       {onBackToSidebar ? (
-        <button 
+        <button
           type="button"
           onClick={() => {
             HapticService.selection();
             onBackToSidebar();
-          }} 
-          className="back-btn-ios" 
+          }}
+          className="back-btn-ios"
           data-testid="content-back-btn"
-          style={{ 
-            display: 'inline-flex', 
-            alignItems: 'center', 
-            gap: 3, 
-            background: 'transparent', 
-            border: 'none', 
-            color: 'var(--accent-primary, #0a84ff)', 
-            fontWeight: 500, 
-            fontSize: '1.02rem', 
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 3,
+            background: 'transparent',
+            border: 'none',
+            color: 'var(--accent-primary, #0a84ff)',
+            fontWeight: 500,
+            fontSize: '1.02rem',
             cursor: 'pointer',
             padding: '4px 8px 4px 0',
             WebkitTapHighlightColor: 'transparent',
@@ -145,14 +149,14 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
       ) : (
         <div style={{ minWidth: 24, flexShrink: 0 }} />
       )}
-      
+
       {/* Dynamic List Title on Top Bar (visible when scrolled) */}
-      <div style={{ 
-        flex: 1, 
+      <div style={{
+        flex: 1,
         minWidth: 0,
-        textAlign: 'center', 
-        fontWeight: 600, 
-        fontSize: '1rem', 
+        textAlign: 'center',
+        fontWeight: 600,
+        fontSize: '1rem',
         color: isSmartView ? SMART_COLORS[currentView] : currentList ? currentList.color : 'var(--text-primary)',
         opacity: glassProgress,
         transform: `translateY(${Math.max(0, 4 * (1 - glassProgress))}px)`,
@@ -218,13 +222,13 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
 
         {/* Añadir sección de raíz */}
         {isListView && (
-          <button 
+          <button
             type="button"
-            className="icon-btn apple-nav-action-btn" 
+            className="icon-btn apple-nav-action-btn"
             onClick={() => {
               HapticService.selection();
               onAddSection();
-            }} 
+            }}
             title="Añadir sección de raíz"
             aria-label="Añadir sección de raíz"
             style={{
@@ -248,10 +252,10 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
         {/* Opciones de lista */}
         {(isListView || (isSmartView && currentView !== 'smart_calendar') || isFolderView) && (
           <div style={{ position: 'relative' }}>
-            <button 
+            <button
               type="button"
-              className="icon-btn apple-nav-action-btn" 
-              onClick={() => setIsMenuOpen(!isMenuOpen)} 
+              className="icon-btn apple-nav-action-btn"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
               title="Opciones de lista"
               aria-label="Opciones de lista"
               style={{
@@ -277,22 +281,22 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                 <AnimatePresence>
                   {isMenuOpen && (
                     <>
-                      <motion.div 
-                        initial={{ opacity: 0 }} 
-                        animate={{ opacity: 1 }} 
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.2 }}
-                        style={{ 
-                          position: 'fixed', 
-                          inset: 0, 
-                          zIndex: 9998, 
-                          background: 'rgba(0, 0, 0, 0.45)', 
+                        style={{
+                          position: 'fixed',
+                          inset: 0,
+                          zIndex: 9998,
+                          background: 'rgba(0, 0, 0, 0.45)',
                           backdropFilter: 'blur(10px)',
                           WebkitBackdropFilter: 'blur(10px)'
-                        }} 
-                        onClick={() => setIsMenuOpen(false)} 
+                        }}
+                        onClick={() => setIsMenuOpen(false)}
                       />
-                      <motion.div 
+                      <motion.div
                         role="dialog"
                         aria-label="Opciones de lista"
                         className="ios-bottom-sheet"
@@ -300,12 +304,12 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                         animate={{ y: 0 }}
                         exit={{ y: '100%' }}
                         transition={{ type: 'spring', damping: 28, stiffness: 350 }}
-                        style={{ 
-                          position: 'fixed', 
-                          bottom: 0, 
-                          left: 0, 
-                          right: 0, 
-                          zIndex: 9999, 
+                        style={{
+                          position: 'fixed',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          zIndex: 9999,
                           background: 'var(--glass-fill, var(--bg-material, rgba(255, 255, 255, 0.88)))',
                           backdropFilter: 'blur(40px) saturate(180%)',
                           WebkitBackdropFilter: 'blur(40px) saturate(180%)',
@@ -318,7 +322,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                           overscrollBehavior: 'contain',
                           WebkitOverflowScrolling: 'touch'
                         }}
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()} ref={focusSheetRef} aria-modal="true"
                       >
                         <div style={{
                           width: 36,
@@ -329,7 +333,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                         }} />
                         {onStartSequence && (
                           <>
-                            <button 
+                            <button
                               type="button"
                               className="ios-dropdown-item"
                               onClick={() => {
@@ -346,29 +350,29 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                           </>
                         )}
 
-                        <button 
+                        <button
                           type="button"
                           className="ios-dropdown-item"
                           onClick={() => { toggleShowCompleted(); setIsMenuOpen(false); }}
                           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', minHeight: 44 }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <Check 
-                              size={17} 
-                              color="var(--accent-primary)" 
-                              style={{ opacity: resolvedShowCompleted ? 1 : 0, transition: 'opacity 0.15s ease' }} 
+                            <Check
+                              size={17}
+                              color="var(--accent-primary)"
+                              style={{ opacity: resolvedShowCompleted ? 1 : 0, transition: 'opacity 0.15s ease' }}
                             />
                             <span style={{ fontSize: '0.95rem', fontWeight: 500 }}>{resolvedShowCompleted ? 'Ocultar completados' : 'Mostrar completados'}</span>
                           </div>
                           {completedCount !== undefined && completedCount > 0 && (
-                            <span style={{ 
-                              fontSize: '0.82rem', 
-                              fontWeight: 600, 
+                            <span style={{
+                              fontSize: '0.82rem',
+                              fontWeight: 600,
                               color: 'var(--text-tertiary)',
                               background: 'var(--bg-hover, rgba(0,0,0,0.05))',
                               padding: '2px 8px',
                               borderRadius: 999,
-                              fontVariantNumeric: 'tabular-nums' 
+                              fontVariantNumeric: 'tabular-nums'
                             }}>
                               {completedCount}
                             </span>
@@ -376,12 +380,12 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                         </button>
 
                         <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '6px 0' }} />
-                        
+
                         <div style={{ padding: '8px 12px 4px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                           Ordenar por
                         </div>
 
-                        <button 
+                        <button
                           type="button"
                           className="ios-dropdown-item"
                           onClick={() => { HapticService.selection(); setSortBy('manual'); setIsMenuOpen(false); }}
@@ -391,7 +395,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                           {sortBy === 'manual' && <Check size={16} color="var(--accent-primary)" />}
                         </button>
 
-                        <button 
+                        <button
                           type="button"
                           className="ios-dropdown-item"
                           onClick={() => { HapticService.selection(); setSortBy('dueDate'); setIsMenuOpen(false); }}
@@ -401,7 +405,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                           {sortBy === 'dueDate' && <Check size={16} color="var(--accent-primary)" />}
                         </button>
 
-                        <button 
+                        <button
                           type="button"
                           className="ios-dropdown-item"
                           onClick={() => { HapticService.selection(); setSortBy('priority'); setIsMenuOpen(false); }}
@@ -411,7 +415,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                           {sortBy === 'priority' && <Check size={16} color="var(--accent-primary)" />}
                         </button>
 
-                        <button 
+                        <button
                           type="button"
                           className="ios-dropdown-item"
                           onClick={() => { HapticService.selection(); setSortBy('title'); setIsMenuOpen(false); }}
@@ -421,7 +425,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                           {sortBy === 'title' && <Check size={16} color="var(--accent-primary)" />}
                         </button>
 
-                        <button 
+                        <button
                           type="button"
                           className="ios-dropdown-item"
                           onClick={() => { HapticService.selection(); setSortBy('createdAt'); setIsMenuOpen(false); }}
@@ -434,7 +438,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                         {isListView && currentList && (
                           <>
                             <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '6px 0' }} />
-                            <button 
+                            <button
                               type="button"
                               className="ios-dropdown-item"
                               onClick={() => { updateList(currentList.id, { isFinancial: !currentList.isFinancial }); setIsMenuOpen(false); }}
@@ -445,13 +449,13 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                                 <span style={{ whiteSpace: 'nowrap' }}>Modo financiero</span>
                               </div>
                             </button>
-                            <button 
+                            <button
                               type="button"
                               className="ios-dropdown-item"
-                              onClick={() => { 
+                              onClick={() => {
                                 const nextVal = currentList.autoEstimateDuration === false ? true : false;
-                                updateList(currentList.id, { autoEstimateDuration: nextVal }); 
-                                setIsMenuOpen(false); 
+                                updateList(currentList.id, { autoEstimateDuration: nextVal });
+                                setIsMenuOpen(false);
                               }}
                               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', minHeight: 44, fontSize: '0.95rem' }}
                             >
@@ -460,7 +464,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                                 <span style={{ whiteSpace: 'nowrap' }}>Estimar duración automática</span>
                               </div>
                             </button>
-                            <button 
+                            <button
                               type="button"
                               className="ios-dropdown-item"
                               onClick={() => { setIsListConfigOpen(true); setIsMenuOpen(false); }}
@@ -470,9 +474,9 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                                 <Settings size={16} color="var(--text-secondary)" />
                                 <span style={{ whiteSpace: 'nowrap' }}>Personalizar lista</span>
                               </div>
-                              <span style={{ 
-                                fontSize: '0.74rem', 
-                                fontWeight: 600, 
+                              <span style={{
+                                fontSize: '0.74rem',
+                                fontWeight: 600,
                                 color: LIST_TYPE_CONFIG[getListType(currentList, currentView)].color,
                                 background: 'var(--bg-hover, rgba(0,0,0,0.04))',
                                 padding: '2px 8px',
@@ -569,23 +573,23 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
               <AnimatePresence>
                 {isMenuOpen && (
                   <>
-                    <motion.div 
+                    <motion.div
                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                      style={{ position: 'fixed', inset: 0, zIndex: 180, background: 'transparent' }} 
-                      onClick={() => setIsMenuOpen(false)} 
+                      style={{ position: 'fixed', inset: 0, zIndex: 180, background: 'transparent' }}
+                      onClick={() => setIsMenuOpen(false)}
                     />
-                    <motion.div 
+                    <motion.div
                       className="ios-dropdown-menu"
                       initial={{ opacity: 0, scale: 0.95, y: -4, transformOrigin: 'top right' }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95, y: -4 }}
                       transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                      style={{ 
-                        position: 'absolute', 
-                        right: 0, 
-                        top: '100%', 
-                        marginTop: 8, 
-                        zIndex: 200, 
+                      style={{
+                        position: 'absolute',
+                        right: 0,
+                        top: '100%',
+                        marginTop: 8,
+                        zIndex: 200,
                         minWidth: 245,
                         background: 'var(--glass-fill, var(--bg-material, rgba(255,255,255,0.85)))',
                         backdropFilter: 'blur(30px) saturate(180%)',
@@ -605,7 +609,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                     >
                       {onStartSequence && (
                         <>
-                          <button 
+                          <button
                             className="ios-dropdown-item"
                             onClick={() => {
                               HapticService.selection();
@@ -621,28 +625,28 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                         </>
                       )}
 
-                      <button 
+                      <button
                         className="ios-dropdown-item"
                         onClick={() => { toggleShowCompleted(); setIsMenuOpen(false); }}
                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <Check 
-                            size={15} 
-                            color="var(--accent-primary)" 
-                            style={{ opacity: resolvedShowCompleted ? 1 : 0, transition: 'opacity 0.15s ease' }} 
+                          <Check
+                            size={15}
+                            color="var(--accent-primary)"
+                            style={{ opacity: resolvedShowCompleted ? 1 : 0, transition: 'opacity 0.15s ease' }}
                           />
                           <span>{resolvedShowCompleted ? 'Ocultar completados' : 'Mostrar completados'}</span>
                         </div>
                         {completedCount !== undefined && completedCount > 0 && (
-                          <span style={{ 
-                            fontSize: '0.78rem', 
-                            fontWeight: 600, 
+                          <span style={{
+                            fontSize: '0.78rem',
+                            fontWeight: 600,
                             color: 'var(--text-tertiary)',
                             background: 'var(--bg-hover, rgba(0,0,0,0.05))',
                             padding: '1.5px 7px',
                             borderRadius: 999,
-                            fontVariantNumeric: 'tabular-nums' 
+                            fontVariantNumeric: 'tabular-nums'
                           }}>
                             {completedCount}
                           </span>
@@ -650,12 +654,12 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                       </button>
 
                       <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
-                      
+
                       <div style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                         Ordenar por
                       </div>
 
-                      <button 
+                      <button
                         className="ios-dropdown-item"
                         onClick={() => { HapticService.selection(); setSortBy('manual'); setIsMenuOpen(false); }}
                         style={{ justifyContent: 'space-between' }}
@@ -664,7 +668,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                         {sortBy === 'manual' && <Check size={14} color="var(--accent-primary)" />}
                       </button>
 
-                      <button 
+                      <button
                         className="ios-dropdown-item"
                         onClick={() => { HapticService.selection(); setSortBy('dueDate'); setIsMenuOpen(false); }}
                         style={{ justifyContent: 'space-between' }}
@@ -673,7 +677,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                         {sortBy === 'dueDate' && <Check size={14} color="var(--accent-primary)" />}
                       </button>
 
-                      <button 
+                      <button
                         className="ios-dropdown-item"
                         onClick={() => { HapticService.selection(); setSortBy('priority'); setIsMenuOpen(false); }}
                         style={{ justifyContent: 'space-between' }}
@@ -682,7 +686,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                         {sortBy === 'priority' && <Check size={14} color="var(--accent-primary)" />}
                       </button>
 
-                      <button 
+                      <button
                         className="ios-dropdown-item"
                         onClick={() => { HapticService.selection(); setSortBy('title'); setIsMenuOpen(false); }}
                         style={{ justifyContent: 'space-between' }}
@@ -691,7 +695,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                         {sortBy === 'title' && <Check size={14} color="var(--accent-primary)" />}
                       </button>
 
-                      <button 
+                      <button
                         className="ios-dropdown-item"
                         onClick={() => { HapticService.selection(); setSortBy('createdAt'); setIsMenuOpen(false); }}
                         style={{ justifyContent: 'space-between' }}
@@ -703,7 +707,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                       {isListView && currentList && (
                         <>
                           <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
-                          <button 
+                          <button
                             className="ios-dropdown-item"
                             onClick={() => { updateList(currentList.id, { isFinancial: !currentList.isFinancial }); setIsMenuOpen(false); }}
                             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
@@ -713,12 +717,12 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                               <span style={{ whiteSpace: 'nowrap' }}>Modo financiero</span>
                             </div>
                           </button>
-                          <button 
+                          <button
                             className="ios-dropdown-item"
-                            onClick={() => { 
+                            onClick={() => {
                               const nextVal = currentList.autoEstimateDuration === false ? true : false;
-                              updateList(currentList.id, { autoEstimateDuration: nextVal }); 
-                              setIsMenuOpen(false); 
+                              updateList(currentList.id, { autoEstimateDuration: nextVal });
+                              setIsMenuOpen(false);
                             }}
                             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
                           >
@@ -727,7 +731,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                               <span style={{ whiteSpace: 'nowrap' }}>Estimar duración automática</span>
                             </div>
                           </button>
-                          <button 
+                          <button
                             className="ios-dropdown-item"
                             onClick={() => { setIsListConfigOpen(true); setIsMenuOpen(false); }}
                             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
@@ -736,9 +740,9 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                               <Settings size={15} color="var(--text-secondary)" />
                               <span style={{ whiteSpace: 'nowrap' }}>Personalizar lista</span>
                             </div>
-                            <span style={{ 
-                              fontSize: '0.72rem', 
-                              fontWeight: 600, 
+                            <span style={{
+                              fontSize: '0.72rem',
+                              fontWeight: 600,
                               color: LIST_TYPE_CONFIG[getListType(currentList, currentView)].color,
                               background: 'var(--bg-hover, rgba(0,0,0,0.04))',
                               padding: '1px 6px',
@@ -754,7 +758,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                         <>
                           <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
                           {onOpenIntegrations && (
-                            <button 
+                            <button
                               className="ios-dropdown-item"
                               onClick={() => {
                                 HapticService.selection();
@@ -768,7 +772,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                             </button>
                           )}
                           {onExportIcs && (
-                            <button 
+                            <button
                               className="ios-dropdown-item"
                               onClick={() => {
                                 HapticService.selection();
@@ -782,7 +786,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                             </button>
                           )}
                           {onExportPdf && (
-                            <button 
+                            <button
                               className="ios-dropdown-item"
                               onClick={() => {
                                 HapticService.selection();

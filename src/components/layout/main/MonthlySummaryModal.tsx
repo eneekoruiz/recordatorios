@@ -4,6 +4,8 @@ import { Sparkles, Printer, Copy } from 'lucide-react';
 import { exportReportToPdf } from '../../../utils/pdfExport';
 import { SheetNavBar } from '../../ui/SheetNavBar';
 import { renderInlineMarkdown, stripInlineMarkdown } from '../../../utils/inlineMarkdown';
+import { useRef as useSheetRef } from "react";
+import { useModalFocus } from "../../../hooks/useModalFocus";
 
 interface MonthlySummaryModalProps {
   modal: { open: boolean; title: string; text: string; loading: boolean };
@@ -14,6 +16,8 @@ export const MonthlySummaryModal: React.FC<MonthlySummaryModalProps> = ({
   modal,
   onClose
 }) => {
+    const sheetRef = useSheetRef<HTMLDivElement>(null);
+    useModalFocus(sheetRef, modal.open, onClose);
   useEffect(() => {
     if (!modal.open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -42,11 +46,11 @@ export const MonthlySummaryModal: React.FC<MonthlySummaryModalProps> = ({
         className="monthly-summary-sheet form-sheet"
         role="dialog"
         aria-modal="true"
-        aria-label={modal.title}
+        aria-label={modal.title} ref={sheetRef}
       >
         <SheetNavBar title={modal.title} onConfirm={onClose} confirmLabel="Listo" />
 
-        <div className="form-sheet-body">
+        <div className="form-sheet-body" aria-live="polite" aria-busy={modal.loading}>
           {modal.loading ? (
             <div className="form-group is-padded" style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-secondary)', fontSize: '0.92rem' }}>
               <Sparkles size={22} className="animate-spin" style={{ margin: '0 auto 12px', color: '#ff9500' }} />

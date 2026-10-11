@@ -21,6 +21,7 @@ import { DrawerMetaSection } from './drawer/DrawerMetaSection';
 import { DrawerFinanceSection } from './drawer/DrawerFinanceSection';
 import { DrawerPeopleSection } from './drawer/DrawerPeopleSection';
 import { DrawerExpirationSection } from './drawer/DrawerExpirationSection';
+import { useModalFocus, isTopmostModal } from "../../hooks/useModalFocus";
 
 interface TaskDrawerProps {
   isOpen: boolean;
@@ -61,7 +62,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   const lists = useAppStore(state => state.lists);
   const listSections = useAppStore(state => state.listSections);
   const addListSection = useAppStore(state => state.addListSection);
-  
+
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [cycleId, setCycleId] = useState<string | undefined>(undefined);
@@ -74,7 +75,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   const [isListening, setIsListening] = useState(false);
   const [blockedBy, setBlockedBy] = useState<string[]>([]);
   const [sectionId, setSectionId] = useState<string | undefined>(defaultSectionId);
-  
+
   // Card collapsible states (collapsed by default for clean learning curve)
   const [cardTimeOpen, setCardTimeOpen] = useState(false);
   const [cardRepeatOpen, setCardRepeatOpen] = useState(false);
@@ -96,7 +97,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   const [locationLng, setLocationLng] = useState<number | null>(null);
   const [locationRadius, setLocationRadius] = useState<number>(100);
   const [locationAddress, setLocationAddress] = useState<string>('');
-  
+
   // Location Presets
   const [homeLocation, setHomeLocation] = useState<{ lat: number; lng: number; address: string } | null>(() => {
     const val = localStorage.getItem('home_location');
@@ -116,7 +117,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [confirmProps, setConfirmProps] = useState({ title: '', message: '', onConfirm: () => {} });
   const [toast, setToast] = useState<string | null>(null);
-  
+
   const showAlert = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
@@ -213,7 +214,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setLocationLng(task.location ? task.location.lng : null);
         setLocationRadius(task.location ? task.location.radius : 100);
         setLocationAddress(task.location ? task.location.address : '');
-        
+
         // Hydrate selected preset if it matches home/work within close tolerance
         if (task.location) {
           const homeVal = localStorage.getItem('home_location');
@@ -222,7 +223,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
           const work = workVal ? JSON.parse(workVal) : null;
           const isHome = home && Math.abs(task.location.lat - home.lat) < 0.0001 && Math.abs(task.location.lng - home.lng) < 0.0001;
           const isWork = work && Math.abs(task.location.lat - work.lat) < 0.0001 && Math.abs(task.location.lng - work.lng) < 0.0001;
-          
+
           if (isHome) {
             setSelectedPreset('home');
           } else if (isWork) {
@@ -248,7 +249,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setTimeOfDay(task.timeOfDay);
         setHasDate(!!task.dueDate);
         setHasTime(!!task.alerts?.some(a => a.type === 'at_time'));
-        
+
         setPeople(task.people || []);
         const taskIsCad = isCaducidadesList(task.categoryId);
         const taskIsSub = task.sectionId?.includes('suscrip');
@@ -266,11 +267,11 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setMediaNotes(task.mediaNotes || '');
         setMediaRecommendedBy(task.mediaRecommendedBy || '');
         setTitleEdited(false);
-        
+
         // Abrir inteligentemente solo las tarjetas que contienen datos relevantes o el foco solicitado
         setCardTimeOpen(
-          initialFocus === 'duration' || initialFocus === 'date' || initialFocus === 'timeOfDay' ||
-          Boolean(task.dueDate || task.alerts?.length || task.duration || task.timeOfDay)
+          initialFocus !== 'duration' && (initialFocus === 'date' || initialFocus === 'timeOfDay' ||
+          Boolean(task.dueDate || task.alerts?.length || task.timeOfDay))
         );
         setCardRepeatOpen(
           initialFocus === 'frequency' || initialFocus === 'location' ||
@@ -335,9 +336,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setIssuerMask('');
         setAutoRollover(true);
         setSubscriptionPeriod('monthly');
-        
+
         // Al crear, mantener interfaz limpia salvo si se solicitó un foco específico
-        setCardTimeOpen(initialFocus === 'duration' || initialFocus === 'date' || initialFocus === 'timeOfDay');
+        setCardTimeOpen(initialFocus === 'date' || initialFocus === 'timeOfDay');
         setCardRepeatOpen(initialFocus === 'frequency' || initialFocus === 'location');
         setCardReqOpen(false);
         setCardDetailsOpen(false);
@@ -429,10 +430,12 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   }, [isOpen]);
 
   const drawerRef = useRef<HTMLDivElement>(null);
+    useModalFocus(drawerRef, isOpen, onClose);
 
   useEffect(() => {
     if (!isOpen) return;
     const handlePointerDown = (e: PointerEvent) => {
+      if (!isTopmostModal(drawerRef.current) || (e.target instanceof Element && e.target.closest('[role="listbox"]'))) return;
       if (drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
         setTimeout(() => onClose(), 10);
       }
@@ -610,7 +613,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
     const lat = parseFloat(result.lat);
     const lng = parseFloat(result.lon);
     const address = result.display_name;
-    
+
     setLocationLat(lat);
     setLocationLng(lng);
     setLocationAddress(address);
@@ -628,7 +631,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
       }
       return;
     }
-    
+
     const finalBlockedBy = blockedBy.length > 0 ? blockedBy : undefined;
 
     const payload: any = {
@@ -682,7 +685,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
     } else {
       addTask(payload);
     }
-    
+
     // Reset y cerrar
     setTitle('');
     setNotes('');
@@ -756,13 +759,13 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
-    
+
     recognition.lang = 'es-ES';
     recognition.continuous = false;
     recognition.interimResults = false;
 
     recognition.onstart = () => setIsListening(true);
-    
+
     recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
       setTitle(prev => prev ? `${prev} ${transcript}` : transcript);
@@ -792,7 +795,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
     <AnimatePresence>
       {isOpen && (
         <div className="drawer-overlay" onClick={onClose}>
-          <motion.div 
+          <motion.div
             ref={drawerRef}
             role="dialog"
             aria-modal="true"
@@ -815,7 +818,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
             }}
           >
             {/* iOS Pull Grabber Handle (Mobile Sheet) */}
-            <div 
+            <div
               className="drawer-mobile-grabber"
               aria-hidden="true"
               style={{
@@ -837,7 +840,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
             </div>
 
             <div className="drawer-content" role="form" aria-labelledby="drawer-title" style={{ overflowY: 'auto', padding: '16px' }}>
-              
+
               {/* Header: Title, Notes, Mic, NLP Chips, List & Type */}
               <DrawerHeaderSection
                 taskId={taskId}
@@ -860,6 +863,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
               <DrawerDateTimeSection
                 task={task}
                 cardTimeOpen={cardTimeOpen}
+                durationInitiallyOpen={initialFocus === 'duration'}
                 setCardTimeOpen={setCardTimeOpen}
                 hasDate={hasDate}
                 setHasDate={setHasDate}
@@ -1027,7 +1031,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         </div>
       )}
     </AnimatePresence>
-    <ConfirmModal 
+    <ConfirmModal
       isOpen={isConfirmOpen}
       title={confirmProps.title}
       message={confirmProps.message}

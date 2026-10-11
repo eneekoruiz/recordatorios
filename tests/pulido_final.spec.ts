@@ -107,6 +107,7 @@ test.describe('Pulido final', () => {
     });
     const casa = page.locator('.group-header', { hasText: 'Casa E2E' });
     const chip = casa.getByRole('button', { name: 'Ver desglose de tiempo de sección' }).first();
+    await casa.locator('.section-context-details > summary').click();
     await expect(chip).toBeVisible();
     await chip.click();
 
@@ -151,6 +152,7 @@ test.describe('Pulido final', () => {
 
     // Abrir modal de duración
     const durationBtn = page.getByRole('button', { name: /Ver desglose/i }).first();
+    await page.locator('.page-context-details > summary').click();
     await expect(durationBtn).toBeVisible();
     await durationBtn.click();
 

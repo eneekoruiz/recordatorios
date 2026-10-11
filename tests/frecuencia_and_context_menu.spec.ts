@@ -141,7 +141,7 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     // Semanales empieza plegada: al desplegarla aparece la cápsula «+ Diarias»
     const semanalHeader = page.locator('.group-header', { hasText: 'Semanales' });
     await expect(semanalHeader).toBeVisible({ timeout: 5000 });
-    await semanalHeader.click();
+    await semanalHeader.getByRole('button', { name: 'Desplegar sección', exact: true }).click();
 
     const chip = semanalHeader.getByRole('button', { name: 'Incluir diarias' });
     await expect(chip).toBeVisible({ timeout: 5000 });
@@ -260,7 +260,7 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
 
     // Las secciones en vistas de frecuencia inician cerradas por defecto para no agobiar
     // Un click en Cocina la despliega
-    await cocinaHeader.click();
+    await cocinaHeader.getByRole('button', { name: 'Desplegar sección', exact: true }).click();
     await page.waitForTimeout(300);
 
     // Verify task card is visible under expanded sub-section
@@ -268,12 +268,12 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     await expect(cocinaTask).toBeVisible({ timeout: 5000 });
 
     // Test collapse toggle: otro click repliega la sub-sección Cocina
-    await cocinaHeader.click();
+    await cocinaHeader.getByRole('button', { name: 'Plegar sección', exact: true }).click();
     await page.waitForTimeout(300);
     await expect(cocinaTask).not.toBeVisible();
 
     // Single click expands Cocina back
-    await cocinaHeader.click();
+    await cocinaHeader.getByRole('button', { name: 'Desplegar sección', exact: true }).click();
     await page.waitForTimeout(300);
     await expect(cocinaTask).toBeVisible();
   });
@@ -332,6 +332,7 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     await expect(coladaHeader).toBeVisible({ timeout: 5000 });
 
     const sectionDuration = coladaHeader.locator('.section-duration');
+    await coladaHeader.locator('.section-context-details > summary').click();
     await expect(sectionDuration).toBeVisible({ timeout: 5000 });
 
     // The sequence is started from the list header ("▶ Empezar")

@@ -207,7 +207,7 @@ export const DrawerLibrarySection: React.FC<DrawerLibrarySectionProps> = ({
                           setMediaRating(star === mediaRating ? 0 : star);
                         }}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', transition: 'transform 0.1s ease' }}
-                        aria-label={`${star} estrellas`}
+                        aria-label={`${star} estrellas`} aria-pressed={star === mediaRating}
                       >
                         <Star
                           size={22}
@@ -244,7 +244,7 @@ export const DrawerLibrarySection: React.FC<DrawerLibrarySectionProps> = ({
                       background: 'var(--bg-surface)',
                       color: 'var(--text-primary)',
                       fontSize: '0.86rem'
-                    }}
+                    }} aria-label="Plataforma"
                   />
                   {/* Chips sugeridos */}
                   <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
@@ -290,7 +290,7 @@ export const DrawerLibrarySection: React.FC<DrawerLibrarySectionProps> = ({
                       background: 'var(--bg-surface)',
                       color: 'var(--text-primary)',
                       fontSize: '0.86rem'
-                    }}
+                    }} aria-label="Progreso de la obra"
                   />
                 </div>
               </div>
@@ -313,7 +313,7 @@ export const DrawerLibrarySection: React.FC<DrawerLibrarySectionProps> = ({
                     background: 'var(--bg-surface)',
                     color: 'var(--text-primary)',
                     fontSize: '0.86rem'
-                  }}
+                  }} aria-label="Recomendado por"
                 />
               </div>
 

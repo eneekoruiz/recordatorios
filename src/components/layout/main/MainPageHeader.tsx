@@ -148,18 +148,18 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
 
   return (
     <>
-      <header 
-        className="content-header" 
+      <header
+        className="content-header"
         style={{ padding: '4px 16px 6px 16px', display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0, margin: '0', borderBottom: 'none', boxSizing: 'border-box', background: 'transparent', backdropFilter: 'none', WebkitBackdropFilter: 'none' }}
       >
         {/* Línea 1: Título, Badge, Botón Empezar y Gran Contador - Máximo 1 línea */}
-        <div style={{ 
-          width: '100%', 
-          boxSizing: 'border-box', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between', 
-          gap: '10px', 
+        <div style={{
+          width: '100%',
+          boxSizing: 'border-box',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '10px',
           flexWrap: 'nowrap',
           minWidth: 0,
           opacity: titleOpacity,
@@ -196,16 +196,16 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                 <Trash2 size={_isMobile ? 17 : 20} color="white" />
               </div>
             )}
-            
-            <h1 className="text-display view-title" style={{ 
-              fontSize: _isMobile ? (getTitle().length > 20 ? '22px' : '26px') : (getTitle().length > 24 ? '28px' : '32px'), 
+
+            <h1 className="text-display view-title" style={{
+              fontSize: _isMobile ? (getTitle().length > 20 ? '22px' : '26px') : (getTitle().length > 24 ? '28px' : '32px'),
               fontWeight: 700,
               lineHeight: '1.15',
               letterSpacing: '-0.025em',
               textWrap: 'balance',
               ['--title-color' as string]: viewColor,
-              display: 'inline-flex', 
-              alignItems: 'center', 
+              display: 'inline-flex',
+              alignItems: 'center',
               margin: 0,
               padding: 0,
               boxSizing: 'border-box',
@@ -215,8 +215,8 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
               whiteSpace: 'nowrap'
             }}>
               {isEditingCycle && currentCycle ? (
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={cycleEditName}
                   onChange={e => setCycleEditName(e.target.value)}
                   onBlur={() => {
@@ -232,8 +232,8 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                   style={{ background: 'transparent', border: 'none', borderBottom: '2px solid var(--accent-primary)', color: 'inherit', fontSize: 'inherit', fontFamily: 'inherit', outline: 'none', width: 'auto' }}
                 />
               ) : isEditingListName && currentList && !currentList.isFolder ? (
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={listEditName}
                   onChange={e => setListEditName(e.target.value)}
                   onBlur={() => {
@@ -250,7 +250,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                   style={{ background: 'transparent', border: 'none', borderBottom: `2px solid ${viewColor}`, color: 'inherit', fontSize: 'inherit', fontFamily: 'inherit', fontWeight: 'inherit', outline: 'none', width: 'auto', minWidth: 120 }}
                 />
               ) : (
-                <span 
+                <span
                   onClick={() => {
                     if (currentList && !currentList.isFolder) {
                       HapticService.selection();
@@ -280,15 +280,15 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
               const badge = getListBadgeInfo(currentList, currentView);
               if (badge.generic) return null;
               return (
-                <span 
-                  className="apple-list-type-pill" 
-                  style={{ 
-                    fontSize: '0.70rem', 
-                    fontWeight: 600, 
-                    color: badge.color, 
-                    background: `color-mix(in srgb, ${badge.color} 9%, transparent)`, 
-                    border: `1px solid color-mix(in srgb, ${badge.color} 20%, transparent)`, 
-                    padding: '1px 7px', 
+                <span
+                  className="apple-list-type-pill"
+                  style={{
+                    fontSize: '0.70rem',
+                    fontWeight: 600,
+                    color: badge.color,
+                    background: `color-mix(in srgb, ${badge.color} 9%, transparent)`,
+                    border: `1px solid color-mix(in srgb, ${badge.color} 20%, transparent)`,
+                    padding: '1px 7px',
                     borderRadius: 999,
                     letterSpacing: '-0.01em',
                     display: 'inline-flex',
@@ -317,108 +317,139 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
         </div>
 
         {/* Línea 2: Metadatos (Duración, Presupuesto y Desglose de Frecuencias) - Máximo 1 línea */}
-        {(() => {
-          const hasValidDuration = Boolean(totalDuration && totalDuration.activeMinutes > 0 && !isShoppingList(currentView, currentList) && !isCaducidadesList(currentView, currentList));
-          const hasValidPrice = Boolean((totalCost > 0 || (completedCost !== undefined && completedCost > 0)) && !currentCycle && !isCaducidadesList(currentView, currentList));
-          const hasBreakdown = Boolean(cycleBreakdown && cycleBreakdown.details && cycleBreakdown.details.length > 1);
-          const canOpenDurationModal = hasBreakdown || Boolean(mixParts && mixParts.length > 1);
+        <div className="page-context-row">{((totalDuration && totalDuration.activeMinutes > 0) || totalCost > 0 || (completedCost ?? 0) > 0 || (cycleBreakdown?.details?.length ?? 0) > 1) && (
+                            <details className="context-details page-context-details">
+                            <summary aria-label="Detalles de lista">Información <ChevronDown size={13} aria-hidden="true" /></summary>
+                            <div className="context-details-body">{(() => {
+                                      const hasValidDuration = Boolean(totalDuration && totalDuration.activeMinutes > 0 && !isShoppingList(currentView, currentList) && !isCaducidadesList(currentView, currentList));
+                                      const hasValidPrice = Boolean((totalCost > 0 || (completedCost !== undefined && completedCost > 0)) && !currentCycle && !isCaducidadesList(currentView, currentList));
+                                      const hasBreakdown = Boolean(cycleBreakdown && cycleBreakdown.details && cycleBreakdown.details.length > 1);
+                                      const canOpenDurationModal = hasBreakdown || Boolean(mixParts && mixParts.length > 1);
 
-          if (!hasValidDuration && !hasValidPrice && !hasBreakdown) return null;
+                                      if (!hasValidDuration && !hasValidPrice && !hasBreakdown) return null;
 
-          return (
-            <div 
-              className="list-duration-meta"
-              style={{
-                width: '100%',
-                boxSizing: 'border-box',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 8,
-                minWidth: 0,
-                opacity: titleOpacity,
-                fontSize: '0.82rem',
-                color: 'var(--text-secondary)',
-                fontWeight: 500,
-                letterSpacing: '-0.01em',
-                marginTop: 2
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, overflow: 'hidden' }}>
-                {hasValidDuration && (
-                  canOpenDurationModal ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        HapticService.selection();
-                        setIsDurationCardOpen(true);
-                      }}
-                      className="apple-list-duration-chip"
-                      title="Toca para ver el desglose detallado de tiempo"
-                      aria-label="Ver desglose de tiempo"
-                    >
-                      <Clock size={11} strokeWidth={1.8} className="apple-list-duration-icon" />
-                      <span>{formatSummaryDuration(totalDuration!.activeMinutes)}</span>
-                      <ChevronDown size={10} strokeWidth={2} style={{ opacity: 0.45, marginLeft: 1 }} />
-                    </button>
-                  ) : (
-                    <span
-                      className="apple-list-duration-chip"
-                      style={{ cursor: 'default' }}
-                      title={`Tiempo estimado: ${formatSummaryDuration(totalDuration!.activeMinutes)}`}
-                    >
-                      <Clock size={11} strokeWidth={1.8} className="apple-list-duration-icon" />
-                      <span>{formatSummaryDuration(totalDuration!.activeMinutes)}</span>
-                    </span>
-                  )
-                )}
+                                      return (
+                                        <div
+                                          className="list-duration-meta"
+                                          style={{
+                                            width: '100%',
+                                            boxSizing: 'border-box',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            gap: 8,
+                                            minWidth: 0,
+                                            opacity: titleOpacity,
+                                            fontSize: '0.82rem',
+                                            color: 'var(--text-secondary)',
+                                            fontWeight: 500,
+                                            letterSpacing: '-0.01em',
+                                            marginTop: 2
+                                          }}
+                                        >
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, overflow: 'hidden' }}>
+                                            {hasValidDuration && (
+                                              canOpenDurationModal ? (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    HapticService.selection();
+                                                    setIsDurationCardOpen(true);
+                                                  }}
+                                                  className="apple-list-duration-chip"
+                                                  title="Toca para ver el desglose detallado de tiempo"
+                                                  aria-label="Ver desglose de tiempo"
+                                                >
+                                                  <Clock size={11} strokeWidth={1.8} className="apple-list-duration-icon" />
+                                                  <span>{formatSummaryDuration(totalDuration!.activeMinutes)}</span>
+                                                  <ChevronDown size={10} strokeWidth={2} style={{ opacity: 0.45, marginLeft: 1 }} />
+                                                </button>
+                                              ) : (
+                                                <span
+                                                  className="apple-list-duration-chip"
+                                                  style={{ cursor: 'default' }}
+                                                  title={`Tiempo estimado: ${formatSummaryDuration(totalDuration!.activeMinutes)}`}
+                                                >
+                                                  <Clock size={11} strokeWidth={1.8} className="apple-list-duration-icon" />
+                                                  <span>{formatSummaryDuration(totalDuration!.activeMinutes)}</span>
+                                                </span>
+                                              )
+                                            )}
 
-                {hasValidDuration && hasValidPrice && (
-                  <span className="meta-dot" style={{ opacity: 0.4 }}>·</span>
-                )}
+                                            {hasValidDuration && hasValidPrice && (
+                                              <span className="meta-dot" style={{ opacity: 0.4 }}>·</span>
+                                            )}
 
-                {hasValidPrice && (
-                  <MetaSplit
-                    label={<span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{formatEuro(totalCost)}</span>}
-                    parts={completedCost && completedCost > 0 ? [
-                      { id: 'pending', value: totalCost, text: `${formatEuro(totalCost)} pendientes`, color: MONEY_COLOR, tone: 'solid' },
-                      { id: 'paid', value: completedCost, text: `${formatEuro(completedCost)} pagados`, color: MONEY_COLOR, tone: 'done' },
-                    ] : []}
-                    description={`Pendiente: ${formatEuro(totalCost)}${completedCost && completedCost > 0 ? ` · Ya pagado: ${formatEuro(completedCost)} · Total original: ${formatEuro(totalCost + completedCost)}` : ''}`}
-                  />
-                )}
-              </div>
+                                            {hasValidPrice && (
+                                              <MetaSplit
+                                                label={<span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{formatEuro(totalCost)}</span>}
+                                                parts={completedCost && completedCost > 0 ? [
+                                                  { id: 'pending', value: totalCost, text: `${formatEuro(totalCost)} pendientes`, color: MONEY_COLOR, tone: 'solid' },
+                                                  { id: 'paid', value: completedCost, text: `${formatEuro(completedCost)} pagados`, color: MONEY_COLOR, tone: 'done' },
+                                                ] : []}
+                                                description={`Pendiente: ${formatEuro(totalCost)}${completedCost && completedCost > 0 ? ` · Ya pagado: ${formatEuro(completedCost)} · Total original: ${formatEuro(totalCost + completedCost)}` : ''}`}
+                                              />
+                                            )}
+                                          </div>
 
-              {/* Desglose de frecuencias situado en la línea 2, alineado a la derecha */}
-              {hasBreakdown && (
-                <div
-                  className="cycle-counter-breakdown"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    fontSize: '0.72rem',
-                    fontWeight: 600,
-                    color: 'var(--text-tertiary)',
-                    letterSpacing: '-0.1px',
-                    flexShrink: 0
-                  }}
-                  title={`${activeVisibleCount} recordatorios en total: ${cycleBreakdown!.details!.map(d => `${d.count} ${d.cycleName.toLowerCase()}`).join(' + ')}`}
-                >
-                  {cycleBreakdown!.details!.map((d, i) => {
-                    const freqColor = d.color || getReservedFrequencyColor(d.cycleId);
-                    return (
-                      <span key={d.cycleId || d.cycleName} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, color: freqColor }}>
-                        {i > 0 && <span style={{ opacity: 0.35, color: 'var(--text-tertiary)', margin: '0 1px' }}>+</span>}
-                        <span>{d.count}</span>
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })()}
+                                          {/* Desglose de frecuencias situado en la línea 2, alineado a la derecha */}
+                                          {hasBreakdown && (
+                                            <div
+                                              className="cycle-counter-breakdown"
+                                              style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 4,
+                                                fontSize: '0.72rem',
+                                                fontWeight: 600,
+                                                color: 'var(--text-tertiary)',
+                                                letterSpacing: '-0.1px',
+                                                flexShrink: 0
+                                              }}
+                                              title={`${activeVisibleCount} recordatorios en total: ${cycleBreakdown!.details!.map(d => `${d.count} ${d.cycleName.toLowerCase()}`).join(' + ')}`}
+                                            >
+                                              {cycleBreakdown!.details!.map((d, i) => {
+                                                const freqColor = d.color || getReservedFrequencyColor(d.cycleId);
+                                                return (
+                                                  <span key={d.cycleId || d.cycleName} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, color: freqColor }}>
+                                                    {i > 0 && <span style={{ opacity: 0.35, color: 'var(--text-tertiary)', margin: '0 1px' }}>+</span>}
+                                                    <span>{d.count}</span>
+                                                  </span>
+                                                );
+                                              })}
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })()}</div>
+                            </details>
+                            )}{currentCycle && currentCycle.id !== 'cycle_day' && onToggleCycleRoutineMode && (
+                        <div className="routine-include-row compact-scope-row">
+                          <label htmlFor={includeSwitchId} className="routine-include-text">
+                            {cycleRoutineMode === 'full_routine' ? 'Con ' : 'Sin '}
+                            {currentCycle.id === 'cycle_week' ? 'diarias' : currentCycle.id === 'cycle_month' ? 'diarias y semanales' : currentCycle.id === 'cycle_year' ? 'diarias, semanales y mensuales' : 'frecuencias más cortas'}
+                            {currentCycle.id !== 'cycle_week' && (
+                              <span className="routine-include-sub">
+                                {currentCycle.id === 'cycle_month' ? 'Semanales y diarias' : currentCycle.id === 'cycle_year' ? 'Mensuales, semanales y diarias' : 'Las de frecuencia más corta'}
+                              </span>
+                            )}
+                          </label>
+                          <label className="switch">
+                            <input
+                              id={includeSwitchId}
+                              type="checkbox"
+                              role="switch"
+                              aria-label={currentCycle.id === 'cycle_week' ? 'Incluir diarias' : 'Incluir acumuladas'}
+                              checked={cycleRoutineMode === 'full_routine'}
+                              onChange={(e) => {
+                                HapticService.selection();
+                                onToggleCycleRoutineMode(e.target.checked ? 'full_routine' : 'only_section');
+                              }}
+                            />
+                            <span className="slider round" />
+                          </label>
+                        </div>
+                      )}</div>
 
         {/* Resumen de Caducidades: una línea propia bajo el título (antes iba en una cápsula
             que en el móvil se partía en tres líneas y empujaba el contador abajo). */}
@@ -447,31 +478,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
         )}
 
         {/* Incluir las frecuencias anteriores en esta vista: una fila con interruptor, como en Ajustes */}
-        {currentCycle && currentCycle.id !== 'cycle_day' && onToggleCycleRoutineMode && (
-          <div className="routine-include-row" style={{ opacity: titleOpacity }}>
-            <label htmlFor={includeSwitchId} className="routine-include-text">
-              {currentCycle.id === 'cycle_week' ? 'Incluir diarias' : 'Incluir acumuladas'}
-              {currentCycle.id !== 'cycle_week' && (
-                <span className="routine-include-sub">
-                  {currentCycle.id === 'cycle_month' ? 'Semanales y diarias' : currentCycle.id === 'cycle_year' ? 'Mensuales, semanales y diarias' : 'Las de frecuencia más corta'}
-                </span>
-              )}
-            </label>
-            <label className="switch">
-              <input
-                id={includeSwitchId}
-                type="checkbox"
-                role="switch"
-                checked={cycleRoutineMode === 'full_routine'}
-                onChange={(e) => {
-                  HapticService.selection();
-                  onToggleCycleRoutineMode(e.target.checked ? 'full_routine' : 'only_section');
-                }}
-              />
-              <span className="slider round" />
-            </label>
-          </div>
-        )}
+        {/* Scope is grouped beside the information disclosure. */}
 
         {/* Navegación temporal y diagnóstico de la rutina de frecuencia (situado bajo «Incluir acumuladas/diarias») */}
         {currentCycle && (
@@ -487,14 +494,14 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
 
         {currentCycle && !['cycle_day', 'cycle_week', 'cycle_month', 'cycle_year'].includes(currentCycle.id) && (
           <div>
-            <button 
+            <button
               type="button"
               onClick={async () => {
                 const cycleName = currentCycle.name;
                 const cycleId = currentCycle.id;
-                setConfirmProps({ 
-                  title: 'Eliminar Frecuencia', 
-                  message: `¿Estás seguro de eliminar la frecuencia "${cycleName}"? Esta acción no se puede deshacer.`, 
+                setConfirmProps({
+                  title: 'Eliminar Frecuencia',
+                  message: `¿Estás seguro de eliminar la frecuencia "${cycleName}"? Esta acción no se puede deshacer.`,
                   onConfirm: () => {
                     deleteCycleWithUndo({
                       getCycleName: () => cycleName,
@@ -510,7 +517,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                       _onBackToSidebar();
                     }
                   }
-                }); 
+                });
                 setIsConfirmOpen(true);
               }}
               className="time-pill"
@@ -565,16 +572,16 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
 
         {sortBy !== 'manual' && (
           <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span 
-              style={{ 
-                display: 'inline-flex', 
-                alignItems: 'center', 
-                gap: 6, 
-                padding: '4px 12px', 
-                borderRadius: 12, 
-                fontSize: '0.8rem', 
-                fontWeight: 600, 
-                background: 'var(--accent-glow, rgba(10,132,255,0.1))', 
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '4px 12px',
+                borderRadius: 12,
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                background: 'var(--accent-glow, rgba(10,132,255,0.1))',
                 color: 'var(--accent-primary)',
                 border: '1px solid rgba(10,132,255,0.2)'
               }}

@@ -612,7 +612,7 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
     // Check Apple Wallet chip on Spotify task (desplegar sección si está colapsada)
     const subSection = page.locator('.group-header:has-text("Suscripciones")').first();
     if (await subSection.isVisible()) {
-      await subSection.click();
+      await subSection.getByRole('button', { name: 'Desplegar sección', exact: true }).click();
       await page.waitForTimeout(400);
     }
     const walletChip = page.locator('.apple-card-chip:has-text("VISA •• 1234")').first();

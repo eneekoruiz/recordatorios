@@ -106,27 +106,7 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
       </div>
 
       {/* Fila 2: Barra de progreso ultra-fina estilo Apple */}
-      {status.totalGoal > 0 && (
-        <div
-          style={{
-            width: '100%',
-            height: 3,
-            borderRadius: 999,
-            background: 'var(--separator, rgba(60, 60, 67, 0.12))',
-            overflow: 'hidden',
-          }}
-        >
-          <div
-            style={{
-              height: '100%',
-              width: `${progressPercent}%`,
-              background: status.isAllDone ? '#34c759' : viewColor,
-              borderRadius: 999,
-              transition: 'width 0.35s cubic-bezier(0.25, 1, 0.5, 1)',
-            }}
-          />
-        </div>
-      )}
+      {/* A single count-first status replaces duplicate visual progress. */}
 
       {/* Fila 3: Píldora interactiva compacta estilo Apple que abre el modal de diagnóstico */}
       {status.totalGoal > 0 && (
@@ -148,6 +128,7 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
             }}
             title="Toca para ver el desglose detallado de la rutina"
             aria-label="Ver diagnóstico detallado de la rutina"
+            aria-description={`${status.totalCompleted} de ${status.totalGoal} hechas. ${status.headline}`}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -176,11 +157,11 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
               ) : (
                 <>
                   <span>{status.totalCompleted} de {status.totalGoal} hechas</span>
-                  <span style={{ color: viewColor, marginLeft: 3 }}>({progressPercent}%)</span>
+                  <span className="sr-only"> ({progressPercent}%)</span>
                 </>
               )}
             </span>
-            <span style={{ opacity: 0.35, margin: '0 2px' }}>·</span>
+            <span className="sr-only"> · </span>
             <span
               data-testid="cycle-status-headline"
               style={{
@@ -188,7 +169,7 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
                 color: status.isAllDone ? '#34c759' : 'var(--text-secondary)',
                 whiteSpace: 'normal',
                 wordBreak: 'break-word',
-              }}
+              }} className={status.statusState === 'own_done_accumulated_pending' || status.statusState === 'accumulated_done_own_pending' ? 'status-exception' : 'sr-only'}
             >
               {status.isAllDone ? 'Objetivo completado' : status.headline}
             </span>

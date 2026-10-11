@@ -1,9 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePromptStore } from '../../store/usePromptStore';
+import { useRef as useSheetRef } from "react";
+import { useModalFocus } from "../../hooks/useModalFocus";
 
 export function PromptModal() {
   const { isOpen, title, placeholder, closePrompt } = usePromptStore();
+    const focusSheetRef = useSheetRef<HTMLDivElement>(null);
+    useModalFocus(focusSheetRef, isOpen, () => closePrompt(null));
   const [inputValue, setInputValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -44,7 +48,7 @@ export function PromptModal() {
             aria-labelledby="prompt-title" initial={{ opacity: 0, scale: 1.08 }}
             animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            onClick={(event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()} ref={focusSheetRef}
           >
             <form onSubmit={handleSubmit}>
               <div className="app-alert-copy">

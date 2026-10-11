@@ -182,7 +182,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
     try { validated = validateJsonImport(preview); }
     catch (error) { notify(error instanceof Error ? error.message : 'Datos de importación inválidos.'); return; }
     const now = new Date().toISOString();
-    
+
     useAppStore.setState((state) => {
       // 1. Merge de listas: conservar existentes e incorporar las nuevas del preview
       const listsMap = new Map<string, any>(state.lists.map(l => [l.id, l]));
@@ -261,12 +261,12 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
   };
 
   return (
-    <main aria-label="Importar y exportar" style={{ 
-      padding: 'var(--space-24)', 
-      maxWidth: 900, 
-      margin: '0 auto', 
-      display: 'flex', 
-      flexDirection: 'column', 
+    <main aria-label="Importar y exportar" style={{
+      padding: 'var(--space-24)',
+      maxWidth: 900,
+      margin: '0 auto',
+      display: 'flex',
+      flexDirection: 'column',
       gap: 'var(--space-32)',
       width: '100%',
       height: '100%',
@@ -280,20 +280,20 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
         onBack={handleBackClick}
       />
 
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
-        gap: 'var(--space-24)' 
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+        gap: 'var(--space-24)'
       }}>
-        
+
         {/* AI Assistant Conversational Importer Card */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="surface-card" 
-          style={{ 
-            padding: 'var(--space-32)', 
+          className="surface-card"
+          style={{
+            padding: 'var(--space-32)',
             background: 'linear-gradient(135deg, color-mix(in srgb, #007aff 12%, var(--bg-surface)), color-mix(in srgb, #af52de 12%, var(--bg-surface)))',
             border: '1.5px solid color-mix(in srgb, #007aff 30%, transparent)',
             borderRadius: 'var(--radius-lg)',
@@ -314,14 +314,14 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
             </p>
           </div>
 
-          <motion.button 
+          <motion.button
             onClick={() => {
               window.dispatchEvent(new CustomEvent('open-ai-assistant'));
             }}
-            style={{ 
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-8)', 
-              background: 'linear-gradient(135deg, #007aff, #af52de)', color: 'white', border: 'none', 
-              padding: '14px 24px', borderRadius: 'var(--radius-md)', fontWeight: 650, 
+            style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-8)',
+              background: 'linear-gradient(135deg, #007aff, #af52de)', color: 'white', border: 'none',
+              padding: '14px 24px', borderRadius: 'var(--radius-md)', fontWeight: 650,
               cursor: 'pointer', transition: 'transform 0.2s, opacity 0.2s, background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s', boxShadow: '0 4px 16px rgba(0, 122, 255, 0.3)',
               alignSelf: 'flex-start'
             }}
@@ -333,22 +333,22 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
         </motion.div>
 
         {/* Export Card */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="surface-card" 
+          className="surface-card"
           style={{ padding: 'var(--space-32)', background: 'var(--bg-surface)' }}
         >
           <h3 aria-level={2} className="text-title" style={{ marginBottom: 'var(--space-16)' }}>Copia de seguridad</h3>
           <p className="text-muted" style={{ marginBottom: 'var(--space-32)' }}>Descarga un archivo JSON con todas tus frecuencias, listas y recordatorios.</p>
-          
-          <motion.button 
+
+          <motion.button
             onClick={handleExport}
-            style={{ 
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-8)', 
-              width: '100%', background: 'var(--accent-fill, var(--accent-primary))', color: 'white', border: 'none', 
-              padding: 'var(--space-16)', borderRadius: 'var(--radius-md)', fontWeight: 600, 
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-8)',
+              width: '100%', background: 'var(--accent-fill, var(--accent-primary))', color: 'white', border: 'none',
+              padding: 'var(--space-16)', borderRadius: 'var(--radius-md)', fontWeight: 600,
               cursor: 'pointer', transition: 'transform 0.2s, opacity 0.2s, background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s', boxShadow: 'var(--shadow-md)'
             }}
             onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
@@ -360,11 +360,11 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
         </motion.div>
 
         {/* Import Card */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
-          className="surface-card" 
+          className="surface-card"
           style={{ padding: 'var(--space-32)', background: 'var(--bg-surface)', gridColumn: '1 / -1' }}
         >
           <h3 aria-level={2} className="text-title" style={{ marginBottom: 'var(--space-16)' }}>Importar datos</h3>
@@ -419,7 +419,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
               >
-                <div 
+                <div
                   onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                   onDragLeave={() => setIsDragging(false)}
                   onDrop={(e) => {
@@ -437,16 +437,16 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
                     transition: 'transform 0.2s ease, opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease'
                   }}
                 >
-                  <textarea 
+                  <textarea
                     aria-label="Datos para importar"
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     placeholder="Arrastra aquí tu PDF o pega texto: Ej: Comprar pintura @Hogar #MiSemana..."
-                    style={{ 
-                      width: '100%', minHeight: 250, background: 'transparent', 
+                    style={{
+                      width: '100%', minHeight: 250, background: 'transparent',
                       border: 'none',
-                      padding: 'var(--space-16)', color: 'var(--text-primary)', 
-                      fontFamily: 'monospace', fontSize: '0.95rem', resize: 'vertical', 
+                      padding: 'var(--space-16)', color: 'var(--text-primary)',
+                      fontFamily: 'monospace', fontSize: '0.95rem', resize: 'vertical',
                       outline: 'none', boxSizing: 'border-box'
                     }}
                   />
@@ -475,14 +475,14 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
                 </div>
 
                 <div style={{ display: 'flex', gap: 'var(--space-12)', flexWrap: 'wrap' }}>
-                  <button 
+                  <button
                     onClick={handleProcessText}
                     disabled={!inputText.trim() || isExtracting}
-                    style={{ 
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-8)', 
-                      flex: 1, minWidth: 160, background: inputText.trim() ? 'var(--text-primary)' : 'var(--bg-elevated)', 
-                      color: inputText.trim() ? 'var(--bg-base)' : 'var(--text-tertiary)', border: 'none', 
-                      padding: 'var(--space-16)', borderRadius: 'var(--radius-md)', fontWeight: 600, 
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-8)',
+                      flex: 1, minWidth: 160, background: inputText.trim() ? 'var(--text-primary)' : 'var(--bg-elevated)',
+                      color: inputText.trim() ? 'var(--bg-base)' : 'var(--text-tertiary)', border: 'none',
+                      padding: 'var(--space-16)', borderRadius: 'var(--radius-md)', fontWeight: 600,
                       cursor: inputText.trim() ? 'pointer' : 'not-allowed', transition: 'transform 0.2s, opacity 0.2s, background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s'
                     }}
                   >
@@ -501,23 +501,23 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
                   >
                     <Clipboard size={18} /> Pegar portapapeles
                   </button>
-                  <label 
-                    style={{ 
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-8)', 
-                      flex: 1, minWidth: 180, background: 'var(--bg-elevated)', 
-                      color: 'var(--text-primary)', border: '1px solid var(--border-subtle)', 
-                      padding: 'var(--space-16)', borderRadius: 'var(--radius-md)', fontWeight: 600, 
+                  <label
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-8)',
+                      flex: 1, minWidth: 180, background: 'var(--bg-elevated)',
+                      color: 'var(--text-primary)', border: '1px solid var(--border-subtle)',
+                      padding: 'var(--space-16)', borderRadius: 'var(--radius-md)', fontWeight: 600,
                       cursor: 'pointer', transition: 'transform 0.2s, opacity 0.2s, background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s'
                     }}
                     onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-elevated)'}
                   >
                     <FileText size={20} color="var(--accent-primary)" /> Subir PDF, CSV o JSON
-                    <input 
-                      type="file" 
-                      accept=".pdf,.csv,.json,.txt,.md" 
-                      style={{ display: 'none' }} 
-                      onChange={handleFileUpload} 
+                    <input
+                      type="file"
+                      accept=".pdf,.csv,.json,.txt,.md"
+                      style={{ display: 'none' }}
+                      onChange={handleFileUpload}
                     />
                   </label>
                 </div>
@@ -531,9 +531,9 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
                 transition={{ duration: 0.2 }}
                 style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-24)' }}
               >
-                <div style={{ 
-                  background: 'rgba(52, 199, 89, 0.1)', padding: 'var(--space-24)', 
-                  borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-green)' 
+                <div style={{
+                  background: 'rgba(52, 199, 89, 0.1)', padding: 'var(--space-24)',
+                  borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-green)'
                 }}>
                   <h4 aria-level={3} style={{ color: 'var(--accent-green)', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, fontSize: '1.1rem' }}>
                     <CheckCircle2 size={24} /> Análisis Exitoso
@@ -548,7 +548,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
                   </ul>
                 </div>
                 <div style={{ display: 'flex', gap: 'var(--space-16)' }}>
-                  <button 
+                  <button
                     onClick={() => setPreview(null)}
                     style={{ flex: 1, padding: 'var(--space-16)', background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: 600, transition: 'background 0.2s' }}
                     onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
@@ -556,7 +556,7 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
                   >
                     Cancelar
                   </button>
-                  <button 
+                  <button
                     onClick={handleConfirmImport}
                     style={{ flex: 1, padding: 'var(--space-16)', background: 'var(--accent-green)', border: 'none', color: 'white', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: 600, transition: 'transform 0.2s, opacity 0.2s, background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s', boxShadow: 'var(--shadow-md)' }}
                     onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
@@ -571,11 +571,11 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
         </motion.div>
 
         {/* Export Card */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.15 }}
-          className="surface-card" 
+          className="surface-card"
           style={{ padding: 'var(--space-32)', background: 'var(--bg-surface)', gridColumn: '1 / -1' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 'var(--space-16)' }}>
@@ -592,148 +592,148 @@ export function UniversalImporter({ onBack }: UniversalImporterProps) {
             </span>
           </div>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: 14,
-            marginTop: 18
-          }}>
-            {/* 1. iCalendar (.ics) */}
-            <div 
-              style={{
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-lg)',
-                padding: 18,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: 14
-              }}
-            >
-              <div>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(0, 122, 255, 0.12)', color: 'var(--accent-primary)', display: 'grid', placeItems: 'center', marginBottom: 12 }}>
-                  <Calendar size={18} />
-                </div>
-                <h4 aria-level={3} style={{ margin: '0 0 4px 0', fontSize: '0.98rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  iCalendar (.ics)
-                </h4>
-                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                  Compatible con la app Calendario de Apple (Mac/iPhone), Google Calendar y Outlook.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleExportIcs}
-                className="modal-btn-secondary"
-                style={{ width: '100%', gap: 6, fontSize: '0.86rem' }}
-              >
-                <Download size={14} /> Descargar .ics
-              </button>
-            </div>
+          <details className="context-details export-format-details"><summary aria-label="Formatos de exportación">Elegir formato <span aria-hidden="true">›</span></summary><div style={{
+                              display: 'grid',
+                              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                              gap: 14,
+                              marginTop: 18
+                            }}>
+                              {/* 1. iCalendar (.ics) */}
+                              <div
+                                style={{
+                                  background: 'var(--bg-elevated)',
+                                  border: '1px solid var(--border-subtle)',
+                                  borderRadius: 'var(--radius-lg)',
+                                  padding: 18,
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  justifyContent: 'space-between',
+                                  gap: 14
+                                }}
+                              >
+                                <div>
+                                  <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(0, 122, 255, 0.12)', color: 'var(--accent-primary)', display: 'grid', placeItems: 'center', marginBottom: 12 }}>
+                                    <Calendar size={18} />
+                                  </div>
+                                  <h4 aria-level={3} style={{ margin: '0 0 4px 0', fontSize: '0.98rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                    iCalendar (.ics)
+                                  </h4>
+                                  <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                                    Compatible con la app Calendario de Apple (Mac/iPhone), Google Calendar y Outlook.
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={handleExportIcs}
+                                  className="modal-btn-secondary"
+                                  style={{ width: '100%', gap: 6, fontSize: '0.86rem' }}
+                                >
+                                  <Download size={14} /> Descargar .ics
+                                </button>
+                              </div>
 
-            {/* 2. Informe Editorial PDF */}
-            <div 
-              style={{
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-lg)',
-                padding: 18,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: 14
-              }}
-            >
-              <div>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255, 149, 0, 0.12)', color: '#ff9500', display: 'grid', placeItems: 'center', marginBottom: 12 }}>
-                  <Printer size={18} />
-                </div>
-                <h4 aria-level={3} style={{ margin: '0 0 4px 0', fontSize: '0.98rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Informe Editorial (PDF)
-                </h4>
-                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                  Documento maquetado con diseño Apple para imprimir o guardar como PDF vectorial.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleExportPdfReport}
-                className="modal-btn-secondary"
-                style={{ width: '100%', gap: 6, fontSize: '0.86rem' }}
-              >
-                <Printer size={14} /> Imprimir / PDF
-              </button>
-            </div>
+                              {/* 2. Informe Editorial PDF */}
+                              <div
+                                style={{
+                                  background: 'var(--bg-elevated)',
+                                  border: '1px solid var(--border-subtle)',
+                                  borderRadius: 'var(--radius-lg)',
+                                  padding: 18,
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  justifyContent: 'space-between',
+                                  gap: 14
+                                }}
+                              >
+                                <div>
+                                  <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255, 149, 0, 0.12)', color: '#ff9500', display: 'grid', placeItems: 'center', marginBottom: 12 }}>
+                                    <Printer size={18} />
+                                  </div>
+                                  <h4 aria-level={3} style={{ margin: '0 0 4px 0', fontSize: '0.98rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                    Informe Editorial (PDF)
+                                  </h4>
+                                  <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                                    Documento maquetado con diseño Apple para imprimir o guardar como PDF vectorial.
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={handleExportPdfReport}
+                                  className="modal-btn-secondary"
+                                  style={{ width: '100%', gap: 6, fontSize: '0.86rem' }}
+                                >
+                                  <Printer size={14} /> Imprimir / PDF
+                                </button>
+                              </div>
 
-            {/* 3. CSV Tabular */}
-            <div 
-              style={{
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-lg)',
-                padding: 18,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: 14
-              }}
-            >
-              <div>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(52, 199, 89, 0.12)', color: 'var(--accent-green)', display: 'grid', placeItems: 'center', marginBottom: 12 }}>
-                  <FileText size={18} />
-                </div>
-                <h4 aria-level={3} style={{ margin: '0 0 4px 0', fontSize: '0.98rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Hoja de Cálculo (CSV)
-                </h4>
-                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                  Abre tus datos en Excel, Numbers o Google Sheets con columnas de costes y fechas.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleExportCsv}
-                className="modal-btn-secondary"
-                style={{ width: '100%', gap: 6, fontSize: '0.86rem' }}
-              >
-                <Download size={14} /> Descargar .csv
-              </button>
-            </div>
+                              {/* 3. CSV Tabular */}
+                              <div
+                                style={{
+                                  background: 'var(--bg-elevated)',
+                                  border: '1px solid var(--border-subtle)',
+                                  borderRadius: 'var(--radius-lg)',
+                                  padding: 18,
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  justifyContent: 'space-between',
+                                  gap: 14
+                                }}
+                              >
+                                <div>
+                                  <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(52, 199, 89, 0.12)', color: 'var(--accent-green)', display: 'grid', placeItems: 'center', marginBottom: 12 }}>
+                                    <FileText size={18} />
+                                  </div>
+                                  <h4 aria-level={3} style={{ margin: '0 0 4px 0', fontSize: '0.98rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                    Hoja de Cálculo (CSV)
+                                  </h4>
+                                  <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                                    Abre tus datos en Excel, Numbers o Google Sheets con columnas de costes y fechas.
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={handleExportCsv}
+                                  className="modal-btn-secondary"
+                                  style={{ width: '100%', gap: 6, fontSize: '0.86rem' }}
+                                >
+                                  <Download size={14} /> Descargar .csv
+                                </button>
+                              </div>
 
-            {/* 4. Backup JSON */}
-            <div 
-              style={{
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-lg)',
-                padding: 18,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: 14
-              }}
-            >
-              <div>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(175, 82, 222, 0.12)', color: 'var(--accent-purple)', display: 'grid', placeItems: 'center', marginBottom: 12 }}>
-                  <Database size={18} />
-                </div>
-                <h4 aria-level={3} style={{ margin: '0 0 4px 0', fontSize: '0.98rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Copia de Seguridad (JSON)
-                </h4>
-                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                  Respaldo técnico integral de listas, ciclos temporales, secciones y recordatorios.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleExport}
-                className="modal-btn-secondary"
-                style={{ width: '100%', gap: 6, fontSize: '0.86rem' }}
-              >
-                <Download size={14} /> Descargar .json
-              </button>
-            </div>
-          </div>
+                              {/* 4. Backup JSON */}
+                              <div
+                                style={{
+                                  background: 'var(--bg-elevated)',
+                                  border: '1px solid var(--border-subtle)',
+                                  borderRadius: 'var(--radius-lg)',
+                                  padding: 18,
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  justifyContent: 'space-between',
+                                  gap: 14
+                                }}
+                              >
+                                <div>
+                                  <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(175, 82, 222, 0.12)', color: 'var(--accent-purple)', display: 'grid', placeItems: 'center', marginBottom: 12 }}>
+                                    <Database size={18} />
+                                  </div>
+                                  <h4 aria-level={3} style={{ margin: '0 0 4px 0', fontSize: '0.98rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                    Copia de Seguridad (JSON)
+                                  </h4>
+                                  <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                                    Respaldo técnico integral de listas, ciclos temporales, secciones y recordatorios.
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={handleExport}
+                                  className="modal-btn-secondary"
+                                  style={{ width: '100%', gap: 6, fontSize: '0.86rem' }}
+                                >
+                                  <Download size={14} /> Descargar .json
+                                </button>
+                              </div>
+                            </div></details>
         </motion.div>
       </div>
     </main>

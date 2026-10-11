@@ -41,6 +41,8 @@ import {
   type CycleStatItem
 } from '../../utils/stats';
 import { plural } from '../../utils/format';
+import { useRef as useSheetRef } from "react";
+import { useModalFocus } from "../../hooks/useModalFocus";
 
 interface AnalyticsViewProps {
   onBack?: () => void;
@@ -62,6 +64,8 @@ export function AnalyticsView({ onBack, onOpenTask }: AnalyticsViewProps) {
   // Estado para expandir qué tareas se hacen y cuáles faltan en cada ciclo
   const [expandedCycle, setExpandedCycle] = useState<string | null>(null);
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
+  const focusSheetRef = useSheetRef<HTMLDivElement>(null);
+  useModalFocus(focusSheetRef, isExportModalOpen, () => setIsExportModalOpen(false));
   const [copiedToast, setCopiedToast] = useState<boolean>(false);
 
   const taskList = useMemo(() => Object.values(tasks), [tasks]);
@@ -856,9 +860,6 @@ export function AnalyticsView({ onBack, onOpenTask }: AnalyticsViewProps) {
       <AnimatePresence>
         {isExportModalOpen && (
           <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="Exportar informe de rendimiento"
             onClick={() => setIsExportModalOpen(false)}
             style={{
               position: 'fixed',
@@ -889,7 +890,7 @@ export function AnalyticsView({ onBack, onOpenTask }: AnalyticsViewProps) {
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
-              }}
+              }} role="dialog" aria-modal="true" aria-label="Exportar informe de rendimiento" ref={focusSheetRef}
             >
               {/* Cabecera del modal */}
               <div

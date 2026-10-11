@@ -1,4 +1,4 @@
-import { Fragment, useMemo, type ReactNode } from 'react';
+import { Fragment, useMemo, type ReactNode, isValidElement } from 'react';
 import { Calendar, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen, Zap, Tag } from 'lucide-react';
 import type { TaskItem, CustomList } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
@@ -101,24 +101,26 @@ export function TaskMetaBadges({
     return null;
   })();
 
-  const showDueDate = !!task.dueDate && !hideDueDate;
+  const showDueDate = !!task.dueDate;
+  const dateIsRedundant = hideDueDate && task.dueDate &&
+    new Date(task.dueDate).toDateString() === new Date().toDateString() &&
+    (dueDateColor || '').toLowerCase() !== '#ff3b30';
   const isShopping = isShoppingList(task.categoryId, taskList);
   const hasDuration = !isShopping && showDuration && (totalActiveMinutes > 0 || totalParallelMinutes > 0);
-  const hasMeta = showListName || showDueDate || Boolean(cycleBadge) || timeOfDayInfo || Boolean(inAppListTarget) || hasDuration || hasPrice;
 
 
   return (
     <>
       {/* Meta row - Native Apple Reminders HIG Style (clean typography + colored micro-icons, zero bulky boxes) */}
-      {hasMeta && (() => {
+      {(() => {
         const items: ReactNode[] = [];
 
             if (showListName && taskList) {
               items.push(
-                <span 
+                <span
                   key="list-name"
                   className="task-meta-list-name"
-                  style={{ 
+                  style={{
                     display: 'inline-flex', alignItems: 'center', gap: 3.5,
                     fontWeight: 650, fontSize: '0.74rem', color: taskList.color || 'var(--text-secondary)'
                   }}
@@ -142,27 +144,27 @@ export function TaskMetaBadges({
               else if (dueZero.getTime() === tomorrow.getTime()) dueText = 'Mañana';
 
               items.push(
-                <span 
+                <button
                   key="due-date"
                   onClick={(e) => {
                     e.stopPropagation();
                     onEdit(task.id, 'date');
                   }}
-                  style={{ 
-                    display: 'inline-flex', 
-                    alignItems: 'center', 
-                    gap: 3.5, 
-                    color: dueColor, 
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 3.5,
+                    color: dueColor,
                     fontWeight: isRed || isBlue ? 650 : 600,
                     cursor: 'pointer',
                     userSelect: 'none',
                     transition: 'opacity 0.15s ease'
                   }}
-                  title="Fecha de vencimiento (Toca para editar)"
+                  title="Fecha de vencimiento (Toca para editar)" type="button" className="task-meta-action"
                 >
                   <Calendar size={11} strokeWidth={2.4} style={{ flexShrink: 0, color: dueColor }} />
                   <span>{dueText}</span>
-                </span>
+                </button>
               );
             }
 
@@ -177,7 +179,7 @@ export function TaskMetaBadges({
               const freqColor = cycleBadge.color || freqColors[cycleBadge.type || 'custom'] || 'var(--accent-primary)';
 
               items.push(
-                <span 
+                <button
                   key="frequency"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -187,21 +189,21 @@ export function TaskMetaBadges({
                       onEdit(task.id, 'frequency');
                     }
                   }}
-                  style={{ 
-                    display: 'inline-flex', 
-                    alignItems: 'center', 
-                    gap: 3.5, 
-                    color: 'var(--text-secondary)', 
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 3.5,
+                    color: 'var(--text-secondary)',
                     fontWeight: 600,
                     cursor: 'pointer',
                     userSelect: 'none',
                     transition: 'opacity 0.15s ease'
                   }}
-                  title={`Frecuencia: ${cycleBadge.label} (Toca para editar)`}
+                  title={`Frecuencia: ${cycleBadge.label} (Toca para editar)`} type="button" className="task-meta-action"
                 >
                   <Repeat size={11} strokeWidth={2.5} style={{ color: freqColor, flexShrink: 0 }} />
                   <span>{cycleBadge.label}</span>
-                </span>
+                </button>
               );
             }
 
@@ -216,7 +218,7 @@ export function TaskMetaBadges({
                 : `Duración estimada: ${formatDuration(totalActiveMinutes)}${isParallel ? ` (+${formatDuration(totalParallelMinutes)} en paralelo)` : ''}. Pulsa para editar.`;
 
               items.push(
-                <span
+                <button
                   key="duration"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -233,7 +235,7 @@ export function TaskMetaBadges({
                     userSelect: 'none',
                     transition: 'opacity 0.15s ease'
                   }}
-                  title={durTooltip}
+                  title={durTooltip} type="button" className="task-meta-action"
                 >
                   {isParallel ? (
                     <Zap size={11} strokeWidth={2.4} style={{ flexShrink: 0, color: '#ff9500' }} />
@@ -243,6 +245,7 @@ export function TaskMetaBadges({
                   {hasSubtasksDur && ownActive > 0 ? (
                     // Sólido = duración propia; rayado = la de sus subtareas.
                     <MetaSplit
+                      interactive={false}
                       label={formatDuration(totalActiveMinutes)}
                       description={durTooltip}
                       parts={[
@@ -256,7 +259,7 @@ export function TaskMetaBadges({
                   {isParallel && (
                     <span style={{ fontSize: '0.67rem', color: 'var(--text-tertiary)', fontWeight: 500 }}>(+{formatDuration(totalParallelMinutes)})</span>
                   )}
-                </span>
+                </button>
               );
             }
 
@@ -268,7 +271,7 @@ export function TaskMetaBadges({
                 : `Precio: ${task.price} €${task.quantity && task.quantity > 1 ? ` (${task.quantity} uds)` : ''}. Toca para editar.`;
 
               items.push(
-                <span
+                <button
                   key="price"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -285,7 +288,7 @@ export function TaskMetaBadges({
                     userSelect: 'none',
                     transition: 'opacity 0.15s ease'
                   }}
-                  title={priceTooltip}
+                  title={priceTooltip} type="button" className="task-meta-action"
                 >
                   <Tag size={11} strokeWidth={2.4} style={{ color: '#30d158', flexShrink: 0 }} />
                   {task.quantity && task.quantity > 1 && subtasksPrice === 0 && (
@@ -295,6 +298,7 @@ export function TaskMetaBadges({
                   )}
                   {subtasksPrice > 0 && ownPrice > 0 ? (
                     <MetaSplit
+                      interactive={false}
                       label={formatEuro(totalPrice)}
                       description={priceTooltip}
                       parts={[
@@ -305,7 +309,7 @@ export function TaskMetaBadges({
                   ) : (
                     <span>{formatEuro(totalPrice)}</span>
                   )}
-                </span>
+                </button>
               );
             }
 
@@ -350,7 +354,7 @@ export function TaskMetaBadges({
 
             if (inAppListTarget) {
               items.push(
-                <span 
+                <button
                   key="in-app-list"
                   onClick={(e) => {
                     e.preventDefault();
@@ -367,27 +371,29 @@ export function TaskMetaBadges({
                     userSelect: 'none',
                     transition: 'opacity 0.15s ease'
                   }}
-                  title={`Ir a ${inAppListTarget.name}`}
+                  title={`Ir a ${inAppListTarget.name}`} type="button" className="task-meta-action"
                 >
                   <LayoutList size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
                   <span>Ir a {inAppListTarget.name}</span>
                   <ChevronRight size={10} style={{ opacity: 0.7, flexShrink: 0 }} />
-                </span>
+                </button>
               );
             }
 
+            const essential = items.filter(item => isValidElement(item) && (
+              (item.key === 'due-date' && !dateIsRedundant) || item.key === 'list-name' ||
+              item.key === 'in-app-list' || (item.key === 'price' && isShopping)
+            ));
+            const optional = items.filter(item => !essential.includes(item));
             return (
-              <div style={{ display: 'inline-flex', gap: '6px', marginTop: 3, alignItems: 'center', flexWrap: 'wrap', fontSize: '0.75rem', lineHeight: '1.2' }}>
-                {items.map((item, idx) => (
-                  <Fragment key={idx}>
-                    {idx > 0 && (
-                      <span aria-hidden="true" style={{ color: 'var(--text-tertiary)', opacity: 0.5, fontSize: '0.62rem', userSelect: 'none', margin: '0 1px' }}>
-                        ·
-                      </span>
-                    )}
-                    {item}
-                  </Fragment>
-                ))}
+              <div className="task-context" onClick={event => event.stopPropagation()}>
+                {essential.length > 0 && <div className="task-context-essential">{essential}</div>}
+                {(
+                  <details className="context-details task-context-details">
+                    <summary aria-label={`Detalles de ${task.title}`}>Detalles <ChevronRight size={13} aria-hidden="true" /></summary>
+                    <div className="context-details-body task-meta-fields">{optional.map((item, index) => <Fragment key={index}>{item}</Fragment>)}<button type="button" className="task-meta-action" onClick={() => onEdit(task.id)}>Editar detalles</button></div>
+                  </details>
+                )}
               </div>
             );
           })()}

@@ -34,7 +34,7 @@ export const DrawerExpirationSection: React.FC<DrawerExpirationSectionProps> = (
 }) => {
   return (
     <div id="drawer-expiration-section" className="section-card">
-      <button 
+      <button
         type="button"
         className="section-card-header"
         onClick={() => setCardCaducidadOpen(!cardCaducidadOpen)}
@@ -117,7 +117,7 @@ export const DrawerExpirationSection: React.FC<DrawerExpirationSectionProps> = (
                       background: 'var(--bg-surface)',
                       color: 'var(--text-primary)',
                       fontSize: '0.85rem'
-                    }}
+                    }} aria-label="Identificador de tarjeta o documento"
                   />
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
                     {['VISA', 'Mastercard', 'DNI', 'Pasaporte', 'Carnet', 'Revolut'].map(preset => (
@@ -153,7 +153,7 @@ export const DrawerExpirationSection: React.FC<DrawerExpirationSectionProps> = (
                       type="checkbox"
                       checked={autoRollover}
                       onChange={e => setAutoRollover(e.target.checked)}
-                      style={{ cursor: 'pointer', width: 16, height: 16 }}
+                      style={{ cursor: 'pointer', width: 16, height: 16 }} aria-label="Renovar automáticamente"
                     />
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -173,7 +173,7 @@ export const DrawerExpirationSection: React.FC<DrawerExpirationSectionProps> = (
                           fontSize: '0.76rem',
                           fontWeight: subscriptionPeriod === 'monthly' ? 700 : 500,
                           cursor: 'pointer'
-                        }}
+                        }} aria-pressed={subscriptionPeriod === 'monthly'}
                       >
                         Mensual
                       </button>
@@ -189,7 +189,7 @@ export const DrawerExpirationSection: React.FC<DrawerExpirationSectionProps> = (
                           fontSize: '0.76rem',
                           fontWeight: subscriptionPeriod === 'yearly' ? 700 : 500,
                           cursor: 'pointer'
-                        }}
+                        }} aria-pressed={subscriptionPeriod === 'yearly'}
                       >
                         Anual
                       </button>
@@ -214,7 +214,7 @@ export const DrawerExpirationSection: React.FC<DrawerExpirationSectionProps> = (
                         background: 'var(--bg-surface)',
                         color: 'var(--text-primary)',
                         fontSize: '0.82rem'
-                      }}
+                      }} aria-label="Enlace para gestionar la suscripción"
                     />
                   </div>
                 </div>

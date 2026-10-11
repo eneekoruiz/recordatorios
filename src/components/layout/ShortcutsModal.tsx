@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SheetNavBar } from '../ui/SheetNavBar';
 import { modKey } from '../../utils/platform';
+import { useRef as useSheetRef } from "react";
+import { useModalFocus } from "../../hooks/useModalFocus";
 
 interface ShortcutsModalProps {
   isOpen: boolean;
@@ -10,6 +12,8 @@ interface ShortcutsModalProps {
 }
 
 export const ShortcutsModal: FC<ShortcutsModalProps> = ({ isOpen, onClose }) => {
+    const sheetRef = useSheetRef<HTMLDivElement>(null);
+    useModalFocus(sheetRef, isOpen, onClose);
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isOpen && e.key === 'Escape') {
@@ -74,7 +78,7 @@ export const ShortcutsModal: FC<ShortcutsModalProps> = ({ isOpen, onClose }) => 
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 8 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()} ref={sheetRef}
           >
             <SheetNavBar title="Atajos de teclado" onConfirm={onClose} confirmLabel="Listo" />
             <div className="form-sheet-body" tabIndex={0}>

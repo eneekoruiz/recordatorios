@@ -9,6 +9,8 @@ import { CYCLE_ICON_MAP } from '../../constants/icons';
 import { CURATED_MODAL_PALETTE } from '../../constants/colors';
 import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
+import { useRef as useSheetRef } from "react";
+import { useModalFocus } from "../../hooks/useModalFocus";
 
 interface CycleConfigModalProps {
   isOpen: boolean;
@@ -50,6 +52,8 @@ function CycleConfigModalContent({
   onClose: () => void;
   onSuccess: (cycleId: string) => void;
 }) {
+    const sheetRef = useSheetRef<HTMLDivElement>(null);
+    useModalFocus(sheetRef, true, onClose);
   const addCycle = useAppStore(state => state.addCycle);
   const [name, setName] = useState('');
   const [days, setDays] = useState<number | ''>(90);
@@ -122,7 +126,7 @@ function CycleConfigModalContent({
         exit={{ opacity: 0, scale: 0.96, y: 24 }}
         transition={{ type: 'spring', damping: 30, stiffness: 400 }}
         onClick={(e) => e.stopPropagation()}
-        style={{ ['--hero-color' as string]: selectedColor } as React.CSSProperties}
+        style={{ ['--hero-color' as string]: selectedColor } as React.CSSProperties} ref={sheetRef}
       >
         <SheetNavBar
           title="Nueva frecuencia"
@@ -207,54 +211,54 @@ function CycleConfigModalContent({
           </div>
 
           {/* Color */}
-          <div>
-            <p className="form-group-label">Color</p>
-            <div className="form-group is-padded">
-              <div className="swatch-grid color-grid">
-                {AVAILABLE_COLORS.map((col) => {
-                  const isSelected = selectedColor === col;
-                  return (
-                    <button
-                      key={col}
-                      type="button"
-                      className={`swatch${isSelected ? ' is-selected' : ''}`}
-                      style={{ background: col, ['--swatch' as string]: col } as React.CSSProperties}
-                      onClick={() => { HapticService.selection(); setSelectedColor(col); }}
-                      aria-label={`Color ${col}`}
-                      aria-pressed={isSelected}
-                    >
-                      {isSelected && <Check size={16} color="white" strokeWidth={3} />}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+          <details className="context-details appearance-details"><summary>Color <span aria-hidden="true">›</span></summary><div>
+                              <p className="form-group-label">Color</p>
+                              <div className="form-group is-padded">
+                                <div className="swatch-grid color-grid">
+                                  {AVAILABLE_COLORS.map((col) => {
+                                    const isSelected = selectedColor === col;
+                                    return (
+                                      <button
+                                        key={col}
+                                        type="button"
+                                        className={`swatch${isSelected ? ' is-selected' : ''}`}
+                                        style={{ background: col, ['--swatch' as string]: col } as React.CSSProperties}
+                                        onClick={() => { HapticService.selection(); setSelectedColor(col); }}
+                                        aria-label={`Color ${col}`}
+                                        aria-pressed={isSelected}
+                                      >
+                                        {isSelected && <Check size={16} color="white" strokeWidth={3} />}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </div></details>
 
           {/* Icono */}
-          <div>
-            <p className="form-group-label">Icono</p>
-            <div className="form-group is-padded">
-              <div className="swatch-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(42px, 1fr))' }}>
-                {SELECTABLE_ICONS.map((iconName) => {
-                  const ItemIcon = CYCLE_ICON_MAP[iconName] || Sparkles;
-                  const isSelected = selectedIcon === iconName;
-                  return (
-                    <button
-                      key={iconName}
-                      type="button"
-                      className={`icon-choice${isSelected ? ' is-selected' : ''}`}
-                      onClick={() => { HapticService.selection(); setSelectedIcon(iconName); }}
-                      aria-label={`Icono ${iconName}`}
-                      aria-pressed={isSelected}
-                    >
-                      <ItemIcon size={19} />
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+          <details className="context-details appearance-details"><summary>Icono <span aria-hidden="true">›</span></summary><div>
+                              <p className="form-group-label">Icono</p>
+                              <div className="form-group is-padded">
+                                <div className="swatch-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(42px, 1fr))' }}>
+                                  {SELECTABLE_ICONS.map((iconName) => {
+                                    const ItemIcon = CYCLE_ICON_MAP[iconName] || Sparkles;
+                                    const isSelected = selectedIcon === iconName;
+                                    return (
+                                      <button
+                                        key={iconName}
+                                        type="button"
+                                        className={`icon-choice${isSelected ? ' is-selected' : ''}`}
+                                        onClick={() => { HapticService.selection(); setSelectedIcon(iconName); }}
+                                        aria-label={`Icono ${iconName}`}
+                                        aria-pressed={isSelected}
+                                      >
+                                        <ItemIcon size={19} />
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </div></details>
         </div>
       </motion.div>
     </div>

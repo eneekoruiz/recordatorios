@@ -30,7 +30,7 @@ export const DrawerFinanceSection: React.FC<DrawerFinanceSectionProps> = ({
 }) => {
   return (
     <div className="section-card" style={{ marginBottom: '0' }}>
-      <button 
+      <button
         type="button"
         className="section-card-header"
         onClick={() => setCardFinanceOpen(!cardFinanceOpen)}
@@ -50,14 +50,14 @@ export const DrawerFinanceSection: React.FC<DrawerFinanceSectionProps> = ({
               <div className="detail-row" style={{ padding: '8px 0' }}>
                 <span className="detail-label" style={{ fontWeight: 500 }}>Precio / Coste (€)</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     id="drawer-price-input"
                     className="drawer-price-input"
-                    step="0.01" 
-                    min="0" 
-                    placeholder="0.00" 
-                    value={price !== undefined && price !== null && !isNaN(price) ? price : ''} 
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={price !== undefined && price !== null && !isNaN(price) ? price : ''}
                     onChange={e => {
                       const val = e.target.value === '' ? undefined : parseFloat(e.target.value);
                       setPrice(val);
@@ -73,7 +73,7 @@ export const DrawerFinanceSection: React.FC<DrawerFinanceSectionProps> = ({
                       color: 'var(--text-primary)',
                       fontSize: '0.92rem',
                       fontWeight: 600
-                    }}
+                    }} aria-label="Precio"
                   />
                   <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', fontWeight: 500 }}>€</span>
                 </div>
@@ -83,11 +83,11 @@ export const DrawerFinanceSection: React.FC<DrawerFinanceSectionProps> = ({
 
               <div className="detail-row" style={{ padding: '8px 0' }}>
                 <span className="detail-label">Cantidad</span>
-                <input 
-                  type="number" 
-                  step="1" 
-                  min="1" 
-                  value={quantity} 
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  value={quantity}
                   onChange={e => setQuantity(parseInt(e.target.value) || 1)}
                   style={{
                     width: 75,
@@ -97,7 +97,7 @@ export const DrawerFinanceSection: React.FC<DrawerFinanceSectionProps> = ({
                     borderRadius: 8,
                     padding: '5px 8px',
                     color: 'var(--text-primary)'
-                  }}
+                  }} aria-label="Cantidad"
                 />
               </div>
 
@@ -105,10 +105,10 @@ export const DrawerFinanceSection: React.FC<DrawerFinanceSectionProps> = ({
 
               <div className="detail-row" style={{ padding: '8px 0' }}>
                 <span className="detail-label">Marca / Proveedor</span>
-                <input 
-                  type="text" 
-                  placeholder="Ej: Nike, Apple, CK" 
-                  value={brand} 
+                <input
+                  type="text"
+                  placeholder="Ej: Nike, Apple, CK"
+                  value={brand}
                   onChange={e => setBrand(e.target.value)}
                   style={{
                     width: 140,
@@ -118,7 +118,7 @@ export const DrawerFinanceSection: React.FC<DrawerFinanceSectionProps> = ({
                     borderRadius: 8,
                     padding: '5px 8px',
                     color: 'var(--text-primary)'
-                  }}
+                  }} aria-label="Marca o proveedor"
                 />
               </div>
             </div>

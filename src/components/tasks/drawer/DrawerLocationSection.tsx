@@ -59,24 +59,24 @@ export const DrawerLocationSection: React.FC<DrawerLocationSectionProps> = ({
           <span className="detail-label" style={{ marginBottom: 0 }}>Información de Ubicación</span>
         </div>
         <label className="switch">
-          <input 
-            type="checkbox" 
-            checked={!!locationName} 
-            onChange={e => setLocationName(e.target.checked ? 'Dirección actual' : '')} 
+          <input
+            type="checkbox"
+            checked={!!locationName}
+            onChange={e => setLocationName(e.target.checked ? 'Dirección actual' : '')} aria-label="Información de ubicación"
           />
           <span className="slider round"></span>
         </label>
       </div>
       {!!locationName && (
         <div className="detail-row" style={{ padding: '4px 0', marginTop: -8 }}>
-          <input 
-            type="text" 
+          <input
+            type="text"
             id="drawer-location-input"
-            className="detail-select drawer-location-input" 
+            className="detail-select drawer-location-input"
             placeholder="Escribe la dirección, URL de Google Maps, etc..."
             value={locationName === 'Dirección actual' ? '' : locationName}
             onChange={e => setLocationName(e.target.value)}
-            style={{ width: '100%', textAlign: 'right', borderBottom: '1px solid var(--border-subtle)' }}
+            style={{ width: '100%', textAlign: 'right', borderBottom: '1px solid var(--border-subtle)' }} aria-label="Información de ubicación"
           />
         </div>
       )}
@@ -90,15 +90,15 @@ export const DrawerLocationSection: React.FC<DrawerLocationSectionProps> = ({
           <span className="detail-label" style={{ marginBottom: 0 }}>Aviso al Llegar (Geocerca)</span>
         </div>
         <label className="switch">
-          <input 
-            type="checkbox" 
-            checked={hasLocationAlert} 
+          <input
+            type="checkbox"
+            checked={hasLocationAlert}
             onChange={e => {
               setHasLocationAlert(e.target.checked);
               if (e.target.checked && locationLat === null) {
                 selectPresetLocation('current');
               }
-            }} 
+            }} aria-label="Aviso al llegar"
           />
           <span className="slider round"></span>
         </label>
@@ -108,7 +108,7 @@ export const DrawerLocationSection: React.FC<DrawerLocationSectionProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '12px', background: 'var(--bg-surface)', borderRadius: 8, marginTop: -4, border: '1px solid var(--border-subtle)', flexShrink: 0 }}>
           {/* Selector de Presets */}
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            <button 
+            <button
               type="button"
               onClick={() => selectPresetLocation('current')}
               style={{
@@ -121,7 +121,7 @@ export const DrawerLocationSection: React.FC<DrawerLocationSectionProps> = ({
             >
               <MapPin size={12} strokeWidth={2.4} /> Actual
             </button>
-            <button 
+            <button
               type="button"
               onClick={() => selectPresetLocation('home')}
               style={{
@@ -134,7 +134,7 @@ export const DrawerLocationSection: React.FC<DrawerLocationSectionProps> = ({
             >
               <Home size={12} strokeWidth={2.4} /> Casa
             </button>
-            <button 
+            <button
               type="button"
               onClick={() => selectPresetLocation('work')}
               style={{
@@ -147,7 +147,7 @@ export const DrawerLocationSection: React.FC<DrawerLocationSectionProps> = ({
             >
               <Briefcase size={12} strokeWidth={2.4} /> Trabajo
             </button>
-            <button 
+            <button
               type="button"
               onClick={() => setSelectedPreset('custom')}
               style={{
@@ -166,7 +166,7 @@ export const DrawerLocationSection: React.FC<DrawerLocationSectionProps> = ({
           {selectedPreset === 'custom' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ display: 'flex', gap: 6 }}>
-                <input 
+                <input
                   type="text"
                   className="detail-select"
                   placeholder="Buscar dirección (ej: Mercadona, Sol, etc.)"
@@ -178,9 +178,9 @@ export const DrawerLocationSection: React.FC<DrawerLocationSectionProps> = ({
                       handleAddressSearch();
                     }
                   }}
-                  style={{ flex: 1, padding: 6, borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'transparent' }}
+                  style={{ flex: 1, padding: 6, borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'transparent' }} aria-label="Buscar dirección"
                 />
-                <button 
+                <button
                   type="button"
                   onClick={handleAddressSearch}
                   disabled={isSearching}
@@ -214,7 +214,7 @@ export const DrawerLocationSection: React.FC<DrawerLocationSectionProps> = ({
                 <span style={{ fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.2 }}>
                   {locationAddress || 'Ubicación seleccionada'}
                 </span>
-                
+
                 {/* Botón para guardar ubicación actual como Casa / Trabajo */}
                 {(selectedPreset === 'current' || selectedPreset === 'custom') && (
                   <div style={{ display: 'flex', gap: 4 }}>
@@ -241,7 +241,7 @@ export const DrawerLocationSection: React.FC<DrawerLocationSectionProps> = ({
                   </div>
                 )}
               </div>
-              
+
               <div style={{ display: 'flex', gap: 12, color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>
                 <span>Lat: {locationLat.toFixed(5)}</span>
                 <span>Lng: {locationLng.toFixed(5)}</span>
@@ -249,7 +249,7 @@ export const DrawerLocationSection: React.FC<DrawerLocationSectionProps> = ({
 
               <div className="detail-row" style={{ padding: '4px 0', justifyContent: 'space-between', marginTop: 4 }}>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Radio de aviso</span>
-                <select 
+                <select
                   className="detail-select"
                   value={locationRadius}
                   onChange={e => setLocationRadius(Number(e.target.value))}

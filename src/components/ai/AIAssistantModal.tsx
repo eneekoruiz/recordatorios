@@ -17,6 +17,8 @@ import { formatEuro, plural } from '../../utils/format';
 import { showUndoToast } from '../../utils/undoToast';
 import { extractTextFromPdf } from '../../utils/pdfExtractor';
 import { renderInlineMarkdown } from '../../utils/inlineMarkdown';
+import { useRef as useSheetRef } from "react";
+import { useModalFocus } from "../../hooks/useModalFocus";
 
 interface AIAssistantModalProps {
   isOpen: boolean;
@@ -70,6 +72,8 @@ function summarizeBatchForHistory(batch?: ProposedBatch): string {
 }
 
 export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantModalProps) {
+    const sheetRef = useSheetRef<HTMLDivElement>(null);
+    useModalFocus(sheetRef, isOpen, onClose);
   const userId = useAppStore(state => state.userId);
   const sessionGeneration = useAppStore(state => state.sessionGeneration);
   const accountIdentity = `${userId ?? 'anonymous'}:${sessionGeneration}`;
@@ -777,7 +781,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
               processAttachedFile(file);
             }
           }}
-          style={{ position: 'relative' }}
+          style={{ position: 'relative' }} ref={sheetRef}
         >
           {/* Visual Drag Overlay */}
           {isDraggingChat && (
@@ -995,7 +999,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
             gap: 16
           }}>
             {shownMessages.map(msg => (
-              <div 
+              <div
                 key={msg.id}
                 style={{
                   display: 'flex',
@@ -1201,7 +1205,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                             gap: 10,
                             padding: '9px 2px',
                             cursor: 'pointer'
-                          }}
+                          }} role="checkbox" aria-checked={Boolean(u.selected)} tabIndex={0} onKeyDown={event => { if (event.key === " " || event.key === "Enter") { event.preventDefault(); event.currentTarget.click(); } }}
                         >
                           <div style={{
                             width: 20, height: 20, borderRadius: '50%',
@@ -1332,7 +1336,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                             gap: 10,
                             padding: '9px 2px',
                             cursor: 'pointer'
-                          }}
+                          }} role="checkbox" aria-checked={Boolean(t.selected)} tabIndex={0} onKeyDown={event => { if (event.key === " " || event.key === "Enter") { event.preventDefault(); event.currentTarget.click(); } }}
                         >
                           <div style={{
                             width: 20, height: 20, borderRadius: '50%',
@@ -1513,7 +1517,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                               cursor: 'pointer',
                               opacity: child.selected ? 1 : 0.6,
                               transition: 'transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease'
-                            }}
+                            }} role="checkbox" aria-checked={Boolean(child.selected)} tabIndex={0} onKeyDown={event => { if (event.key === " " || event.key === "Enter") { event.preventDefault(); event.currentTarget.click(); } }}
                           >
                             <div style={{
                               width: 18, height: 18, borderRadius: 5,
