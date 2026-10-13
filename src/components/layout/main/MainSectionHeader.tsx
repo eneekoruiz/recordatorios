@@ -403,7 +403,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       key={itemKey}
       data-index={index}
       ref={rowRef}
-      className="group-header"
+      className={`group-header section-header-row section-depth-${Math.min(data.depth, 2)}`}
       draggable={!isMobile && isCustomSection && !editingSectionId}
       data-section-drag-key={data.sectionId}
       // Solo reordenar (no anidar) necesita abrir hueco por CSS — "inside" ya lo resuelve el
@@ -419,18 +419,18 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       style={{
         ...itemStyle,
         position: 'sticky',
-        top: data.depth === 0 ? 0 : 56,
+        top: data.depth === 0 ? 0 : 'var(--section-header-h)',
         zIndex: isMenuOpenForThisSection ? 999992 : Math.max(10, 30 - data.depth),
-        borderBottom: '1px solid var(--border-subtle)',
+        borderBottom: 'none',
         borderTop: 'none',
         paddingLeft: `${16 + data.depth * 14}px`,
         paddingRight: '16px',
-        minHeight: data.depth === 0 ? 56 : 38,
-
-        paddingTop: data.depth === 0 ? (isFirstAfterPageHeader ? 16 : 28) : 12,
-        paddingBottom: data.depth === 0 ? 8 : 6,
+        // Una línea: 44 px de contenido. El aire entre secciones va arriba (paddingTop), no debajo del título.
+        minHeight: 44,
+        paddingTop: data.depth === 0 ? (isFirstAfterPageHeader ? 4 : 18) : 6,
+        paddingBottom: 2,
         marginTop: 0,
-        marginBottom: 4,
+        marginBottom: 0,
         boxSizing: 'border-box',
         display: 'flex',
         flexDirection: 'column',
@@ -594,16 +594,15 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                     {data.titleIcon}
                   </span>
                 )}
-                <h3
-                  aria-level={2}
+                <h2
                   onDoubleClick={(e) => isCustomSection && startEditingSection(e, data.sectionId!, data.title)}
                   style={{
                     cursor: isCustomSection ? 'text' : 'pointer',
                     fontWeight: data.depth === 0 ? 700 : 600,
-                    color: data.depth === 0 ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    fontSize: data.depth === 0 ? '1.18rem' : data.depth === 1 ? '0.85rem' : '0.78rem',
-                    textTransform: data.depth === 0 ? 'none' : 'uppercase',
-                    letterSpacing: data.depth === 0 ? '-0.01em' : '0.03em',
+                    color: data.depth === 0 ? 'var(--label-1)' : 'var(--label-2)',
+                    fontSize: data.depth === 0 ? 'var(--type-title3)' : 'var(--type-subhead)',
+                    textTransform: 'none',
+                    letterSpacing: data.depth === 0 ? '-0.015em' : '-0.005em',
                     lineHeight: '1.25',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
@@ -616,7 +615,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                   title={isCustomSection ? "Doble click para editar" : data.title}
                 >
                   {data.title}
-                </h3>
+                </h2>
                 {periodContext && (
                   <span
                     className="section-period-context-badge"
@@ -646,11 +645,6 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
             </div>
           )}
 
-          {(durationNode || priceNode) && (
-            <div className="section-duration section-meta" onClick={event => event.stopPropagation()}>
-              {durationNode}{priceNode}
-            </div>
-          )}
           {data.category.startsWith('persona_') && data.category !== 'persona_solo' && (
             <button
               type="button"
@@ -677,24 +671,6 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               <span>Ficha</span>
             </button>
           )}
-          {isCustomSection && (
-            <button
-              ref={moreBtnRef}
-              type="button"
-              className="section-more-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                openSectionMenu();
-              }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
-              title="Opciones de sección"
-              aria-label="Opciones de sección"
-              aria-haspopup="menu"
-              aria-expanded={isMenuOpenForThisSection}
-            >
-              <MoreHorizontal size={16} color="var(--text-primary)" />
-            </button>
-          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, justifyContent: 'flex-end' }}>
           {/* Incluir las frecuencias anteriores: una cápsula que se enciende (con la sección desplegada) */}
@@ -715,6 +691,12 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               {isFullRoutine ? <Check size={12} strokeWidth={3} aria-hidden="true" /> : <Plus size={12} strokeWidth={2.6} aria-hidden="true" />}
               <span>{includeLabel}</span>
             </button>
+          )}
+          {/* Duración y precio junto al conteo: un único grupo de datos a la derecha */}
+          {(durationNode || priceNode) && (
+            <div className="section-duration section-meta" onClick={event => event.stopPropagation()}>
+              {durationNode}{priceNode}
+            </div>
           )}
           {/* Conteo numérico sutil estilo Apple: total y desglose (propias + incluidas) si «+ Diarias» está activo */}
           {(() => {
@@ -764,6 +746,24 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
             );
           })()}
 
+          {isCustomSection && (
+            <button
+              ref={moreBtnRef}
+              type="button"
+              className="section-more-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                openSectionMenu();
+              }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
+              title="Opciones de sección"
+              aria-label="Opciones de sección"
+              aria-haspopup="menu"
+              aria-expanded={isMenuOpenForThisSection}
+            >
+              <MoreHorizontal size={16} color="var(--text-primary)" />
+            </button>
+          )}
           <button
             type="button"
             className="section-collapse-chevron-btn"

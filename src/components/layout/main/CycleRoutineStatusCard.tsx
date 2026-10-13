@@ -83,25 +83,27 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
       style={{
         width: '100%',
         boxSizing: 'border-box',
-        padding: isMobile ? '8px 0 12px 0' : '10px 0 14px 0',
-        borderTop: currentCycle.id === 'cycle_day' ? '0.5px solid var(--separator)' : 'none',
-        borderBottom: '0.5px solid var(--separator)',
-        marginTop: currentCycle.id === 'cycle_day' ? 6 : 0,
-        marginBottom: 12,
+        padding: '4px 0 8px 0',
+        borderTop: 'none',
+        borderBottom: 'none',
+        marginTop: 0,
+        marginBottom: 4,
         background: 'transparent',
+        // Una sola línea: periodo ‹ › y avance. En pantallas estrechas el avance baja sin romper el control.
         display: 'flex',
-        flexDirection: 'column',
-        gap: 8,
-        transition: 'background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, fill 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease',
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: '4px 16px',
       }}
     >
       {/* Fila 1: Navegador temporal ocupando todo el ancho de la pantalla de lado a lado */}
-      <div style={{ width: '100%' }}>
+      <div style={{ flex: '0 1 auto', minWidth: 0 }}>
         <ApplePeriodNavigator
           defaultPeriodicity={effPeriod}
           viewColor={viewColor}
           isMobile={isMobile}
-          fullWidth={true}
+          fullWidth={false}
         />
       </div>
 
@@ -129,24 +131,23 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
             title="Toca para ver el desglose detallado de la rutina"
             aria-label="Ver diagnóstico detallado de la rutina"
             aria-description={`${status.totalCompleted} de ${status.totalGoal} hechas. ${status.headline}`}
+            className="cycle-status-text-btn"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               flexWrap: 'wrap',
               gap: 6,
-              padding: '5px 12px',
-              borderRadius: 999,
-              border: '1px solid var(--border-subtle, rgba(0, 0, 0, 0.08))',
-              background: 'var(--bg-material, rgba(255, 255, 255, 0.65))',
-              backdropFilter: 'blur(16px)',
-              WebkitBackdropFilter: 'blur(16px)',
-              color: status.isAllDone ? '#34c759' : 'var(--text-primary)',
-              fontSize: isMobile ? '0.76rem' : '0.80rem',
-              fontWeight: 600,
-              letterSpacing: '-0.01em',
+              minHeight: 44,
+              padding: '0 4px',
+              borderRadius: 10,
+              border: 'none',
+              background: 'transparent',
+              color: status.isAllDone ? 'var(--accent-green-text, #248a3d)' : 'var(--label-2)',
+              fontSize: 'var(--type-subhead)',
+              fontWeight: 500,
+              fontVariantNumeric: 'tabular-nums',
               cursor: 'pointer',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
-              transition: 'background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, fill 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
+              transition: 'background-color 0.15s ease, color 0.15s ease',
               maxWidth: '100%',
             }}
           >
@@ -173,7 +174,7 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
             >
               {status.isAllDone ? 'Objetivo completado' : status.headline}
             </span>
-            <Info size={12} strokeWidth={2.2} style={{ opacity: 0.55, marginLeft: 2, flexShrink: 0 }} />
+            <Info size={14} strokeWidth={2} aria-hidden="true" style={{ color: 'var(--label-3)', flexShrink: 0 }} />
           </button>
         </div>
       )}

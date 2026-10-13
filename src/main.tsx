@@ -6,6 +6,7 @@ import './index.css'
 import App from './App.tsx'
 import './styles/polish.css'
 import './styles/liquid-glass.css'
+import './styles/clarity.css'
 
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 import { PersistenceStatusBanner } from './components/ui/PersistenceStatusBanner.tsx'

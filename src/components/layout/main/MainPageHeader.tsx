@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { DurationInfoCard } from '../../ui/DurationInfoCard';
 import { HapticService } from '../../../services/HapticService';
-import { isCaducidadesList, isQueHeHechoList, getListBadgeInfo, isShoppingList } from '../../../utils/specialLists';
+import { isCaducidadesList, isQueHeHechoList, isShoppingList } from '../../../utils/specialLists';
 import { confirmDialog } from '../../ui/confirmDialog';
 import { useAppStore } from '../../../store/useAppStore';
 import { deleteCycleWithUndo } from '../../../utils/undoToast';
@@ -150,7 +150,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
     <>
       <header
         className="content-header"
-        style={{ padding: '4px 16px 6px 16px', display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0, margin: '0', borderBottom: 'none', boxSizing: 'border-box', background: 'transparent', backdropFilter: 'none', WebkitBackdropFilter: 'none' }}
+        style={{ padding: '2px 16px 4px 16px', display: 'flex', flexDirection: 'column', gap: '2px', flexShrink: 0, margin: '0', borderBottom: 'none', boxSizing: 'border-box', background: 'transparent', backdropFilter: 'none', WebkitBackdropFilter: 'none' }}
       >
         {/* Línea 1: Título, Badge, Botón Empezar y Gran Contador - Máximo 1 línea */}
         <div style={{
@@ -276,31 +276,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
               )}
             </h1>
 
-            {currentList && !currentList.isFolder && (() => {
-              const badge = getListBadgeInfo(currentList, currentView);
-              if (badge.generic) return null;
-              return (
-                <span
-                  className="apple-list-type-pill"
-                  style={{
-                    fontSize: '0.70rem',
-                    fontWeight: 600,
-                    color: badge.color,
-                    background: `color-mix(in srgb, ${badge.color} 9%, transparent)`,
-                    border: `1px solid color-mix(in srgb, ${badge.color} 20%, transparent)`,
-                    padding: '1px 7px',
-                    borderRadius: 999,
-                    letterSpacing: '-0.01em',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    flexShrink: 0
-                  }}
-                >
-                  {badge.label}
-                </span>
-              );
-            })()}
-
+            {/* El tipo de lista (Duraciones, Checklist…) se elige y se ve en «Personalizar lista», no en la cabecera. */}
             {/* Las listas normales mantienen su cabecera limpia sin selector temporal */}
           </div>
 
@@ -317,7 +293,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
         </div>
 
         {/* Línea 2: Metadatos (Duración, Presupuesto y Desglose de Frecuencias) - Máximo 1 línea */}
-        <div className="page-context-row">{((totalDuration && totalDuration.activeMinutes > 0) || totalCost > 0 || (completedCost ?? 0) > 0 || (cycleBreakdown?.details?.length ?? 0) > 1) && (
+        <div className="page-context-row" style={{ order: currentCycle ? 3 : undefined }}>{((totalDuration && totalDuration.activeMinutes > 0) || totalCost > 0 || (completedCost ?? 0) > 0 || (cycleBreakdown?.details?.length ?? 0) > 1) && (
                             <div className="page-context-metadata">{(() => {
                                       const hasValidDuration = Boolean(totalDuration && totalDuration.activeMinutes > 0 && !isShoppingList(currentView, currentList) && !isCaducidadesList(currentView, currentList));
                                       const hasValidPrice = Boolean((totalCost > 0 || (completedCost !== undefined && completedCost > 0)) && !currentCycle && !isCaducidadesList(currentView, currentList));
@@ -423,7 +399,8 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                             )}{currentCycle && currentCycle.id !== 'cycle_day' && onToggleCycleRoutineMode && (
                         <div className="routine-include-row compact-scope-row">
                           <label htmlFor={includeSwitchId} className="routine-include-text">
-                            {cycleRoutineMode === 'full_routine' ? 'Con ' : 'Sin '}
+                            {/* El texto nombra la acción del interruptor (coincide con su nombre accesible); el estado lo da el interruptor. */}
+                            {'Incluir '}
                             {currentCycle.id === 'cycle_week' ? 'diarias' : currentCycle.id === 'cycle_month' ? 'diarias y semanales' : currentCycle.id === 'cycle_year' ? 'diarias, semanales y mensuales' : 'frecuencias más cortas'}
                             {currentCycle.id !== 'cycle_week' && (
                               <span className="routine-include-sub">
@@ -479,7 +456,8 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
 
         {/* Navegación temporal y diagnóstico de la rutina de frecuencia (situado bajo «Incluir acumuladas/diarias») */}
         {currentCycle && (
-          <div style={{ width: '100%' }}>
+          // En las vistas de frecuencia el periodo va primero: da contexto a la duración y al avance.
+          <div style={{ width: '100%', order: 2 }}>
             <CycleRoutineStatusCard
               currentCycle={currentCycle}
               cycleRoutineMode={cycleRoutineMode}

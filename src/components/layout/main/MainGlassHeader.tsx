@@ -188,64 +188,30 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
               HapticService.selection();
               onStartSequence();
             }}
-            title={isStartDisabled ? "No hay recordatorios pendientes para empezar" : "Empezar lista en modo enfoque"}
+            title={isStartDisabled ? "No hay recordatorios pendientes para empezar" : `Empezar la lista en modo enfoque${startDuration && startDuration !== '0 min' ? ` · ${startDuration}` : ''}`}
             aria-label="Empezar lista"
             style={{
               ['--start-color' as string]: listAccentColor || '#007aff',
-              height: 32,
-              padding: '0 12px',
+              height: 34,
+              padding: '0 14px',
               borderRadius: 999,
               display: 'inline-flex',
               alignItems: 'center',
-              gap: 5,
+              gap: 6,
               background: listAccentColor ? `color-mix(in srgb, ${listAccentColor} 14%, transparent)` : 'rgba(0, 122, 255, 0.12)',
               border: `1px solid ${listAccentColor ? `color-mix(in srgb, ${listAccentColor} 30%, transparent)` : 'rgba(0, 122, 255, 0.25)'}`,
               cursor: isStartDisabled ? 'default' : 'pointer',
               opacity: isStartDisabled ? 0.45 : 1,
               color: listAccentColor,
-              fontWeight: 650,
-              fontSize: '0.80rem',
+              fontWeight: 600,
+              fontSize: 'var(--type-subhead)',
               whiteSpace: 'nowrap',
               boxShadow: isStartDisabled ? 'none' : '0 1px 3px rgba(0,0,0,0.04)',
               transition: 'background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), color 0.18s cubic-bezier(0.16, 1, 0.3, 1), fill 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
           >
             <Play size={12} fill="currentColor" style={{ flexShrink: 0 }} />
-            {!isMobile && <span>Empezar</span>}
-            {!isMobile && startDuration && startDuration !== '0 min' && !isStartDisabled && (
-              <span style={{ opacity: 0.85, fontSize: '0.72rem', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
-                ({startDuration})
-              </span>
-            )}
-          </button>
-        )}
-
-        {/* Añadir sección de raíz */}
-        {isListView && (
-          <button
-            type="button"
-            className="icon-btn apple-nav-action-btn"
-            onClick={() => {
-              HapticService.selection();
-              onAddSection();
-            }}
-            title="Añadir sección de raíz"
-            aria-label="Añadir sección de raíz"
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border-subtle)',
-              cursor: 'pointer',
-              color: 'var(--accent-primary)',
-              transition: 'background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, fill 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease'
-            }}
-          >
-            <FolderPlus size={18} strokeWidth={2.2} />
+            <span>Empezar</span>
           </button>
         )}
 
@@ -331,7 +297,20 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                           background: 'var(--border-strong, rgba(0,0,0,0.22))',
                           margin: '0 auto 16px auto'
                         }} />
-                        {onStartSequence && (
+                        {isListView && (
+                          <button
+                            type="button"
+                            className="ios-dropdown-item"
+                            onClick={() => { HapticService.selection(); setIsMenuOpen(false); onAddSection(); }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 44 }}
+                            aria-label="Añadir sección de raíz"
+                          >
+                            <FolderPlus size={16} color="var(--accent-primary)" />
+                            <span style={{ whiteSpace: 'nowrap', color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: 500 }}>Nueva sección</span>
+                          </button>
+                        )}
+                        {/* «Empezar» ya está en la barra cuando es la acción principal: aquí solo si no lo está. */}
+                        {onStartSequence && !showProminentStartButton && (
                           <>
                             <button
                               type="button"
@@ -607,7 +586,19 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                       onClick={(e) => e.stopPropagation()}
                       onWheel={(e) => e.stopPropagation()}
                     >
-                      {onStartSequence && (
+                      {isListView && (
+                        <button
+                          type="button"
+                          className="ios-dropdown-item"
+                          onClick={() => { HapticService.selection(); setIsMenuOpen(false); onAddSection(); }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 10 }}
+                          aria-label="Añadir sección de raíz"
+                        >
+                          <FolderPlus size={15} color="var(--accent-primary)" />
+                          <span style={{ whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>Nueva sección</span>
+                        </button>
+                      )}
+                      {onStartSequence && !showProminentStartButton && (
                         <>
                           <button
                             className="ios-dropdown-item"

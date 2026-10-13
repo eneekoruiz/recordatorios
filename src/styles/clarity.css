@@ -1,0 +1,212 @@
+/* ============================================================================================
+   Claridad — capa final del sistema visual (2026-10-13).
+   Dirección: «Primero la lista: una fila, una línea, una acción» (docs/design-arena/2026-10-13).
+   Reglas: el contenido es sólido y legible; el cristal queda para la navegación y lo que flota;
+   las zonas táctiles de 44 px se consiguen sin inflar el layout; transiciones con propiedades concretas.
+   ============================================================================================ */
+:root {
+  /* Escala tipográfica (equivalentes web de los estilos de texto del sistema). */
+  --type-large-title: 2.125rem;  /* 34 */
+  --type-title2: 1.375rem;       /* 22 */
+  --type-title3: 1.25rem;        /* 20 */
+  --type-headline: 1.0625rem;    /* 17 semibold */
+  --type-body: 1.0625rem;        /* 17 */
+  --type-subhead: 0.9375rem;     /* 15 */
+  --type-footnote: 0.8125rem;    /* 13 */
+  --type-caption: 0.75rem;       /* 12 */
+  --task-title-size: var(--type-body);
+  --task-title-lh: 1.4375rem;    /* 23 */
+  /* Etiquetas en tres niveles con contraste AA sobre fondo claro. */
+  --label-1: #1c1c1e;
+  --label-2: #5e5e64;
+  --label-3: #6e6e74;
+  --separator-hair: rgba(60, 60, 67, 0.18);
+  --radius-row: 10px;
+  --radius-card: 14px;
+}
+[data-theme="dark"], html.dark, body.dark {
+  --label-1: #f2f2f7;
+  --label-2: #aeaeb2;
+  --label-3: #98989e;
+  --separator-hair: rgba(235, 235, 245, 0.16);
+}
+
+/* Cifras que cambian: anchura fija para que nada baile. */
+.task-meta-num, .section-total-count, .apple-large-counter, .count, .tabular { font-variant-numeric: tabular-nums; }
+
+/* ---------- Fila de tarea ---------- */
+.task-row .task-title { display: inline-block; }
+.task-row-content { cursor: text; }
+
+/* Una línea secundaria: datos separados por «·», en gris; color solo con significado (vencida, hoy). */
+.task-meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 0;
+  row-gap: 2px;
+  margin-top: 1px;
+  font-size: var(--type-footnote);
+  line-height: 1.125rem;
+  color: var(--label-2);
+  cursor: pointer;
+  min-width: 0;
+}
+.task-meta-item { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.task-meta-item > svg { flex-shrink: 0; color: var(--label-3); }
+.task-meta-item + .task-meta-item::before {
+  content: "·";
+  margin: 0 6px;
+  color: var(--label-3);
+}
+.task-meta-item.is-overdue, .task-meta-item.is-overdue > svg { color: var(--accent-red-text, #d70015); font-weight: 600; }
+.task-meta-item.is-today, .task-meta-item.is-today > svg { color: var(--accent-blue, #0068d6); }
+.task-meta-list { font-weight: 600; }
+.task-meta-aside { color: var(--label-3); }
+.task-meta-glyph > svg { color: var(--label-3); }
+.task-meta-link { color: var(--accent-primary); }
+.task-meta-link > svg { color: currentColor; }
+@media (hover: hover) and (pointer: fine) {
+  .task-meta-item[data-meta-field]:hover > span:not(.sr-only) { text-decoration: underline; text-underline-offset: 2px; text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); }
+}
+
+/* Botones de la derecha: 32 px visibles, 44 px táctiles sin solaparse (separación de 12 px). */
+.task-subtasks-btn { position: relative; border-radius: 16px; }
+.task-subtasks-btn::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+.task-subtasks-btn:hover { color: var(--label-1) !important; }
+.task-info-btn:focus-visible, .task-row:focus-within .task-info-btn { opacity: 1 !important; }
+
+/* Notas: una línea en la fila; el texto completo vive en el editor. */
+.task-row .task-note-preview:not(:empty) {
+  display: -webkit-box !important;
+  font-size: var(--type-footnote) !important;
+  color: var(--label-2) !important;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ---------- Cabecera de sección: una línea, nombre + «6 · 2 h 45 min» en gris + ··· + chevron ---------- */
+:root { --section-header-h: 48px; }
+.category-group, .section-container { margin-bottom: 0 !important; }
+.group-header.section-header-row {
+  min-height: 44px !important;
+  background: var(--bg-base) !important;
+  color: var(--label-1);
+}
+.section-header-row .section-title-row { gap: 12px !important; }
+.section-header-row .section-meta { margin-top: 0; color: var(--label-2); font-size: var(--type-subhead); }
+.section-header-row .section-total-count {
+  color: var(--label-2);
+  font-size: var(--type-subhead);
+  font-weight: 500;
+  min-width: 1.5ch;
+  text-align: right;
+}
+.section-header-row .section-routine-breakdown { font-size: var(--type-footnote); opacity: 1; color: var(--label-3); }
+/* Duración: texto gris de 15 px; su zona táctil crece a 44 px de alto sin cambiar la caja. */
+.section-header-row .section-duration-label {
+  position: relative;
+  height: 22px !important;
+  padding: 0 4px !important;
+  font-size: var(--type-subhead) !important;
+  font-weight: 500 !important;
+  color: var(--label-2) !important;
+}
+.section-header-row .section-duration-label::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 44px;
+  transform: translateY(-50%);
+}
+/* «···» y chevron: 32 px visibles, 44 px táctiles; 12 px entre ellos para que no se solapen. */
+.section-header-row .section-more-btn,
+.section-header-row .section-collapse-chevron-btn {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+}
+.section-header-row .section-collapse-chevron-btn::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+.section-header-row .section-collapse-chevron-btn { margin-left: 6px !important; }
+.section-header-row > div > div:last-child { gap: 12px !important; }
+@media (hover: none) { .section-header-row .section-more-btn { opacity: 0.7; } }
+.section-header-row .routine-chip { height: 28px; font-size: var(--type-footnote); }
+
+/* ---------- Cabecera de página ---------- */
+.content-header .page-context-row { gap: 0 16px; align-items: center; }
+.content-header .list-duration-meta { margin-top: 0 !important; font-size: var(--type-subhead) !important; color: var(--label-2) !important; }
+.content-header .apple-list-duration-chip {
+  position: relative;
+  height: 28px !important;
+  padding: 0 6px 0 2px !important;
+  font-size: var(--type-subhead) !important;
+  color: var(--label-2) !important;
+}
+.content-header .apple-list-duration-chip::before {
+  content: "";
+  position: absolute;
+  inset: -8px -4px;
+}
+.content-header .apple-large-counter { font-weight: 600; }
+.content-header .compact-scope-row { flex: 0 1 auto !important; min-width: 0 !important; gap: 8px !important; }
+.content-header .compact-scope-row .routine-include-text { font-size: var(--type-subhead); color: var(--label-2); }
+
+/* Navegador de periodo: cápsula compacta de cristal (control de navegación, no contenido). */
+.cycle-routine-status-strip .apple-period-navigator-capsule {
+  background: var(--glass-fill) !important;
+  border: 1px solid var(--glass-stroke) !important;
+  box-shadow: inset 0 1px 0 var(--glass-highlight), 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+.cycle-status-text-btn:hover { background: color-mix(in srgb, var(--label-1) 6%, transparent) !important; }
+
+/* ---------- Barra superior: botones redondos de cristal, una acción principal ---------- */
+.glass-header .apple-nav-action-btn {
+  width: 36px !important;
+  height: 36px !important;
+  background: var(--glass-fill) !important;
+  border: 1px solid var(--glass-stroke) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+.glass-header .apple-nav-start-btn { min-height: 36px; }
+.glass-header .apple-nav-start-btn,
+.glass-header .apple-nav-start-btn:is(*) {
+  width: auto !important;
+  height: 36px !important;
+  padding: 0 14px !important;
+  gap: 6px !important;
+  font-size: var(--type-subhead) !important;
+  font-weight: 600 !important;
+}
+.content-header .page-context-metadata { flex: 0 1 auto; }
+.content-header .page-context-metadata .list-duration-meta { width: auto !important; }
+.content-header .page-context-row { flex-wrap: wrap; align-items: center; }
+.cycle-routine-status-strip { padding-bottom: 0 !important; }
+.content-header .compact-scope-row { width: auto !important; justify-content: flex-start !important; margin-left: auto; }

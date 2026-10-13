@@ -730,8 +730,8 @@ const CORE_CYCLES = [
     if (currentCycle && (category === 'inbox' || category === 'undefined' || category === 'Sin Lista' || lists?.some(l => l.id === category))) {
       return false;
     }
-    // En toda la app (listas normales, frecuencia, caducidades), las secciones vienen cerradas por defecto para no agobiar
-    return true;
+    // Las secciones empiezan desplegadas para ver qué hay que hacer sin un toque extra; plegar se recuerda por sección.
+    return false;
   }, [collapsed, currentView, currentList, isSmartView, currentCycle, lists]);
 
   const toggleCategory = useCallback((category: string) => {
@@ -2273,6 +2273,34 @@ const CORE_CYCLES = [
     [currentCycle, cycleBreakdown, currentView, currentList, viewTasks, listSections, lists, cycles]
   );
 
+  // Las tareas de una sección se alinean con su título (como en Recordatorios): la sangría solo expresa
+  // el anidamiento de subtareas, no la profundidad de la sección que las contiene.
+  // Frecuencia en la fila: en una sección donde todas comparten frecuencia no aporta nada; si se mezclan,
+  // se escribe («Mensual») para distinguirlas; en las listas inteligentes basta el glifo.
+  const { taskIndentLevels, mixedFrequencyIndexes } = useMemo(() => {
+    const levels = new Map<number, number>();
+    const mixed = new Set<number>();
+    // Cada tramo entre cabeceras toma como base la profundidad mínima de sus tareas.
+    let segment: { index: number; depth: number; kind: string }[] = [];
+    const flush = () => {
+      if (!segment.length) return;
+      const base = Math.min(...segment.map(row => row.depth));
+      const roots = segment.filter(row => row.depth === base);
+      const isMixed = new Set(roots.map(row => row.kind)).size > 1;
+      for (const row of segment) {
+        levels.set(row.index, row.depth - base);
+        if (isMixed && row.depth === base) mixed.add(row.index);
+      }
+      segment = [];
+    };
+    flattenedData.forEach((item, index) => {
+      if (item.type === 'header') flush();
+      else if (item.type === 'task') segment.push({ index, depth: item.depth, kind: getTaskPeriodicity(item.task, listSections, lists) || 'none' });
+    });
+    flush();
+    return { taskIndentLevels: levels, mixedFrequencyIndexes: mixed };
+  }, [flattenedData, listSections, lists]);
+
   // Group flattenedData into sections to enable native multi-tier CSS sticky push effect between sections
   const sectionGroups = useMemo(() => {
     interface SubSectionGroup {
@@ -2463,7 +2491,7 @@ const CORE_CYCLES = [
           <TaskCard 
             task={task}
             virtualStyle={{ margin: 0, padding: 0, boxSizing: 'border-box' }}
-            indent={depth * (isMobile ? 28 : 32)}
+            indent={depth * (isMobile ? 24 : 28)}
             onToggle={handleToggleTask}
             onDelete={handleDeleteTask}
             onOpenZenMode={onOpenZenMode}
@@ -2472,6 +2500,7 @@ const CORE_CYCLES = [
             // Las tareas se agrupan bajo la cabecera de su lista: repetirla en cada fila sobra.
             showListName={false}
             hideDueDate={currentView === 'smart_today'}
+            frequencyMode={currentView.startsWith('cycle_') || depth > 0 ? 'none' : isSmartView ? 'glyph' : mixedFrequencyIndexes.has(index) ? 'label' : 'none'}
             isFirstInSection={isFirst}
             isLastInSection={isLast}
             previousTaskId={previousTaskId}
@@ -2498,7 +2527,7 @@ const CORE_CYCLES = [
         </div>
       </div>
     );
-  }, [childCountByTaskId, visibleIndexById, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, onSelectView, currentView, setSelectedPersonForProfile, recentlyCompletedIds, visibleTasks, handleMoveTaskUp, handleMoveTaskDown, handleReorderTasks, canStartIndividualTasks, handleStartTask, selectedTaskIds, handleToggleSelectTask, isMobile, isExplicitSelectionMode]);
+  }, [childCountByTaskId, mixedFrequencyIndexes, isSmartView, visibleIndexById, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, onSelectView, currentView, setSelectedPersonForProfile, recentlyCompletedIds, visibleTasks, handleMoveTaskUp, handleMoveTaskDown, handleReorderTasks, canStartIndividualTasks, handleStartTask, selectedTaskIds, handleToggleSelectTask, isMobile, isExplicitSelectionMode]);
 
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
   const smartListInfo = isSmartView ? SMART_LISTS.find(l => l.id === currentView) : null;
@@ -2844,7 +2873,7 @@ const CORE_CYCLES = [
                       data.task, 
                       itemStyle, 
                       index, 
-                      data.depth, 
+                      taskIndentLevels.get(index) ?? data.depth, 
                       !!data.isFirstInSection, 
                       !!data.isLastInSection, 
                       previousTaskId, 

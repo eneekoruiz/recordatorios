@@ -1,12 +1,11 @@
-import { useMemo, type ReactNode, isValidElement } from 'react';
-import { Calendar, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen, Zap, Tag } from 'lucide-react';
+import { useMemo, type ReactNode, type MouseEvent } from 'react';
+import { Calendar, CalendarX2, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen, Zap } from 'lucide-react';
 import type { TaskItem, CustomList } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
 import { getTaskDuration, formatDuration } from '../../../utils/taskDuration';
 import { isShoppingList } from '../../../utils/specialLists';
 import { formatEuro } from '../../../utils/format';
-import { MetaSplit, MONEY_COLOR } from '../../ui/MetaSplit';
 
 export interface TaskMetaBadgesProps {
   task: TaskItem;
@@ -21,6 +20,8 @@ export interface TaskMetaBadgesProps {
   onNavigateView?: (viewId: string) => void;
   lists?: CustomList[];
   onOpenFrequencyPicker?: (e: React.MouseEvent) => void;
+  /** Escribe la frecuencia en lugar de mostrar solo el glifo (secciones con frecuencias mezcladas). */
+  frequencyAsLabel?: boolean;
 }
 
 export function TaskMetaBadges({
@@ -34,7 +35,8 @@ export function TaskMetaBadges({
   onEdit,
   onNavigateView,
   lists,
-  onOpenFrequencyPicker
+  onOpenFrequencyPicker,
+  frequencyAsLabel = false
 }: TaskMetaBadgesProps) {
   const updateTask = useAppStore(state => state.updateTask);
   const tasks = useAppStore(state => state.tasks);
@@ -101,7 +103,6 @@ export function TaskMetaBadges({
     return null;
   })();
 
-  const showDueDate = !!task.dueDate;
   const dateIsRedundant = hideDueDate && task.dueDate &&
     new Date(task.dueDate).toDateString() === new Date().toDateString() &&
     (dueDateColor || '').toLowerCase() !== '#ff3b30';
@@ -109,284 +110,108 @@ export function TaskMetaBadges({
   const hasDuration = !isShopping && showDuration && (totalActiveMinutes > 0 || totalParallelMinutes > 0);
 
 
+  const isRed = (dueDateColor || '').toLowerCase() === '#ff3b30';
+  const isBlue = (dueDateColor || '').toLowerCase() === '#007aff';
+  const ownActive = durationInfo?.activeMinutes || 0;
+  const subActive = subtasksDuration.activeMinutes;
+  const durationDescription = subtasksDuration.hasSubtasksDuration && ownActive > 0
+    ? `${formatDuration(totalActiveMinutes)}: ${formatDuration(ownActive)} propia y ${formatDuration(subActive)} en subtareas`
+    : subtasksDuration.hasSubtasksDuration
+      ? `${formatDuration(totalActiveMinutes)} en subtareas`
+      : formatDuration(totalActiveMinutes);
+  const priceDescription = subtasksPrice > 0 && ownPrice > 0
+    ? `${formatEuro(totalPrice)}: ${formatEuro(ownPrice)} propio y ${formatEuro(subtasksPrice)} en subtareas`
+    : formatEuro(totalPrice);
+
+  /* Una sola línea secundaria con lo que ayuda a actuar. Los datos no son botones sueltos de 44 px: toda la
+     fila es la zona táctil y TaskCard abre el editor en el campo tocado (data-meta-field). El desglose
+     (propio/subtareas, paralelo) se queda en el título accesible y en el editor. */
+  const items: ReactNode[] = [];
+  if (showListName && taskList) {
+    items.push(<span key="list-name" className="task-meta-item task-meta-list" style={{ color: taskList.color || undefined }}>{taskList.name}</span>);
+  }
+  if (task.dueDate && !dateIsRedundant) {
+    const due = new Date(task.dueDate);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+    const dueZero = new Date(due); dueZero.setHours(0, 0, 0, 0);
+    let dueText = due.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }).replace('.', '');
+    if (dueZero.getTime() === today.getTime()) dueText = 'Hoy';
+    else if (dueZero.getTime() === tomorrow.getTime()) dueText = 'Mañana';
+    const hasTime = due.getHours() !== 0 || due.getMinutes() !== 0;
+    const timeText = hasTime ? due.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '';
+    items.push(
+      <span key="due-date" className={`task-meta-item${isRed ? ' is-overdue' : isBlue ? ' is-today' : ''}`} data-meta-field="date" title="Fecha · toca para editar">
+        {isRed ? <CalendarX2 size={13} aria-hidden="true" /> : <Calendar size={13} aria-hidden="true" />}
+        {isRed && <span className="sr-only">Vencida: </span>}
+        <span>{dueText}{timeText ? `, ${timeText}` : ''}</span>
+      </span>
+    );
+  }
+  if (timeOfDayInfo) {
+    const TimeIcon = timeOfDayInfo.tag === 'morning' ? Sun : timeOfDayInfo.tag === 'afternoon' ? Clock : Moon;
+    items.push(
+      <span key="time-of-day" className="task-meta-item" data-meta-field="time-of-day" data-next-time={timeOfDayInfo.next}
+        title={`${timeOfDayInfo.label} · toca para cambiar el momento del día`}>
+        <TimeIcon size={13} aria-hidden="true" /><span>{timeOfDayInfo.label}</span>
+      </span>
+    );
+  }
+  if (hasDuration) {
+    items.push(
+      <span key="duration" className="task-meta-item task-meta-num" data-meta-field="duration" title={`Duración: ${durationDescription}${isParallel ? ` (+${formatDuration(totalParallelMinutes)} en paralelo)` : ''}`}>
+        {isParallel ? <Zap size={13} aria-hidden="true" /> : <Clock size={13} aria-hidden="true" />}
+        <span className="sr-only">Duración: </span>
+        <span>{formatDuration(totalActiveMinutes)}</span>
+        {isParallel && <span className="task-meta-aside">+{formatDuration(totalParallelMinutes)}</span>}
+      </span>
+    );
+  }
+  if (hasPrice) {
+    items.push(
+      <span key="price" className="task-meta-item task-meta-num" data-meta-field="price" title={`Precio: ${priceDescription}`}>
+        <span className="sr-only">Precio: </span>
+        {task.quantity && task.quantity > 1 && subtasksPrice === 0
+          ? <span>{task.quantity} × {formatEuro(task.price || 0)}</span>
+          : <span>{formatEuro(totalPrice)}</span>}
+      </span>
+    );
+  }
+  if (cycleBadge) {
+    items.push(
+      <span key="frequency" className="task-meta-item task-meta-glyph" data-meta-field="frequency" title={`Se repite: ${cycleBadge.label}`}>
+        <Repeat size={13} aria-hidden="true" />
+        {frequencyAsLabel ? <span>{cycleBadge.label}</span> : <span className="sr-only">Se repite: {cycleBadge.label}</span>}
+      </span>
+    );
+  }
+  if (inAppListTarget) {
+    items.push(
+      <span key="in-app-list" className="task-meta-item task-meta-link" data-meta-field="in-app-list" data-target-view={`list_${inAppListTarget.id}`} title={`Ir a ${inAppListTarget.name}`}>
+        <LayoutList size={13} aria-hidden="true" /><span>{inAppListTarget.name}</span><ChevronRight size={12} aria-hidden="true" />
+      </span>
+    );
+  }
+  // Tocar un dato abre su edición (como en la versión original); el teclado llega por el (i) y el menú contextual.
+  const handleMetaClick = (event: MouseEvent<HTMLDivElement>) => {
+    const item = (event.target as HTMLElement).closest<HTMLElement>('[data-meta-field]');
+    event.stopPropagation();
+    const field = item?.dataset.metaField;
+    if (field === 'time-of-day' && timeOfDayInfo) {
+      updateTask(task.id, { timeOfDay: timeOfDayInfo.next });
+      HapticService.selection();
+    } else if (field === 'in-app-list' && item?.dataset.targetView) {
+      onNavigateView?.(item.dataset.targetView);
+    } else if (field === 'frequency' && onOpenFrequencyPicker) {
+      onOpenFrequencyPicker(event);
+    } else {
+      onEdit(task.id, field && field !== 'list-name' ? field : undefined);
+    }
+  };
+
   return (
     <>
-      {/* Meta row - Native Apple Reminders HIG Style (clean typography + colored micro-icons, zero bulky boxes) */}
-      {(() => {
-        const items: ReactNode[] = [];
-
-            if (showListName && taskList) {
-              items.push(
-                <span
-                  key="list-name"
-                  className="task-meta-list-name"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 3.5,
-                    fontWeight: 650, fontSize: '0.74rem', color: taskList.color || 'var(--text-secondary)'
-                  }}
-                >
-                  {taskList.name}
-                </span>
-              );
-            }
-
-            if (showDueDate) {
-              const isRed = (dueDateColor || '').toLowerCase() === '#ff3b30';
-              const isBlue = (dueDateColor || '').toLowerCase() === '#007aff';
-              const dueColor = isRed ? 'var(--accent-red-text, #d70015)' : isBlue ? 'var(--accent-blue, #0068d6)' : 'var(--text-secondary)';
-
-              const due = new Date(task.dueDate!);
-              const today = new Date(); today.setHours(0, 0, 0, 0);
-              const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
-              const dueZero = new Date(due); dueZero.setHours(0, 0, 0, 0);
-              let dueText = due.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-              if (dueZero.getTime() === today.getTime()) dueText = 'Hoy';
-              else if (dueZero.getTime() === tomorrow.getTime()) dueText = 'Mañana';
-
-              items.push(
-                <button
-                  key="due-date"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(task.id, 'date');
-                  }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 3.5,
-                    color: dueColor,
-                    fontWeight: isRed || isBlue ? 650 : 600,
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    transition: 'opacity 0.15s ease'
-                  }}
-                  title="Fecha de vencimiento (Toca para editar)" type="button" className="task-meta-action"
-                >
-                  <Calendar size={11} strokeWidth={2.4} style={{ flexShrink: 0, color: dueColor }} />
-                  <span>{dueText}</span>
-                </button>
-              );
-            }
-
-            if (cycleBadge) {
-              const freqColors: Record<string, string> = {
-                day: '#ff9500',
-                week: '#007aff',
-                month: '#af52de',
-                year: '#34c759',
-                custom: cycleBadge.color || 'var(--text-tertiary)'
-              };
-              const freqColor = cycleBadge.color || freqColors[cycleBadge.type || 'custom'] || 'var(--accent-primary)';
-
-              items.push(
-                <button
-                  key="frequency"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (onOpenFrequencyPicker) {
-                      onOpenFrequencyPicker(e);
-                    } else {
-                      onEdit(task.id, 'frequency');
-                    }
-                  }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 3.5,
-                    color: 'var(--text-secondary)',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    transition: 'opacity 0.15s ease'
-                  }}
-                  title={`Frecuencia: ${cycleBadge.label} (Toca para editar)`} type="button" className="task-meta-action"
-                >
-                  <Repeat size={11} strokeWidth={2.5} style={{ color: freqColor, flexShrink: 0 }} />
-                  <span className="sr-only">{cycleBadge.label}</span>
-                </button>
-              );
-            }
-
-            if (hasDuration) {
-              const ownActive = durationInfo?.activeMinutes || 0;
-              const subActive = subtasksDuration.activeMinutes;
-              const hasSubtasksDur = subtasksDuration.hasSubtasksDuration;
-              const durTooltip = hasSubtasksDur && ownActive > 0
-                ? `Duración total: ${formatDuration(totalActiveMinutes)} (${formatDuration(ownActive)} propia + ${formatDuration(subActive)} en subtareas)${isParallel ? ` (+${formatDuration(totalParallelMinutes)} en paralelo)` : ''}. Pulsa para editar.`
-                : hasSubtasksDur
-                ? `Duración total subtareas: ${formatDuration(totalActiveMinutes)}${isParallel ? ` (+${formatDuration(totalParallelMinutes)} en paralelo)` : ''}. Pulsa para editar.`
-                : `Duración estimada: ${formatDuration(totalActiveMinutes)}${isParallel ? ` (+${formatDuration(totalParallelMinutes)} en paralelo)` : ''}. Pulsa para editar.`;
-
-              items.push(
-                <button
-                  key="duration"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(task.id, 'duration');
-                  }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 3.5,
-                    color: 'var(--text-secondary)',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    fontVariantNumeric: 'tabular-nums',
-                    userSelect: 'none',
-                    transition: 'opacity 0.15s ease'
-                  }}
-                  title={durTooltip} type="button" className="task-meta-action"
-                >
-                  {isParallel ? (
-                    <Zap size={11} strokeWidth={2.4} style={{ flexShrink: 0, color: '#ff9500' }} />
-                  ) : (
-                    <Clock size={11} strokeWidth={2.2} style={{ flexShrink: 0, color: 'var(--accent-primary)', opacity: 0.85 }} />
-                  )}
-                  {hasSubtasksDur && ownActive > 0 ? (
-                    // Sólido = duración propia; rayado = la de sus subtareas.
-                    <MetaSplit
-                      interactive={false}
-                      label={formatDuration(totalActiveMinutes)}
-                      description={durTooltip}
-                      parts={[
-                        { id: 'own', value: ownActive, text: `${formatDuration(ownActive)} propia`, color: 'var(--accent-primary)', tone: 'solid' },
-                        { id: 'subs', value: subActive, text: `${formatDuration(subActive)} subtareas`, color: 'var(--accent-primary)', tone: 'striped' },
-                      ]}
-                    />
-                  ) : (
-                    <span>{formatDuration(totalActiveMinutes)}</span>
-                  )}
-                  {isParallel && (
-                    <span style={{ fontSize: '0.67rem', color: 'var(--text-tertiary)', fontWeight: 500 }}>(+{formatDuration(totalParallelMinutes)})</span>
-                  )}
-                </button>
-              );
-            }
-
-            if (hasPrice) {
-              const priceTooltip = (subtasksPrice > 0 && ownPrice > 0)
-                ? `Precio total: ${formatEuro(totalPrice)} (${formatEuro(ownPrice)} propio + ${formatEuro(subtasksPrice)} en subtareas). Toca para editar.`
-                : (subtasksPrice > 0)
-                ? `Precio total subtareas: ${formatEuro(totalPrice)}. Toca para editar.`
-                : `Precio: ${task.price} €${task.quantity && task.quantity > 1 ? ` (${task.quantity} uds)` : ''}. Toca para editar.`;
-
-              items.push(
-                <button
-                  key="price"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(task.id, 'price');
-                  }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 3.5,
-                    color: 'var(--text-secondary)',
-                    fontWeight: 650,
-                    fontVariantNumeric: 'tabular-nums',
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    transition: 'opacity 0.15s ease'
-                  }}
-                  title={priceTooltip} type="button" className="task-meta-action"
-                >
-                  <Tag size={11} strokeWidth={2.4} style={{ color: '#30d158', flexShrink: 0 }} />
-                  {task.quantity && task.quantity > 1 && subtasksPrice === 0 && (
-                    <span style={{ color: 'var(--text-tertiary)', fontSize: '0.72rem', fontWeight: 500 }}>
-                      {task.quantity} × {formatEuro(task.price || 0)} =
-                    </span>
-                  )}
-                  {subtasksPrice > 0 && ownPrice > 0 ? (
-                    <MetaSplit
-                      interactive={false}
-                      label={formatEuro(totalPrice)}
-                      description={priceTooltip}
-                      parts={[
-                        { id: 'own', value: ownPrice, text: `${formatEuro(ownPrice)} propio`, color: MONEY_COLOR, tone: 'solid' },
-                        { id: 'subs', value: subtasksPrice, text: `${formatEuro(subtasksPrice)} subtareas`, color: MONEY_COLOR, tone: 'striped' },
-                      ]}
-                    />
-                  ) : (
-                    <span>{formatEuro(totalPrice)}</span>
-                  )}
-                </button>
-              );
-            }
-
-            if (timeOfDayInfo) {
-              const timeIcon = timeOfDayInfo.tag === 'morning'
-                ? <Sun size={11} strokeWidth={2.4} style={{ color: '#ff9500', flexShrink: 0 }} />
-                : timeOfDayInfo.tag === 'afternoon'
-                ? <Clock size={11} strokeWidth={2.4} style={{ color: '#007aff', flexShrink: 0 }} />
-                : <Moon size={11} strokeWidth={2.4} style={{ color: '#5856d6', flexShrink: 0 }} />;
-
-              items.push(
-                <button
-                  key="time-of-day"
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    updateTask(task.id, { timeOfDay: timeOfDayInfo.next });
-                    HapticService.selection();
-                  }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    padding: 0,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 3.5,
-                    color: 'var(--text-secondary)',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    fontSize: '0.75rem',
-                    lineHeight: '1.2',
-                    userSelect: 'none',
-                    transition: 'opacity 0.15s ease'
-                  }}
-                  title={`Momento del día: ${timeOfDayInfo.label}. Pulsa para alternar (Mañana ➔ Tarde ➔ Noche).`}
-                >
-                  {timeIcon}
-                  <span>{timeOfDayInfo.label}</span>
-                </button>
-              );
-            }
-
-            if (inAppListTarget) {
-              items.push(
-                <button
-                  key="in-app-list"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onNavigateView?.(`list_${inAppListTarget.id}`);
-                  }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 3.5,
-                    color: 'var(--accent-primary)',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    transition: 'opacity 0.15s ease'
-                  }}
-                  title={`Ir a ${inAppListTarget.name}`} type="button" className="task-meta-action"
-                >
-                  <LayoutList size={11} strokeWidth={2.2} style={{ flexShrink: 0 }} />
-                  <span>Ir a {inAppListTarget.name}</span>
-                  <ChevronRight size={10} style={{ opacity: 0.7, flexShrink: 0 }} />
-                </button>
-              );
-            }
-
-            const visible = items.filter(item => !isValidElement(item) || item.key !== 'due-date' || !dateIsRedundant);
-            return visible.length > 0 ? (
-              <div className="task-context task-meta-fields" onClick={event => event.stopPropagation()}>
-                {visible}
-              </div>
-            ) : null;
-          })()}
+      {items.length > 0 && <div className="task-meta-line" onClick={handleMetaClick}>{items}</div>}
 
       {/* Rich Links (External URLs) */}
       {(() => {

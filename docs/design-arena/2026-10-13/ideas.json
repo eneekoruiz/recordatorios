@@ -1,0 +1,1626 @@
+[
+ {
+  "id": "a001",
+  "perspective": "Madre/padre con limpieza semanal y compras en móvil",
+  "title": "Fila compacta de 52 px con meta en una sola línea bajo el título",
+  "mechanism": "TaskCard: grid de 2 columnas (círculo 44px | contenido). Título y una única línea secundaria pegada (gap 2px) que concatena solo el dato más accionable según contexto: fecha si vencida/hoy, si no la duración. Altura mínima 44px, padding vertical 8px; separador inset alineado al título. El (i) desaparece de la fila: el toque en el título abre el editor.",
+  "surfaces": [
+   "task rows"
+  ],
+  "visible": "Círculo, título, un dato (p. ej. «Hoy» en rojo o «20 min»)",
+  "discreet": "Icono de repetición como glifo 12px tras el dato, sin color",
+  "editing": "Frecuencia exacta, microbarra de acumuladas, nota completa",
+  "evidence": "Recordatorios de Apple: filas de una línea con meta compacta debajo; el toque en la fila abre detalles (https://support.apple.com/guide/iphone/iph2b2b71a2e/ios)",
+  "risk": "Pierde el (i) como affordance visible; requiere que el toque en título sea descubrible (cursor y foco)",
+  "verification": "En 390×844 contar filas visibles en Casa·Limpieza: ≥8 en lugar de ~3; medir altura de fila en DevTools ≤64px"
+ },
+ {
+  "id": "a002",
+  "perspective": "Madre/padre con limpieza semanal y compras en móvil",
+  "title": "Secciones desplegadas por defecto con cabecera de 44 px",
+  "mechanism": "Cabecera de sección (list_casa): una línea, título 17pt semibold a la izquierda, a la derecha «6 · 2 h 45» en gris tabular y el botón «…» de 44×44. El chevron de plegar pasa a ser el propio título (button con aria-expanded). Estado inicial desplegado; el plegado se recuerda por sección en localStorage con try/catch.",
+  "surfaces": [
+   "section headers",
+   "list views"
+  ],
+  "visible": "Nombre de sección, conteo pendiente",
+  "discreet": "Duración total junto al conteo en gris",
+  "editing": "Plegar/desplegar persiste; orden de secciones en menú",
+  "evidence": "Listas con secciones de Recordatorios iOS 17: cabecera tipográfica sin tarjeta",
+  "risk": "Listas muy largas se vuelven largas; mitigado por plegado recordado",
+  "verification": "Abrir Casa en móvil: tareas de Limpieza visibles sin tocar; cabecera mide 44–52px"
+ },
+ {
+  "id": "a003",
+  "perspective": "Madre/padre con limpieza semanal y compras en móvil",
+  "title": "Modo compra: marcar sin que la fila desaparezca y deshacer en barra",
+  "mechanism": "En listas tipo Compras, al marcar el círculo la fila se tacha y baja al final del grupo «En el carro» tras 1.5 s (respeta prefers-reduced-motion: sin animación), con toast «Deshacer» de 5 s. Un solo control en la cabecera «Vaciar carro» que consolida las completadas.",
+  "surfaces": [
+   "task rows",
+   "list views",
+   "menus"
+  ],
+  "visible": "Productos pendientes arriba, tachados abajo",
+  "discreet": "Contador «4 en el carro» al final",
+  "editing": "Ninguno nuevo; la opción de mostrar completadas sigue en «…»",
+  "evidence": "Lista de la compra de Recordatorios (iOS 17) agrupa y permite deshacer",
+  "risk": "Confusión si la lista no es de compras; aplicar solo a listas con flag de tipo",
+  "verification": "Marcar 3 productos en Compras: siguen visibles tachados, deshacer restaura"
+ },
+ {
+  "id": "a004",
+  "perspective": "Madre/padre con limpieza semanal y compras en móvil",
+  "title": "Botón Empezar de lista convertido en «Siguiente: Aspirar el salón · 20 min»",
+  "mechanism": "Sustituir la pastilla amarilla ▶ del header por un botón secundario contextual bajo el título que nombra la primera tarea pendiente de la sección activa y su duración; al pulsar abre ListSequenceMode desde esa tarea. Duración total de lista se muestra solo en ese botón.",
+  "surfaces": [
+   "page headers",
+   "list views"
+  ],
+  "visible": "Nombre de la siguiente tarea y su duración",
+  "discreet": "Total de la lista en gris tras «de 3 h 45»",
+  "editing": "Ordenar la secuencia sigue en «…» > Ordenar tareas",
+  "evidence": "Botón de acción principal claro, una por pantalla (HIG Buttons: https://developer.apple.com/design/human-interface-guidelines/buttons)",
+  "risk": "Elegir «la siguiente» por orden manual puede no ser la deseada; usar el orden visible",
+  "verification": "Abrir Casa: botón muestra la primera pendiente de Limpieza; pulsar inicia secuencia en ella"
+ },
+ {
+  "id": "a005",
+  "perspective": "Madre/padre con limpieza semanal y compras en móvil",
+  "title": "Resumen de Hoy en 2 líneas con una acción por sección atrasada",
+  "mechanism": "Tarjeta de resumen diario colapsada a: línea 1 «Limpieza: 3 de la semana pasada»; línea 2 botones «Hacer una (20 min)» y «Omitir semana». «Esta semana», «Ver historial» y «Ver estadísticas» pasan al menú contextual (long-press/«…» de la tarjeta). Tareas de hoy quedan visibles debajo sin scroll.",
+  "surfaces": [
+   "Today + daily summary"
+  ],
+  "visible": "Sección, periodo, conteo y 2 botones",
+  "discreet": "Fecha y saludo como subtítulo pequeño",
+  "editing": "Historial y estadísticas en menú de la tarjeta",
+  "evidence": "Widgets de iOS: un hecho + una acción; reduce la tarjeta de ~1200px a ~120px",
+  "risk": "Ocultar «Ver historial» lo hace menos descubrible",
+  "verification": "En móvil, Hoy muestra la tarea «Enviar el informe trimestral» sin scroll; tarjeta ≤160px"
+ },
+ {
+  "id": "a006",
+  "perspective": "Persona con poca energía/TDAH, sensible a la culpa",
+  "title": "Una única «Siguiente tarea» destacada en Hoy",
+  "mechanism": "Encabezado de Hoy con una sola tarjeta 'Ahora' que propone la tarea más pequeña entre vencidas/hoy (ordenada por duración asc., desempate por prioridad), con botones «Hecho» y «Otra». El resto de la lista sigue debajo, sin cambios. «Otra» rota sin registrar nada.",
+  "surfaces": [
+   "Today + daily summary",
+   "task rows"
+  ],
+  "visible": "Una tarea, su duración, «Hecho»",
+  "discreet": "«Otra» como botón de texto",
+  "editing": "Criterio de selección no configurable; se puede fijar una tarea manualmente desde su menú",
+  "evidence": "Things 'Today' + reducción de carga cognitiva; Apple Focus muestra lo relevante",
+  "risk": "Puede proponer siempre tareas triviales; mostrar duración ayuda a elegir",
+  "verification": "Con datos sembrados, Hoy muestra «Regar las plantas» o la más corta; «Otra» cambia sin side-effects en BD"
+ },
+ {
+  "id": "a007",
+  "perspective": "Persona con poca energía/TDAH, sensible a la culpa",
+  "title": "Lenguaje neutro: sustituir «sin marcar»/«omitidas» por hechos sin juicio",
+  "mechanism": "Copia: «La semana pasada: 3 de Limpieza quedaron abiertas» → «Limpieza · semana pasada: 3 abiertas». Eliminar «¿Te apetece…? Basta con una.» Usar «Cerrar esa semana» en lugar de «Omitir período». Centralizar strings en constants/copy.ts.",
+  "surfaces": [
+   "Today + daily summary",
+   "statistics"
+  ],
+  "visible": "Sección · periodo: N abiertas",
+  "discreet": "Nada",
+  "editing": "Nada",
+  "evidence": "Brief: sin mensajes culpabilizadores; HIG Writing: lenguaje directo y breve (https://developer.apple.com/design/human-interface-guidelines/writing)",
+  "risk": "«Cerrar» puede leerse como completar; acompañar con confirmación en toast",
+  "verification": "Grep de la UI renderizada: no aparecen «Basta con una», «sin marcar», «omitidas por ti»"
+ },
+ {
+  "id": "a008",
+  "perspective": "Persona con poca energía/TDAH, sensible a la culpa",
+  "title": "Racha sin castigo: sustituir «Racha actual» por «Días con algo hecho este mes»",
+  "mechanism": "En Estadísticas, la KPI de racha pasa a un contador positivo acumulativo del mes (días con ≥1 completada / días transcurridos), con mini-calendario de puntos. No se muestra récord ni pérdida de racha.",
+  "surfaces": [
+   "statistics"
+  ],
+  "visible": "«9 días con algo hecho en octubre»",
+  "discreet": "Puntos del calendario en gris para días sin actividad (no rojo)",
+  "editing": "Nada",
+  "evidence": "Anillos de Actividad de Apple cuentan días cerrados sin reproche; evita efecto 'racha rota'",
+  "risk": "Pierde el dato de racha que alguien podría valorar; dejarlo en historial",
+  "verification": "Ver Estadísticas: no aparece la palabra «Racha»; puntos sin rojo"
+ },
+ {
+  "id": "a009",
+  "perspective": "Persona con poca energía/TDAH, sensible a la culpa",
+  "title": "Ocultar las diarias pasadas: periodos diarios cerrados nunca se acumulan en Hoy",
+  "mechanism": "En Hoy y en la vista Diaria, las tareas diarias de días anteriores no completadas no aparecen como vencidas ni suman al contador de la cabecera; solo cuentan en Estadísticas como inferidas. El contador grande de Hoy muestra solo pendientes de hoy.",
+  "surfaces": [
+   "Today + daily summary",
+   "frequency views",
+   "page headers"
+  ],
+  "visible": "Pendientes de hoy",
+  "discreet": "Nada de ayer",
+  "editing": "Nada",
+  "evidence": "Brief: el periodo actual pendiente nunca cuenta como omitido; lo pasado no debe saturar",
+  "risk": "Usuarios que querían recuperar diarias pierden el recordatorio; disponible en Estadísticas",
+  "verification": "Dejar una diaria sin hacer ayer (mock fecha): hoy no hay acumulado ni rojo"
+ },
+ {
+  "id": "a010",
+  "perspective": "Persona con poca energía/TDAH, sensible a la culpa",
+  "title": "Modo foco a pantalla completa con temporizador y un solo botón",
+  "mechanism": "Al pulsar «Empezar» en cualquier tarea (swipe derecha o menú) se abre ZenMode reducido: título grande, cuenta atrás de su duración (cifras tabulares), botón «Hecho» de 64px y «Salir». Subtareas como checklist si las hay. Respeta reduced motion (sin anillo animado).",
+  "surfaces": [
+   "task rows",
+   "menus"
+  ],
+  "visible": "Título, tiempo restante, «Hecho»",
+  "discreet": "Subtareas si existen",
+  "editing": "Duración se edita en el editor",
+  "evidence": "Apple Timer/Live Activity: una tarea, un tiempo",
+  "risk": "Duplica ListSequenceMode; unificar ambos en el mismo componente",
+  "verification": "Iniciar foco en «Limpiar espejos»: solo 3 controles en pantalla; Esc sale"
+ },
+ {
+  "id": "a011",
+  "perspective": "Oficinista con tareas fechadas en escritorio y teclado",
+  "title": "Atajos de teclado globales y paleta de comandos",
+  "mechanism": "Teclas: N nueva tarea (enfoca QuickAddBar), J/K mover foco por filas, Espacio completar, Enter abrir editor, E/⌘D cambiar fecha, ⌘K Spotlight. Hoja de atajos con «?». roving tabindex en la lista.",
+  "surfaces": [
+   "task rows",
+   "menus",
+   "task editor"
+  ],
+  "visible": "Anillo de foco en la fila activa",
+  "discreet": "Hoja de atajos con «?»",
+  "editing": "Ninguno",
+  "evidence": "Atajos de Recordatorios en macOS (⌘N, ⌘⏎) y menús con equivalentes de teclado",
+  "risk": "Conflictos con inputs; desactivar cuando el foco está en campo de texto",
+  "verification": "Solo con teclado: crear, completar y reprogramar 3 tareas sin ratón"
+ },
+ {
+  "id": "a012",
+  "perspective": "Oficinista con tareas fechadas en escritorio y teclado",
+  "title": "Agrupar Trabajo por fecha: Vencidas / Hoy / Esta semana / Más tarde",
+  "mechanism": "En listas sin secciones y con fechas, opción de vista (en «…» > Agrupar por fecha) que crea cabeceras de grupo virtuales. La fecha se elimina de la fila si coincide con su grupo (solo hora si existe).",
+  "surfaces": [
+   "list views",
+   "section headers",
+   "task rows",
+   "menus"
+  ],
+  "visible": "Grupos con conteo",
+  "discreet": "Hora dentro de la fila",
+  "editing": "Preferencia de agrupación por lista",
+  "evidence": "Recordatorios macOS: Programados agrupados por día",
+  "risk": "Mezcla con secciones reales; solo ofrecer cuando la lista no tiene secciones",
+  "verification": "Activar en Trabajo: «Revisar el contrato» bajo «Vencidas», sin «10 oct» en la fila"
+ },
+ {
+  "id": "a013",
+  "perspective": "Oficinista con tareas fechadas en escritorio y teclado",
+  "title": "Inspector lateral en escritorio en lugar de drawer modal",
+  "mechanism": "≥1024px: el editor de tarea se abre como panel derecho de 360px no modal (la lista sigue interactiva); cambiar de fila con J/K actualiza el inspector. Campos en orden: título, notas, fecha/hora, repetición, duración, lista/sección, prioridad, subtareas. Esc cierra.",
+  "surfaces": [
+   "task editor"
+  ],
+  "visible": "Título y fecha editables al instante",
+  "discreet": "Campos poco usados agrupados al final sin desplegables, en filas de 44px",
+  "editing": "Todo el detalle",
+  "evidence": "Inspector de macOS Recordatorios (panel de info) y HIG Inspectors (https://developer.apple.com/design/human-interface-guidelines/inspectors)",
+  "risk": "Reduce el ancho de lista a ~600px en 1280",
+  "verification": "En d-v-list_trabajo abrir una tarea: la lista permanece visible y navegable"
+ },
+ {
+  "id": "a014",
+  "perspective": "Oficinista con tareas fechadas en escritorio y teclado",
+  "title": "Reprogramar en línea con chip de fecha accionable",
+  "mechanism": "El dato de fecha de la fila es un botón (≥44px de hit area con padding invisible) que abre un popover con Hoy/Mañana/Próximo lunes/Elegir fecha. Las vencidas muestran el chip en rojo; el resto en gris.",
+  "surfaces": [
+   "task rows"
+  ],
+  "visible": "Chip de fecha",
+  "discreet": "Color rojo solo si vencida",
+  "editing": "Hora y repetición siguen en el editor",
+  "evidence": "Menú de fecha rápido de Recordatorios macOS (clic derecho > Fecha)",
+  "risk": "Hit areas solapadas con el título; separar con columna fija",
+  "verification": "Clic en «10 oct» → «Mañana»: la fila se actualiza sin abrir editor"
+ },
+ {
+  "id": "a015",
+  "perspective": "Oficinista con tareas fechadas en escritorio y teclado",
+  "title": "Barra de selección múltiple con ⇧/⌘ clic y acciones agrupadas",
+  "mechanism": "Selección con ⌘-clic/⇧-clic o ⇧J/K; aparece BatchTaskActionsBar flotante (glass) con Completar, Fecha, Mover, Prioridad, Eliminar. Elimina del menú de sección «Marcar completadas (6)» y «Marcar todas como hechas» duplicados: queda un único «Completar todas (6)».",
+  "surfaces": [
+   "task rows",
+   "menus",
+   "section headers"
+  ],
+  "visible": "Contador «3 seleccionadas» y 5 acciones",
+  "discreet": "Atajos en tooltips",
+  "editing": "Ninguno",
+  "evidence": "Selección múltiple de Finder/Recordatorios macOS",
+  "risk": "Selección accidental en táctil; solo con modificadores o modo «Editar»",
+  "verification": "⇧-clic 3 filas en Trabajo → Fecha → Mañana; menú de sección muestra una sola opción de completar"
+ },
+ {
+  "id": "a016",
+  "perspective": "Planificador/a del domingo que revisa lo saltado",
+  "title": "Revisión del domingo: hoja con secciones de la semana pasada y decisión por sección",
+  "mechanism": "WeeklyReviewModal reorganizado como lista: cada sección con periodo cerrado incompleto en una fila «Limpieza · 3 abiertas» con control segmentado [Pasar a esta semana | Cerrar semana]. Botón final «Listo». Cerrar limpieza no toca compras ni el periodo actual (operación por sectionId+periodKey).",
+  "surfaces": [
+   "Today + daily summary",
+   "menus"
+  ],
+  "visible": "Filas por sección con su decisión",
+  "discreet": "Nombres de tareas al expandir la fila",
+  "editing": "Nada",
+  "evidence": "Revisión semanal estilo GTD; segmented control de HIG (https://developer.apple.com/design/human-interface-guidelines/segmented-controls)",
+  "risk": "Aplicar a todo en lote puede sorprender; confirmar con resumen y deshacer",
+  "verification": "Cerrar Limpieza semana 41: Compras semana 41 sigue abierta; semana 42 intacta"
+ },
+ {
+  "id": "a017",
+  "perspective": "Planificador/a del domingo que revisa lo saltado",
+  "title": "Navegador de periodo compacto en la barra de título",
+  "mechanism": "Vista Semanal: título «Semana 42» con flechas ‹ › de 44px al lado y subtítulo «12–18 oct · 0 de 13» en tabular. Se eliminan la píldora a todo ancho, la pastilla «0 de 13 hechas (i)» y el separador. El conmutador «Sin diarias» pasa al menú «…» de la vista como opción con check.",
+  "surfaces": [
+   "frequency views",
+   "page headers",
+   "menus"
+  ],
+  "visible": "Periodo y progreso",
+  "discreet": "Rango de fechas en gris",
+  "editing": "Filtro «Sin diarias» en menú",
+  "evidence": "Calendario iOS: mes en título con flechas compactas",
+  "risk": "Menos visible el filtro de diarias",
+  "verification": "Vista Semanal: primera sección empieza a ≤180px del top en móvil"
+ },
+ {
+  "id": "a018",
+  "perspective": "Planificador/a del domingo que revisa lo saltado",
+  "title": "Rejilla de periodos con dos tonos: omitidas por ti vs. cerradas abiertas",
+  "mechanism": "Celdas de Estadísticas muestran barra apilada horizontal: hechas (color sección), omitidas explícitas (gris rayado), inferidas (contorno sin relleno) y la cifra «3/6». Leyenda única arriba; la nota explicativa larga se elimina. El periodo actual muestra «en curso» y nunca omitidas.",
+  "surfaces": [
+   "statistics"
+  ],
+  "visible": "Barras y fracción",
+  "discreet": "Leyenda de 3 claves",
+  "editing": "Nada",
+  "evidence": "Gráficos de Salud de Apple: pocas categorías, leyenda breve",
+  "risk": "Rayado poco accesible; añadir texto aria y patrón además de color",
+  "verification": "Semana 5–11 oct: muestra hechas 3, inferidas 3 diferenciadas; 12–18 oct «en curso»"
+ },
+ {
+  "id": "a019",
+  "perspective": "Planificador/a del domingo que revisa lo saltado",
+  "title": "Estadísticas filtradas por chips de sección y frecuencia en vez de select y fecha nativa",
+  "mechanism": "Sustituir select «Todas las secciones» y date input por: control segmentado de frecuencia (ya existe) + fila de chips horizontales con las secciones reales (Limpieza, Compras, Cocina…) multiselección + navegador ‹ › de rango. Elimina las 4 KPI contradictorias; el encabezado resume el rango visible «Últimas 8 semanas: 19 hechas · 4 cerradas por ti · 21 abiertas».",
+  "surfaces": [
+   "statistics"
+  ],
+  "visible": "Frecuencia, chips, resumen del rango",
+  "discreet": "Totales históricos en pie",
+  "editing": "Nada",
+  "evidence": "Filtros tipo chip de Fotos/Música; coherencia de una sola fuente de verdad",
+  "risk": "Muchas secciones desbordan; scroll horizontal con fade",
+  "verification": "Seleccionar chip Compras: rejilla y resumen cambian coherentes; no hay KPI 85% contradictorio"
+ },
+ {
+  "id": "a020",
+  "perspective": "Planificador/a del domingo que revisa lo saltado",
+  "title": "Del historial a la acción: tocar una celda abre las tareas de ese periodo",
+  "mechanism": "Cada celda de periodo es un botón que abre una hoja con las tareas de ese periodo agrupadas por sección y estado, con acciones por sección: «Pasar a este periodo» y «Cerrar periodo» (si inferido). Reemplaza los <details> «0 hechas · 0 omitidas por ti · 4 pendientes».",
+  "surfaces": [
+   "statistics",
+   "menus"
+  ],
+  "visible": "Lista de tareas del periodo",
+  "discreet": "Estado como glifo",
+  "editing": "Nada",
+  "evidence": "Salud: tocar barra muestra detalle del día",
+  "risk": "Acciones sobre el pasado pueden sorprender; requiere deshacer",
+  "verification": "Clic en 5–11 oct → hoja con 3 abiertas de Limpieza y botón Cerrar"
+ },
+ {
+  "id": "a021",
+  "perspective": "Persona mayor con texto grande y toques imprecisos",
+  "title": "Escala de texto dinámica que reflowea la fila en vez de truncar",
+  "mechanism": "Usar rem en toda la UI y respetar el tamaño de fuente del sistema; preferencia «Texto más grande» (1.0/1.15/1.3) en ajustes que cambia --font-scale. A escalas ≥1.15 la meta pasa a línea propia y los números no se truncan; cabeceras bajan a 1 columna.",
+  "surfaces": [
+   "task rows",
+   "section headers",
+   "page headers"
+  ],
+  "visible": "Texto más grande con mismo contenido",
+  "discreet": "Nada",
+  "editing": "Ajuste en preferencias",
+  "evidence": "Dynamic Type de HIG (https://developer.apple.com/design/human-interface-guidelines/typography)",
+  "risk": "Menos tareas en pantalla",
+  "verification": "Zoom del navegador 200% y escala 1.3: sin scroll horizontal ni texto cortado"
+ },
+ {
+  "id": "a022",
+  "perspective": "Persona mayor con texto grande y toques imprecisos",
+  "title": "Círculo de completar con área de 56px y confirmación por deshacer",
+  "mechanism": "El círculo visual 26px dentro de un botón de 56×56 que ocupa toda la columna izquierda de la fila; separación ≥8px de otros controles. Al completar aparece toast «Hecho · Deshacer» 6 s grande, en lugar de diálogo.",
+  "surfaces": [
+   "task rows"
+  ],
+  "visible": "Círculo",
+  "discreet": "Toast de deshacer",
+  "editing": "Nada",
+  "evidence": "HIG: hit targets ≥44pt; deshacer preferible a confirmación",
+  "risk": "Filas un poco más altas en escala mayor",
+  "verification": "Con DevTools: el área clicable del círculo ≥56px y no solapa con el título"
+ },
+ {
+  "id": "a023",
+  "perspective": "Persona mayor con texto grande y toques imprecisos",
+  "title": "Menú de sección simplificado en dos grupos con etiquetas grandes",
+  "mechanism": "Menú «…» de sección: grupo 1 «Empezar», «Añadir tarea», «Completar todas (6)»; grupo 2 «Ordenar», «Mover tareas a…», «Renombrar», «Duplicar», «Añadir subsección», «Mover arriba/abajo»; grupo 3 destructivo «Vaciar», «Eliminar» con confirmación. Filas de 48px, sin botones Subir/Bajar como pastillas superiores.",
+  "surfaces": [
+   "menus",
+   "section headers"
+  ],
+  "visible": "Primer grupo de acciones",
+  "discreet": "Destructivas al final en rojo",
+  "editing": "Ninguno (todas las funciones se conservan)",
+  "evidence": "HIG Menus: agrupar, destructivas al final (https://developer.apple.com/design/human-interface-guidelines/menus)",
+  "risk": "Mover arriba/abajo menos inmediato",
+  "verification": "Abrir menú de Limpieza: no hay duplicado de completar; todas las funciones presentes"
+ },
+ {
+  "id": "a024",
+  "perspective": "Persona mayor con texto grande y toques imprecisos",
+  "title": "Editor de tarea con pasos verticales en lenguaje claro",
+  "mechanism": "Drawer móvil como hoja a pantalla completa con filas tipo Ajustes: «Cuándo», «Se repite», «Cuánto dura», «Lista», «Importancia», cada fila 52px con valor actual a la derecha y una subpantalla con opciones grandes (botones, no selects nativos ni ruedas pequeñas). Botón «Guardar» fijo abajo de 52px.",
+  "surfaces": [
+   "task editor"
+  ],
+  "visible": "Título y las 5 filas con su valor",
+  "discreet": "Notas y subtareas debajo",
+  "editing": "Toda la configuración",
+  "evidence": "Ajustes de iOS y la pantalla Detalles de Recordatorios",
+  "risk": "Más niveles de navegación",
+  "verification": "Con teclado/lector: cada fila tiene etiqueta y valor anunciados; nada <44px"
+ },
+ {
+  "id": "a025",
+  "perspective": "Persona mayor con texto grande y toques imprecisos",
+  "title": "Contraste y prioridad legible: «!!!» sustituido por etiqueta textual",
+  "mechanism": "La prioridad deja de ser «!!!» rojo pegado al título: se muestra como etiqueta «Urgente» o «Alta» en la línea secundaria con contraste AA y forma (icono flag); la bandera naranja se mantiene. Colores de títulos de lista oscurecidos para AA (Casa marrón ≥4.5:1).",
+  "surfaces": [
+   "task rows",
+   "page headers"
+  ],
+  "visible": "Etiqueta «Urgente» en texto",
+  "discreet": "«Alta» en gris",
+  "editing": "Nivel de prioridad en el editor",
+  "evidence": "WCAG 1.4.3 y 1.4.1 (no solo color)",
+  "risk": "Ocupa más espacio que «!!!»",
+  "verification": "Auditar con Lighthouse: contraste sin errores en Casa y Trabajo"
+ },
+ {
+  "id": "b001",
+  "perspective": "integridad de datos",
+  "title": "Una sola definición de «Esta semana»: la semana natural de rutinas, igual que la rejilla",
+  "mechanism": "BUG: la tarjeta KPI «Esta semana 85 %» usa stats.weeklySuccess(): ventana móvil de 7 días, numerador = TODAS las marcas (incluye cada repetición de diarias y tareas sueltas) y denominador = marcas + tareas con fecha vencida; las rutinas sin dueDate nunca cuentan como no hechas. La rejilla usa calculateRoutinePeriod (semana natural lun–dom, rutinas semanales, 0/13). Sustituir la tarjeta por un valor derivado de calculateRoutinePeriod('week', hoy) y renombrar la métrica móvil a «Últimos 7 días · 11 marcas» dentro del gráfico de actividad (que ya es de 7 días). Regla: ninguna cifra con el nombre de un periodo puede calcularse con otra ventana.",
+  "surfaces": [
+   "ANALYTICS KPI",
+   "RoutineAnalytics rejilla",
+   "stats.ts weeklySuccess"
+  ],
+  "visible": "«Semana 12–18 oct: 0 de 13 hechas» idéntico a la celda seleccionada de la rejilla",
+  "discreet": "«Últimos 7 días: 11 marcas» como pie del gráfico de actividad, sin porcentaje",
+  "editing": "—",
+  "evidence": "Apple Fitness/Salud: cada cifra lleva su intervalo explícito (Hoy, Semana, Mes) y la misma cifra en resumen y detalle; Health muestra «Promedio diario» ligado al rango elegido.",
+  "risk": "Usuarios acostumbrados al 85 % verán una caída aparente; se mitiga porque el número ahora coincide con lo que ven en Semanal.",
+  "verification": "Sembrar datos, abrir Estadísticas: el valor de la tarjeta semanal == texto de la celda 12–18 oct y == pastilla «0 de 13 hechas» de la vista Semanal."
+ },
+ {
+  "id": "b002",
+  "perspective": "integridad de datos",
+  "title": "Las subtareas no son rutinas independientes en los recuentos",
+  "mechanism": "BUG: calculateRoutinePeriod recorre todas las tareas sin filtrar parentId, así que «Limpiar espejos» + 3 espejos suman 4 rutinas (0/13 frente a 7 tareas raíz en Quehaceres). «Omitir sección» además escribe skipHistory en cada subtarea. Contar solo tareas raíz (task.parentId vacío o padre borrado); la tarea con subtareas se considera hecha cuando su marca existe; el progreso de subtareas aparece como fracción en la fila del detalle («2/3 espejos»), no en el total del periodo.",
+  "surfaces": [
+   "routineAnalytics.ts",
+   "CycleRoutineStatusCard",
+   "ANALYTICS rejilla",
+   "resumen diario"
+  ],
+  "visible": "Totales por periodo sobre tareas raíz",
+  "discreet": "Fracción de subtareas junto a la tarea en el detalle de la sección",
+  "editing": "—",
+  "evidence": "Recordatorios de Apple: las subtareas se muestran como recuento del padre («3 subtareas»), no inflan el número de la lista.",
+  "risk": "Rutinas en las que el usuario marca solo subtareas quedarían como no hechas; regla: si todas las subtareas están marcadas en el periodo, el padre cuenta como hecho.",
+  "verification": "Crear rutina semanal con 3 subtareas: el total del periodo sube en 1, no en 4; omitir la sección no añade skipHistory a las subtareas (inspeccionar store)."
+ },
+ {
+  "id": "b003",
+  "perspective": "integridad de datos",
+  "title": "Cuatro estados con nombre y color fijos en todas las superficies",
+  "mechanism": "Tras el cambio a missed/skipped, la UI sigue mezclándolos: la nota dice «aparecen como omitidas automáticamente», la cabecera «lo que decidiste saltarte», la celda solo pinta `counts.skipped` y el punto diario solo skipped. Definir un vocabulario único en un módulo statusCopy.ts: Hecha (verde, check), Omitida por ti (gris, flecha de salto), Sin marcar (contorno discontinuo, sin color de error) — solo periodos cerrados, Pendiente (sin marca, solo periodo actual). Toda superficie (celda, detalle, resumen, export Markdown, aria-label) importa de ahí. Eliminar la palabra «omitidas» para las inferidas.",
+  "surfaces": [
+   "RoutineAnalytics",
+   "RoutineRecovery",
+   "generatePerformanceReportMarkdown",
+   "CycleRoutineStatusCard"
+  ],
+  "visible": "Icono+palabra de estado por tarea en el detalle",
+  "discreet": "Leyenda de 4 estados en una línea bajo la rejilla, sustituyendo la nota larga",
+  "editing": "—",
+  "evidence": "Apple HIG: usar el mismo término para el mismo concepto en toda la app; Actividad usa siempre los mismos tres colores de anillo.",
+  "risk": "Ninguno funcional; requiere revisar tests de texto.",
+  "verification": "Buscar en el DOM de Estadísticas y Hoy «omitidas automáticamente»: 0 resultados; un periodo con 3 missed y 0 skipped muestra «3 sin marcar» en la celda."
+ },
+ {
+  "id": "b004",
+  "perspective": "integridad de datos",
+  "title": "Celda de periodo con la ecuación completa: hechas / omitidas / sin marcar",
+  "mechanism": "BUG: la celda muestra `completed/total` y su pie solo `skipped` («hechas» si no hay explícitas), así que una semana cerrada con 3 sin marcar se lee «3/6 hechas». Reemplazar el pie por una barra segmentada de 4 tramos (hechas, omitidas por ti, sin marcar, pendientes) cuyo ancho suma total-unknown, con cifra principal «3 de 6» y aria-label con countsText. Excluir unknown del denominador (hoy está en total: 0/6 puede ser 0 de 2 conocidas).",
+  "surfaces": [
+   "ANALYTICS rejilla de periodos"
+  ],
+  "visible": "«3 de 6» + barra segmentada",
+  "discreet": "Leyenda única debajo; desglose en el aria-label/tooltip",
+  "editing": "—",
+  "evidence": "Pantalla Tiempo de uso / Almacenamiento de iOS: barra apilada por categorías con leyenda, la suma es visible de un vistazo.",
+  "risk": "Barras muy finas en móvil; tramo mínimo 2px y nunca color como única señal (patrón discontinuo para sin marcar).",
+  "verification": "Periodo con 3 completed, 3 missed: celda «3 de 6», barra 50/50, ningún texto «hechas» engañoso; con 2 unknown, denominador baja a 4."
+ },
+ {
+  "id": "b005",
+  "perspective": "integridad de datos",
+  "title": "El periodo actual nunca muestra fracción de fracaso: muestra «en curso»",
+  "mechanism": "La celda del periodo actual (12–18 oct, 0/13) se pinta igual que las cerradas y parece un 0 %. Marcar la celda actual con estado «en curso»: cifra «0 de 13» + texto «quedan 6 días» (calculado de period.end - now) y barra solo con hechas/omitidas; pendientes en contorno neutro. Las celdas futuras se ocultan (hoy getRoutinePeriods mensual lista los 12 meses del año, incluidos futuros «—»).",
+  "surfaces": [
+   "ANALYTICS rejilla",
+   "vista Semanal pastilla"
+  ],
+  "visible": "«0 de 13 · quedan 6 días» en la celda actual",
+  "discreet": "Celdas futuras ausentes o con guion muy atenuado",
+  "editing": "—",
+  "evidence": "Anillos de Actividad: el día en curso se muestra como progreso, nunca como fallo hasta que cierra.",
+  "risk": "Ninguno; cambia percepción de la rejilla mensual (menos celdas).",
+  "verification": "En Mensuales a 12-oct: noviembre/diciembre no aparecen; la celda de octubre dice «quedan 19 días»."
+ },
+ {
+  "id": "b006",
+  "perspective": "arquitectura de información",
+  "title": "Sustituir las 4 tarjetas KPI por una fila de 3 que responden a una pregunta cada una",
+  "mechanism": "Hoy: Racha (cualquier marca), Esta semana (ventana móvil), Frecuencias al día (todas las frecuencias en su periodo vivo, sin created_at, legacy status), Total histórico (marcas vs «35 pendiente activas»). Mezclan unidades y ventanas. Nueva fila: (1) «Periodo actual» = suma de calculateRoutinePeriod de cada frecuencia en su periodo vivo «18 de 37 rutinas al día», (2) «Último periodo cerrado» con hechas/omitidas/sin marcar, (3) «Racha» con su definición en el subtítulo («días con al menos una marca»). «Total histórico» pasa al informe exportado.",
+  "surfaces": [
+   "ANALYTICS cabecera"
+  ],
+  "visible": "3 tarjetas con cifras tabulares y una etiqueta de intervalo cada una",
+  "discreet": "Subtítulo de una línea por tarjeta",
+  "editing": "Total histórico → Exportar informe",
+  "evidence": "App Salud: la pantalla Resumen muestra pocas métricas destacadas, cada una con fecha/intervalo; el histórico completo está en «Mostrar todos los datos».",
+  "risk": "Perder «Total histórico» visible; queda en el informe y en el pie.",
+  "verification": "Ninguna tarjeta usa una función de stats.ts distinta de routineAnalytics para cifras de rutinas (grep de imports); los números cuadran con la rejilla."
+ },
+ {
+  "id": "b007",
+  "perspective": "integridad de datos",
+  "title": "«Frecuencias al día» corregida: respeta created_at, ciclos personalizados y estado inferido",
+  "mechanism": "BUG en calculateCyclesBreakdown: (a) no filtra tareas creadas después del periodo de referencia; (b) ignora ciclos personalizados (target null), mientras getEffectiveCycleId puede devolverlos; (c) para periodos pasados cuenta como «pending» lo que debería ser missed; (d) el fallback `status==='completed'` sin fecha marca hechas en cualquier periodo; (e) la etiqueta «0 de 24 periódicas al día» suma diarias+semanales+mensuales+anuales sin decirlo. Reescribirla como envoltorio de calculateRoutinePeriod por frecuencia (una sola fuente), y añadir un grupo «Ciclos personalizados» si existen.",
+  "surfaces": [
+   "stats.ts calculateCyclesBreakdown",
+   "ANALYTICS",
+   "informe exportado"
+  ],
+  "visible": "Desglose por frecuencia con los mismos números que las pestañas",
+  "discreet": "Ciclos personalizados como quinta fila solo si existen",
+  "editing": "—",
+  "evidence": "Principio de una sola fuente de verdad; el propio comentario de DailyBriefingService lo persigue.",
+  "risk": "Tests existentes de stats pueden depender del comportamiento legacy; actualizar fixtures.",
+  "verification": "Test unitario: misma entrada → calculateCyclesBreakdown.weekly.completed === calculateRoutinePeriod('week').completed; tarea creada mañana no aparece hoy."
+ },
+ {
+  "id": "b008",
+  "perspective": "arquitectura de información",
+  "title": "Estadísticas organizadas por eje: Frecuencia arriba, Lista/Sección como filas, no como select",
+  "mechanism": "Sustituir el <select> «Lista y sección» (lista plana larga, incluye grupos de otras frecuencias) por filas de sección dentro de la frecuencia elegida: cada fila «Casa · Limpieza» lleva una mini-tira de los últimos 8 periodos (puntos por estado) y su fracción del periodo seleccionado. Tocar una fila filtra la rejilla grande. Agrupar filas por lista real con su color/icono (Limpieza, Compras, categorías del usuario).",
+  "surfaces": [
+   "ANALYTICS",
+   "RoutineAnalytics"
+  ],
+  "visible": "Filas de sección con tira de 8 periodos",
+  "discreet": "Color de lista como punto de 8px, no fondo",
+  "editing": "—",
+  "evidence": "Salud › Tendencias / Fitness › Historial: filas por categoría con mini-sparkline, tocar abre el detalle.",
+  "risk": "Muchas secciones → lista larga; ordenar por secciones con sin marcar primero y mostrar 6 con «Mostrar todas».",
+  "verification": "Elegir Semanales: aparecen solo secciones con rutinas semanales; tocar «Casa · Limpieza» resalta su fila y la rejilla muestra solo sus datos; Escape/segundo toque vuelve a todas."
+ },
+ {
+  "id": "b009",
+  "perspective": "producto",
+  "title": "Navegación de periodos sin selector de fecha nativo",
+  "mechanism": "El input type=date muestra «10/12/2026» con formato del navegador (en-US) en una app en español: se lee 10 de diciembre. Para Semanales basta un control segmentado ‹ «12–18 oct» › y botón «Hoy» solo visible si no estás en el periodo actual (hoy siempre visible). Mantener el selector de fecha como acción secundaria dentro del título del periodo (tocar el título abre un popover de calendario con locale es-ES).",
+  "surfaces": [
+   "ANALYTICS toolbar"
+  ],
+  "visible": "‹ 12–18 oct › y «Hoy» cuando no estás en el actual",
+  "discreet": "Popover de calendario al tocar el título",
+  "editing": "—",
+  "evidence": "Calendario de iOS: navegación por chevrons y botón «Hoy» que aparece contextual; nada de campos de fecha crudos en vistas de consulta.",
+  "risk": "Saltos largos (un año atrás) más lentos; el popover lo cubre.",
+  "verification": "Con navegador en en-US, no aparece «10/12/2026» en ningún lugar; teclado: ← → mueven el periodo con foco visible."
+ },
+ {
+  "id": "b010",
+  "perspective": "producto",
+  "title": "Resumen diario: una tarjeta por sección con UNA acción primaria y dos secundarias compactas",
+  "mechanism": "Hoy cada grupo tiene 4 botones de igual peso + «Ver estadísticas». Reestructurar RoutineRecovery: titular «Casa · Limpieza — semana pasada: 3 sin marcar», acción primaria «Empezar: Aspirar el salón · 20 min» (marca/abre esa tarea en contexto), menú «…» con «Omitir esa semana» (alcance escrito en el ítem) y «Ver historial». Quitar «Esta semana» (navega a la lista entera, no a la semana: duplicado de tocar el titular). El titular es un enlace a la sección.",
+  "surfaces": [
+   "DailyBriefingBanner",
+   "DailyGreetingModal",
+   "RoutineRecovery.tsx"
+  ],
+  "visible": "Titular + 1 botón primario con la tarea concreta",
+  "discreet": "«…» con omitir/historial",
+  "editing": "—",
+  "evidence": "Sugerencias de Fotos/Salud: una tarjeta, una acción principal, el resto en menú contextual.",
+  "risk": "Omitir queda a un toque más; aceptable porque es destructivo respecto al historial.",
+  "verification": "En m-v-smart_today cada grupo ocupa ≤ 120px, las tareas de Hoy son visibles sin scroll; todos los botones ≥44px."
+ },
+ {
+  "id": "b011",
+  "perspective": "integridad de datos",
+  "title": "«Omitir período» del resumen debe cubrir exactamente lo que el historial llama sin marcar",
+  "mechanism": "BUG: buildRoutineRecovery solo cuenta como «quedaron N sin marcar» las tareas missed de la semana pasada que SIGUEN pendientes esta semana (`available`). Una tarea sin marcar la semana pasada pero ya hecha esta semana desaparece del aviso, y «Omitir período» no le escribe skip: el historial sigue mostrando ese periodo con sin marcar tras «omitirlo». Separar dos cifras: `missedInPeriod` (todas las missed de sección+periodo, la que se muestra y la que omite el botón, igual que updateSection en Estadísticas) y `resumable` (las pendientes ahora, de donde sale el candidato). El texto usa missedInPeriod; si resumable=0, la tarjeta solo ofrece «Omitir esa semana» o desaparece.",
+  "surfaces": [
+   "routineRecovery.ts",
+   "RoutineRecovery.tsx",
+   "ANALYTICS"
+  ],
+  "visible": "«Semana pasada: 3 sin marcar en Limpieza» igual al detalle de Estadísticas",
+  "discreet": "—",
+  "editing": "—",
+  "evidence": "Coherencia resumen↔detalle: en Salud, un resumen siempre abre a un detalle con la misma cifra.",
+  "risk": "Puede aparecer una tarjeta sin acción de retomar; se oculta si no hay nada retomable y nada que omitir.",
+  "verification": "Semana pasada 3 missed, 1 de ellas hecha hoy: el resumen dice 3; tras «Omitir esa semana» la celda de 5–11 oct muestra 0 sin marcar y 3 omitidas por ti; la tarea hecha esta semana sigue hecha."
+ },
+ {
+  "id": "b012",
+  "perspective": "producto",
+  "title": "Deshacer en el mismo toast, no «en Estadísticas»",
+  "mechanism": "El toast de RoutineRecovery dice «Puedes deshacerlo en Estadísticas», obligando a navegar, buscar periodo y sección y pulsar «Restaurar omitidas» (que restaura TODAS las explícitas del periodo, incluso las previas). Guardar los ids afectados por esa acción y ofrecer «Deshacer» en el toast (6 s, accesible por teclado, aria-live) que llama skipTask(id, true, periodStart) solo para esos ids. Igual para «Omitir sección» en Estadísticas.",
+  "surfaces": [
+   "RoutineRecovery",
+   "RoutineAnalytics",
+   "toast"
+  ],
+  "visible": "Toast «Semana pasada omitida en Limpieza · Deshacer»",
+  "discreet": "—",
+  "editing": "«Restaurar omitidas» sigue en el detalle del periodo para casos tardíos",
+  "evidence": "Patrón iOS de deshacer inmediato (Mail «Deshacer envío», Fotos al borrar) en lugar de remitir a otra pantalla.",
+  "risk": "Toast efímero inaccesible para lectores de pantalla si no se anuncia; usar role=status y foco opcional.",
+  "verification": "Omitir, pulsar Deshacer: skipHistory de esas tareas vuelve a su estado previo; una omisión explícita anterior del mismo periodo no se toca."
+ },
+ {
+  "id": "b013",
+  "perspective": "producto",
+  "title": "Elegir qué secciones aparecen en el resumen con un criterio explícito, y decir cuántas quedan",
+  "mechanism": "BUG: buildRoutineRecovery ordena grupos por nombre de lista (localeCompare) y devuelve `[weekly, monthly]` o `slice(0,2)`: «Casa» siempre gana a «Compras» y el resto se descarta en silencio. Ordenar por menor esfuerzo para retomar (duración del candidato, luego menos tareas restantes) — criterio derivado de la meta de la dueña («empezar por una tarea pequeña»), no de uso inventado — mostrar máximo 2 y una línea «y 2 secciones más» que abre Estadísticas filtradas por las secciones con sin marcar del periodo anterior.",
+  "surfaces": [
+   "routineRecovery.ts",
+   "RoutineRecovery"
+  ],
+  "visible": "Hasta 2 tarjetas de sección",
+  "discreet": "«y N secciones más» en texto secundario",
+  "editing": "—",
+  "evidence": "Sugerencias de Siri/Fotos limitan el número y ofrecen «Mostrar más», nunca ocultan sin indicarlo.",
+  "risk": "Orden cambiante de un día a otro; aceptable porque refleja el estado real.",
+  "verification": "Sembrar 3 secciones semanales con missed: se ven 2 con la tarea más corta primero y «y 1 sección más»; el enlace abre Semanales en la semana anterior."
+ },
+ {
+  "id": "b014",
+  "perspective": "producto",
+  "title": "«Empezar por una» lleva a la tarea en su sección, lista para marcar — no al editor",
+  "mechanism": "RoutineRecovery.onOpenTask abre el drawer de edición (TaskDrawer), igual que «Ver esta tarea» en Estadísticas: para completar, el usuario debe cerrar el editor y buscar la fila. Cambiar a navegación `list_<listId>` con sección desplegada, scroll a la fila del candidato y foco en su círculo de completar (resaltado 1,5 s, sin animación con reduced-motion). Si la sección tiene modo secuencia («Empezar sección»), ofrecerlo como alternativa dentro del «…».",
+  "surfaces": [
+   "RoutineRecovery",
+   "RoutineAnalytics sugerencia",
+   "list view"
+  ],
+  "visible": "Fila de la tarea resaltada con el círculo enfocado",
+  "discreet": "—",
+  "editing": "Editar sigue en el (i) de la fila",
+  "evidence": "Notificaciones de Recordatorios abren la lista con el recordatorio visible para marcarlo, no su hoja de detalles.",
+  "risk": "Si la sección está plegada por preferencia, desplegarla solo temporalmente.",
+  "verification": "Pulsar «Empezar: Aspirar el salón»: URL/vista = list_casa, la fila es visible, document.activeElement es su checkbox; Espacio la completa."
+ },
+ {
+  "id": "b015",
+  "perspective": "arquitectura de información",
+  "title": "Un solo resumen diario: banner en Hoy, el modal solo como entrada a Hoy",
+  "mechanism": "DailyGreetingModal y DailyBriefingBanner renderizan el mismo RoutineRecovery y el mismo titular; el modal añade «Por dónde empezar». Unificar en un componente DailyBriefing con dos densidades. Al abrir la app el primer día, en vez de un modal a pantalla completa con todo el contenido, mostrar una hoja compacta (saludo + titular + botón «Ir a Hoy») solo si el usuario no aterriza en Hoy; en Hoy el banner es la única superficie con acciones. Compartir el estado de descarte (DISMISSED_KEY y daily_briefing_collapsed) para que descartar uno no deje el otro abierto. «Por dónde empezar» se convierte en el orden de la propia lista de Hoy (los 3 focus primero), no en una lista duplicada.",
+  "surfaces": [
+   "DailyGreetingModal",
+   "DailyBriefingBanner",
+   "smart_today"
+  ],
+  "visible": "Banner de Hoy con titular y tarjetas de sección",
+  "discreet": "Hoja de saludo de una línea solo fuera de Hoy",
+  "editing": "Silenciar saludo sigue en ajustes",
+  "evidence": "iOS evita modales para información no bloqueante (HIG Modality: usar modal solo para tareas que requieren atención inmediata).",
+  "risk": "Quien depende del modal como recordatorio diario lo verá menos; la hoja breve lo conserva.",
+  "verification": "Abrir app en Hoy: no aparece modal; abrir en una lista: hoja breve con «Ir a Hoy»; las acciones de recuperación solo existen una vez en el DOM."
+ },
+ {
+  "id": "b016",
+  "perspective": "producto",
+  "title": "En Hoy, las tareas primero: el resumen se comprime a una línea y tarjetas de sección horizontales",
+  "mechanism": "En móvil el banner ocupa los 844 px y las tareas quedan fuera. Estructura: fila 1 «Buenas tardes · 1 para hoy, 6 diarias, 1 vencida» (cifras tabulares, sin frase larga), fila 2 carrusel horizontal de tarjetas de sección (b010) de altura ≤ 96 px, y debajo la lista de Hoy. Quitar «Ver estadísticas» del banner (la ruta existe vía «Ver historial»). Colapsado = solo fila 1.",
+  "surfaces": [
+   "smart_today móvil y escritorio",
+   "DailyBriefingBanner"
+  ],
+  "visible": "Una línea de estado + tarjetas compactas + tareas visibles",
+  "discreet": "Fecha larga en texto secundario",
+  "editing": "—",
+  "evidence": "Pantalla Hoy de Salud/Fitness: resumen arriba en tarjetas compactas, el contenido accionable inmediatamente visible.",
+  "risk": "Carrusel horizontal oculta tarjetas; con máximo 2 tarjetas (b013) caben apiladas en 2 filas compactas en vez de carrusel.",
+  "verification": "En 390×844 la primera tarea de Hoy es visible por encima del pliegue con 2 grupos de recuperación."
+ },
+ {
+  "id": "b017",
+  "perspective": "integridad de datos",
+  "title": "El titular diario clasifica diarias y semanales con la misma regla que Estadísticas",
+  "mechanism": "BUG: DailyBriefingService considera «diaria» cualquier tarea con `targetCount > 1` y mira `t.cycle_id` antes que la frecuencia heredada de la sección; una semanal «3 veces por semana» cuenta como diaria y además como semanal, y una tarea con cycle_id propio dentro de sección semanal se clasifica distinto que en routineAnalytics (getEffectiveCycleId). Usar getEffectiveCycleId en ambos filtros; los hábitos con objetivo se agrupan por su frecuencia efectiva. Test: una tarea nunca aparece en dos grupos.",
+  "surfaces": [
+   "DailyBriefingService.ts",
+   "smart_today titular"
+  ],
+  "visible": "«seis diarias» coincide con la vista Diaria",
+  "discreet": "—",
+  "editing": "—",
+  "evidence": "Una única taxonomía de frecuencia en toda la app.",
+  "risk": "Cambia el número del titular para usuarios con hábitos con objetivo semanal.",
+  "verification": "Tarea semanal con targetCount 3: aparece en pendingWeekly y no en pendingDaily; el número de diarias del titular == contador de la vista Diaria."
+ },
+ {
+  "id": "b018",
+  "perspective": "arquitectura de información",
+  "title": "Vistas de frecuencia: una línea de estado periodo · progreso · tiempo restante",
+  "mechanism": "Cabecera Semanal actual: título, «3 h 18 min», interruptor «Sin diarias», navegador en píldora de ancho completo, pastilla «0 de 13 hechas (i)» y separador = 5 bloques. Nuevo: título «Semanal» con chevrons compactos a su derecha; debajo UNA línea «12–18 oct · 0 de 13 · 3 h 18 min por hacer». El tiempo es siempre el restante de tareas pendientes del periodo (no el total). El contador grande «13» se elimina (repite el 13 de la línea). «Sin diarias» pasa al menú «…» de la vista como opción de filtro con check. Acumuladas (racha de periodos) no aparecen aquí: pertenecen a Estadísticas.",
+  "surfaces": [
+   "cycle_week",
+   "cycle_day",
+   "cycle_month",
+   "CycleRoutineStatusCard"
+  ],
+  "visible": "Título + chevrons + 1 línea de estado",
+  "discreet": "«quedan 6 días» si el periodo es el actual",
+  "editing": "Filtro «Sin diarias» en «…»",
+  "evidence": "Calendario/Recordatorios de iOS: título grande y una sola línea de subtítulo; filtros en el menú de la vista.",
+  "risk": "El interruptor deja de estar a un toque; es un filtro de preferencia, no de uso continuo.",
+  "verification": "En d-v-cycle_week la primera sección empieza por encima de y=300px; «13» aparece una sola vez."
+ },
+ {
+  "id": "b019",
+  "perspective": "producto",
+  "title": "Fusionar «Marcar completadas (6)» y «Marcar todas como hechas» en una sola acción",
+  "mechanism": "SectionContextMenu tiene dos ítems que hacen lo mismo por vías distintas: onToggleAllCompleted («Marcar completadas (n)» / «Desmarcar») y el evento `complete-all-tasks` («Marcar todas como hechas», cuando pendingTaskCount>0). Dejar un único ítem «Completar las 6 pendientes» que usa una sola ruta del store (setSectionTasksCompleted) y se convierte en «Desmarcar las 6» cuando todas están hechas; n = pendientes, no total. En vistas de frecuencia, la acción completa solo el periodo actual.",
+  "surfaces": [
+   "SectionContextMenu",
+   "list_casa",
+   "cycle_week"
+  ],
+  "visible": "Un ítem con recuento de pendientes",
+  "discreet": "—",
+  "editing": "—",
+  "evidence": "HIG Menus: evitar ítems redundantes; los menús de iOS muestran una acción por intención con su opuesto contextual.",
+  "risk": "Si las dos rutas tenían efectos distintos (p. ej. una registra completionHistory y otra no), unificar puede cambiar el historial: verificar y quedarse con la que registra marcas.",
+  "verification": "Abrir menú de Limpieza: un solo ítem de completar; tras usarlo, la rejilla de Estadísticas suma n hechas en el periodo actual, no en otro."
+ },
+ {
+  "id": "b020",
+  "perspective": "producto",
+  "title": "Un solo «Empezar» por ámbito y su recuento en tareas, no en duración",
+  "mechanism": "Hay «Empezar (3 h 45 min)» en la cabecera de lista, «Empezar sección (n)» en el menú de sección y «Empezar por una» en el resumen. Regla: la cabecera de lista ofrece «Empezar» con el número de pendientes («Empezar · 9»); el menú de sección conserva «Empezar sección»; el resumen usa «Empezar: <tarea>» (una sola tarea). La duración total sale del botón y queda solo en la línea de estado (b018), evitando mostrar «3 h 45 min» dos veces en la cabecera.",
+  "surfaces": [
+   "list header",
+   "SectionContextMenu",
+   "RoutineRecovery"
+  ],
+  "visible": "Botón «Empezar · 9»",
+  "discreet": "Duración en la línea de estado de la cabecera",
+  "editing": "—",
+  "evidence": "Botones de iOS con verbo + objeto conciso; la métrica no se repite en el control y en el texto.",
+  "risk": "Usuarios que deciden por tiempo pierden la cifra en el botón; sigue a 1 línea de distancia.",
+  "verification": "En d-v-list_casa «3 h 45 min» aparece una vez; la acción del botón no cambia."
+ },
+ {
+  "id": "b021",
+  "perspective": "integridad de datos",
+  "title": "El primer periodo parcial de una rutina no genera omisión inferida",
+  "mechanism": "calculateRoutinePeriod solo excluye tareas creadas después del fin del periodo: una semanal creada el domingo a las 22:00 aparece como «sin marcar» esa semana. Si created_at cae dentro del periodo (start < created < end) y no hay marca ni skip, status = 'unknown' («nueva») en vez de missed, y no entra en el denominador. Así ninguna inferencia nace de un periodo que el usuario no tuvo entero.",
+  "surfaces": [
+   "routineAnalytics.ts",
+   "RoutineRecovery",
+   "ANALYTICS"
+  ],
+  "visible": "—",
+  "discreet": "Celda muestra el total sin la tarea nueva",
+  "editing": "—",
+  "evidence": "Fitness no penaliza el día de configuración de un objetivo nuevo; las tendencias requieren historial suficiente.",
+  "risk": "Una tarea hecha en su primer periodo sí cuenta (completed tiene prioridad), sesgo optimista menor.",
+  "verification": "Test: rutina semanal creada el sábado sin marcar → semana cerrada con status 'unknown'; creada el lunes anterior → 'missed'."
+ },
+ {
+  "id": "b022",
+  "perspective": "integridad de datos",
+  "title": "Guardar la sección de cada marca a partir de ahora para que el historial no cambie al mover tareas",
+  "mechanism": "La nota admite «El desglose usa las secciones actuales»: mover «Aspirar» de Limpieza a Cocina reescribe meses de historial de ambas secciones. Añadir (retrocompatible) `completionContext?: Record<timestamp, {listId, sectionId}>` y lo mismo para skips al marcar/omitir; calculateRoutinePeriod agrupa por el contexto de la marca si existe y por la sección actual si no (solo para marcas antiguas). La nota desaparece; en el detalle, una tarea movida muestra «ahora en Cocina» en texto secundario.",
+  "surfaces": [
+   "TaskItem modelo",
+   "useAppStore completeTask/skipTask",
+   "routineAnalytics.ts"
+  ],
+  "visible": "Historial estable por sección",
+  "discreet": "«ahora en Cocina» discreto en filas movidas",
+  "editing": "—",
+  "evidence": "Integridad: los registros históricos no deben depender de la organización actual (como Salud conserva la fuente de cada muestra).",
+  "risk": "Crecimiento del documento de tarea; limitar a las últimas N marcas o compactar por periodo.",
+  "verification": "Completar en Limpieza, mover a Cocina, abrir Estadísticas: el periodo pasado sigue contando la marca en Limpieza."
+ },
+ {
+  "id": "b023",
+  "perspective": "producto",
+  "title": "Detalle de sección: solo cifras distintas de cero y acción con alcance escrito",
+  "mechanism": "Cada <details> muestra «0 hechas · 0 omitidas por ti · 4 pendientes» y, dentro, un párrafo «Solo afecta a esta sección…» + «Omitir sección». Mostrar solo estados no nulos con icono de estado (b003). El botón se rotula con su alcance exacto: «Omitir 12–18 oct en Limpieza» y desaparece el párrafo. En el periodo actual el botón omite pendientes solo tras confirmación inline (el periodo actual no se omite por inferencia, solo por decisión explícita).",
+  "surfaces": [
+   "RoutineAnalytics detalle",
+   "informe"
+  ],
+  "visible": "«4 pendientes» o «3 hechas · 1 sin marcar»",
+  "discreet": "Lista de tareas al desplegar",
+  "editing": "—",
+  "evidence": "HIG Writing: el título del botón describe el resultado; los ceros no aportan información.",
+  "risk": "Botones de texto más largos en móvil; permitir dos líneas.",
+  "verification": "Grupo sin hechas ni omitidas: el resumen no contiene «0»; el botón incluye periodo y sección."
+ },
+ {
+  "id": "b024",
+  "perspective": "producto",
+  "title": "Racha por sección que respeta las omisiones explícitas",
+  "mechanism": "La «Racha actual» cuenta días con cualquier marca (incluye tareas sueltas), lo que no dice nada de las rutinas. Añadir a cada fila de sección (b008) «4 semanas seguidas»: periodos consecutivos cerrados sin 'missed'. Una omisión explícita (skipped) NO rompe la racha — la decisión de la persona se respeta — mientras que un periodo con sin marcar sí la corta. La racha global de días se mantiene solo en el gráfico de actividad con su definición.",
+  "surfaces": [
+   "ANALYTICS filas de sección",
+   "calculateCycleStreaks"
+  ],
+  "visible": "«4 sem seguidas» en la fila de sección si ≥2",
+  "discreet": "Récord en el detalle",
+  "editing": "—",
+  "evidence": "Fitness: rachas por métrica concreta; diferenciación: distinguir decisión explícita de omisión inferida es justo lo que pide la dueña.",
+  "risk": "Puede incentivar omitir en vez de hacer; mitigado porque omitida no suma a hechas.",
+  "verification": "Semana con todo omitido explícitamente entre dos completas: racha 3; si en vez de omitir queda sin marcar: racha 1."
+ },
+ {
+  "id": "b025",
+  "perspective": "arquitectura de información",
+  "title": "El informe exportado sale de la misma fuente y la exportación baja al menú «…»",
+  "mechanism": "generatePerformanceReportMarkdown consume weeklySuccess/calculateCyclesBreakdown/totals (las cifras inconsistentes). Generarlo con calculateRoutinePeriod: por frecuencia y sección, columnas Hechas / Omitidas por ti / Sin marcar / Pendientes (periodo actual) y el «Total histórico». El botón «Exportar Informe» (pastilla destacada junto al título) pasa al menú «…» de Estadísticas como «Exportar informe…», ya que no ayuda a elegir ni completar tareas.",
+  "surfaces": [
+   "ANALYTICS cabecera",
+   "stats.ts informe"
+  ],
+  "visible": "—",
+  "discreet": "Ítem «Exportar informe…» en «…»",
+  "editing": "—",
+  "evidence": "Salud › Exportar todos los datos vive en el perfil, no en la cabecera de las gráficas.",
+  "risk": "Menos descubrible; aceptable para una acción ocasional.",
+  "verification": "Exportar y comparar con la pantalla: cada cifra del Markdown coincide con la celda/sección correspondiente; la cabecera solo tiene título y «…»."
+ },
+ {
+  "id": "c001",
+  "perspective": "lector de pantalla",
+  "title": "Fila de tarea como un único elemento de lista con nombre completo y acciones personalizadas",
+  "mechanism": "Envolver las TaskCard de cada sección en <ul role='list'> y cada .task-item-wrapper en <li>. El botón de completar (motion.button.hit-44, hoy aria-label='Completar tarea') pasa a role='checkbox' aria-checked con aria-labelledby apuntando al id del .task-title + aria-describedby a un span sr-only con resumen corto: 'Prioridad alta. Vence hoy. 45 min. 2 subtareas'. Así VoiceOver lee 'Enviar el informe trimestral, casilla, no marcada, Prioridad alta, vence hoy' en un solo foco en vez de 5 paradas sueltas.",
+  "surfaces": [
+   "TaskCard.tsx",
+   "TaskMetaBadges.tsx",
+   "listas",
+   "Hoy",
+   "vistas de ciclo"
+  ],
+  "visible": "Nada cambia visualmente.",
+  "discreet": "El resumen sr-only reutiliza los mismos datos de TaskMetaBadges, en orden fijo: prioridad, vencimiento, duración, subtareas.",
+  "editing": "Ninguno.",
+  "evidence": "Apple Recordatorios en VoiceOver anuncia cada recordatorio como una casilla con su título y fecha en un solo elemento; patrón WAI-ARIA Checkbox (https://www.w3.org/WAI/ARIA/apg/patterns/checkbox/).",
+  "risk": "Duplicar lectura si el título sigue siendo además role=button enfocable; hay que dejar el título como una parada aparte solo para editar.",
+  "verification": "Activar VoiceOver (Safari) o NVDA (Firefox), recorrer con VO+→ la lista Trabajo: cada tarea debe leerse en una parada con estado y metadatos; el rotor 'Listas' debe mostrar el número de elementos."
+ },
+ {
+  "id": "c002",
+  "perspective": "lector de pantalla",
+  "title": "Nombres de botón que incluyan la tarea: (i), plegar subtareas y arrastrar",
+  "mechanism": "Cambiar aria-label estáticos de TaskCard: 'Detalles del recordatorio' → `Editar «${title}»`; 'Expandir/Contraer' → aria-expanded + aria-controls al contenedor de subtareas y label `Subtareas de «${title}» (2)`; 'Cambiar urgencia' → `Urgencia: alta. Cambiar`. En MainSectionHeader 'Opciones de sección' → `Opciones de ${section}` y 'Desplegar sección' → aria-expanded en el botón cuyo nombre es el propio título de sección.",
+  "surfaces": [
+   "TaskCard.tsx",
+   "MainSectionHeader.tsx"
+  ],
+  "visible": "Sin cambios visuales.",
+  "discreet": "—",
+  "editing": "—",
+  "evidence": "WCAG 2.4.6/2.5.3: en la lista de controles del rotor de VoiceOver, 9 botones 'Detalles del recordatorio' idénticos son indistinguibles.",
+  "risk": "Etiquetas largas con títulos extensos; truncar a ~40 caracteres en el aria-label.",
+  "verification": "Abrir el rotor de VoiceOver (VO+U → Controles de formulario/Botones) en Trabajo: ningún nombre debe repetirse."
+ },
+ {
+  "id": "c003",
+  "perspective": "lector de pantalla",
+  "title": "Jerarquía de encabezados real: h1 vista, h2 sección, sin h3 con aria-level",
+  "mechanism": "MainPageHeader ya usa <h1 class='view-title'>; MainSectionHeader usa <h3 aria-level={2}>: sustituir por <h2> y que el botón de plegar sea un <button aria-expanded> DENTRO del h2 (patrón disclosure), con la duración y el contador como texto del mismo botón en sr-only: 'Limpieza, 6 tareas, 2 h 45 min, contraído'. El número grande '9/13' de la cabecera de vista se anuncia 'quedan 9' con aria-label en vez de un número suelto.",
+  "surfaces": [
+   "MainPageHeader.tsx",
+   "MainSectionHeader.tsx"
+  ],
+  "visible": "Igual que hoy.",
+  "discreet": "Duración y contador siguen visibles, pero accesibles como parte del nombre del encabezado.",
+  "editing": "—",
+  "evidence": "APG Accordion (https://www.w3.org/WAI/ARIA/apg/patterns/accordion/): botón dentro del encabezado.",
+  "risk": "Estilos que dependan de h3 en polish.css deben migrarse.",
+  "verification": "Rotor 'Encabezados' de VoiceOver/NVDA (tecla H): Casa (nivel 1) → Limpieza, Cocina (nivel 2), cada uno con estado expandido."
+ },
+ {
+  "id": "c004",
+  "perspective": "teclado",
+  "title": "Navegación de filas con flechas (roving tabindex) en lugar de 4–6 tabulaciones por tarea",
+  "mechanism": "Cada lista de tareas tiene un único tab stop: la fila activa (tabIndex=0, resto -1). ↑/↓ mueven entre tareas (incluidas subtareas), →/← despliegan o pliegan subtareas, Espacio completa, Enter abre el editor (onEdit), F2 o 'e' edita el título en línea, Supr envía a papelera con deshacer. Implementar en un hook useTaskListKeyboard en el contenedor de la sección y data-task-id existente para localizar el foco.",
+  "surfaces": [
+   "TaskCard.tsx",
+   "contenedor de listas",
+   "vistas de ciclo"
+  ],
+  "visible": "Anillo de foco en la fila completa (outline 2px var(--accent-primary), radio concéntrico con la fila).",
+  "discreet": "Atajos listados en la hoja de atajos (c004 → c005).",
+  "editing": "—",
+  "evidence": "Mail y Recordatorios de macOS: ↑/↓ seleccionan filas, Espacio marca; APG Treegrid/Tree para jerarquía.",
+  "risk": "Conflicto con edición en línea del título y con inputs; desactivar cuando el foco está en input/textarea.",
+  "verification": "Con teclado solo, en Semanal pulsar Tab una vez para entrar en la lista y ↓ hasta la última tarea; contar pulsaciones (debe ser ≈ nº de tareas, no ×5)."
+ },
+ {
+  "id": "c005",
+  "perspective": "teclado",
+  "title": "Hoja de atajos con '?' y atajos globales coherentes",
+  "mechanism": "Añadir atajos: N = nuevo recordatorio (enfoca el campo 'Nuevo recordatorio'), ⌘/Ctrl+K = Spotlight (ya existe overlay), G luego H/P/T = ir a Hoy/Programados/Todos, [ y ] = período anterior/siguiente en ApplePeriodNavigator, T = volver a hoy. '?' abre un diálogo modal listando todos, agrupados, con <kbd>. Atajos de una letra solo activos fuera de campos de texto y desactivables (WCAG 2.1.4).",
+  "surfaces": [
+   "App global",
+   "ApplePeriodNavigator.tsx",
+   "MainInlineAdd.tsx",
+   "Spotlight"
+  ],
+  "visible": "Nada permanente.",
+  "discreet": "En el menú '…' de la cabecera una entrada 'Atajos de teclado'.",
+  "editing": "Interruptor 'Atajos de una tecla' en ajustes.",
+  "evidence": "macOS: menú Ayuda/atajos; WCAG 2.1.4 Character Key Shortcuts.",
+  "risk": "Choques con atajos del navegador o de lectores de pantalla (NVDA usa letras en modo exploración) — por eso el interruptor.",
+  "verification": "Pulsar '?' en escritorio; probar cada atajo; con NVDA en modo exploración comprobar que H sigue saltando encabezados."
+ },
+ {
+  "id": "c006",
+  "perspective": "teclado",
+  "title": "Retorno de foco determinista al cerrar editor, menús y modales",
+  "mechanism": "Guardar document.activeElement al abrir TaskDrawer, SectionContextMenu, TaskContextMenu, Spotlight, saludo diario; al cerrar devolver foco a ese elemento o, si la tarea desapareció (completada/borrada/movida), a la fila siguiente por data-task-id (o anterior, o al h2 de la sección). Hoy, en m-m-drawer-new el foco cae en 'Cancelar' (correcto al abrir) pero al cerrar no hay restauración garantizada.",
+  "surfaces": [
+   "TaskDrawer.tsx",
+   "SectionContextMenu.tsx",
+   "TaskContextMenu.tsx",
+   "Spotlight",
+   "greeting"
+  ],
+  "visible": "Anillo de foco visible donde se estaba.",
+  "discreet": "—",
+  "editing": "—",
+  "evidence": "APG Dialog: 'When a dialog closes, focus returns to the element that invoked it'.",
+  "risk": "Listas virtualizadas pueden desmontar el elemento; usar id y scrollIntoView antes de focus().",
+  "verification": "Abrir (i) de la 3.ª tarea con Enter, Esc: foco vuelve al (i) de esa tarea. Completar desde el editor: foco a la 4.ª tarea."
+ },
+ {
+  "id": "c007",
+  "perspective": "motricidad",
+  "title": "Fila de 44px mínimo con zonas táctiles reales y no solapadas",
+  "mechanism": "Hoy .task-info-btn y el botón de subtareas miden 32px y amplían a 44 con ::before (polish.css .hit-44::before), lo que hace que el área de '2 ⌄' y la de (i) se solapen (separación 2–4px). Sustituir por una rejilla de fila: [44 círculo][1fr título][44 subtareas][44 (i)] con botones de 44×44 reales y icono centrado de 17–18px; la altura mínima de fila pasa a 44px + padding 6px, de modo que una fila de una línea mide ~56px en vez de 150px.",
+  "surfaces": [
+   "TaskCard.tsx",
+   "polish.css (.hit-44, .task-info-btn)"
+  ],
+  "visible": "Mismos iconos, sin aumento visual.",
+  "discreet": "—",
+  "editing": "—",
+  "evidence": "Apple HIG: 44×44 pt mínimo (https://developer.apple.com/design/human-interface-guidelines/accessibility); WCAG 2.5.8.",
+  "risk": "Rejilla rígida puede comprimir el título a 320px; ver c010.",
+  "verification": "En DevTools móvil activar 'Show hit-test borders' o pintar outline en button: ningún par de rectángulos se cruza; medir con getBoundingClientRect ≥44."
+ },
+ {
+  "id": "c008",
+  "perspective": "motricidad",
+  "title": "Alternativas visibles a deslizar y pulsación larga",
+  "mechanism": "TaskSwipeBackground (completar/papelera al deslizar) y long-press (menú contextual + arrastre) no tienen equivalente descubrible. Mantener gestos, pero: (1) el botón (i) se convierte en botón 'Más' con menú (Editar, Marcar, Mover, Posponer, Papelera, Reordenar ↑/↓) mediante TaskContextMenu ya existente; (2) arrastrar tiene alternativa 'Subir/Bajar' y 'Anidar bajo anterior' en ese menú; (3) añadir acciones personalizadas para VoiceOver vía role='menu' accesible desde la fila.",
+  "surfaces": [
+   "TaskCard.tsx",
+   "TaskContextMenu.tsx",
+   "TaskSwipeBackground.tsx"
+  ],
+  "visible": "Un solo botón de acciones por fila.",
+  "discreet": "Gestos siguen como atajo para expertos.",
+  "editing": "Edición completa sigue en TaskDrawer.",
+  "evidence": "WCAG 2.5.1 Pointer Gestures y 2.5.7 Dragging Movements; iOS ofrece siempre el menú de 'Más' además del swipe.",
+  "risk": "Mezclar 'editar' y 'más' en el mismo botón: el menú debe tener 'Editar…' como primera opción.",
+  "verification": "Con ratón sin arrastrar y sin teclado modificado, conseguir reordenar, mover y borrar una tarea solo con clics."
+ },
+ {
+  "id": "c009",
+  "perspective": "motricidad",
+  "title": "Reordenar con teclado sin arrastre",
+  "mechanism": "El .task-drag-handle actual es role='img' y solo visible al hover. Convertirlo en <button aria-label='Reordenar «X»'> que al pulsar Espacio entra en 'modo mover': ↑/↓ desplazan, Tab/→ anida, Enter confirma, Esc cancela; anunciar cada paso con aria-live polite ('Posición 3 de 6 en Limpieza'). Reutilizar onReorderTasks / nestTask.",
+  "surfaces": [
+   "TaskCard.tsx",
+   "polish.css (.task-drag-handle)"
+  ],
+  "visible": "Asa visible al hover/foco en escritorio.",
+  "discreet": "En móvil no se muestra; la alternativa es el menú (c008).",
+  "editing": "—",
+  "evidence": "Patrón de arrastre accesible de Atlassian/react-beautiful-dnd; WCAG 2.5.7.",
+  "risk": "Lógica de anidación compleja; empezar por reordenar dentro de la misma sección.",
+  "verification": "Solo teclado: mover 'Limpiar espejos' por encima de 'Regar las plantas' y oír el anuncio."
+ },
+ {
+  "id": "c010",
+  "perspective": "baja visión",
+  "title": "Texto al 200% y ancho de 320px: reflujo de la fila sin superposición",
+  "mechanism": "Usar unidades rem en .task-title y metadatos (hoy fontSize 1.05rem pero márgenes calculados con 32px fijos: `calc(2px + ((1.05rem*1.4) - 32px)/2)`). Con zoom de texto 200% el título debe ocupar toda la anchura y los metadatos bajar en línea fluida con flex-wrap; los botones (subtareas, (i)) se alinean al inicio de la primera línea (align-self:start) en lugar de con márgenes calculados. Ocultar la microbarra y dejar solo texto cuando container-query <260px.",
+  "surfaces": [
+   "TaskCard.tsx",
+   "TaskMetaBadges.tsx",
+   "polish.css",
+   "MainPageHeader.tsx"
+  ],
+  "visible": "Mismo contenido reflujado.",
+  "discreet": "Microbarra de progreso desaparece a anchos estrechos; su valor queda en texto.",
+  "editing": "—",
+  "evidence": "WCAG 1.4.4 Resize Text y 1.4.10 Reflow (320 CSS px).",
+  "risk": "Container queries requieren Safari 16+; aceptable para PWA.",
+  "verification": "Chrome: tamaño de fuente 'Muy grande' + ventana 320px en Trabajo, Semanal y Hoy: sin scroll horizontal, sin texto cortado ni botones encima del título."
+ },
+ {
+  "id": "c011",
+  "perspective": "baja visión",
+  "title": "Cabecera de vista que no duplique el tamaño grande al ampliar",
+  "mechanism": "En MainPageHeader el título (text-display) y el contador grande '13' compiten en la misma línea; con 200% el contador empuja el título a varias líneas. Usar clamp() en .view-title (p. ej. clamp(1.75rem, 1.2rem+3vw, 2.25rem)) y mover el contador a la línea de subtítulo junto a la duración con aria-label 'quedan 13 · 3 h 18 min' cuando el contenedor sea <360px.",
+  "surfaces": [
+   "MainPageHeader.tsx",
+   "index.css (.text-display)"
+  ],
+  "visible": "Título y conteo, en una o dos líneas según espacio.",
+  "discreet": "Duración total en la línea de subtítulo, 15px secundario.",
+  "editing": "—",
+  "evidence": "iOS Dynamic Type: los títulos grandes se ajustan antes que el cuerpo (Large Title escala menos).",
+  "risk": "Cambio de posición del contador puede desorientar; mantenerlo a la derecha cuando cabe.",
+  "verification": "Zoom 200% en 390px y 320px: título 'Semanal' en una línea, contador legible."
+ },
+ {
+  "id": "c012",
+  "perspective": "baja visión",
+  "title": "Contraste verificado de texto secundario y estados atenuados",
+  "mechanism": "Texto completado usa opacity 0.65 sobre var(--text-tertiary) y el (i) opacity 0.35–0.55 → contraste < 3:1. Sustituir opacidades por tokens con contraste comprobado: --text-tertiary ≥4.5:1 para texto, iconos de control ≥3:1 (WCAG 1.4.11) en claro y oscuro; para lo 'discreto' usar tamaño/peso, no opacidad. Añadir @media (prefers-contrast: more) que suba bordes de separadores (.task-row-separator) y elimine translucidez de la barra 'Nuevo recordatorio'.",
+  "surfaces": [
+   "polish.css",
+   "index.css (:root tokens)",
+   "TaskCard.tsx (opacidades inline)",
+   "MainInlineAdd.tsx"
+  ],
+  "visible": "Mismo diseño con colores más firmes.",
+  "discreet": "Discreción por jerarquía tipográfica.",
+  "editing": "—",
+  "evidence": "WCAG 1.4.3 y 1.4.11; Apple 'Increase Contrast' reduce transparencia y refuerza bordes.",
+  "risk": "Pérdida de la 'ligereza' estética; compensar con tamaño menor.",
+  "verification": "Lighthouse/axe en claro y oscuro; emular prefers-contrast: more en DevTools > Rendering."
+ },
+ {
+  "id": "c013",
+  "perspective": "baja visión",
+  "title": "Prioridad y vencimiento nunca solo por color",
+  "mechanism": "'!!!' rojo ya es texto, pero vencido (10 oct en rojo, dueColor isRed) solo cambia color. Añadir palabra o icono: 'Vencida · 10 oct' con icono de reloj con exclamación y aria; prioridad: mantener '!!!/!!/!' con sr-only existente y además diferenciar peso (high = 700). La bandera naranja (marcada) obtiene aria-label 'Marcada' y en modo alto contraste un contorno.",
+  "surfaces": [
+   "TaskMetaBadges.tsx",
+   "TaskCard.tsx"
+  ],
+  "visible": "'Vencida' como texto corto antes de la fecha.",
+  "discreet": "—",
+  "editing": "—",
+  "evidence": "WCAG 1.4.1 Use of Color; Apple Recordatorios muestra la fecha vencida en rojo y la agrupa además en 'Vencidos'.",
+  "risk": "Una palabra más en la fila; usarla solo para vencidas, no para 'Hoy'.",
+  "verification": "Filtro de DevTools 'Emulate vision deficiencies: achromatopsia': distinguir vencida de normal en Trabajo."
+ },
+ {
+  "id": "c014",
+  "perspective": "cognitiva",
+  "title": "Resumen de Hoy compacto: una acción principal por grupo y tareas visibles",
+  "mechanism": "La tarjeta del saludo en Hoy ocupa toda la pantalla (m-v-smart_today). Reducir cada grupo de recuperación a una línea: 'Casa · Limpieza — 3 sin marcar la semana pasada' + botón principal 'Empezar: Aspirar el salón (20 min)' y un botón '…' con 'Omitir período', 'Ver esta semana', 'Ver historial'. Eliminar la frase '¿Te apetece…? Basta con una.' La tarjeta tiene altura máx. ~40% del viewport y un enlace 'Saltar a tareas' (skip link) antes de ella.",
+  "surfaces": [
+   "DailyBriefing/banner de Hoy",
+   "greeting modal"
+  ],
+  "visible": "Una línea de contexto y un botón de acción por grupo; tareas de hoy visibles en la primera pantalla.",
+  "discreet": "Acciones secundarias en menú '…' con nombre explícito.",
+  "editing": "—",
+  "evidence": "Carga cognitiva: un CTA por bloque (HIG 'Make the primary action obvious').",
+  "risk": "Menos descubrible 'Omitir período'; el '…' debe tener label 'Más opciones para Casa · Limpieza'.",
+  "verification": "Móvil 390×844: la primera tarea de hoy aparece sin hacer scroll; con lector de pantalla, el skip link es la primera parada después del h1."
+ },
+ {
+  "id": "c015",
+  "perspective": "lector de pantalla",
+  "title": "Anuncios en vivo al completar, omitir y deshacer",
+  "mechanism": "Una sola región aria-live='polite' global (componente LiveAnnouncer) que reciba mensajes: 'Completada: Regar las plantas. Quedan 12. Deshacer con ⌘Z', 'Omitido período de Limpieza (semana 41)', 'Movida a Cocina'. Evitar múltiples role=status dispersos (hay 9). El toast DeletedTaskToast pasa a usar este anunciador y su botón Deshacer recibe foco solo si la acción se hizo con teclado.",
+  "surfaces": [
+   "LiveAnnouncer nuevo",
+   "TaskCard.tsx",
+   "DeletedTaskToast.tsx",
+   "resumen diario"
+  ],
+  "visible": "Toasts como hoy.",
+  "discreet": "—",
+  "editing": "—",
+  "evidence": "WCAG 4.1.3 Status Messages.",
+  "risk": "Exceso de anuncios en completado múltiple: agrupar ('6 completadas').",
+  "verification": "NVDA con historial de voz: completar una tarea y verificar un único anuncio."
+ },
+ {
+  "id": "c016",
+  "perspective": "movimiento reducido",
+  "title": "Reduced motion también para animaciones JS (framer-motion)",
+  "mechanism": "La regla CSS de polish.css (@media prefers-reduced-motion) no afecta a springs de framer-motion (rotación del chevron, whileTap scale 0.85, animación de color del título, deslizamiento de filas al completar). Envolver la app en <MotionConfig reducedMotion='user'> (verificar main.tsx) y en TaskCard sustituir layout/spring por fundidos de opacidad ≤150ms; desactivar desplazamiento de la fila al completar y el efecto parallax de la barra glass.",
+  "surfaces": [
+   "main.tsx",
+   "TaskCard.tsx",
+   "MainSectionHeader.tsx",
+   "ApplePeriodNavigator.tsx"
+  ],
+  "visible": "Mismo resultado final sin movimiento.",
+  "discreet": "Fundidos cortos.",
+  "editing": "—",
+  "evidence": "iOS 'Reducir movimiento' sustituye desplazamientos por fundidos; WCAG 2.3.3.",
+  "risk": "Reorder animations ayudan a entender cambios; mantener fundido, no corte seco.",
+  "verification": "DevTools > Rendering > emulate prefers-reduced-motion: completar, plegar sección y cambiar semana sin desplazamientos."
+ },
+ {
+  "id": "c017",
+  "perspective": "teclado",
+  "title": "Navegador de período accesible como grupo con flechas y etiqueta clara",
+  "mechanism": "ApplePeriodNavigator: role='group' aria-label='Período'; botones anterior/siguiente con nombres concretos ('Semana 41', 'Semana 43') en vez de 'Período anterior'; el botón central (hoy 'Fecha actual: … Toca para cambiar.') pasa a 'Semana 42, 12–18 oct. Elegir semana' con aria-haspopup='dialog'. Teclas ←/→ en el grupo cambian período, Inicio vuelve a hoy. Al cambiar, anunciar el nuevo rango (c015).",
+  "surfaces": [
+   "ApplePeriodNavigator.tsx"
+  ],
+  "visible": "Píldora igual.",
+  "discreet": "'Volver a hoy' solo aparece si no se está en el período actual.",
+  "editing": "—",
+  "evidence": "APG Toolbar pattern; 'Toca para cambiar' es instrucción táctil inválida en teclado.",
+  "risk": "—",
+  "verification": "Teclado: Tab hasta el navegador, ← dos veces, oír 'Semana 40, 28 sept – 4 oct'."
+ },
+ {
+  "id": "c018",
+  "perspective": "cognitiva",
+  "title": "Interruptor 'Sin diarias' con etiqueta en positivo y estado inequívoco",
+  "mechanism": "En MainPageHeader el texto visible 'Sin diarias' y el aria-label 'Incluir diarias' son contrarios (WCAG 2.5.3 Label in Name): el switch apagado se lee 'Incluir diarias, desactivado' mientras la vista dice 'Sin diarias'. Unificar: texto 'Incluir diarias' + role=switch aria-checked; el texto es <label> clicable de 44px. Igual para 'Incluir acumuladas'.",
+  "surfaces": [
+   "MainPageHeader.tsx"
+  ],
+  "visible": "Etiqueta 'Incluir diarias' junto al interruptor.",
+  "discreet": "—",
+  "editing": "—",
+  "evidence": "WCAG 2.5.3; iOS: los conmutadores siempre describen el estado 'activado'.",
+  "risk": "Cambio de redacción visible.",
+  "verification": "Control por voz (Voice Control/Dragon): decir 'pulsa Incluir diarias' funciona."
+ },
+ {
+  "id": "c019",
+  "perspective": "cognitiva",
+  "title": "Menú de sección sin duplicados y con orden por intención",
+  "mechanism": "SectionContextMenu tiene 'Marcar completadas (6)' y 'Marcar todas como hechas'. Unificar en una entrada 'Completar las 6' (con confirmación deshacible por toast). Agrupar con role='group' y separadores con aria-label: Hacer (Empezar sección, Completar las 6, Añadir tarea), Organizar (Ordenar ›, Mover ›, Subir/Bajar, Añadir subsección), Editar (Renombrar, Duplicar), Destructivas (Vaciar, Eliminar). Navegación con flechas, tecla inicial, Esc cierra y devuelve foco al '…'.",
+  "surfaces": [
+   "SectionContextMenu.tsx",
+   "MainSectionHeader.tsx"
+  ],
+  "visible": "Menú más corto.",
+  "discreet": "Subir/Bajar como entradas normales del grupo Organizar.",
+  "editing": "—",
+  "evidence": "APG Menu Button; menús contextuales de macOS agrupados por separadores.",
+  "risk": "Si las dos acciones difieren (completadas vs hechas para hábitos), documentarlo en el código y fusionar con lógica.",
+  "verification": "Abrir con teclado, recorrer con ↓: no hay dos entradas con el mismo efecto; Esc devuelve el foco."
+ },
+ {
+  "id": "c020",
+  "perspective": "motricidad",
+  "title": "Cabecera de sección compacta con un solo objetivo táctil principal",
+  "mechanism": "En Lista Casa cada cabecera ocupa ~150px y tiene 4 objetivos (duración ⌄, …, número, ›) con el número no interactivo entre dos botones. Convertir toda la fila de cabecera en el botón de plegar (44–52px de alto, título + '6 · 2 h 45 min' secundario + chevron), y dejar solo '…' como segundo objetivo a la derecha, separado 8px. El desglose de duración ('Ver desglose de tiempo de sección') pasa al menú '…'.",
+  "surfaces": [
+   "MainSectionHeader.tsx",
+   "polish.css"
+  ],
+  "visible": "Título, conteo y duración en una línea; chevron.",
+  "discreet": "Desglose de duración en el menú.",
+  "editing": "—",
+  "evidence": "Apple Recordatorios: cabeceras de sección en una línea; Fitts: objetivo grande para la acción frecuente.",
+  "risk": "Pérdida de acceso directo al desglose; queda a un paso.",
+  "verification": "Medir altura de cabecera ≤56px; tocar en cualquier punto del título pliega."
+ },
+ {
+  "id": "c021",
+  "perspective": "lector de pantalla",
+  "title": "Estadísticas: rejilla de periodos como tabla/radiogrupo con lectura separada de omisiones",
+  "mechanism": "En ANALYTICS cada celda '0/6 · 6 omitidas' se convierte en botón dentro de role='radiogroup' aria-label='Semanas' (seleccionada aria-checked) con nombre: '7–13 sept: 0 de 6 hechas, 0 omitidas por ti, 6 sin completar al cerrar'. Las inferidas se marcan con patrón (rayado) además de color, y el período actual 'en curso' con texto, nunca 'omitidas'. Las <details> por sección se sustituyen por una tabla <table> con <th scope> (Sección, Hechas, Omitidas por ti, Sin completar, Pendientes).",
+  "surfaces": [
+   "Analytics view",
+   "polish.css"
+  ],
+  "visible": "Rejilla con cifras tabulares y leyenda corta de 3 palabras por categoría.",
+  "discreet": "La nota larga explicativa desaparece; cada término tiene tooltip/aria-describedby de una frase.",
+  "editing": "—",
+  "evidence": "Tablas de datos accesibles (WCAG 1.3.1); Salud de Apple separa 'Registrado' y 'Estimado'.",
+  "risk": "Tabla en 320px requiere scroll horizontal contenido; usar lista de definiciones en móvil.",
+  "verification": "Navegar con NVDA (Ctrl+Alt+flechas) por la tabla; filtro acromatopsia distingue explícitas e inferidas."
+ },
+ {
+  "id": "c022",
+  "perspective": "teclado",
+  "title": "Selector de fecha y sección de Estadísticas sin controles nativos dispares",
+  "mechanism": "Sustituir el input type=date (formato 10/12/2026 ambiguo) por el mismo ApplePeriodNavigator de las vistas de ciclo (coherencia y teclado de c017), y el select 'Todas las secciones' por CustomSelect con optgroup por lista. Los segmentos Diarias/Semanales/Mensuales/Anuales pasan a role='tablist' con flechas y aria-controls a la rejilla.",
+  "surfaces": [
+   "Analytics view",
+   "ApplePeriodNavigator.tsx",
+   "CustomSelect.tsx"
+  ],
+  "visible": "Mismos controles, estilo coherente.",
+  "discreet": "—",
+  "editing": "—",
+  "evidence": "APG Tabs; consistencia (WCAG 3.2.4).",
+  "risk": "CustomSelect debe conservar comportamiento nativo en móvil (o usar <select> en móvil).",
+  "verification": "Solo teclado: cambiar a Mensuales con →, retroceder dos meses con [ y elegir 'Casa · Limpieza'."
+ },
+ {
+  "id": "c023",
+  "perspective": "cognitiva",
+  "title": "Editor: sustituir 'Detalles adicionales' por filas con nombre y valor actual",
+  "mechanism": "En TaskDrawer (m-m-drawer-new) la fila genérica 'Detalles adicionales' oculta qué contiene. Desglosarla en filas con nombre del dato que abren (p. ej. 'Etiquetas', 'Marca', 'Prioridad', 'Notas de ubicación' — según los campos reales) y mostrar a la derecha el valor actual ('Alta', 'Ninguna') como ya hace Duración ('Sin asignar'). Cada fila: <button> con aria-label 'Prioridad: alta. Cambiar'. Filas vacías poco usadas pueden agruparse bajo 'Más campos (3)' con lista visible de nombres.",
+  "surfaces": [
+   "TaskDrawer.tsx"
+  ],
+  "visible": "Nombre de cada campo + valor actual.",
+  "discreet": "Campos vacíos en grupo nombrado.",
+  "editing": "Todo sigue en el editor.",
+  "evidence": "Apple Recordatorios 'Detalles': filas con nombre explícito y valor; el usuario pidió eliminar 'Detalles' genéricos.",
+  "risk": "Más filas visibles; compensar con altura 44px y agrupación.",
+  "verification": "Abrir editor y verificar que con lector cada fila anuncia campo y valor; ninguna fila llamada 'Detalles'."
+ },
+ {
+  "id": "c024",
+  "perspective": "lector de pantalla",
+  "title": "Subtareas anidadas expuestas como árbol con nivel y posición",
+  "mechanism": "Las subtareas (Recopilar datos de ventas bajo Preparar la presentación) solo se distinguen por sangría y la guía .subtask-tree-guide aria-hidden. Exponer aria-level, aria-setsize y aria-posinset en cada <li>, o en el sr-only de c001: 'subtarea 1 de 2 de Preparar la presentación'. El contador '2 ⌄' se anuncia 'mostrar 2 subtareas'.",
+  "surfaces": [
+   "TaskCard.tsx"
+  ],
+  "visible": "Sangría actual.",
+  "discreet": "—",
+  "editing": "—",
+  "evidence": "APG Treeview; VoiceOver anuncia nivel en listas anidadas nativas.",
+  "risk": "Si se usa role=tree hay que implementar todo el patrón; preferir listas anidadas <ul> que ya dan nivel.",
+  "verification": "VoiceOver: en una subtarea se oye 'nivel 2' o 'subtarea 1 de 2'."
+ },
+ {
+  "id": "c025",
+  "perspective": "motricidad",
+  "title": "Barra 'Nuevo recordatorio' que no tape la última tarea ni el foco",
+  "mechanism": "La barra flotante glass (MainInlineAdd) cubre la última fila (en m-v-list_trabajo tapa '20 min'). Añadir padding-bottom al contenedor de lista = altura de la barra + env(safe-area-inset-bottom) + 16px, y scroll-padding-bottom igual para que la tarea enfocada por teclado (c004) no quede debajo (WCAG 2.4.11 Focus Not Obscured). Con prefers-reduced-transparency o prefers-contrast:more, fondo sólido.",
+  "surfaces": [
+   "MainInlineAdd.tsx",
+   "polish.css",
+   "contenedor de lista"
+  ],
+  "visible": "Barra igual.",
+  "discreet": "—",
+  "editing": "—",
+  "evidence": "WCAG 2.4.11; iOS reserva el inset inferior para las barras de herramientas.",
+  "risk": "Ninguno relevante.",
+  "verification": "Tabular hasta la última tarea en móvil: queda entera por encima de la barra; scroll al fondo muestra la última fila completa."
+ },
+ {
+  "id": "d001",
+  "perspective": "sistema de diseño",
+  "title": "Separar «área táctil» de «caja de layout»: matar los min-height:44px que inflan cada fila",
+  "mechanism": "Causa raíz de las filas de 150–230 px (capturas a 2x = 75–115 px CSS para una línea): (1) src/styles/polish.css:2735 `.task-info-btn{width:44px!important;height:44px!important}` fuerza que la línea del título mida 44px aunque el texto mide ~23px; (2) polish.css:2736-2745 `.task-meta-action{min-height:44px;min-width:44px}` + :2746 `.task-meta-fields button{min-height:44px}` + :2783 `.task-meta-fields > button{min-height:44px!important;min-width:44px!important}` convierten la línea de metadatos (texto de 12px) en una franja de 44px y separan el icono de repetición 44px del reloj (el hueco raro «⟳      ⏱ 30 min»); (3) a eso se suma el padding 12/12 de la fila (TaskCard.tsx:991) y el padding 2px del contenedor del texto (TaskCard.tsx:~1223). Solución: borrar esas cuatro reglas y usar SOLO el patrón ya existente polish.css:1059-1075 (`.hit-44::before` de 44×44 absoluto, centrado, sin ocupar layout) en .task-info-btn, .task-meta-action y la casilla. Los 44px se cumplen por pseudo-elemento; la caja visible vuelve a 20–24px. Para que dos ::before vecinos no se solapen en la línea de metadatos, darles `width: max(100%, 44px); height:44px` y un `gap` horizontal ≥ 12px, con el ::before de la meta-línea desplazado hacia abajo (`top:auto; bottom:-12px`) para no pisar el del título.",
+  "surfaces": [
+   "fila de tarea (todas las listas, Hoy, Semanal, Programados)"
+  ],
+  "visible": "Fila de una línea sin metadatos: 44px; con línea de metadatos: ~60px (título 22px + 2px + meta 16px + padding 10/10).",
+  "discreet": "Nada cambia de jerarquía; solo desaparece el aire falso.",
+  "editing": "—",
+  "evidence": "Apple Reminders iOS: fila de 44pt para una línea, ~60pt con subtítulo; HIG «Layout»: el área táctil mínima 44×44pt no implica que el control visible mida 44 (https://developer.apple.com/design/human-interface-guidelines/accessibility).",
+  "risk": "Solapamiento de áreas táctiles entre (i) y contador de subtareas, o entre la meta-línea y la fila siguiente: hay que comprobar con outline de los ::before.",
+  "verification": "DevTools: medir `.task-item-wrapper` getBoundingClientRect().height en list_trabajo móvil (objetivo ≤ 64px con meta, 44 sin); activar `*::before{outline:1px solid red}` y verificar que ningún par de áreas se solapa; Lighthouse «tap targets» sin avisos."
+ },
+ {
+  "id": "d002",
+  "perspective": "sistema de diseño",
+  "title": "Cabecera de sección compacta: de ~95px CSS a 44px (colapsada) / 52px (primera)",
+  "mechanism": "Causa raíz: MainSectionHeader.tsx:426-433 aplica `minHeight:56` + `paddingTop:28` (16 si es la primera) + `paddingBottom:8` + `marginBottom:4`, y Layout.css:314-316 `.section-container{margin-bottom:16px!important}`; además polish.css:2763 `.section-more-btn{min-height:44px}` y :2765 `.section-meta button.section-duration-label{min-height:44px!important}` y :2762 `.section-meta{flex-wrap:wrap}` (puede partir en dos líneas en móvil). Resultado: 28+44+8+4+16 ≈ 100px CSS (≈200 en las capturas 2x) por una cabecera de una línea. Cambio: header `min-height:44px; padding:12px 16px 4px`, quitar margin-bottom de .section-container cuando la sección está plegada (usar `gap` del contenedor padre = 8px entre secciones plegadas, 20px antes de una sección abierta), retirar los min-height de .section-more-btn/.section-duration-label y darles `.hit-44`. `.section-meta{flex-wrap:nowrap}` con la duración truncable.",
+  "surfaces": [
+   "lista con secciones (Casa, Compras)",
+   "vistas por frecuencia",
+   "Hoy agrupado por lista"
+  ],
+  "visible": "Título de sección 17/600 + contador a la derecha en una sola línea de 44px; secciones plegadas forman una lista compacta tipo grupo inset.",
+  "discreet": "Duración y «…» en color terciario.",
+  "editing": "—",
+  "evidence": "Reminders macOS/iOS: las secciones son una línea de título 17pt semibold con 20pt de aire superior; nunca 100pt.",
+  "risk": "Que la cabecera pierda el área de soltado (drop target) del drag & drop; mantener el área de drop con padding interno en lugar de margen.",
+  "verification": "En list_casa móvil: distancia entre baseline «Limpieza» y «Cocina» ≤ 52px CSS plegadas; arrastrar una tarea a una sección plegada sigue funcionando."
+ },
+ {
+  "id": "d003",
+  "perspective": "sistema de diseño",
+  "title": "Unificar las DOS capas de tokens :root en una sola escala (color, radio, espacio)",
+  "mechanism": "index.css define :root dos veces con valores distintos: línea 7-52 (--accent-primary #007AFF, --text-secondary #8E8E93, --text-tertiary #C7C7CC, --radius-md 10px) y línea 910-939 «LEVEL 100 EXPERIENCE LAYER» (--accent-primary #0068D6, --text-secondary rgba(60,60,67,.6), --text-tertiary rgba(60,60,67,.3), --radius-md 12px). Los componentes con estilos inline usan unos u otros y los fallbacks (`var(--accent-primary,#007aff)`) mezclan azules: por eso hay dos azules en pantalla (título «Trabajo» casi navy vs «6» azul vivo). Consolidar en un único bloque con roles semánticos: --label, --label-2 (secondary 60%), --label-3 (tertiary 30%), --label-4, --fill-1..3, --separator, --tint; --radius-control 10, --radius-card 14 (=control+4 padding), --radius-sheet 22; escala de espacio 4/8/12/16/20/28. Eliminar fallbacks hex inline sustituyéndolos por var() sin fallback (un lint de grep en CI que falle si aparece `#007aff` en .tsx).",
+  "surfaces": [
+   "toda la app"
+  ],
+  "visible": "Un único azul de acción, grises de etiqueta coherentes.",
+  "discreet": "—",
+  "editing": "—",
+  "evidence": "Colores semánticos de UIKit (label/secondaryLabel/tertiaryLabel/quaternaryLabel, systemFill) — https://developer.apple.com/design/human-interface-guidelines/color",
+  "risk": "Regresiones visuales repartidas; requiere captura antes/después de las 13 vistas.",
+  "verification": "grep -c ':root' index.css == 1 bloque claro + 1 oscuro; `grep -rni '#007aff' src --include=*.tsx` → 0; capturas comparadas."
+ },
+ {
+  "id": "d004",
+  "perspective": "tipografía",
+  "title": "Escala tipográfica de 6 pasos tipo Dynamic Type, en rem y como tokens",
+  "mechanism": "Hoy conviven 0.62, 0.7, 0.74, 0.75, 0.78, 0.82, 0.85, 0.86 rem… (grep en MainSectionHeader.tsx y polish.css). Definir --type-largeTitle 34/41 bold (-0.4px), --type-title2 22/28 bold, --type-headline 17/22 600, --type-body 17/22 400 (móvil; 15/20 en escritorio ≥1024px), --type-subhead 15/20, --type-footnote 13/18, --type-caption 12/16. Mapeo: título de lista = largeTitle; cabecera de sección = title3/headline; título de tarea = body; meta-línea = footnote; contadores de sección = subhead tabular. Sustituir los fontSize inline por clases utilitarias (.t-body, .t-footnote…).",
+  "surfaces": [
+   "toda la app"
+  ],
+  "visible": "Ritmo regular: cada nivel se distingue por tamaño o peso, no por ambos a la vez y además color.",
+  "discreet": "—",
+  "editing": "—",
+  "evidence": "HIG Typography, tabla de estilos de texto de iOS (Large Title 34, Body 17, Footnote 13, Caption 12) https://developer.apple.com/design/human-interface-guidelines/typography",
+  "risk": "Cambiar body de 1.05rem a 17px puede variar alturas; combinado con d001 es neto negativo.",
+  "verification": "Computed font-size de todos los nodos de texto visibles pertenece al conjunto {34,22,17,15,13,12} (script en consola)."
+ },
+ {
+  "id": "d005",
+  "perspective": "tipografía",
+  "title": "Cifras tabulares y alineación decimal en todo número vivo",
+  "mechanism": "Solo hay 2 usos de tabular-nums en index.css y 14 en polish.css. Aplicar `font-variant-numeric: tabular-nums` globalmente a: contadores de lista/sección/tiles, duraciones («3 h 45 min»), «0 de 13», semana «Semana 42», rejilla de periodos de Estadísticas, porcentajes y la fecha del icono «12». Alinear a la derecha la columna de contadores del sidebar y de las secciones con un ancho fijo `min-width: 3ch; text-align:right` para que «10» y «0» compartan borde derecho (en d-v-list_casa «Quehaceres 10» vs «Care 0» están desalineados y «Bandeja de entrada 0» sobresale a la derecha de los demás).",
+  "surfaces": [
+   "sidebar",
+   "cabeceras",
+   "Estadísticas",
+   "navegador de periodo"
+  ],
+  "visible": "Columnas numéricas limpias; nada «baila» al marcar una tarea.",
+  "discreet": "—",
+  "editing": "—",
+  "evidence": "SF Pro usa cifras tabulares por defecto en contadores del sistema; make-interfaces-feel-better: «Use tabular-nums for counters, timers».",
+  "risk": "Ninguno relevante.",
+  "verification": "Marcar/desmarcar tareas y comprobar que el contador no desplaza su borde derecho (comparar x de getBoundingClientRect().right antes/después)."
+ },
+ {
+  "id": "d006",
+  "perspective": "diseño visual",
+  "title": "Título de lista en color de etiqueta, el color de la lista solo en el glifo",
+  "mechanism": "Ahora el título «Trabajo» va en azul oscuro, «Casa» en ocre y el contador grande «9/13/6» en el color de la lista; con la pastilla «Duraciones» y el botón «Empezar» amarillo hay 3–4 tintes compitiendo en la cabecera. Reminders sí colorea título y contador con el color de la lista; aquí, como el tinte ya marca acciones, propongo: título en --label (negro/blanco) 34 bold, un pequeño glifo de lista (icono 28px en círculo de color) a la izquierda que lleva la identidad, y el contador en --label-2, tabular, 34 regular alineado a la baseline del título. Así el único azul visible = acciones (volver, +, Empezar).",
+  "surfaces": [
+   "cabecera de lista",
+   "cabecera de vistas Semanal/Hoy"
+  ],
+  "visible": "Glifo de color + título negro + contador gris.",
+  "discreet": "Duración total en footnote gris debajo.",
+  "editing": "—",
+  "evidence": "HIG Color: «Use color sparingly in non-game apps… avoid using the same color for interactive and noninteractive elements» https://developer.apple.com/design/human-interface-guidelines/color",
+  "risk": "Pérdida de reconocimiento por color; el glifo lo compensa.",
+  "verification": "Contar tintes no grises en la franja superior de 200px: objetivo ≤ 2 (glifo + acciones)."
+ },
+ {
+  "id": "d007",
+  "perspective": "diseño visual",
+  "title": "Acento solo para lo accionable: fechas, duraciones e iconos de meta en gris",
+  "mechanism": "En la meta-línea el icono de reloj, el «⟳» y «Hoy» se pintan en azul (accent), igual que botones reales; el ojo no distingue dato de botón. Regla: meta-línea en --label-2 con iconos en --label-3; solo excepciones semánticas: vencida → rojo (texto «10 oct» y su icono), hoy → texto --label sin color, prioridad → rojo en el «!» (ya), bandera → naranja. Duración y frecuencia nunca azules. Las acciones (Empezar, +, Listas ‹, (i) en hover) conservan --tint.",
+  "surfaces": [
+   "fila de tarea"
+  ],
+  "visible": "Título negro, meta gris, solo lo urgente en rojo.",
+  "discreet": "Iconos de meta en terciario.",
+  "editing": "—",
+  "evidence": "Reminders: la fecha va en secondaryLabel y solo en rojo si está vencida; la ubicación y repetición son glifos grises.",
+  "risk": "Usuarios acostumbrados al azul como 'toca para editar' pierden la pista; el cursor/hover y la presión mantienen el feedback.",
+  "verification": "En list_trabajo: los únicos píxeles azules por fila deben ser cero en reposo (screenshot + muestreo de color)."
+ },
+ {
+  "id": "d008",
+  "perspective": "diseño visual",
+  "title": "Meta-línea en una sola cadena tipográfica con separador «·», sin huecos de 44px",
+  "mechanism": "Hoy la meta-línea es una fila de botones independientes de min-width 44 con iconos de 11px: «⟳ [44px vacío] ⏱ 30 min ▬▨». Sustituir por un único párrafo footnote: `⟳ Semanal · 30 min` o `Hoy · 45 min`, con separador «·» en --label-3 y `white-space:nowrap` por segmento + `text-overflow:ellipsis` al final. Cada segmento sigue siendo un botón (para editar en línea) pero con caja inline y área táctil ::before de 44 alto ajustada a su ancho (sin solapes gracias al gap 0 y a que el ::before ocupa exactamente el segmento verticalmente expandido). La microbarra de progreso de subtareas pasa a ser un anillo de 12px junto al contador de subtareas, no un elemento más en la meta.",
+  "surfaces": [
+   "fila de tarea"
+  ],
+  "visible": "Una línea gris legible como frase.",
+  "discreet": "Separadores en terciario.",
+  "editing": "—",
+  "evidence": "Reminders/Mail: subtítulos compuestos con «·» o comas en una línea secondaryLabel.",
+  "risk": "Áreas táctiles estrechas de segmentos cortos (‘1 h’): ampliar ::before horizontalmente con mínimo 44px y desplazar si colisiona; alternativamente editar desde el (i).",
+  "verification": "La meta-línea mide 16–18px de alto; inspector muestra 0 elementos con min-width 44 en .task-meta-fields."
+ },
+ {
+  "id": "d009",
+  "perspective": "diseño visual",
+  "title": "Casilla, título e (i) alineados a la primera línea con medidas Apple",
+  "mechanism": "La casilla es 26px con marginTop calculado (TaskCard.tsx:~1112-1116) y está desplazada respecto al título (en m-v-list_trabajo el círculo queda 10px por debajo del cap-height). Fijar: casilla visible 22px (anillo 1.5px --label-3), centrada en la línea del título (line-height 22px → margin-top 0), columna de casilla de 44px de ancho (inset del texto = 16+44 = 60px, que es también el inicio del separador). (i) 22px visible, a 16px del borde, mostrado solo en hover/foco en escritorio y siempre en táctil pero en --label-3. El contador de subtareas «2 ⌄» queda a la derecha como «2» en footnote --label-2 + chevron de 12px, compartiendo baseline con el título (hoy está 6px más bajo).",
+  "surfaces": [
+   "fila de tarea"
+  ],
+  "visible": "Columna izquierda limpia: separadores alineados con el texto, círculos alineados entre filas y subtareas.",
+  "discreet": "(i) atenuado.",
+  "editing": "—",
+  "evidence": "Reminders iOS: círculo 22pt, separador inset que empieza bajo el texto, (i) solo en la fila seleccionada.",
+  "risk": "Ninguno grave; revisar papelera (botón restaurar 24px).",
+  "verification": "Overlay de rejilla de 4px: centro vertical del círculo == centro de la primera línea ±1px en 5 filas multi-línea."
+ },
+ {
+  "id": "d010",
+  "perspective": "diseño visual",
+  "title": "Subtareas: sangría de 28px y sin el «codo» └ gris",
+  "mechanism": "El guía de árbol `.subtask-tree-guide` (TaskCard.tsx:1018) dibuja un codo └ de 2px gris a la izquierda y la subtarea se sangra ~56px; resulta pesado y, en móvil, roba ancho al título (‘Añadir abono para que crezcan más rápido’ parte en dos líneas). Cambio: sangría de 28px (media columna de casilla), casilla 18px, título subhead 15px, sin codo; el separador de la subtarea empieza en su propio texto. El padre muestra «2» y el chevron; plegado/desplegado anima la altura (ver d021).",
+  "surfaces": [
+   "fila de tarea con subtareas",
+   "vistas por frecuencia"
+  ],
+  "visible": "Jerarquía por sangría y tamaño, no por líneas.",
+  "discreet": "—",
+  "editing": "—",
+  "evidence": "Reminders iOS 17: subtareas con sangría simple, círculo más pequeño, sin líneas guía.",
+  "risk": "Árboles profundos (3+ niveles) pierden legibilidad; limitar visualmente a 2 niveles de sangría y mostrar ‘›’ para más.",
+  "verification": "Captura cycle_week móvil: la subtarea larga cabe en una línea a 390px."
+ },
+ {
+  "id": "d011",
+  "perspective": "diseño visual",
+  "title": "Teselas inteligentes del sidebar al estilo Reminders: fondo neutro, color solo en el icono",
+  "mechanism": "Ahora cada tesela (Layout.css:529 .ios-smart-card, min-height 94px, borde 1px + sombra + degradado ::before) se tiñe entera de su color (azul, rosa, gris, crema, lila) y la seleccionada pasa a sólido saturado (Hoy azul en d-00-home, Calendario violeta en ANALYTICS): ruido cromático máximo en la zona que menos acción requiere. Cambio: fondo --fill-secondary-grouped (blanco en claro, #1C1C1E en oscuro) sin borde ni degradado, radio 12px, icono 28px en círculo de color, número 28 bold tabular en --label alineado arriba-derecha, etiqueta 15/600 --label-2; alto 76px (padding 10). Seleccionada: fondo del color al 100% y texto blanco SOLO en esa (como iOS), el resto neutras. Calendario deja de ser ancho completo con número vacío: va en la rejilla 2×N; si no tiene contador, muestra el día del mes.",
+  "surfaces": [
+   "sidebar escritorio",
+   "pantalla Listas en móvil"
+  ],
+  "visible": "Cuatro/cinco teselas blancas idénticas con iconos de color; una sola tesela coloreada = la seleccionada.",
+  "discreet": "Etiqueta en secundario.",
+  "editing": "—",
+  "evidence": "Reminders iOS/macOS: Today/Scheduled/All/Flagged son tarjetas grises/blancas con glifo de color.",
+  "risk": "Menos ‘alegre’; se compensa con iconos más saturados.",
+  "verification": "Muestreo de color en d-00-home: solo la tesela activa tiene fondo no neutro; alturas 76±2px."
+ },
+ {
+  "id": "d012",
+  "perspective": "diseño visual",
+  "title": "Lista «Mis listas»: filas de 44px, iconos 28px y contador terciario alineado",
+  "mechanism": "Las filas del sidebar miden ~55px CSS con iconos de ~36px; «Bandeja de entrada 0» tiene el contador más a la derecha que el resto (otra columna) y los ceros pesan igual que «10». Cambio: fila 44px, icono 28px, texto body 17 (15 escritorio), contador --label-2 tabular con `min-width:3ch;text-align:right` en la misma columna para todas las filas, ceros en --label-3. Separador inset que empieza en el texto (60px).",
+  "surfaces": [
+   "sidebar"
+  ],
+  "visible": "Más listas visibles sin scroll (9 → 12 en 860px de alto).",
+  "discreet": "Contadores a cero atenuados.",
+  "editing": "—",
+  "evidence": "Reminders macOS: filas de lista de 28pt (escritorio) con contador gris a la derecha.",
+  "risk": "Ninguno.",
+  "verification": "En d-v-list_casa: borde derecho de todos los contadores con la misma x; altura de .ios-list-item = 44."
+ },
+ {
+  "id": "d013",
+  "perspective": "diseño visual",
+  "title": "Cabecera de lista en dos líneas máximas: título+contador / meta-fila única",
+  "mechanism": "Cabecera actual Casa: título + pastilla «Duraciones» + «9» gigante + segunda línea «⏱ 3 h 45 min ⌄» con 60px de aire debajo; Semanal además añade «Sin diarias» con interruptor desalineado (el texto del interruptor a 40px de la duración, el switch flotando en medio) + navegador a todo ancho + pastilla «0 de 13 hechas (i)» + separador. Propuesta: línea 1 = título largeTitle + contador; línea 2 = una sola meta-fila footnote --label-2 «3 h 45 min · 0 de 13 hechas» (texto, sin pastillas, botón invisible que abre el desglose). El interruptor «Sin diarias» y la pastilla «Duraciones» se convierten en ítems de filtro del menú «…» de la cabecera (marcados con ✓) y, cuando están activos, aparece un chip‐token descartable «Sin diarias ✕» en la meta-fila. Total cabecera ≤ 96px.",
+  "surfaces": [
+   "cabecera de lista",
+   "vista Semanal/Diaria/Mensual"
+  ],
+  "visible": "Título, contador, una línea de resumen.",
+  "discreet": "Chip de filtro activo solo si hay filtro.",
+  "editing": "Activar/desactivar filtros y modo duraciones desde «…».",
+  "evidence": "Reminders: el título grande y, como mucho, una línea; filtros en menú «…» (Show Completed).",
+  "risk": "Descubribilidad del filtro «Sin diarias»: el chip activo y el ✓ en el menú lo mitigan.",
+  "verification": "Altura del bloque cabecera en m-v-cycle_week ≤ 96px CSS antes del primer contenido."
+ },
+ {
+  "id": "d014",
+  "perspective": "materiales",
+  "title": "Liquid Glass solo en la capa de navegación: barra inferior, toolbar y navegador de periodo",
+  "mechanism": "Hoy el cristal (backdrop-filter, ~64 usos) está repartido: botones redondos de cabecera (polish.css:1041), teselas, tarjetas de stats, dropdowns, toasts, mientras la barra inferior es casi opaca blanca con borde gris y sombra, y el navegador de semana es una píldora blanca con borde 1px dentro del contenido. Regla: material ‘glass’ (token --glass: `background: color-mix(in srgb, var(--bg-base) 72%, transparent); backdrop-filter: blur(24px) saturate(180%); border: 0.5px solid var(--glass-stroke); box-shadow: 0 8px 24px rgba(0,0,0,.12)`) SOLO para: barra «Nuevo recordatorio», toolbar superior al hacer scroll (aparece al cruzar el título, ver d020), y el navegador de periodo cuando queda pegado arriba. Contenido (filas, tarjetas, menús de contenido) opaco. En `prefers-reduced-transparency: reduce` y dark: relleno sólido --bg-elevated.",
+  "surfaces": [
+   "barra inferior",
+   "toolbar",
+   "navegador de periodo",
+   "menús"
+  ],
+  "visible": "Controles flotantes translúcidos sobre contenido opaco y legible.",
+  "discreet": "—",
+  "editing": "—",
+  "evidence": "Apple Liquid Glass (WWDC25): «reserved for the navigation layer that floats above content» https://developer.apple.com/documentation/technologyoverviews/liquid-glass",
+  "risk": "Rendimiento de backdrop-filter en Android de gama baja: limitar a 2–3 superficies simultáneas.",
+  "verification": "`[...document.querySelectorAll('*')].filter(e=>getComputedStyle(e).backdropFilter!=='none').length` ≤ 3 en cualquier vista; contraste del placeholder sobre la barra ≥ 4.5:1 con contenido debajo."
+ },
+ {
+  "id": "d015",
+  "perspective": "materiales",
+  "title": "Barra inferior de añadir: cápsula glass de 52px con controles concéntricos",
+  "mechanism": "La barra mide ~68px CSS (136 en 2x) con radio 34 y el botón enviar de 44px gris claro con radio completo pegado a 8px del borde; el botón de teclado de escritorio flota fuera como otro círculo. Rediseño: cápsula de 52px, padding 4px, botón enviar 44px → radio 22 = (52/2) − 4 (concéntrico exacto); el botón aparece en --tint solo cuando hay texto (ahora es un círculo gris deshabilitado siempre visible); icono ✨ IA y ajustes como glifos 20px en --label-2 dentro de la cápsula; el botón teclado de escritorio se integra como segmento dentro de la misma cápsula (GlassEffectContainer: una sola forma). Margen inferior = max(16px, env(safe-area-inset-bottom)).",
+  "surfaces": [
+   "barra inferior móvil y escritorio"
+  ],
+  "visible": "Cápsula más baja y una única forma.",
+  "discreet": "Enviar deshabilitado se oculta (opacity 0, scale .8).",
+  "editing": "—",
+  "evidence": "iOS 26 Messages/Reminders: campo de composición en cápsula glass con botón enviar concéntrico que aparece con texto.",
+  "risk": "Pérdida de affordance de enviar para quien no escribe: el Enter y el botón animado lo resuelven.",
+  "verification": "Medir: radio externo − padding == radio del botón; altura 52; hit área del botón 44."
+ },
+ {
+  "id": "d016",
+  "perspective": "diseño visual",
+  "title": "Navegador de periodo: control segmentado compacto en la meta-fila, no píldora a todo ancho",
+  "mechanism": "La píldora «‹ Semana 42 (12–18 Oct) ⌄ ›» ocupa todo el ancho y 46px CSS, con las flechas a 500px de distancia en escritorio (movimiento de ratón absurdo). Propuesta: control compacto `‹  12–18 oct  ›` alineado a la izquierda bajo el título (o a la derecha del título en escritorio), alto 32 visible/44 hit, flechas pegadas al texto, etiqueta 15/600 tabular; el número de semana pasa a tooltip/subtítulo terciario. Pulsar la etiqueta abre el selector (popover con mini-calendario). Botón «Hoy» aparece solo si el periodo no es el actual (como Calendario de Apple).",
+  "surfaces": [
+   "vistas Diaria/Semanal/Mensual",
+   "Estadísticas"
+  ],
+  "visible": "Rango de fechas y flechas juntas.",
+  "discreet": "Nº de semana, botón «Hoy» contextual.",
+  "editing": "—",
+  "evidence": "Calendar macOS: ‹ Hoy › compacto en la toolbar; iOS: título de mes con flechas mínimas.",
+  "risk": "Ninguno; hit areas ‹/› 44px sin solapar con la etiqueta (gap 0 y ::before recortados).",
+  "verification": "En d-v-cycle_week: distancia entre flechas ≤ 200px; 'Hoy' ausente en semana actual."
+ },
+ {
+  "id": "d017",
+  "perspective": "diseño visual",
+  "title": "Radios concéntricos y una sola escala: 6 / 10 / 14 / 22 / cápsula",
+  "mechanism": "Hay radios 8, 9, 10, 12, 14, 16, 18, 22 mezclados (filas de tarea 10px en polish/TaskCard.tsx:974-981, tarjeta de saludo ~28px, tarjetas KPI ~18, rejilla de periodos ~12 con botones internos, menús 14 con items 8). Regla: radio interno = externo − padding. Tokens: --r-xs 6 (chips), --r-sm 10 (controles, botones), --r-md 14 (tarjetas/grupos inset, menús con padding 4 e items de 10), --r-lg 22 (hojas/modales con padding 8 → hijos 14), --r-pill. Grupo de filas de sección: radio 14 exterior, filas 0 salvo primera/última que heredan por overflow:hidden del grupo (eliminar el cálculo por fila de TaskCard.tsx:972-981 y :998).",
+  "surfaces": [
+   "toda la app"
+  ],
+  "visible": "Esquinas que ‘encajan’ visualmente.",
+  "discreet": "—",
+  "editing": "—",
+  "evidence": "make-interfaces-feel-better «Concentric radius»; Liquid Glass: formas concéntricas con el dispositivo.",
+  "risk": "overflow:hidden en grupo puede recortar menús contextuales: renderizarlos en portal.",
+  "verification": "Script: para cada elemento con radio y padre con radio, comprobar r_hijo ≈ r_padre − padding ±1px."
+ },
+ {
+  "id": "d018",
+  "perspective": "diseño visual",
+  "title": "Sombras y bordes: separadores hairline en contenido, sombra solo en lo que flota",
+  "mechanism": "Ahora hay bordes 1px grises en navegador, pastillas, tarjeta de saludo, teselas, tarjetas KPI y rejilla de periodos, todos a la vez con sombras suaves: aspecto ‘web genérico’ (‘raro’). Regla: contenido sobre --bg-grouped (#F2F2F7) en tarjetas blancas SIN borde ni sombra (la diferencia de fondo basta); separadores 0.5px --separator con inset; sombra solo en capas flotantes (barra inferior, menús, hojas) con dos capas `0 1px 2px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.10)`; en oscuro sin sombra y con borde 0.5px rgba(255,255,255,.08). Fondo de la vista principal pasa a grouped gris en lugar de blanco cuando hay secciones (inset grouped).",
+  "surfaces": [
+   "vistas de lista",
+   "Estadísticas",
+   "Hoy"
+  ],
+  "visible": "Grupos blancos sobre gris claro, sin contornos.",
+  "discreet": "—",
+  "editing": "—",
+  "evidence": "UITableView .insetGrouped; HIG Materials.",
+  "risk": "Contraste blanco/F2F2F7 bajo en pantallas malas: separador opcional 0.5px.",
+  "verification": "Contar elementos con border-width ≥1px visibles en Estadísticas: objetivo 0 en contenido."
+ },
+ {
+  "id": "d019",
+  "perspective": "iconografía",
+  "title": "Un solo set de glifos, un solo peso, tamaños por contexto",
+  "mechanism": "Se mezclan lucide con strokeWidth 1.5/2/2.5 (Repeat size 11 stroke 2.5 en TaskMetaBadges.tsx:~70), «!!!» textuales rojos, bandera rellena naranja, icono de reloj azul, iconos de sección con «…» y chevron de pesos distintos. Regla: lucide strokeWidth 1.75 global (vía wrapper <Icon>), tamaños 13 (meta), 17 (filas/toolbar), 22 (navegación), color por rol (--label-3 meta, --tint acción). Prioridad: «!», «!!», «!!!» en peso 700 --red con 2px de separación del título, igual que Reminders. Chevron de disclosure siempre `chevron.right` que rota 90°, nunca alternar ‹⌄› y ‹›› entre secciones (hoy Casa usa › y Semanal ⌄).",
+  "surfaces": [
+   "toda la app"
+  ],
+  "visible": "Iconos homogéneos y discretos.",
+  "discreet": "Iconos de meta terciarios.",
+  "editing": "—",
+  "evidence": "SF Symbols: pesos alineados con el texto adyacente (symbol weight = font weight).",
+  "risk": "Ninguno.",
+  "verification": "grep strokeWidth distinto de 1.75 → 0; inspección visual de chevrons en list_casa y cycle_week."
+ },
+ {
+  "id": "d020",
+  "perspective": "movimiento",
+  "title": "Título grande que colapsa a título de barra al hacer scroll",
+  "mechanism": "Ahora el título grande y el contador se van con el scroll y la barra superior (‹ Listas, …) queda sin contexto. Implementar large-title collapse: IntersectionObserver sobre el h1; cuando sale, la toolbar muestra el título en 17/600 centrado con fade+translateY(4px) 180ms y adquiere material glass (d014) con hairline inferior. Sin JS de scroll continuo; solo dos estados con transición de opacity/transform. Reduced motion: cambio instantáneo.",
+  "surfaces": [
+   "cabecera de todas las vistas"
+  ],
+  "visible": "Siempre se sabe en qué lista estás.",
+  "discreet": "Hairline de toolbar solo con scroll.",
+  "editing": "—",
+  "evidence": "UINavigationBar prefersLargeTitles — comportamiento estándar de Reminders.",
+  "risk": "Doble título en lector de pantalla: el de la barra aria-hidden.",
+  "verification": "Scroll en list_trabajo: a los 60px aparece el título compacto; transición ≤ 200ms; prefers-reduced-motion la desactiva."
+ },
+ {
+  "id": "d021",
+  "perspective": "movimiento",
+  "title": "Transiciones específicas: completar, plegar sección, entrar/salir filas",
+  "mechanism": "Completar: el círculo se rellena (scale 0.6→1 con spring stiffness 500/damping 30) y la fila, si se oculta, colapsa altura con `grid-template-rows: 1fr → 0fr` 220ms ease-out tras 600ms de gracia (para deshacer). Plegar sección: chevron rota 90° 200ms y el contenido usa la misma técnica grid-rows (no medir alturas en JS). Entrada de fila nueva: opacity 0→1 + translateY(-4px) 180ms; salida 140ms solo opacity. Todas las transiciones con propiedades explícitas (ya no hay `transition: all`; mantenerlo con un lint stylelint `declaration-property-value-disallowed-list`). Quitar `whileHover scale 1.15` del botón de restaurar/casilla (TaskCard.tsx:~1039), Apple no escala en hover.",
+  "surfaces": [
+   "fila de tarea",
+   "cabecera de sección"
+  ],
+  "visible": "Feedback inmediato y calmado.",
+  "discreet": "—",
+  "editing": "—",
+  "evidence": "make-interfaces-feel-better: enter vs exit asimétricos, press scale 0.96; HIG Motion.",
+  "risk": "framer-motion y CSS compitiendo en la misma propiedad; unificar en uno por elemento.",
+  "verification": "Performance panel: ninguna animación de height/width/top; reduced-motion → duraciones 0."
+ },
+ {
+  "id": "d022",
+  "perspective": "diseño visual",
+  "title": "Hoy: el resumen como una fila-cabecera compacta, no tarjeta de pantalla completa",
+  "mechanism": "En m-v-smart_today la tarjeta ‘Buenas tardes’ ocupa 1250px de 1688 (2x), con borde, icono de sol, colapsador, 2 bloques × 4 botones de texto con pesos casi iguales. Visualmente: convertirla en una cabecera de grupo sin borde sobre el fondo, con saludo en title3, una línea resumen footnote, y cada pendiente de periodo pasado como UNA fila de lista (44–56px): «Limpieza · semana pasada — 3 sin marcar» + acción primaria en botón tintado pequeño «Empezar» (con la tarea sugerida como subtítulo) y un botón «…» que agrupa Omitir periodo / Esta semana / Ver historial. Las tareas de hoy deben verse en el primer viewport móvil.",
+  "surfaces": [
+   "Hoy",
+   "saludo diario modal"
+  ],
+  "visible": "Saludo + 1 línea + 1 fila por recuperación + tareas de hoy.",
+  "discreet": "Acciones secundarias en menú de la fila; racha como texto footnote.",
+  "editing": "—",
+  "evidence": "Reminders/Fitness: resúmenes como filas con acción, no párrafos; HIG ‘Make important content prominent’.",
+  "risk": "Menos visibles «Omitir periodo» y «Ver historial»: siguen a un toque; el brief prohíbe esconder todo, por eso la acción principal y el contexto quedan visibles.",
+  "verification": "En m-v-smart_today 390×844: la primera tarea de hoy visible sin scroll; el bloque resumen ≤ 280px CSS."
+ },
+ {
+  "id": "d023",
+  "perspective": "diseño visual",
+  "title": "Estadísticas: KPI sin tarjetas, rejilla de periodos como barras con tres estados visuales",
+  "mechanism": "La página usa título morado gradiente-saturado 48px, subtítulo explicativo, 4 tarjetas con borde, segmentado, inputs nativos, rejilla de 8 tarjetas con borde y un párrafo largo. Visual: título en --label; una franja KPI sin tarjetas (número 28 bold tabular + caption) con solo 3 cifras coherentes con el periodo seleccionado; la rejilla se vuelve una fila de 8 columnas-barra (alto proporcional a total) apiladas en tres tonos de un mismo matiz: hechas (tint 100%), omitidas por ti (tint 45% rayado diagonal 1px), cerradas sin completar (--fill-3 gris con borde dashed) y el periodo actual con contorno y sin color de omisión. Leyenda en una línea footnote con muestras; el párrafo explicativo desaparece (la leyenda lo explica). Fecha de referencia = navegador compacto de d016 en lugar de input nativo.",
+  "surfaces": [
+   "Estadísticas"
+  ],
+  "visible": "Tendencia de 8 periodos y tres estados distinguibles de un vistazo.",
+  "discreet": "Cifras exactas en tooltip/foco de cada barra.",
+  "editing": "—",
+  "evidence": "Fitness/Screen Time: barras apiladas con un matiz y leyenda mínima; Swift Charts.",
+  "risk": "Daltonismo: el rayado y el dashed no dependen del color.",
+  "verification": "Simulador de daltonismo en DevTools: los tres estados distinguibles; aXe: cada barra con aria-label «Semana 5–11 oct: 3 hechas, 0 omitidas por ti, 3 sin completar»."
+ },
+ {
+  "id": "d024",
+  "perspective": "diseño visual",
+  "title": "Estados vacíos tipográficos y una sección vacía de una sola línea",
+  "mechanism": "Lista Casa con secciones plegadas deja 900px blancos sin indicación; la papelera o listas a 0 muestran (según vista) ilustraciones o nada. Propuesta: vacío de vista = glifo de la lista 44px --label-3 + «Sin recordatorios» title3 --label-2 + una acción tintada («Añadir recordatorio»), centrado ópticamente al 40% de alto. Sección vacía = una fila placeholder 44px «Añadir a Limpieza» en --label-3 con «+» (que es exactamente el comportamiento de Reminders: tocar el espacio vacío crea una tarea). Si todo está plegado, mostrar al pie un footnote «2 secciones plegadas · Desplegar todo».",
+  "surfaces": [
+   "listas",
+   "secciones",
+   "papelera",
+   "búsqueda"
+  ],
+  "visible": "Siempre hay un siguiente paso evidente.",
+  "discreet": "Texto en terciario.",
+  "editing": "—",
+  "evidence": "Reminders: ‘No Reminders’ centrado gris; fila vacía para crear al tocar.",
+  "risk": "Ninguno.",
+  "verification": "Vaciar una lista de prueba y comprobar centrado y que el botón crea una tarea con foco en el título."
+ },
+ {
+  "id": "d025",
+  "perspective": "modo oscuro",
+  "title": "Modo oscuro con elevación por luminancia y tintes ajustados",
+  "mechanism": "Hoy el oscuro es en gran parte negro puro #000 + --bg-surface #111111 con las mismas tintas de color del claro (teselas tintadas, ocre del título Casa) y algunas reglas `html.dark` que fuerzan #b8b8bd (polish.css:2660-2668). Regla: fondo base #000 (OLED), grupo/tarjeta #1C1C1E, elevada (menús, hojas) #2C2C2E, glass con mezcla del 60% de #1C1C1E; separadores rgba(84,84,88,.6); labels: #FFF, rgba(235,235,245,.6), .3, .18; tintes de sistema en sus variantes oscuras (azul #0A84FF, rojo #FF453A, naranja #FF9F0A, verde #30D158) definidos una sola vez en el bloque oscuro de tokens (d003). Sin sombras; la elevación se expresa con la luminancia. Eliminar los overrides puntuales html.dark/body.dark duplicados (3 selectores por regla) unificando en `[data-theme=dark]`.",
+  "surfaces": [
+   "toda la app"
+  ],
+  "visible": "Contraste correcto sin manchas de color.",
+  "discreet": "—",
+  "editing": "—",
+  "evidence": "HIG Dark Mode: ‘elevated’ background colors y colores de sistema adaptativos https://developer.apple.com/design/human-interface-guidelines/dark-mode",
+  "risk": "Usuarios que prefieren gris oscuro en vez de negro: opción en Apariencia ya existente.",
+  "verification": "Capturas d-/m- en dark; contraste de --label-2 sobre #1C1C1E ≥ 4.5:1 (axe); grep 'html.dark' y 'body.dark' → 0 tras consolidar."
+ }
+]

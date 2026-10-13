@@ -53,6 +53,8 @@ interface TaskCardProps {
   showListName?: boolean;
   /** Oculta la fecha en vistas donde ya es obvia (p. ej. «Hoy»). */
   hideDueDate?: boolean;
+  /** Cómo mostrar la frecuencia: nada si el contexto ya la dice, glifo, o texto si la sección mezcla frecuencias. */
+  frequencyMode?: 'none' | 'glyph' | 'label';
   isFirstInSection?: boolean;
   isLastInSection?: boolean;
   previousTaskId?: string;
@@ -82,7 +84,7 @@ const SWIPE_COMPLETE_THRESHOLD = 65;
 const SWIPE_DELETE_THRESHOLD = -65;
 
 export const TaskCard = React.memo(function TaskCard({
-  task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, showListName = true, hideDueDate = false, isFirstInSection, isLastInSection, previousTaskId, hasChildren, childCount = 0, isExpanded, onToggleExpand, indent = 0, onNavigateView, onPersonClick, isGracePeriod,
+  task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, showListName = true, hideDueDate = false, frequencyMode = 'glyph', isFirstInSection, isLastInSection, previousTaskId, hasChildren, childCount = 0, isExpanded, onToggleExpand, indent = 0, onNavigateView, onPersonClick, isGracePeriod,
   onMoveUp, onMoveDown, canMoveUp, canMoveDown, onReorderTasks, onStartTask,
   isSelected, onToggleSelect, isSelectionMode, referenceDate: propReferenceDate
 }: TaskCardProps) {
@@ -959,7 +961,7 @@ export const TaskCard = React.memo(function TaskCard({
       {/* Main card — physically slides */}
       <motion.div
         ref={cardRef}
-        className={contextMenuOpen ? 'selected-card' : undefined}
+        className={`task-row${contextMenuOpen ? ' selected-card' : ''}`}
         drag={contextMenuOpen || isDraggingTouch ? false : "x"}
         dragSnapToOrigin
         dragConstraints={{ left: -140, right: 140 }}
@@ -985,12 +987,12 @@ export const TaskCard = React.memo(function TaskCard({
           x,
           position: 'relative',
           zIndex: contextMenuOpen ? 999992 : 1,
-          minHeight: 52,
+          minHeight: 44,
           display: 'flex',
           // Como en Recordatorios: la casilla y el (i) se alinean con la primera
           // línea del título, no con el centro de una tarea de varias líneas.
           alignItems: 'flex-start',
-          padding: `12px 12px 12px ${8 + indent}px`,
+          padding: `10px 8px 10px ${4 + indent}px`,
           margin: 0,
           width: '100%',
           boxSizing: 'border-box',
@@ -1020,13 +1022,12 @@ export const TaskCard = React.memo(function TaskCard({
               position: 'absolute',
               left: `${Math.max(12, indent - 10)}px`,
               top: 0,
-              height: '26px',
-              width: '14px',
-              borderLeft: '2px solid var(--border-subtle, rgba(0, 0, 0, 0.2))',
-              borderBottom: '2px solid var(--border-subtle, rgba(0, 0, 0, 0.2))',
-              borderBottomLeftRadius: '8px',
-              pointerEvents: 'none',
-              opacity: 0.65
+              height: '22px',
+              width: '10px',
+              borderLeft: '1px solid var(--separator-hair)',
+              borderBottom: '1px solid var(--separator-hair)',
+              borderBottomLeftRadius: '6px',
+              pointerEvents: 'none'
             }}
           />
         )}
@@ -1048,7 +1049,7 @@ export const TaskCard = React.memo(function TaskCard({
             }}
             style={{
               width: 24, height: 24,
-              marginTop: `calc(2px + ((1.05rem * 1.4) - 24px) / 2)`,
+              marginTop: 'calc((var(--task-title-lh) - 24px) / 2)',
               padding: 0,
               background: 'rgba(0, 122, 255, 0.12)',
               border: '1px solid rgba(0, 122, 255, 0.28)',
@@ -1070,7 +1071,7 @@ export const TaskCard = React.memo(function TaskCard({
             aria-hidden="true"
             style={{
               width: 26, height: 26,
-              marginTop: `calc(2px + ((1.05rem * 1.4) - 26px) / 2)`,
+              marginTop: 'calc((var(--task-title-lh) - 26px) / 2)',
               marginRight: 8,
               flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center'
@@ -1111,11 +1112,11 @@ export const TaskCard = React.memo(function TaskCard({
             }}
             style={{
               width: 26, height: 26,
-              marginTop: `calc(2px + ((1.05rem * 1.4) - 26px) / 2)`,
+              marginTop: 'calc((var(--task-title-lh) - 26px) / 2)',
               padding: 0,
               background: 'transparent',
               border: 'none',
-              marginRight: 8,
+              marginRight: 10,
               cursor: isBlocked ? 'default' : 'pointer',
               flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1220,7 +1221,16 @@ export const TaskCard = React.memo(function TaskCard({
         )}
 
         {/* Content */}
-        <div style={{ flex: 1, minWidth: 0, padding: '2px 0', boxSizing: 'border-box' }}>
+        <div
+          className="task-row-content"
+          onClick={(e) => {
+            // Toda la columna es la zona táctil del título (≥ 44 px): tocar el hueco equivale a tocar el texto.
+            if (isEditingTitle || task.deleted_at) return;
+            if ((e.target as HTMLElement).closest('button, a, input, textarea, [role="button"], [data-meta-field], .task-meta-line')) return;
+            setIsEditingTitle(true);
+          }}
+          style={{ flex: 1, minWidth: 0, boxSizing: 'border-box' }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             {isBlocked && <Lock size={15} color="var(--accent-red)" />}
             {isEditingTitle ? (
@@ -1419,8 +1429,8 @@ export const TaskCard = React.memo(function TaskCard({
                 transition={{ duration: 0.25, ease: 'easeOut' }}
                 style={{
                   fontWeight: 400,
-                  fontSize: '1.05rem',
-                  lineHeight: '1.4',
+                  fontSize: 'var(--task-title-size)',
+                  lineHeight: 'var(--task-title-lh)',
                   whiteSpace: 'normal',
                   wordBreak: 'normal',
                   overflowWrap: 'anywhere',
@@ -1797,7 +1807,8 @@ export const TaskCard = React.memo(function TaskCard({
             hideDueDate={hideDueDate}
             taskList={taskList}
             dueDateColor={dueDateColor}
-            cycleBadge={cycleBadge}
+            cycleBadge={frequencyMode === 'none' ? null : cycleBadge}
+            frequencyAsLabel={frequencyMode === 'label'}
             timeOfDayInfo={timeOfDayInfo}
             onEdit={onEdit}
             onNavigateView={onNavigateView}
@@ -1809,6 +1820,8 @@ export const TaskCard = React.memo(function TaskCard({
         {/* Subtask Chevron */}
         {hasChildren && (
           <button
+            type="button"
+            className="task-subtasks-btn"
             onClick={(e) => { e.stopPropagation(); onToggleExpand?.(); }}
             style={{
               background: 'transparent',
@@ -1823,15 +1836,16 @@ export const TaskCard = React.memo(function TaskCard({
               fontSize: '0.8rem',
               minWidth: 32,
               minHeight: 32,
-              marginTop: `calc(2px + ((1.05rem * 1.4) - 32px) / 2)`,
+              marginTop: 'calc((var(--task-title-lh) - 32px) / 2)',
               WebkitTapHighlightColor: 'transparent',
               flexShrink: 0,
-              opacity: 0.75,
-              transition: 'opacity 0.2s, color 0.2s',
-              marginRight: 4
+              transition: 'color 0.2s ease',
+              marginLeft: 6,
+              marginRight: 6
             }}
-            title={isExpanded ? "Contraer" : "Expandir"}
-            aria-label={isExpanded ? "Contraer" : "Expandir"}
+            title={isExpanded ? "Ocultar subtareas" : "Mostrar subtareas"}
+            aria-expanded={isExpanded}
+            aria-label={`${isExpanded ? 'Ocultar' : 'Mostrar'} ${childCount === 1 ? 'la subtarea' : `las ${childCount} subtareas`} de «${task.title}»`}
           >
             {(() => {
               const count = childCount;
@@ -1845,7 +1859,7 @@ export const TaskCard = React.memo(function TaskCard({
 
         {/* Apple Reminders Info (i) button & clean drag handle */}
         {!isBlocked && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: `calc(2px + ((1.05rem * 1.4) - 32px) / 2)` }}>
+          <div className="task-row-trailing" style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 'calc((var(--task-title-lh) - 32px) / 2)' }}>
             <button
               className="task-info-btn"
               onPointerDown={(e) => e.stopPropagation()}
@@ -1854,8 +1868,8 @@ export const TaskCard = React.memo(function TaskCard({
                 HapticService.selection();
                 onEdit(task.id);
               }}
-              aria-label="Detalles del recordatorio"
-              title="Información y detalles (i)"
+              aria-label={`Detalles de «${task.title || 'recordatorio'}»`}
+              title="Detalles (i)"
               style={{
                 width: 32, height: 32,
                 borderRadius: '50%',
@@ -1866,7 +1880,8 @@ export const TaskCard = React.memo(function TaskCard({
                 border: 'none',
                 cursor: 'pointer',
                 color: taskColor || 'var(--accent-primary)',
-                opacity: isMobile ? 0.55 : (isHovered || contextMenuOpen ? 0.85 : 0.35),
+                // Escritorio: aparece al pasar el ratón o con el foco, como en Recordatorios. Táctil: siempre a mano.
+                opacity: isMobile ? 0.8 : (isHovered || contextMenuOpen ? 1 : 0),
                 pointerEvents: 'auto',
                 transition: 'opacity 0.15s ease, background-color 0.15s ease, transform 0.12s ease',
                 WebkitTapHighlightColor: 'transparent',

@@ -13,7 +13,7 @@ describe('task metadata visibility with a redundant-date hint', () => {
     const due = new Date(); due.setDate(due.getDate() + Number(offset));
     const task: TaskItem = { id: 'exception', title: 'Fecha importante', status: 'pending', created_at: new Date().toISOString(), version: 1, user_id: 'guest', type: 'task', dueDate: due.toISOString() };
     const html = renderToStaticMarkup(createElement(TaskMetaBadges, { task, hideDueDate: true, dueDateColor: String(color), onEdit: vi.fn() }));
-    const date = html.indexOf('title="Fecha de vencimiento');
+    const date = html.indexOf('data-meta-field="date"');
     expect(date).toBeGreaterThan(-1);
     expect(html).not.toContain('<details');
   });
@@ -21,7 +21,7 @@ describe('task metadata visibility with a redundant-date hint', () => {
   it('omits a redundant current date from the metadata row', () => {
     const task: TaskItem = { id: 'current', title: 'Hoy', status: 'pending', created_at: new Date().toISOString(), version: 1, user_id: 'guest', type: 'task', dueDate: new Date().toISOString() };
     const html = renderToStaticMarkup(createElement(TaskMetaBadges, { task, hideDueDate: true, dueDateColor: '#007aff', onEdit: vi.fn() }));
-    expect(html).not.toContain('title="Fecha de vencimiento');
-    expect(html).not.toContain('task-context');
+    expect(html).not.toContain('data-meta-field="date"');
+    expect(html).not.toContain('task-meta-line');
   });
 });
