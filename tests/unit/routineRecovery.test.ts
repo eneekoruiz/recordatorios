@@ -39,11 +39,26 @@ describe('retomar rutinas por período y sección', () => {
       task('sin fecha', { created_at: '' }), task('eliminada', { deleted_at: now.toISOString() }),
     ])).toEqual([]);
   });
-  it('solo sugiere dos secciones y leer no escribe omisiones en el historial', () => {
-    const tasks = [task('a'), task('b', { sectionId: 'bath' }), task('c', { sectionId: 'bed' })];
+  it('devuelve todas las secciones (la vista decide cuántas enseña) y leer no escribe en el historial', () => {
+    const tasks = [task('a', { duration: 20 }), task('b', { sectionId: 'bath', duration: 5 }), task('c', { sectionId: 'bed' })];
     const snapshot = JSON.stringify(tasks);
-    expect(build(tasks)).toHaveLength(2);
+    const groups = build(tasks);
+    expect(groups).toHaveLength(3);
+    // Primero lo que se retoma con menos esfuerzo.
+    expect(groups.map(group => group.candidate.id)).toEqual(['b', 'a', 'c']);
     expect(JSON.stringify(tasks)).toBe(snapshot);
     expect(tasks.every(item => item.skipHistory === undefined)).toBe(true);
+  });
+  it('«Omitir» cubre todas las sin marcar de esa sección y periodo; empezar propone solo lo pendiente hoy', () => {
+    const groups = build([
+      task('pendiente', { duration: 30 }),
+      task('retomada', { duration: 5, completionHistory: [currentWeek] }),
+    ]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].tasks.map(item => item.id).sort()).toEqual(['pendiente', 'retomada']);
+    expect(groups[0].candidate.id).toBe('pendiente');
+  });
+  it('no insiste si todo lo que quedó sin marcar ya está hecho en el periodo actual', () => {
+    expect(build([task('retomada', { completionHistory: [currentWeek] })])).toEqual([]);
   });
 });

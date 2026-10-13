@@ -453,6 +453,7 @@ function App() {
       <DailyGreetingModal
         onSelectView={handleSelectView}
         onOpenTask={(taskId) => { handleSelectView('smart_today'); setEditingTaskId(taskId); setIsDrawerOpen(true); }}
+        onStartTask={(taskId) => setZenModeTaskId(taskId)}
       />
       {securityOpen && (
         <Suspense fallback={null}>

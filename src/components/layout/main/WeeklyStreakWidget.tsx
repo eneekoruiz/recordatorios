@@ -144,15 +144,11 @@ export function WeeklyStreakWidget() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 320, damping: 28 }}
       style={{
-        margin: '0 0 16px 0',
-        borderRadius: 18,
+        // Contenido, como el resumen: misma anchura, superficie sólida y sin sombra flotante.
+        margin: '0 16px 12px',
+        borderRadius: 16,
         background: cardBg,
-        backdropFilter: 'blur(24px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(24px) saturate(180%)',
         border: cardBorder,
-        boxShadow: isDark
-          ? '0 4px 24px rgba(0,0,0,0.28)'
-          : '0 2px 16px rgba(0,0,0,0.06)',
         overflow: 'hidden'
       }}
     >

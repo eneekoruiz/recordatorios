@@ -16,7 +16,7 @@ const PERIOD_STYLE = {
   evening: { Icon: Moon, accent: '#5e5ce6' },
 } as const;
 
-export function DailyBriefingBanner({ onOpenTask, onSelectView }: { onOpenTask?: (taskId: string) => void; onSelectView?: (view: string) => void }) {
+export function DailyBriefingBanner({ onOpenTask, onStartTask, onSelectView }: { onOpenTask?: (taskId: string) => void; onStartTask?: (taskId: string) => void; onSelectView?: (view: string) => void }) {
   const tasks = useAppStore((state) => state.tasks);
   const cycles = useAppStore((state) => state.cycles);
   const listSections = useAppStore((state) => state.listSections);
@@ -69,7 +69,7 @@ export function DailyBriefingBanner({ onOpenTask, onSelectView }: { onOpenTask?:
   return (
     <div className="daily-briefing-container" style={{ ['--briefing-accent' as string]: accent }}>
       <div className="briefing-top">
-        <span className="briefing-icon" aria-hidden="true"><Icon size={18} strokeWidth={2.1} /></span>
+        <span className="briefing-icon" aria-hidden="true"><Icon size={16} strokeWidth={2.2} /></span>
         <div className="briefing-heading">
           <span className="briefing-greeting">{briefing.greeting}</span>
           <span className="briefing-date">{briefing.date}</span>
@@ -100,7 +100,7 @@ export function DailyBriefingBanner({ onOpenTask, onSelectView }: { onOpenTask?:
               {briefing.detail ? ` ${briefing.detail}` : ''}
             </p>
 
-            <RoutineRecovery groups={briefing.recovery} onOpenTask={onOpenTask} onSelectView={onSelectView} />
+            <RoutineRecovery groups={briefing.recovery} onStartTask={onStartTask} onOpenTask={onOpenTask} onSelectView={onSelectView} />
 
             {/* Solo lo que la frase no dice: la caducidad cercana, la racha y activar avisos */}
             {(expiring || briefing.topStreak >= 2 || canAskNotifications) && (

@@ -76,19 +76,19 @@ export function buildDailyBriefing(
   const overdue = all.filter((t) => t.dueDate && !Number.isNaN(new Date(t.dueDate).getTime()) && dueDay(t) < startOfToday && !isDoneNow(t));
 
   // ── Rutinas: diarias (y hábitos) y semanales. Una tarea con fecha de hoy no es «diaria». ──
-  const dailyTasks = all.filter((t) => {
-    if (t.cycle_id === 'cycle_day' || (t.targetCount && t.targetCount > 1)) return true;
-    return getTaskPeriodicity(t, options.listSections, options.lists) === 'day';
-  });
+  // La frecuencia efectiva (propia o heredada de la sección) manda; un objetivo de repeticiones
+  // («3 veces») solo hace diaria a una tarea que no tiene otra frecuencia.
+  const periodicityOf = (t: TaskItem) => getTaskPeriodicity(t, options.listSections, options.lists);
+  const isDaily = (t: TaskItem) => {
+    const p = periodicityOf(t);
+    return p === 'day' || (!p && Boolean(t.targetCount && t.targetCount > 1));
+  };
+  const dailyTasks = all.filter(isDaily);
 
   const pendingDaily = dailyTasks.filter((t) => !isDoneNow(t));
   const completedDailyToday = dailyTasks.filter(isActuallyDone).length;
 
-  const weeklyTasks = all.filter((t) => {
-    if (t.cycle_id === 'cycle_week') return true;
-    const p = getTaskPeriodicity(t, options.listSections, options.lists);
-    return p === 'week';
-  });
+  const weeklyTasks = all.filter((t) => periodicityOf(t) === 'week');
 
   const pendingWeekly = weeklyTasks.filter((t) => !isDoneNow(t));
 
@@ -99,7 +99,7 @@ export function buildDailyBriefing(
     ? currentDayOfWeek === options.weeklyDayOfWeek 
     : currentDayOfWeek === weeklyDayPref;
 
-  const habits = all.filter((t) => t.cycle_id === 'cycle_day' || (t.targetCount && t.targetCount > 1));
+  const habits = all.filter(isDaily);
   const habitsDone = habits.filter(isActuallyDone).length;
   const topStreak = habits.reduce((max, habit) => Math.max(max, calculateHabitStreak(habit, cycles).count), 0);
 

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Check, CreditCard, Flame, Moon, Sun, Sunset, X } from 'lucide-react';
+import { ArrowRight, Check, CreditCard, Moon, Sun, Sunset, X } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { buildDailyBriefing } from '../../services/DailyBriefingService';
 import { HapticService } from '../../services/HapticService';
@@ -13,6 +13,8 @@ import { RoutineRecovery } from './RoutineRecovery';
 interface DailyGreetingModalProps {
   onSelectView?: (view: string) => void;
   onOpenTask?: (taskId: string) => void;
+  /** Empezar una tarea en modo foco (desde «Para retomar»). */
+  onStartTask?: (taskId: string) => void;
 }
 
 const PERIOD_STYLE = {
@@ -40,7 +42,7 @@ const write = (storage: Storage, key: string, value: string) => {
   }
 };
 
-export const DailyGreetingModal: React.FC<DailyGreetingModalProps> = ({ onSelectView, onOpenTask }) => {
+export const DailyGreetingModal: React.FC<DailyGreetingModalProps> = ({ onSelectView, onOpenTask, onStartTask }) => {
   const tasks = useAppStore((state) => state.tasks);
   const cycles = useAppStore((state) => state.cycles);
   const listSections = useAppStore((state) => state.listSections);
@@ -207,7 +209,7 @@ export const DailyGreetingModal: React.FC<DailyGreetingModalProps> = ({ onSelect
               </p>
             </header>
 
-            <RoutineRecovery groups={briefing.recovery} onOpenTask={openTask} onSelectView={onSelectView ? view => { setIsOpen(false); onSelectView(view); } : undefined} />
+            <RoutineRecovery groups={briefing.recovery} onStartTask={onStartTask ? (id) => { setIsOpen(false); onStartTask(id); } : undefined} onOpenTask={openTask} onSelectView={onSelectView ? view => { setIsOpen(false); onSelectView(view); } : undefined} />
 
             {briefing.focus.length > 0 && (
               <section className="greeting-focus">
@@ -232,30 +234,7 @@ export const DailyGreetingModal: React.FC<DailyGreetingModalProps> = ({ onSelect
               </section>
             )}
 
-            {(briefing.completedToday > 0 || briefing.habitsTotal > 0 || briefing.pendingToday.length > 0) && (
-              <div className="greeting-stats">
-                <div className="greeting-stat">
-                  <b>{briefing.pendingToday.length}</b>
-                  <span>{briefing.pendingToday.length === 1 ? 'pendiente' : 'pendientes'}</span>
-                </div>
-                {briefing.completedToday > 0 && (
-                  <div className="greeting-stat">
-                    <b>{briefing.completedToday}</b>
-                    <span>{briefing.completedToday === 1 ? 'completada' : 'completadas'}</span>
-                  </div>
-                )}
-                {briefing.habitsTotal > 0 && (
-                  <div className="greeting-stat">
-                    <b>{briefing.habitsDone}/{briefing.habitsTotal}</b>
-                    <span>hábitos</span>
-                  </div>
-                )}
-                {briefing.topStreak >= 2 && (
-                  <span className="greeting-streak"><Flame size={14} /> {plural(briefing.topStreak, 'día')}</span>
-                )}
-              </div>
-            )}
-
+            {/* Las cifras del día ya están en la frase principal: no se repiten en tarjetas. */}
             {briefing.expiring.length > 0 && (
               <p className="greeting-note">
                 <CreditCard size={16} />

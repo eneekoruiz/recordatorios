@@ -1,75 +1,74 @@
-/* Resumen del día en la vista «Hoy»: informativo y discreto. */
+/* Resumen del día en «Hoy»: contenido (superficie sólida, sin cristal), compacto y por encima de las tareas. */
 .daily-briefing-container {
-  margin: 0 16px 14px;
-  padding: 16px;
-  border-radius: 28px;
-  background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
-  backdrop-filter: blur(20px) saturate(1.2);
-  -webkit-backdrop-filter: blur(20px) saturate(1.2);
-  border: 0.5px solid var(--border-subtle);
-  box-shadow: var(--shadow-sm);
+  margin: 4px 16px 12px;
+  padding: 10px 14px 8px;
+  border-radius: 16px;
+  background: var(--sheet-card, var(--bg-elevated));
+  border: 0.5px solid var(--separator-hair, var(--border-subtle));
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 4px;
 }
+[data-theme="dark"] .daily-briefing-container, html.dark .daily-briefing-container { background: var(--bg-elevated); }
 
-.briefing-top { display: flex; align-items: flex-start; gap: 12px; }
+.briefing-top { display: flex; align-items: center; gap: 10px; min-height: 44px; }
 .briefing-icon {
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  border-radius: 10px;
+  border-radius: 8px;
   background: color-mix(in srgb, var(--briefing-accent) 14%, transparent);
   color: var(--briefing-accent);
 }
-.briefing-heading { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.briefing-heading { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; }
 .briefing-greeting {
   font-family: var(--font-display);
-  font-size: 1.05rem;
-  font-weight: 650;
+  font-size: var(--type-headline, 1.0625rem);
+  font-weight: 600;
   letter-spacing: -0.015em;
-  color: var(--text-primary);
+  color: var(--label-1, var(--text-primary));
 }
-.briefing-date { font-size: 0.8rem; color: var(--text-tertiary); }
+.briefing-date { font-size: var(--type-subhead, 0.9375rem); color: var(--label-2, var(--text-secondary)); }
 .briefing-toggle {
   width: 44px;
   height: 44px;
+  margin-right: -10px;
   flex-shrink: 0;
   display: grid;
   place-items: center;
   border: 0;
   border-radius: 50%;
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--label-2, var(--text-secondary));
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background-color 0.15s ease;
 }
 @media (hover: hover) and (pointer: fine) {
   .briefing-toggle:hover { background: var(--bg-hover); }
 }
 
-.briefing-body { display: flex; flex-direction: column; gap: 10px; }
-.briefing-lead { margin: 0; font-size: 0.95rem; line-height: 1.45; color: var(--text-secondary); }
-.briefing-lead strong { color: var(--text-primary); font-weight: 600; }
+.briefing-body { display: flex; flex-direction: column; gap: 8px; }
+.briefing-lead { margin: 0; font-size: var(--type-subhead, 0.9375rem); line-height: 1.4; color: var(--label-2, var(--text-secondary)); text-wrap: pretty; }
+.briefing-lead strong { color: var(--label-1, var(--text-primary)); font-weight: 600; }
 
 .briefing-stats {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 16px;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
+  gap: 4px 12px;
+  font-size: var(--type-footnote, 0.8125rem);
+  color: var(--label-2, var(--text-secondary));
 }
-.briefing-stats b { color: var(--text-primary); font-weight: 650; font-variant-numeric: tabular-nums; }
 .briefing-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 10px;
+  min-height: 28px;
+  padding: 0 10px;
   border-radius: 999px;
-  font-size: 0.82rem;
+  font-size: var(--type-footnote, 0.8125rem);
   font-weight: 600;
   background: color-mix(in srgb, var(--accent-orange) 12%, transparent);
   color: color-mix(in srgb, var(--accent-orange) 55%, var(--text-primary));
@@ -85,12 +84,11 @@
   border: 0;
   cursor: pointer;
   font: inherit;
+  font-size: var(--type-footnote, 0.8125rem);
+  font-weight: 600;
 }
 @media (hover: hover) and (pointer: fine) {
   .briefing-chip--action:hover { filter: brightness(0.95); }
 }
 .briefing-chip--action:active { transform: scale(0.97); }
-
-@media (max-width: 768px) {
-  .daily-briefing-container { margin: 0 16px 12px; padding: 16px; }
-}
+@media (prefers-reduced-motion: reduce) { .briefing-chip--action:active { transform: none; } }
