@@ -21,13 +21,12 @@ test('task metadata is directly actionable without a redundant disclosure', asyn
   const section = page.locator('.group-header', { hasText: 'Cocina' });
   const expand = section.getByRole('button', { name: 'Desplegar sección', exact: true });
   if (await expand.count()) await expand.click();
-  const details = page.locator('[data-task-id="hierarchy-task"]').first().locator('.task-context');
-  await expect(details.locator('details')).toHaveCount(0);
-  for (const button of await details.getByRole('button').all()) {
-    const box = await button.boundingBox();
-    expect(box?.height).toBeGreaterThanOrEqual(44);
-    expect(box?.width).toBeGreaterThanOrEqual(44);
-  }
+  const row = page.locator('[data-task-id="hierarchy-task"]').first();
+  await expect(row.locator('details')).toHaveCount(0);
+  // Los datos son una línea de texto (sin botones diminutos); la zona táctil es la fila entera.
+  await expect(row.locator('.task-meta-line button')).toHaveCount(0);
+  const box = await row.locator('.task-row').boundingBox();
+  expect(box?.height).toBeGreaterThanOrEqual(44);
   await expect(details).toContainText('15 min');
   await expect(details).toContainText('24');
   await details.getByRole('button', { name: /Mañana/ }).click();

@@ -214,3 +214,23 @@
 /* ---------- Menús: filas de 44 px, grupos separados, lo destructivo al final ---------- */
 .ios-dropdown-item { min-height: 44px; }
 .section-move-btn { min-height: 44px; height: 44px !important; }
+.content-header .page-date { font-size: var(--type-subhead); color: var(--label-2); line-height: 28px; }
+.content-header .page-date::first-letter { text-transform: uppercase; }
+/* Segunda línea de la cabecera de sección: periodo en curso y «+ Diarias», en gris y sin cápsulas con borde. */
+.section-subline { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; margin-top: 1px; min-width: 0; }
+.section-subline .section-period-context-badge, .section-subline .section-period-context-badge:hover {
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  font-size: var(--type-footnote) !important;
+  font-weight: 400 !important;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.section-subline .routine-chip { height: 26px; margin: 0; font-size: var(--type-footnote); font-weight: 500; padding: 0 9px 0 7px; }

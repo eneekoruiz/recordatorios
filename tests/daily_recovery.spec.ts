@@ -63,11 +63,9 @@ test('greeting and daily banner suggest the same unresolved previous sections', 
     await expect(container.getByTestId('recovery-group')).toHaveCount(2);
     const weekly = recoveryGroup(container, 'recovery-kitchen');
     const monthly = recoveryGroup(container, 'recovery-bathroom');
-    await expect(weekly).toContainText('La semana pasada');
-    await expect(weekly).toContainText('Limpieza · Cocina');
+    await expect(weekly).toContainText('Cocina, sin marcar la semana pasada');
     await expect(weekly).toHaveAttribute('data-frequency', 'week');
-    await expect(monthly).toContainText('El mes pasado');
-    await expect(monthly).toContainText('Limpieza · Baño');
+    await expect(monthly).toContainText('Baño, sin marcar el mes pasado');
     await expect(monthly).toHaveAttribute('data-frequency', 'month');
     await expect(container.getByTestId('routine-recovery')).not.toContainText('Ya hecho esta semana');
     await expect(container.getByTestId('routine-recovery')).not.toContainText('Ya omitido esta semana');
@@ -94,7 +92,8 @@ test('omitting the previous period stops that suggestion without touching curren
   await seedRecovery(page);
   const before = JSON.parse(await sourceSnapshot(page));
   const dialog = await openGreeting(page);
-  await recoveryGroup(dialog, 'recovery-kitchen').getByRole('button', { name: 'Omitir la semana pasada en Limpieza · Cocina', exact: true }).click();
+  await recoveryGroup(dialog, 'recovery-kitchen').getByRole('button', { name: 'Más opciones para Limpieza · Cocina', exact: true }).click();
+  await recoveryGroup(dialog, 'recovery-kitchen').getByRole('menuitem', { name: 'Omitir la semana pasada', exact: true }).click();
   await expect(recoveryGroup(dialog, 'recovery-kitchen')).toHaveCount(0);
   await expect(recoveryGroup(page.locator('.daily-briefing-container'), 'recovery-kitchen')).toHaveCount(0);
   await expect(recoveryGroup(dialog, 'recovery-bathroom')).toBeVisible();
@@ -117,20 +116,19 @@ test('recovery navigation opens the current list and real statistics view', asyn
   await seedRecovery(page);
   const before = await sourceSnapshot(page);
   const dialog = await openGreeting(page);
-  await recoveryGroup(dialog, 'recovery-kitchen').getByRole('button', { name: 'Ir a la sección', exact: true }).click();
+  await recoveryGroup(dialog, 'recovery-kitchen').getByRole('button', { name: 'Más opciones para Limpieza · Cocina', exact: true }).click();
+  await recoveryGroup(dialog, 'recovery-kitchen').getByRole('menuitem', { name: 'Ir a la sección', exact: true }).click();
   await expect(dialog).not.toBeVisible();
   await expect(page.locator('.content-header h1')).toContainText('Limpieza');
   const reopened = await openGreeting(page);
-  await recoveryGroup(reopened, 'recovery-kitchen').getByRole('button', { name: 'Ver historial de Limpieza · Cocina', exact: true }).click();
+  await recoveryGroup(reopened, 'recovery-kitchen').getByRole('button', { name: 'Más opciones para Limpieza · Cocina', exact: true }).click();
+  await recoveryGroup(reopened, 'recovery-kitchen').getByRole('menuitem', { name: 'Ver historial', exact: true }).click();
   await expect(reopened).not.toBeVisible();
   await expect(page.getByTestId('routine-analytics')).toBeVisible();
   await expect(page.getByTestId('routine-frequency-week')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('[data-testid="routine-period"][data-period-start="2026-09-28"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByTestId('routine-group')).toHaveCount(1);
   await expect(page.getByTestId('routine-group')).toHaveAttribute('data-section-id', 'recovery-kitchen');
-  await page.evaluate(() => window.dispatchEvent(new CustomEvent('select-view', { detail: 'smart_today' })));
-  await page.locator('.daily-briefing-container').getByRole('button', { name: 'Ver estadísticas', exact: true }).click();
-  await expect(page.getByTestId('routine-analytics')).toBeVisible();
   expect(await sourceSnapshot(page)).toBe(before);
 });
 

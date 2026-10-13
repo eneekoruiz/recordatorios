@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ChevronRight, Play } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { MoreHorizontal, Play } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { useNavigation } from '../../hooks/useNavigation';
 import { buildRoutineRecovery, type RoutineRecoveryGroup } from '../../utils/routineRecovery';
@@ -16,23 +16,40 @@ interface RoutineRecoveryProps {
   onSelectView?: (view: string) => void;
 }
 
-// En móvil, una sección basta para dar un siguiente paso sin tapar las tareas de hoy.
-const visibleCount = () => (typeof window !== 'undefined' && window.innerWidth <= 560 ? 1 : 3);
-const periodName = (group: RoutineRecoveryGroup) => group.frequency === 'week' ? 'La semana pasada' : 'El mes pasado';
+// En móvil, una sugerencia basta para dar un siguiente paso sin tapar las tareas de hoy.
+const visibleCount = () => (typeof window !== 'undefined' && window.innerWidth <= 560 ? 1 : 2);
+const pastPeriod = (group: RoutineRecoveryGroup) => group.frequency === 'week' ? 'la semana pasada' : 'el mes pasado';
 const dateValue = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
 /**
- * Del historial a una acción por sección. Describe el dato («3 sin marcar»), nunca a la persona.
- * Tres salidas: empezar por la tarea más breve, ir a la sección, u omitir ese periodo (solo esa
- * sección y ese periodo pasado; se puede deshacer).
+ * «Para retomar»: cada sugerencia es una fila con el aspecto de una tarea. Tocarla empieza la tarea
+ * más breve de esa sección; el resto de acciones (ir a la sección, omitir ese periodo, historial)
+ * viven en su menú «···», como las de cualquier fila. El texto describe el dato, no a la persona.
  */
 export function RoutineRecovery({ groups, onStartTask, onOpenTask, onSelectView }: RoutineRecoveryProps) {
   const [expanded, setExpanded] = useState(false);
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuFor) return;
+    const close = (event: Event) => {
+      if (event instanceof KeyboardEvent && event.key !== 'Escape') return;
+      if (event instanceof PointerEvent && menuRef.current?.contains(event.target as Node)) return;
+      setMenuFor(null);
+    };
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', close);
+    menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+    return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', close); };
+  }, [menuFor]);
+
   if (!groups.length) return null;
   const limit = visibleCount();
   const visible = expanded ? groups : groups.slice(0, limit);
 
   const omit = (group: RoutineRecoveryGroup) => {
+    setMenuFor(null);
     // Relee los datos vivos: no omite una tarea marcada desde que se pintó.
     const state = useAppStore.getState();
     const live = buildRoutineRecovery(Object.values(state.tasks), state.cycles, state.listSections, state.lists);
@@ -40,7 +57,7 @@ export function RoutineRecovery({ groups, onStartTask, onOpenTask, onSelectView 
     if (!selected) return;
     const ids = selected.tasks.map(task => task.id);
     for (const id of ids) state.skipTask(id, false, group.periodStart);
-    showUndoToast(`${periodName(group)} omitida en ${group.label}`, () => {
+    showUndoToast(`${group.label}: ${pastPeriod(group)} omitida`, () => {
       const latest = useAppStore.getState();
       for (const id of ids) latest.skipTask(id, true, group.periodStart);
     });
@@ -53,6 +70,7 @@ export function RoutineRecovery({ groups, onStartTask, onOpenTask, onSelectView 
   };
 
   const showHistory = (group: RoutineRecoveryGroup) => {
+    setMenuFor(null);
     useNavigation.getState().setRoutineAnalyticsFocus({
       frequency: group.frequency,
       reference: dateValue(group.periodStart),
@@ -62,51 +80,55 @@ export function RoutineRecovery({ groups, onStartTask, onOpenTask, onSelectView 
   };
 
   return (
-    <section className="routine-recovery" aria-label="Para retomar" data-testid="routine-recovery">
-      <h3 className="routine-recovery-title">Para retomar</h3>
+    <section className="routine-recovery" aria-labelledby="routine-recovery-title" data-testid="routine-recovery">
+      <div className="routine-recovery-head">
+        <h2 id="routine-recovery-title" className="routine-recovery-title">Para retomar</h2>
+        {groups.length > limit && (
+          <button type="button" className="routine-recovery-more" aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>
+            {expanded ? 'Menos' : `${groups.length - limit} más`}
+          </button>
+        )}
+      </div>
       {visible.map(group => {
         const minutes = group.candidate.duration && group.candidate.duration > 0 ? group.candidate.duration : 0;
-        const omitLabel = `Omitir ${group.frequency === 'week' ? 'la semana pasada' : 'el mes pasado'} en ${group.label}`;
+        // El nombre de la sección basta (la lista solo si no hay sección); el número exacto va en el nombre accesible.
+        const place = group.label.split(' · ').pop() || group.label;
+        const fact = `${place}, sin marcar ${pastPeriod(group)}`;
         return (
           <div className="routine-recovery-row" key={group.id} data-testid="recovery-group" data-frequency={group.frequency} data-list-id={group.listId} data-section-id={group.sectionId}>
-            <div className="routine-recovery-head">
-              <p className="routine-recovery-label">
-                <strong>{group.label}</strong>
-                <span className="routine-recovery-fact">{periodName(group)}: {group.tasks.length} sin marcar</span>
-              </p>
-              {onSelectView && (
-                <button type="button" className="routine-recovery-link" onClick={() => showHistory(group)} aria-label={`Ver historial de ${group.label}`}>
-                  Historial <ChevronRight size={14} aria-hidden="true" />
-                </button>
-              )}
-            </div>
-            <div className="routine-recovery-actions">
-              <button type="button" className="routine-recovery-start" onClick={() => start(group)}
-                aria-label={`Empezar por «${group.candidate.title}»${minutes ? `, ${formatDuration(minutes)}` : ''}`}>
-                <Play size={13} fill="currentColor" aria-hidden="true" />
-                <span className="routine-recovery-start-text">{group.candidate.title}</span>
-                {minutes > 0 && <span className="routine-recovery-minutes">{formatDuration(minutes)}</span>}
+            <button type="button" className="routine-recovery-start" onClick={() => start(group)}
+              aria-label={`Empezar por «${group.candidate.title}»${minutes ? `, ${formatDuration(minutes)}` : ''}. ${group.label}: ${group.tasks.length} sin marcar ${pastPeriod(group)}`}>
+              <span className="routine-recovery-glyph" aria-hidden="true"><Play size={11} fill="currentColor" /></span>
+              <span className="routine-recovery-text">
+                <span className="routine-recovery-task">{group.candidate.title}</span>
+                <span className="routine-recovery-fact">
+                  {minutes > 0 && <><span className="tabular">{formatDuration(minutes)}</span> · </>}{fact}
+                </span>
+              </span>
+            </button>
+            <div className="routine-recovery-menu-anchor">
+              <button type="button" className="routine-recovery-more-btn" aria-haspopup="menu" aria-expanded={menuFor === group.id}
+                aria-label={`Más opciones para ${group.label}`} onClick={() => setMenuFor(menuFor === group.id ? null : group.id)}>
+                <MoreHorizontal size={18} aria-hidden="true" />
               </button>
-              {onSelectView && (
-                <button type="button" onClick={() => onSelectView(`list_${group.listId}`)}>Ir a la sección</button>
+              {menuFor === group.id && (
+                <div ref={menuRef} role="menu" aria-label={group.label} className="ios-dropdown-menu routine-recovery-menu">
+                  {onSelectView && (
+                    <button type="button" role="menuitem" className="ios-dropdown-item" onClick={() => { setMenuFor(null); onSelectView(`list_${group.listId}`); }}>Ir a la sección</button>
+                  )}
+                  {onSelectView && (
+                    <button type="button" role="menuitem" className="ios-dropdown-item" onClick={() => showHistory(group)}>Ver historial</button>
+                  )}
+                  <div className="ios-dropdown-divider" role="separator" />
+                  <button type="button" role="menuitem" className="ios-dropdown-item" onClick={() => omit(group)}>
+                    Omitir {pastPeriod(group)}
+                  </button>
+                </div>
               )}
-              <button type="button" onClick={() => omit(group)} aria-label={omitLabel} title={omitLabel}>Omitir</button>
             </div>
           </div>
         );
       })}
-      <div className="routine-recovery-footer">
-        {groups.length > limit && (
-          <button type="button" className="routine-recovery-link" aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>
-            {expanded ? 'Mostrar menos' : `${groups.length - limit} ${groups.length - limit === 1 ? 'sección más' : 'secciones más'}`}
-          </button>
-        )}
-        {onSelectView && (
-          <button className="routine-recovery-link routine-recovery-stats" type="button" onClick={() => onSelectView('ANALYTICS')}>
-            Ver estadísticas <ChevronRight size={14} aria-hidden="true" />
-          </button>
-        )}
-      </div>
     </section>
   );
 }

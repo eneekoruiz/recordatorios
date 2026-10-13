@@ -1,3 +1,4 @@
+import { expandSection } from './support/sections';
 import { test, expect } from '@playwright/test';
 import { bootApp } from "./support/bootApp";
 
@@ -138,10 +139,10 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     }
     await page.waitForTimeout(400);
 
-    // Semanales empieza plegada: al desplegarla aparece la cápsula «+ Diarias»
+    // Con la sección desplegada aparece la cápsula «+ Diarias»
     const semanalHeader = page.locator('.group-header', { hasText: 'Semanales' });
     await expect(semanalHeader).toBeVisible({ timeout: 5000 });
-    await semanalHeader.getByRole('button', { name: 'Desplegar sección', exact: true }).click();
+    await expandSection(semanalHeader);
 
     const chip = semanalHeader.getByRole('button', { name: 'Incluir diarias' });
     await expect(chip).toBeVisible({ timeout: 5000 });
@@ -258,9 +259,8 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     await expect(cocinaHeader).toBeVisible({ timeout: 5000 });
     await expect(banoHeader).toBeVisible({ timeout: 5000 });
 
-    // Las secciones en vistas de frecuencia inician cerradas por defecto para no agobiar
-    // Un click en Cocina la despliega
-    await cocinaHeader.getByRole('button', { name: 'Desplegar sección', exact: true }).click();
+    // Las secciones empiezan desplegadas
+    await expandSection(cocinaHeader);
     await page.waitForTimeout(300);
 
     // Verify task card is visible under expanded sub-section

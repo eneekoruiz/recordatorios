@@ -616,16 +616,17 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                 >
                   {data.title}
                 </h2>
-                {periodContext && (
+
+              </div>
+              {/* Segunda línea, discreta: el periodo en curso y la opción de incluir frecuencias más cortas. */}
+              {(periodContext || (data.routineCounts && data.routineCounts.full > data.routineCounts.only)) && (
+                <div className="section-subline">
+                  {periodContext && (
                   <span
                     className="section-period-context-badge"
                     title={periodContext.isRolledOver ? 'Período actual completado · Mostrando siguiente ciclo' : 'Período en curso'}
                     style={{
-                      marginLeft: 4,
-                      fontSize: '0.72rem',
-                      fontWeight: 500,
-                      color: periodContext.isRolledOver ? 'var(--accent-green, #34c759)' : 'var(--text-tertiary)',
-                      letterSpacing: data.depth === 0 ? '-0.01em' : '0.03em',
+                      color: periodContext.isRolledOver ? 'var(--accent-green-text, #248a3d)' : 'var(--label-2)',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 3,
@@ -639,9 +640,26 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                     {periodContext.label}
                   </span>
                 )}
-
-              </div>
-
+                  {data.routineCounts && data.routineCounts.full > data.routineCounts.only && (
+            <button
+              type="button"
+              className={`routine-chip${isFullRoutine ? ' is-on' : ''}`}
+              aria-pressed={isFullRoutine}
+              aria-label={`Incluir ${includeLabel.toLowerCase()}`}
+              style={{ ['--chip-color' as string]: data.color }}
+              onClick={(e) => {
+                e.stopPropagation();
+                HapticService.selection();
+                toggleSectionRoutineMode?.(data.category, isFullRoutine ? 'only_section' : 'full_routine');
+              }}
+              title={isFullRoutine ? `Mostrando también ${includeLabel.toLowerCase()}` : `Incluir ${includeLabel.toLowerCase()}`}
+            >
+              {isFullRoutine ? <Check size={12} strokeWidth={3} aria-hidden="true" /> : <Plus size={12} strokeWidth={2.6} aria-hidden="true" />}
+              <span>{includeLabel}</span>
+            </button>
+          )}
+                </div>
+              )}
             </div>
           )}
 
@@ -674,24 +692,6 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, justifyContent: 'flex-end' }}>
           {/* Incluir las frecuencias anteriores: una cápsula que se enciende (con la sección desplegada) */}
-          {data.routineCounts && data.routineCounts.full > data.routineCounts.only && (
-            <button
-              type="button"
-              className={`routine-chip${isFullRoutine ? ' is-on' : ''}`}
-              aria-pressed={isFullRoutine}
-              aria-label={`Incluir ${includeLabel.toLowerCase()}`}
-              style={{ ['--chip-color' as string]: data.color }}
-              onClick={(e) => {
-                e.stopPropagation();
-                HapticService.selection();
-                toggleSectionRoutineMode?.(data.category, isFullRoutine ? 'only_section' : 'full_routine');
-              }}
-              title={isFullRoutine ? `Mostrando también ${includeLabel.toLowerCase()}` : `Incluir ${includeLabel.toLowerCase()}`}
-            >
-              {isFullRoutine ? <Check size={12} strokeWidth={3} aria-hidden="true" /> : <Plus size={12} strokeWidth={2.6} aria-hidden="true" />}
-              <span>{includeLabel}</span>
-            </button>
-          )}
           {/* Duración y precio junto al conteo: un único grupo de datos a la derecha */}
           {(durationNode || priceNode) && (
             <div className="section-duration section-meta" onClick={event => event.stopPropagation()}>

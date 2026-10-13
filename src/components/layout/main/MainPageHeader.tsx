@@ -15,6 +15,7 @@ import {
 
 } from 'lucide-react';
 import { DurationInfoCard } from '../../ui/DurationInfoCard';
+import { formatLongDate } from '../../../utils/format';
 import { HapticService } from '../../../services/HapticService';
 import { isCaducidadesList, isQueHeHechoList, isShoppingList } from '../../../utils/specialLists';
 import { confirmDialog } from '../../ui/confirmDialog';
@@ -293,7 +294,9 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
         </div>
 
         {/* Línea 2: Metadatos (Duración, Presupuesto y Desglose de Frecuencias) - Máximo 1 línea */}
-        <div className="page-context-row" style={{ order: currentCycle ? 3 : undefined }}>{((totalDuration && totalDuration.activeMinutes > 0) || totalCost > 0 || (completedCost ?? 0) > 0 || (cycleBreakdown?.details?.length ?? 0) > 1) && (
+        <div className="page-context-row" style={{ order: currentCycle ? 3 : undefined }}>
+          {/* «Hoy»: la fecha, como subtítulo (sustituye a la tarjeta de saludo). */}
+          {currentView === 'smart_today' && <span className="page-date">{formatLongDate(new Date())}</span>}{((totalDuration && totalDuration.activeMinutes > 0) || totalCost > 0 || (completedCost ?? 0) > 0 || (cycleBreakdown?.details?.length ?? 0) > 1) && (
                             <div className="page-context-metadata">{(() => {
                                       const hasValidDuration = Boolean(totalDuration && totalDuration.activeMinutes > 0 && !isShoppingList(currentView, currentList) && !isCaducidadesList(currentView, currentList));
                                       const hasValidPrice = Boolean((totalCost > 0 || (completedCost !== undefined && completedCost > 0)) && !currentCycle && !isCaducidadesList(currentView, currentList));

@@ -44,7 +44,6 @@ const CalendarView = lazyWithRetry(() => import('../views/CalendarView'), 'Calen
 const PersonProfileModal = lazyWithRetry(() => import('../people/PersonProfileModal'), 'PersonProfileModal');
 const MonthlySummaryModal = lazyWithRetry(() => import('./main/MonthlySummaryModal'), 'MonthlySummaryModal');
 import { smartSortTasks } from '../../utils/smartSort';
-import { WeeklyStreakWidget } from './main/WeeklyStreakWidget';
 import { confirmDialog } from '../ui/confirmDialog';
 import { deduplicateTaskList } from '../../utils/taskDeduplication';
 import { showUndoToast } from '../../utils/undoToast';
@@ -837,7 +836,7 @@ const CORE_CYCLES = [
   }, [sectionMenu, groupedTasks, emptySection]);
 
   // 1. Flatten Data para Virtualización (QA Performance Optimization)
-  const { flattenedData, renderedSectionTasks } = useMemo(() => {
+  const { flattenedData: rawFlattenedData, renderedSectionTasks } = useMemo(() => {
     const flat: VirtualItemType[] = [{ type: 'page-header' }];
     // Tareas que pinta cada cabecera agrupada (habitaciones de Limpieza…), para su precio y su menú.
     const sectionTasksByKey: Record<string, TaskItem[]> = {};
@@ -1927,6 +1926,20 @@ const CORE_CYCLES = [
   }, [groupedTasks, currentView, currentCycle, cycleViewMode, collapsed, isListView, lists, listSections, cycles, currentList, listSectionFilter, sortBy, isCatCollapsed, isolatedSectionKey, sectionRoutineModes, cycleRoutineCounts, temporalDate, resolvedShowCompleted, recentlyCompletedIds]);
 
   // Tareas visibles en pantalla respetando el orden visual exacto de renderizado
+  // En las vistas inteligentes (Con marca, Todos…) una sección sin tareas no aporta nada: ni su cabecera ni su
+  // hueco vacío se muestran. En las listas sí, porque ahí la sección es un sitio donde añadir.
+  const flattenedData = useMemo(() => {
+    if (!isSmartView) return rawFlattenedData;
+    const drop = new Set<number>();
+    rawFlattenedData.forEach((item, index) => {
+      if (item.type !== 'empty-section') return;
+      drop.add(index);
+      const previous = rawFlattenedData[index - 1];
+      if (previous?.type === 'header' && previous.category === item.category) drop.add(index - 1);
+    });
+    return drop.size ? rawFlattenedData.filter((_, index) => !drop.has(index)) : rawFlattenedData;
+  }, [rawFlattenedData, isSmartView]);
+
   const visibleTasks = useMemo(() => {
     const fromFlat: TaskItem[] = [];
     const seen = new Set<string>();
@@ -2713,7 +2726,6 @@ const CORE_CYCLES = [
                         {currentView === 'smart_today' && (
                           <>
                             <DailyBriefingBanner onOpenTask={onEditTask} onStartTask={onOpenZenMode} onSelectView={onSelectView} />
-                            <WeeklyStreakWidget />
                           </>
                         )}
                         {isCalendarView && (
@@ -2816,19 +2828,16 @@ const CORE_CYCLES = [
                         data-index={index}
                         style={{ 
                           ...itemStyle, 
-                          paddingLeft: `${16 + data.depth * 14}px`,
+                          paddingLeft: '16px',
                           paddingRight: '16px',
-                          margin: '6px 0 14px 0',
+                          margin: '0 0 4px 0',
                           boxSizing: 'border-box',
                           display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'flex-start',
-                          gap: 6
+                          alignItems: 'center'
                         }}
                       >
-                        <span style={{ fontSize: '0.84rem', color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
-                          {data.title || 'Aquí no hay tareas'}
-                        </span>
+                        {/* Sección vacía: una sola fila gris para añadir, alineada con las casillas. */}
+                        <span className="sr-only">{data.title || 'Aquí no hay tareas'}</span>
                         <button
                           type="button"
                           className="empty-section-btn"
@@ -2839,19 +2848,20 @@ const CORE_CYCLES = [
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: 6,
-                            padding: '4px 0',
+                            gap: 10,
+                            minHeight: 44,
+                            padding: '0 8px 0 7px',
                             background: 'transparent',
                             border: 'none',
-                            color: data.color || 'var(--accent-primary)',
-                            fontSize: '0.86rem',
-                            fontWeight: 600,
+                            color: 'var(--label-2)',
+                            fontSize: 'var(--type-body)',
+                            fontWeight: 400,
                             cursor: 'pointer',
                             transition: 'opacity 0.15s ease'
                           }}
                           title="Añadir un nuevo recordatorio a esta sección"
                         >
-                          <Plus size={16} strokeWidth={2.2} />
+                          <Plus size={20} strokeWidth={1.8} style={{ color: 'var(--label-3)' }} />
                           <span>Nuevo recordatorio</span>
                         </button>
                       </div>

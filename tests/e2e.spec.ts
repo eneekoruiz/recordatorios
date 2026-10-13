@@ -1,3 +1,4 @@
+import { expandSection } from './support/sections';
 import { test, expect } from '@playwright/test';
 import { bootApp } from "./support/bootApp";
 
@@ -355,22 +356,24 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
   });
 
   // 11. Daily Smart Briefing
-  test('11. Daily Smart Briefing: Renders greeting, date, and metrics banner on Hoy view', async ({ page }) => {
+  test('11. Daily Smart Briefing: Hoy shows the date under its title and the greeting lives in the daily summary', async ({ page }) => {
     await ensureAppUnlocked(page);
 
-    // Select smart_today view
     await page.evaluate(() => {
       window.dispatchEvent(new CustomEvent('select-view', { detail: 'smart_today' }));
     });
     await page.waitForTimeout(400);
 
-    // Verify Daily Briefing container is rendered
-    const briefing = page.locator('.daily-briefing-container');
-    await expect(briefing).toBeVisible({ timeout: 5000 });
+    // «Hoy» ya no repite una tarjeta de saludo: la fecha va como subtítulo de la vista.
+    const date = page.locator('.content-header .page-date');
+    await expect(date).toBeVisible({ timeout: 5000 });
+    await expect(date).toContainText(/lunes|martes|miércoles|jueves|viernes|sábado|domingo/i);
 
-    // Verify it contains either Buenos días, Buenas tardes, or Buenas noches
-    const greetingText = await briefing.textContent();
-    expect(greetingText).toMatch(/Buenos días|Buenas tardes|Buenas noches/);
+    // El saludo con la frase del día sigue en el resumen que se abre al empezar el día.
+    await page.evaluate(() => window.dispatchEvent(new Event('open-daily-greeting')));
+    const greeting = page.locator('.greeting-sheet');
+    await expect(greeting).toBeVisible();
+    await expect(greeting).toContainText(/Buenos días|Buenas tardes|Buenas noches/);
   });
 
   // 12. Caducidades: Pre-configured Sections, Expiration Pill & Smart Anticipation Alerts
@@ -432,9 +435,9 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
     await expect(cardSection).toBeVisible();
     await expect(subSection).toBeVisible();
 
-    // Las secciones de las listas inician cerradas por defecto: click para desplegar
-    await cardSection.click();
-    await subSection.click();
+    // Las secciones empiezan desplegadas (se despliegan solo si alguien las plegó)
+    await expandSection(cardSection);
+    await expandSection(subSection);
     await page.waitForTimeout(400);
 
     // Verify expiration pills on both cards
@@ -612,7 +615,7 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
     // Check Apple Wallet chip on Spotify task (desplegar sección si está colapsada)
     const subSection = page.locator('.group-header:has-text("Suscripciones")').first();
     if (await subSection.isVisible()) {
-      await subSection.getByRole('button', { name: 'Desplegar sección', exact: true }).click();
+      await expandSection(subSection);
       await page.waitForTimeout(400);
     }
     const walletChip = page.locator('.apple-card-chip:has-text("VISA •• 1234")').first();
