@@ -780,20 +780,7 @@ function MenuActions({
         onClick={() => setCurrentSubmenu('duration')} 
       />
 
-      {/* Anular sangrado (acción principal en tareas anidadas) */}
-      {task.parentId && (
-        <ActionRow 
-          icon={<IndentDecrease size={16} color="var(--accent-primary)" />} 
-          label="Anular sangrado" 
-          sublabel="Convertir en principal"
-          onClick={() => { 
-            setContextMenuOpen(false); 
-            nestTask(task.id, undefined); 
-            HapticService.selection();
-          }} 
-        />
-      )}
-
+      {/* «Anular sangría» está una sola vez, en «Más opciones», junto a «Sangrar». */}
       <div className="ios-dropdown-divider" />
 
       {/* Botón desplegable: Más opciones... */}

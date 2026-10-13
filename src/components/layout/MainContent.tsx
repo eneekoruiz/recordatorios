@@ -162,20 +162,12 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
 
   useEffect(() => {
+    // Misma vía que «Completar» del menú de sección: respeta el periodo y añade la marca al historial.
     const handleCompleteAll = (e: any) => {
-      const { taskIds } = e.detail;
-      if (!taskIds || !taskIds.length) return;
-      const tasks = useAppStore.getState().tasks;
-      const updates: any = {};
-      taskIds.forEach((id: string) => {
-        if (tasks[id] && tasks[id].status !== 'completed') {
-          updates[id] = { status: 'completed' };
-        }
-      });
-      if (Object.keys(updates).length > 0) {
-        Object.entries(updates).forEach(([id, up]) => useAppStore.getState().updateTask(id, up as any));
-        HapticService.notification('success');
-      }
+      const taskIds: string[] = e.detail?.taskIds || [];
+      if (!taskIds.length) return;
+      useAppStore.getState().setSectionTasksCompleted(taskIds, true);
+      HapticService.notification('success');
     };
     window.addEventListener('complete-all-tasks', handleCompleteAll);
     return () => window.removeEventListener('complete-all-tasks', handleCompleteAll);
@@ -2963,15 +2955,6 @@ const CORE_CYCLES = [
         onConfirm={() => { confirmProps.onConfirm(); setIsConfirmOpen(false); }}
         title={confirmProps.title}
         message={confirmProps.message}
-      />
-
-      <DeletedTaskToast
-        toast={deletedToast}
-        onUndo={(id) => {
-          updateTask(id, { deleted_at: undefined });
-          setDeletedToast(null);
-        }}
-        onDismiss={() => setDeletedToast(null)}
       />
 
       {(() => {

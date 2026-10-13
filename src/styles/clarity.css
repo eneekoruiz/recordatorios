@@ -210,3 +210,7 @@
 .content-header .page-context-row { flex-wrap: wrap; align-items: center; }
 .cycle-routine-status-strip { padding-bottom: 0 !important; }
 .content-header .compact-scope-row { width: auto !important; justify-content: flex-start !important; margin-left: auto; }
+
+/* ---------- Menús: filas de 44 px, grupos separados, lo destructivo al final ---------- */
+.ios-dropdown-item { min-height: 44px; }
+.section-move-btn { min-height: 44px; height: 44px !important; }

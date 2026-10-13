@@ -1,4 +1,3 @@
-import { CheckSquare } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
@@ -121,6 +120,7 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
   sections = [],
 }) => {
   const [currentSubmenu, setCurrentSubmenu] = useState<'main' | 'sort' | 'move_tasks'>('main');
+  const pendingCount = sectionMenu.pendingTaskCount ?? taskCount;
   const sheetRef = useRef<HTMLDivElement>(null);
   // Escritorio: con su altura real, el menú cabe siempre (debajo, encima o pegado al borde).
   useFitMenuInViewport(sheetRef, sectionMenu.triggerRect, sectionMenu.open && window.innerWidth > 768);
@@ -382,7 +382,20 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
               </>
             )}
 
-            {/* ACCIONES DE TAREAS */}
+            {/* 1 · Hacer: empezar, completar (una sola entrada, la que guarda el historial del periodo) y añadir */}
+              {onStartSequence && (sectionMenu.pendingTaskCount ?? 0) > 0 && (
+              <button 
+                type="button"
+                className="ios-dropdown-item" 
+                onClick={() => { onClose(); onStartSequence(); }}
+              >
+                <Play size={16} fill="var(--accent-primary)" color="var(--accent-primary)" />
+                <span style={{ fontWeight: 600 }}>
+                  Empezar sección ({sectionMenu.pendingTaskCount})
+                </span>
+              </button>
+            )}
+
             {onToggleAllCompleted && taskCount > 0 && (
               <button
                 type="button"
@@ -396,17 +409,30 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
                 {allCompleted ? (
                   <>
                     <RotateCcw size={16} color="var(--accent-primary)" />
-                    <span>Desmarcar tareas ({taskCount})</span>
+                    <span>Desmarcar las {taskCount}</span>
                   </>
                 ) : (
                   <>
                     <CheckCheck size={16} color="#34C759" />
-                    <span>Marcar completadas ({taskCount})</span>
+                    <span>Completar {pendingCount === 1 ? 'la pendiente' : `las ${pendingCount} pendientes`}</span>
                   </>
                 )}
               </button>
             )}
 
+            {onAddTask && (
+              <button 
+                type="button"
+                className="ios-dropdown-item" 
+                onClick={() => { onClose(); onAddTask(); }}
+              >
+                <Plus size={16} />
+                <span>Añadir tarea aquí</span>
+              </button>
+            )}
+
+            <div className="ios-dropdown-divider" />
+            {/* 2 · Organizar */}
             {onSortTasks && taskCount > 1 && (
               <button
                 type="button"
@@ -434,51 +460,6 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
                   <span>Mover tareas a...</span>
                 </div>
                 <ChevronRight size={15} color="var(--text-tertiary)" />
-              </button>
-            )}
-
-            {((onToggleAllCompleted && taskCount > 0) || (onSortTasks && taskCount > 1) || (onMoveAllTasks && taskCount > 0)) && (
-              <div className="ios-dropdown-divider" />
-            )}
-
-            {/* GESTIÓN DE LA SECCIÓN («+ Diarias» está en la propia cabecera) */}
-            
-              {sectionMenu.pendingTaskCount !== undefined && sectionMenu.pendingTaskCount > 0 && (
-                <button
-                  type="button"
-                  className="ios-dropdown-item"
-                  onClick={() => {
-                    HapticService.selection();
-                    window.dispatchEvent(new CustomEvent('complete-all-tasks', { detail: { taskIds: sectionMenu.sectionTaskIds } }));
-                    onClose();
-                  }}
-                >
-                  <CheckSquare size={16} color="var(--text-primary)" />
-                  <span>Marcar todas como hechas</span>
-                </button>
-              )}
-
-              {onStartSequence && (sectionMenu.pendingTaskCount ?? 0) > 0 && (
-              <button 
-                type="button"
-                className="ios-dropdown-item" 
-                onClick={() => { onClose(); onStartSequence(); }}
-              >
-                <Play size={16} fill="var(--accent-primary)" color="var(--accent-primary)" />
-                <span style={{ fontWeight: 600 }}>
-                  Empezar sección ({sectionMenu.pendingTaskCount})
-                </span>
-              </button>
-            )}
-
-            {onAddTask && (
-              <button 
-                type="button"
-                className="ios-dropdown-item" 
-                onClick={() => { onClose(); onAddTask(); }}
-              >
-                <Plus size={16} />
-                <span>Añadir tarea aquí</span>
               </button>
             )}
 
