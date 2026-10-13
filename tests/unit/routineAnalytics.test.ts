@@ -42,9 +42,9 @@ describe('routine period analytics', () => {
       task('general'),
     ];
     const result = calculateRoutinePeriod(tasks, 'week', new Date(2026, 9, 1), [], sections, lists, now);
-    expect(result).toMatchObject({ total: 4, completed: 1, skipped: 3, automaticSkipped: 2, missed: 0, pending: 0, unknown: 0 });
+    expect(result).toMatchObject({ total: 4, completed: 1, skipped: 1, missed: 2, pending: 0, unknown: 0 });
     expect(result.groups).toHaveLength(4);
-    expect(result.groups.find(group => group.sectionId === 'kitchen')).toMatchObject({ name: 'Casa / Cocina', listName: 'Limpieza', skipped: 1, automaticSkipped: 0, completed: 0 });
+    expect(result.groups.find(group => group.sectionId === 'kitchen')).toMatchObject({ name: 'Casa / Cocina', listName: 'Limpieza', skipped: 1, missed: 0, completed: 0 });
     expect(result.groups.find(group => group.sectionId === 'bath')?.tasks[0].status).toBe('completed');
     expect(result.groups.find(group => !group.sectionId)?.name).toBe('Sin sección');
   });
@@ -64,13 +64,13 @@ describe('routine period analytics', () => {
       task('onboarding', { categoryId: 'primeros_pasos' }),
     ];
     const result = calculateRoutinePeriod(tasks, 'week', new Date(2026, 9, 1), [], [], [], now);
-    expect(result).toMatchObject({ total: 2, unknown: 1, skipped: 1, automaticSkipped: 1, missed: 0 });
+    expect(result).toMatchObject({ total: 2, unknown: 1, skipped: 0, missed: 1 });
     expect(result.groups[0].tasks.map(item => item.task.id)).toEqual(['legacy', 'existed']);
   });
 
   it('keeps current pending, future unknown and monthly omissions in their own month', () => {
     const tasks = [task('mensual', { cycle_id: 'cycle_month', skipHistory: [stamp(8, 20)] })];
-    expect(calculateRoutinePeriod(tasks, 'month', new Date(2026, 8, 1), [], [], [], now)).toMatchObject({ skipped: 1, automaticSkipped: 0, completed: 0, missed: 0 });
+    expect(calculateRoutinePeriod(tasks, 'month', new Date(2026, 8, 1), [], [], [], now)).toMatchObject({ skipped: 1, completed: 0, missed: 0 });
     expect(calculateRoutinePeriod(tasks, 'month', now, [], [], [], now)).toMatchObject({ skipped: 0, pending: 1 });
     expect(calculateRoutinePeriod(tasks, 'month', new Date(2026, 10, 1), [], [], [], now)).toMatchObject({ unknown: 1, missed: 0, pending: 0 });
   });
@@ -87,15 +87,15 @@ describe('routine period analytics', () => {
       .toMatchObject({ completed: 1, skipped: 0 });
   });
 
-  it('derives an automatic omission only when the period closes without mutating history', () => {
+  it('infers an omission (not a decision) only when the period closes, without mutating history', () => {
     const t = task('mensual', { cycle_id: 'cycle_month' });
     const reference = new Date(2026, 9, 1);
     const beforeClose = new Date(2026, 9, 31, 23, 59, 59, 999);
     expect(calculateRoutinePeriod([t], 'month', reference, [], [], [], beforeClose))
-      .toMatchObject({ pending: 1, skipped: 0, automaticSkipped: 0 });
+      .toMatchObject({ pending: 1, skipped: 0, missed: 0 });
     const result = calculateRoutinePeriod([t], 'month', reference, [], [], [], new Date(2026, 10, 1));
-    expect(result).toMatchObject({ pending: 0, skipped: 1, automaticSkipped: 1, missed: 0 });
-    expect(result.groups[0].tasks[0]).toMatchObject({ status: 'skipped', automatic: true });
+    expect(result).toMatchObject({ pending: 0, skipped: 0, missed: 1 });
+    expect(result.groups[0].tasks[0]).toMatchObject({ status: 'missed' });
     expect(t.skipHistory).toBeUndefined();
   });
 });

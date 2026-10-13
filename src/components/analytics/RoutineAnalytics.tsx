@@ -9,10 +9,10 @@ const frequencies: { value: RoutineFrequency; label: string }[] = [
   { value: 'day', label: 'Diarias' }, { value: 'week', label: 'Semanales' },
   { value: 'month', label: 'Mensuales' }, { value: 'year', label: 'Anuales' },
 ];
-const statusLabels = { completed: 'Hecha', skipped: 'Omitida', pending: 'Pendiente', missed: 'Sin hacer', unknown: 'Sin datos' };
+const statusLabels = { completed: 'Hecha', skipped: 'Omitida por ti', pending: 'Pendiente', missed: 'Sin marcar', unknown: 'Sin datos' };
 const dateValue = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-const countsText = (value: { completed: number; skipped: number; automaticSkipped: number; pending: number; unknown: number }) =>
-  `${value.completed} hechas · ${value.skipped - value.automaticSkipped} omitidas por ti${value.automaticSkipped ? ` · ${value.automaticSkipped} omitidas automáticamente` : ''} · ${value.pending} pendientes${value.unknown ? ` · ${value.unknown} sin datos` : ''}`;
+const countsText = (value: { completed: number; skipped: number; missed: number; pending: number; unknown: number }) =>
+  `${value.completed} hechas · ${value.skipped} omitidas por ti${value.missed ? ` · ${value.missed} sin marcar` : ''} · ${value.pending} pendientes${value.unknown ? ` · ${value.unknown} sin datos` : ''}`;
 
 export function RoutineAnalytics({ onOpenTask }: { onOpenTask?: (taskId: string) => void }) {
   const focus = useNavigation(state => state.routineAnalyticsFocus);
@@ -83,7 +83,7 @@ export function RoutineAnalytics({ onOpenTask }: { onOpenTask?: (taskId: string)
     const group = calculateRoutinePeriod(Object.values(state.tasks), frequency, selected.start, state.cycles, state.listSections, state.lists)
       .groups.find(item => item.id === groupId);
     if (!group) return;
-    const affected = group.tasks.filter(item => restore ? item.status === 'skipped' && !item.automatic : item.status === 'pending' || item.automatic);
+    const affected = group.tasks.filter(item => restore ? item.status === 'skipped' : item.status === 'pending' || item.status === 'missed');
     const now = new Date();
     const timestamp = now >= selected.start && now < selected.end ? now : new Date(selected.start.getTime() + 12 * 60 * 60 * 1000);
     for (const { task } of affected) state.skipTask(task.id, restore, timestamp);
@@ -125,8 +125,8 @@ export function RoutineAnalytics({ onOpenTask }: { onOpenTask?: (taskId: string)
         {history.map(period => {
           const groups = period.summary.groups.filter(group => groupFilter === 'all' || group.id === groupFilter);
           const counts = groups.reduce((sum, group) => ({ total: sum.total + group.total, completed: sum.completed + group.completed, skipped: sum.skipped + group.skipped,
-            automaticSkipped: sum.automaticSkipped + group.automaticSkipped,
-            pending: sum.pending + group.pending, unknown: sum.unknown + group.unknown }), { total: 0, completed: 0, skipped: 0, automaticSkipped: 0, pending: 0, unknown: 0 });
+            missed: sum.missed + group.missed,
+            pending: sum.pending + group.pending, unknown: sum.unknown + group.unknown }), { total: 0, completed: 0, skipped: 0, missed: 0, pending: 0, unknown: 0 });
           return <button type="button" key={period.id} data-testid="routine-period" data-period-start={dateValue(period.start)}
             aria-pressed={selected?.id === period.id} aria-label={`${period.label}: ${counts.total ? countsText(counts) : 'sin rutinas'}`}
             onClick={() => { setSelectedId(period.id); setAnnouncement(''); }}>
@@ -154,13 +154,13 @@ export function RoutineAnalytics({ onOpenTask }: { onOpenTask?: (taskId: string)
             <p>Si hoy no te apetece todo, puedes empezar por <strong>{suggestion.title}</strong>{suggestion.duration ? ` (${suggestion.duration} min)` : ''}.</p>
             <button type="button" className="routine-button" onClick={() => onOpenTask(suggestion.id)}>Ver esta tarea</button>
           </div>}
-          <ul className="routine-tasks">{group.tasks.map(({ task, status, automatic }) => <li key={task.id} data-testid="routine-task" data-task-id={task.id} data-status={status} data-automatic={!!automatic}>
-            <span>{task.title}</span><span className={`routine-status routine-status--${status}`}>{automatic ? 'Omitida automáticamente' : statusLabels[status]}</span>
+          <ul className="routine-tasks">{group.tasks.map(({ task, status }) => <li key={task.id} data-testid="routine-task" data-task-id={task.id} data-status={status} data-automatic={status === 'missed'}>
+            <span>{task.title}</span><span className={`routine-status routine-status--${status}`}>{statusLabels[status]}</span>
           </li>)}</ul>
-          {(group.pending + group.automaticSkipped > 0 || group.skipped - group.automaticSkipped > 0) && <div className="routine-group-actions">
+          {(group.pending + group.missed > 0 || group.skipped > 0) && <div className="routine-group-actions">
             <p>Solo afecta a esta sección y al período seleccionado. Las tareas hechas se conservan.</p>
-            {group.pending + group.automaticSkipped > 0 && <button type="button" className="routine-button" onClick={() => updateSection(group.id, false)}>Omitir sección</button>}
-            {group.skipped - group.automaticSkipped > 0 && <button type="button" className="routine-button" onClick={() => updateSection(group.id, true)}>Restaurar omitidas</button>}
+            {group.pending + group.missed > 0 && <button type="button" className="routine-button" onClick={() => updateSection(group.id, false)}>Omitir sección</button>}
+            {group.skipped > 0 && <button type="button" className="routine-button" onClick={() => updateSection(group.id, true)}>Restaurar omitidas</button>}
           </div>}
         </div>
       </details>;

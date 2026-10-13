@@ -26,7 +26,7 @@ export function buildRoutineRecovery(
     const current = calculateRoutinePeriod(tasks, frequency, now, cycles, sections, lists, now);
     const available = new Set(current.groups.flatMap(group => group.tasks.filter(row => row.status === 'pending').map(row => row.task.id)));
     for (const group of history.groups) {
-      const remaining = group.tasks.filter(row => row.automatic && available.has(row.task.id)).map(row => row.task);
+      const remaining = group.tasks.filter(row => row.status === 'missed' && available.has(row.task.id)).map(row => row.task);
       if (!remaining.length) continue;
       const ranked = [...remaining].sort((a, b) => {
         const duration = (task: TaskItem) => task.duration && task.duration > 0 ? task.duration : Infinity;

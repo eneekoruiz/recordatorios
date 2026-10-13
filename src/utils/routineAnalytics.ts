@@ -3,6 +3,11 @@ import { getStartOfWeek, matchesPeriod } from '../services/TaskService';
 import { getEffectiveCycleId } from './sectionRoutine';
 
 export type RoutineFrequency = 'day' | 'week' | 'month' | 'year';
+/**
+ * completed: marcada en el periodo. skipped: omitida explícitamente por la persona.
+ * missed: periodo cerrado sin marcar (omisión inferida: no se atribuye una decisión).
+ * pending: periodo actual abierto (nunca cuenta como omitido). unknown: futuro o sin historial fiable.
+ */
 export type RoutineTaskStatus = 'completed' | 'skipped' | 'pending' | 'missed' | 'unknown';
 
 export interface RoutinePeriod {
@@ -16,9 +21,10 @@ export interface RoutinePeriod {
 export interface RoutineCounts {
   total: number;
   completed: number;
+  /** Omitidas explícitamente. */
   skipped: number;
-  automaticSkipped: number;
   pending: number;
+  /** Periodos cerrados sin marcar (inferidas). */
   missed: number;
   unknown: number;
 }
@@ -29,7 +35,7 @@ export interface RoutineGroup extends RoutineCounts {
   listName: string;
   listId: string;
   sectionId?: string;
-  tasks: { task: TaskItem; status: RoutineTaskStatus; automatic?: boolean }[];
+  tasks: { task: TaskItem; status: RoutineTaskStatus }[];
 }
 
 export interface RoutinePeriodSummary extends RoutineCounts {
@@ -38,7 +44,7 @@ export interface RoutinePeriodSummary extends RoutineCounts {
   groups: RoutineGroup[];
 }
 
-const emptyCounts = (): RoutineCounts => ({ total: 0, completed: 0, skipped: 0, automaticSkipped: 0, pending: 0, missed: 0, unknown: 0 });
+const emptyCounts = (): RoutineCounts => ({ total: 0, completed: 0, skipped: 0, pending: 0, missed: 0, unknown: 0 });
 const localDateId = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
 export function getRoutinePeriod(frequency: RoutineFrequency, referenceDate: Date): RoutinePeriod {
@@ -98,7 +104,8 @@ function sectionPath(sectionId: string | undefined, listId: string, sections: Li
 
 /**
  * Read-only analytics: marks are evidence; today's count cannot invalidate past history.
- * Unmarked closed periods are automatically omitted, without changing the saved history.
+ * Unmarked closed periods are reported as inferred omissions (`missed`), never as a user decision,
+ * and without changing the saved history.
  * Without a creation timestamp, an unrecorded closed period remains unknown.
  * Grouping reflects the currently saved list/section; historical moves are not recorded.
  */
@@ -123,14 +130,10 @@ export function calculateRoutinePeriod(
     const completions: (number | string)[] = [...(task.completionHistory || [])];
     if (task.completed_at) completions.push(task.completed_at);
     let status: RoutineTaskStatus;
-    let automatic = false;
     if (start.getTime() > now.getTime()) status = 'unknown';
     else if (matchesPeriod(completions, cycleId, referenceDate, cycles)) status = 'completed';
     else if (matchesPeriod(task.skipHistory, cycleId, referenceDate, cycles)) status = 'skipped';
-    else if (end.getTime() <= now.getTime()) {
-      status = Number.isFinite(created) ? 'skipped' : 'unknown';
-      automatic = status === 'skipped';
-    }
+    else if (end.getTime() <= now.getTime()) status = Number.isFinite(created) ? 'missed' : 'unknown';
     else status = 'pending';
     const listId = task.categoryId || 'inbox';
     const sectionId = task.sectionId;
@@ -146,13 +149,9 @@ export function calculateRoutinePeriod(
     }
     group.total++;
     group[status]++;
-    group.tasks.push({ task, status, ...(automatic ? { automatic: true } : {}) });
+    group.tasks.push({ task, status });
     result.total++;
     result[status]++;
-    if (automatic) {
-      group.automaticSkipped++;
-      result.automaticSkipped++;
-    }
   }
   result.groups = [...groups.values()].sort((a, b) => a.listName.localeCompare(b.listName, 'es') || a.name.localeCompare(b.name, 'es'));
   return result;
