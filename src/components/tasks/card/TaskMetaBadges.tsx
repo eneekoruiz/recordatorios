@@ -201,8 +201,8 @@ export function TaskMetaBadges({
                   }}
                   title={`Frecuencia: ${cycleBadge.label} (Toca para editar)`} type="button" className="task-meta-action"
                 >
-                  <Repeat size={11} strokeWidth={2.5} style={{ color: freqColor, flexShrink: 0 }} />
-                  <span className="sr-only">{cycleBadge.label}</span>
+                  <Repeat size={11} strokeWidth={2.5} aria-hidden="true" style={{ color: freqColor, flexShrink: 0 }} />
+                  <span>{cycleBadge.label}</span>
                 </button>
               );
             }

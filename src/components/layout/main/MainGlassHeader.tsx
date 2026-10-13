@@ -2,6 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, MoreHorizontal, Check, Settings, FolderPlus, Play, Calendar, Printer, Share2 } from 'lucide-react';
+import type { TaskSortMode } from '../../../models/Task';
 import type { CustomList } from '../../../models/Task';
 import { HapticService } from '../../../services/HapticService';
 import { getListType, LIST_TYPE_CONFIG } from '../../../utils/specialLists';
@@ -33,8 +34,10 @@ interface MainGlassHeaderProps {
   setIsMenuOpen: (val: boolean) => void;
   resolvedShowCompleted: boolean;
   toggleShowCompleted: () => void;
-  sortBy: 'manual' | 'dueDate' | 'priority' | 'title' | 'createdAt';
-  setSortBy: (val: 'manual' | 'dueDate' | 'priority' | 'title' | 'createdAt') => void;
+  sortBy: TaskSortMode;
+  setSortBy: (val: TaskSortMode) => void;
+  /** Ofrece «Orden de limpieza» (listas de limpieza). */
+  canUseRoutineOrder?: boolean;
   updateList: (id: string, updates: Partial<CustomList>) => void;
   setIsListConfigOpen: (val: boolean) => void;
   onAddSection: () => void;
@@ -65,6 +68,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
   toggleShowCompleted,
   sortBy,
   setSortBy,
+  canUseRoutineOrder = false,
   updateList,
   setIsListConfigOpen,
   onAddSection,
@@ -220,35 +224,6 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
           </button>
         )}
 
-        {/* Añadir sección de raíz */}
-        {isListView && (
-          <button
-            type="button"
-            className="icon-btn apple-nav-action-btn"
-            onClick={() => {
-              HapticService.selection();
-              onAddSection();
-            }}
-            title="Añadir sección de raíz"
-            aria-label="Añadir sección de raíz"
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border-subtle)',
-              cursor: 'pointer',
-              color: 'var(--accent-primary)',
-              transition: 'background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, fill 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease'
-            }}
-          >
-            <FolderPlus size={18} strokeWidth={2.2} />
-          </button>
-        )}
-
         {/* Opciones de lista */}
         {(isListView || (isSmartView && currentView !== 'smart_calendar') || isFolderView) && (
           <div style={{ position: 'relative' }}>
@@ -379,11 +354,38 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                           )}
                         </button>
 
+                        {isListView && (
+                          <button
+                            type="button"
+                            className="ios-dropdown-item"
+                            onClick={() => { HapticService.selection(); setIsMenuOpen(false); onAddSection(); }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 44 }}
+                          >
+                            <FolderPlus size={17} color="var(--accent-primary)" />
+                            <span style={{ fontSize: '0.95rem', fontWeight: 500 }}>Nueva sección</span>
+                          </button>
+                        )}
+
                         <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '6px 0' }} />
 
-                        <div style={{ padding: '8px 12px 4px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <div style={{ padding: '8px 12px 4px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-tertiary)' }}>
                           Ordenar por
                         </div>
+
+                        {canUseRoutineOrder && (
+                          <button
+                            type="button"
+                            className="ios-dropdown-item"
+                            onClick={() => { HapticService.selection(); setSortBy('routine'); setIsMenuOpen(false); }}
+                            style={{ justifyContent: 'space-between', minHeight: 44, fontSize: '0.95rem' }}
+                          >
+                            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1 }}>
+                              <span>Orden de limpieza</span>
+                              <span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>Ventilar primero, suelos y basura al final</span>
+                            </span>
+                            {sortBy === 'routine' && <Check size={16} color="var(--accent-primary)" />}
+                          </button>
+                        )}
 
                         <button
                           type="button"

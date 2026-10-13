@@ -1420,7 +1420,7 @@ body.dark .cad-summary-cost strong {
    conservando siempre visible el número de recordatorios. */
 @media (hover: hover) {
   .ios-list-block .ios-list-item .list-action-btn {
-    position: static !important;
+    position: relative !important; /* su ::before de 44 px debe quedar sobre el botón, no en mitad de la fila */
     margin-left: 6px !important;
     opacity: 0 !important;
     transition: opacity 0.15s ease, transform 0.15s ease;
@@ -2816,3 +2816,489 @@ body.dark .stats-page .stat-card-hint {
   .sheet-navbar > :last-child { margin-left: auto; }
 }
 [data-testid="manage-lists-modal"] button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; box-sizing: border-box; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Cabecera de sección (MainSectionHeader) — dos líneas como mucho.
+   1) nombre ....................... número  ⌄
+   2) periodo · duración              [Rutina completa]
+   Los controles son cajas reales de 44 px con márgenes negativos: no engordan la fila.
+   ══════════════════════════════════════════════════════════════════════════ */
+.section-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+.section-head-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.section-head-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+.group-header .section-head-title {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-wrap: nowrap;
+  text-transform: none;
+  font-family: var(--font-display);
+  font-size: 1.18rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  color: var(--text-primary);
+}
+.group-header .section-head[data-depth="nested"] .section-head-title {
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--text-secondary);
+}
+.section-head-input {
+  min-width: 0;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid currentColor;
+  font: inherit;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  outline: none;
+}
+.section-head-trailing {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.section-head-count {
+  min-width: 1.5ch;
+  text-align: right;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+.section-head[data-depth="nested"] .section-head-count {
+  font-size: 0.88rem;
+}
+.section-head-price {
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.section-head-link {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0 4px;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #5856d6;
+  cursor: pointer;
+}
+
+/* Flecha de plegar: caja real de 44 px que no ensancha la fila */
+.group-header .section-head-chevron {
+  appearance: none;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: -6px -14px -6px -8px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+.group-header .section-head-chevron:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 0;
+}
+
+/* Segunda línea */
+.section-head-sub {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  min-width: 0;
+  min-height: 28px;
+  margin-top: 1px;
+}
+.section-head-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 auto;
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.section-head-period {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.section-head-period.is-done {
+  color: #248a3d;
+}
+[data-theme="dark"] .section-head-period.is-done,
+html.dark .section-head-period.is-done {
+  color: #30d158;
+}
+.section-head-dot {
+  opacity: 0.6;
+}
+.section-head-duration.is-button {
+  appearance: none;
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+  text-underline-offset: 3px;
+}
+.section-head-duration.is-button {
+  min-height: 44px;
+  min-width: 44px;
+  margin-top: -10px;
+  margin-bottom: -10px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .section-head-duration.is-button:hover {
+    color: var(--text-secondary);
+  }
+}
+.section-head-duration.is-button:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.section-head-sub .routine-chip {
+  margin-right: 0;
+}
+
+/* «···»: discreto. Con ratón aparece al pasar por la fila o al enfocarlo; en táctil solo
+   con la sección abierta (plegada, se abre manteniendo pulsado el nombre). */
+.group-header .section-head-more {
+  appearance: none;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: -8px -10px -8px -8px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  opacity: 1 !important;
+}
+.group-header .section-head-more:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 0;
+}
+@media (hover: hover) and (pointer: fine) {
+  .group-header .section-head-more {
+    opacity: 0 !important;
+    transition: opacity 0.15s ease;
+  }
+  .group-header:hover .section-head-more,
+  .group-header:focus-within .section-head-more,
+  .group-header .section-head-more[aria-expanded="true"] {
+    opacity: 1 !important;
+  }
+}
+@media (hover: none), (pointer: coarse) {
+  .group-header[data-expanded="false"] .section-head-more,
+  .group-header .section-head[data-depth="nested"] .section-head-more {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .group-header .section-head-more { transition: none; }
+}
+
+/* Metadatos de la fila de tarea (frecuencia, duración, precio…): cada dato sigue siendo un
+   botón real de 44 × 44 px, pero con márgenes negativos para que la línea mida lo que el texto
+   (antes los 44 px empujaban la fila hasta casi 100 px y separaban los datos con huecos). */
+.task-meta-fields > button,
+.task-meta-fields button.task-meta-action {
+  min-height: 44px !important;
+  min-width: 44px !important;
+  margin-top: -13px;
+  margin-bottom: -13px;
+  padding: 0;
+  justify-content: flex-start;
+}
+/* Si los datos ocupan dos líneas, 26 px entre ellas (18 de texto + 26 = 44): así las cajas de
+   44 px de una línea no tapan las de la siguiente. En una sola línea no cambia nada. */
+.task-context.task-meta-fields {
+  gap: 26px 10px;
+  align-items: center;
+  margin-top: 2px;
+}
+
+/* Vista de frecuencia: el selector de periodo y el progreso son información, no tarjetas.
+   Sin caja, sin sombra ni desenfoque; las flechas mantienen su zona táctil. */
+.apple-period-navigator-capsule {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+@media (hover: hover) and (pointer: fine) {
+  .apple-period-navigator-capsule:hover {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+  }
+}
+
+/* Vista de frecuencia: dos líneas bajo el título.
+   3 h 15 min · 0 de 11 hechas
+   ‹ Octubre 2026 ›                    [Rutina completa] */
+.cycle-strip-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  margin-left: -10px; /* la flecha izquierda se alinea ópticamente con el título */
+}
+.cycle-strip-row .routine-chip {
+  margin-right: 0;
+  flex-shrink: 0;
+}
+.cycle-strip-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  min-height: 24px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.cycle-strip-status {
+  appearance: none;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+  text-underline-offset: 3px;
+}
+.cycle-strip-status {
+  min-height: 44px;
+  margin-top: -10px;
+  margin-bottom: -10px;
+}
+.cycle-strip-status.is-done {
+  color: #248a3d;
+  text-decoration: none;
+}
+[data-theme="dark"] .cycle-strip-status.is-done,
+html.dark .cycle-strip-status.is-done {
+  color: #30d158;
+}
+.cycle-strip-status:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.cycle-strip-status .status-exception {
+  color: var(--text-tertiary);
+  text-decoration: none;
+}
+
+/* «Rutina completa»: botón de 44 px real (transparente) con la cápsula de 26 px dentro.
+   Así cumple el tamaño táctil sin convertir la cápsula en un bloque gordo en el móvil. */
+.routine-chip-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
+  margin: -9px 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.routine-chip-btn .routine-chip {
+  pointer-events: none;
+  margin-right: 0;
+}
+.routine-chip-btn .routine-chip::before {
+  content: none;
+}
+.routine-chip-btn:active .routine-chip {
+  transform: scale(0.96);
+}
+.routine-chip-btn:focus-visible {
+  outline: none;
+}
+.routine-chip-btn:focus-visible .routine-chip {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Con el dedo, la hoja de estilos general da 44 px reales a todo botón. Aquí esos 44 px se
+   conservan pero no empujan la fila (márgenes negativos), y el título de cada tarea deja de
+   medir 44 px de alto para que la fila no crezca hasta casi 100 px. */
+@media (pointer: coarse) {
+  .task-title[role="button"] {
+    min-height: 26px !important;
+  }
+}
+
+/* Total de la lista bajo el título: mismo lenguaje que las secciones (texto gris, sin icono ni
+   flecha; subrayado de puntos si abre el desglose). Caja real de 44 px que no separa las líneas. */
+.page-context-row .apple-list-duration-chip {
+  height: auto !important;
+  min-height: 44px;
+  margin-top: -12px;
+  margin-bottom: -12px;
+  padding: 0 !important;
+  font-size: 0.82rem;
+  color: var(--text-tertiary) !important;
+}
+.page-context-row .apple-list-duration-chip svg {
+  display: none;
+}
+.page-context-row button.apple-list-duration-chip > span {
+  text-decoration: underline dotted;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+  text-underline-offset: 3px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .page-context-row .apple-list-duration-chip:hover {
+    background: transparent !important;
+    color: var(--text-secondary) !important;
+  }
+}
+
+/* Respuesta de la IA sobre la barra «Nuevo recordatorio» */
+.qa-ai-reply {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 0 4px 8px;
+  padding: 10px 12px 10px 14px;
+  border-radius: 18px;
+  background: var(--bg-elevated, #ffffff);
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.10);
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
+.qa-ai-reply-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--accent-primary);
+}
+.qa-ai-reply-body {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+.qa-ai-reply-text {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 550;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.qa-ai-reply-detail {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.qa-ai-reply-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+.qa-ai-reply-actions button {
+  appearance: none;
+  min-height: 44px;
+  min-width: 44px;
+  margin: -12px 0;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+  cursor: pointer;
+  border-radius: 10px;
+}
+.qa-ai-reply-actions .qa-ai-reply-close {
+  color: var(--text-tertiary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.qa-ai-reply-actions button:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: -2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .spin-anim { animation: none !important; }
+}

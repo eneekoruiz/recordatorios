@@ -1,4 +1,6 @@
 import type { TaskItem, CustomList, ListSection } from '../models/Task';
+import type { TaskSortMode } from '../models/Task';
+import { sortByCleaningOrder } from './cleaningOrder';
 import type { PeriodicityType } from '../../shared/periodicity.js';
 import { PERIODICITY_PREFIX_REGEX, getTaskPeriodicity } from '../../shared/periodicity.js';
 
@@ -189,7 +191,7 @@ export function formatSectionTitle(title?: string | null): string {
   return clean;
 }
 
-export type TaskSortMode = 'manual' | 'dueDate' | 'priority' | 'title' | 'createdAt';
+export type { TaskSortMode } from '../models/Task';
 
 /**
  * Única función de ordenación de tareas de toda la aplicación cuando se mezclan
@@ -207,6 +209,11 @@ export type TaskSortMode = 'manual' | 'dueDate' | 'priority' | 'title' | 'create
  * tareas es siempre el mismo en toda la app.
  */
 export function sortTasksByUserPreference(taskList: TaskItem[], sortBy: TaskSortMode): TaskItem[] {
+  // «Orden de limpieza»: por fases (preparar → arriba → superficies → suelos → acabar) y,
+  // dentro de cada fase, por el orden manual. Intercala frecuencias a propósito.
+  if (sortBy === 'routine') {
+    return sortByCleaningOrder(taskList);
+  }
   if (sortBy === 'manual') {
     return [...taskList].sort((a, b) => {
       const orderA = a.order ?? 0;
@@ -238,6 +245,11 @@ export function sortTasksByUserPreference(taskList: TaskItem[], sortBy: TaskSort
 export interface PeriodContextInfo {
   label: string;
   shortLabel: string;
+  /**
+   * Texto mínimo para la cabecera de sección: solo lo que no repite el título
+   * ("Octubre", "12–18 oct", "Hoy", "2026"). Si el periodo ya está hecho: "Al día · Noviembre".
+   */
+  compactLabel: string;
   isRolledOver: boolean;
   activePeriod: string;
   nextPeriodDate?: Date;
@@ -300,6 +312,7 @@ export function getPeriodContextLabel(
       return {
         label: `${nextYear} · ${curYear} completado`,
         shortLabel: `${nextYear}`,
+        compactLabel: `Al día · ${nextYear}`,
         isRolledOver: true,
         activePeriod: `${nextYear}`,
         nextPeriodDate: getNextPeriodDate('year', referenceDate)
@@ -308,6 +321,7 @@ export function getPeriodContextLabel(
     return {
       label: `Año ${curYear}`,
       shortLabel: `${curYear}`,
+      compactLabel: `${curYear}`,
       isRolledOver: false,
       activePeriod: `${curYear}`
     };
@@ -324,6 +338,7 @@ export function getPeriodContextLabel(
       return {
         label: `${nextName} ${nextYear} · ${curName} al día`,
         shortLabel: `${nextName}`,
+        compactLabel: `Al día · ${nextName}`,
         isRolledOver: true,
         activePeriod: `${nextName}`,
         nextPeriodDate: getNextPeriodDate('month', referenceDate)
@@ -332,6 +347,7 @@ export function getPeriodContextLabel(
     return {
       label: `${curName} ${curYear}`,
       shortLabel: `${curName}`,
+      compactLabel: curName,
       isRolledOver: false,
       activePeriod: `${curName}`
     };
@@ -354,6 +370,9 @@ export function getPeriodContextLabel(
 
     const mMonth = MONTH_SHORTS[monday.getMonth()];
     const sMonth = MONTH_SHORTS[sunday.getMonth()];
+    const formatRange = (from: Date, to: Date) => from.getMonth() === to.getMonth()
+      ? `${from.getDate()}–${to.getDate()} ${MONTH_SHORTS[to.getMonth()]}`
+      : `${from.getDate()} ${MONTH_SHORTS[from.getMonth()]}–${to.getDate()} ${MONTH_SHORTS[to.getMonth()]}`;
     const dateRange = monday.getMonth() === sunday.getMonth()
       ? `${monday.getDate()}–${sunday.getDate()} ${sMonth}`
       : `${monday.getDate()} ${mMonth}–${sunday.getDate()} ${sMonth}`;
@@ -362,6 +381,10 @@ export function getPeriodContextLabel(
       return {
         label: `Semana ${weekNo + 1} · Semana actual al día`,
         shortLabel: `Sem. ${weekNo + 1}`,
+        compactLabel: `Al día · ${formatRange(
+          new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 7),
+          new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + 7)
+        )}`,
         isRolledOver: true,
         activePeriod: `Semana ${weekNo + 1}`,
         nextPeriodDate: getNextPeriodDate('week', referenceDate)
@@ -370,6 +393,7 @@ export function getPeriodContextLabel(
     return {
       label: `Semana ${weekNo} · ${dateRange}`,
       shortLabel: `Sem. ${weekNo}`,
+      compactLabel: dateRange,
       isRolledOver: false,
       activePeriod: `Semana ${weekNo}`
     };
@@ -385,6 +409,7 @@ export function getPeriodContextLabel(
       return {
         label: `Mañana · ${tomDayName} ${tom.getDate()} ${tomMName} (Hoy al día)`,
         shortLabel: 'Mañana',
+        compactLabel: 'Al día · mañana',
         isRolledOver: true,
         activePeriod: 'Mañana',
         nextPeriodDate: getNextPeriodDate('day', referenceDate)
@@ -393,6 +418,7 @@ export function getPeriodContextLabel(
     return {
       label: `Hoy · ${dayName} ${referenceDate.getDate()} ${mName}`,
       shortLabel: 'Hoy',
+      compactLabel: 'Hoy',
       isRolledOver: false,
       activePeriod: 'Hoy'
     };

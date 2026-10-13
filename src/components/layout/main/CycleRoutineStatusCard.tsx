@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { CheckCircle2, Clock, Sparkles, Calendar, Info } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { useTemporalNavigationStore } from '../../../store/useTemporalNavigationStore';
 import { ApplePeriodNavigator } from './ApplePeriodNavigator';
@@ -14,6 +14,10 @@ interface CycleRoutineStatusCardProps {
   cycleRoutineMode: 'only_section' | 'full_routine';
   viewColor: string;
   isMobile?: boolean;
+  /** Duración de la vista: va al principio de la segunda línea, junto al progreso. */
+  durationNode?: React.ReactNode;
+  /** Botón «Rutina completa»: va en la misma línea que el periodo, a la derecha. */
+  routineToggle?: React.ReactNode;
 }
 
 export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
@@ -21,6 +25,8 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
   cycleRoutineMode,
   viewColor,
   isMobile = false,
+  durationNode,
+  routineToggle,
 }) => {
   const [isDiagnosticModalOpen, setIsDiagnosticModalOpen] = useState(false);
 
@@ -54,22 +60,6 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
     });
   }, [tasks, cycles, listSections, lists, currentCycle, cycleRoutineMode, referenceDate]);
 
-  // Icono según el estado
-  const statusIcon = useMemo(() => {
-    if (status.statusState === 'all_done') {
-      return <CheckCircle2 size={13} strokeWidth={2.4} color="#34c759" />;
-    }
-    if (status.statusState === 'own_done_accumulated_pending') {
-      return <Clock size={13} strokeWidth={2.2} color={viewColor} />;
-    }
-    if (status.statusState === 'accumulated_done_own_pending') {
-      return <Sparkles size={13} strokeWidth={2.2} color="#ff9500" />;
-    }
-    if (status.statusState === 'both_pending' || status.statusState === 'own_pending') {
-      return <Clock size={13} strokeWidth={2.2} color="var(--text-secondary)" />;
-    }
-    return <Calendar size={13} strokeWidth={2} color="var(--text-tertiary)" />;
-  }, [status.statusState, viewColor]);
 
   const progressPercent = useMemo(() => {
     if (status.totalGoal === 0) return 0;
@@ -83,7 +73,7 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
       style={{
         width: '100%',
         boxSizing: 'border-box',
-        padding: isMobile ? '8px 0 12px 0' : '10px 0 14px 0',
+        padding: isMobile ? '4px 0 10px 0' : '6px 0 12px 0',
         borderTop: currentCycle.id === 'cycle_day' ? '0.5px solid var(--separator)' : 'none',
         borderBottom: '0.5px solid var(--separator)',
         marginTop: currentCycle.id === 'cycle_day' ? 6 : 0,
@@ -91,92 +81,57 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
         background: 'transparent',
         display: 'flex',
         flexDirection: 'column',
-        gap: 8,
+        gap: 2,
         transition: 'background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, fill 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease',
       }}
     >
-      {/* Fila 1: Navegador temporal ocupando todo el ancho de la pantalla de lado a lado */}
-      <div style={{ width: '100%' }}>
+      {/* Línea 1, bajo el título: duración · progreso (el progreso abre el diagnóstico). */}
+      {(durationNode || status.totalGoal > 0) && (
+        <div className="cycle-strip-meta">
+          {durationNode}
+          {durationNode && status.totalGoal > 0 && <span className="section-head-dot" aria-hidden="true">·</span>}
+          {status.totalGoal > 0 && (
+            <button
+              type="button"
+              data-testid="cycle-status-pill-btn"
+              className={`cycle-strip-status${status.isAllDone ? ' is-done' : ''}`}
+              onClick={() => {
+                HapticService.selection();
+                setIsDiagnosticModalOpen(true);
+              }}
+              title="Ver el detalle de la rutina"
+              aria-label={`${status.statusState === 'all_done' ? 'Todo al día' : `${status.totalCompleted} de ${status.totalGoal} hechas`}. Ver el detalle de la rutina`}
+              aria-description={status.headline}
+            >
+              {status.isAllDone && <CheckCircle2 size={13} strokeWidth={2.4} aria-hidden="true" />}
+              <span data-testid="cycle-status-badge">
+                {status.statusState === 'all_done' ? (
+                  'Todo al día'
+                ) : (
+                  <>
+                    <span>{status.totalCompleted} de {status.totalGoal} hechas</span>
+                    <span className="sr-only"> ({progressPercent}%)</span>
+                  </>
+                )}
+              </span>
+              {(status.statusState === 'own_done_accumulated_pending' || status.statusState === 'accumulated_done_own_pending') && (
+                <span data-testid="cycle-status-headline" className="status-exception">· {status.headline}</span>
+              )}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Línea 2: periodo (‹ Octubre 2026 ›) y, a la derecha, «Rutina completa». */}
+      <div className="cycle-strip-row">
         <ApplePeriodNavigator
           defaultPeriodicity={effPeriod}
           viewColor={viewColor}
           isMobile={isMobile}
-          fullWidth={true}
+          fullWidth={false}
         />
+        {routineToggle}
       </div>
-
-      {/* Fila 2: Barra de progreso ultra-fina estilo Apple */}
-      {/* A single count-first status replaces duplicate visual progress. */}
-
-      {/* Fila 3: Píldora interactiva compacta estilo Apple que abre el modal de diagnóstico */}
-      {status.totalGoal > 0 && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 8,
-            flexWrap: 'wrap',
-          }}
-        >
-          <button
-            type="button"
-            data-testid="cycle-status-pill-btn"
-            onClick={() => {
-              HapticService.selection();
-              setIsDiagnosticModalOpen(true);
-            }}
-            title="Toca para ver el desglose detallado de la rutina"
-            aria-label="Ver diagnóstico detallado de la rutina"
-            aria-description={`${status.totalCompleted} de ${status.totalGoal} hechas. ${status.headline}`}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: 6,
-              padding: '5px 12px',
-              borderRadius: 999,
-              border: '1px solid var(--border-subtle, rgba(0, 0, 0, 0.08))',
-              background: 'var(--bg-material, rgba(255, 255, 255, 0.65))',
-              backdropFilter: 'blur(16px)',
-              WebkitBackdropFilter: 'blur(16px)',
-              color: status.isAllDone ? '#34c759' : 'var(--text-primary)',
-              fontSize: isMobile ? '0.76rem' : '0.80rem',
-              fontWeight: 600,
-              letterSpacing: '-0.01em',
-              cursor: 'pointer',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
-              transition: 'background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, fill 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
-              maxWidth: '100%',
-            }}
-          >
-            {statusIcon}
-            <span data-testid="cycle-status-badge">
-              {status.statusState === 'all_done' ? (
-                'Todo al día'
-              ) : (
-                <>
-                  <span>{status.totalCompleted} de {status.totalGoal} hechas</span>
-                  <span className="sr-only"> ({progressPercent}%)</span>
-                </>
-              )}
-            </span>
-            <span className="sr-only"> · </span>
-            <span
-              data-testid="cycle-status-headline"
-              style={{
-                fontWeight: 600,
-                color: status.isAllDone ? '#34c759' : 'var(--text-secondary)',
-                whiteSpace: 'normal',
-                wordBreak: 'break-word',
-              }} className={status.statusState === 'own_done_accumulated_pending' || status.statusState === 'accumulated_done_own_pending' ? 'status-exception' : 'sr-only'}
-            >
-              {status.isAllDone ? 'Objetivo completado' : status.headline}
-            </span>
-            <Info size={12} strokeWidth={2.2} style={{ opacity: 0.55, marginLeft: 2, flexShrink: 0 }} />
-          </button>
-        </div>
-      )}
 
       {/* Modal Apple de Diagnóstico detallado */}
       <RoutineDiagnosticModal
