@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
 import { MoreHorizontal, ChevronDown, Check, Plus, Play } from 'lucide-react';
 import { DurationInfoCard } from '../../ui/DurationInfoCard';
 import { HapticService } from '../../../services/HapticService';
@@ -221,6 +221,19 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   const touchSectionGhostRef = useRef<ReturnType<typeof createDragGhost> | null>(null);
   // Armado tras la pulsación larga: desde ahí se cancela el scroll nativo de iOS (ver guardNativeScroll).
   const sectionTouchArmedRef = useRef(false);
+  // Publica la altura real de la cabecera principal en su bloque (.section-container) para que las
+  // subsecciones fijas se peguen exactamente debajo.
+  useLayoutEffect(() => {
+    const el = rowRef.current;
+    const block = el?.parentElement;
+    if (!el || !block || data.depth !== 0) return;
+    const publish = () => block.style.setProperty('--section-sticky-h', `${el.getBoundingClientRect().height}px`);
+    publish();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(publish);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [data.depth]);
   useEffect(() => {
     const el = rowRef.current;
     if (!el) return;
@@ -461,7 +474,10 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       style={{
         ...itemStyle,
         position: 'sticky',
-        top: data.depth === 0 ? 0 : 56,
+        // Las subsecciones se pegan justo debajo de la cabecera principal de su bloque, mida lo que
+        // mida (una línea, dos líneas…): con 56 px fijos quedaba un hueco por el que se leían las
+        // tareas de detrás, o la subsección se metía debajo y se cortaba.
+        top: data.depth === 0 ? 0 : 'var(--section-sticky-h, 56px)',
         zIndex: isMenuOpenForThisSection ? 999992 : Math.max(10, 30 - data.depth),
         borderBottom: data.depth === 0 ? '1px solid var(--border-subtle)' : 'none',
         borderTop: 'none',
