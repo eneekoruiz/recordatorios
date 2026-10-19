@@ -27,12 +27,15 @@ test('task metadata is directly actionable without a redundant disclosure', asyn
   await expect(row.locator('.task-meta-line button')).toHaveCount(0);
   const box = await row.locator('.task-row').boundingBox();
   expect(box?.height).toBeGreaterThanOrEqual(44);
-  await expect(details).toContainText('15 min');
-  await expect(details).toContainText('24');
-  await details.getByRole('button', { name: /Mañana/ }).click();
+  const meta = row.locator('.task-meta-line');
+  await expect(meta).toContainText('15 min');
+  await expect(meta).toContainText('12,00 €');
+  // Cada dato de la línea sigue siendo accionable: el momento del día rota sin completar la tarea…
+  await meta.locator('[data-meta-field="time-of-day"]').click();
   expect(await page.evaluate(() => (window as any).useAppStore.getState().tasks['hierarchy-task'].timeOfDay)).toBe('afternoon');
   expect(await page.evaluate(() => (window as any).useAppStore.getState().tasks['hierarchy-task'].status)).toBe('pending');
-  await details.getByRole('button', { name: /15 min/ }).click();
+  // …y la duración abre el editor en su campo.
+  await meta.locator('[data-meta-field="duration"]').click();
   await expect(page.getByRole('dialog', { name: 'Detalles', exact: true })).toBeVisible();
   await expect(page.locator('#drawer-duration-row')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Fecha y hora', exact: false })).toHaveAttribute('aria-expanded', 'false');
@@ -93,7 +96,7 @@ test('mobile section options remain directly accessible', async ({ page }) => {
   await page.evaluate(() => (window as any).useAppStore.getState().addTask({id:'empty-meta',title:'Sin datos secundarios',categoryId:'hierarchy',status:'pending'}));
   const row=page.locator('[data-task-id="empty-meta"]').first();
   await expect(row.locator('.task-context')).toHaveCount(0);
-  await row.getByRole('button',{name:'Detalles del recordatorio',exact:true}).click();
+  await row.getByRole('button',{name:'Detalles de «Sin datos secundarios»',exact:true}).click();
   await expect(page.getByRole('dialog',{name:'Detalles',exact:true})).toBeVisible();
   expect(await page.evaluate(()=>(window as any).useAppStore.getState().tasks['empty-meta'].status)).toBe('pending');
 });

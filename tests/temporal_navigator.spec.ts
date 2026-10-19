@@ -119,8 +119,8 @@ test.describe('Apple Period Navigator (helen-design)', () => {
     // El navegador interactivo debe estar dentro de la tarjeta
     await expect(statusCard.locator('[data-testid="apple-period-navigator"]')).toBeVisible();
 
-    // «Rutina completa» comparte línea con el periodo (antes era un interruptor en otra fila)
-    await expect(statusCard.locator('.cycle-strip-row .routine-chip')).toBeVisible();
+    // «Rutina completa» comparte línea con el recuento (junto al periodo no cabía en móvil)
+    await expect(statusCard.locator('.cycle-strip-meta .routine-chip')).toBeVisible();
     await expect(page.locator('.routine-include-row')).toHaveCount(0);
   });
 

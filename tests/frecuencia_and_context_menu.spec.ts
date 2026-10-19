@@ -139,6 +139,12 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     }
     await page.waitForTimeout(400);
 
+    // «Diarias» se pliega para comprobar que su tarea solo aparece donde la mete el interruptor
+    // (las secciones empiezan desplegadas).
+    const diariasHeader = page.locator('.group-header', { hasText: 'Diarias' }).first();
+    const collapse = diariasHeader.getByRole('button', { name: /^Plegar / });
+    if (await collapse.count()) await collapse.first().click();
+
     // Con la sección desplegada aparece «Rutina completa» (incluir las diarias)
     const semanalHeader = page.locator('.group-header', { hasText: 'Semanales' });
     await expect(semanalHeader).toBeVisible({ timeout: 5000 });
