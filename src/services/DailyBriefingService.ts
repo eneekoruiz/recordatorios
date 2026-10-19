@@ -2,7 +2,8 @@
 // tarjeta de resumen. Devuelve frases ya redactadas (nada de "1 tarea(s)").
 import type { TaskItem, CustomCycle, ListSection, CustomList } from '../models/Task';
 import { isTaskCompleted } from '../store/useAppStore';
-import { calculateHabitStreak, isCompletedInCurrentPeriod, isTaskActuallyCompletedInCurrentPeriod } from './TaskService';
+import { isCompletedInCurrentPeriod, isTaskActuallyCompletedInCurrentPeriod } from './TaskService';
+import { calculateTaskStreak } from '../utils/streaks';
 import { getTaskPeriodicity } from '../utils/sectionRoutine';
 import { formatLongDate, joinNatural, numberWord, pluralWord } from '../utils/format';
 import { readStoredWeeklyDay } from '../utils/routineDay';
@@ -101,7 +102,7 @@ export function buildDailyBriefing(
 
   const habits = all.filter(isDaily);
   const habitsDone = habits.filter(isActuallyDone).length;
-  const topStreak = habits.reduce((max, habit) => Math.max(max, calculateHabitStreak(habit, cycles).count), 0);
+  const topStreak = habits.reduce((max, habit) => Math.max(max, (calculateTaskStreak(habit, options.listSections, options.lists, cycles, now)?.count ?? 0)), 0);
 
   const expiring = all.filter((t) => {
     if (!t.dueDate || isTaskCompleted(t)) return false;

@@ -12,7 +12,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, TrendingUp, CheckCircle2, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { WeeklyReviewModal } from '../../review/WeeklyReviewModal';
 import { useAppStore } from '../../../store/useAppStore';
-import { isCompletedInCurrentPeriod, calculateHabitStreak, getStartOfWeek } from '../../../services/TaskService';
+import { isCompletedInCurrentPeriod, getStartOfWeek } from '../../../services/TaskService';
+import { calculateTaskStreak } from '../../../utils/streaks';
 import type { TaskItem } from '../../../models/Task';
 
 function getDayLabel(date: Date): string {
@@ -107,8 +108,8 @@ export function WeeklyStreakWidget() {
     // Best habit streak
     const bestHabit = allTasks
       .filter(t => t.cycle_id || t.targetCount)
-      .map(t => ({ task: t, streak: calculateHabitStreak(t, cycles) }))
-      .filter(h => h.streak.count > 0)
+      .map(t => ({ task: t, streak: calculateTaskStreak(t, listSections, lists, cycles) }))
+      .filter((h): h is { task: TaskItem; streak: NonNullable<typeof h.streak> } => Boolean(h.streak && h.streak.count > 0))
       .sort((a, b) => b.streak.count - a.streak.count)[0];
 
     // Today's completions

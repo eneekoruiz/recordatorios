@@ -76,13 +76,13 @@ test('weekly history separates manual sections, completed tasks and skips', asyn
   await expect(kitchen).not.toContainText('Limpiar horno');
   await expect(kitchen).not.toContainText('Recoger cocina');
   await expect(kitchen.getByTestId('routine-group-summary')).toContainText(/1 hecha/);
-  await expect(kitchen.getByTestId('routine-group-summary')).toContainText(/1 omitida/);
   await expect(kitchen.getByTestId('routine-group-summary')).toContainText('0 omitidas por ti');
-  await expect(kitchen.getByTestId('routine-group-summary')).toContainText('1 omitidas automáticamente');
+  await expect(kitchen.getByTestId('routine-group-summary')).toContainText('1 sin marcar');
   await expect(bathroom.getByTestId('routine-group-summary')).toContainText(/0 hecha/);
   await expect(bathroom.getByTestId('routine-group-summary')).toContainText(/1 omitida/);
   await expect(kitchen.locator('[data-task-id="analytics-done"]')).toHaveAttribute('data-status', 'completed');
-  await expect(kitchen.locator('[data-task-id="analytics-pending"]')).toHaveAttribute('data-status', 'skipped');
+  // Sin marcar (inferida) no es lo mismo que omitida por la persona.
+  await expect(kitchen.locator('[data-task-id="analytics-pending"]')).toHaveAttribute('data-status', 'missed');
   await expect(kitchen.locator('[data-task-id="analytics-pending"]')).toHaveAttribute('data-automatic', 'true');
   await expect(bathroom.locator('[data-task-id="analytics-bath"]')).toHaveAttribute('data-status', 'skipped');
   await expect(bathroom.locator('[data-task-id="analytics-bath"]')).toHaveAttribute('data-automatic', 'false');
@@ -97,7 +97,7 @@ test('skip and restore affect only the selected section, frequency and period', 
   await kitchen.getByRole('button', { name: 'Omitir sección', exact: true }).click();
   await expect(kitchen.locator('[data-task-id="analytics-pending"]')).toHaveAttribute('data-automatic', 'false');
   await expect(kitchen.getByTestId('routine-group-summary')).toContainText('1 omitidas por ti');
-  await expect(kitchen.getByTestId('routine-group-summary')).not.toContainText('automáticamente');
+  await expect(kitchen.getByTestId('routine-group-summary')).not.toContainText('sin marcar');
   const skipped = await histories(page);
   expect(skipped['analytics-pending'].skips).toHaveLength(2);
   expect(skipped['analytics-pending'].skips).toContain(before['analytics-pending'].skips[0]);
@@ -117,9 +117,8 @@ test('skip and restore affect only the selected section, frequency and period', 
   }
   await kitchen.getByRole('button', { name: 'Restaurar omitidas', exact: true }).click();
   expect(await histories(page)).toEqual(before);
-  await expect(kitchen.getByTestId('routine-group-summary')).toContainText(/1 omitida/);
   await expect(kitchen.locator('[data-task-id="analytics-pending"]')).toHaveAttribute('data-automatic', 'true');
-  await expect(kitchen.getByTestId('routine-group-summary')).toContainText('1 omitidas automáticamente');
+  await expect(kitchen.getByTestId('routine-group-summary')).toContainText('1 sin marcar');
 });
 
 test('only closed periods infer omissions and viewing history never writes task data', async ({ page }) => {
@@ -133,10 +132,10 @@ test('only closed periods infer omissions and viewing history never writes task 
   await expect(kitchen.getByTestId('routine-group-summary')).toContainText(/0 omitida/);
 
   await page.locator('[data-testid="routine-period"][data-period-start="2026-10-09"]').click();
-  await expect(unmarked).toHaveAttribute('data-status', 'skipped');
+  await expect(unmarked).toHaveAttribute('data-status', 'missed');
   await expect(unmarked).toHaveAttribute('data-automatic', 'true');
   await expect(kitchen.locator('[data-task-id="analytics-day"]')).toHaveAttribute('data-status', 'completed');
-  await expect(kitchen.getByTestId('routine-group-summary')).toContainText(/1 omitida/);
+  await expect(kitchen.getByTestId('routine-group-summary')).toContainText('1 sin marcar');
 
   await page.locator('[data-testid="routine-period"][data-period-start="2026-10-11"]').click();
   await expect(unmarked).toHaveAttribute('data-status', 'unknown');

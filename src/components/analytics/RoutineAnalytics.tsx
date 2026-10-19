@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Flame, RotateCcw } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { useNavigation } from '../../hooks/useNavigation';
 import { calculateRoutinePeriod, getRoutinePeriods, type RoutineFrequency, type RoutineGroup } from '../../utils/routineAnalytics';
+import { calculateSectionStreaks } from '../../utils/streaks';
 import './RoutineAnalytics.css';
 
 const frequencies: { value: RoutineFrequency; label: string }[] = [
@@ -58,6 +59,9 @@ export function RoutineAnalytics({ onOpenTask }: { onOpenTask?: (taskId: string)
     }
     return [...groups.values()].sort((a, b) => `${a.listName} ${a.name}`.localeCompare(`${b.listName} ${b.name}`, 'es'));
   }, [history, tasks, cycles, sections, lists, now]);
+  // Rachas vivas por sección y frecuencia (2 periodos o más). Se calculan sobre «ahora», no sobre la
+  // fecha de referencia del historial.
+  const streaks = useMemo(() => calculateSectionStreaks(Object.values(tasks), cycles, sections, lists, now), [tasks, cycles, sections, lists, now]);
   const selected = history.find(period => period.id === selectedId)
     ?? history.find(period => anchor >= period.start && anchor < period.end) ?? history[history.length - 1];
   const visibleGroups = (selected?.summary.groups ?? []).filter(group => groupFilter === 'all' || group.id === groupFilter);
@@ -100,6 +104,29 @@ export function RoutineAnalytics({ onOpenTask }: { onOpenTask?: (taskId: string)
         <button type="button" className="routine-button" onClick={() => changeReference(dateValue(new Date()))}><RotateCcw size={16} aria-hidden="true" /> Hoy</button>
       </div>
 
+      {streaks.length > 0 && (
+        <div className="routine-streaks" aria-labelledby="routine-streaks-title">
+          <h3 id="routine-streaks-title">Rachas</h3>
+          <ul>
+            {streaks.slice(0, 5).map(streak => (
+              <li key={streak.id}>
+                <button type="button" data-testid="routine-streak"
+                  aria-label={`${streak.label}: ${streak.count} ${streak.unit} seguidas. Ver su historial`}
+                  onClick={() => {
+                    setFrequency(streak.frequency);
+                    setGroupFilter(JSON.stringify([streak.listId, streak.sectionId || null]));
+                    setReference(dateValue(new Date()));
+                    setSelectedId(null);
+                  }}>
+                  <span className="routine-streak-name">{streak.label}</span>
+                  <span className="routine-streak-count"><Flame size={13} aria-hidden="true" />{streak.count} {streak.unit}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="routine-frequency" role="group" aria-label="Frecuencia de las rutinas">
         {frequencies.map(item => <button type="button" key={item.value} data-testid={`routine-frequency-${item.value}`} aria-pressed={frequency === item.value}
           onClick={() => { setFrequency(item.value); setSelectedId(null); setAnnouncement(''); }}>{item.label}</button>)}
@@ -137,7 +164,7 @@ export function RoutineAnalytics({ onOpenTask }: { onOpenTask?: (taskId: string)
           </button>;
         })}
       </div>
-      <p className="routine-history-note">Al cerrar un período, las tareas sin completar aparecen como omitidas automáticamente. Se distinguen de las que omitiste tú. Los períodos futuros y el historial desconocido no cuentan como incumplimientos. El desglose usa las secciones actuales.</p>
+      <p className="routine-history-note">«Sin marcar»: el período terminó sin marcarla. «Omitida por ti»: la saltaste a propósito. El período en curso nunca cuenta como sin marcar.</p>
 
       <div className="routine-selected-heading"><h3>{selected?.label}</h3><span>Detalle por sección</span></div>
       {!visibleGroups.length && <p className="routine-empty">Sin rutinas para esta sección y este período.</p>}

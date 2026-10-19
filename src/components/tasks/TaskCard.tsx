@@ -11,7 +11,8 @@ import {
 import type { TaskItem, ListSection } from '../../models/Task';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { useTemporalNavigationStore } from '../../store/useTemporalNavigationStore';
-import { isCompletedInCurrentPeriod, isSkippedInCurrentPeriod, calculateHabitStreak, calculateExpirationStatus } from '../../services/TaskService';
+import { isCompletedInCurrentPeriod, isSkippedInCurrentPeriod, calculateExpirationStatus } from '../../services/TaskService';
+import { calculateTaskStreak } from '../../utils/streaks';
 import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
 import { ConfettiService } from '../../services/ConfettiService';
@@ -575,7 +576,7 @@ export const TaskCard = React.memo(function TaskCard({
     ? (Math.min(effectiveCurrentCount, targetCount) / targetCount) * 100
     : (totalAlerts > 1 ? (completedAlertsCount / totalAlerts) * 100 : 0);
 
-  const habitStreak = calculateHabitStreak(task, cycles);
+  const habitStreak = useMemo(() => calculateTaskStreak(task, listSections, lists, cycles), [task, listSections, lists, cycles]);
   const isCaducidad = isCaducidadesList(task.categoryId) || !!task.expirationType;
   const expirationStatus = isCaducidad ? calculateExpirationStatus(task.dueDate) : null;
 
@@ -1781,7 +1782,7 @@ export const TaskCard = React.memo(function TaskCard({
             onNavigateView={onNavigateView}
             lists={lists}
             onOpenFrequencyPicker={handleFrequencyBadgeClick}
-            streak={habitStreak.count >= 2 ? habitStreak : null}
+            streak={habitStreak && habitStreak.count >= 2 ? habitStreak : null}
           />
         </div>
 

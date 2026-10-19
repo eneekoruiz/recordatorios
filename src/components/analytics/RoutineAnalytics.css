@@ -59,3 +59,13 @@
 }
 /* Oscuro: el azul de acento sobre el cristal no llegaba a 4,5:1 (axe). Un azul más claro sí. */
 [data-theme="dark"] .routine-button, html.dark .routine-button { color: #6cb0ff; }
+/* Rachas: una lista breve, la sección y cuántos períodos seguidos. Tocarla abre su historial. */
+.routine-streaks { margin-top: 16px; }
+.routine-streaks h3 { margin: 0 0 4px; font-size: .96rem; }
+.routine-streaks ul { list-style: none; margin: 0; padding: 0; }
+.routine-streaks li + li { border-top: 1px solid var(--border-subtle); }
+.routine-streaks button { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; padding: 8px 0; border: 0; background: transparent; color: var(--text-primary); font: inherit; font-size: .88rem; text-align: left; cursor: pointer; transition: background-color 150ms ease; border-radius: 8px; }
+.routine-streaks button:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
+.routine-streak-name { min-width: 0; overflow-wrap: anywhere; }
+.routine-streak-count { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; color: #c2410c; font-weight: 600; font-variant-numeric: tabular-nums; }
+[data-theme="dark"] .routine-streak-count, html.dark .routine-streak-count { color: #ff9f5a; }
