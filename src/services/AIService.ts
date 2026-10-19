@@ -156,6 +156,14 @@ export class AIService {
     return { ok: false, error: lastError || 'No se pudo conectar con ningún modelo de Gemini' };
   }
 
+  /** ¿Hay un modelo de lenguaje de verdad (Gemini u OpenAI con clave)? Si no, responde el extractor local. */
+  public static hasLanguageModel(): boolean {
+    const config = this.getConfig();
+    const apiKey = config.apiKey?.trim();
+    if (!apiKey) return false;
+    return config.provider === 'gemini' || config.provider === 'openai' || (config.provider === 'auto' && apiKey.startsWith('AIza'));
+  }
+
   /**
    * Main entry point: Processes conversation and returns conversational response + proposed tasks
    */

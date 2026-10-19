@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, SlidersHorizontal, ArrowUp, Calendar, Clock, AlertCircle, List as ListIcon, Repeat, Users, Coins } from 'lucide-react';
+import { Sparkles, SlidersHorizontal, ArrowUp, Calendar, Clock, AlertCircle, List as ListIcon, Repeat, Users, Coins, Loader2, X } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { parseNaturalLanguage } from '../../utils/nlp';
 import { SoundService } from '../../services/SoundService';
@@ -9,6 +9,11 @@ import { isCaducidadesList } from '../../utils/specialLists';
 import { formatEuro } from '../../utils/format';
 import { useCalendarStore } from '../../store/useCalendarStore';
 import { parseDayKey } from '../../utils/calendar';
+import { AIService, type ProposedBatch } from '../../services/AIService';
+import { HapticService } from '../../services/HapticService';
+import type { TaskItem, CustomList } from '../../models/Task';
+import { buildTasksFromBatch, canAutoApply, isConversationalRequest, plainReply, summarizeCreated } from '../../utils/aiQuickAdd';
+import { sendToAssistant, type AssistantRequest } from '../../utils/aiAssistantInbox';
 
 interface QuickAddBarProps {
   currentView: string;
@@ -21,8 +26,14 @@ const PRIORITY_LABELS: Record<string, string> = { high: 'alta', medium: 'media',
 export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
   const [text, setText] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  // La barra es la conversación con la IA: mientras piensa, y lo que responde después.
+  const [isThinking, setIsThinking] = useState(false);
+  const [aiReply, setAiReply] = useState<{ text: string; detail?: string; createdIds: string[]; request?: AssistantRequest } | null>(null);
+  const replyTimerRef = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const addTask = useAppStore(state => state.addTask);
+  const addTasksBatch = useAppStore(state => state.addTasksBatch);
+  const deleteTask = useAppStore(state => state.deleteTask);
   const lists = useAppStore(state => state.lists);
   const listSections = useAppStore(state => state.listSections);
   const calendarDay = useCalendarStore(state => state.selectedDay);
@@ -38,13 +49,12 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
     (person) => (person || '').toLowerCase() !== (nlp.suggestedCategory || '').toLowerCase()
   );
 
-  const handleSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  // El intérprete propio de la barra: «!alta», «@Compras», precios, caducidades, horas…
+  // Sin un modelo de lenguaje configurado es más fiable que el extractor local para un solo
+  // recordatorio, así que se usa para eso; la IA entra con varios a la vez o con preguntas.
+  const buildLocalTask = (): Partial<TaskItem> | null => {
     const cleanTitle = nlp.cleanTitle || text.trim();
-    if (!cleanTitle) {
-      onExpandDrawer();
-      return;
-    }
+    if (!cleanTitle) return null;
 
     // Determinar categoría / lista por defecto
     let targetCategory = 'inbox';
@@ -122,7 +132,7 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
       alerts = [...alerts, ...autoAlerts];
     }
 
-    addTask({
+    return {
       id: crypto.randomUUID(),
       title: cleanTitle,
       categoryId: targetCategory,
@@ -136,11 +146,112 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
       expirationType,
       status: 'pending',
       created_at: new Date().toISOString()
-    });
+    };
+  };
+
+  useEffect(() => () => {
+    if (replyTimerRef.current) window.clearTimeout(replyTimerRef.current);
+  }, []);
+
+  const showReply = (reply: { text: string; detail?: string; createdIds: string[]; request?: AssistantRequest }, ms = 8000) => {
+    if (replyTimerRef.current) window.clearTimeout(replyTimerRef.current);
+    setAiReply(reply);
+    replyTimerRef.current = window.setTimeout(() => setAiReply(null), ms);
+  };
+
+  // Valores de la vista para lo que la IA no diga: la lista abierta, el día de Hoy o del
+  // calendario y la frecuencia de la vista de frecuencia.
+  const viewDefaults = () => {
+    const defaultListId = currentView.startsWith('list_') ? currentView.replace('list_', '') : undefined;
+    let defaultDueDate: string | undefined;
+    if (currentView === 'smart_today') defaultDueDate = new Date().toISOString();
+    else if (currentView === 'smart_calendar') {
+      const day = calendarDay ? parseDayKey(calendarDay) : new Date();
+      defaultDueDate = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 12).toISOString();
+    }
+    const defaultCycleId = currentView.startsWith('cycle_') ? currentView : undefined;
+    return { defaultListId, defaultDueDate, defaultCycleId };
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (isThinking) return;
+    const raw = text.trim();
+    if (!raw) {
+      onExpandDrawer();
+      return;
+    }
+    setAiReply(null);
+
+    // Una pregunta no es un recordatorio: se continúa en el chat de la IA.
+    if (isConversationalRequest(raw)) {
+      sendToAssistant({ text: raw });
+      setText('');
+      return;
+    }
+
+    const usesModel = AIService.hasLanguageModel();
+    const localTask = buildLocalTask();
+    let batch: ProposedBatch | null = null;
+    setIsThinking(true);
+    try {
+      batch = await AIService.processPrompt(raw, lists, [], useAppStore.getState().tasks, undefined, listSections);
+    } catch {
+      batch = null; // sin IA disponible: se apunta con el intérprete de la barra
+    } finally {
+      setIsThinking(false);
+    }
+
+    // La IA necesita hablarlo (aclarar algo, cambiar o agrupar recordatorios que ya existen):
+    // se abre el chat con su respuesta, sin volver a preguntar.
+    if (batch && !canAutoApply(batch) && (usesModel || batch.tasks.length === 0 || Boolean(batch.taskUpdates?.length) || Boolean(batch.action))) {
+      sendToAssistant({ text: raw, batch });
+      setText('');
+      return;
+    }
+
+    const proposedCount = batch ? batch.tasks.filter(t => t.selected !== false).length : 0;
+    let payload: Partial<TaskItem>[] = [];
+    let createList: CustomList | undefined;
+    if (!batch || (!usesModel && proposedCount <= 1)) {
+      payload = localTask ? [localTask] : [];
+    } else {
+      const built = buildTasksFromBatch(batch, lists, { ...viewDefaults(), fallbackListId: 'inbox', sourceText: raw });
+      payload = built.tasks;
+      createList = built.createList;
+    }
+    if (payload.length === 0) {
+      onExpandDrawer(raw);
+      setText('');
+      return;
+    }
+
+    const before = useAppStore.getState().tasks;
+    addTasksBatch(payload, createList ? { createList } : undefined);
+    const after = useAppStore.getState().tasks;
+    const created = payload.filter(t => t.id && after[t.id] && !before[t.id]);
 
     SoundService.playPop();
+    HapticService.selection();
     setText('');
     inputRef.current?.blur();
+
+    const summary = summarizeCreated(created, useAppStore.getState().lists);
+    const modelReply = usesModel && batch ? plainReply(batch.reply) : '';
+    showReply({
+      text: summary,
+      detail: modelReply && modelReply !== summary ? modelReply : undefined,
+      createdIds: created.map(t => t.id!).filter(Boolean),
+      // «Abrir chat» continúa esta misma conversación (lo apuntado ya no se vuelve a proponer).
+      request: { text: raw, batch: { ...(batch || { reply: '', tasks: [] }), tasks: [], reply: `${batch?.reply ? `${batch.reply}\n\n` : ''}✅ ${summary}` } },
+    });
+  };
+
+  const undoLastReply = () => {
+    if (!aiReply) return;
+    aiReply.createdIds.forEach(id => deleteTask(id));
+    HapticService.selection();
+    showReply({ text: 'Deshecho.', createdIds: [] }, 2500);
   };
 
   const showCalendarDay = Boolean(calendarDate && text.trim() && !nlp.suggestedDueDate);
@@ -153,6 +264,48 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
         boxSizing: 'border-box'
       }}
     >
+      {/* Respuesta de la IA: qué ha apuntado, con «Deshacer» y «Abrir chat» para seguir hablando */}
+      <AnimatePresence>
+        {aiReply && (
+          <motion.div
+            key="qa-ai-reply"
+            className="qa-ai-reply"
+            role="status"
+            aria-live="polite"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={{ duration: 0.18 }}
+          >
+            <Sparkles size={15} aria-hidden="true" className="qa-ai-reply-icon" />
+            <div className="qa-ai-reply-body">
+              <p className="qa-ai-reply-text">{aiReply.text}</p>
+              {aiReply.detail && <p className="qa-ai-reply-detail">{aiReply.detail}</p>}
+            </div>
+            <div className="qa-ai-reply-actions">
+              {aiReply.createdIds.length > 0 && (
+                <button type="button" onClick={undoLastReply}>Deshacer</button>
+              )}
+              {aiReply.request && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const request = aiReply.request!;
+                    setAiReply(null);
+                    sendToAssistant(request);
+                  }}
+                >
+                  Abrir chat
+                </button>
+              )}
+              <button type="button" className="qa-ai-reply-close" aria-label="Cerrar respuesta" onClick={() => setAiReply(null)}>
+                <X size={14} aria-hidden="true" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div
         className="quick-add-shell"
         style={{
@@ -229,7 +382,9 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
           <button
             type="button"
             onClick={() => {
-              window.dispatchEvent(new CustomEvent('open-ai-assistant', { detail: text }));
+              const draft = text.trim();
+              sendToAssistant({ text: draft });
+              if (draft) setText('');
             }}
             style={{
               background: 'transparent',
@@ -246,7 +401,8 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
               justifyContent: 'center',
               transition: 'color 0.2s ease, transform 0.2s ease'
             }}
-            title="Hablar con la IA / Asistente MCP (Ctrl+J)"
+            title="Abrir el chat de la IA (Ctrl+J)"
+            aria-label="Abrir el chat de la IA"
           >
             <Sparkles size={18} />
           </button>
@@ -255,7 +411,9 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
             ref={inputRef}
             type="text"
             value={text}
-            onChange={e => setText(e.target.value)}
+            onChange={e => { setText(e.target.value); if (aiReply) setAiReply(null); }}
+            readOnly={isThinking}
+            aria-busy={isThinking}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             onPaste={e => {
@@ -282,7 +440,8 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
                 }
               }
             }}
-            placeholder="Nuevo recordatorio"
+            placeholder={isThinking ? 'Pensando…' : 'Nuevo recordatorio'}
+            aria-label="Nuevo recordatorio o mensaje para la IA"
             style={{
               flex: 1,
               minWidth: 0,
@@ -328,8 +487,9 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
           {/* Quick Submit Button */}
           <button
             type="submit"
-            disabled={!text.trim()}
-            title="Añadir recordatorio rápido (Enter)"
+            disabled={!text.trim() || isThinking}
+            title="Enviar a la IA (Intro)"
+            aria-label={isThinking ? 'La IA está pensando' : 'Enviar a la IA'}
             style={{
               width: 44,
               height: 44,
@@ -347,7 +507,9 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
               opacity: text.trim() ? 1 : 0.4
             }}
           >
-            <ArrowUp size={15} strokeWidth={2.5} />
+            {isThinking
+              ? <Loader2 size={16} strokeWidth={2.5} className="spin-anim" aria-hidden="true" />
+              : <ArrowUp size={15} strokeWidth={2.5} aria-hidden="true" />}
           </button>
         </form>
       </div>

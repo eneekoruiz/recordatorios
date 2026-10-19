@@ -19,7 +19,7 @@ test('task metadata is directly actionable without a redundant disclosure', asyn
   await page.setViewportSize({ width: 375, height: 812 });
   await seed(page);
   const section = page.locator('.group-header', { hasText: 'Cocina' });
-  const expand = section.getByRole('button', { name: 'Desplegar sección', exact: true });
+  const expand = section.getByRole('button', { name: /^Desplegar / });
   if (await expand.count()) await expand.click();
   const row = page.locator('[data-task-id="hierarchy-task"]').first();
   await expect(row.locator('details')).toHaveCount(0);
@@ -77,7 +77,7 @@ test('mobile section options remain directly accessible', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await seed(page);
   const section = page.locator('.group-header', { hasText: 'Cocina' });
-  const options = section.getByRole('button', { name: 'Opciones de sección', exact: true });
+  const options = section.getByRole('button', { name: /^Opciones de / });
   await expect(options).toBeVisible();
   for (const target of [options]) {
     const bounds = await target.boundingBox();
@@ -131,7 +131,7 @@ test('management and configuration reflow at narrow widths and enlarged text', a
 test('batch sheets trap focus and Escape preserves selection and tasks', async ({page}) => {
   await seed(page);
   const section=page.locator('.group-header',{hasText:'Cocina'});
-  const expand=section.getByRole('button',{name:'Desplegar sección',exact:true});
+  const expand=section.getByRole('button',{name:/^Desplegar /});
   if(await expand.count()) await expand.click();
   await event(page,'enter-selection-mode');
   await page.locator('[data-task-id="hierarchy-task"]').first().dispatchEvent('pointerdown',{pointerType:'mouse',button:0});

@@ -3,7 +3,7 @@ import { safeGetJSON, safeSetJSON } from '../../utils/safeStorage';
 import { useTaskGrouping } from '../../hooks/useTaskGrouping';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import { Plus, User, Users, PartyPopper, UtensilsCrossed, ShowerHead, BedDouble, DoorOpen, Flower2, House } from 'lucide-react';
+import { Plus, User, Users, PartyPopper, UtensilsCrossed, ShowerHead, BedDouble, DoorOpen, Flower2, House, Wind, Sparkles } from 'lucide-react';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import type { TaskItem } from '../../models/Task';
 import { TaskCard } from '../tasks/TaskCard';
@@ -28,8 +28,10 @@ import {
   sortTasksByUserPreference,
   formatSectionTitle,
   getNextPeriodDate,
-  type PeriodicityType 
+  type PeriodicityType,
+  type TaskSortMode
 } from '../../utils/sectionRoutine';
+import { splitWholeHouseTasks, WHOLE_HOUSE_START, WHOLE_HOUSE_END } from '../../utils/cleaningOrder';
 import { MainEmptyState } from './main/MainEmptyState';
 import { MainGlassHeader } from './main/MainGlassHeader';
 import { MainSectionHeader } from './main/MainSectionHeader';
@@ -89,7 +91,7 @@ type VirtualItemType =
       totalCount?: number
     }
   | { type: 'empty-section', title: string, category: string, color: string, sectionId?: string, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean }
-  | { type: 'task', task: TaskItem, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean, referenceDate?: Date };
+  | { type: 'task', task: TaskItem, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean, referenceDate?: Date, contextPeriodicity?: PeriodicityType | null };
 
 
 const getRoomIcon = (key: string): ReactNode => {
@@ -100,6 +102,8 @@ const getRoomIcon = (key: string): ReactNode => {
     case 'pasillo': return <DoorOpen size={14} />;
     case 'balcon': return <Flower2 size={14} />;
     case 'general': return <House size={14} />;
+    case 'para_empezar': return <Wind size={14} />;
+    case 'para_terminar': return <Sparkles size={14} />;
     default: return undefined;
   }
 };
@@ -148,7 +152,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const [isListConfigOpen, setIsListConfigOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [confirmProps, setConfirmProps] = useState<{ title: string; message: string; onConfirm: () => void }>({ title: '', message: '', onConfirm: () => {} });
-  const [sortBy, setSortBy] = useState<'manual' | 'dueDate' | 'priority' | 'title' | 'createdAt'>('manual');
+  // Orden fuera de una lista (vistas inteligentes y de frecuencia). Cada lista guarda el suyo.
+  const [sortByState, setSortByState] = useState<TaskSortMode>('manual');
   const [deletedToast, setDeletedToast] = useState<{ id: string; title: string; timeoutId: number } | null>(null);
   const [isEditingCycle, setIsEditingCycle] = useState(false);
   const [cycleEditName, setCycleEditName] = useState('');
@@ -313,6 +318,22 @@ const CORE_CYCLES = [
   const isFolderView = currentView.startsWith('folder_') || !!lists?.find(l => l.id === currentView.replace('list_', ''))?.isFolder;
   const currentList = lists?.find((l) => l.id === currentView.replace('list_', '').replace('folder_', ''));
   const currentCycle = (cycles || []).find((c) => c.id === currentView) || (CORE_CYCLES.find((c) => c.id === currentView) as any);
+
+  // Cada lista recuerda su orden (como en Recordatorios de Apple). Limpieza empieza en «Orden de
+  // limpieza» porque mezcla frecuencias y el orden útil es el del trabajo, no el de creación.
+  const defaultSortForList = useCallback((listId?: string | null): TaskSortMode => {
+    const list = listId ? lists?.find(l => l.id === listId) : undefined;
+    if (list?.sortMode) return list.sortMode;
+    return isLimpiezaList(listId || undefined, list) ? 'routine' : 'manual';
+  }, [lists]);
+  const sortBy: TaskSortMode = currentList && !currentList.isFolder ? defaultSortForList(currentList.id) : sortByState;
+  const setSortBy = useCallback((mode: TaskSortMode) => {
+    if (currentList && !currentList.isFolder) {
+      if (currentList.sortMode !== mode) updateList(currentList.id, { sortMode: mode });
+    } else {
+      setSortByState(mode);
+    }
+  }, [currentList, updateList]);
 
   // Vistas de frecuencia (Semanal, Mensual, Anual): un único modo para toda la vista, el del
   // interruptor «Incluir…» bajo el título. Filtro, cabeceras y árbol de secciones lo usan igual.
@@ -1052,24 +1073,32 @@ const CORE_CYCLES = [
                 }
               }
 
-              const sortedRooms = Array.from(roomsMap.values()).sort((a, b) => a.order - b.order);
-              const periodicityRank: Record<string, number> = { day: 1, week: 2, month: 3, year: 4 };
+              // Igual que dentro de la lista: con «Orden de limpieza», lo que no tiene habitación se
+              // reparte en «Para empezar» y «Para terminar».
+              const listSortMode = defaultSortForList(listId);
+              let roomRenders = Array.from(roomsMap.values()).map(r => ({
+                key: r.key, name: r.name, order: r.order, primarySectionId: r.primarySectionId,
+                tasks: assignedTasksByRoom.get(r.key) || []
+              }));
+              if (listSortMode === 'routine' && isLimpiezaList(listId)) {
+                const general = roomRenders.find(r => r.key === 'general');
+                if (general && general.tasks.length > 0) {
+                  const { start, end } = splitWholeHouseTasks(deduplicateTaskList(general.tasks));
+                  roomRenders = roomRenders.filter(r => r.key !== 'general');
+                  roomRenders.push({ ...WHOLE_HOUSE_START, order: -1, primarySectionId: general.primarySectionId, tasks: start });
+                  roomRenders.push({ ...WHOLE_HOUSE_END, order: 99, primarySectionId: general.primarySectionId, tasks: end });
+                }
+              }
+              const sortedRooms = roomRenders.sort((a, b) => a.order - b.order);
 
               sortedRooms.forEach(room => {
-                const rawRoomTasks = assignedTasksByRoom.get(room.key) || [];
-                if (currentCycle && rawRoomTasks.length === 0) {
+                const rawRoomTasks = room.tasks;
+                if ((currentCycle || listSortMode === 'routine') && rawRoomTasks.length === 0) {
                   return;
                 }
 
-                const roomTasks = deduplicateTaskList(rawRoomTasks);
-                roomTasks.sort((a, b) => {
-                  const pA = getTaskPeriodicity(a, listSections, lists) || 'day';
-                  const pB = getTaskPeriodicity(b, listSections, lists) || 'day';
-                  const rankA = periodicityRank[pA] || 99;
-                  const rankB = periodicityRank[pB] || 99;
-                  if (rankA !== rankB) return rankA - rankB;
-                  return (a.order ?? 0) - (b.order ?? 0);
-                });
+                // Mismo criterio que dentro de la lista: frecuencias intercaladas, no en bloques.
+                const roomTasks = sortTasksByUserPreference(deduplicateTaskList(rawRoomTasks), listSortMode);
 
                 const roomCategoryKey = `unified_room_${listId}_${room.key}`;
                 sectionTasksByKey[roomCategoryKey] = roomTasks;
@@ -1532,7 +1561,10 @@ const CORE_CYCLES = [
             const cumulativeTasks = deduplicateTaskList(
               allListTasks.filter(t => {
                 if (t.deleted_at) return false;
-                const tPeriodicity = getTaskPeriodicity(t, listSections, lists) || 'day';
+                // Las tareas sin frecuencia no son parte de ninguna rutina: tienen su propia sección
+                // («Otras»). Antes contaban como diarias y descuadraban los números.
+                const tPeriodicity = getTaskPeriodicity(t, listSections, lists);
+                if (!tPeriodicity) return false;
                 return (PERIOD_ORDER_MAP[tPeriodicity] || 1) <= currentRank;
               })
             );
@@ -1564,8 +1596,9 @@ const CORE_CYCLES = [
 
             const filteredTasksToGroup = filterTasks(tasksToGroup);
 
-            // Agrupar las tareas de esta frecuencia por habitación
-            const roomBuckets = new Map<string, { key: string; name: string; order: number; tasks: TaskItem[] }>();
+            // Agrupar por habitación. Con «Orden de limpieza», lo que no tiene habitación se parte en
+            // «Para empezar» (ventilar, recoger, polvo…) y «Para terminar» (suelos de toda la casa,
+            // basura, ambientador), y cada habitación sigue el orden del trabajo, no el de creación.
             const defaultRooms = [
               { key: 'cocina', name: 'Cocina', order: 0 },
               { key: 'bano', name: 'Baño', order: 1 },
@@ -1574,38 +1607,55 @@ const CORE_CYCLES = [
               { key: 'balcon', name: 'Balcón', order: 4 },
               { key: 'general', name: 'General', order: 5 },
             ];
-            defaultRooms.forEach(dr => roomBuckets.set(dr.key, { ...dr, tasks: [] }));
+            const buildRooms = (source: TaskItem[]) => {
+              const roomBuckets = new Map<string, { key: string; name: string; order: number; tasks: TaskItem[] }>();
+              defaultRooms.forEach(dr => roomBuckets.set(dr.key, { ...dr, tasks: [] }));
+              source.forEach(t => {
+                // Intentar detectar habitación por sección
+                const tSecId = t.sectionId;
+                let roomKey: string | null = null;
+                if (tSecId) {
+                  const tSec = sectionsForList.find(s => s.id === tSecId);
+                  if (tSec && !getPureCyclicPeriodicity(tSec.name)) {
+                    roomKey = canonicalRoomInfo(tSec.name).key;
+                  }
+                }
+                // Fallback: detectar por título
+                if (!roomKey) {
+                  roomKey = canonicalRoomInfo(getRoomForCleaningTask(t.title)).key;
+                }
+                if (!roomBuckets.has(roomKey)) {
+                  roomBuckets.set(roomKey, { ...canonicalRoomInfo(roomKey), tasks: [] });
+                }
+                roomBuckets.get(roomKey)!.tasks.push(t);
+              });
 
-            filteredTasksToGroup.forEach(t => {
-              // Intentar detectar habitación por sección
-              const tSecId = t.sectionId;
-              let roomKey: string | null = null;
-              if (tSecId) {
-                const tSec = sectionsForList.find(s => s.id === tSecId);
-                if (tSec && !getPureCyclicPeriodicity(tSec.name)) {
-                  const info = canonicalRoomInfo(tSec.name);
-                  roomKey = info.key;
+              if (sortBy === 'routine') {
+                const general = roomBuckets.get('general');
+                if (general && general.tasks.length > 0) {
+                  const { start, end } = splitWholeHouseTasks(deduplicateTaskList(general.tasks));
+                  roomBuckets.delete('general');
+                  roomBuckets.set(WHOLE_HOUSE_START.key, { ...WHOLE_HOUSE_START, order: -1, tasks: start });
+                  roomBuckets.set(WHOLE_HOUSE_END.key, { ...WHOLE_HOUSE_END, order: 99, tasks: end });
                 }
               }
-              // Fallback: detectar por título
-              if (!roomKey) {
-                const roomName = getRoomForCleaningTask(t.title);
-                const info = canonicalRoomInfo(roomName);
-                roomKey = info.key;
-              }
-              if (!roomBuckets.has(roomKey!)) {
-                const info = canonicalRoomInfo(roomKey!);
-                roomBuckets.set(roomKey!, { ...info, tasks: [] });
-              }
-              roomBuckets.get(roomKey!)!.tasks.push(t);
-            });
+
+              // Solo habitaciones con algo que hacer: una fila «Sin tareas» por estancia vacía es ruido.
+              return Array.from(roomBuckets.values())
+                .filter(rb => rb.tasks.length > 0)
+                .sort((a, b) => a.order - b.order)
+                .map(rb => ({ ...rb, tasks: sortTasksByUserPreference(deduplicateTaskList(rb.tasks), sortBy) }));
+            };
+            const sortedRooms = buildRooms(filteredTasksToGroup);
+            // El modo secuencia («Empezar») recorre las tareas en el mismo orden en que se ven.
+            const orderedTasksToGroup = buildRooms(tasksToGroup).flatMap(rb => rb.tasks);
 
             // Calcular IDs pendientes de toda la frecuencia (todas habitaciones juntas)
-            const freqPendingIds = tasksToGroup.filter(t => !isTaskCompleted(t)).map(t => t.id);
+            const freqPendingIds = orderedTasksToGroup.filter(t => !isTaskCompleted(t)).map(t => t.id);
 
             // Cabecera de frecuencia (depth 0)
             const freqColor = getReservedFrequencyColor(cycleId) || color;
-            sectionTasksByKey[freqCatKey] = tasksToGroup;
+            sectionTasksByKey[freqCatKey] = orderedTasksToGroup;
             const ref = temporalDate ? new Date(temporalDate) : new Date();
             const isLimpiezaRolledOver = Boolean(
               periodicity &&
@@ -1633,17 +1683,12 @@ const CORE_CYCLES = [
             });
 
             if (!isCatCollapsed(freqCatKey)) {
-              const sortedRooms = Array.from(roomBuckets.values())
-                .filter(rb => defaultRooms.some(dr => dr.key === rb.key) || rb.tasks.length > 0)
-                .sort((a, b) => a.order - b.order);
-
               if (sortedRooms.length === 0) {
                 flat.push({ type: 'empty-section', title: 'Sin tareas', category: freqCatKey, color: freqColor, depth: 0 });
               } else {
                 sortedRooms.forEach(room => {
                   const roomCatKey = `limpieza_${periodicity}_${room.key}`;
-                  const roomTasks = deduplicateTaskList(room.tasks);
-                  roomTasks.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+                  const roomTasks = room.tasks;
                   sectionTasksByKey[roomCatKey] = roomTasks;
                   const roomPendingIds = roomTasks.filter(t => !isTaskCompleted(t)).map(t => t.id);
 
@@ -1668,7 +1713,9 @@ const CORE_CYCLES = [
                           type: 'task',
                           task,
                           depth: task.parentId ? 1 : 0,
-                          referenceDate: isLimpiezaRolledOver ? effectiveLimpiezaRefDate : undefined
+                          referenceDate: isLimpiezaRolledOver ? effectiveLimpiezaRefDate : undefined,
+                          // Bajo «Mensuales» no hace falta repetir «Mensual» en cada fila; solo las incluidas lo dicen.
+                          contextPeriodicity: periodicity as PeriodicityType
                         });
                       });
                     }
@@ -1923,7 +1970,7 @@ const CORE_CYCLES = [
     }
 
     return { flattenedData: flat, renderedSectionTasks: sectionTasksByKey };
-  }, [groupedTasks, currentView, currentCycle, cycleViewMode, collapsed, isListView, lists, listSections, cycles, currentList, listSectionFilter, sortBy, isCatCollapsed, isolatedSectionKey, sectionRoutineModes, cycleRoutineCounts, temporalDate, resolvedShowCompleted, recentlyCompletedIds]);
+  }, [groupedTasks, currentView, currentCycle, cycleViewMode, collapsed, isListView, lists, listSections, cycles, currentList, listSectionFilter, sortBy, defaultSortForList, isCatCollapsed, isolatedSectionKey, sectionRoutineModes, cycleRoutineCounts, temporalDate, resolvedShowCompleted, recentlyCompletedIds]);
 
   // Tareas visibles en pantalla respetando el orden visual exacto de renderizado
   // En las vistas inteligentes (Con marca, Todos…) una sección sin tareas no aporta nada: ni su cabecera ni su
@@ -1972,6 +2019,13 @@ const CORE_CYCLES = [
     return out.length > 0 ? out : visibleTasks;
   }, [groupedTasks, isolatedSectionKey, visibleTasks]);
 
+  // En una vista de frecuencia («Mensual»…), las filas de esa misma frecuencia no repiten la etiqueta.
+  const viewPeriodicity: PeriodicityType | null = currentCycle?.id === 'cycle_day' ? 'day'
+    : currentCycle?.id === 'cycle_week' ? 'week'
+    : currentCycle?.id === 'cycle_month' ? 'month'
+    : currentCycle?.id === 'cycle_year' ? 'year'
+    : null;
+
   // Duración estimada agregada de todas las tareas de la vista
   const viewTasksDuration = useMemo(() => {
     return calculateTasksDuration(viewTasks, listSections, lists);
@@ -2000,7 +2054,7 @@ const CORE_CYCLES = [
 
     reorderTasks(reordered.map(t => t.id));
     HapticService.selection();
-  }, [visibleTasks, reorderTasks, sortBy]);
+  }, [visibleTasks, reorderTasks, sortBy, setSortBy]);
 
   const handleMoveTaskDown = useCallback((taskId: string) => {
     const idx = visibleTasks.findIndex(t => t.id === taskId);
@@ -2017,7 +2071,7 @@ const CORE_CYCLES = [
 
     reorderTasks(reordered.map(t => t.id));
     HapticService.selection();
-  }, [visibleTasks, reorderTasks, sortBy]);
+  }, [visibleTasks, reorderTasks, sortBy, setSortBy]);
 
   const handleReorderTasks = useCallback((sourceTaskId: string, targetTaskId: string, position: 'before' | 'after' = 'before') => {
     if (sourceTaskId === targetTaskId) return;
@@ -2143,7 +2197,7 @@ const CORE_CYCLES = [
 
     reorderTasks(reordered.map(t => t.id), Object.keys(taskUpdates).length > 0 ? taskUpdates : undefined);
     HapticService.selection();
-  }, [visibleTasks, reorderTasks, sortBy, isSmartView, isListView, currentList]);
+  }, [visibleTasks, reorderTasks, sortBy, setSortBy, isSmartView, isListView, currentList]);
 
   const handleReorderSections = useCallback((sourceSectionId: string, targetSectionId: string, position: 'before' | 'after' = 'before') => {
     if (sourceSectionId === targetSectionId) return;
@@ -2477,7 +2531,7 @@ const CORE_CYCLES = [
   }, [onStartSequence]);
 
 
-  const renderTask = useCallback((task: TaskItem, itemStyle: React.CSSProperties, index: number, depth: number, isFirst: boolean, isLast: boolean, previousTaskId?: string, itemKey?: React.Key, referenceDate?: Date) => {
+  const renderTask = useCallback((task: TaskItem, itemStyle: React.CSSProperties, index: number, depth: number, isFirst: boolean, isLast: boolean, previousTaskId?: string, itemKey?: React.Key, referenceDate?: Date, contextPeriodicity?: PeriodicityType | null) => {
     const childCount = childCountByTaskId.get(task.id) || 0;
     const hasChildren = childCount > 0;
     const isExpanded = !isCatCollapsed(`task_${task.id}`);
@@ -2522,6 +2576,7 @@ const CORE_CYCLES = [
             onToggleSelect={handleToggleSelectTask}
             isSelectionMode={selectedTaskIds.size > 0 || isExplicitSelectionMode}
             referenceDate={referenceDate}
+            contextPeriodicity={contextPeriodicity}
             {...({
             hasChildren,
             childCount,
@@ -2573,6 +2628,7 @@ const CORE_CYCLES = [
         toggleShowCompleted={toggleShowCompleted}
         sortBy={sortBy}
         setSortBy={setSortBy}
+        canUseRoutineOrder={isLimpiezaList(currentList?.id, currentList)}
         updateList={updateList}
         setIsListConfigOpen={setIsListConfigOpen}
         onAddSection={handleAddSection}
@@ -2704,6 +2760,7 @@ const CORE_CYCLES = [
                           deleteCycle={deleteCycle}
                           sortBy={sortBy}
                           setSortBy={setSortBy}
+                          defaultSortBy={isLimpiezaList(currentList?.id, currentList) ? 'routine' : 'manual'}
                           lifeLogViewMode={lifeLogViewMode}
                           setLifeLogViewMode={setLifeLogViewMode}
                           handleOpenMonthlySummary={handleOpenMonthlySummary}
@@ -2880,7 +2937,8 @@ const CORE_CYCLES = [
                       !!data.isLastInSection, 
                       previousTaskId, 
                       itemKey,
-                      data.referenceDate
+                      data.referenceDate,
+                      data.contextPeriodicity ?? viewPeriodicity
                     );
                   }
 

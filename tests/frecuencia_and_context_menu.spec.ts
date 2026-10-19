@@ -139,24 +139,23 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     }
     await page.waitForTimeout(400);
 
-    // Con la sección desplegada aparece la cápsula «+ Diarias»
+    // Con la sección desplegada aparece «Rutina completa» (incluir las diarias)
     const semanalHeader = page.locator('.group-header', { hasText: 'Semanales' });
     await expect(semanalHeader).toBeVisible({ timeout: 5000 });
     await expandSection(semanalHeader);
 
-    const chip = semanalHeader.getByRole('button', { name: 'Incluir diarias' });
+    const chip = semanalHeader.getByRole('button', { name: /Rutina completa: incluir las diarias/ });
     await expect(chip).toBeVisible({ timeout: 5000 });
     await expect(chip).toHaveAttribute('aria-pressed', 'false');
-    await expect(semanalHeader.locator('.section-total-count')).toHaveText('1');
+    await expect(semanalHeader.locator('.section-head-count')).toHaveText('1');
     await expect(page.locator('.task-item-wrapper[data-task-id="task_daily_1"]')).not.toBeVisible();
 
     // Encendida: la diaria se mezcla con la semanal, al mismo nivel (sin subcabecera aparte),
     // y el número de la cabecera pasa a contar las dos. El desglose (1 propia + 1 incluida) ya
     // no se pinta aparte en la cabecera (ocupaba demasiado sitio): vive en el title/tooltip.
     await chip.click();
-    await expect(semanalHeader.locator('.section-main-count')).toHaveText('2');
-    await expect(semanalHeader.locator('.section-routine-breakdown')).toHaveText('(1 + 1)');
-    await expect(semanalHeader.locator('.section-total-count')).toHaveAttribute('title', /1 semanales.*1 diarias/);
+    await expect(semanalHeader.locator('.section-head-count')).toHaveText('2');
+    await expect(semanalHeader.locator('.section-head-count')).toHaveAttribute('title', /1 semanales.*1 diarias/);
     // Un único nodo (Playwright falla en modo estricto si hubiera dos): no se duplica bajo su
     // sección «Diarias» (que sigue plegada) y, además, mezclada bajo «Semanales».
     await expect(page.locator('.task-item-wrapper[data-task-id="task_daily_1"]')).toBeVisible();
@@ -165,7 +164,7 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     // Apagada: vuelve a mostrar solo la semanal
     await chip.click();
     await expect(chip).toHaveAttribute('aria-pressed', 'false');
-    await expect(semanalHeader.locator('.section-total-count')).toHaveText('1');
+    await expect(semanalHeader.locator('.section-head-count')).toHaveText('1');
     await expect(page.locator('.task-item-wrapper[data-task-id="task_daily_1"]')).not.toBeVisible();
 
     // Sin divisores redundantes dentro de las cabeceras
@@ -268,12 +267,12 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
     await expect(cocinaTask).toBeVisible({ timeout: 5000 });
 
     // Test collapse toggle: otro click repliega la sub-sección Cocina
-    await cocinaHeader.getByRole('button', { name: 'Plegar sección', exact: true }).click();
+    await cocinaHeader.getByRole('button', { name: /^Plegar / }).click();
     await page.waitForTimeout(300);
     await expect(cocinaTask).not.toBeVisible();
 
     // Single click expands Cocina back
-    await cocinaHeader.getByRole('button', { name: 'Desplegar sección', exact: true }).click();
+    await cocinaHeader.getByRole('button', { name: /^Desplegar / }).click();
     await page.waitForTimeout(300);
     await expect(cocinaTask).toBeVisible();
   });

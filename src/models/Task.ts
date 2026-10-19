@@ -16,6 +16,9 @@ export interface CustomCycle {
 
 export type ListType = 'routines' | 'simple' | 'events' | 'goals' | 'caducidades' | 'que_he_hecho' | 'library';
 
+/** Criterio de orden de las tareas de una lista. «routine» = orden lógico de limpieza. */
+export type TaskSortMode = 'manual' | 'dueDate' | 'priority' | 'title' | 'createdAt' | 'routine';
+
 export interface CustomList {
   id: string;
   parentId?: string; // Para jerarquía infinita (Lista -> Sublistas)
@@ -31,6 +34,7 @@ export interface CustomList {
   specialType?: 'caducidades' | 'que_he_hecho'; // Tipo especial para comportamiento enriquecido (retrocompatibilidad)
   isShared?: boolean; // True si la lista tiene un enlace público de solo lectura activo
   order?: number; // Orden de la lista para reordenación por drag & drop
+  sortMode?: TaskSortMode; // Orden elegido para esta lista (si falta: «routine» en Limpieza, «manual» en el resto)
   updated_at?: string;
   deleted_at?: string;
   version?: number;

@@ -119,7 +119,9 @@ const listSchema = z.object({
   isFinancial: flag, showCompleted: flag, isPinned: flag, isFolder: flag,
   listType: optional(z.enum(['routines', 'simple', 'events', 'goals', 'caducidades', 'que_he_hecho', 'library'])),
   autoEstimateDuration: flag, specialType: optional(z.enum(['caducidades', 'que_he_hecho'])),
-  isShared: flag, order: number, ...syncFields,
+  isShared: flag, order: number,
+  sortMode: optional(z.enum(['manual', 'dueDate', 'priority', 'title', 'createdAt', 'routine'])),
+  ...syncFields,
 });
 const sectionSchema = z.object({ id, listId: id, name: z.string().trim().min(1), parentId: reference, order: number, ...syncFields });
 

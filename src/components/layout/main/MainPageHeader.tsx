@@ -11,19 +11,18 @@ import {
   Star,
   Trash2,
   ChevronDown,
-
-
+  Check,
+  Plus,
 } from 'lucide-react';
 import { DurationInfoCard } from '../../ui/DurationInfoCard';
-import { formatLongDate } from '../../../utils/format';
 import { HapticService } from '../../../services/HapticService';
 import { isCaducidadesList, isQueHeHechoList, isShoppingList } from '../../../utils/specialLists';
 import { confirmDialog } from '../../ui/confirmDialog';
 import { useAppStore } from '../../../store/useAppStore';
 import { deleteCycleWithUndo } from '../../../utils/undoToast';
-import type { TaskItem, CustomCycle, CustomList } from '../../../models/Task';
+import type { TaskItem, CustomCycle, CustomList, TaskSortMode } from '../../../models/Task';
 import { formatSummaryDuration, type TasksDurationSummary } from '../../../utils/taskDuration';
-import { formatEuro } from '../../../utils/format';
+import { formatEuro, formatLongDate } from '../../../utils/format';
 import { MetaSplit, MONEY_COLOR } from '../../ui/MetaSplit';
 import type { RoutinePart } from '../../../utils/routineBreakdown';
 import { getReservedFrequencyColor } from '../../../constants/colors';
@@ -68,8 +67,10 @@ interface MainPageHeaderProps {
   setConfirmProps: (props: any) => void;
   setIsConfirmOpen: (open: boolean) => void;
   deleteCycle: (id: string) => void;
-  sortBy: string;
-  setSortBy: (sortBy: any) => void;
+  sortBy: TaskSortMode;
+  setSortBy: (sortBy: TaskSortMode) => void;
+  /** Orden por defecto de esta vista: si es el activo, no se muestra ningún aviso de orden. */
+  defaultSortBy?: TaskSortMode;
   lifeLogViewMode: 'people' | 'timeline';
   setLifeLogViewMode: (mode: 'people' | 'timeline') => void;
   handleOpenMonthlySummary: () => void;
@@ -118,6 +119,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   deleteCycle,
   sortBy,
   setSortBy,
+  defaultSortBy = 'manual',
   lifeLogViewMode,
   setLifeLogViewMode,
   handleOpenMonthlySummary,
@@ -139,7 +141,6 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   const [isDurationCardOpen, setIsDurationCardOpen] = React.useState(false);
   const canOpenDurationModal = Boolean((cycleBreakdown && cycleBreakdown.details && cycleBreakdown.details.length > 1) || (mixParts && mixParts.length > 1));
 
-  const includeSwitchId = React.useId();
   const scrollOffset = Math.min(80, Math.max(0, scrollTop || 0));
   const titleProgress = Math.min(1, Math.max(0, (scrollOffset - 36) / 36));
   const titleOpacity = Math.max(0, 1 - titleProgress);
@@ -151,7 +152,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
     <>
       <header
         className="content-header"
-        style={{ padding: '2px 16px 4px 16px', display: 'flex', flexDirection: 'column', gap: '2px', flexShrink: 0, margin: '0', borderBottom: 'none', boxSizing: 'border-box', background: 'transparent', backdropFilter: 'none', WebkitBackdropFilter: 'none' }}
+        style={{ padding: '4px 16px 6px 16px', display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0, margin: '0', borderBottom: 'none', boxSizing: 'border-box', background: 'transparent', backdropFilter: 'none', WebkitBackdropFilter: 'none' }}
       >
         {/* Línea 1: Título, Badge, Botón Empezar y Gran Contador - Máximo 1 línea */}
         <div style={{
@@ -277,7 +278,9 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
               )}
             </h1>
 
-            {/* El tipo de lista (Duraciones, Checklist…) se elige y se ve en «Personalizar lista», no en la cabecera. */}
+            {/* Sin distintivo de tipo («Duraciones», «Financiera»…): es una categoría interna; el
+                contenido de la lista ya deja claro de qué es. Se cambia en la configuración de la lista. */}
+
             {/* Las listas normales mantienen su cabecera limpia sin selector temporal */}
           </div>
 
@@ -294,9 +297,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
         </div>
 
         {/* Línea 2: Metadatos (Duración, Presupuesto y Desglose de Frecuencias) - Máximo 1 línea */}
-        <div className="page-context-row" style={{ order: currentCycle ? 3 : undefined }}>
-          {/* «Hoy»: la fecha, como subtítulo (sustituye a la tarjeta de saludo). */}
-          {currentView === 'smart_today' && <span className="page-date">{formatLongDate(new Date())}</span>}{((totalDuration && totalDuration.activeMinutes > 0) || totalCost > 0 || (completedCost ?? 0) > 0 || (cycleBreakdown?.details?.length ?? 0) > 1) && (
+        {!currentCycle && <div className="page-context-row">{currentView === 'smart_today' && <span className="page-date">{formatLongDate(new Date())}</span>}{((totalDuration && totalDuration.activeMinutes > 0) || totalCost > 0 || (completedCost ?? 0) > 0 || (cycleBreakdown?.details?.length ?? 0) > 1) && (
                             <div className="page-context-metadata">{(() => {
                                       const hasValidDuration = Boolean(totalDuration && totalDuration.activeMinutes > 0 && !isShoppingList(currentView, currentList) && !isCaducidadesList(currentView, currentList));
                                       const hasValidPrice = Boolean((totalCost > 0 || (completedCost !== undefined && completedCost > 0)) && !currentCycle && !isCaducidadesList(currentView, currentList));
@@ -399,34 +400,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                                         </div>
                                       );
                                     })()}</div>
-                            )}{currentCycle && currentCycle.id !== 'cycle_day' && onToggleCycleRoutineMode && (
-                        <div className="routine-include-row compact-scope-row">
-                          <label htmlFor={includeSwitchId} className="routine-include-text">
-                            {/* El texto nombra la acción del interruptor (coincide con su nombre accesible); el estado lo da el interruptor. */}
-                            {'Incluir '}
-                            {currentCycle.id === 'cycle_week' ? 'diarias' : currentCycle.id === 'cycle_month' ? 'diarias y semanales' : currentCycle.id === 'cycle_year' ? 'diarias, semanales y mensuales' : 'frecuencias más cortas'}
-                            {currentCycle.id !== 'cycle_week' && (
-                              <span className="routine-include-sub">
-                                {currentCycle.id === 'cycle_month' ? 'Semanales y diarias' : currentCycle.id === 'cycle_year' ? 'Mensuales, semanales y diarias' : 'Las de frecuencia más corta'}
-                              </span>
-                            )}
-                          </label>
-                          <label className="switch">
-                            <input
-                              id={includeSwitchId}
-                              type="checkbox"
-                              role="switch"
-                              aria-label={currentCycle.id === 'cycle_week' ? 'Incluir diarias' : 'Incluir acumuladas'}
-                              checked={cycleRoutineMode === 'full_routine'}
-                              onChange={(e) => {
-                                HapticService.selection();
-                                onToggleCycleRoutineMode(e.target.checked ? 'full_routine' : 'only_section');
-                              }}
-                            />
-                            <span className="slider round" />
-                          </label>
-                        </div>
-                      )}</div>
+                            )}</div>}
 
         {/* Resumen de Caducidades: una línea propia bajo el título (antes iba en una cápsula
             que en el móvil se partía en tres líneas y empujaba el contador abajo). */}
@@ -459,13 +433,46 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
 
         {/* Navegación temporal y diagnóstico de la rutina de frecuencia (situado bajo «Incluir acumuladas/diarias») */}
         {currentCycle && (
-          // En las vistas de frecuencia el periodo va primero: da contexto a la duración y al avance.
-          <div style={{ width: '100%', order: 2 }}>
+          <div style={{ width: '100%' }}>
             <CycleRoutineStatusCard
               currentCycle={currentCycle}
               cycleRoutineMode={cycleRoutineMode}
               viewColor={viewColor}
               isMobile={_isMobile}
+              durationNode={totalDuration && totalDuration.activeMinutes > 0 ? (
+                canOpenDurationModal ? (
+                  <button
+                    type="button"
+                    className="section-head-duration is-button"
+                    onClick={() => { HapticService.selection(); setIsDurationCardOpen(true); }}
+                    title="Ver desglose de tiempo"
+                    aria-label={`${formatSummaryDuration(totalDuration.activeMinutes)}. Ver desglose de tiempo`}
+                  >
+                    {formatSummaryDuration(totalDuration.activeMinutes)}
+                  </button>
+                ) : (
+                  <span className="section-head-duration">{formatSummaryDuration(totalDuration.activeMinutes)}</span>
+                )
+              ) : null}
+              routineToggle={currentCycle.id !== 'cycle_day' && onToggleCycleRoutineMode ? (
+                <button
+                  type="button"
+                  className={`routine-chip-btn${cycleRoutineMode === 'full_routine' ? ' is-on' : ''}`}
+                  aria-pressed={cycleRoutineMode === 'full_routine'}
+                  aria-label={`Rutina completa: incluir ${currentCycle.id === 'cycle_week' ? 'las diarias' : currentCycle.id === 'cycle_month' ? 'las semanales y diarias' : currentCycle.id === 'cycle_year' ? 'las mensuales, semanales y diarias' : 'las de frecuencia más corta'}`}
+                  title={currentCycle.id === 'cycle_week' ? 'Incluir también las diarias' : currentCycle.id === 'cycle_month' ? 'Incluir también las semanales y diarias' : currentCycle.id === 'cycle_year' ? 'Incluir también las mensuales, semanales y diarias' : 'Incluir también las de frecuencia más corta'}
+                  style={{ ['--chip-color' as string]: viewColor }}
+                  onClick={() => {
+                    HapticService.selection();
+                    onToggleCycleRoutineMode(cycleRoutineMode === 'full_routine' ? 'only_section' : 'full_routine');
+                  }}
+                >
+                  <span className={`routine-chip${cycleRoutineMode === 'full_routine' ? ' is-on' : ''}`}>
+                    {cycleRoutineMode === 'full_routine' ? <Check size={12} strokeWidth={3} aria-hidden="true" /> : <Plus size={12} strokeWidth={2.6} aria-hidden="true" />}
+                    <span>Rutina completa</span>
+                  </span>
+                </button>
+              ) : null}
             />
           </div>
         )}
@@ -548,7 +555,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
         )}
 
 
-        {sortBy !== 'manual' && (
+        {sortBy !== defaultSortBy && (
           <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
             <span
               style={{
@@ -568,13 +575,16 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
               <span>Orden: {
                 sortBy === 'dueDate' ? 'Fecha de vencimiento' :
                 sortBy === 'priority' ? 'Prioridad' :
-                sortBy === 'title' ? 'Título (A-Z)' : 'Fecha de creación'
+                sortBy === 'title' ? 'Título (A-Z)' :
+                sortBy === 'routine' ? 'Orden de limpieza' :
+                sortBy === 'manual' ? 'Manual' : 'Fecha de creación'
               }</span>
               <button
                 type="button"
-                onClick={() => { HapticService.selection(); setSortBy('manual'); }}
+                onClick={() => { HapticService.selection(); setSortBy(defaultSortBy); }}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, display: 'flex', alignItems: 'center', marginLeft: 4 }}
-                title="Restablecer a orden manual"
+                title={defaultSortBy === 'routine' ? 'Volver al orden de limpieza' : 'Volver al orden manual'}
+                aria-label={defaultSortBy === 'routine' ? 'Volver al orden de limpieza' : 'Volver al orden manual'}
               >
                 <X size={13} />
               </button>

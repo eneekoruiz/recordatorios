@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { MoreHorizontal, ChevronDown, Check, Plus, Clock } from 'lucide-react';
+import { MoreHorizontal, ChevronDown, Check, Plus } from 'lucide-react';
 import { DurationInfoCard } from '../../ui/DurationInfoCard';
 import { HapticService } from '../../../services/HapticService';
 import type { SectionMenuState } from './SectionContextMenu';
@@ -8,7 +8,6 @@ import { isShoppingList, isLifeLibraryList } from '../../../utils/specialLists';
 import { useAppStore } from '../../../store/useAppStore';
 import { formatEuro } from '../../../utils/format';
 import { classifyDropZone, DRAG_MOVE_THRESHOLD_PX } from '../../../utils/dragDrop';
-import { getReservedFrequencyColor } from '../../../constants/colors';
 import { MetaSplit, MONEY_COLOR } from '../../ui/MetaSplit';
 import { routinePeriodLabel, type RoutinePart } from '../../../utils/routineBreakdown';
 import { getPeriodContextLabel } from '../../../utils/sectionRoutine';
@@ -138,8 +137,14 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   const durSummary = !isShopping && !isLibrary ? (data.routineDurations ? (isFullRoutine ? data.routineDurations.full : data.routineDurations.only) : durationSummary) : null;
   const sectionDurationLabel = durSummary && durSummary.activeMinutes > 0 ? formatSummaryDuration(durSummary.activeMinutes) : null;
 
-  // Corto para caber en el móvil: '+ Diarias' en las semanales, '+ Acumuladas' en mensuales y anuales.
-  const includeLabel = data.periodicity === 'week' ? 'Diarias' : 'Acumuladas';
+  // Qué añade «Rutina completa» en cada frecuencia (se dice en el aria-label y en el title).
+  const includedScope = data.periodicity === 'week'
+    ? 'las diarias'
+    : data.periodicity === 'month'
+      ? 'las semanales y diarias'
+      : data.periodicity === 'year'
+        ? 'las mensuales, semanales y diarias'
+        : 'las de frecuencia más corta';
 
   const periodContext = React.useMemo(() => {
     if (hidePeriodContext) return null;
@@ -157,8 +162,11 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   const hasMixBreakdown = Boolean(mixParts && mixParts.length > 1);
   const canShowDurationBreakdown = hasAccumulatedBreakdown || hasMixBreakdown;
 
+  // La duración es texto; si hay desglose que ver, el mismo texto es el botón (sin icono ni flecha).
   let durationNode: React.ReactNode = null;
-  if (sectionDurationLabel && durSummary) {
+  // Con una sola tarea pendiente su fila ya muestra la duración: repetirla aquí no aporta nada.
+  const onlyOneTask = (pendingTaskCount ?? data.pendingCount) === 1;
+  if (data.depth === 0 && sectionDurationLabel && durSummary && !(onlyOneTask && !canShowDurationBreakdown)) {
     if (canShowDurationBreakdown) {
       durationNode = (
         <button
@@ -168,25 +176,17 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
             HapticService.selection();
             setIsSectionDurationOpen(true);
           }}
-          className="section-duration-label"
-          title="Toca para ver el desglose de tiempo"
-          aria-label="Ver desglose de tiempo de sección"
-          style={{ cursor: 'pointer' }}
+          className="section-head-duration is-button"
+          title="Ver desglose de tiempo"
+          aria-label={`${sectionDurationLabel}. Ver desglose de tiempo de ${data.title}`}
         >
-          <Clock size={11} strokeWidth={1.8} className="section-duration-icon" />
-          <span>{sectionDurationLabel}</span>
-          <ChevronDown size={10} style={{ opacity: 0.5, marginLeft: 2 }} />
+          {sectionDurationLabel}
         </button>
       );
     } else {
       durationNode = (
-        <span
-          className="section-duration-label"
-          style={{ cursor: 'default', userSelect: 'none' }}
-          title={`Tiempo estimado: ~${sectionDurationLabel}`}
-        >
-          <Clock size={11} strokeWidth={1.8} className="section-duration-icon" />
-          <span>{sectionDurationLabel}</span>
+        <span className="section-head-duration" title={`Tiempo estimado: ~${sectionDurationLabel}`}>
+          {sectionDurationLabel}
         </span>
       );
     }
@@ -251,8 +251,9 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
     // Anchor: bajo el botón '...' o el título
     let anchorLeft: number;
 
-    if (moreBtnRef.current) {
-      const btnRect = moreBtnRef.current.getBoundingClientRect();
+    const btnRect = moreBtnRef.current?.getBoundingClientRect();
+    // El «···» puede estar oculto (táctil con la sección plegada): entonces se ancla al título.
+    if (btnRect && btnRect.width > 0) {
       anchorLeft = btnRect.left;
     } else {
       anchorLeft = rowRect.left + 28 + (data.depth * 24);
@@ -398,12 +399,54 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
     }, { once: true });
   }, [data.sectionId, data.color, onReorderSections, openSectionMenu]);
 
+  const isTopLevel = data.depth === 0;
+  const isExpanded = !isCatCollapsed(data.category);
+  const canIncludeShorter = Boolean(data.routineCounts && data.routineCounts.full > data.routineCounts.only);
+  // El interruptor solo aparece donde se usa: con la sección abierta, o si ya está encendido
+  // (para que se vea qué está sumando el número aunque la sección esté plegada).
+  const showRoutineToggle = isTopLevel && canIncludeShorter && (isExpanded || isFullRoutine);
+  const periodText = isTopLevel && periodContext ? periodContext.compactLabel : null;
+  const hasSubRow = isTopLevel && Boolean(periodText || durationNode || priceNode || showRoutineToggle);
+
+  const headerCount = data.pendingCount ?? pendingTaskCount ?? data.sectionTaskIds?.length ?? 0;
+  const countTooltip = (() => {
+    if (!(isFullRoutine && canIncludeShorter)) return `${headerCount} pendientes`;
+    const parts = (data.routineParts || []).filter(rp => rp.count > 0);
+    if (parts.length > 1) {
+      return `${headerCount} pendientes: ${parts.map(rp => `${rp.count} ${routinePeriodLabel(rp.periodicity)}`).join(' + ')}`;
+    }
+    const own = data.routineCounts!.only;
+    const extra = data.routineCounts!.full - own;
+    const ownLabel = data.periodicity === 'week' ? 'semanales' : data.periodicity === 'month' ? 'mensuales' : data.periodicity === 'year' ? 'anuales' : 'propias';
+    const extraLabel = data.periodicity === 'week' ? 'diarias' : 'de frecuencia más corta';
+    return `${headerCount} pendientes: ${own} ${ownLabel} + ${extra} ${extraLabel}`;
+  })();
+
+  const moreButton = isCustomSection ? (
+    <button
+      ref={moreBtnRef}
+      type="button"
+      className="section-more-btn section-head-more"
+      onClick={(e) => {
+        e.stopPropagation();
+        openSectionMenu();
+      }}
+      title="Opciones de sección"
+      aria-label={`Opciones de ${data.title}`}
+      aria-haspopup="menu"
+      aria-expanded={isMenuOpenForThisSection}
+    >
+      <MoreHorizontal size={17} color="currentColor" />
+    </button>
+  ) : null;
+
   return (
     <div
       key={itemKey}
       data-index={index}
       ref={rowRef}
-      className={`group-header section-header-row section-depth-${Math.min(data.depth, 2)}`}
+      className="group-header"
+      data-expanded={isExpanded ? 'true' : 'false'}
       draggable={!isMobile && isCustomSection && !editingSectionId}
       data-section-drag-key={data.sectionId}
       // Solo reordenar (no anidar) necesita abrir hueco por CSS — "inside" ya lo resuelve el
@@ -419,18 +462,17 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       style={{
         ...itemStyle,
         position: 'sticky',
-        top: data.depth === 0 ? 0 : 'var(--section-header-h)',
+        top: data.depth === 0 ? 0 : 56,
         zIndex: isMenuOpenForThisSection ? 999992 : Math.max(10, 30 - data.depth),
-        borderBottom: 'none',
+        borderBottom: data.depth === 0 ? '1px solid var(--border-subtle)' : 'none',
         borderTop: 'none',
         paddingLeft: `${16 + data.depth * 14}px`,
         paddingRight: '16px',
-        // Una línea: 44 px de contenido. El aire entre secciones va arriba (paddingTop), no debajo del título.
-        minHeight: 44,
-        paddingTop: data.depth === 0 ? (isFirstAfterPageHeader ? 4 : 18) : 6,
-        paddingBottom: 2,
+        minHeight: data.depth === 0 ? 52 : 44,
+        paddingTop: data.depth === 0 ? (isFirstAfterPageHeader ? 6 : 10) : 4,
+        paddingBottom: data.depth === 0 ? 8 : 4,
         marginTop: 0,
-        marginBottom: 0,
+        marginBottom: 4,
         boxSizing: 'border-box',
         display: 'flex',
         flexDirection: 'column',
@@ -571,9 +613,13 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         </div>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }} className="section-title-row">
-{isCustomSection && editingSectionId === data.sectionId ? (
+      {/* Cabecera en dos líneas como mucho:
+          1) nombre ........................ número  ⌄
+          2) periodo · duración   [Rutina completa]   ···   (solo secciones de primer nivel con algo que contar)
+          Las habitaciones/subsecciones son una sola línea: icono, nombre, número y flecha. */}
+      <div className="section-head" data-depth={data.depth === 0 ? 'top' : 'nested'}>
+        <div className="section-head-main">
+          {isCustomSection && editingSectionId === data.sectionId ? (
             <input
               type="text"
               value={editingSectionName}
@@ -583,220 +629,112 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                 if (e.key === 'Enter') saveSectionName(e as any, data.sectionId!);
               }}
               autoFocus
+              aria-label="Nombre de la sección"
               onClick={e => e.stopPropagation()}
-              style={{ background: 'transparent', border: 'none', borderBottom: `2px solid ${data.color}`, color: 'inherit', fontSize: 'inherit', fontFamily: 'inherit', outline: 'none' }}
+              className="section-head-input"
+              style={{ borderBottomColor: data.color }}
             />
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, justifyContent: 'center', flex: '1 1 auto' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flexWrap: 'nowrap' }}>
-                {data.titleIcon && (
-                  <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: 2, opacity: 0.85, flexShrink: 0 }}>
-                    {data.titleIcon}
-                  </span>
-                )}
-                <h2
-                  onDoubleClick={(e) => isCustomSection && startEditingSection(e, data.sectionId!, data.title)}
-                  style={{
-                    cursor: isCustomSection ? 'text' : 'pointer',
-                    fontWeight: data.depth === 0 ? 700 : 600,
-                    color: data.depth === 0 ? 'var(--label-1)' : 'var(--label-2)',
-                    fontSize: data.depth === 0 ? 'var(--type-title3)' : 'var(--type-subhead)',
-                    textTransform: 'none',
-                    letterSpacing: data.depth === 0 ? '-0.015em' : '-0.005em',
-                    lineHeight: '1.25',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    margin: 0,
-                    padding: '1px 0',
-                    boxSizing: 'border-box',
-                    flexShrink: 0
-                  }}
-                  title={isCustomSection ? "Doble click para editar" : data.title}
-                >
-                  {data.title}
-                </h2>
-
-              </div>
-              {/* Segunda línea, discreta: el periodo en curso y la opción de incluir frecuencias más cortas. */}
-              {(periodContext || (data.routineCounts && data.routineCounts.full > data.routineCounts.only)) && (
-                <div className="section-subline">
-                  {periodContext && (
-                  <span
-                    className="section-period-context-badge"
-                    title={periodContext.isRolledOver ? 'Período actual completado · Mostrando siguiente ciclo' : 'Período en curso'}
-                    style={{
-                      color: periodContext.isRolledOver ? 'var(--accent-green-text, #248a3d)' : 'var(--label-2)',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 3,
-                      flexShrink: 1,
-                      minWidth: 0,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
-                    }}
-                  >
-                    {periodContext.isRolledOver && <Check size={11} strokeWidth={2.5} />}
-                    {periodContext.label}
-                  </span>
-                )}
-                  {data.routineCounts && data.routineCounts.full > data.routineCounts.only && (
-            <button
-              type="button"
-              className={`routine-chip${isFullRoutine ? ' is-on' : ''}`}
-              aria-pressed={isFullRoutine}
-              aria-label={`Incluir ${includeLabel.toLowerCase()}`}
-              style={{ ['--chip-color' as string]: data.color }}
-              onClick={(e) => {
-                e.stopPropagation();
-                HapticService.selection();
-                toggleSectionRoutineMode?.(data.category, isFullRoutine ? 'only_section' : 'full_routine');
-              }}
-              title={isFullRoutine ? `Mostrando también ${includeLabel.toLowerCase()}` : `Incluir ${includeLabel.toLowerCase()}`}
-            >
-              {isFullRoutine ? <Check size={12} strokeWidth={3} aria-hidden="true" /> : <Plus size={12} strokeWidth={2.6} aria-hidden="true" />}
-              <span>{includeLabel}</span>
-            </button>
-          )}
-                </div>
+            <>
+              {data.titleIcon && (
+                <span className="section-head-icon" aria-hidden="true">{data.titleIcon}</span>
               )}
-            </div>
+              <h3
+                aria-level={2}
+                className="section-head-title"
+                onDoubleClick={(e) => isCustomSection && startEditingSection(e, data.sectionId!, data.title)}
+                style={{ cursor: isCustomSection ? 'text' : 'pointer' }}
+                title={isCustomSection ? 'Doble clic para editar' : data.title}
+              >
+                {data.title}
+              </h3>
+            </>
           )}
+        </div>
 
+        <div className="section-head-trailing">
           {data.category.startsWith('persona_') && data.category !== 'persona_solo' && (
             <button
               type="button"
+              className="section-head-link"
               onClick={(e) => {
                 e.stopPropagation();
                 setSelectedPersonForProfile(data.category.replace('persona_', ''));
               }}
-              style={{
-                background: 'rgba(88, 86, 214, 0.12)',
-                border: '1px solid rgba(88, 86, 214, 0.25)',
-                borderRadius: 999,
-                color: '#5856D6',
-                fontSize: '0.72rem',
-                fontWeight: 600,
-                padding: '2px 8px',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 3,
-                marginLeft: 4
-              }}
               title="Ver momentos compartidos y relación"
             >
-              <span>Ficha</span>
+              Ficha
             </button>
           )}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, justifyContent: 'flex-end' }}>
-          {/* Incluir las frecuencias anteriores: una cápsula que se enciende (con la sección desplegada) */}
-          {/* Duración y precio junto al conteo: un único grupo de datos a la derecha */}
-          {(durationNode || priceNode) && (
-            <div className="section-duration section-meta" onClick={event => event.stopPropagation()}>
-              {durationNode}{priceNode}
-            </div>
-          )}
-          {/* Conteo numérico sutil estilo Apple: total y desglose (propias + incluidas) si «+ Diarias» está activo */}
-          {(() => {
-            const count = data.pendingCount ?? pendingTaskCount ?? data.sectionTaskIds?.length ?? 0;
-            if (count <= 0) return null;
-
-            const hasRoutineBreakdown = isFullRoutine && Boolean(data.routineCounts && data.routineCounts.full > data.routineCounts.only);
-            const onlyCount = data.routineCounts?.only ?? count;
-            const extraCount = hasRoutineBreakdown ? (data.routineCounts!.full - data.routineCounts!.only) : 0;
-
-            const ownLabel = data.periodicity === 'week' ? 'semanales' : data.periodicity === 'month' ? 'mensuales' : data.periodicity === 'year' ? 'anuales' : 'propias';
-            const extraLabel = data.periodicity === 'week' ? 'diarias' : 'acumuladas';
-            const countParts = hasRoutineBreakdown && data.routineParts && data.routineParts.length > 1
-              ? data.routineParts.map((rp) => ({ id: rp.periodicity, n: rp.count, color: getReservedFrequencyColor(rp.periodicity), label: routinePeriodLabel(rp.periodicity) }))
-              : hasRoutineBreakdown
-                ? [
-                    { id: 'own', n: onlyCount, color: getReservedFrequencyColor(data.periodicity), label: ownLabel },
-                    { id: 'extra', n: extraCount, color: data.periodicity === 'week' ? getReservedFrequencyColor('day') : 'var(--text-tertiary)', label: extraLabel },
-                  ]
-                : [];
-
-            const tooltipText = hasRoutineBreakdown
-              ? `${count} tareas totales (${countParts.map(cp => `${cp.n} ${cp.label}`).join(' + ')})`
-              : `${count} tareas pendientes`;
-
-            return (
-              <span
-                className="section-total-count"
-                title={tooltipText}
-              >
-                <span className="section-main-count">{count}</span>
-                {hasRoutineBreakdown && countParts.length > 0 && (
-                  <span
-                    className="section-routine-breakdown"
-                  >
-                    <span style={{ opacity: 0.35 }}>(</span>
-                    {countParts.map((cp, i) => (
-                      <React.Fragment key={cp.id}>
-                        {i > 0 && <span style={{ opacity: 0.35, fontSize: '0.62rem', margin: '0 1px' }}> + </span>}
-                        <span style={{ color: cp.color }}>{cp.n}</span>
-                      </React.Fragment>
-                    ))}
-                    <span style={{ opacity: 0.35 }}>)</span>
-                  </span>
-                )}
-              </span>
-            );
-          })()}
-
-          {isCustomSection && (
-            <button
-              ref={moreBtnRef}
-              type="button"
-              className="section-more-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                openSectionMenu();
-              }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
-              title="Opciones de sección"
-              aria-label="Opciones de sección"
-              aria-haspopup="menu"
-              aria-expanded={isMenuOpenForThisSection}
-            >
-              <MoreHorizontal size={16} color="var(--text-primary)" />
-            </button>
+          {!hasSubRow && priceNode && <span className="section-head-price">{priceNode}</span>}
+          {moreButton}
+          {headerCount > 0 && (
+            <span className="section-head-count" title={countTooltip}>
+              {headerCount}
+            </span>
           )}
           <button
             type="button"
-            className="section-collapse-chevron-btn"
+            className="section-collapse-chevron-btn section-head-chevron"
             onClick={(e) => {
               e.stopPropagation();
               toggleCategory(data.category);
             }}
-            aria-label={isCatCollapsed(data.category) ? "Desplegar sección" : "Plegar sección"}
-            aria-expanded={!isCatCollapsed(data.category)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              padding: 4,
-              margin: -4,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              color: 'var(--text-tertiary)',
-              flexShrink: 0
-            }}
+            aria-label={isExpanded ? `Plegar ${data.title}` : `Desplegar ${data.title}`}
+            aria-expanded={isExpanded}
           >
             <ChevronDown
-              size={18}
+              size={17}
+              strokeWidth={2.2}
               color="currentColor"
               style={{
-                transform: isCatCollapsed(data.category) ? 'rotate(-90deg)' : 'rotate(0deg)',
-                transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                flexShrink: 0
+                transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
               }}
             />
           </button>
         </div>
+
+        {hasSubRow && (
+          <div className="section-head-sub">
+            <span className="section-head-meta section-duration">
+              {periodText && (
+                <span
+                  className={`section-head-period${periodContext?.isRolledOver ? ' is-done' : ''}`}
+                  title={periodContext?.label}
+                >
+                  {periodContext?.isRolledOver && <Check size={12} strokeWidth={2.6} aria-hidden="true" />}
+                  {periodText}
+                </span>
+              )}
+              {periodText && (durationNode || priceNode) && <span className="section-head-dot" aria-hidden="true">·</span>}
+              {durationNode}
+              {durationNode && priceNode && <span className="section-head-dot" aria-hidden="true">·</span>}
+              {priceNode}
+            </span>
+            {showRoutineToggle && (
+              <button
+                type="button"
+                className={`routine-chip-btn${isFullRoutine ? ' is-on' : ''}`}
+                aria-pressed={isFullRoutine}
+                aria-label={`Rutina completa: incluir ${includedScope}`}
+                style={{ ['--chip-color' as string]: data.color }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  HapticService.selection();
+                  toggleSectionRoutineMode?.(data.category, isFullRoutine ? 'only_section' : 'full_routine');
+                }}
+                title={isFullRoutine ? `Incluye también ${includedScope}` : `Incluir también ${includedScope}`}
+              >
+                {/* La cápsula visible mide 26 px; el botón que la contiene, 44 px (zona táctil real). */}
+                <span className={`routine-chip${isFullRoutine ? ' is-on' : ''}`}>
+                  {isFullRoutine ? <Check size={12} strokeWidth={3} aria-hidden="true" /> : <Plus size={12} strokeWidth={2.6} aria-hidden="true" />}
+                  <span>Rutina completa</span>
+                </span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
       {isCustomSection && dragOverSectionId === data.sectionId && (
         <span style={{ fontSize: '0.8rem', color: data.color }}>Mover aquí</span>

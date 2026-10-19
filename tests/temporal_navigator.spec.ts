@@ -119,11 +119,9 @@ test.describe('Apple Period Navigator (helen-design)', () => {
     // El navegador interactivo debe estar dentro de la tarjeta
     await expect(statusCard.locator('[data-testid="apple-period-navigator"]')).toBeVisible();
 
-    // El interruptor de incluir acumuladas debe estar visible justo arriba
-    const includeSwitch = page.locator('.routine-include-row');
-    if (await includeSwitch.isVisible()) {
-      await expect(includeSwitch).toBeVisible();
-    }
+    // «Rutina completa» comparte línea con el periodo (antes era un interruptor en otra fila)
+    await expect(statusCard.locator('.cycle-strip-row .routine-chip')).toBeVisible();
+    await expect(page.locator('.routine-include-row')).toHaveCount(0);
   });
 
   test('La píldora de diagnóstico abre el Modal de Diagnóstico de Rutina estilo Apple', async ({ page }) => {

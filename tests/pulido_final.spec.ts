@@ -106,7 +106,7 @@ test.describe('Pulido final', () => {
       window.dispatchEvent(new CustomEvent('select-view', { detail: 'smart_all' }));
     });
     const casa = page.locator('.group-header', { hasText: 'Casa E2E' });
-    const chip = casa.getByRole('button', { name: 'Ver desglose de tiempo de sección' }).first();
+    const chip = casa.getByRole('button', { name: /Ver desglose de tiempo de Casa E2E/ }).first();
     await expect(chip).toBeVisible();
     await chip.click();
 
@@ -132,7 +132,7 @@ test.describe('Pulido final', () => {
     await page.locator('.ios-list-item', { hasText: 'Proyecto' }).first().click();
     const header = page.locator('.group-header', { hasText: 'Fase uno' });
     await header.hover();
-    await header.getByRole('button', { name: 'Opciones de sección' }).click();
+    await header.getByRole('button', { name: /^Opciones de / }).click();
     await page.getByText('Eliminar sección').first().click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Eliminar' }).click();
     await expect(header).toHaveCount(0);

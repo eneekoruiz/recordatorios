@@ -10,6 +10,8 @@ import {
   Edit3, Trash2
 } from 'lucide-react';
 import { AIService, type ProposedBatch, type AIConfig } from '../../services/AIService';
+import { buildTasksFromBatch } from '../../utils/aiQuickAdd';
+import { takeAssistantRequest, type AssistantRequest } from '../../utils/aiAssistantInbox';
 import { useAppStore } from '../../store/useAppStore';
 import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
@@ -352,15 +354,29 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
     }
   };
 
-  // Lo que llega desde la barra rápida (✨) se envía al abrir el asistente. Se atiende en el
-  // propio evento que lo abre, no en un efecto que dependa de «isOpen».
-  const askFromOutside = useEffectEvent((text: string) => {
-    handleSend(text);
+  // Lo que llega desde la barra «Nuevo recordatorio». Si la barra ya tiene la respuesta de la IA,
+  // se muestra tal cual (sin volver a preguntar); si no, se envía. La petición espera en un buzón
+  // porque la primera vez el asistente se monta después del evento que lo abre.
+  const askFromOutside = useEffectEvent((request: AssistantRequest) => {
+    if (request.batch) {
+      const time = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+      setMessages(prev => [
+        ...(prev.length > 0 ? prev : [WELCOME_MESSAGE]),
+        { id: `msg_user_${Date.now()}`, sender: 'user', text: request.text, timestamp: time },
+        { id: `msg_ai_${Date.now() + 1}`, sender: 'assistant', text: request.batch!.reply, batch: request.batch, timestamp: time },
+      ]);
+      return;
+    }
+    if (request.text.trim()) handleSend(request.text);
   });
   useEffect(() => {
+    const initial = takeAssistantRequest();
+    if (initial) queueMicrotask(() => askFromOutside(initial));
     const onOpen = (event: Event) => {
-      const text = (event as CustomEvent<string | undefined>).detail;
-      if (typeof text === 'string' && text.trim()) askFromOutside(text);
+      const detail = (event as CustomEvent<string | undefined>).detail;
+      const request = takeAssistantRequest()
+        ?? (typeof detail === 'string' && detail.trim() ? { text: detail } : null);
+      if (request) askFromOutside(request);
     };
     window.addEventListener('open-ai-assistant', onOpen);
     return () => window.removeEventListener('open-ai-assistant', onOpen);
@@ -400,54 +416,11 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
     const selectedTasks = msg.batch.tasks.filter(t => t.selected);
     if (selectedTasks.length === 0) return;
 
-    let targetListToCreate: any = undefined;
-    if (msg.batch.suggestedList) {
-      const suggestedName = msg.batch.suggestedList.name || '';
-      const existing = lists.find(l => (l.name || '').toLowerCase() === suggestedName.toLowerCase());
-      if (!existing) {
-        targetListToCreate = {
-          id: `list_${Date.now()}`,
-          name: msg.batch.suggestedList.name,
-          color: msg.batch.suggestedList.color || '#007aff',
-          icon: msg.batch.suggestedList.icon || 'list',
-          created_at: new Date().toISOString()
-        };
-      }
-    }
-
-    const tasksPayload = selectedTasks.map(t => {
-      let finalCatId = t.listId;
-      if (t.listId === 'que_he_hecho' || t.listId === 'caducidades') {
-        finalCatId = t.listId;
-      } else if (targetListToCreate) {
-        finalCatId = targetListToCreate.id;
-      } else if (!finalCatId || !lists.some(l => l.id === finalCatId)) {
-        finalCatId = lists[0]?.id || 'inbox';
-      }
-
-      return {
-        id: crypto.randomUUID(),
-        title: t.title,
-        description: t.description,
-        categoryId: finalCatId,
-        sectionId: t.sectionId,
-        dueDate: t.dueDate,
-        timeOfDay: t.timeOfDay,
-        price: t.price,
-        quantity: t.quantity,
-        targetCount: t.targetCount,
-        currentCount: t.currentCount || 0,
-        priority: t.priority || 'none',
-        cycle_id: t.cycle,
-        people: t.people,
-        vibe: t.vibe,
-        locationName: t.locationName,
-        mediaType: t.mediaType,
-        mediaStatus: t.mediaStatus,
-        status: 'pending' as const,
-        created_at: new Date().toISOString()
-      };
-    });
+    // Misma conversión que usa la barra «Nuevo recordatorio» (utils/aiQuickAdd).
+    const { tasks: tasksPayload, createList: targetListToCreate } = buildTasksFromBatch(
+      { ...msg.batch, tasks: selectedTasks },
+      lists
+    );
 
     addTasksBatch(tasksPayload, { createList: targetListToCreate });
     SoundService.playComplete();
@@ -458,7 +431,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
     // Se puede deshacer: los recordatorios recién añadidos van a la papelera.
     showUndoToast(
       `${plural(tasksPayload.length, 'recordatorio')} ${tasksPayload.length === 1 ? 'añadido' : 'añadidos'} a «${listName}»`,
-      () => tasksPayload.forEach((t) => useAppStore.getState().deleteTask(t.id))
+      () => tasksPayload.forEach((t) => t.id && useAppStore.getState().deleteTask(t.id))
     );
 
     // Mark as imported in message

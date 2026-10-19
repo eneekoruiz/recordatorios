@@ -77,6 +77,8 @@ interface TaskCardProps {
   onToggleSelect?: (taskId: string) => void;
   isSelectionMode?: boolean;
   referenceDate?: Date;
+  /** Frecuencia de la sección que contiene la fila: si coincide con la de la tarea, no se repite. */
+  contextPeriodicity?: 'day' | 'week' | 'month' | 'year' | null;
 }
 
 // Recorrido del dedo (px) a partir del cual deslizar completa (→) o pide borrar (←).
@@ -86,7 +88,7 @@ const SWIPE_DELETE_THRESHOLD = -65;
 export const TaskCard = React.memo(function TaskCard({
   task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, showListName = true, hideDueDate = false, frequencyMode = 'glyph', isFirstInSection, isLastInSection, previousTaskId, hasChildren, childCount = 0, isExpanded, onToggleExpand, indent = 0, onNavigateView, onPersonClick, isGracePeriod,
   onMoveUp, onMoveDown, canMoveUp, canMoveDown, onReorderTasks, onStartTask,
-  isSelected, onToggleSelect, isSelectionMode, referenceDate: propReferenceDate
+  isSelected, onToggleSelect, isSelectionMode, referenceDate: propReferenceDate, contextPeriodicity
 }: TaskCardProps) {
   const cycles = useAppStore(state => state.cycles);
   const hasPendingBlocker = useAppStore(state => Boolean(task.blockedBy?.some(id => state.tasks[id]?.status === 'pending')));
@@ -125,6 +127,7 @@ export const TaskCard = React.memo(function TaskCard({
   const cycleBadge = (() => {
     // 1. Detección vía periodicidad calculada (cubre cycle_id, prefijos en título, sección manual, lista y frecuencia)
     const periodicity = getTaskPeriodicity(task, listSections, lists);
+    if (periodicity && contextPeriodicity && periodicity === contextPeriodicity) return null;
     if (periodicity) {
       const labelMap: Record<string, string> = {
         day: 'Diaria',

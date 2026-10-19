@@ -94,68 +94,13 @@
   overflow: hidden;
 }
 
-/* ---------- Cabecera de sección: una línea, nombre + «6 · 2 h 45 min» en gris + ··· + chevron ---------- */
-:root { --section-header-h: 48px; }
+/* ---------- Cabecera de sección (section-head): nombre en negrita, número y duración en gris ---------- */
 .category-group, .section-container { margin-bottom: 0 !important; }
-.group-header.section-header-row {
-  min-height: 44px !important;
-  background: var(--bg-base) !important;
-  color: var(--label-1);
-}
-.section-header-row .section-title-row { gap: 12px !important; }
-.section-header-row .section-meta { margin-top: 0; color: var(--label-2); font-size: var(--type-subhead); }
-.section-header-row .section-total-count {
-  color: var(--label-2);
-  font-size: var(--type-subhead);
-  font-weight: 500;
-  min-width: 1.5ch;
-  text-align: right;
-}
-.section-header-row .section-routine-breakdown { font-size: var(--type-footnote); opacity: 1; color: var(--label-3); }
-/* Duración: texto gris de 15 px; su zona táctil crece a 44 px de alto sin cambiar la caja. */
-.section-header-row .section-duration-label {
-  position: relative;
-  height: 22px !important;
-  padding: 0 4px !important;
-  font-size: var(--type-subhead) !important;
-  font-weight: 500 !important;
-  color: var(--label-2) !important;
-}
-.section-header-row .section-duration-label::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: 44px;
-  transform: translateY(-50%);
-}
-/* «···» y chevron: 32 px visibles, 44 px táctiles; 12 px entre ellos para que no se solapen. */
-.section-header-row .section-more-btn,
-.section-header-row .section-collapse-chevron-btn {
-  position: relative;
-  width: 32px;
-  height: 32px;
-  margin: 0 !important;
-  padding: 0 !important;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 16px;
-}
-.section-header-row .section-collapse-chevron-btn::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 44px;
-  height: 44px;
-  transform: translate(-50%, -50%);
-}
-.section-header-row .section-collapse-chevron-btn { margin-left: 6px !important; }
-.section-header-row > div > div:last-child { gap: 12px !important; }
-@media (hover: none) { .section-header-row .section-more-btn { opacity: 0.7; } }
-.section-header-row .routine-chip { height: 28px; font-size: var(--type-footnote); }
+.group-header .section-head-count { color: var(--label-2); font-weight: 500; }
+.section-head-meta { color: var(--label-2); font-size: var(--type-footnote); }
+/* La línea de periodo/duración no reserva 28 px: su botón ya crece a 44 px con márgenes negativos. */
+.section-head-sub { min-height: 20px; }
+.section-head-sub .routine-chip { height: 26px; font-size: var(--type-footnote); }
 
 /* ---------- Cabecera de página ---------- */
 .content-header .page-context-row { gap: 0 16px; align-items: center; }
@@ -216,21 +161,8 @@
 .section-move-btn { min-height: 44px; height: 44px !important; }
 .content-header .page-date { font-size: var(--type-subhead); color: var(--label-2); line-height: 28px; }
 .content-header .page-date::first-letter { text-transform: uppercase; }
-/* Segunda línea de la cabecera de sección: periodo en curso y «+ Diarias», en gris y sin cápsulas con borde. */
-.section-subline { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; margin-top: 1px; min-width: 0; }
-.section-subline .section-period-context-badge, .section-subline .section-period-context-badge:hover {
-  box-shadow: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  border: 0 !important;
-  background: transparent !important;
-  padding: 0 !important;
-  border-radius: 0 !important;
-  font-size: var(--type-footnote) !important;
-  font-weight: 400 !important;
-  white-space: nowrap;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.section-subline .routine-chip { height: 26px; margin: 0; font-size: var(--type-footnote); font-weight: 500; padding: 0 9px 0 7px; }
+
+/* Vista de frecuencia: «Rutina completa» comparte línea con el recuento, así el navegador cabe solo. */
+.cycle-strip-meta { flex-wrap: nowrap; min-height: 32px; }
+.cycle-strip-toggle { margin-left: auto; flex-shrink: 0; }
+.cycle-strip-toggle .routine-chip { margin: 0; }
