@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode, type MouseEvent } from 'react';
-import { Calendar, CalendarX2, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen, Zap } from 'lucide-react';
+import { Calendar, CalendarX2, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen, Zap, Flame } from 'lucide-react';
 import type { TaskItem, CustomList } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
@@ -22,6 +22,8 @@ export interface TaskMetaBadgesProps {
   onOpenFrequencyPicker?: (e: React.MouseEvent) => void;
   /** Escribe la frecuencia en lugar de mostrar solo el glifo (secciones con frecuencias mezcladas). */
   frequencyAsLabel?: boolean;
+  /** Racha de un hábito (≥ 2): un dato más de la línea, no una etiqueta junto al título. */
+  streak?: { count: number; unit: string } | null;
 }
 
 export function TaskMetaBadges({
@@ -36,6 +38,7 @@ export function TaskMetaBadges({
   onNavigateView,
   lists,
   onOpenFrequencyPicker,
+  streak,
   frequencyAsLabel = false
 }: TaskMetaBadgesProps) {
   const updateTask = useAppStore(state => state.updateTask);
@@ -127,6 +130,8 @@ export function TaskMetaBadges({
      fila es la zona táctil y TaskCard abre el editor en el campo tocado (data-meta-field). El desglose
      (propio/subtareas, paralelo) se queda en el título accesible y en el editor. */
   const items: ReactNode[] = [];
+  let hasExactTime = false;
+  let hasDateText = false;
   if (showListName && taskList) {
     items.push(<span key="list-name" className="task-meta-item task-meta-list" style={{ color: taskList.color || undefined }}>{taskList.name}</span>);
   }
@@ -140,6 +145,8 @@ export function TaskMetaBadges({
     else if (dueZero.getTime() === tomorrow.getTime()) dueText = 'Mañana';
     const hasTime = due.getHours() !== 0 || due.getMinutes() !== 0;
     const timeText = hasTime ? due.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '';
+    hasExactTime = hasTime;
+    hasDateText = true;
     items.push(
       <span key="due-date" className={`task-meta-item${isRed ? ' is-overdue' : isBlue ? ' is-today' : ''}`} data-meta-field="date" title="Fecha · toca para editar">
         {isRed ? <CalendarX2 size={13} aria-hidden="true" /> : <Calendar size={13} aria-hidden="true" />}
@@ -148,12 +155,15 @@ export function TaskMetaBadges({
       </span>
     );
   }
-  if (timeOfDayInfo) {
+  // Con hora exacta, el momento del día sobra (y «Hoy, 14:55 · Mañana» se contradecía). Junto a una
+  // fecha se escribe «por la mañana»: a secas, «Mañana» se leía como el día siguiente.
+  if (timeOfDayInfo && !hasExactTime) {
+    const timeOfDayText = hasDateText ? `por la ${timeOfDayInfo.label.toLowerCase()}` : timeOfDayInfo.label;
     const TimeIcon = timeOfDayInfo.tag === 'morning' ? Sun : timeOfDayInfo.tag === 'afternoon' ? Clock : Moon;
     items.push(
       <span key="time-of-day" className="task-meta-item" data-meta-field="time-of-day" data-next-time={timeOfDayInfo.next}
         title={`${timeOfDayInfo.label} · toca para cambiar el momento del día`}>
-        <TimeIcon size={13} aria-hidden="true" /><span>{timeOfDayInfo.label}</span>
+        <TimeIcon size={13} aria-hidden="true" /><span>{timeOfDayText}</span>
       </span>
     );
   }
@@ -185,6 +195,14 @@ export function TaskMetaBadges({
       </span>
     );
   }
+  if (streak && streak.count >= 2) {
+    items.push(
+      <span key="streak" className="task-meta-item task-meta-num task-meta-streak" data-meta-field="streak"
+        title={`Racha: ${streak.count} ${streak.unit} seguidos`}>
+        <Flame size={13} aria-hidden="true" /><span className="sr-only">Racha: </span><span>{streak.count} {streak.unit}</span>
+      </span>
+    );
+  }
   if (inAppListTarget) {
     items.push(
       <span key="in-app-list" className="task-meta-item task-meta-link" data-meta-field="in-app-list" data-target-view={`list_${inAppListTarget.id}`} title={`Ir a ${inAppListTarget.name}`}>
@@ -205,7 +223,7 @@ export function TaskMetaBadges({
     } else if (field === 'frequency' && onOpenFrequencyPicker) {
       onOpenFrequencyPicker(event);
     } else {
-      onEdit(task.id, field && field !== 'list-name' ? field : undefined);
+      onEdit(task.id, field && field !== 'list-name' && field !== 'streak' ? field : undefined);
     }
   };
 

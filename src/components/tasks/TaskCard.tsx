@@ -5,7 +5,7 @@ import {
   Lock,
   ChevronDown, X, Info, RotateCcw, Flag,
   ShieldAlert, Clock, CheckCircle2, CreditCard,
-  Flame, User, MapPin, Link2, Check, GripVertical,
+  User, MapPin, Link2, Check, GripVertical,
   SkipForward
 } from 'lucide-react';
 import type { TaskItem, ListSection } from '../../models/Task';
@@ -1219,7 +1219,9 @@ export const TaskCard = React.memo(function TaskCard({
           }}
           style={{ flex: 1, minWidth: 0, boxSizing: 'border-box' }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          {/* Arriba, no centrado: con un título de dos líneas la bandera y los contadores quedaban
+              flotando entre ellas en vez de junto a la primera. */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, flexWrap: 'wrap' }}>
             {isBlocked && <Lock size={15} color="var(--accent-red)" />}
             {isEditingTitle ? (
               <div style={{ display: 'flex', alignItems: 'flex-start', width: '100%', gap: 4 }}>
@@ -1562,7 +1564,7 @@ export const TaskCard = React.memo(function TaskCard({
                 <span>Deshacer</span>
               </motion.button>
             )}
-            {task.flagged && <Flag size={13} color="var(--accent-orange)" fill="var(--accent-orange)" />}
+            {task.flagged && <Flag size={13} color="var(--accent-orange)" fill="var(--accent-orange)" style={{ marginTop: 'calc((var(--task-title-lh) - 13px) / 2)', flexShrink: 0 }} />}
             {task.targetCount && task.targetCount > 1 && (
               <TaskHabitCounter
                 task={task}
@@ -1571,29 +1573,6 @@ export const TaskCard = React.memo(function TaskCard({
                 targetCount={targetCount}
                 onToggle={onToggle}
               />
-            )}
-            {habitStreak.count >= 2 && (
-              <span
-                className="apple-streak-pill"
-                title={`¡Racha activa! Has completado esta tarea ${habitStreak.count} ${habitStreak.unit} consecutivos.`}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 2.5,
-                  padding: 0,
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '0.75rem',
-                  fontWeight: 650,
-                  color: '#ff6200',
-                  verticalAlign: 'middle',
-                  lineHeight: '1.2',
-                  userSelect: 'none'
-                }}
-              >
-                <Flame size={11} strokeWidth={2.4} style={{ color: '#ff6200', flexShrink: 0 }} />
-                <span>{habitStreak.count} {habitStreak.unit}</span>
-              </span>
             )}
             {expirationStatus && (
               <span
@@ -1802,6 +1781,7 @@ export const TaskCard = React.memo(function TaskCard({
             onNavigateView={onNavigateView}
             lists={lists}
             onOpenFrequencyPicker={handleFrequencyBadgeClick}
+            streak={habitStreak.count >= 2 ? habitStreak : null}
           />
         </div>
 

@@ -10,7 +10,7 @@ async function seed(page: Page) {
     const state = (window as any).useAppStore.getState();
     state.addList({ id: 'hierarchy', name: 'Casa tranquila', color: '#007aff' });
     state.addListSection({ id: 'hierarchy-section', listId: 'hierarchy', name: 'Cocina', order: 0 });
-    state.addTask({ id: 'hierarchy-task', title: 'Revisar la cocina', categoryId: 'hierarchy', sectionId: 'hierarchy-section', status: 'pending', duration: 15, cycle_id: 'cycle_week', timeOfDay: 'morning', price: 12, quantity: 2, dueDate: new Date().toISOString() });
+    state.addTask({ id: 'hierarchy-task', title: 'Revisar la cocina', categoryId: 'hierarchy', sectionId: 'hierarchy-section', status: 'pending', duration: 15, cycle_id: 'cycle_week', timeOfDay: 'morning', price: 12, quantity: 2, dueDate: (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.toISOString(); })() });
   });
   await event(page, 'select-view', 'list_hierarchy');
 }

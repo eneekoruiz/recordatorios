@@ -59,7 +59,7 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
                 tabIndex={0}
                 aria-label={list.name}
                 aria-pressed={isActive}
-                className={`ios-smart-card ${isActive ? 'is-active' : ''}`}
+                className={`ios-smart-card ${isActive ? 'is-active' : ''}${SMART_LISTS_WITHOUT_COUNT.has(list.id) ? ' no-count' : ''}`}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
@@ -78,15 +78,11 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
                   }
                 }}
                 style={{
-                  background: isActive 
-                    ? list.color 
-                    : `linear-gradient(135deg, color-mix(in srgb, ${list.color} 18%, var(--bg-elevated)) 0%, color-mix(in srgb, ${list.color} 10%, var(--bg-elevated)) 100%)`,
-                  border: isActive 
-                    ? `1.5px solid ${list.color}` 
-                    : `1px solid color-mix(in srgb, ${list.color} 26%, transparent)`,
-                  boxShadow: isActive 
-                    ? `0 6px 20px ${list.color}45` 
-                    : `0 2px 8px color-mix(in srgb, ${list.color} 14%, transparent)`,
+                  // Tarjeta neutra: el color vive en el icono y, al elegirla, en toda la tarjeta.
+                  // Cuatro fondos tintados a la vez competían con el contenido de la lista.
+                  background: isActive ? list.color : 'var(--bg-elevated)',
+                  border: isActive ? `1px solid ${list.color}` : '1px solid var(--separator-hair, var(--border-subtle))',
+                  boxShadow: 'none',
                   ['--card-color' as string]: list.color,
                   opacity: isEditMode && !smartListVisibility[list.id] ? 0.5 : 1,
                   transition: 'background-color 180ms cubic-bezier(0.16, 1, 0.3, 1), border-color 180ms cubic-bezier(0.16, 1, 0.3, 1), color 180ms cubic-bezier(0.16, 1, 0.3, 1), fill 180ms cubic-bezier(0.16, 1, 0.3, 1), opacity 180ms cubic-bezier(0.16, 1, 0.3, 1), transform 180ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1)'
@@ -126,7 +122,7 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
                   className="icon-circle" 
                   style={{
                     backgroundColor: isActive ? 'rgba(255, 255, 255, 0.28)' : list.color,
-                    boxShadow: isActive ? 'none' : `0 3px 8px color-mix(in srgb, ${list.color} 30%, transparent)`,
+                    boxShadow: 'none',
                     border: 'none',
                     transition: 'background-color 150ms ease, border-color 150ms ease, color 150ms ease, fill 150ms ease, opacity 150ms ease, transform 150ms ease, box-shadow 150ms ease'
                   }}
@@ -137,8 +133,10 @@ export const SmartListsGrid: React.FC<SmartListsGridProps> = ({
                   <span 
                     className="count" 
                     style={{ 
-                      fontSize: getTaskCount(list.id) >= 100 ? '1.65rem' : getTaskCount(list.id) >= 10 ? '1.95rem' : '2.25rem',
-                      color: isActive ? '#ffffff' : 'var(--text-primary)',
+                      fontSize: getTaskCount(list.id) >= 100 ? '1.5rem' : '1.75rem',
+                      fontWeight: 650,
+                      // Un cero no reclama atención: se atenúa.
+                      color: isActive ? '#ffffff' : getTaskCount(list.id) === 0 ? 'var(--label-3, var(--text-tertiary))' : 'var(--text-primary)',
                       transition: 'color 150ms ease',
                       fontVariantNumeric: 'tabular-nums',
                       letterSpacing: '-0.035em'

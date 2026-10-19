@@ -121,14 +121,6 @@
 .content-header .compact-scope-row { flex: 0 1 auto !important; min-width: 0 !important; gap: 8px !important; }
 .content-header .compact-scope-row .routine-include-text { font-size: var(--type-subhead); color: var(--label-2); }
 
-/* Navegador de periodo: cápsula compacta de cristal (control de navegación, no contenido). */
-.cycle-routine-status-strip .apple-period-navigator-capsule {
-  background: var(--glass-fill) !important;
-  border: 1px solid var(--glass-stroke) !important;
-  box-shadow: inset 0 1px 0 var(--glass-highlight), 0 1px 3px rgba(0, 0, 0, 0.05) !important;
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-}
 .cycle-status-text-btn:hover { background: color-mix(in srgb, var(--label-1) 6%, transparent) !important; }
 
 /* ---------- Barra superior: botones redondos de cristal, una acción principal ---------- */
@@ -166,3 +158,33 @@
 .cycle-strip-meta { flex-wrap: nowrap; min-height: 32px; }
 .cycle-strip-toggle { margin-left: auto; flex-shrink: 0; }
 .cycle-strip-toggle .routine-chip { margin: 0; }
+
+/* Duración junto al nombre de la sección (cuando es lo único que había en la segunda línea). */
+.section-head-main .section-head-inline {
+  flex: 0 0 auto;
+  font-size: var(--type-subhead);
+  font-weight: 400;
+  color: var(--label-2);
+}
+
+/* ---------- Barra lateral ---------- */
+/* Una tarjeta sin número (Calendario) que queda sola en su fila no necesita la altura de las demás:
+   icono y nombre en una línea. */
+.smart-cards-grid > .ios-smart-card.no-count:last-child:nth-child(odd) {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  min-height: 52px;
+  padding: 8px 14px;
+}
+.smart-cards-grid > .ios-smart-card.no-count:last-child:nth-child(odd) .icon-circle { width: 30px; height: 30px; }
+.smart-cards-grid > .ios-smart-card.no-count:last-child:nth-child(odd) .icon-circle svg { width: 16px; height: 16px; }
+.smart-cards-grid > .ios-smart-card.no-count:last-child:nth-child(odd) h3 { margin-top: 0 !important; align-self: center; }
+@media (hover: hover) {
+  .ios-smart-card:hover { transform: none; filter: none; box-shadow: none !important; background-color: color-mix(in srgb, var(--label-1, #000) 3%, var(--bg-elevated)); }
+}
+/* La racha conserva su color (es un logro) pero con el peso del resto de datos. */
+.task-meta-streak { color: #c2410c; }
+:root[data-theme="dark"] .task-meta-streak { color: #ff9f5a; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .task-meta-streak { color: #ff9f5a; } }

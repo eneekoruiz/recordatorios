@@ -421,7 +421,10 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   // (para que se vea qué está sumando el número aunque la sección esté plegada).
   const showRoutineToggle = isTopLevel && canIncludeShorter && (isExpanded || isFullRoutine);
   const periodText = isTopLevel && periodContext ? periodContext.compactLabel : null;
-  const hasSubRow = isTopLevel && Boolean(periodText || durationNode || priceNode || showRoutineToggle);
+  // Si lo único que habría en la segunda línea es la duración, va junto al nombre, en gris: una
+  // línea entera para «28 min» alejaba las tareas de su cabecera.
+  const durationInline = isTopLevel && Boolean(durationNode) && !periodText && !priceNode && !showRoutineToggle;
+  const hasSubRow = isTopLevel && !durationInline && Boolean(periodText || durationNode || priceNode || showRoutineToggle);
 
   const headerCount = data.pendingCount ?? pendingTaskCount ?? data.sectionTaskIds?.length ?? 0;
   const countTooltip = (() => {
@@ -656,6 +659,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               >
                 {data.title}
               </h3>
+              {durationInline && <span className="section-head-meta section-head-inline section-duration">{durationNode}</span>}
             </>
           )}
         </div>
