@@ -2553,9 +2553,12 @@ const CORE_CYCLES = [
   const isLibrary = currentListType === 'library' || isLifeLibraryList(currentView, currentList);
   const isGoals = currentListType === 'goals' || isGoalsList(currentView, currentList);
   const hasDurationToRun = Boolean(viewTasksDuration && viewTasksDuration.activeMinutes > 0);
-  const canRunExecutionMode = isRoutine && hasDurationToRun && !isShopping && !isVital && !isLibrary && !isGoals;
-  // Empezar una tarea suelta: disponible en listas de rutinas con temporización
-  const canStartIndividualTasks = isRoutine;
+  // Las vistas de frecuencia (Diarias, Semanales…) son justo donde más sentido tiene «empezar»:
+  // la lista entera, una sección o una tarea suelta. Antes solo se ofrecía en listas de rutinas.
+  const isFrequencyView = currentView.startsWith('cycle_');
+  const canRunExecutionMode = (isRoutine || isFrequencyView) && hasDurationToRun && !isShopping && !isVital && !isLibrary && !isGoals;
+  // Empezar una tarea suelta: disponible en listas de rutinas y en las vistas de frecuencia
+  const canStartIndividualTasks = isRoutine || isFrequencyView;
   const handleStartTask = useCallback((task: TaskItem) => {
     onStartSequence?.([task.id], task.title);
   }, [onStartSequence]);
@@ -2889,6 +2892,7 @@ const CORE_CYCLES = [
                         sectionRoutineModes={sectionRoutineModes}
                         toggleSectionRoutineMode={toggleSectionRoutineMode}
                         dragOverSectionId={dragOverSectionId}
+                        showStartButton={isFrequencyView && !isCustomSection}
                         onStartSectionSequence={onStartSequence && canRunExecutionMode && sectionPendingTaskIds.length > 0 ? () => {
                           const rawTitle = (data?.title || '').replace(/^[\p{Emoji}\s⏳]+/gu, '').trim() || (data?.title || '');
                           const cleanTitle = rawTitle.length > 0 

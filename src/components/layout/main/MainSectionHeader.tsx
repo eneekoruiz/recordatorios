@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { MoreHorizontal, ChevronDown, Check, Plus } from 'lucide-react';
+import { MoreHorizontal, ChevronDown, Check, Plus, Play } from 'lucide-react';
 import { DurationInfoCard } from '../../ui/DurationInfoCard';
 import { HapticService } from '../../../services/HapticService';
 import type { SectionMenuState } from './SectionContextMenu';
@@ -69,6 +69,8 @@ interface MainSectionHeaderProps {
   toggleSectionRoutineMode?: (secKey: string, mode: 'full_routine' | 'only_section') => void;
   dragOverSectionId: string | null;
   onStartSectionSequence?: () => void;
+  /** Botón ▶ visible: en vistas de frecuencia, donde las cabeceras son listas y no tienen menú «···». */
+  showStartButton?: boolean;
   pendingTaskCount?: number;
   totalTaskCount?: number;
   isMobile?: boolean;
@@ -118,6 +120,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   toggleSectionRoutineMode,
   dragOverSectionId,
   onStartSectionSequence: _onStartSectionSequence,
+  showStartButton = false,
   pendingTaskCount,
   totalTaskCount,
   isMobile,
@@ -679,6 +682,22 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
             </button>
           )}
           {!hasSubRow && priceNode && <span className="section-head-price">{priceNode}</span>}
+          {showStartButton && _onStartSectionSequence && (
+            <button
+              type="button"
+              className="section-head-start"
+              onClick={(e) => {
+                e.stopPropagation();
+                HapticService.selection();
+                _onStartSectionSequence();
+              }}
+              aria-label={`Empezar ${data.title}`}
+              title={`Empezar ${data.title}`}
+              style={{ ['--start-color' as string]: data.color || 'var(--accent-primary)' }}
+            >
+              <Play size={13} fill="currentColor" aria-hidden="true" />
+            </button>
+          )}
           {moreButton}
           {headerCount > 0 && (
             <span className="section-head-count" title={countTooltip}>

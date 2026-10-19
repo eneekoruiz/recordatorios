@@ -98,8 +98,8 @@ export function RoutineAnalytics({ onOpenTask }: { onOpenTask?: (taskId: string)
     <section ref={panelRef} className="routine-analytics" data-testid="routine-analytics" aria-labelledby="routine-history-title">
       <div className="routine-heading">
         <div>
-          <h2 id="routine-history-title">Tu rutina, período a período</h2>
-          <p>Lo que hiciste y lo que decidiste saltarte, separado por listas y secciones.</p>
+          <h2 id="routine-history-title">Historial de rutinas</h2>
+          <p>Lo hecho y lo que saltaste a propósito, por sección.</p>
         </div>
         <button type="button" className="routine-button" onClick={() => changeReference(dateValue(new Date()))}><RotateCcw size={16} aria-hidden="true" /> Hoy</button>
       </div>
@@ -149,22 +149,39 @@ export function RoutineAnalytics({ onOpenTask }: { onOpenTask?: (taskId: string)
       <div className={`routine-periods routine-periods--${frequency}`} role="group" aria-label="Historial por período">
         {frequency === 'day' && <>{['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((day, index) => <span key={index} className="routine-weekday" aria-hidden="true">{day}</span>)}
           {Array.from({ length: (periods[0].start.getDay() + 6) % 7 }, (_, index) => <span key={`spacer-${index}`} aria-hidden="true" />)}</>}
-        {history.map(period => {
+        {history.map((period, index) => {
           const groups = period.summary.groups.filter(group => groupFilter === 'all' || group.id === groupFilter);
           const counts = groups.reduce((sum, group) => ({ total: sum.total + group.total, completed: sum.completed + group.completed, skipped: sum.skipped + group.skipped,
             missed: sum.missed + group.missed,
             pending: sum.pending + group.pending, unknown: sum.unknown + group.unknown }), { total: 0, completed: 0, skipped: 0, missed: 0, pending: 0, unknown: 0 });
+          const label = frequency === 'day' ? String(period.start.getDate())
+            // Semanas: el mes solo cuando cambia («31 ago · 7 sept · 14 · 21»), si no las etiquetas se pisan.
+            : frequency === 'week' ? (index === 0 || history[index - 1].start.getMonth() !== period.start.getMonth()
+              ? period.start.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }).replace('.', '')
+              : String(period.start.getDate()))
+              : frequency === 'month' ? period.start.toLocaleDateString('es-ES', { month: 'short' }).replace('.', '')
+                : String(period.start.getFullYear());
+          // Una barra por período con los cuatro estados por separado (hechas, omitidas por ti, sin
+          // marcar, pendientes): de un vistazo se ve qué fue decisión y qué quedó sin hacer.
+          const segments = (['completed', 'skipped', 'missed', 'pending'] as const).filter(key => counts[key] > 0);
+          const known = counts.total - counts.unknown;
           return <button type="button" key={period.id} data-testid="routine-period" data-period-start={dateValue(period.start)}
             aria-pressed={selected?.id === period.id} aria-label={`${period.label}: ${counts.total ? countsText(counts) : 'sin rutinas'}`}
             onClick={() => { setSelectedId(period.id); setAnnouncement(''); }}>
-            <span className="routine-period-label">{frequency === 'day' ? period.start.getDate() : period.label}</span>
-            <span className="routine-period-value">{counts.total && counts.unknown !== counts.total ? `${counts.completed}/${counts.total}` : '—'}</span>
-            {frequency !== 'day' && <span className="routine-period-caption">{counts.skipped ? `${counts.skipped} omitidas` : counts.unknown === counts.total ? 'Sin datos' : 'hechas'}</span>}
-            {frequency === 'day' && counts.skipped > 0 && <span className="routine-omission-dot" aria-hidden="true" />}
+            {frequency !== 'day' && <span className="routine-period-value">{known > 0 ? `${counts.completed}/${known}` : '—'}</span>}
+            <span className="routine-bar" aria-hidden="true">
+              {known > 0 && segments.map(key => <span key={key} className={`routine-bar-seg routine-bar-seg--${key}`} style={{ flexGrow: counts[key] }} />)}
+            </span>
+            <span className="routine-period-label">{label}</span>
           </button>;
         })}
       </div>
-      <p className="routine-history-note">«Sin marcar»: el período terminó sin marcarla. «Omitida por ti»: la saltaste a propósito. El período en curso nunca cuenta como sin marcar.</p>
+      <ul className="routine-legend" aria-label="Leyenda">
+        <li><span className="routine-bar-seg--completed" />Hechas</li>
+        <li><span className="routine-bar-seg--skipped" />Omitidas por ti</li>
+        <li><span className="routine-bar-seg--missed" />Sin marcar</li>
+        <li><span className="routine-bar-seg--pending" />Pendientes</li>
+      </ul>
 
       <div className="routine-selected-heading"><h3>{selected?.label}</h3><span>Detalle por sección</span></div>
       {!visibleGroups.length && <p className="routine-empty">Sin rutinas para esta sección y este período.</p>}

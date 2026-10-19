@@ -26,6 +26,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { useNavigation } from '../../hooks/useNavigation';
 import { ViewHeader } from '../ui/ViewHeader';
 import { RoutineAnalytics } from './RoutineAnalytics';
+import { WeeklyReviewModal } from '../review/WeeklyReviewModal';
 import { HapticService } from '../../services/HapticService';
 import {
   completionsByDay,
@@ -64,6 +65,7 @@ export function AnalyticsView({ onBack, onOpenTask }: AnalyticsViewProps) {
   // Estado para expandir qué tareas se hacen y cuáles faltan en cada ciclo
   const [expandedCycle, setExpandedCycle] = useState<string | null>(null);
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
   const focusSheetRef = useSheetRef<HTMLDivElement>(null);
   useModalFocus(focusSheetRef, isExportModalOpen, () => setIsExportModalOpen(false));
   const [copiedToast, setCopiedToast] = useState<boolean>(false);
@@ -445,38 +447,32 @@ export function AnalyticsView({ onBack, onOpenTask }: AnalyticsViewProps) {
     <main className="stats-page" aria-label="Estadísticas">
       <ViewHeader
         title="Estadísticas"
-        subtitle="Rendimiento, constancia y progreso exacto por ciclos de frecuencia."
         icon={<BarChart3 size={20} />}
         color="var(--accent-purple)"
         onBack={() => (onBack ? onBack() : reset('HOME'))}
         actions={
-          <button
-            type="button"
-            onClick={() => {
-              HapticService.selection();
-              setIsExportModalOpen(true);
-            }}
-            aria-label="Exportar informe de rendimiento"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '7px 14px',
-              borderRadius: 20,
-              background: 'color-mix(in srgb, var(--accent-purple, #af52de) 12%, transparent)',
-              color: 'var(--text-primary)',
-              border: '0.5px solid color-mix(in srgb, var(--accent-purple, #af52de) 28%, transparent)',
-              fontSize: '0.84rem',
-              fontWeight: 650,
-              cursor: 'pointer',
-              transition: 'transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease',
-            }}
-          >
-            <Share2 size={15} strokeWidth={2.2} />
-            <span>Exportar Informe</span>
-          </button>
+          <div className="stats-header-actions">
+            {/* La revisión semanal vivía en un panel de «Hoy» que ya no está: aquí tiene sitio fijo. */}
+            <button type="button" className="stats-header-btn" onClick={() => { HapticService.selection(); setIsReviewOpen(true); }}>
+              <Sparkles size={15} strokeWidth={2.2} aria-hidden="true" />
+              <span>Revisión semanal</span>
+            </button>
+            <button
+              type="button"
+              className="stats-header-btn"
+              onClick={() => {
+                HapticService.selection();
+                setIsExportModalOpen(true);
+              }}
+              aria-label="Exportar informe de rendimiento"
+            >
+              <Share2 size={15} strokeWidth={2.2} aria-hidden="true" />
+              <span>Exportar</span>
+            </button>
+          </div>
         }
       />
+      <WeeklyReviewModal isOpen={isReviewOpen} onClose={() => setIsReviewOpen(false)} />
 
       {/* ── Banners Inteligentes de Reconocimiento y Cierre de Período ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
@@ -623,7 +619,8 @@ export function AnalyticsView({ onBack, onOpenTask }: AnalyticsViewProps) {
         initial="hidden"
         animate="show"
         transition={{ staggerChildren: 0.05 }}
-        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))' }}
+        // 2 × 2 en móvil, 4 en una fila en escritorio: antes eran cuatro tarjetas apiladas.
+        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}
       >
         {/* Racha */}
         <motion.section variants={itemAnim} className="stat-card" aria-label="Racha diaria">
@@ -692,29 +689,6 @@ export function AnalyticsView({ onBack, onOpenTask }: AnalyticsViewProps) {
         </motion.section>
       </motion.div>
 
-      <RoutineAnalytics onOpenTask={onOpenTask} />
-
-      {/* ── 2. Desglose Exhaustivo por Ciclos y Frecuencias (Apple Style) ──── */}
-      <section style={{ marginTop: 22 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: '1.08rem', fontWeight: 650, letterSpacing: '-0.015em', color: 'var(--text-primary)' }}>
-              Cumplimiento por Frecuencia
-            </h2>
-            <p style={{ margin: '2px 0 0', fontSize: '0.80rem', color: 'var(--text-secondary)' }}>
-              Qué tareas tienes completadas y cuáles te faltan en cada período
-            </p>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
-          {renderCycleCard(cyclesBreakdown.daily)}
-          {renderCycleCard(cyclesBreakdown.weekly)}
-          {renderCycleCard(cyclesBreakdown.monthly)}
-          {renderCycleCard(cyclesBreakdown.yearly)}
-        </div>
-      </section>
-
       {/* ── 3. Gráfico de Actividad de los Últimos 7 Días ────────────── */}
       <motion.section
         className="week-chart"
@@ -754,6 +728,29 @@ export function AnalyticsView({ onBack, onOpenTask }: AnalyticsViewProps) {
           })}
         </div>
       </motion.section>
+
+      <RoutineAnalytics onOpenTask={onOpenTask} />
+
+      {/* ── 2. Desglose Exhaustivo por Ciclos y Frecuencias (Apple Style) ──── */}
+      <section style={{ marginTop: 22 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '1.08rem', fontWeight: 650, letterSpacing: '-0.015em', color: 'var(--text-primary)' }}>
+              Cumplimiento por Frecuencia
+            </h2>
+            <p style={{ margin: '2px 0 0', fontSize: '0.80rem', color: 'var(--text-secondary)' }}>
+              Qué tareas tienes completadas y cuáles te faltan en cada período
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
+          {renderCycleCard(cyclesBreakdown.daily)}
+          {renderCycleCard(cyclesBreakdown.weekly)}
+          {renderCycleCard(cyclesBreakdown.monthly)}
+          {renderCycleCard(cyclesBreakdown.yearly)}
+        </div>
+      </section>
 
       {/* ── 4. Patrones de Productividad y Distribución por Listas ─────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14, marginTop: 22 }}>

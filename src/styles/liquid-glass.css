@@ -159,7 +159,7 @@ body.dark .sidebar-container {
 @media (pointer: coarse) {
   /* Excepciones: controles que ya amplían su zona táctil a 44 px con ::before (sin inflar la fila) y el
      título de la tarea, cuya zona táctil es toda la columna de contenido. */
-  :is(button, [role="button"], a[href], [role="option"]):not(.hit-44):not(.task-info-btn):not(.task-subtasks-btn):not(.task-title):not(.section-more-btn):not(.section-collapse-chevron-btn):not(.routine-chip):not(.section-duration-label) {
+  :is(button, [role="button"], a[href], [role="option"]):not(.hit-44):not(.task-info-btn):not(.task-subtasks-btn):not(.task-title):not(.section-more-btn):not(.section-collapse-chevron-btn):not(.routine-chip):not(.section-duration-label):not(.section-head-start) {
     min-width: 44px !important;
     min-height: 44px !important;
   }

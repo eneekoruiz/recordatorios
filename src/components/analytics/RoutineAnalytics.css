@@ -69,3 +69,35 @@
 .routine-streak-name { min-width: 0; overflow-wrap: anywhere; }
 .routine-streak-count { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; color: #c2410c; font-weight: 600; font-variant-numeric: tabular-nums; }
 [data-theme="dark"] .routine-streak-count, html.dark .routine-streak-count { color: #ff9f5a; }
+
+/* ---- Períodos como barras: una columna por período, los cuatro estados apilados ---- */
+.routine-periods { grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
+.routine-periods--month { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+.routine-periods--year { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.routine-periods button { min-height: 0; padding: 6px 2px; gap: 6px; border: 0; border-radius: 10px; justify-content: flex-end; }
+.routine-periods button[aria-pressed="true"] { background: var(--bg-hover); box-shadow: none; border-color: transparent; }
+.routine-periods button[aria-pressed="true"] .routine-period-label { color: var(--text-primary); font-weight: 650; }
+.routine-period-value { font-size: .74rem; font-weight: 600; color: var(--text-secondary); }
+.routine-period-label { font-size: .72rem; color: var(--text-secondary); white-space: nowrap; }
+.routine-bar { display: flex; flex-direction: column-reverse; width: 14px; height: 64px; border-radius: 7px; overflow: hidden; background: var(--bg-hover); gap: 1px; }
+.routine-bar-seg { display: block; min-height: 3px; }
+.routine-bar-seg--completed { background: #248a3d; }
+.routine-bar-seg--skipped { background: #c2410c; }
+.routine-bar-seg--missed { background: #8e8e93; }
+.routine-bar-seg--pending { background: color-mix(in srgb, var(--text-secondary) 22%, transparent); }
+[data-theme="dark"] .routine-bar-seg--completed, html.dark .routine-bar-seg--completed { background: #30d158; }
+[data-theme="dark"] .routine-bar-seg--skipped, html.dark .routine-bar-seg--skipped { background: #ff9f5a; }
+/* Días: calendario de 7 columnas; la barra va en horizontal bajo el número. */
+.routine-periods--day { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.routine-periods--day button { min-height: 44px; padding: 4px 2px; flex-direction: column-reverse; justify-content: center; }
+.routine-periods--day .routine-bar { flex-direction: row; width: 70%; height: 4px; border-radius: 2px; }
+.routine-periods--day .routine-period-label { font-size: .8rem; color: var(--text-primary); }
+.routine-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 10px 0 0; padding: 0; list-style: none; font-size: .76rem; color: var(--text-secondary); }
+.routine-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.routine-legend li > span { width: 8px; height: 8px; border-radius: 2px; }
+@media (max-width: 600px) {
+  .routine-periods--month { grid-template-columns: repeat(6, minmax(0, 1fr)); row-gap: 10px; }
+  .routine-periods--week, .routine-periods--year { grid-template-columns: repeat(var(--cols, 8), minmax(0, 1fr)); }
+  .routine-periods--year { --cols: 5; }
+  .routine-periods--day button { min-height: 44px; border-radius: 8px; }
+}
