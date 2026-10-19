@@ -28,19 +28,7 @@ import { TaskHabitCounter } from './card/TaskHabitCounter';
 import { TaskNoteEditor } from './card/TaskNoteEditor';
 import { getTaskPeriodicity, getSectionPeriodicity, stripPeriodicityPrefix, getEffectiveCycleId } from '../../utils/sectionRoutine';
 import { extractPrice } from '../../utils/priceExtractor';
-import { classifyDropZone, DROP_GAP_PX } from '../../utils/dragDrop';
-
-function findScrollableParent(el: HTMLElement | null): HTMLElement | Window {
-  let parent = el?.parentElement;
-  while (parent) {
-    const style = window.getComputedStyle(parent);
-    if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && parent.scrollHeight > parent.clientHeight) {
-      return parent;
-    }
-    parent = parent.parentElement;
-  }
-  return window;
-}
+import { classifyDropZone, DROP_GAP_PX, createEdgeAutoScroll, findScrollableParent, relativeYInRow, dropTargetAt } from '../../utils/dragDrop';
 
 interface TaskCardProps {
   task: TaskItem;
@@ -592,9 +580,6 @@ export const TaskCard = React.memo(function TaskCard({
   const expirationStatus = isCaducidad ? calculateExpirationStatus(task.dueDate) : null;
 
   const [dragOverPosition, setDragOverPosition] = useState<'top' | 'bottom' | 'inside' | null>(null);
-  // Congela el alto de la fila al entrar: si se recalculase en cada evento, el propio hueco que
-  // se abre (ver DROP_GAP_PX) cambiaría el rect y podría oscilar entre zonas.
-  const dragOverRectRef = useRef<DOMRect | null>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
     if (!onReorderTasks) return;
@@ -602,19 +587,13 @@ export const TaskCard = React.memo(function TaskCard({
       e.preventDefault();
       e.stopPropagation();
       e.dataTransfer.dropEffect = 'move';
-      if (!dragOverRectRef.current) {
-        dragOverRectRef.current = e.currentTarget.getBoundingClientRect();
-      }
-      const rect = dragOverRectRef.current;
-      const relY = (e.clientY - rect.top) / rect.height;
-      setDragOverPosition(classifyDropZone(relY));
+      setDragOverPosition(classifyDropZone(relativeYInRow(e.currentTarget as HTMLElement, e.clientY)));
     }
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    dragOverRectRef.current = null;
     setDragOverPosition(null);
   };
 
@@ -625,7 +604,6 @@ export const TaskCard = React.memo(function TaskCard({
     const sourceId = e.dataTransfer.getData('text/task-id') || e.dataTransfer.getData('text/plain');
     const pos = dragOverPosition;
     setDragOverPosition(null);
-    dragOverRectRef.current = null;
     if (sourceId && sourceId !== task.id) {
       if (pos === 'inside') {
         nestTask(sourceId, task.id);
@@ -641,6 +619,11 @@ export const TaskCard = React.memo(function TaskCard({
     // Desktop only — touch drag is handled separately via touch events
     if (e.nativeEvent instanceof DragEvent && !e.nativeEvent.clientX) return;
     e.stopPropagation();
+    // Arrastrar no es mantener pulsado: sin esto, a los 380 ms se abría el menú en mitad del arrastre.
+    if (longPressTimer.current) {
+      window.clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
     e.dataTransfer.setData('text/task-id', task.id);
     e.dataTransfer.setData('text/plain', task.id);
     e.dataTransfer.effectAllowed = 'move';
@@ -650,27 +633,17 @@ export const TaskCard = React.memo(function TaskCard({
   };
 
   // ── Touch drag helpers ─────────────────────────────────────────────────────
-  const startTouchDrag = useCallback((startY: number, _startX: number) => {
+  const startTouchDrag = useCallback((startY: number, startX: number) => {
     if (!onReorderTasks || !wrapperRef.current) return;
     x.set(0); // Cancel any horizontal swipe translation
     touchDragLiftedRef.current = true;
     touchDragActiveRef.current = true;
 
-    const scrollEl = findScrollableParent(wrapperRef.current);
-    let rafIdRef = 0;
-    let scrollSpeed = 0;
-
-    const performScroll = () => {
-      if (scrollSpeed !== 0) {
-        scrollEl.scrollBy({ top: scrollSpeed });
-      }
-      rafIdRef = requestAnimationFrame(performScroll);
-    };
-    rafIdRef = requestAnimationFrame(performScroll);
-
     const rect = wrapperRef.current.getBoundingClientRect();
     const cloned = wrapperRef.current.cloneNode(true) as HTMLDivElement;
     cloned.removeAttribute('data-touch-drag-over');
+    // La copia flota bajo el dedo: sin identificador para que nunca cuente como fila de destino.
+    cloned.removeAttribute('data-task-id');
     cloned.querySelectorAll('[data-touch-drag-ghost]').forEach(el => el.remove());
     const ghost = document.createElement('div');
     ghost.setAttribute('data-touch-drag-ghost', 'true');
@@ -695,39 +668,57 @@ export const TaskCard = React.memo(function TaskCard({
     setIsDraggingTouch(true);
     HapticService.impact('medium');
 
+    // Dónde se soltaría. Se busca la fila que hay de verdad bajo el dedo (una cabecera de sección
+    // fija tapa las filas que pasan por debajo) y se mantiene mientras el dedo siga en ella o en el
+    // hueco que ha abierto: si no, el hueco movería la fila y el objetivo parpadearía.
+    let target: HTMLElement | null = null;
+    let zone: 'top' | 'bottom' | 'inside' | 'section' | null = null;
+    let lastX = startX;
+    let lastY = startY;
+    const clearTarget = () => {
+      target?.removeAttribute('data-touch-drag-over');
+      target?.removeAttribute('data-task-drop-section');
+      target = null;
+      zone = null;
+    };
+    const updateTarget = () => {
+      let next: HTMLElement | null = null;
+      if (target?.isConnected) {
+        const rel = relativeYInRow(target, lastY);
+        const slack = (DROP_GAP_PX + 2) / target.getBoundingClientRect().height;
+        if (rel >= -slack && rel <= 1 + slack) next = target;
+      }
+      if (!next) {
+        next = dropTargetAt(lastX, lastY, '.task-item-wrapper[data-task-id], .group-header[data-section-drag-key]');
+        if (next?.getAttribute('data-task-id') === task.id) next = null;
+      }
+      if (next !== target) clearTarget();
+      target = next;
+      if (!target) return;
+      if (target.classList.contains('group-header')) {
+        zone = 'section';
+        target.setAttribute('data-task-drop-section', 'true');
+        return;
+      }
+      zone = classifyDropZone(relativeYInRow(target, lastY));
+      if (target.getAttribute('data-touch-drag-over') !== zone) target.setAttribute('data-touch-drag-over', zone);
+    };
+    const autoScroll = createEdgeAutoScroll(findScrollableParent(wrapperRef.current), updateTarget);
+
     const onMove = (ev: TouchEvent) => {
       const t = ev.touches[0];
       ev.preventDefault();
       if (touchDragGhostRef.current) {
         touchDragGhostRef.current.style.top = `${t.clientY - rect.height / 2}px`;
       }
-
-      const bounds = scrollEl === window 
-        ? { top: 0, bottom: window.innerHeight } 
-        : (scrollEl as HTMLElement).getBoundingClientRect();
-        
-      if (t.clientY < bounds.top + 80) {
-        scrollSpeed = -Math.max(1, 14 * (1 - (t.clientY - bounds.top) / 80));
-      } else if (t.clientY > bounds.bottom - 80) {
-        scrollSpeed = Math.max(1, 14 * (1 - (bounds.bottom - t.clientY) / 80));
-      } else {
-        scrollSpeed = 0;
-      }
-
-      // Highlight drop target
-      document.querySelectorAll<HTMLElement>('.task-item-wrapper[data-task-id]').forEach((el) => {
-        const elRect = el.getBoundingClientRect();
-        if (t.clientY >= elRect.top && t.clientY <= elRect.bottom) {
-          const relY = (t.clientY - elRect.top) / elRect.height;
-          el.setAttribute('data-touch-drag-over', classifyDropZone(relY));
-        } else {
-          el.removeAttribute('data-touch-drag-over');
-        }
-      });
+      lastX = t.clientX;
+      lastY = t.clientY;
+      autoScroll.update(lastY);
+      updateTarget();
     };
 
     const onEnd = (_ev: TouchEvent) => {
-      cancelAnimationFrame(rafIdRef);
+      autoScroll.stop();
       document.removeEventListener('touchmove', onMove);
       if (touchDragGhostRef.current) {
         document.body.removeChild(touchDragGhostRef.current);
@@ -738,26 +729,20 @@ export const TaskCard = React.memo(function TaskCard({
       document.body.style.overflow = '';
       x.set(0);
 
-      // Encontrar objetivo sobre el que se soltó
-      let targetId: string | null = null;
-      let dropAction: 'before' | 'after' | 'inside' = 'before';
-      const wrappers = Array.from(document.querySelectorAll<HTMLElement>('.task-item-wrapper[data-task-id]'));
-      for (const el of wrappers) {
-        const attr = el.getAttribute('data-touch-drag-over');
-        if (attr) {
-          targetId = el.getAttribute('data-task-id');
-          if (attr === 'inside') dropAction = 'inside';
-          else if (attr === 'bottom') dropAction = 'after';
-          else dropAction = 'before';
-        }
-        el.removeAttribute('data-touch-drag-over');
-      }
-      if (targetId && targetId !== task.id) {
-        if (dropAction === 'inside') {
+      const targetId = target?.getAttribute('data-task-id') || null;
+      const targetSectionId = target?.getAttribute('data-section-drag-key') || null;
+      const dropZone = zone;
+      clearTarget();
+      if (dropZone === 'section' && targetSectionId) {
+        // Soltar sobre la cabecera de una sección: pasa a esa sección (igual que con el ratón).
+        useAppStore.getState().updateTaskSection(task.id, targetSectionId);
+        HapticService.impact('medium');
+      } else if (targetId && targetId !== task.id) {
+        if (dropZone === 'inside') {
           nestTask(task.id, targetId);
           HapticService.notification('success');
         } else if (onReorderTasks) {
-          onReorderTasks(task.id, targetId, dropAction);
+          onReorderTasks(task.id, targetId, dropZone === 'bottom' ? 'after' : 'before');
           HapticService.impact('medium');
         }
       }
@@ -768,13 +753,13 @@ export const TaskCard = React.memo(function TaskCard({
     document.addEventListener('touchmove', onMove, { passive: false });
     document.addEventListener('touchend', onEnd, { once: true });
     document.addEventListener('touchcancel', () => {
-      cancelAnimationFrame(rafIdRef);
+      autoScroll.stop();
       document.removeEventListener('touchmove', onMove);
       if (touchDragGhostRef.current) {
         document.body.removeChild(touchDragGhostRef.current);
         touchDragGhostRef.current = null;
       }
-      document.querySelectorAll<HTMLElement>('[data-touch-drag-over]').forEach(el => el.removeAttribute('data-touch-drag-over'));
+      clearTarget();
       setIsDraggingTouch(false);
       touchDragLiftedRef.current = false;
       touchDragActiveRef.current = false;

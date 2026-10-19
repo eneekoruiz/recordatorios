@@ -20,3 +20,106 @@ export const DRAG_MOVE_THRESHOLD_PX = 10;
 /** Alto del hueco que se abre en la lista para reordenar (tareas y secciones): en vez de una
  * línea o recuadro superpuestos, el propio espacio "se abre camino" hasta el punto de soltar. */
 export const DROP_GAP_PX = 14;
+
+/** Contenedor que se desplaza (la lista); si no hay ninguno, la ventana. */
+export function findScrollableParent(el: HTMLElement | null): HTMLElement | Window {
+  let parent = el?.parentElement;
+  while (parent) {
+    const style = window.getComputedStyle(parent);
+    if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && parent.scrollHeight > parent.clientHeight) {
+      return parent;
+    }
+    parent = parent.parentElement;
+  }
+  return window;
+}
+
+const scrollTopOf = (scroller: HTMLElement | Window) =>
+  scroller === window ? window.scrollY : (scroller as HTMLElement).scrollTop;
+
+/**
+ * Parte visible de la lista mientras se arrastra. La barra «Nuevo recordatorio» (abajo) y la
+ * barra de cristal (arriba) flotan sobre la lista: el borde útil para desplazar es el suyo, no
+ * el de la ventana; si no, la zona que activa el desplazamiento queda tapada y nunca se alcanza.
+ */
+export function getVisibleListBounds(scroller: HTMLElement | Window): { top: number; bottom: number } {
+  const base = scroller === window
+    ? { top: 0, bottom: window.innerHeight }
+    : (scroller as HTMLElement).getBoundingClientRect();
+  let { top, bottom } = base;
+  const bar = document.querySelector<HTMLElement>('.quick-add-shell');
+  const barRect = bar?.getBoundingClientRect();
+  if (barRect && barRect.height > 0 && barRect.top < bottom && barRect.top > top + (bottom - top) / 2) {
+    bottom = barRect.top;
+  }
+  const header = document.querySelector<HTMLElement>('.glass-header');
+  const headerRect = header?.getBoundingClientRect();
+  if (headerRect && headerRect.height > 0 && headerRect.bottom > top && headerRect.bottom < top + (bottom - top) / 2) {
+    top = headerRect.bottom;
+  }
+  return { top, bottom };
+}
+
+export const AUTO_SCROLL_EDGE_PX = 72;
+const AUTO_SCROLL_MAX_PX = 18;
+
+/**
+ * Desplaza la lista sola mientras el dedo o el ratón están cerca de su borde superior o
+ * inferior (o ya fuera de ella, sobre la barra inferior). Cuanto más cerca del borde, más
+ * rápido. `onScroll` se llama tras cada paso para recalcular dónde se soltaría: con el dedo
+ * quieto, las filas siguen pasando por debajo.
+ */
+export function createEdgeAutoScroll(scroller: HTMLElement | Window, onScroll?: () => void) {
+  let speed = 0;
+  let raf = 0;
+  const step = () => {
+    raf = 0;
+    if (!speed) return;
+    const before = scrollTopOf(scroller);
+    // «instant»: la lista tiene scroll-behavior: smooth, y cada paso suave anularía al anterior.
+    scroller.scrollBy({ top: speed, behavior: 'instant' });
+    if (scrollTopOf(scroller) !== before) onScroll?.();
+    raf = requestAnimationFrame(step);
+  };
+  return {
+    update(clientY: number) {
+      const { top, bottom } = getVisibleListBounds(scroller);
+      const ratio = clientY < top + AUTO_SCROLL_EDGE_PX
+        ? -Math.min(1, (top + AUTO_SCROLL_EDGE_PX - clientY) / AUTO_SCROLL_EDGE_PX)
+        : clientY > bottom - AUTO_SCROLL_EDGE_PX
+          ? Math.min(1, (clientY - (bottom - AUTO_SCROLL_EDGE_PX)) / AUTO_SCROLL_EDGE_PX)
+          : 0;
+      speed = ratio === 0 ? 0 : Math.sign(ratio) * (2 + (AUTO_SCROLL_MAX_PX - 2) * ratio * ratio);
+      if (speed && !raf) raf = requestAnimationFrame(step);
+    },
+    stop() {
+      speed = 0;
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+    },
+  };
+}
+
+/**
+ * Posición vertical (0 = arriba, 1 = abajo) del puntero dentro de una fila, sin contar el hueco que
+ * la propia fila abre encima (margin-top animado): ese hueco la desplaza hacia abajo y, si contara,
+ * la fila «huiría» del dedo y no se podría llegar a su centro (anidar) ni a su borde inferior.
+ * Se mide en vivo, así que sigue bien a la fila si la lista se desplaza o se cierra otro hueco.
+ */
+export function relativeYInRow(el: HTMLElement, clientY: number): number {
+  const rect = el.getBoundingClientRect();
+  const ownGap = parseFloat(window.getComputedStyle(el).marginTop) || 0;
+  return (clientY - (rect.top - ownGap)) / rect.height;
+}
+
+/**
+ * Fila de destino bajo el puntero. Se recorren todas las capas (no solo la de arriba): al empezar a
+ * arrastrar, el menú contextual de la pulsación larga aún se está cerrando por encima de la lista.
+ */
+export function dropTargetAt(x: number, y: number, selector: string): HTMLElement | null {
+  for (const el of document.elementsFromPoint(x, y)) {
+    const row = (el as HTMLElement).closest<HTMLElement>(selector);
+    if (row) return row;
+  }
+  return null;
+}

@@ -56,6 +56,7 @@ import { BatchTaskActionsBar } from '../tasks/BatchTaskActionsBar';
 import { downloadIcsFile } from '../../utils/icsExporter';
 import { exportReportToPdf } from '../../utils/pdfExport';
 import { parseTaskPrice } from '../../utils/format';
+import { createEdgeAutoScroll, findScrollableParent } from '../../utils/dragDrop';
 
 interface MainContentProps {
   currentView: string;
@@ -2073,6 +2074,32 @@ const CORE_CYCLES = [
     HapticService.selection();
   }, [visibleTasks, reorderTasks, sortBy, setSortBy]);
 
+  // Arrastre con ratón: el navegador apenas desplaza la lista al acercarse al borde (y abajo lo
+  // tapa la barra «Nuevo recordatorio»), así que la lista se desplaza sola mientras se arrastra
+  // una tarea o una sección cerca del borde. Las filas recalculan la zona en cada «dragover».
+  // En fase de captura: las filas detienen la propagación de estos eventos.
+  useEffect(() => {
+    let autoScroll: ReturnType<typeof createEdgeAutoScroll> | null = null;
+    const onStart = (e: DragEvent) => {
+      const el = e.target instanceof HTMLElement ? e.target : null;
+      if (!el?.closest('.task-item-wrapper, .group-header')) return;
+      autoScroll = createEdgeAutoScroll(findScrollableParent(el));
+    };
+    const onOver = (e: DragEvent) => autoScroll?.update(e.clientY);
+    const onEnd = () => { autoScroll?.stop(); autoScroll = null; };
+    document.addEventListener('dragstart', onStart, true);
+    document.addEventListener('dragover', onOver, true);
+    document.addEventListener('dragend', onEnd, true);
+    document.addEventListener('drop', onEnd, true);
+    return () => {
+      onEnd();
+      document.removeEventListener('dragstart', onStart, true);
+      document.removeEventListener('dragover', onOver, true);
+      document.removeEventListener('dragend', onEnd, true);
+      document.removeEventListener('drop', onEnd, true);
+    };
+  }, []);
+
   const handleReorderTasks = useCallback((sourceTaskId: string, targetTaskId: string, position: 'before' | 'after' = 'before') => {
     if (sourceTaskId === targetTaskId) return;
     const sourceIdx = visibleTasks.findIndex(t => t.id === sourceTaskId);
@@ -2139,9 +2166,12 @@ const CORE_CYCLES = [
         else if (prevTask && nextTask && prevTask.parentId && nextTask.parentId && prevTask.parentId === nextTask.parentId) {
           newParentId = prevTask.parentId;
         }
-        // Escenario 3: Soltado después de una subtarea
+        // Escenario 3: Soltado después de la última subtarea de un grupo → queda como tarea normal,
+        // tras el grupo. (Entre dos subtareas ya lo cubre el escenario 2; para añadirla como subtarea
+        // se suelta sobre el centro del padre.) Así llevar una tarea al final de la lista no la
+        // convierte por sorpresa en subtarea de la última.
         else if (position === 'after' && targetTask.parentId) {
-          newParentId = targetTask.parentId;
+          newParentId = undefined;
         }
         // Escenario 4: Soltado antes de una subtarea, cuando el elemento anterior es el padre o un hermano
         else if (position === 'before' && targetTask.parentId && prevTask && (prevTask.id === targetTask.parentId || prevTask.parentId === targetTask.parentId)) {

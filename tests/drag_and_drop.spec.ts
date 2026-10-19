@@ -103,3 +103,59 @@ test.describe('Arrastrar para reordenar o anidar', () => {
     expect(parent).toBe('sec_dnd_1');
   });
 });
+
+// Listas largas: al acercarse al borde inferior la lista se desplaza sola, y soltar tras la última
+// subtarea deja la tarea al final como tarea normal (no como subtarea de la última).
+test.describe('Arrastrar en listas largas', () => {
+  async function seedLong(page: any) {
+    await page.evaluate(() => {
+      const store = (window as any).useAppStore.getState();
+      store.addList({ id: 'list_dnd_long', name: 'Larga Test', color: '#007aff' });
+      store.addListSection({ id: 'sec_long_a', listId: 'list_dnd_long', name: 'Sección A', order: 0 });
+      store.addListSection({ id: 'sec_long_b', listId: 'list_dnd_long', name: 'Sección B', order: 1 });
+      for (let i = 1; i <= 24; i++) {
+        store.addTask({ id: `long_${i}`, title: `Tarea ${i}`, categoryId: 'list_dnd_long', sectionId: i <= 12 ? 'sec_long_a' : 'sec_long_b', status: 'pending', order: i, created_at: new Date().toISOString() });
+      }
+      store.addTask({ id: 'long_sub', title: 'Subtarea de la 24', categoryId: 'list_dnd_long', sectionId: 'sec_long_b', parentId: 'long_24', status: 'pending', order: 25, created_at: new Date().toISOString() });
+    });
+    await page.locator('[data-list-id], .ios-list-item').filter({ hasText: 'Larga Test' }).first().click();
+    await expect(page.locator('.task-item-wrapper[data-task-id="long_1"]')).toBeVisible();
+  }
+
+  test('con el ratón, la lista baja sola y la primera tarea acaba la última', async ({ page }) => {
+    test.skip(test.info().project.name !== 'chromium', 'Arrastre con ratón (HTML5) solo en escritorio');
+    await ensureAppUnlocked(page);
+    await seedLong(page);
+    // Eventos de arrastre reales del navegador: la emulación de Playwright pierde el «drop» si la
+    // fila de origen sale de la pantalla durante el desplazamiento.
+    const result = await page.evaluate(async () => {
+      const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+      const dt = new DataTransfer();
+      const handle = document.querySelector('.task-item-wrapper[data-task-id="long_1"] .task-drag-handle') as HTMLElement;
+      const hr = handle.getBoundingClientRect();
+      handle.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt, clientX: hr.x + 5, clientY: hr.y + 5 }));
+      const scroller = document.querySelector('.content-scroll') as HTMLElement;
+      const y = innerHeight - 20;
+      for (let k = 0; k < 60 && scroller.scrollTop < scroller.scrollHeight - scroller.clientHeight - 1; k++) {
+        (document.elementFromPoint(innerWidth / 2, y) || document.body).dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt, clientX: innerWidth / 2, clientY: y }));
+        await sleep(50);
+      }
+      const scrolled = scroller.scrollTop;
+      const row = document.querySelector('.task-item-wrapper[data-task-id="long_sub"]') as HTMLElement;
+      const r = row.getBoundingClientRect();
+      const cy = r.top + r.height * 0.85;
+      for (let k = 0; k < 3; k++) { row.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt, clientX: innerWidth / 2, clientY: cy })); await sleep(60); }
+      row.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt, clientX: innerWidth / 2, clientY: cy }));
+      handle.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: dt }));
+      await sleep(300);
+      return { scrolled };
+    });
+    expect(result.scrolled).toBeGreaterThan(200);
+    const moved = await page.evaluate(() => {
+      const task = (window as any).useAppStore.getState().tasks['long_1'];
+      const ids = Array.from(document.querySelectorAll('.task-item-wrapper[data-task-id]')).map(w => w.getAttribute('data-task-id'));
+      return { parentId: task.parentId ?? null, sectionId: task.sectionId, last: ids[ids.length - 1] };
+    });
+    expect(moved).toEqual({ parentId: null, sectionId: 'sec_long_b', last: 'long_1' });
+  });
+});

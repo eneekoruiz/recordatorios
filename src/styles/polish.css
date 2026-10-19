@@ -795,6 +795,18 @@ input:focus, input:focus-visible, textarea:focus, textarea:focus-visible {
   pointer-events: none;
 }
 
+/* La copia que sigue al dedo no debe recibir nada: si no, tapa la fila que hay debajo. */
+[data-touch-drag-ghost], [data-touch-drag-ghost] *,
+[data-section-drag-ghost], [data-section-drag-ghost] * {
+  pointer-events: none !important;
+}
+
+/* Una tarea arrastrada con el dedo sobre la cabecera de una sección: pasará a esa sección. */
+.group-header[data-task-drop-section='true'] {
+  box-shadow: inset 0 0 0 2px var(--accent-primary, #007aff) !important;
+  border-radius: 8px;
+}
+
 /* Mismo gesto para secciones arrastradas con el dedo (antes no tenía ningún indicador). */
 .group-header[data-section-drag-over='top'] {
   margin-top: 24px !important;

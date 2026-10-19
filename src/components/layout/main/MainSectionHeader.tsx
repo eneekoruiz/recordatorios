@@ -7,7 +7,7 @@ import { formatSummaryDuration, type TasksDurationSummary } from '../../../utils
 import { isShoppingList, isLifeLibraryList } from '../../../utils/specialLists';
 import { useAppStore } from '../../../store/useAppStore';
 import { formatEuro } from '../../../utils/format';
-import { classifyDropZone, DRAG_MOVE_THRESHOLD_PX } from '../../../utils/dragDrop';
+import { classifyDropZone, DRAG_MOVE_THRESHOLD_PX, createEdgeAutoScroll, findScrollableParent, relativeYInRow, dropTargetAt } from '../../../utils/dragDrop';
 import { MetaSplit, MONEY_COLOR } from '../../ui/MetaSplit';
 import { routinePeriodLabel, type RoutinePart } from '../../../utils/routineBreakdown';
 import { getPeriodContextLabel } from '../../../utils/sectionRoutine';
@@ -208,9 +208,6 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   }
   const [isPressed, setIsPressed] = useState(false);
   const [sectionDragOverPos, setSectionDragOverPos] = useState<'top' | 'bottom' | 'inside' | null>(null);
-  // Congela el alto de la fila al entrar: si no, el propio hueco que se abre (DROP_GAP_PX)
-  // cambiaría el rect en cada evento y podría oscilar entre zonas.
-  const sectionDragOverRectRef = useRef<DOMRect | null>(null);
   const didSectionLongPressRef = useRef(false);
   const sectionTouchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -298,6 +295,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       if (!rowRef.current) return;
       const cloned = rowRef.current.cloneNode(true) as HTMLDivElement;
       cloned.querySelectorAll('[data-section-drag-ghost]').forEach(el => el.remove());
+      cloned.removeAttribute('data-section-drag-key');
+      cloned.removeAttribute('data-section-drag-over');
       const ghost = document.createElement('div');
       ghost.setAttribute('data-section-drag-ghost', 'true');
       ghost.style.cssText = `
@@ -322,6 +321,35 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       HapticService.impact('medium');
     };
 
+    // Objetivo estable: la cabecera bajo el dedo, conservada mientras siga en ella o en su hueco
+    // (el hueco la desplaza; recalcular por rectángulos hacía que el objetivo saltase).
+    // Objetivo estable: la cabecera bajo el dedo, conservada mientras siga en ella o en su hueco.
+    let target: HTMLElement | null = null;
+    let lastX = startX;
+    let lastY = startY;
+    const clearTarget = () => {
+      target?.removeAttribute('data-section-drag-over');
+      target = null;
+    };
+    const updateTarget = () => {
+      let next: HTMLElement | null = null;
+      if (target?.isConnected) {
+        const rel = relativeYInRow(target, lastY);
+        const slack = 26 / target.getBoundingClientRect().height;
+        if (rel >= -slack && rel <= 1 + slack) next = target;
+      }
+      if (!next) {
+        next = dropTargetAt(lastX, lastY, '[data-section-drag-key]');
+        if (next?.getAttribute('data-section-drag-key') === sectionId) next = null;
+      }
+      if (next !== target) clearTarget();
+      target = next;
+      if (!target) return;
+      const zone = classifyDropZone(relativeYInRow(target, lastY));
+      if (target.getAttribute('data-section-drag-over') !== zone) target.setAttribute('data-section-drag-over', zone);
+    };
+    const autoScroll = createEdgeAutoScroll(findScrollableParent(rowRef.current), updateTarget);
+
     const onMove = (ev: TouchEvent) => {
       const t = ev.touches[0];
       ev.preventDefault();
@@ -332,22 +360,15 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       if (touchSectionGhostRef.current) {
         touchSectionGhostRef.current.style.top = `${t.clientY - rect.height / 2}px`;
       }
-      document.querySelectorAll<HTMLElement>('[data-section-drag-key]').forEach((el) => {
-        if (el.getAttribute('data-section-drag-key') === sectionId) {
-          el.removeAttribute('data-section-drag-over');
-          return;
-        }
-        const elRect = el.getBoundingClientRect();
-        if (t.clientY >= elRect.top && t.clientY <= elRect.bottom) {
-          const relY = (t.clientY - elRect.top) / elRect.height;
-          el.setAttribute('data-section-drag-over', classifyDropZone(relY));
-        } else {
-          el.removeAttribute('data-section-drag-over');
-        }
-      });
+      lastX = t.clientX;
+      lastY = t.clientY;
+      autoScroll.update(lastY);
+      updateTarget();
     };
 
     const cleanup = () => {
+      autoScroll.stop();
+      clearTarget();
       document.removeEventListener('touchmove', onMove);
       if (touchSectionGhostRef.current) {
         document.body.removeChild(touchSectionGhostRef.current);
@@ -362,15 +383,9 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
       const wasActive = touchSectionDragActiveRef.current;
       let targetId: string | null = null;
       let dropAction: 'top' | 'bottom' | 'inside' = 'top';
-      if (wasActive) {
-        const candidates = Array.from(document.querySelectorAll<HTMLElement>('[data-section-drag-key]'));
-        for (const el of candidates) {
-          const attr = el.getAttribute('data-section-drag-over');
-          if (attr) {
-            targetId = el.getAttribute('data-section-drag-key');
-            dropAction = attr as 'top' | 'bottom' | 'inside';
-          }
-        }
+      if (wasActive && target) {
+        targetId = target.getAttribute('data-section-drag-key');
+        dropAction = (target.getAttribute('data-section-drag-over') as 'top' | 'bottom' | 'inside' | null) || 'top';
       }
       cleanup();
       touchSectionDragActiveRef.current = false;
@@ -511,19 +526,13 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           e.preventDefault();
           e.stopPropagation();
           e.dataTransfer.dropEffect = 'move';
-          if (!sectionDragOverRectRef.current) {
-            sectionDragOverRectRef.current = e.currentTarget.getBoundingClientRect();
-          }
-          const rect = sectionDragOverRectRef.current;
-          const relY = (e.clientY - rect.top) / rect.height;
-          setSectionDragOverPos(classifyDropZone(relY));
+          setSectionDragOverPos(classifyDropZone(relativeYInRow(e.currentTarget as HTMLElement, e.clientY)));
         } else if (isCustomSection) {
           e.preventDefault();
           setDragOverSectionId(data.sectionId!);
         }
       }}
       onDragLeave={() => {
-        sectionDragOverRectRef.current = null;
         setSectionDragOverPos(null);
         if (isCustomSection) setDragOverSectionId(null);
       }}
@@ -531,7 +540,6 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         e.preventDefault();
         e.stopPropagation();
         const curDragPos = sectionDragOverPos;
-        sectionDragOverRectRef.current = null;
         setSectionDragOverPos(null);
         setDragOverSectionId(null);
 
