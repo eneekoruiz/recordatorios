@@ -72,12 +72,17 @@ const AUTO_SCROLL_MAX_PX = 18;
 export function createEdgeAutoScroll(scroller: HTMLElement | Window, onScroll?: () => void) {
   let speed = 0;
   let raf = 0;
+  // La lista tiene scroll-behavior: smooth y cada paso suave anularía al anterior. Se fuerza «auto»
+  // mientras dura el arrastre (en vez de scrollBy({ behavior: 'instant' }), que Safari no siempre admite).
+  const target = scroller === window ? document.documentElement : (scroller as HTMLElement);
+  const previousBehavior = target.style.scrollBehavior;
+  target.style.scrollBehavior = 'auto';
   const step = () => {
     raf = 0;
     if (!speed) return;
     const before = scrollTopOf(scroller);
-    // «instant»: la lista tiene scroll-behavior: smooth, y cada paso suave anularía al anterior.
-    scroller.scrollBy({ top: speed, behavior: 'instant' });
+    if (scroller === window) window.scrollTo(0, before + speed);
+    else (scroller as HTMLElement).scrollTop = before + speed;
     if (scrollTopOf(scroller) !== before) onScroll?.();
     raf = requestAnimationFrame(step);
   };
@@ -96,7 +101,53 @@ export function createEdgeAutoScroll(scroller: HTMLElement | Window, onScroll?: 
       speed = 0;
       if (raf) cancelAnimationFrame(raf);
       raf = 0;
+      target.style.scrollBehavior = previousBehavior;
     },
+  };
+}
+
+/**
+ * iOS (WebKit) decide al empezar el toque si la página puede desplazarse por su cuenta: si en ese
+ * momento no hay ninguna escucha `touchmove` no pasiva bajo el dedo, el scroll nativo corre en paralelo
+ * y un preventDefault posterior ya no lo para (React registra las suyas como pasivas). Por eso, al
+ * arrastrar un recordatorio hacia abajo la lista subía, y al revés. Esta escucha vive en la fila desde
+ * el principio y solo cancela el scroll cuando la pulsación larga ya ha «armado» el arrastre.
+ */
+export function guardNativeScroll(el: HTMLElement, isArmed: () => boolean): () => void {
+  const onMove = (event: TouchEvent) => {
+    if (isArmed() && event.cancelable) event.preventDefault();
+  };
+  el.addEventListener('touchmove', onMove, { passive: false });
+  return () => el.removeEventListener('touchmove', onMove);
+}
+
+/**
+ * Copia que sigue al dedo, como al reordenar en Recordatorios de iOS: opaca, levantada con una sombra
+ * suave y sujeta por el mismo punto por el que se cogió (no salta a centrarse bajo el dedo).
+ */
+export function createDragGhost(source: HTMLElement, pointerY: number, stripAttributes: string[] = []) {
+  const rect = source.getBoundingClientRect();
+  const grabOffset = Math.min(Math.max(pointerY - rect.top, 0), rect.height);
+  const clone = source.cloneNode(true) as HTMLElement;
+  for (const attribute of [...stripAttributes, 'data-touch-drag-over', 'data-section-drag-over', 'data-task-drop-section', 'data-drag-over-pos']) {
+    clone.removeAttribute(attribute);
+  }
+  clone.style.margin = '0';
+  clone.style.opacity = '1';
+  const ghost = document.createElement('div');
+  ghost.setAttribute('data-drag-ghost', 'true');
+  ghost.className = 'drag-ghost';
+  ghost.style.left = `${rect.left}px`;
+  ghost.style.width = `${rect.width}px`;
+  ghost.style.height = `${rect.height}px`;
+  ghost.style.top = `${pointerY - grabOffset}px`;
+  ghost.appendChild(clone);
+  document.body.appendChild(ghost);
+  // Un fotograma después: así la transición de «levantar» (escala y sombra) se ve.
+  requestAnimationFrame(() => ghost.classList.add('is-lifted'));
+  return {
+    move(y: number) { ghost.style.top = `${y - grabOffset}px`; },
+    remove() { ghost.remove(); },
   };
 }
 

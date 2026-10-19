@@ -796,10 +796,30 @@ input:focus, input:focus-visible, textarea:focus, textarea:focus-visible {
 }
 
 /* La copia que sigue al dedo no debe recibir nada: si no, tapa la fila que hay debajo. */
-[data-touch-drag-ghost], [data-touch-drag-ghost] *,
-[data-section-drag-ghost], [data-section-drag-ghost] * {
+[data-drag-ghost], [data-drag-ghost] * {
   pointer-events: none !important;
 }
+/* La fila que sigue al dedo: opaca y «levantada» como en Recordatorios de iOS (sombra suave y una
+   leve escala, sin anillo de color). La transición solo anima el levantamiento. */
+.drag-ghost {
+  position: fixed;
+  z-index: 2147483000;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--bg-elevated, #ffffff);
+  box-shadow: 0 0 0 0.5px var(--separator-hair, rgba(60, 60, 67, 0.18));
+  transform: scale(1);
+  transform-origin: center;
+  transition: transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 160ms ease;
+  will-change: top, transform;
+}
+.drag-ghost.is-lifted {
+  transform: scale(1.025);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.18), 0 3px 8px rgba(0, 0, 0, 0.10), 0 0 0 0.5px var(--separator-hair, rgba(60, 60, 67, 0.18));
+}
+[data-theme="dark"] .drag-ghost, html.dark .drag-ghost { background: #2c2c2e; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .drag-ghost { background: #2c2c2e; } }
+@media (prefers-reduced-motion: reduce) { .drag-ghost { transition: none; } }
 
 /* Una tarea arrastrada con el dedo sobre la cabecera de una sección: pasará a esa sección. */
 .group-header[data-task-drop-section='true'] {

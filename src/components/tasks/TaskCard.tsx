@@ -29,7 +29,7 @@ import { TaskHabitCounter } from './card/TaskHabitCounter';
 import { TaskNoteEditor } from './card/TaskNoteEditor';
 import { getTaskPeriodicity, getSectionPeriodicity, stripPeriodicityPrefix, getEffectiveCycleId } from '../../utils/sectionRoutine';
 import { extractPrice } from '../../utils/priceExtractor';
-import { classifyDropZone, DROP_GAP_PX, createEdgeAutoScroll, findScrollableParent, relativeYInRow, dropTargetAt } from '../../utils/dragDrop';
+import { classifyDropZone, DROP_GAP_PX, createEdgeAutoScroll, findScrollableParent, relativeYInRow, dropTargetAt, guardNativeScroll, createDragGhost } from '../../utils/dragDrop';
 
 interface TaskCardProps {
   task: TaskItem;
@@ -179,10 +179,17 @@ export const TaskCard = React.memo(function TaskCard({
 
   // ── Touch drag-to-reorder (long press → drag, no handle needed) ──────────
   const [isDraggingTouch, setIsDraggingTouch] = useState(false);
-  const touchDragGhostRef = useRef<HTMLDivElement | null>(null);
+  const touchDragGhostRef = useRef<ReturnType<typeof createDragGhost> | null>(null);
   const touchDragActiveRef = useRef(false); // true once finger moves after long-press lift
   const touchDragLiftedRef = useRef(false); // true after 380ms (card "lifted", waiting to see if drag or menu)
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  // iOS: sin esta escucha no pasiva desde el principio del toque, el scroll nativo acompañaba al
+  // arrastre (y en sentido contrario al dedo). Solo actúa con la pulsación larga ya armada.
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    return guardNativeScroll(el, () => touchDragLiftedRef.current || touchDragActiveRef.current);
+  }, []);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -640,32 +647,8 @@ export const TaskCard = React.memo(function TaskCard({
     touchDragLiftedRef.current = true;
     touchDragActiveRef.current = true;
 
-    const rect = wrapperRef.current.getBoundingClientRect();
-    const cloned = wrapperRef.current.cloneNode(true) as HTMLDivElement;
-    cloned.removeAttribute('data-touch-drag-over');
     // La copia flota bajo el dedo: sin identificador para que nunca cuente como fila de destino.
-    cloned.removeAttribute('data-task-id');
-    cloned.querySelectorAll('[data-touch-drag-ghost]').forEach(el => el.remove());
-    const ghost = document.createElement('div');
-    ghost.setAttribute('data-touch-drag-ghost', 'true');
-    ghost.style.cssText = `
-      position:fixed;
-      left:${rect.left}px;
-      top:${startY - rect.height / 2}px;
-      width:${rect.width}px;
-      height:${rect.height}px;
-      pointer-events:none;
-      z-index:999999;
-      border-radius:12px;
-      box-shadow:0 14px 40px rgba(0,0,0,0.32), 0 0 0 2px var(--accent-primary,#007aff);
-      opacity:0.96;
-      transform:scale(1.03);
-      overflow:hidden;
-      background: var(--bg-surface, #ffffff);
-    `;
-    ghost.appendChild(cloned);
-    document.body.appendChild(ghost);
-    touchDragGhostRef.current = ghost;
+    touchDragGhostRef.current = createDragGhost(wrapperRef.current, startY, ['data-task-id']);
     setIsDraggingTouch(true);
     HapticService.impact('medium');
 
@@ -709,26 +692,31 @@ export const TaskCard = React.memo(function TaskCard({
     const onMove = (ev: TouchEvent) => {
       const t = ev.touches[0];
       ev.preventDefault();
-      if (touchDragGhostRef.current) {
-        touchDragGhostRef.current.style.top = `${t.clientY - rect.height / 2}px`;
-      }
+      touchDragGhostRef.current?.move(t.clientY);
       lastX = t.clientX;
       lastY = t.clientY;
       autoScroll.update(lastY);
       updateTarget();
     };
 
-    const onEnd = (_ev: TouchEvent) => {
+    // Un solo final para soltar y para cancelar: quita las tres escuchas a la vez (con «once» por
+    // separado, la que no se disparaba quedaba viva y actuaba en un toque posterior).
+    const finish = (commit: boolean) => {
       autoScroll.stop();
       document.removeEventListener('touchmove', onMove);
-      if (touchDragGhostRef.current) {
-        document.body.removeChild(touchDragGhostRef.current);
-        touchDragGhostRef.current = null;
-      }
+      document.removeEventListener('touchend', onEnd);
+      document.removeEventListener('touchcancel', onCancel);
+      touchDragGhostRef.current?.remove();
+      touchDragGhostRef.current = null;
       setIsDraggingTouch(false);
       touchDragLiftedRef.current = false;
       document.body.style.overflow = '';
       x.set(0);
+      if (!commit) {
+        clearTarget();
+        touchDragActiveRef.current = false;
+        return;
+      }
 
       const targetId = target?.getAttribute('data-task-id') || null;
       const targetSectionId = target?.getAttribute('data-section-drag-key') || null;
@@ -749,24 +737,13 @@ export const TaskCard = React.memo(function TaskCard({
       }
       touchDragActiveRef.current = false;
     };
+    const onEnd = () => finish(true);
+    const onCancel = () => finish(false);
 
     document.body.style.overflow = 'hidden';
     document.addEventListener('touchmove', onMove, { passive: false });
-    document.addEventListener('touchend', onEnd, { once: true });
-    document.addEventListener('touchcancel', () => {
-      autoScroll.stop();
-      document.removeEventListener('touchmove', onMove);
-      if (touchDragGhostRef.current) {
-        document.body.removeChild(touchDragGhostRef.current);
-        touchDragGhostRef.current = null;
-      }
-      clearTarget();
-      setIsDraggingTouch(false);
-      touchDragLiftedRef.current = false;
-      touchDragActiveRef.current = false;
-      document.body.style.overflow = '';
-      x.set(0);
-    }, { once: true });
+    document.addEventListener('touchend', onEnd);
+    document.addEventListener('touchcancel', onCancel);
   }, [onReorderTasks, task.id, nestTask, x]);
 
   return (

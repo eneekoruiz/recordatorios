@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { MoreHorizontal, ChevronDown, Check, Plus, Play } from 'lucide-react';
 import { DurationInfoCard } from '../../ui/DurationInfoCard';
 import { HapticService } from '../../../services/HapticService';
@@ -7,7 +7,7 @@ import { formatSummaryDuration, type TasksDurationSummary } from '../../../utils
 import { isShoppingList, isLifeLibraryList } from '../../../utils/specialLists';
 import { useAppStore } from '../../../store/useAppStore';
 import { formatEuro } from '../../../utils/format';
-import { classifyDropZone, DRAG_MOVE_THRESHOLD_PX, createEdgeAutoScroll, findScrollableParent, relativeYInRow, dropTargetAt } from '../../../utils/dragDrop';
+import { classifyDropZone, DRAG_MOVE_THRESHOLD_PX, createEdgeAutoScroll, findScrollableParent, relativeYInRow, dropTargetAt, guardNativeScroll, createDragGhost } from '../../../utils/dragDrop';
 import { MetaSplit, MONEY_COLOR } from '../../ui/MetaSplit';
 import { routinePeriodLabel, type RoutinePart } from '../../../utils/routineBreakdown';
 import { getPeriodContextLabel } from '../../../utils/sectionRoutine';
@@ -218,7 +218,14 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   const moreBtnRef = useRef<HTMLButtonElement>(null);
   // Arrastrar con el dedo (mantener pulsado se «arma»; mover de verdad arrastra, quieto abre el menú)
   const [isDraggingTouchSection, setIsDraggingTouchSection] = useState(false);
-  const touchSectionGhostRef = useRef<HTMLDivElement | null>(null);
+  const touchSectionGhostRef = useRef<ReturnType<typeof createDragGhost> | null>(null);
+  // Armado tras la pulsación larga: desde ahí se cancela el scroll nativo de iOS (ver guardNativeScroll).
+  const sectionTouchArmedRef = useRef(false);
+  useEffect(() => {
+    const el = rowRef.current;
+    if (!el) return;
+    return guardNativeScroll(el, () => sectionTouchArmedRef.current || touchSectionDragActiveRef.current);
+  }, []);
   const touchSectionDragActiveRef = useRef(false);
   const getRowRect = useCallback(() => {
     if (!rowRef.current) return undefined;
@@ -292,41 +299,17 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   const startSectionTouchDrag = useCallback((startY: number, startX: number) => {
     const sectionId = data.sectionId;
     if (!sectionId || !rowRef.current) return;
-    const rect = rowRef.current.getBoundingClientRect();
+    sectionTouchArmedRef.current = true;
 
     const createGhost = () => {
       if (!rowRef.current) return;
-      const cloned = rowRef.current.cloneNode(true) as HTMLDivElement;
-      cloned.querySelectorAll('[data-section-drag-ghost]').forEach(el => el.remove());
-      cloned.removeAttribute('data-section-drag-key');
-      cloned.removeAttribute('data-section-drag-over');
-      const ghost = document.createElement('div');
-      ghost.setAttribute('data-section-drag-ghost', 'true');
-      ghost.style.cssText = `
-        position:fixed;
-        left:${rect.left}px;
-        top:${startY - rect.height / 2}px;
-        width:${rect.width}px;
-        height:${rect.height}px;
-        pointer-events:none;
-        z-index:999999;
-        border-radius:12px;
-        box-shadow:0 10px 36px rgba(0,0,0,0.28),0 0 0 2px ${data.color || 'var(--accent-primary,#007aff)'};
-        opacity:0.95;
-        transform:scale(1.02);
-        overflow:hidden;
-        background:var(--bg-base);
-      `;
-      ghost.appendChild(cloned);
-      document.body.appendChild(ghost);
-      touchSectionGhostRef.current = ghost;
+      touchSectionGhostRef.current = createDragGhost(rowRef.current, startY, ['data-section-drag-key']);
       setIsDraggingTouchSection(true);
       HapticService.impact('medium');
     };
 
     // Objetivo estable: la cabecera bajo el dedo, conservada mientras siga en ella o en su hueco
     // (el hueco la desplaza; recalcular por rectángulos hacía que el objetivo saltase).
-    // Objetivo estable: la cabecera bajo el dedo, conservada mientras siga en ella o en su hueco.
     let target: HTMLElement | null = null;
     let lastX = startX;
     let lastY = startY;
@@ -355,43 +338,39 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
 
     const onMove = (ev: TouchEvent) => {
       const t = ev.touches[0];
-      ev.preventDefault();
+      if (ev.cancelable) ev.preventDefault();
       const moved = Math.abs(t.clientY - startY) > DRAG_MOVE_THRESHOLD_PX || Math.abs(t.clientX - startX) > DRAG_MOVE_THRESHOLD_PX;
       if (!moved && !touchSectionDragActiveRef.current) return;
       if (!touchSectionDragActiveRef.current) createGhost();
       touchSectionDragActiveRef.current = true;
-      if (touchSectionGhostRef.current) {
-        touchSectionGhostRef.current.style.top = `${t.clientY - rect.height / 2}px`;
-      }
+      touchSectionGhostRef.current?.move(t.clientY);
       lastX = t.clientX;
       lastY = t.clientY;
       autoScroll.update(lastY);
       updateTarget();
     };
 
-    const cleanup = () => {
-      autoScroll.stop();
-      clearTarget();
-      document.removeEventListener('touchmove', onMove);
-      if (touchSectionGhostRef.current) {
-        document.body.removeChild(touchSectionGhostRef.current);
-        touchSectionGhostRef.current = null;
-      }
-      document.querySelectorAll<HTMLElement>('[data-section-drag-over]').forEach(el => el.removeAttribute('data-section-drag-over'));
-      setIsDraggingTouchSection(false);
-      document.body.style.overflow = '';
-    };
-
-    const onEnd = () => {
+    // Un solo final para soltar y para cancelar, que quita todas las escuchas a la vez.
+    const finish = (commit: boolean) => {
       const wasActive = touchSectionDragActiveRef.current;
       let targetId: string | null = null;
       let dropAction: 'top' | 'bottom' | 'inside' = 'top';
-      if (wasActive && target) {
+      if (commit && wasActive && target) {
         targetId = target.getAttribute('data-section-drag-key');
         dropAction = (target.getAttribute('data-section-drag-over') as 'top' | 'bottom' | 'inside' | null) || 'top';
       }
-      cleanup();
+      autoScroll.stop();
+      clearTarget();
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onEnd);
+      document.removeEventListener('touchcancel', onCancel);
+      touchSectionGhostRef.current?.remove();
+      touchSectionGhostRef.current = null;
+      setIsDraggingTouchSection(false);
+      document.body.style.overflow = '';
       touchSectionDragActiveRef.current = false;
+      sectionTouchArmedRef.current = false;
+      if (!commit) return;
 
       if (wasActive) {
         if (targetId && targetId !== sectionId) {
@@ -407,15 +386,14 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         openSectionMenu();
       }
     };
+    const onEnd = () => finish(true);
+    const onCancel = () => finish(false);
 
     document.body.style.overflow = 'hidden';
     document.addEventListener('touchmove', onMove, { passive: false });
-    document.addEventListener('touchend', onEnd, { once: true });
-    document.addEventListener('touchcancel', () => {
-      touchSectionDragActiveRef.current = false;
-      cleanup();
-    }, { once: true });
-  }, [data.sectionId, data.color, onReorderSections, openSectionMenu]);
+    document.addEventListener('touchend', onEnd);
+    document.addEventListener('touchcancel', onCancel);
+  }, [data.sectionId, onReorderSections, openSectionMenu]);
 
   const isTopLevel = data.depth === 0;
   const isExpanded = !isCatCollapsed(data.category);
