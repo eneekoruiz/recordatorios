@@ -639,7 +639,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
         <div style={{ width: '100%', maxWidth: 720, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
           {/* List name + progress + total time */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: listColor, fontSize: '0.82rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: listColor, fontSize: '0.82rem', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               <ListChecks size={16} style={{ flexShrink: 0 }} />
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listName}</span>
             </div>
@@ -739,7 +739,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
               style={{ textAlign: 'center', maxWidth: 660, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', margin: 'auto 0', gap: 0 }}
             >
               {/* Step indicator */}
-              <div style={{ fontSize: '0.8rem', color: isDark ? 'rgba(255,255,255,0.5)' : 'var(--text-tertiary, #8e8e93)', fontWeight: 600, marginBottom: 8, letterSpacing: '0.04em', fontVariantNumeric: 'tabular-nums' }}>
+              <div style={{ fontSize: '0.8rem', color: isDark ? 'rgba(255,255,255,0.5)' : 'var(--text-tertiary, #8e8e93)', fontWeight: 600, marginBottom: 8, fontVariantNumeric: 'tabular-nums' }}>
                 {index + 1} de {activeTaskIds.length} {activeTaskIds.length === 1 ? 'tarea' : 'tareas'}
               </div>
 
@@ -944,7 +944,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginRight: 'auto', paddingLeft: 4 }}>
                   <Sparkles size={13} color={listColor} />
-                  <span style={{ fontSize: '0.72rem', color: isDark ? 'rgba(255,255,255,0.4)' : 'var(--text-tertiary, #8e8e93)', fontWeight: 700, letterSpacing: '0.04em' }}>SONIDO</span>
+                  <span style={{ fontSize: '0.72rem', color: isDark ? 'rgba(255,255,255,0.4)' : 'var(--text-tertiary, #8e8e93)', fontWeight: 700, }}>SONIDO</span>
                   {ambient !== 'off' && isActive && (
                     <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 11, marginLeft: 2 }}>
                       <span className="equalizer-bar" style={{ width: 2, background: listColor, borderRadius: 1, height: 5, animation: 'equalizerPulse 0.9s ease-in-out infinite alternate' }} />

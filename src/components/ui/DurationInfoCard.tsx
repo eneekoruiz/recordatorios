@@ -321,7 +321,7 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
 
                 {/* Métricas al lado del anillo */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 650, color: 'var(--text-tertiary, #8e8e93)' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 650, color: 'var(--text-tertiary, #8e8e93)' }}>
                     Tiempo activo restante
                   </span>
                   <div style={{ fontSize: '1.55rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: color, letterSpacing: '-0.03em', lineHeight: 1.15, marginTop: 1 }}>
@@ -347,8 +347,6 @@ export const DurationInfoCard: React.FC<DurationInfoCardProps> = ({
                       margin: '0 0 8px 12px',
                       fontSize: '0.82rem',
                       fontWeight: 600,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.04em',
                       color: 'var(--text-secondary, #8e8e93)'
                     }}
                   >

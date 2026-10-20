@@ -91,7 +91,7 @@ export const DrawerLibrarySection: React.FC<DrawerLibrarySectionProps> = ({
             <div className="section-card-content" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* 1. Selector de Tipo de Obra */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 650, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 650, color: 'var(--text-tertiary)', marginBottom: 6 }}>
                   Tipo de contenido
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
@@ -136,7 +136,7 @@ export const DrawerLibrarySection: React.FC<DrawerLibrarySectionProps> = ({
 
               {/* 2. Selector de Estado de Consumo */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 650, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 650, color: 'var(--text-tertiary)', marginBottom: 6 }}>
                   Estado
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
@@ -182,7 +182,7 @@ export const DrawerLibrarySection: React.FC<DrawerLibrarySectionProps> = ({
               {/* 3. Valoración Personal (Estrellas) */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <label style={{ fontSize: '0.74rem', fontWeight: 650, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <label style={{ fontSize: '0.74rem', fontWeight: 650, color: 'var(--text-tertiary)', }}>
                     Tu valoración
                   </label>
                   {mediaRating > 0 && (
@@ -228,7 +228,7 @@ export const DrawerLibrarySection: React.FC<DrawerLibrarySectionProps> = ({
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
                 {/* Plataforma */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 650, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+                  <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 650, color: 'var(--text-tertiary)', marginBottom: 6 }}>
                     Plataforma / Dónde
                   </label>
                   <input
@@ -274,7 +274,7 @@ export const DrawerLibrarySection: React.FC<DrawerLibrarySectionProps> = ({
 
                 {/* Progreso (Temporada/Episodio o Página) */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 650, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+                  <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 650, color: 'var(--text-tertiary)', marginBottom: 6 }}>
                     {isBook ? 'Páginas / Capítulo' : mediaType === 'series' ? 'Temporada / Episodio' : 'Edición / Versión'}
                   </label>
                   <input
@@ -297,7 +297,7 @@ export const DrawerLibrarySection: React.FC<DrawerLibrarySectionProps> = ({
 
               {/* 5. Recomendado por */}
               <div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.74rem', fontWeight: 650, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.74rem', fontWeight: 650, color: 'var(--text-tertiary)', marginBottom: 6 }}>
                   <Sparkles size={12} color="var(--accent-primary)" /> Recomendado por
                 </label>
                 <input
@@ -319,7 +319,7 @@ export const DrawerLibrarySection: React.FC<DrawerLibrarySectionProps> = ({
 
               {/* 6. Tus notas y comentarios */}
               <div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.74rem', fontWeight: 650, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.74rem', fontWeight: 650, color: 'var(--text-tertiary)', marginBottom: 6 }}>
                   <MessageSquare size={12} /> Comentarios personales
                 </label>
                 <textarea

@@ -182,7 +182,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
       >
         {/* Top Header Bar */}
         <div style={{ width: '100%', maxWidth: 760, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--accent-primary, #0a84ff)', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--accent-primary, #0a84ff)', fontSize: '0.9rem', fontWeight: 700, }}>
             <Sparkles size={16} /> Modo Enfoque Zen
           </div>
 
@@ -541,7 +541,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
               gap: 10
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Headphones size={15} color="var(--accent-primary, #0a84ff)" /> SONIDO AMBIENTAL ZEN
                 </span>
                 {ambientType !== 'off' && isActive && (

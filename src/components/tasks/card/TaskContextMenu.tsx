@@ -636,7 +636,7 @@ function MenuActions({
 
           <div className="ios-dropdown-divider" />
 
-          <div style={{ padding: '6px 12px 2px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+          <div style={{ padding: '6px 12px 2px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-tertiary)', }}>
             Preajustes rápidos
           </div>
 

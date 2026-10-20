@@ -344,12 +344,10 @@ export const ApplePeriodNavigator: React.FC<ApplePeriodNavigatorProps> = ({
               style={{
                 fontSize: '0.66rem',
                 fontWeight: 700,
-                textTransform: 'uppercase',
                 padding: '1px 5px',
                 borderRadius: 999,
                 background: `color-mix(in srgb, ${viewColor} 20%, transparent)`,
                 color: viewColor,
-                letterSpacing: '0.02em',
                 lineHeight: 1
               }}
             >

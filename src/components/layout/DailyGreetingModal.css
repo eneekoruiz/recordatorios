@@ -85,8 +85,6 @@
 .greeting-date {
   font-size: 0.72rem;
   font-weight: 650;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   color: var(--text-tertiary);
 }
 .greeting-title {
@@ -113,8 +111,6 @@
   margin-bottom: 4px;
   font-size: 0.70rem;
   font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
   color: var(--text-tertiary);
 }
 .greeting-task {

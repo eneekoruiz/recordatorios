@@ -289,7 +289,7 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
               {/* Secciones en la lista actual */}
               {sections && sections.filter(s => s.id !== sectionMenu.sectionId && !s.deleted_at).length > 0 && (
                 <>
-                  <div style={{ padding: '4px 10px 2px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>
+                  <div style={{ padding: '4px 10px 2px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-tertiary)', }}>
                     En esta lista
                   </div>
                   {sections
@@ -317,7 +317,7 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
               )}
 
               {/* Otras listas disponibles */}
-              <div style={{ padding: '4px 10px 2px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>
+              <div style={{ padding: '4px 10px 2px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-tertiary)', }}>
                 Otras listas
               </div>
               {lists?.map(l => (

@@ -180,8 +180,6 @@
 /* Section titles */
 .section-title {
   font-size: 0.76rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   color: var(--text-secondary);
   font-weight: 600;
   margin-top: 4px;

@@ -292,8 +292,6 @@ export const RoutineDiagnosticModal: React.FC<RoutineDiagnosticModalProps> = ({
                 style={{
                   fontSize: '0.74rem',
                   fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
                   color: 'var(--text-tertiary)',
                   paddingLeft: 2,
                 }}

@@ -221,7 +221,6 @@
   font-size: 0.7rem;
   font-weight: 600;
   color: var(--text-secondary);
-  text-transform: uppercase;
   letter-spacing: 1px;
   padding: 0 12px;
   margin-bottom: 8px;
@@ -521,9 +520,7 @@
 .section-header {
   color: var(--text-tertiary);
   font-size: 0.75rem;
-  letter-spacing: 0.1em;
   font-weight: 700;
-  text-transform: uppercase;
 }
 
 .ios-smart-card {
@@ -751,8 +748,6 @@
   color: var(--accent-primary);
   font-size: 0.85rem;
   font-weight: 800;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
 }
 .content-kicker::before {
   content: "";

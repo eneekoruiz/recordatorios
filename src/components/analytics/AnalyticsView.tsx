@@ -164,9 +164,10 @@ export function AnalyticsView({ onBack, onOpenTask }: AnalyticsViewProps) {
   const maxDaily = Math.max(1, ...days.map((d) => d.count));
   const chartSummary = days.map((d) => `${weekday(d.day)}: ${plural(d.count, 'completada')}`).join(', ');
 
+  // Sin entrada escalonada: las tarjetas no se mueven al abrir (el movimiento solo responde a una acción).
   const itemAnim = {
-    hidden: { opacity: 0, y: 12 },
-    show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 320, damping: 28 } }
+    hidden: { opacity: 1 },
+    show: { opacity: 1 }
   };
 
   const getListName = (categoryId?: string) => {
@@ -353,8 +354,6 @@ export function AnalyticsView({ onBack, onOpenTask }: AnalyticsViewProps) {
                       fontSize: '0.74rem',
                       fontWeight: 650,
                       color: 'var(--accent-orange, #ff9500)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.04em',
                       marginBottom: 6,
                       display: 'flex',
                       alignItems: 'center',
@@ -398,8 +397,6 @@ export function AnalyticsView({ onBack, onOpenTask }: AnalyticsViewProps) {
                       fontSize: '0.74rem',
                       fontWeight: 650,
                       color: '#34c759',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.04em',
                       marginBottom: 6,
                       display: 'flex',
                       alignItems: 'center',
@@ -618,14 +615,13 @@ export function AnalyticsView({ onBack, onOpenTask }: AnalyticsViewProps) {
         className="stat-cards"
         initial="hidden"
         animate="show"
-        transition={{ staggerChildren: 0.05 }}
         // 2 × 2 en móvil, 4 en una fila en escritorio: antes eran cuatro tarjetas apiladas.
         style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}
       >
         {/* Racha */}
         <motion.section variants={itemAnim} className="stat-card" aria-label="Racha diaria">
           <div className="stat-card-label">
-            <Flame size={16} color="var(--accent-orange, #ff9500)" aria-hidden="true" /> Racha actual
+            <Flame size={16} aria-hidden="true" /> Racha actual
           </div>
           <div className="stat-card-value">
             {streak}
@@ -639,36 +635,36 @@ export function AnalyticsView({ onBack, onOpenTask }: AnalyticsViewProps) {
         {/* Éxito de la Semana */}
         <motion.section variants={itemAnim} className="stat-card" aria-label="Éxito de la semana">
           <div className="stat-card-label">
-            <Target size={16} color="var(--accent-green, #34c759)" aria-hidden="true" /> Esta semana
+            <Target size={16} aria-hidden="true" /> Esta semana
           </div>
           <div
             className="stat-card-value"
-            style={{ color: week.rate !== null && week.rate >= 70 ? 'var(--accent-green)' : undefined }}
+            
           >
             {week.rate !== null ? `${week.rate}%` : '—'}
           </div>
           <div className="stat-card-hint">
             {week.rate === null
               ? 'Aún nada que medir'
-              : `${plural(week.done, 'hecha')}${week.missed ? ` · ${week.missed} vencidas` : ''}`}
+              : `${plural(week.done, 'hecha')}${week.missed ? `, ${week.missed} ${week.missed === 1 ? 'vencida' : 'vencidas'}` : ''}`}
           </div>
         </motion.section>
 
         {/* Cumplimiento de Frecuencias */}
         <motion.section variants={itemAnim} className="stat-card" aria-label="Rutinas al día">
           <div className="stat-card-label">
-            <Repeat size={16} color="var(--accent-purple, #af52de)" aria-hidden="true" /> Frecuencias al día
+            <Repeat size={16} aria-hidden="true" /> Frecuencias al día
           </div>
           <div
             className="stat-card-value"
-            style={{ color: cyclesBreakdown.allRoutinesRate !== null && cyclesBreakdown.allRoutinesRate >= 70 ? 'var(--accent-purple)' : undefined }}
+            
           >
             {cyclesBreakdown.allRoutinesRate !== null ? `${cyclesBreakdown.allRoutinesRate}%` : '—'}
           </div>
           <div className="stat-card-hint">
             {cyclesBreakdown.allRoutinesGoal > 0
               ? `${cyclesBreakdown.allRoutinesCompleted} de ${cyclesBreakdown.allRoutinesGoal} periódicas al día${
-                  cycleStreaks.monthlyStreak > 0 ? ` · Racha: ${cycleStreaks.monthlyStreak}m` : ''
+                  cycleStreaks.monthlyStreak > 0 ? `, racha de ${cycleStreaks.monthlyStreak} ${cycleStreaks.monthlyStreak === 1 ? 'mes' : 'meses'}` : ''
                 }`
               : 'Sin tareas periódicas'}
           </div>
@@ -677,7 +673,7 @@ export function AnalyticsView({ onBack, onOpenTask }: AnalyticsViewProps) {
         {/* Total General */}
         <motion.section variants={itemAnim} className="stat-card" aria-label="Completadas en total">
           <div className="stat-card-label">
-            <CheckCircle2 size={16} color="var(--accent-blue, #007aff)" aria-hidden="true" /> Total histórico
+            <CheckCircle2 size={16} aria-hidden="true" /> Total histórico
           </div>
           <div className="stat-card-value">
             {sum.completed}

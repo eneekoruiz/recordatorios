@@ -682,7 +682,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
 
                       <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
 
-                      <div style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      <div style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', }}>
                         Ordenar por
                       </div>
 

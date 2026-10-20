@@ -1931,7 +1931,7 @@ export const TaskCard = React.memo(function TaskCard({
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ padding: '4px 8px 2px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+            <div style={{ padding: '4px 8px 2px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-tertiary)', }}>
               Urgencia
             </div>
             {[
@@ -2020,7 +2020,7 @@ export const TaskCard = React.memo(function TaskCard({
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ padding: '4px 8px 2px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+            <div style={{ padding: '4px 8px 2px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-tertiary)', }}>
               Frecuencia
             </div>
             {[

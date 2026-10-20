@@ -239,7 +239,7 @@ export const WeeklyReviewModal: React.FC<WeeklyReviewModalProps> = ({ isOpen, on
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
                     <div style={{ padding: '16px', borderRadius: 18, background: 'var(--bg-secondary, rgba(0,0,0,0.03))', textAlign: 'center' }}>
-                      <span style={{ fontSize: '0.74rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-tertiary)' }}>
+                      <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-tertiary)' }}>
                         Completados
                       </span>
                       <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#30d158', marginTop: 4 }}>
@@ -248,7 +248,7 @@ export const WeeklyReviewModal: React.FC<WeeklyReviewModalProps> = ({ isOpen, on
                     </div>
 
                     <div style={{ padding: '16px', borderRadius: 18, background: 'var(--bg-secondary, rgba(0,0,0,0.03))', textAlign: 'center' }}>
-                      <span style={{ fontSize: '0.74rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-tertiary)' }}>
+                      <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-tertiary)' }}>
                         Tiempo invertido
                       </span>
                       <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#0a84ff', marginTop: 4 }}>
@@ -259,7 +259,7 @@ export const WeeklyReviewModal: React.FC<WeeklyReviewModalProps> = ({ isOpen, on
 
                   {report.topAchievements.length > 0 && (
                     <div>
-                      <h5 style={{ margin: '0 0 8px', fontSize: '0.82rem', textTransform: 'uppercase', color: 'var(--text-tertiary)', fontWeight: 700 }}>
+                      <h5 style={{ margin: '0 0 8px', fontSize: '0.82rem', color: 'var(--text-tertiary)', fontWeight: 700 }}>
                         Logros destacados
                       </h5>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

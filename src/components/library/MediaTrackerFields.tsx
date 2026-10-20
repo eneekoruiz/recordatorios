@@ -268,7 +268,7 @@ export const MediaTrackerFields: React.FC<MediaTrackerFieldsProps> = ({
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-        <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700, color: 'var(--text-tertiary)' }}>
+        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-tertiary)' }}>
           Biblioteca de Vida
         </span>
         {/* Selector de tipo */}

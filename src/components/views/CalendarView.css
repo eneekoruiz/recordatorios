@@ -98,7 +98,6 @@ body.dark .cal {
   text-align: center;
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.02em;
   color: var(--text-secondary);
 }
 .cal-weekdays > span.is-weekend {
@@ -225,8 +224,6 @@ body.dark .cal-day.is-outside .cal-dots {
   margin: 0 0 4px;
   font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
   color: var(--text-secondary);
 }
 .cal-list {
