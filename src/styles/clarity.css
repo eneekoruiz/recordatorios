@@ -159,6 +159,15 @@
 .cycle-strip-toggle { margin-left: auto; flex-shrink: 0; }
 .cycle-strip-toggle .routine-chip { margin: 0; }
 
+/* Periodo hecho: «✓ Octubre hecho» en verde; de cuándo son las tareas que se ven, en gris. */
+.section-head-period .section-head-next { color: var(--label-2); }
+.section-head-note {
+  flex-basis: 100%;
+  font-size: var(--type-footnote);
+  font-weight: 400;
+  color: var(--label-2);
+}
+
 /* Duración junto al nombre de la sección (cuando es lo único que había en la segunda línea). */
 .section-head-main .section-head-inline {
   flex: 0 0 auto;

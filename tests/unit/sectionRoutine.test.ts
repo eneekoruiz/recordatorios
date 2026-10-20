@@ -281,7 +281,10 @@ describe('sectionRoutine utility', () => {
     it('returns next year 2027 when all 2026 annual tasks are completed', () => {
       const info = getPeriodContextLabel('year', 0, 5, fixedDate);
       expect(info).toBeDefined();
-      expect(info?.label).toBe('2027 · 2026 completado');
+      // La cabecera dice lo que está hecho; de cuándo son las tareas que se ven va aparte.
+      expect(info?.compactLabel).toBe('2026 hecho');
+      expect(info?.nextLabel).toBe('estas son para 2027');
+      expect(info?.label).toBe('2026 hecho. Las que ves son para 2027.');
       expect(info?.isRolledOver).toBe(true);
       expect(info?.activePeriod).toBe('2027');
     });
@@ -290,13 +293,17 @@ describe('sectionRoutine utility', () => {
       const info = getPeriodContextLabel('month', 2, 4, fixedDate);
       expect(info).toBeDefined();
       expect(info?.label).toBe('Octubre 2026');
+      expect(info?.compactLabel).toBe('Octubre');
+      expect(info?.nextLabel).toBeUndefined();
       expect(info?.isRolledOver).toBe(false);
     });
 
     it('returns next month when all current month tasks are completed', () => {
       const info = getPeriodContextLabel('month', 0, 4, fixedDate);
       expect(info).toBeDefined();
-      expect(info?.label).toBe('Noviembre 2026 · Octubre al día');
+      expect(info?.compactLabel).toBe('Octubre hecho');
+      expect(info?.nextLabel).toBe('estas son para noviembre');
+      expect(info?.label).toBe('Octubre hecho. Las que ves son para noviembre de 2026.');
       expect(info?.isRolledOver).toBe(true);
     });
 
@@ -310,7 +317,9 @@ describe('sectionRoutine utility', () => {
     it('returns next week when all weekly tasks are completed', () => {
       const info = getPeriodContextLabel('week', 0, 3, fixedDate);
       expect(info).toBeDefined();
-      expect(info?.label).toBe('Semana 42 · Semana actual al día');
+      expect(info?.compactLabel).toBe('Semana hecha');
+      expect(info?.nextLabel).toBe('estas son para la que viene');
+      expect(info?.label).toBe('Semana hecha. Las que ves son para la que viene (12–18 oct).');
       expect(info?.isRolledOver).toBe(true);
     });
 
@@ -324,7 +333,9 @@ describe('sectionRoutine utility', () => {
     it('returns tomorrow information when all daily tasks are completed', () => {
       const info = getPeriodContextLabel('day', 0, 6, fixedDate);
       expect(info).toBeDefined();
-      expect(info?.label).toContain('Mañana');
+      expect(info?.compactLabel).toBe('Hecho por hoy');
+      expect(info?.nextLabel).toBe('estas son para mañana');
+      expect(info?.label).toContain('para mañana');
       expect(info?.isRolledOver).toBe(true);
     });
   });

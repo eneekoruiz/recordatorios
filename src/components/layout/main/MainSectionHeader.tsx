@@ -29,6 +29,10 @@ interface SectionData {
   /** Pendientes de esta cabecera (con las incluidas ya mezcladas, si «+ Diarias» está activo). */
   pendingCount?: number;
   totalCount?: number;
+  /** Periodo actual ya hecho: las tareas que se ven son del siguiente. */
+  rolledOver?: boolean;
+  /** Por eso empieza plegada (mientras no se abra o pliegue a mano). */
+  foldedByDefault?: boolean;
 }
 
 interface MainSectionHeaderProps {
@@ -40,7 +44,8 @@ interface MainSectionHeaderProps {
   isCustomSection: boolean;
   isDraggingOver: boolean;
   isCatCollapsed: (cat: string) => boolean;
-  toggleCategory: (cat: string) => void;
+  /** `shownCollapsed`: si la cabecera se ve plegada ahora (lo que se va a invertir). */
+  toggleCategory: (cat: string, shownCollapsed?: boolean) => void;
   sectionMenuId?: string | null;
   setSectionMenuId?: (id: string | null) => void;
   setDragOverSectionId: (id: string | null) => void;
@@ -409,16 +414,25 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   }, [data.sectionId, onReorderSections, openSectionMenu]);
 
   const isTopLevel = data.depth === 0;
-  const isExpanded = !isCatCollapsed(data.category);
+  const isExpanded = !(data.foldedByDefault || isCatCollapsed(data.category));
   const canIncludeShorter = Boolean(data.routineCounts && data.routineCounts.full > data.routineCounts.only);
   // El interruptor solo aparece donde se usa: con la sección abierta, o si ya está encendido
   // (para que se vea qué está sumando el número aunque la sección esté plegada).
   const showRoutineToggle = isTopLevel && canIncludeShorter && (isExpanded || isFullRoutine);
-  const periodText = isTopLevel && periodContext ? periodContext.compactLabel : null;
+  // Periodo hecho y lo de debajo es del siguiente («Octubre hecho»): se dice también en las
+  // subsecciones, que empiezan plegadas; al abrir, se aclara de cuándo son las tareas que se ven.
+  const showsNextPeriod = Boolean(data.rolledOver && periodContext?.isRolledOver);
+  const periodText = (isTopLevel || showsNextPeriod) && periodContext ? periodContext.compactLabel : null;
+  const nextPeriodNote = showsNextPeriod && isExpanded ? periodContext?.nextLabel ?? null : null;
+  // La duración y el precio de esas tareas del siguiente periodo parecerían pendientes de ahora.
+  if (showsNextPeriod) {
+    durationNode = null;
+    priceNode = null;
+  }
   // Si lo único que habría en la segunda línea es la duración, va junto al nombre, en gris: una
   // línea entera para «28 min» alejaba las tareas de su cabecera.
   const durationInline = isTopLevel && Boolean(durationNode) && !periodText && !priceNode && !showRoutineToggle;
-  const hasSubRow = isTopLevel && !durationInline && Boolean(periodText || durationNode || priceNode || showRoutineToggle);
+  const hasSubRow = (isTopLevel || showsNextPeriod) && !durationInline && Boolean(periodText || durationNode || priceNode || showRoutineToggle);
 
   const headerCount = data.pendingCount ?? pendingTaskCount ?? data.sectionTaskIds?.length ?? 0;
   const countTooltip = (() => {
@@ -513,7 +527,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         touchAction: isDraggingTouchSection ? 'none' : undefined,
         transition: 'background 0.15s ease, border-color 0.15s ease, border-radius 0.15s ease, opacity 0.15s ease, margin-top 0.18s cubic-bezier(0.22,1,0.36,1), margin-bottom 0.18s cubic-bezier(0.22,1,0.36,1)'
       }}
-      onClick={() => toggleCategory(data.category)}
+      onClick={() => toggleCategory(data.category, !isExpanded)}
       onClickCapture={(e) => {
         if (didSectionLongPressRef.current) {
           e.stopPropagation();
@@ -703,7 +717,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
             className="section-collapse-chevron-btn section-head-chevron"
             onClick={(e) => {
               e.stopPropagation();
-              toggleCategory(data.category);
+              toggleCategory(data.category, !isExpanded);
             }}
             aria-label={isExpanded ? `Plegar ${data.title}` : `Desplegar ${data.title}`}
             aria-expanded={isExpanded}
@@ -729,7 +743,11 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                   title={periodContext?.label}
                 >
                   {periodContext?.isRolledOver && <Check size={12} strokeWidth={2.6} aria-hidden="true" />}
-                  {periodText}
+                  {/* Cabe en la misma línea si no hay interruptor; si lo hay, va debajo (ver más abajo). */}
+                  <span>
+                    {periodText}
+                    {nextPeriodNote && !showRoutineToggle && <span className="section-head-next">, {nextPeriodNote}</span>}
+                  </span>
                 </span>
               )}
               {periodText && (durationNode || priceNode) && <span className="section-head-dot" aria-hidden="true">·</span>}
@@ -757,6 +775,9 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                   <span>Rutina completa</span>
                 </span>
               </button>
+            )}
+            {nextPeriodNote && showRoutineToggle && (
+              <span className="section-head-note">{nextPeriodNote.charAt(0).toUpperCase() + nextPeriodNote.slice(1)}</span>
             )}
           </div>
         )}

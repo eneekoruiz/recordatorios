@@ -89,7 +89,11 @@ type VirtualItemType =
       sectionTaskIds?: string[],
       /** Pendientes de esta cabecera (con las incluidas ya mezcladas, si '+ Diarias' está activo). */
       pendingCount?: number,
-      totalCount?: number
+      totalCount?: number,
+      /** Periodo actual ya hecho: lo que se ve debajo es del siguiente. */
+      rolledOver?: boolean,
+      /** Por eso empieza plegada (mientras no se abra o pliegue a mano). */
+      foldedByDefault?: boolean
     }
   | { type: 'empty-section', title: string, category: string, color: string, sectionId?: string, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean }
   | { type: 'task', task: TaskItem, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean, referenceDate?: Date, contextPeriodicity?: PeriodicityType | null };
@@ -747,12 +751,14 @@ const CORE_CYCLES = [
     return false;
   }, [collapsed, currentView, currentList, isSmartView, currentCycle, lists]);
 
-  const toggleCategory = useCallback((category: string) => {
+  // `shownCollapsed`: lo que enseña la cabecera, si lo sabe (una sección con el periodo hecho
+  // empieza plegada aunque por defecto las secciones estén abiertas).
+  const toggleCategory = useCallback((category: string, shownCollapsed?: boolean) => {
     HapticService.selection();
     setCollapsed(prev => {
       const isCurrentlyCollapsed = prev[category] !== undefined
         ? Boolean(prev[category])
-        : isCatCollapsed(category);
+        : shownCollapsed ?? isCatCollapsed(category);
       return {
         ...prev,
         [category]: !isCurrentlyCollapsed
@@ -888,6 +894,14 @@ const CORE_CYCLES = [
       }
       return filtered;
     };
+
+    // Periodo ya hecho («Octubre hecho»): lo que se ve debajo es del siguiente y no corre prisa, así
+    // que la sección empieza plegada hasta que se abra a mano. Antes esas tareas se veían sin más y
+    // parecían pendientes de ahora. Si la última se acaba de marcar, espera a que pase su momento de
+    // gracia: se ve la marca y después se recoge.
+    const startsFolded = (category: string, rolledOver: boolean, sectionTasks: TaskItem[]) =>
+      rolledOver && collapsed[category] === undefined && category !== isolatedSectionKey &&
+      !sectionTasks.some(t => recentlyCompletedIds.includes(t.id));
 
     // Categorías (Si estamos en ciclo o carpeta) o Ciclos/Secciones (Si estamos en Lista)
     if (currentView === 'TRASH') {
@@ -1481,10 +1495,12 @@ const CORE_CYCLES = [
             routineParts: currentRoutineMode === 'full_routine' ? routineParts : null,
             sectionTaskIds: allSectionPendingTaskIds,
             pendingCount: countPending(sectionScopeForCounts),
-            totalCount: sectionScopeForCounts.length
+            totalCount: sectionScopeForCounts.length,
+            rolledOver: isManualSecRolledOver,
+            foldedByDefault: startsFolded(categoryKey, isManualSecRolledOver, sectionScopeForCounts)
           });
 
-          if (!isCatCollapsed(categoryKey)) {
+          if (!isCatCollapsed(categoryKey) && !startsFolded(categoryKey, isManualSecRolledOver, sectionScopeForCounts)) {
             if (tasksToRender.length === 0 && childSections.length === 0) {
               flat.push({ type: 'empty-section', title: 'Aquí no hay tareas', category: categoryKey, color, sectionId: sec.id, depth });
             } else {
@@ -1595,7 +1611,18 @@ const CORE_CYCLES = [
               !s.parentId && getPureCyclicPeriodicity(s.name) === periodicity
             );
 
-            const filteredTasksToGroup = filterTasks(tasksToGroup);
+            // Con el periodo hecho se ven las del siguiente: se filtra con esa fecha (con la de hoy
+            // salían todas como hechas y la sección quedaba vacía bajo «Octubre hecho»).
+            const ref = temporalDate ? new Date(temporalDate) : new Date();
+            const isLimpiezaRolledOver = Boolean(
+              periodicity &&
+              tasksToGroup.length > 0 &&
+              countPending(tasksToGroup) === 0
+            );
+            const effectiveLimpiezaRefDate = isLimpiezaRolledOver
+              ? getNextPeriodDate(periodicity as PeriodicityType, ref)
+              : ref;
+            const filteredTasksToGroup = filterTasks(tasksToGroup, effectiveLimpiezaRefDate);
 
             // Agrupar por habitación. Con «Orden de limpieza», lo que no tiene habitación se parte en
             // «Para empezar» (ventilar, recoger, polvo…) y «Para terminar» (suelos de toda la casa,
@@ -1657,15 +1684,6 @@ const CORE_CYCLES = [
             // Cabecera de frecuencia (depth 0)
             const freqColor = getReservedFrequencyColor(cycleId) || color;
             sectionTasksByKey[freqCatKey] = orderedTasksToGroup;
-            const ref = temporalDate ? new Date(temporalDate) : new Date();
-            const isLimpiezaRolledOver = Boolean(
-              periodicity &&
-              tasksToGroup.length > 0 &&
-              countPending(tasksToGroup) === 0
-            );
-            const effectiveLimpiezaRefDate = isLimpiezaRolledOver
-              ? getNextPeriodDate(periodicity as PeriodicityType, ref)
-              : ref;
 
             flat.push({
               type: 'header',
@@ -1680,10 +1698,12 @@ const CORE_CYCLES = [
               routineParts: mode === 'full_routine' ? routineParts : null,
               sectionTaskIds: freqPendingIds,
               pendingCount: countPending(tasksToGroup),
-              totalCount: tasksToGroup.length
+              totalCount: tasksToGroup.length,
+              rolledOver: isLimpiezaRolledOver,
+              foldedByDefault: startsFolded(freqCatKey, isLimpiezaRolledOver, tasksToGroup)
             });
 
-            if (!isCatCollapsed(freqCatKey)) {
+            if (!isCatCollapsed(freqCatKey) && !startsFolded(freqCatKey, isLimpiezaRolledOver, tasksToGroup)) {
               if (sortedRooms.length === 0) {
                 flat.push({ type: 'empty-section', title: 'Sin tareas', category: freqCatKey, color: freqColor, depth: 0 });
               } else {
@@ -1891,10 +1911,12 @@ const CORE_CYCLES = [
                 routineParts: mode === 'full_routine' ? routineParts : null,
                 sectionTaskIds: allSectionPendingTaskIds,
                 pendingCount: countPending(countScope),
-                totalCount: countScope.length
+                totalCount: countScope.length,
+                rolledOver: isSectionRolledOver,
+                foldedByDefault: startsFolded(catKey, isSectionRolledOver, countScope)
               });
 
-              if (!isCatCollapsed(catKey)) {
+              if (!isCatCollapsed(catKey) && !startsFolded(catKey, isSectionRolledOver, countScope)) {
                 if (finalTasksToRender.length > 0) {
                   const inScope = new Set(finalTasksToRender.map(t => t.id));
                   const roots = finalTasksToRender.filter(t => !t.parentId || !inScope.has(t.parentId) || t.parentId === t.id);
@@ -1919,7 +1941,8 @@ const CORE_CYCLES = [
                       processNode(t, 0);
                     }
                   });
-                } else if (manualSec) {
+                } else if (manualSec && childSections.length === 0) {
+                  // Con subsecciones no hace falta la fila de añadir: ya hay contenido debajo (como en las demás secciones).
                   flat.push({
                     type: 'empty-section',
                     title: 'No hay recordatorios en esta sección',
@@ -3081,8 +3104,10 @@ const CORE_CYCLES = [
             onAddNestedSection={currentList && !currentList.isFolder ? () => {
               if (sectionMenu.sectionId) {
                 handleAddSection(sectionMenu.sectionId);
-                if (sectionMenu.category && isCatCollapsed(sectionMenu.category)) {
-                  toggleCategory(sectionMenu.category);
+                const category = sectionMenu.category;
+                const foldedByDefault = Boolean(category && flattenedData.some(item => item.type === 'header' && item.category === category && item.foldedByDefault));
+                if (category && (foldedByDefault || isCatCollapsed(category))) {
+                  toggleCategory(category, true);
                 }
               }
             } : undefined}

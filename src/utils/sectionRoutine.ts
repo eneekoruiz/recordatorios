@@ -247,9 +247,11 @@ export interface PeriodContextInfo {
   shortLabel: string;
   /**
    * Texto mínimo para la cabecera de sección: solo lo que no repite el título
-   * ("Octubre", "12–18 oct", "Hoy", "2026"). Si el periodo ya está hecho: "Al día · Noviembre".
+   * ("Octubre", "12–18 oct", "Hoy", "2026"). Si el periodo ya está hecho: "Octubre hecho".
    */
   compactLabel: string;
+  /** Con el periodo hecho, para cuándo son las tareas que se ven ("estas son para noviembre"). */
+  nextLabel?: string;
   isRolledOver: boolean;
   activePeriod: string;
   nextPeriodDate?: Date;
@@ -310,9 +312,10 @@ export function getPeriodContextLabel(
     if (isRolledOver) {
       const nextYear = curYear + 1;
       return {
-        label: `${nextYear} · ${curYear} completado`,
+        label: `${curYear} hecho. Las que ves son para ${nextYear}.`,
         shortLabel: `${nextYear}`,
-        compactLabel: `Al día · ${nextYear}`,
+        compactLabel: `${curYear} hecho`,
+        nextLabel: `estas son para ${nextYear}`,
         isRolledOver: true,
         activePeriod: `${nextYear}`,
         nextPeriodDate: getNextPeriodDate('year', referenceDate)
@@ -336,9 +339,10 @@ export function getPeriodContextLabel(
       const nextYear = curMIdx === 11 ? curYear + 1 : curYear;
       const nextName = MONTH_NAMES[nextMIdx];
       return {
-        label: `${nextName} ${nextYear} · ${curName} al día`,
+        label: `${curName} hecho. Las que ves son para ${nextName.toLowerCase()} de ${nextYear}.`,
         shortLabel: `${nextName}`,
-        compactLabel: `Al día · ${nextName}`,
+        compactLabel: `${curName} hecho`,
+        nextLabel: `estas son para ${nextName.toLowerCase()}`,
         isRolledOver: true,
         activePeriod: `${nextName}`,
         nextPeriodDate: getNextPeriodDate('month', referenceDate)
@@ -378,13 +382,15 @@ export function getPeriodContextLabel(
       : `${monday.getDate()} ${mMonth}–${sunday.getDate()} ${sMonth}`;
 
     if (isRolledOver) {
+      const nextRange = formatRange(
+        new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 7),
+        new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + 7)
+      );
       return {
-        label: `Semana ${weekNo + 1} · Semana actual al día`,
+        label: `Semana hecha. Las que ves son para la que viene (${nextRange}).`,
         shortLabel: `Sem. ${weekNo + 1}`,
-        compactLabel: `Al día · ${formatRange(
-          new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 7),
-          new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + 7)
-        )}`,
+        compactLabel: 'Semana hecha',
+        nextLabel: 'estas son para la que viene',
         isRolledOver: true,
         activePeriod: `Semana ${weekNo + 1}`,
         nextPeriodDate: getNextPeriodDate('week', referenceDate)
@@ -407,9 +413,10 @@ export function getPeriodContextLabel(
       const tomDayName = DAY_SHORTS[tom.getDay()];
       const tomMName = MONTH_SHORTS[tom.getMonth()];
       return {
-        label: `Mañana · ${tomDayName} ${tom.getDate()} ${tomMName} (Hoy al día)`,
+        label: `Hecho por hoy. Las que ves son para mañana, ${tomDayName} ${tom.getDate()} ${tomMName}.`,
         shortLabel: 'Mañana',
-        compactLabel: 'Al día · mañana',
+        compactLabel: 'Hecho por hoy',
+        nextLabel: 'estas son para mañana',
         isRolledOver: true,
         activePeriod: 'Mañana',
         nextPeriodDate: getNextPeriodDate('day', referenceDate)
