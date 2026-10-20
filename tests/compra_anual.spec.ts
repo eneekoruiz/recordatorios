@@ -47,10 +47,12 @@ test.describe('Compra Anual & Subtasks Visibility Suite', () => {
       window.dispatchEvent(new CustomEvent('select-view', { detail: 'list_compra' }));
     });
     // Expand Anuales section if collapsed by default
+    // (Las secciones salen desplegadas; solo se abre si estuviera plegada: pulsarla a ciegas la plegaba.)
     const anualHeader = page.locator('.group-header:has-text("Anuales")').first();
-    if (await anualHeader.isVisible()) {
-      await anualHeader.click();
-      await page.waitForTimeout(300);
+    await expect(anualHeader).toBeVisible();
+    const chevron = anualHeader.locator('.section-head-chevron');
+    if ((await chevron.getAttribute('aria-expanded')) === 'false') {
+      await chevron.click();
     }
 
     // Verify parent task is rendered

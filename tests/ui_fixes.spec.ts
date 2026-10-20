@@ -142,9 +142,10 @@ test('a 300-child family renders and collapses/expands smoothly without paginati
   await expect.poll(() => mountedCards.count()).toBeGreaterThan(0);
   const familyRoot = mountedCards.filter({ hasText: 'Oversized family root' }).first();
   await expect(page.getByText('Family child 001', { exact: true })).toBeVisible();
-  await familyRoot.getByRole('button', { name: 'Contraer', exact: true }).click();
+  // El botón dice qué oculta: «Ocultar las 305 subtareas de «Oversized family root»».
+  await familyRoot.getByRole('button', { name: /^Ocultar las 305 subtareas de «Oversized family root»$/ }).click();
   await expect(page.getByText('Family child 001', { exact: true })).toHaveCount(0);
-  await familyRoot.getByRole('button', { name: 'Expandir' }).click();
+  await familyRoot.getByRole('button', { name: /^Mostrar las 305 subtareas de «Oversized family root»$/ }).click();
   await expect(page.getByText('Family child 001', { exact: true })).toBeVisible();
 
   // Scroll down to verify continuous scrolling without pagination

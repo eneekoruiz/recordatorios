@@ -69,9 +69,17 @@ test.describe('iPhone (emulado)', () => {
         return [...document.querySelectorAll('button, [role="button"], a[href]')]
           .filter((el) => (el as HTMLElement).offsetParent !== null && el.getBoundingClientRect().width > 0)
           .filter((el) => !el.classList.contains('task-title'))
+          // Un control que no se puede tocar (oculto hasta editar la fila, como el (i)) no tiene zona táctil.
+          .filter((el) => getComputedStyle(el).pointerEvents !== 'none')
           .filter((el) => {
             const r = el.getBoundingClientRect();
-            return r.width < 43.9 || r.height < 43.9 ||
+            // La zona táctil puede ampliarse con un ::before absoluto (sin inflar la fila): también cuenta
+            // para el sistema de toques, y la comprobación a ±21 px de abajo demuestra que llega.
+            const before = getComputedStyle(el, '::before');
+            const extra = before.content !== 'none' && before.position === 'absolute';
+            const w = Math.max(r.width, extra ? parseFloat(before.width) || 0 : 0);
+            const h = Math.max(r.height, extra ? parseFloat(before.height) || 0 : 0);
+            return w < 43.9 || h < 43.9 ||
               !(hits(el, -21, 0) && hits(el, 21, 0) && hits(el, 0, -21) && hits(el, 0, 21));
           })
           .map((el) => (el.getAttribute('aria-label') || el.getAttribute('title') || el.textContent || el.className).toString().trim().slice(0, 40));

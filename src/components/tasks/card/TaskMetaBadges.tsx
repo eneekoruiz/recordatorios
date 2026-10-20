@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode, type MouseEvent } from 'react';
-import { Calendar, CalendarX2, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen, Zap, Flame } from 'lucide-react';
+import { Calendar, CalendarX2, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen, Flame } from 'lucide-react';
 import type { TaskItem, CustomList } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
@@ -169,11 +169,12 @@ export function TaskMetaBadges({
   }
   if (hasDuration) {
     items.push(
-      <span key="duration" className="task-meta-item task-meta-num" data-meta-field="duration" title={`Duración: ${durationDescription}${isParallel ? ` (+${formatDuration(totalParallelMinutes)} en paralelo)` : ''}`}>
-        {isParallel ? <Zap size={13} aria-hidden="true" /> : <Clock size={13} aria-hidden="true" />}
+      <span key="duration" className="task-meta-item task-meta-num" data-meta-field="duration" title={`Duración: ${durationDescription}${isParallel ? `, más ${formatDuration(totalParallelMinutes)} de espera en segundo plano` : ''}`}>
+        <Clock size={13} aria-hidden="true" />
         <span className="sr-only">Duración: </span>
         <span>{formatDuration(totalActiveMinutes)}</span>
-        {isParallel && <span className="task-meta-aside">+{formatDuration(totalParallelMinutes)}</span>}
+        {/* «+2 h» a secas no se entendía: es el tiempo que la tarea sigue sola (lavadora, horno…). */}
+        {isParallel && <span className="task-meta-aside">+ {formatDuration(totalParallelMinutes)} de espera</span>}
       </span>
     );
   }
@@ -187,15 +188,18 @@ export function TaskMetaBadges({
       </span>
     );
   }
-  if (cycleBadge) {
-    items.push(
-      <span key="frequency" className="task-meta-item task-meta-glyph" data-meta-field="frequency" title={`Se repite: ${cycleBadge.label}`}>
-        <Repeat size={13} aria-hidden="true" />
-        {frequencyAsLabel ? <span>{cycleBadge.label}</span> : <span className="sr-only">Se repite: {cycleBadge.label}</span>}
-      </span>
-    );
+  const renderFrequency = (withLabel: boolean) => cycleBadge && (
+    <span key="frequency" className="task-meta-item task-meta-glyph" data-meta-field="frequency" title={`Se repite: ${cycleBadge.label}`}>
+      <Repeat size={13} aria-hidden="true" />
+      {withLabel ? <span>{cycleBadge.label}</span> : <span className="sr-only">Se repite: {cycleBadge.label}</span>}
+    </span>
+  );
+  // Con racha («3 días») ya se ve que se repite: el icono suelto de repetición sobra.
+  const hasStreak = Boolean(streak && streak.count >= 2);
+  if (cycleBadge && (frequencyAsLabel || !hasStreak)) {
+    items.push(renderFrequency(frequencyAsLabel));
   }
-  if (streak && streak.count >= 2) {
+  if (streak && hasStreak) {
     items.push(
       <span key="streak" className="task-meta-item task-meta-num task-meta-streak" data-meta-field="streak"
         title={`Racha: ${streak.count} ${streak.unit} seguidos`}>
@@ -209,6 +213,10 @@ export function TaskMetaBadges({
         <LayoutList size={13} aria-hidden="true" /><span>{inAppListTarget.name}</span><ChevronRight size={12} aria-hidden="true" />
       </span>
     );
+  }
+  // Una línea entera solo para el icono de repetición no decía nada: si va sola, lleva su nombre («Diaria»).
+  if (cycleBadge && !frequencyAsLabel && items.length === 1) {
+    items[0] = renderFrequency(true);
   }
   // Tocar un dato abre su edición (como en la versión original); el teclado llega por el (i) y el menú contextual.
   const handleMetaClick = (event: MouseEvent<HTMLDivElement>) => {
@@ -231,44 +239,27 @@ export function TaskMetaBadges({
     <>
       {items.length > 0 && <div className="task-meta-line" onClick={handleMetaClick}>{items}</div>}
 
-      {/* Rich Links (External URLs) */}
+      {/* Enlace: una línea con el sitio («doctoralia.es»), no una tarjeta con la URL entera repetida. */}
       {(() => {
-        if (task.url && task.url.startsWith('http')) {
-          return (
-            <a
-              href={task.url}
-              target="_blank"
-              rel="noreferrer"
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                textDecoration: 'none', color: 'var(--text-primary)',
-                marginTop: 8, padding: '8px 12px', borderRadius: '12px',
-                background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.02)', boxSizing: 'border-box',
-                maxWidth: '100%', overflow: 'hidden'
-              }}
-              onClick={e => e.stopPropagation()}
-            >
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                {task.url.includes('drive.google.com') || task.url.includes('docs.google.com') ? (
-                  <FolderOpen size={16} color="var(--accent-primary)" />
-                ) : (
-                  <Link2 size={16} color="var(--accent-primary)" />
-                )}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
-                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--accent-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {task.url.includes('drive.google.com') ? 'Google Drive' : task.url.includes('docs.google.com') ? 'Google Docs' : task.url}
-                </span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {(() => { try { return new URL(task.url).hostname.replace('www.', ''); } catch { return 'Enlace web'; } })()}
-                </span>
-              </div>
-            </a>
-          );
-        }
-
-        return null;
+        if (!task.url || !task.url.startsWith('http')) return null;
+        const isDrive = task.url.includes('drive.google.com');
+        const isDocs = task.url.includes('docs.google.com');
+        const host = (() => { try { return new URL(task.url).hostname.replace(/^www\./, ''); } catch { return 'Enlace web'; } })();
+        const label = isDrive ? 'Google Drive' : isDocs ? 'Google Docs' : host;
+        return (
+          <a
+            href={task.url}
+            target="_blank"
+            rel="noreferrer"
+            className="task-link hit-44"
+            title={task.url}
+            aria-label={`Abrir ${label} (en otra pestaña)`}
+            onClick={e => e.stopPropagation()}
+          >
+            {isDrive || isDocs ? <FolderOpen size={14} aria-hidden="true" /> : <Link2 size={14} aria-hidden="true" />}
+            <span>{label}</span>
+          </a>
+        );
       })()}
     </>
   );

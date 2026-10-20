@@ -52,24 +52,10 @@ export const TaskHabitCounter: React.FC<TaskHabitCounterProps> = ({
             setRecentlyIncremented(false);
           }}
           title="Restar 1 repetición (-1)"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 20,
-            height: 20,
-            borderRadius: '50%',
-            border: '1px solid var(--border-subtle, rgba(0,0,0,0.15))',
-            background: 'var(--bg-hover, rgba(0,0,0,0.05))',
-            color: 'var(--text-secondary)',
-            cursor: 'pointer',
-            fontSize: '0.85rem',
-            fontWeight: 700,
-            padding: 0,
-            lineHeight: 1
-          }}
+          aria-label={`Restar una repetición de «${task.title || 'hábito'}»`}
+          className="habit-counter-minus hit-44"
         >
-          -
+          −
         </button>
       )}
 
@@ -109,22 +95,10 @@ export const TaskHabitCounter: React.FC<TaskHabitCounterProps> = ({
           onToggle(task.id, true);
           setRecentlyIncremented(false);
         }}
-        title="Clic: avanzar progreso (+1). Clic derecho o botón -: retroceder progreso (-1)."
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 4,
-          padding: '2px 8px',
-          borderRadius: 12,
-          fontSize: '0.78rem',
-          fontWeight: 600,
-          background: isEffectivelyDone ? 'rgba(52, 199, 89, 0.15)' : 'rgba(0, 122, 255, 0.12)',
-          color: 'var(--text-primary)',
-          border: 'none',
-          cursor: 'pointer',
-          verticalAlign: 'middle',
-          lineHeight: '1.2'
-        }}
+        title="Clic: avanzar progreso (+1). Clic derecho o botón −: retroceder progreso (-1)."
+        aria-label={`${task.title || 'Hábito'}: ${effectiveCurrentCount} de ${task.targetCount}. Sumar una`}
+        // Cápsula de 26 px a la vista; la zona táctil de 44 px la pone .hit-44 sin inflar la fila.
+        className={`habit-counter hit-44${isEffectivelyDone ? ' is-done' : ''}`}
       >
         <span>{getHabitIcon(task.title)}</span>
         <span>{effectiveCurrentCount}/{task.targetCount}</span>

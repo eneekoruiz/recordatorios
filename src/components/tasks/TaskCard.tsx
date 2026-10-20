@@ -483,6 +483,9 @@ export const TaskCard = React.memo(function TaskCard({
   }, [propReferenceDate, temporalDate]);
 
   const isBlocked = hasPendingBlocker;
+  // Se decide por el puntero, no por el ancho: una ventana estrecha con ratón también revela el (i) al pasar.
+  const canHover = useMemo(() => typeof window !== 'undefined' && Boolean(window.matchMedia?.('(hover: hover) and (pointer: fine)').matches), []);
+  const showInfoButton = contextMenuOpen || (canHover ? isHovered : (isEditingTitle || isEditingNote));
   const effCycleId = getEffectiveCycleId(task, listSections, lists);
   const isRecurring = Boolean(effCycleId);
   const isCompletedPeriod = isCompletedInCurrentPeriod(task, cycles, listSections, lists, referenceDate);
@@ -1826,9 +1829,11 @@ export const TaskCard = React.memo(function TaskCard({
                 border: 'none',
                 cursor: 'pointer',
                 color: taskColor || 'var(--accent-primary)',
-                // Escritorio: aparece al pasar el ratón o con el foco, como en Recordatorios. Táctil: siempre a mano.
-                opacity: isMobile ? 0.8 : (isHovered || contextMenuOpen ? 1 : 0),
-                pointerEvents: 'auto',
+                // Como en Recordatorios: con ratón aparece al pasar por encima; con el dedo, en la fila que se
+                // está editando (tocar la fila la edita y deja el (i) a mano). Una columna de (i) en todas las
+                // filas era ruido. El lector de pantalla y el teclado lo siguen encontrando siempre.
+                opacity: showInfoButton ? 1 : 0,
+                pointerEvents: canHover || showInfoButton ? 'auto' : 'none',
                 transition: 'opacity 0.15s ease, background-color 0.15s ease, transform 0.12s ease',
                 WebkitTapHighlightColor: 'transparent',
                 flexShrink: 0

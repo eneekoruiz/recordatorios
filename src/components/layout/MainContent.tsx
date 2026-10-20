@@ -2772,7 +2772,7 @@ const CORE_CYCLES = [
                 flexDirection: isActuallyEmpty ? 'column' : undefined
               }}
             >
-              {sectionGroups.map((group) => {
+              {sectionGroups.map((group, groupIndex) => {
                 const renderItem = (item: any, index: number) => {
                   const data = item as any;
                   const itemKey = getItemKey(item, index);
@@ -3003,12 +3003,17 @@ const CORE_CYCLES = [
                 };
 
                 const hasSubGroups = group.subGroups && group.subGroups.length > 0;
+                // Línea fina entre secciones principales, como en Recordatorios: encima de cada cabecera de
+                // primer nivel que sigue a otra cosa de la lista (no bajo el título ni en las subsecciones).
+                const previousGroup = groupIndex > 0 ? sectionGroups[groupIndex - 1] : null;
+                const dividerAbove = Boolean(group.headerItem && group.depth === 0 && previousGroup && previousGroup.key !== 'page-header-group');
 
                 return (
                   <div 
                     key={group.key} 
                     className="section-container" 
                     data-testid="master-section-container"
+                    data-divider-above={dividerAbove || undefined}
                     style={{ position: 'relative', width: '100%', boxSizing: 'border-box' }}
                   >
                     {group.headerItem && renderItem(group.headerItem.item, group.headerItem.index)}

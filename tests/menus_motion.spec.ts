@@ -73,7 +73,11 @@ for (const viewport of [{ name: 'móvil', width: 390, height: 844 }, { name: 'es
         ['lista', () => page.getByRole('button', { name: 'Opciones de lista' }).first().click()],
         ['sección', async () => { await page.locator('.group-header').first().hover(); await page.locator('.section-head-more').first().click(); }],
         ['tarea', () => page.locator('.task-item-wrapper[data-task-id="motion_0"]').click({ button: 'right' })],
-        ['editor', () => page.getByRole('button', { name: 'Detalles de «Tarea 0»' }).click({ force: true })],
+        ['editor', async () => {
+          // Con el dedo, el (i) aparece al tocar la fila, como en Recordatorios; con ratón, al pasar por encima.
+          if (viewport.width < 700) await page.locator('.task-item-wrapper[data-task-id="motion_0"] .task-row-content').first().click();
+          await page.getByRole('button', { name: 'Detalles de «Tarea 0»' }).click(viewport.width < 700 ? {} : { force: true });
+        }],
       ];
       for (const [name, open] of cases) {
         const result = await watch(page, open);

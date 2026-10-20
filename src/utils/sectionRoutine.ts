@@ -247,7 +247,7 @@ export interface PeriodContextInfo {
   shortLabel: string;
   /**
    * Texto mínimo para la cabecera de sección: solo lo que no repite el título
-   * ("Octubre", "12–18 oct", "Hoy", "2026"). Si el periodo ya está hecho: "Octubre hecho".
+   * ("Octubre", "12–18 oct", "2026"; vacío para hoy). Si el periodo ya está hecho: "Octubre hecho".
    */
   compactLabel: string;
   /** Con el periodo hecho, para cuándo son las tareas que se ven ("estas son para noviembre"). */
@@ -422,12 +422,15 @@ export function getPeriodContextLabel(
         nextPeriodDate: getNextPeriodDate('day', referenceDate)
       };
     }
+    // Bajo «Diarias», «Hoy» no añade nada: solo se dice el día si se está mirando otro.
+    const isToday = referenceDate.toDateString() === new Date().toDateString();
+    const dayText = `${dayName} ${referenceDate.getDate()} ${mName}`;
     return {
-      label: `Hoy · ${dayName} ${referenceDate.getDate()} ${mName}`,
-      shortLabel: 'Hoy',
-      compactLabel: 'Hoy',
+      label: isToday ? `Hoy · ${dayText}` : dayText,
+      shortLabel: isToday ? 'Hoy' : dayText,
+      compactLabel: isToday ? '' : dayText,
       isRolledOver: false,
-      activePeriod: 'Hoy'
+      activePeriod: isToday ? 'Hoy' : dayText
     };
   }
 

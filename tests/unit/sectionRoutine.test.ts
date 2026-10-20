@@ -324,9 +324,15 @@ describe('sectionRoutine utility', () => {
     });
 
     it('returns today information when daily tasks are pending', () => {
+      // Hoy: bajo «Diarias» no se repite «Hoy» (la línea queda libre para la duración).
+      const today = getPeriodContextLabel('day', 2, 6, new Date());
+      expect(today?.label).toContain('Hoy');
+      expect(today?.compactLabel).toBe('');
+      // Otro día (navegando por fechas): se dice cuál, no «Hoy».
       const info = getPeriodContextLabel('day', 2, 6, fixedDate);
       expect(info).toBeDefined();
-      expect(info?.label).toContain('Hoy');
+      expect(info?.label).not.toContain('Hoy');
+      expect(info?.compactLabel).toBe('lun 5 oct');
       expect(info?.isRolledOver).toBe(false);
     });
 

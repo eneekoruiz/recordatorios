@@ -38,6 +38,8 @@ const MONTH_NAMES = [
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
 ];
 const MONTH_SHORTS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+// Dentro de una frase el mes va en minúscula («Hoy, 20 oct»); con mayúscula solo como etiqueta suelta.
+const monthInline = (index: number) => MONTH_SHORTS[index].toLowerCase();
 const DAY_SHORTS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 export const ApplePeriodNavigator: React.FC<ApplePeriodNavigatorProps> = ({
@@ -139,7 +141,7 @@ export const ApplePeriodNavigator: React.FC<ApplePeriodNavigatorProps> = ({
     const month = activeDate.getMonth();
     const day = activeDate.getDate();
     const dayName = DAY_SHORTS[activeDate.getDay()];
-    const mShort = MONTH_SHORTS[month];
+    const mShort = monthInline(month);
 
     if (effGranularity === 'year') {
       return `${year}`;
@@ -165,8 +167,8 @@ export const ApplePeriodNavigator: React.FC<ApplePeriodNavigatorProps> = ({
       const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
 
       const rangeText = monday.getMonth() === sunday.getMonth()
-        ? `${monday.getDate()}–${sunday.getDate()} ${MONTH_SHORTS[sunday.getMonth()]}`
-        : `${monday.getDate()} ${MONTH_SHORTS[monday.getMonth()]}–${sunday.getDate()} ${MONTH_SHORTS[sunday.getMonth()]}`;
+        ? `${monday.getDate()}–${sunday.getDate()} ${monthInline(sunday.getMonth())}`
+        : `${monday.getDate()} ${monthInline(monday.getMonth())}–${sunday.getDate()} ${monthInline(sunday.getMonth())}`;
 
       return `Semana ${weekNo} (${rangeText})`;
     }
@@ -704,7 +706,7 @@ export const ApplePeriodNavigator: React.FC<ApplePeriodNavigatorProps> = ({
                               {offset === -1 ? 'Semana anterior' : offset === 0 ? 'Semana seleccionada' : 'Semana siguiente'}
                             </span>
                             <span style={{ fontSize: '0.76rem', color: 'var(--text-tertiary)' }}>
-                              {monday.getDate()} {MONTH_SHORTS[monday.getMonth()]} – {sunday.getDate()} {MONTH_SHORTS[sunday.getMonth()]}
+                              {monday.getDate()} {monthInline(monday.getMonth())} – {sunday.getDate()} {monthInline(sunday.getMonth())}
                             </span>
                           </button>
                         );

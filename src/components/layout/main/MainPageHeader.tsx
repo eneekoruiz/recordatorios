@@ -326,6 +326,10 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                                           }}
                                         >
                                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, overflow: 'hidden' }}>
+                                            {/* En «Hoy» va detrás de la fecha: «Martes, 20 de octubre · 45 min». */}
+                                            {currentView === 'smart_today' && (hasValidDuration || hasValidPrice) && (
+                                              <span className="meta-dot" aria-hidden="true" style={{ opacity: 0.4 }}>·</span>
+                                            )}
                                             {hasValidDuration && (
                                               canOpenDurationModal ? (
                                                 <button
@@ -360,7 +364,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
 
                                             {hasValidPrice && (
                                               <MetaSplit
-                                                label={<span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{formatEuro(totalCost)}</span>}
+                                                label={<span>{formatEuro(totalCost)}</span>}
                                                 parts={completedCost && completedCost > 0 ? [
                                                   { id: 'pending', value: totalCost, text: `${formatEuro(totalCost)} pendientes`, color: MONEY_COLOR, tone: 'solid' },
                                                   { id: 'paid', value: completedCost, text: `${formatEuro(completedCost)} pagados`, color: MONEY_COLOR, tone: 'done' },
