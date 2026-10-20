@@ -254,6 +254,54 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
     }
   };
 
+  const handleImportBatch = (messageId: string) => {
+    const msg = messages.find(m => m.id === messageId);
+    if (!msg || !msg.batch) return;
+
+    const selectedTasks = msg.batch.tasks.filter(t => t.selected);
+    if (selectedTasks.length === 0) return;
+
+    // Misma conversión que usa la barra «Nuevo recordatorio» (utils/aiQuickAdd).
+    const { tasks: tasksPayload, createList: targetListToCreate } = buildTasksFromBatch(
+      { ...msg.batch, tasks: selectedTasks },
+      lists
+    );
+
+    addTasksBatch(tasksPayload, { createList: targetListToCreate });
+    SoundService.playComplete();
+    HapticService.notification('success');
+
+    // Notify user
+    const listName = targetListToCreate?.name || lists.find(l => l.id === tasksPayload[0]?.categoryId)?.name || 'Inbox';
+    // Se puede deshacer: los recordatorios recién añadidos van a la papelera.
+    showUndoToast(
+      `${plural(tasksPayload.length, 'recordatorio')} ${tasksPayload.length === 1 ? 'añadido' : 'añadidos'} a «${listName}»`,
+      () => tasksPayload.forEach((t) => t.id && useAppStore.getState().deleteTask(t.id))
+    );
+
+    // Mark as imported in message
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId || !m.batch) return m;
+      return {
+        ...m,
+        batch: {
+          ...m.batch,
+          tasks: []
+        },
+        text: `${m.text}\n\n✅ ${plural(tasksPayload.length, 'recordatorio')} ${tasksPayload.length === 1 ? 'añadido' : 'añadidos'}.`
+      };
+    }));
+
+    // If a new list was created or special list was specified, navigate
+    if (targetListToCreate && onSelectView) {
+      onSelectView(`list_${targetListToCreate.id}`);
+    } else if (tasksPayload[0]?.categoryId === 'que_he_hecho' && onSelectView) {
+      onSelectView('list_que_he_hecho');
+    }
+
+    onClose();
+  };
+
   const handleSend = async (textToSend?: string) => {
     const rawText = (textToSend || input).trim();
     if ((!rawText && !attachedFile) || loading || isExtractingFile) return;
@@ -422,54 +470,6 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
         }
       };
     }));
-  };
-
-  const handleImportBatch = (messageId: string) => {
-    const msg = messages.find(m => m.id === messageId);
-    if (!msg || !msg.batch) return;
-
-    const selectedTasks = msg.batch.tasks.filter(t => t.selected);
-    if (selectedTasks.length === 0) return;
-
-    // Misma conversión que usa la barra «Nuevo recordatorio» (utils/aiQuickAdd).
-    const { tasks: tasksPayload, createList: targetListToCreate } = buildTasksFromBatch(
-      { ...msg.batch, tasks: selectedTasks },
-      lists
-    );
-
-    addTasksBatch(tasksPayload, { createList: targetListToCreate });
-    SoundService.playComplete();
-    HapticService.notification('success');
-
-    // Notify user
-    const listName = targetListToCreate?.name || lists.find(l => l.id === tasksPayload[0]?.categoryId)?.name || 'Inbox';
-    // Se puede deshacer: los recordatorios recién añadidos van a la papelera.
-    showUndoToast(
-      `${plural(tasksPayload.length, 'recordatorio')} ${tasksPayload.length === 1 ? 'añadido' : 'añadidos'} a «${listName}»`,
-      () => tasksPayload.forEach((t) => t.id && useAppStore.getState().deleteTask(t.id))
-    );
-
-    // Mark as imported in message
-    setMessages(prev => prev.map(m => {
-      if (m.id !== messageId || !m.batch) return m;
-      return {
-        ...m,
-        batch: {
-          ...m.batch,
-          tasks: []
-        },
-        text: `${m.text}\n\n✅ ${plural(tasksPayload.length, 'recordatorio')} ${tasksPayload.length === 1 ? 'añadido' : 'añadidos'}.`
-      };
-    }));
-
-    // If a new list was created or special list was specified, navigate
-    if (targetListToCreate && onSelectView) {
-      onSelectView(`list_${targetListToCreate.id}`);
-    } else if (tasksPayload[0]?.categoryId === 'que_he_hecho' && onSelectView) {
-      onSelectView('list_que_he_hecho');
-    }
-
-    onClose();
   };
 
   const handleUpdateActionParentTitle = (messageId: string, title: string) => {
