@@ -377,3 +377,16 @@ html.dark .habit-counter.is-done { color: #30d158; }
 }
 
 .content-header .page-context-row:has(.page-date) { column-gap: 6px; align-items: baseline; }
+
+/* ---------- Materiales ----------
+   El cristal (desenfoque) queda para la navegación y lo que flota sobre el contenido: barra lateral,
+   cabecera, barra de añadir y botones flotantes. Tarjetas, listas, menús, buscador y hojas son
+   superficies sólidas: con desenfoque y 78 % de opacidad el texto de detrás se cuela y cuesta leer. */
+.ios-smart-card, .ios-list-block, .ios-dropdown-menu, .spotlight-panel, .drawer-header,
+.sheet-navbar, .ios-bottom-sheet, .stat-card, .duration-info-card, .routine-diagnostic-modal {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+.ios-dropdown-menu, .spotlight-panel, .drawer-header, .sheet-navbar, .ios-bottom-sheet {
+  background-color: var(--bg-elevated, #fff) !important;
+}

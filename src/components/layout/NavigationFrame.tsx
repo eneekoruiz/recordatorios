@@ -198,7 +198,7 @@ export function NavigationFrame({
                   display: 'flex',
                   alignItems: 'center',
                   gap: 'var(--space-8, 8px)',
-                  color: 'var(--text-primary, #111)',
+                  color: 'var(--text-primary, #1c1c1e)',
                   padding: 'var(--space-8, 8px) var(--space-16, 16px)',
                   borderRadius: 'var(--radius-full, 999px)',
                   background: 'var(--bg-elevated, #fff)',
