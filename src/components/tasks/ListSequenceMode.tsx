@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Play, Pause, CheckCircle, SkipForward, Clock, ArrowRight,
-  Sparkles, CloudRain, Waves, Volume2, VolumeX, ListChecks,
+  CloudRain, Waves, Volume2, VolumeX, ListChecks,
   Zap, Share, Headphones, Plus
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
@@ -943,8 +943,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                 display: 'flex', gap: 6, alignItems: 'center', marginBottom: 12
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginRight: 'auto', paddingLeft: 4 }}>
-                  <Sparkles size={13} color={listColor} />
-                  <span style={{ fontSize: '0.72rem', color: isDark ? 'rgba(255,255,255,0.4)' : 'var(--text-tertiary, #8e8e93)', fontWeight: 700, }}>SONIDO</span>
+                  <span style={{ fontSize: '0.78rem', color: isDark ? 'rgba(255,255,255,0.55)' : 'var(--text-secondary, #636366)', fontWeight: 600 }}>Sonido</span>
                   {ambient !== 'off' && isActive && (
                     <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 11, marginLeft: 2 }}>
                       <span className="equalizer-bar" style={{ width: 2, background: listColor, borderRadius: 1, height: 5, animation: 'equalizerPulse 0.9s ease-in-out infinite alternate' }} />
@@ -997,24 +996,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                   </motion.button>
                 )}
 
-                {initialDuration > 0 && !currentDurationInfo?.isParallel && (
-                  <button
-                    onClick={() => setIsActive(v => !v)}
-                    style={{
-                      flex: 1.1, height: 48, borderRadius: 16,
-                      background: isActive ? (isDark ? 'rgba(255,149,0,0.18)' : 'rgba(255,149,0,0.12)') : listColor,
-                      color: isActive ? '#ff9500' : 'white',
-                      border: isActive ? '1px solid rgba(255,149,0,0.4)' : 'none',
-                      fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                      boxShadow: isActive ? 'none' : `0 6px 20px ${listColor}45`,
-                      transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.18s ease'
-                    }}
-                  >
-                    {isActive ? <><Pause size={17} fill="#ff9500" /> Pausar</> : <><Play size={17} fill="white" style={{ marginLeft: 2 }} /> Reanudar</>}
-                  </button>
-                )}
-
+                {/* Pausar y reanudar viven en el propio reloj: un segundo botón repetía la acción. */}
                 <motion.button
                   onClick={handleCompleteTask}
                   whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
