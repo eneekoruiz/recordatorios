@@ -13,6 +13,7 @@ import { AIService, type ProposedBatch } from '../../services/AIService';
 import { HapticService } from '../../services/HapticService';
 import type { TaskItem, CustomList } from '../../models/Task';
 import { buildTasksFromBatch, canAutoApply, isConversationalRequest, plainReply, summarizeCreated } from '../../utils/aiQuickAdd';
+import { readFrequency, stripAddRequest } from '../../utils/aiIntent';
 import { sendToAssistant, type AssistantRequest } from '../../utils/aiAssistantInbox';
 
 interface QuickAddBarProps {
@@ -215,6 +216,21 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
     let createList: CustomList | undefined;
     if (!batch || (!usesModel && proposedCount <= 1)) {
       payload = localTask ? [localTask] : [];
+      // El intérprete de la barra no quita «quiero añadir…» ni «una vez al mes o así»: si el título
+      // los conserva, se usa la lectura del asistente (título limpio, frecuencia y lista adecuada).
+      const proposal = batch?.tasks.find(t => t.selected !== false);
+      if (localTask && proposal && proposedCount === 1) {
+        const title = String(localTask.title || '');
+        if (stripAddRequest(title) !== title || readFrequency(title)) {
+          localTask.title = proposal.title;
+          if (!localTask.cycle_id && proposal.cycle) localTask.cycle_id = proposal.cycle;
+          if (!localTask.targetCount && proposal.targetCount) localTask.targetCount = proposal.targetCount;
+        }
+        if (localTask.categoryId === 'inbox' && !currentView.startsWith('list_') && proposal.listId && proposal.listId !== 'inbox' && lists.some(l => l.id === proposal.listId)) {
+          localTask.categoryId = proposal.listId;
+          localTask.sectionId = proposal.sectionId;
+        }
+      }
     } else {
       const built = buildTasksFromBatch(batch, lists, { ...viewDefaults(), fallbackListId: 'inbox', sourceText: raw });
       payload = built.tasks;

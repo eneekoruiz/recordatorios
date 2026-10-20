@@ -235,7 +235,7 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
     await page.waitForTimeout(800);
     const importBtn = page.locator('[data-testid="ai-import-all-btn"]').first();
     await expect(importBtn).toBeVisible();
-    await expect(importBtn).toContainText('Añadir 2 recordatorios');
+    await expect(importBtn).toContainText('Añadir 2');
 
     // Check that price pills were detected in the proposal
     const pricePill = page.locator('.apple-price-pill').first();

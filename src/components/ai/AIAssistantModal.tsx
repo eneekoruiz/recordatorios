@@ -2,13 +2,13 @@ import { useState, useRef, useEffect, useEffectEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Sparkles, X, ArrowUp, Check, User, Settings, Mic, MicOff,
-  Calendar, CheckCircle2, Volume2, VolumeX,
-  Sunrise, Sun, Moon, Repeat, MapPin,
+  Sparkles, X, ArrowUp, Check, Settings, Mic, MicOff,
+  CheckCircle2, Volume2, VolumeX,
   CalendarRange, Luggage, ShoppingCart, SprayCan,
   Paperclip, FileText, Loader2, AlertCircle, HelpCircle, CheckCircle,
   Edit3, Trash2
 } from 'lucide-react';
+import { describeRepeat } from '../../utils/aiIntent';
 import { AIService, type ProposedBatch, type AIConfig } from '../../services/AIService';
 import { buildTasksFromBatch } from '../../utils/aiQuickAdd';
 import { takeAssistantRequest, type AssistantRequest } from '../../utils/aiAssistantInbox';
@@ -217,6 +217,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
 
   // Sin conversación, el asistente saluda (el saludo pasa a la conversación al escribir).
   const shownMessages = messages.length > 0 ? messages : [WELCOME_MESSAGE];
+  const lastAssistantId = [...shownMessages].reverse().find(m => m.sender === 'assistant')?.id;
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -337,7 +338,21 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
         timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
       };
 
-      setMessages(prev => [...prev, aiMsg]);
+      // «Sí»: se añade lo propuesto, igual que con el botón.
+      if (batch.confirmPending && lastPending) {
+        setMessages(prev => [...prev, aiMsg]);
+        handleImportBatch(lastPending.id);
+        return;
+      }
+      // «No» o una corrección: la propuesta anterior deja de poder añadirse (la corregida la sustituye).
+      if ((batch.discardPending || batch.supersedesPending) && lastPending) {
+        setMessages(prev => [
+          ...prev.map(m => m.id === lastPending.id && m.batch ? { ...m, batch: { ...m.batch, tasks: [], suggestedReplies: undefined } } : m),
+          aiMsg,
+        ]);
+      } else {
+        setMessages(prev => [...prev, aiMsg]);
+      }
       SoundService.playPop();
     } catch (err: any) {
       setMessages(prev => [
@@ -1076,8 +1091,8 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                   </motion.div>
                 )}
 
-                {/* Suggested Quick Replies Chips */}
-                {msg.batch?.suggestedReplies && msg.batch.suggestedReplies.length > 0 && (
+                {/* Respuestas rápidas: solo en el último mensaje (las antiguas ya no tienen sentido). */}
+                {msg.id === lastAssistantId && msg.batch?.suggestedReplies && msg.batch.suggestedReplies.length > 0 && (
                   <motion.div
                     initial={{ opacity: 0, y: 4 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1108,24 +1123,9 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                           }
                           handleSend(replyText);
                         }}
-                        style={{
-                          background: 'var(--bg-surface)',
-                          border: '1px solid var(--accent-primary)',
-                          borderRadius: 999,
-                          padding: '6px 13px',
-                          fontSize: '0.82rem',
-                          fontWeight: 600,
-                          color: 'var(--accent-primary)',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 6,
-                          boxShadow: '0 2px 6px rgba(0, 122, 255, 0.08)',
-                          transition: 'transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease'
-                        }}
+                        className="ai-quick-reply"
                       >
-                        <span>{replyText}</span>
-                        <ArrowUp size={12} style={{ transform: 'rotate(45deg)' }} />
+                        {replyText}
                       </button>
                     ))}
                   </motion.div>
@@ -1276,8 +1276,8 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                       gap: 8
                     }}
                   >
-                    {/* Header with suggested list and toggle all */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '0.5px solid var(--separator)', paddingBottom: 8 }}>
+                    {/* Con varios, cuáles se añaden; con uno solo no hay nada que elegir. */}
+                    {(msg.batch.tasks.length > 1 || msg.batch.suggestedList) && <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '0.5px solid var(--separator)', paddingBottom: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                           {msg.batch.tasks.filter(t => t.selected).length} de {msg.batch.tasks.length} elegidos
@@ -1294,92 +1294,61 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                       >
                         {msg.batch.tasks.every(t => t.selected) ? 'Ninguno' : 'Todos'}
                       </button>
-                    </div>
+                    </div>}
 
                     {/* Task Rows */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 280, overflowY: 'auto' }}>
-                      {msg.batch.tasks.map(t => (
+                      {msg.batch.tasks.map(t => {
+                        const several = msg.batch!.tasks.length > 1;
+                        const meta = [
+                          t.listName || 'Bandeja de entrada',
+                          t.sectionName,
+                          describeRepeat(t.cycle, t.targetCount) ? describeRepeat(t.cycle, t.targetCount).replace(/^./, c => c.toUpperCase()) : undefined,
+                          t.dueDate ? new Date(t.dueDate).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }) : undefined,
+                          t.timeOfDay ? (t.timeOfDay === 'morning' ? 'Por la mañana' : t.timeOfDay === 'afternoon' ? 'Por la tarde' : 'Por la noche') : undefined,
+                          t.price !== undefined ? formatEuro(Number(t.price)) : undefined,
+                          t.priority === 'high' ? 'Urgente' : t.priority === 'medium' ? 'Prioridad media' : undefined,
+                          t.people && t.people.length > 0 ? `Con ${t.people.join(' y ')}` : undefined,
+                          t.locationName ? `En ${t.locationName}` : undefined,
+                        ].filter(Boolean) as string[];
+                        return (
                         <div
                           key={t.id}
                           className="ai-card-row"
-                          onClick={() => handleToggleTaskSelected(msg.id, t.id)}
+                          onClick={several ? () => handleToggleTaskSelected(msg.id, t.id) : undefined}
                           style={{
                             display: 'flex',
-                            alignItems: 'center',
+                            alignItems: 'flex-start',
                             gap: 10,
-                            padding: '9px 2px',
-                            cursor: 'pointer'
-                          }} role="checkbox" aria-checked={Boolean(t.selected)} tabIndex={0} onKeyDown={event => { if (event.key === " " || event.key === "Enter") { event.preventDefault(); event.currentTarget.click(); } }}
+                            padding: '6px 2px',
+                            cursor: several ? 'pointer' : 'default'
+                          }}
+                          {...(several ? { role: 'checkbox', 'aria-checked': Boolean(t.selected), tabIndex: 0, onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => { if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); event.currentTarget.click(); } } } : {})}
                         >
-                          <div style={{
-                            width: 20, height: 20, borderRadius: '50%',
-                            border: t.selected ? '1.5px solid var(--accent-blue, #007aff)' : '1.5px solid var(--text-tertiary)',
-                            background: t.selected ? 'var(--accent-blue, #007aff)' : 'transparent',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            flexShrink: 0
-                          }}>
-                            {t.selected && <Check size={12} color="white" />}
-                          </div>
-
+                          {several && (
+                            <div style={{
+                              width: 20, height: 20, borderRadius: '50%',
+                              border: t.selected ? '1.5px solid var(--accent-blue, #007aff)' : '1.5px solid var(--text-tertiary)',
+                              background: t.selected ? 'var(--accent-blue, #007aff)' : 'transparent',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              flexShrink: 0, marginTop: 1
+                            }}>
+                              {t.selected && <Check size={12} color="white" />}
+                            </div>
+                          )}
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <div style={{ fontSize: '0.98rem', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.3, overflowWrap: 'anywhere' }}>
                               {t.title}
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 2 }}>
-                              {t.listName && (
-                                <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
-                                  {t.listName}
-                                </span>
-                              )}
-                              {t.dueDate && (
-                                <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                                  <Calendar size={11} /> {new Date(t.dueDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
-                                </span>
-                              )}
-                              {t.timeOfDay && (
-                                <span style={{ fontSize: '0.72rem', color: t.timeOfDay === 'morning' ? '#ff9500' : t.timeOfDay === 'afternoon' ? '#007aff' : '#af52de', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                                  {t.timeOfDay === 'morning' ? <Sunrise size={11} /> : t.timeOfDay === 'afternoon' ? <Sun size={11} /> : <Moon size={11} />}
-                                  {t.timeOfDay === 'morning' ? 'Mañana' : t.timeOfDay === 'afternoon' ? 'Tarde' : 'Noche'}
-                                </span>
-                              )}
-                              {t.price !== undefined && (
-                                <span className="apple-price-pill" style={{ padding: '0 5px', fontSize: '0.72rem' }}>
-                                  {formatEuro(Number(t.price))}
-                                </span>
-                              )}
-                              {t.priority && t.priority !== 'none' && (
-                                <span style={{ fontSize: '0.72rem', color: t.priority === 'high' ? '#ff3b30' : '#ff9500', fontWeight: 600 }}>
-                                  {t.priority === 'high' ? '!!! Urgente' : '!! Media'}
-                                </span>
-                              )}
-                              {t.cycle && (
-                                <span style={{ fontSize: '0.72rem', color: 'var(--accent-primary)', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                                  <Repeat size={11} /> {t.cycle === 'cycle_day' ? 'Diario' : t.cycle === 'cycle_week' ? 'Semanal' : 'Mensual'}
-                                </span>
-                              )}
-                              {t.people && t.people.length > 0 && (
-                                <div style={{ display: 'inline-flex', gap: 3, alignItems: 'center' }}>
-                                  {t.people.map(p => (
-                                    <span key={p} style={{ fontSize: '0.72rem', color: '#5856D6', background: 'rgba(88, 86, 214, 0.12)', padding: '1px 6px', borderRadius: 999, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                                      <User size={10} /> {p}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                              {t.vibe && (
-                                <span style={{ fontSize: '0.72rem', color: '#ff9500', background: 'rgba(255, 149, 0, 0.12)', padding: '1px 6px', borderRadius: 999, fontWeight: 600 }}>
-                                  {t.vibe}
-                                </span>
-                              )}
-                              {t.locationName && (
-                                <span style={{ fontSize: '0.72rem', color: '#34c759', background: 'rgba(52, 199, 89, 0.12)', padding: '1px 6px', borderRadius: 999, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                                  <MapPin size={10} /> {t.locationName}
-                                </span>
-                              )}
-                            </div>
+                            {meta.length > 0 && (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 12px', marginTop: 3, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                                {meta.map(item => <span key={item}>{item}</span>)}
+                              </div>
+                            )}
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
 
                     {/* Action button */}
@@ -1407,7 +1376,7 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                       <CheckCircle2 size={17} />
                       {msg.batch.tasks[0]?.listId === 'que_he_hecho' || msg.batch.tasks[0]?.listName?.toLowerCase().includes('qué he hecho')
                         ? `Sí, apuntar e importar todo a Qué he hecho (${msg.batch.tasks.filter(t => t.selected).length})`
-                        : (() => { const n = msg.batch.tasks.filter(t => t.selected).length; return n === 1 ? 'Añadir 1 recordatorio' : `Añadir ${n} recordatorios`; })()}
+                        : (() => { const n = msg.batch.tasks.filter(t => t.selected).length; return msg.batch.tasks.length === 1 ? 'Añadir' : `Añadir ${n}`; })()}
                     </button>
                   </motion.div>
                 )}

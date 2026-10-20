@@ -241,3 +241,24 @@
   .stats-page .stat-card-value { font-size: 1.6rem; }
   .stats-page .stat-card-hint { font-size: var(--type-caption, 0.75rem); }
 }
+
+/* ---------- Asistente ---------- */
+/* Respuestas rápidas: texto en tono de acción sobre un relleno suave, sin borde ni flecha. */
+.ai-quick-reply {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+  color: var(--accent-primary);
+  font: inherit;
+  font-size: var(--type-subhead);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease, transform 120ms ease;
+}
+.ai-quick-reply:active { transform: scale(0.97); }
+.ai-quick-reply:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .ai-quick-reply:hover { background: color-mix(in srgb, var(--accent-primary) 18%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .ai-quick-reply { transition: none; } }
+[data-theme="dark"] .ai-quick-reply { color: #6cb0ff; }

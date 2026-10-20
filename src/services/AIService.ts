@@ -4,6 +4,7 @@ import { detectFormatAndParse } from '../utils/importerParser';
 import { readExtendedDate } from '../utils/nlp';
 import { normalizeSpokenPrompt, stripRequestFrames, isFillerOnly, asPriorityModifier, parseWeekdayPhrase, parseClockTime, timeOfDayForHour, tidyTitle, leadingInfinitive, isBareNounPhrase } from '../utils/aiPhrasing';
 import { useAppStore } from '../store/useAppStore';
+import { readFrequency, asksForNoRepeat, stripAddRequest, readConfirmation, readListTarget, referencesPending, inferList, describeProposal, type AssistantCycle } from '../utils/aiIntent';
 import { getAccountSettings, saveAccountSettings } from '../utils/accountSettings';
 
 export interface ProposedTask {
@@ -79,6 +80,12 @@ export interface ProposedBatch {
   };
   clarificationQuestions?: string[];
   suggestedReplies?: string[];
+  /** «Sí»: añadir lo que se propuso en el mensaje anterior. */
+  confirmPending?: boolean;
+  /** «No»: descartar lo que se propuso en el mensaje anterior. */
+  discardPending?: boolean;
+  /** Esta propuesta corrige la anterior y la sustituye (la anterior deja de poder añadirse). */
+  supersedesPending?: boolean;
 }
 
 export interface AIConfig {
@@ -178,6 +185,12 @@ export class AIService {
     const config = this.getConfig();
     const apiKey = config.apiKey?.trim();
 
+    // «Sí», «no», «en otra lista», «cada semana mejor»… sobre lo que se acaba de proponer: se
+    // resuelve aquí, igual con o sin modelo de lenguaje, para que nunca se cree una tarea nueva con
+    // la propia respuesta como título.
+    const pendingReply = this.answerPendingProposal(userMessage, existingLists, lastProposedTasks, existingTasks);
+    if (pendingReply) return pendingReply;
+
     // 1. External LLM via Gemini API if key is present or provider is gemini
     // OJO: un "provider" explícito (elegido en Ajustes) manda siempre — antes, cualquier clave
     // de más de 20 caracteres (o sea, casi cualquier clave real, también las de OpenAI que
@@ -236,6 +249,51 @@ export class AIService {
 
     // 4. Fallback: Intelligent Local Semantic Extractor (Zero-Config)
     return this.localSemanticExtract(userMessage, existingLists, existingTasks, lastProposedTasks, listSections);
+  }
+
+  /**
+   * Respuestas a lo que se acaba de proponer y aún no se ha añadido:
+   *  · «sí», «vale», «añádelo» → añadirlo; «no», «déjalo» → descartarlo;
+   *  · «en otra lista» / «cambiar frecuencia» → ofrecer las opciones;
+   *  · un cambio («no en la bandeja, en Care», «mejor cada semana», «a las 11») → aplicarlo a la
+   *    propuesta, que se sustituye. Se reconoce aunque la frase sea larga si habla de lo propuesto
+   *    («lo», «eso», «pero…») o si es corta.
+   * Devuelve null si el mensaje es otra cosa (p. ej. un recordatorio nuevo).
+   */
+  public static answerPendingProposal(
+    text: string,
+    existingLists: CustomList[],
+    lastProposedTasks?: ProposedTask[],
+    existingTasks?: Record<string, TaskItem> | TaskItem[],
+  ): ProposedBatch | null {
+    const trimmed = text.trim();
+    if (!trimmed || !lastProposedTasks || lastProposedTasks.length === 0) return null;
+    const plural = lastProposedTasks.length > 1;
+    const confirmation = readConfirmation(trimmed);
+    if (confirmation === 'yes') return { reply: plural ? 'Hecho, añadidos.' : 'Hecho, añadido.', tasks: [], confirmPending: true };
+    if (confirmation === 'no') return { reply: plural ? 'Vale, no los apunto.' : 'Vale, no lo apunto.', tasks: [], discardPending: true };
+
+    const folded = trimmed.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[¿?¡!.]/g, '').trim();
+    if (/^(?:en\s+)?otra\s+lista$|^cambiar(?:\s+de)?\s+lista$|^en\s+que\s+lista$/.test(folded)) {
+      const tasksArray = existingTasks ? (Array.isArray(existingTasks) ? existingTasks : Object.values(existingTasks)) : [];
+      const guess = inferList(lastProposedTasks[0].title, existingLists, tasksArray);
+      const names = [
+        ...(guess ? [guess.list.name] : []),
+        ...existingLists.filter(l => l.name && !l.isFolder && !/^(?:que_he_hecho|biblioteca)/.test(l.id)).map(l => l.name),
+        'Bandeja de entrada',
+      ].filter((name, i, all) => all.indexOf(name) === i && name !== lastProposedTasks[0].listName).slice(0, 6);
+      return { reply: '¿En qué lista?', tasks: [], suggestedReplies: names.map(name => `En ${name}`) };
+    }
+    if (/^(?:cambiar|otra)\s+frecuencia$|^cada\s+cuanto$|^cambiar\s+la\s+repeticion$/.test(folded)) {
+      return { reply: '¿Cada cuánto?', tasks: [], suggestedReplies: ['Cada día', 'Cada semana', 'Cada mes', 'Una sola vez'] };
+    }
+
+    const wordCount = trimmed.split(/\s+/).length;
+    const opener = /^¿?(?:y\s+si|qu[ée]\s+tal\s+si|mejor|y\s+mejor|no,?\s+|pero\b|c[áa]mbia(?:lo|la)?\b|c[áa]mbiale|p[áa]sa(?:lo|la)|mu[ée]ve(?:lo|la)|m[ée]te(?:lo|la)|pon(?:lo|la)\b|en\s+(?:la\s+lista\s+)?(?:de\s+)?\S+$|cada\s+|una\s+sola\s+vez)/i.test(trimmed);
+    const looksLikeNewTask = /\b(recu[ée]rdame|ap[úu]ntame|a[ñn]ade\s+(?:un|una|otro|otra)|tengo\s+que|hay\s+que|debo|comprar)\b/i.test(trimmed) && !referencesPending(trimmed);
+    if (looksLikeNewTask) return null;
+    if (!(opener || referencesPending(trimmed) || wordCount <= 6)) return null;
+    return this.tryApplyCorrection(trimmed, lastProposedTasks, existingLists);
   }
 
   /**
@@ -307,15 +365,25 @@ export class AIService {
       changeDescriptions.push(`precio: ${newPrice}€`);
     }
 
-    const listMatch = text.match(/(?:en\s+la\s+lista\s+(?:de\s+)?|muével[oa]\s+a\s+|pásal[oa]\s+a\s+|c[áa]mbial[oa]\s+a\s+(?:la\s+lista\s+)?)["']?([^"'.,\n]+)["']?/i);
-    if (listMatch && listMatch[1]) {
-      const candidate = listMatch[1].trim();
-      const matchedList = existingLists.find(l => l.name.toLowerCase() === candidate.toLowerCase() || candidate.toLowerCase().includes(l.name.toLowerCase()));
-      if (matchedList) {
-        newListId = matchedList.id;
-        newListName = matchedList.name;
-        changeDescriptions.push(`lista: ${matchedList.name}`);
-      }
+    // Lista pedida, descartando las mencionadas en negativo («no en la bandeja, en Care»).
+    const listTarget = readListTarget(text, existingLists);
+    if (listTarget) {
+      newListId = listTarget.id;
+      newListName = listTarget.name;
+      changeDescriptions.push(`lista: ${listTarget.name}`);
+    }
+
+    // Frecuencia: «mejor cada semana», «una vez al mes», «una sola vez».
+    let newCycle: AssistantCycle | null | undefined;
+    let newTargetCount: number | undefined;
+    const frequency = readFrequency(text);
+    if (frequency) {
+      newCycle = frequency.cycle;
+      newTargetCount = frequency.targetCount;
+      changeDescriptions.push('frecuencia');
+    } else if (asksForNoRepeat(text)) {
+      newCycle = null;
+      changeDescriptions.push('sin repetición');
     }
 
     const titleMatch = text.match(/(?:que\s+se\s+llame|c[áa]mbiale\s+el\s+(?:nombre|t[íi]tulo)\s+a|renómbral[oa]\s+a|mejor\s+(?:que\s+)?ponle)\s+["']?([^"'.\n]+)["']?/i);
@@ -350,14 +418,21 @@ export class AIService {
       if (newListId) {
         clone.listId = newListId;
         clone.listName = newListName;
+        clone.sectionId = undefined;
+        clone.sectionName = undefined;
+      }
+      if (newCycle !== undefined) {
+        clone.cycle = newCycle ?? undefined;
+        clone.targetCount = newCycle ? newTargetCount : undefined;
       }
       return clone;
     });
 
-    const subject = updatedTasks.length === 1 ? `"${updatedTasks[0].title}"` : `los ${updatedTasks.length} recordatorios`;
     return {
-      reply: `He actualizado ${subject} (${changeDescriptions.join(', ')}). Revisa y confirma:`,
-      tasks: updatedTasks
+      reply: `Cambiado. ${describeProposal(updatedTasks)}`,
+      tasks: updatedTasks,
+      supersedesPending: true,
+      suggestedReplies: updatedTasks.length === 1 ? ['Sí', 'En otra lista', 'Cambiar frecuencia'] : ['Sí, todos', 'En otra lista'],
     };
   }
 
@@ -383,19 +458,9 @@ export class AIService {
       ? (Array.isArray(existingTasks) ? existingTasks : Object.values(existingTasks))
       : [];
 
-    // 0.-1 Intent: Corregir lo que se acaba de proponer (aún sin confirmar/guardar), no una
-    // tarea existente ni una tarea nueva — "¿y si mejor a las 11?", "mejor el jueves",
-    // "ponle 5€", "cámbialo a la lista Compra". Va antes que cualquier otra cosa: si hay una
-    // propuesta reciente y el mensaje trae un cambio reconocible, se aplica sobre esa.
-    // Solo si el mensaje realmente "suena" a corrección (frase corta u opener típico) — si no,
-    // "recuérdame ir al médico mañana a las 5" tras una propuesta sin confirmar se trataría por
-    // error como una corrección de esa propuesta en vez de como la tarea nueva que es.
-    const soundsLikeCorrection = /^¿?(?:y\s+si|qu[ée]\s+tal\s+si|mejor\s+(?:si|a\s+las?|que)|y\s+mejor|no,?\s+mejor|c[áa]mbia(?:lo|la)?\s+a|c[áa]mbiale)\b/i.test(trimmed) ||
-      (trimmed.split(/\s+/).length <= 6 && !/\b(recu[ée]rdame|apunta|a[ñn]ade|agrega|crea|pon\s+un\s+recordatorio|tengo\s+que|hay\s+que|debo|comprar|llamar|hacer)\b/i.test(trimmed));
-    if (soundsLikeCorrection && lastProposedTasks && lastProposedTasks.length > 0) {
-      const correctionBatch = this.tryApplyCorrection(trimmed, lastProposedTasks, existingLists);
-      if (correctionBatch) return correctionBatch;
-    }
+    // 0.-1 Respuestas a la propuesta anterior (sí, no, cambios): ver answerPendingProposal.
+    const pendingReply = this.answerPendingProposal(trimmed, existingLists, lastProposedTasks, tasksArray);
+    if (pendingReply) return pendingReply;
 
     // 0. Intent: Saludo general o pregunta sobre capacidades (NO añadir recordatorios ciegamente)
     const normalizedGreeting = trimmed.replace(/^[¡¿\s]+/, '');
@@ -403,15 +468,9 @@ export class AIService {
       !/(?:apunta|crea|a[ñn]ade|recu[ée]rdame|compra|marca|borra|elimina|pon|haz)\b/i.test(trimmed);
     if (isGreetingOrHelp) {
       return {
-        reply: `¡Hola! Soy tu **Asistente Inteligente de Recordatorios**. Estoy aquí para facilitarte el día a día. Puedes pedirme:
+        reply: `Hola. Dime qué tienes que hacer y lo apunto: «hacerme las cejas una vez al mes», «llamar al dentista mañana a las 10», «comprar pan y leche». Antes de crear nada te digo qué voy a apuntar y dónde.
 
-- 📋 **Crear recordatorios desglosados:** Pega listas largas, audios transcritos o notas enrevesadas.
-- ✏️ **Modificar o completar:** *"Marca hecha la leche"*, *"Pon precio de 3,50€ al pan"* o *"Elimina la reunión"*.
-- 🔍 **Consultar tus tareas:** *"¿Qué tengo para hoy?"* o *"¿Cuánto llevo gastado en la compra?"*.
-- 📂 **Unificar y organizar:** *"Unifica los productos de limpieza en una tarea madre"*.
-- 📄 **Importar documentos:** Arrastra cualquier archivo PDF o CSV.
-
-¿Qué te gustaría organizar hoy?`,
+También puedo marcar algo como hecho («marca hecha la leche»), cambiarlo («pon 3,50 € al pan»), borrarlo, decirte qué tienes hoy o leer un PDF o CSV.`,
         tasks: [],
         suggestedReplies: [
           '¿Qué tareas tengo para hoy?',
@@ -843,7 +902,7 @@ export class AIService {
 
       // «oye, cuando puedas, recuérdame que tengo que…»: fuera el marco, se queda lo que hay que hacer.
       // Si el usuario cuenta su día («fui a…», «he hecho…») no se toca.
-      if (!isNarrative) segment = stripRequestFrames(segment);
+      if (!isNarrative) segment = stripRequestFrames(stripAddRequest(segment));
       if (isFillerOnly(segment)) continue;
       // «es urgente» detrás de una tarea no es otra tarea: es su prioridad.
       const priorityModifier = asPriorityModifier(segment);
@@ -991,16 +1050,22 @@ export class AIService {
         priority = 'medium';
       }
 
-      // Extract cycle
+      // Extract cycle: «una vez al mes o así», «dos veces por semana», «cada día», «mensualmente»…
+      // (la frase sale del título; un adjetivo suelto como «informe semanal» se queda).
       let cycle: ProposedTask['cycle'];
-      if (/\b(diari[oa]|todos\s+los\s+días|cada\s+día)\b/i.test(segment)) cycle = 'cycle_day';
-      else if (/\b(semanal|cada\s+semana)\b/i.test(segment)) cycle = 'cycle_week';
-      else if (/\b(mensual|cada\s+mes)\b/i.test(segment)) cycle = 'cycle_month';
-      else if (/\b(anual|cada\s+año)\b/i.test(segment)) cycle = 'cycle_year';
+      let targetCount: number | undefined;
+      const frequency = readFrequency(segment);
+      if (frequency) {
+        cycle = frequency.cycle;
+        targetCount = frequency.targetCount;
+        segment = segment.replace(frequency.matched, ' ').replace(/\s{2,}/g, ' ').trim();
+      } else if (/\b(diari[oa])\b/i.test(segment)) cycle = 'cycle_day';
+      else if (/\b(semanal)\b/i.test(segment)) cycle = 'cycle_week';
+      else if (/\b(mensual)\b/i.test(segment)) cycle = 'cycle_month';
+      else if (/\b(anual)\b/i.test(segment)) cycle = 'cycle_year';
 
       // Extract target count / repetitions (ej. "10 veces", "beber 8 vasos de agua", "10 veces al día", "5 series")
-      let targetCount: number | undefined;
-      const timesMatch = segment.match(/\b(\d+)\s*(?:veces|repeticiones|series|vasos|tazas)(?:\s+(?:al|por|cada)\s+d[íi]a)?\b/i);
+      const timesMatch = targetCount ? null : segment.match(/\b(\d+)\s*(?:veces|repeticiones|series|vasos|tazas)(?:\s+(?:al|por|cada)\s+d[íi]a)?\b/i);
       if (timesMatch) {
         const count = parseInt(timesMatch[1], 10);
         if (count > 1 && count <= 100) {
@@ -1022,6 +1087,7 @@ export class AIService {
       cycle = weekdayCycle ?? cycle;
 
       // Match target list
+      let explicitList = Boolean(suggestedList);
       let listId = suggestedList ? undefined : 'inbox';
       let listName = suggestedList ? suggestedList.name : 'Bandeja de entrada';
       let targetSectionId: string | undefined;
@@ -1062,6 +1128,7 @@ export class AIService {
       );
 
       if (inferredMediaType && libraryList) {
+        explicitList = true;
         listId = libraryList.id;
         listName = libraryList.name;
         if (listSections && listSections.length > 0) {
@@ -1078,6 +1145,7 @@ export class AIService {
           }
         }
       } else if (isNarrative || finalPeople.length > 0) {
+        explicitList = true;
         const queHeHechoList = existingLists.find(l => l.id === 'que_he_hecho' || l.id === 'list_que_he_hecho' || (l.name || '').toLowerCase().includes('qué he hecho'));
         if (queHeHechoList) {
           listId = queHeHechoList.id;
@@ -1092,6 +1160,7 @@ export class AIService {
           if (regex.test(segment) || regex.test(text)) {
             listId = l.id;
             listName = l.name;
+            explicitList = true;
             segment = segment.replace(regex, '').trim();
             break;
           }
@@ -1106,6 +1175,15 @@ export class AIService {
         .trim();
       cleanTitle = tidyTitle(cleanTitle.replace(/^tengo\s+(?!que\b|ganas\b|hambre\b|sue[ñn]o\b|sed\b)/i, ''));
       const segmentVerb = leadingInfinitive(cleanTitle);
+      // Sin lista dicha: la que encaje por tema o por lo que ya contiene (cejas → Care). Si no hay
+      // una clara, se queda en la bandeja y la pregunta lo dice.
+      if (!explicitList && listId === 'inbox') {
+        const guess = inferList(cleanTitle, existingLists, tasksArray);
+        if (guess) {
+          listId = guess.list.id;
+          listName = guess.list.name;
+        }
+      }
 
       let modifierDueDate: string | undefined;
       if (dueDate) {
@@ -1184,7 +1262,11 @@ export class AIService {
       }
     }
 
-    let reply = `He analizado tu petición y preparado ${tasks.length} recordatorio${tasks.length === 1 ? '' : 's'} listo${tasks.length === 1 ? '' : 's'} para importar:`;
+    // Antes de crear nada, una pregunta corta que dice qué, cada cuánto y dónde.
+    let reply = describeProposal(tasks);
+    let suggestedReplies: string[] | undefined = tasks.length === 1
+      ? ['Sí', 'En otra lista', 'Cambiar frecuencia']
+      : tasks.length > 1 ? ['Sí, todos', 'En otra lista'] : undefined;
 
     // Empathetic & conversational companion reply if the user talked about their day
     if (isNarrative && tasks.length > 0) {
@@ -1199,17 +1281,19 @@ export class AIService {
         ? ` con ${allUniquePeople.join(' y ')}` 
         : '';
 
-      reply = `¡Vaya día más activo! Con todo lo que me cuentas, veo que has hecho ${activitiesOverview || 'varias actividades'}${peoplePart}. ¿Quieres que lo apunte todo a tu lista «Qué he hecho»?`;
+      reply = `Has hecho ${activitiesOverview || 'varias cosas'}${peoplePart}. ¿Lo apunto en «Qué he hecho»?`;
+      suggestedReplies = ['Sí'];
     } else if (hadCorrectionLikeSegment) {
-      reply = 'El extractor local no tiene memoria de lo que acabo de proponer, así que no puedo aplicar ese cambio directamente. Escribe el recordatorio completo de nuevo (p. ej. "Comprar leche mañana a las 11") o configura una clave de Gemini/OpenAI en Ajustes ⚙️ para poder conversar con contexto.';
+      reply = 'Ahora no hay nada pendiente que cambiar. Dime el recordatorio completo, por ejemplo «Comprar leche mañana a las 11».';
     } else if (tasks.length === 0) {
-      reply = 'No he podido detectar tareas claras en el texto. Puedes contarme cómo ha ido tu día o darme una lista como: "Comprar pan por 1€, llamar al dentista mañana a las 10:00 y hacer ejercicio por la tarde".';
+      reply = 'No veo nada que apuntar. Prueba con algo como «llamar al dentista mañana a las 10» o «comprar pan y leche».';
     }
 
     return {
       reply,
       tasks,
-      suggestedList
+      suggestedList,
+      suggestedReplies: tasks.length > 0 ? suggestedReplies : undefined,
     };
   }
 

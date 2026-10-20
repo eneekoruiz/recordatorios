@@ -222,7 +222,7 @@ describe('AIService Semantic Grouping & Queries', () => {
   it('handles general greetings with helpful advice and suggestions without creating fake tasks', () => {
     const result = AIService.localSemanticExtract('¡Hola buenas! ¿Qué tal?', lists, {});
     expect(result.tasks.length).toBe(0);
-    expect(result.reply).toContain('Asistente Inteligente de Recordatorios');
+    expect(result.reply).toContain('Dime qué tienes que hacer');
     expect(result.suggestedReplies && result.suggestedReplies.length > 0).toBe(true);
   });
 
