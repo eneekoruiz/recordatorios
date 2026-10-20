@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Clock, Mic, MicOff, Calendar as CalendarIcon, Repeat, Flag } from 'lucide-react';
 import { CustomSelect } from '../../ui/CustomSelect';
 import type { TaskItem, CustomList } from '../../../models/Task';
+import { focusOnMount } from '../../../utils/focusOnMount';
 
 interface DrawerHeaderSectionProps {
   taskId?: string;
@@ -47,7 +48,8 @@ export const DrawerHeaderSection: React.FC<DrawerHeaderSectionProps> = ({
             placeholder="Título · p. ej. «Pastillas mañana 9:00»" 
             value={title}
             onChange={e => setTitle(e.target.value)}
-            autoFocus 
+            // Solo al crear: al abrir una tarea existente, el teclado tapaba media hoja en el móvil.
+            ref={taskId ? undefined : focusOnMount}
             aria-label="Título de la tarea con reconocimiento de horas"
             style={{ flex: 1 }}
           />

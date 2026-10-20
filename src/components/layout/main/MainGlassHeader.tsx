@@ -82,7 +82,21 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
   onOpenIntegrations,
 }) => {
     const focusSheetRef = useSheetRef<HTMLDivElement>(null);
+    const menuTriggerRef = useSheetRef<HTMLButtonElement>(null);
     useModalFocus(focusSheetRef, isMobile && isMenuOpen, () => setIsMenuOpen(false));
+    // Escritorio: el desplegable se cierra con Escape y devuelve el foco al «···» (antes se quedaba
+    // abierto, con una capa invisible encima de la página que bloqueaba los clics).
+    React.useEffect(() => {
+      if (isMobile || !isMenuOpen) return;
+      const onKeyDown = (event: KeyboardEvent) => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        setIsMenuOpen(false);
+        menuTriggerRef.current?.focus({ preventScroll: true });
+      };
+      window.addEventListener('keydown', onKeyDown);
+      return () => window.removeEventListener('keydown', onKeyDown);
+    }, [isMobile, isMenuOpen, setIsMenuOpen]);
   const listAccentColor = isSmartView
     ? (SMART_COLORS[currentView] || 'var(--accent-blue, #007AFF)')
     : (currentList?.color || 'var(--accent-blue, #007AFF)');
@@ -223,11 +237,14 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
         {(isListView || (isSmartView && currentView !== 'smart_calendar') || isFolderView) && (
           <div style={{ position: 'relative' }}>
             <button
+              ref={menuTriggerRef}
               type="button"
               className="icon-btn apple-nav-action-btn"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               title="Opciones de lista"
               aria-label="Opciones de lista"
+              aria-haspopup="menu"
+              aria-expanded={isMenuOpen}
               style={{
                 width: 32,
                 height: 32,

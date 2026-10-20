@@ -30,7 +30,7 @@ export function DeleteParentModal({
     if (!isOpen) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    const focusTimer = window.setTimeout(() => cancelRef.current?.focus(), 80);
+    const focusTimer = window.setTimeout(() => cancelRef.current?.focus({ preventScroll: true }), 80);
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -48,12 +48,12 @@ export function DeleteParentModal({
 
           if (event.shiftKey) {
             if (document.activeElement === firstElement) {
-              lastElement.focus();
+              lastElement.focus({ preventScroll: true });
               event.preventDefault();
             }
           } else {
             if (document.activeElement === lastElement) {
-              firstElement.focus();
+              firstElement.focus({ preventScroll: true });
               event.preventDefault();
             }
           }

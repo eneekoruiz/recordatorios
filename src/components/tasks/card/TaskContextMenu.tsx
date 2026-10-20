@@ -17,6 +17,7 @@ import { SpotlightBackdrop, type SpotlightRect } from '../../ui/SpotlightBackdro
 import { formatEuro } from '../../../utils/format';
 import { useFitMenuInViewport } from '../../../hooks/useFitMenuInViewport';
 import { IntegrationService } from '../../../services/IntegrationService';
+import { focusOnMount } from '../../../utils/focusOnMount';
 
 export interface TaskContextMenuProps {
   task: TaskItem;
@@ -499,7 +500,7 @@ function MenuActions({
             type="number"
             step="0.01"
             min="0"
-            autoFocus
+            ref={focusOnMount}
             placeholder="0.00"
             defaultValue={task.price !== undefined ? task.price : ''}
             onKeyDown={(e) => {

@@ -13,7 +13,11 @@ const selector = 'button, a[href], input, select, textarea, summary, [tabindex]:
 const targets = (element: HTMLElement) => Array.from(element.querySelectorAll<HTMLElement>(selector))
   .filter(node => !node.matches(':disabled, [aria-disabled="true"]') && !node.closest('[hidden], [inert], [aria-hidden="true"]') && node.getClientRects().length > 0);
 
-/** Keep keyboard interaction in the active sheet; nested sheets close independently. */
+/**
+ * Keep keyboard interaction in the active sheet; nested sheets close independently.
+ * Focus never scrolls: sheets mount off-screen and slide in, and iOS Safari scrolls the page to
+ * reveal a focused element that is still below the fold (the sheet appeared to jump up and back).
+ */
 export function useModalFocus<T extends HTMLElement>(ref: RefObject<T | null>, open: boolean, onClose: () => void) {
   const close = useRef(onClose);
   useEffect(() => { close.current = onClose; }, [onClose]);
@@ -27,7 +31,7 @@ export function useModalFocus<T extends HTMLElement>(ref: RefObject<T | null>, o
     const previousTabIndex = element.getAttribute('tabindex');
     if (previousTabIndex === null) element.tabIndex = -1;
     const frame = requestAnimationFrame(() => {
-      if (layers.at(-1) === layer && !element.contains(document.activeElement)) (targets(element)[0] ?? element).focus();
+      if (layers.at(-1) === layer && !element.contains(document.activeElement)) (targets(element)[0] ?? element).focus({ preventScroll: true });
     });
     const handleKey = (event: KeyboardEvent) => {
       if (layers.at(-1) !== layer) return;
@@ -46,7 +50,7 @@ export function useModalFocus<T extends HTMLElement>(ref: RefObject<T | null>, o
         if (!element.contains(active) || (event.shiftKey ? active === first : active === last) || items.length === 0) {
           event.preventDefault();
           event.stopImmediatePropagation();
-          (event.shiftKey ? last : first).focus();
+          (event.shiftKey ? last : first).focus({ preventScroll: true });
         }
       }
     };
@@ -61,8 +65,8 @@ export function useModalFocus<T extends HTMLElement>(ref: RefObject<T | null>, o
         const current = document.activeElement;
         if (current !== document.body && current instanceof HTMLElement && current.isConnected && !element.contains(current)) return;
         const next = layers.at(-1)?.element;
-        if (layer.restore?.isConnected && (!next || next.contains(layer.restore))) layer.restore.focus();
-        else if (next) (targets(next)[0] ?? next).focus();
+        if (layer.restore?.isConnected && (!next || next.contains(layer.restore))) layer.restore.focus({ preventScroll: true });
+        else if (next) (targets(next)[0] ?? next).focus({ preventScroll: true });
       });
     };
   }, [ref, open]);

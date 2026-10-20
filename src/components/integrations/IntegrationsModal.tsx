@@ -150,7 +150,7 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
     const focusableSelector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
     const focusInitialControl = () => {
       const firstFocusable = dialog?.querySelector<HTMLElement>(focusableSelector);
-      (firstFocusable || dialog)?.focus();
+      (firstFocusable || dialog)?.focus({ preventScroll: true });
     };
     focusInitialControl();
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -164,17 +164,17 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
         .filter(element => element.getClientRects().length > 0);
       if (focusable.length === 0) {
         e.preventDefault();
-        dialog.focus();
+        dialog.focus({ preventScroll: true });
         return;
       }
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
       if (e.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) {
         e.preventDefault();
-        last.focus();
+        last.focus({ preventScroll: true });
       } else if (!e.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement))) {
         e.preventDefault();
-        first.focus();
+        first.focus({ preventScroll: true });
       }
     };
     window.addEventListener('keydown', handleKeyDown);

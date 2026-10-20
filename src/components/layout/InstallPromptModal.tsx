@@ -5,6 +5,7 @@ import { AlertCircle } from 'lucide-react';
 import { AppLogo } from '../ui/AppLogo';
 import { useRef as useSheetRef } from "react";
 import { useModalFocus } from "../../hooks/useModalFocus";
+import { focusOnMount } from '../../utils/focusOnMount';
 
 type InstallInfo = { title: string; desc: string; isError?: boolean };
 
@@ -136,10 +137,10 @@ export function InstallPromptModal() {
               {deferredPrompt ? (
                 <>
                   <button type="button" className="secondary" onClick={close}>Ahora no</button>
-                  <button type="button" className="is-preferred" onClick={handleInstallClick} autoFocus>Instalar</button>
+                  <button type="button" className="is-preferred" onClick={handleInstallClick} ref={focusOnMount}>Instalar</button>
                 </>
               ) : (
-                <button type="button" className="is-preferred" onClick={close} autoFocus>Entendido</button>
+                <button type="button" className="is-preferred" onClick={close} ref={focusOnMount}>Entendido</button>
               )}
             </div>
           </motion.section>

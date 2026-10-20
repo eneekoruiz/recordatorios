@@ -22,7 +22,7 @@ export function PromptModal() {
     if (!isOpen) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    const timer = window.setTimeout(() => inputRef.current?.focus(), 100);
+    const timer = window.setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 100);
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') closePrompt(null);
     };

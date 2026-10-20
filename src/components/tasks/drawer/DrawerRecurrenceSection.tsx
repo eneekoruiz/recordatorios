@@ -5,6 +5,7 @@ import { SectionTrailing } from './SectionTrailing';
 import { CustomSelect } from '../../ui/CustomSelect';
 import type { CustomCycle, ListSection } from '../../../models/Task';
 import { formatSectionTitle } from '../../../utils/sectionRoutine';
+import { focusOnMount } from '../../../utils/focusOnMount';
 
 interface DrawerRecurrenceSectionProps {
   cardRepeatOpen: boolean;
@@ -106,7 +107,7 @@ export const DrawerRecurrenceSection: React.FC<DrawerRecurrenceSectionProps> = (
                     <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>Nueva sección</span>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <input
-                        autoFocus
+                        ref={focusOnMount}
                         value={inlineInputValue}
                         onChange={e => setInlineInputValue(e.target.value)}
                         placeholder="Nombre de sección"

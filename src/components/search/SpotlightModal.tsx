@@ -103,7 +103,7 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
   }
   useEffect(() => {
     if (!isModalOpen) return;
-    const timer = window.setTimeout(() => inputRef.current?.focus(), 50);
+    const timer = window.setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 50);
     return () => window.clearTimeout(timer);
   }, [isModalOpen]);
 

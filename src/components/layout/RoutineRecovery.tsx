@@ -35,12 +35,14 @@ export function RoutineRecovery({ groups, onStartTask, onOpenTask, onSelectView 
     if (!menuFor) return;
     const close = (event: Event) => {
       if (event instanceof KeyboardEvent && event.key !== 'Escape') return;
-      if (event instanceof PointerEvent && menuRef.current?.contains(event.target as Node)) return;
+      // Dentro del menú, o sobre su propio «···» (ese botón ya alterna: si se cerrara aquí, el clic
+      // lo volvía a abrir y el menú no había forma de cerrarlo con él).
+      if (event instanceof PointerEvent && (event.target as Element | null)?.closest?.(`[data-menu-anchor="${CSS.escape(menuFor)}"]`)) return;
       setMenuFor(null);
     };
     document.addEventListener('pointerdown', close);
     document.addEventListener('keydown', close);
-    menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+    menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus({ preventScroll: true });
     return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', close); };
   }, [menuFor]);
 
@@ -106,7 +108,7 @@ export function RoutineRecovery({ groups, onStartTask, onOpenTask, onSelectView 
                 </span>
               </span>
             </button>
-            <div className="routine-recovery-menu-anchor">
+            <div className="routine-recovery-menu-anchor" data-menu-anchor={group.id}>
               <button type="button" className="routine-recovery-more-btn" aria-haspopup="menu" aria-expanded={menuFor === group.id}
                 aria-label={`Más opciones para ${group.label}`} onClick={() => setMenuFor(menuFor === group.id ? null : group.id)}>
                 <MoreHorizontal size={18} aria-hidden="true" />

@@ -32,6 +32,7 @@ import {
 import type { ListType } from '../../models/Task';
 import { useRef as useSheetRef } from "react";
 import { useModalFocus } from "../../hooks/useModalFocus";
+import { focusOnMount } from '../../utils/focusOnMount';
 
 export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFolder }: ListConfigModalProps) {
     const sheetRef = useSheetRef<HTMLDivElement>(null);
@@ -233,7 +234,7 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                 placeholder={isFolder ? 'Nombre de la carpeta' : 'Nombre de la lista'}
                 aria-label={isFolder ? 'Nombre de la carpeta' : 'Nombre de la lista'}
                 data-focused={isFocused || undefined}
-                autoFocus
+                ref={focusOnMount}
               />
             </div>
 

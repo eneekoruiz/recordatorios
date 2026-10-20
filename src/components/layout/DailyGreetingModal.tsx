@@ -92,7 +92,7 @@ export const DailyGreetingModal: React.FC<DailyGreetingModalProps> = ({ onSelect
   // Foco y teclado mientras la hoja está abierta.
   useEffect(() => {
     if (!isOpen) {
-      (previouslyFocused.current as HTMLElement | null)?.focus?.();
+      (previouslyFocused.current as HTMLElement | null)?.focus?.({ preventScroll: true });
       return;
     }
     previouslyFocused.current = document.activeElement;
@@ -100,7 +100,7 @@ export const DailyGreetingModal: React.FC<DailyGreetingModalProps> = ({ onSelect
     document.body.style.overflow = 'hidden';
     const focusTimer = window.setTimeout(() => {
       // El foco va a la hoja (sin anillo); Intro abre el día y Tab recorre los botones.
-      sheetRef.current?.focus();
+      sheetRef.current?.focus({ preventScroll: true });
     }, 120);
 
     const onKeyDown = (event: KeyboardEvent) => {
@@ -121,10 +121,10 @@ export const DailyGreetingModal: React.FC<DailyGreetingModalProps> = ({ onSelect
       const last = focusables[focusables.length - 1];
       if (event.shiftKey && document.activeElement === first) {
         event.preventDefault();
-        last.focus();
+        last.focus({ preventScroll: true });
       } else if (!event.shiftKey && document.activeElement === last) {
         event.preventDefault();
-        first.focus();
+        first.focus({ preventScroll: true });
       }
     };
 

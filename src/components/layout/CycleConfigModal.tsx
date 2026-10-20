@@ -11,6 +11,7 @@ import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
 import { useRef as useSheetRef } from "react";
 import { useModalFocus } from "../../hooks/useModalFocus";
+import { focusOnMount } from '../../utils/focusOnMount';
 
 interface CycleConfigModalProps {
   isOpen: boolean;
@@ -152,7 +153,7 @@ function CycleConfigModalContent({
               placeholder="Nombre (p. ej. Trimestral)"
               aria-label="Nombre de la frecuencia"
               data-focused={isFocused || undefined}
-              autoFocus
+              ref={focusOnMount}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && isValid) {
                   e.preventDefault();

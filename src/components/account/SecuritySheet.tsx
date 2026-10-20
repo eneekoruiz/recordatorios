@@ -7,6 +7,7 @@ import { apiUrl } from '../../sync/syncManager';
 import { useAppStore } from '../../store/useAppStore';
 import { useRef as useSheetRef } from "react";
 import { useModalFocus } from "../../hooks/useModalFocus";
+import { focusOnMount } from '../../utils/focusOnMount';
 
 type Status = { twoFactorEnabled: boolean; recoveryCodesLeft: number; emailAlerts: boolean };
 type Step = 'idle' | 'setup' | 'codes' | 'disable' | 'password';
@@ -145,7 +146,7 @@ export function SecuritySheet({ onClose }: { onClose: () => void }) {
                   <p className="security-help">¿No puedes escanearlo? Escribe esta clave: <code className="security-key">{groupKey(setup.secret)}</code></p>
                   <a className="security-link" href={setup.url}><Smartphone size={14} /> Abrir en la app de este dispositivo</a>
                   <label htmlFor={codeId} className="security-help">2. Escribe el código de 6 dígitos que muestra la app</label>
-                  <input id={codeId} className="security-input" inputMode="numeric" autoComplete="one-time-code" maxLength={7} value={code} onChange={(e) => setCode(e.target.value)} placeholder="123 456" autoFocus />
+                  <input id={codeId} className="security-input" inputMode="numeric" autoComplete="one-time-code" maxLength={7} value={code} onChange={(e) => setCode(e.target.value)} placeholder="123 456" ref={focusOnMount} />
                   <div className="security-actions">
                     <button type="button" className="security-btn" onClick={() => { setStep('idle'); setSetup(null); }}>Cancelar</button>
                     <button type="button" className="security-btn is-primary" disabled={busy || code.replace(/\s/g, '').length !== 6} onClick={enable}>Activar</button>
@@ -195,7 +196,7 @@ export function SecuritySheet({ onClose }: { onClose: () => void }) {
               {step === 'password' ? (
                 <div className="security-setup">
                   <label htmlFor={pwId} className="security-help">Contraseña actual</label>
-                  <input id={pwId} className="security-input" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} autoFocus />
+                  <input id={pwId} className="security-input" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} ref={focusOnMount} />
                   <label htmlFor={newPwId} className="security-help">Contraseña nueva (mínimo 8 caracteres)</label>
                   <input id={newPwId} className="security-input" type="password" autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
                   <div className="security-actions">

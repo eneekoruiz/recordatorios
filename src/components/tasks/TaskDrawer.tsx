@@ -463,12 +463,12 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         if (e.shiftKey) {
           if (document.activeElement === first || !drawerEl.contains(document.activeElement)) {
             e.preventDefault();
-            last.focus();
+            last.focus({ preventScroll: true });
           }
         } else {
           if (document.activeElement === last || !drawerEl.contains(document.activeElement)) {
             e.preventDefault();
-            first.focus();
+            first.focus({ preventScroll: true });
           }
         }
       }
@@ -477,7 +477,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       if (previousActiveElement && typeof previousActiveElement.focus === 'function') {
-        previousActiveElement.focus();
+        previousActiveElement.focus({ preventScroll: true });
       }
     };
   }, [isOpen, onClose]);
