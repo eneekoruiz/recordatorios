@@ -390,3 +390,16 @@ html.dark .habit-counter.is-done { color: #30d158; }
 .ios-dropdown-menu, .spotlight-panel, .drawer-header, .sheet-navbar, .ios-bottom-sheet {
   background-color: var(--bg-elevated, #fff) !important;
 }
+
+/* Separadores de los menús: línea de pelo visible en claro y oscuro, como las de las listas. */
+.ios-dropdown-menu .ios-dropdown-divider {
+  display: block;
+  height: 0.5px;
+  min-height: 0.5px;
+  flex: 0 0 0.5px;
+  margin: 6px 12px;
+  background: var(--separator-hair) !important;
+}
+@media (max-resolution: 1.5dppx) {
+  .ios-dropdown-menu .ios-dropdown-divider { height: 1px; min-height: 1px; flex-basis: 1px; }
+}

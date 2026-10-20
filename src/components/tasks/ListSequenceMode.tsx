@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, Play, Pause, CheckCircle, SkipForward, Clock, ArrowRight,
-  CloudRain, Waves, Volume2, VolumeX, ListChecks,
-  Zap, Share, Headphones, Plus
+  X, Play, Pause, CheckCircle, SkipForward, Clock, VolumeX, Zap, Share, Headphones, ArrowRight
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { SoundService } from '../../services/SoundService';
@@ -192,8 +190,8 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
   const isDark = theme === 'dark';
 
   const screenBackground = isDark
-    ? 'radial-gradient(ellipse at center, rgba(18,22,38,0.98) 0%, rgba(8,10,18,1) 100%)'
-    : 'radial-gradient(ellipse at center, rgba(246,248,252,0.98) 0%, rgba(235,238,245,1) 100%)';
+    ? '#000000'
+    : '#f2f2f7';
   const primaryText = isDark ? 'white' : 'var(--text-primary, #1c1c1e)';
   const secondaryText = isDark ? 'rgba(255,255,255,0.6)' : 'var(--text-secondary, #636366)';
 
@@ -217,6 +215,9 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
 
   // Ambient sound
   const [ambient, setAmbient] = useState<AmbientType>('off');
+  // Lo que no hace falta a cada momento (sonido, +1/+5/+10) está plegado hasta que se pide.
+  const [showSound, setShowSound] = useState(false);
+  const [showTimeTools, setShowTimeTools] = useState(false);
 
   // Dynamic task queue: allows postponing tasks to the end of the sequence
   const [sequenceTaskIds, setSequenceTaskIds] = useState<string[]>(() =>
@@ -318,7 +319,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
         if (finishedTitle) {
           SoundService.playComplete();
           HapticService.notification('success');
-          setParallelToast(`🧺 ¡"${finishedTitle}" ha completado su ciclo!`);
+          setParallelToast(`«${finishedTitle}» ha terminado`);
         }
         return updated;
       });
@@ -395,14 +396,14 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
 
     const currentId = currentTask.id;
     if (activeTaskIds.length - index <= 1) {
-      setParallelToast('ℹ️ Esta tarea ya es la última de la lista');
+      setParallelToast('Esta tarea ya es la última de la lista');
       setTimeout(() => setParallelToast(null), 2500);
       return;
     }
     // Se mueve por su posición real (el índice cuenta solo las tareas que siguen existiendo).
     const position = sequenceTaskIds.indexOf(currentId);
     setSequenceTaskIds([...sequenceTaskIds.slice(0, position), ...sequenceTaskIds.slice(position + 1), currentId]);
-    setParallelToast(`⏳ «${currentTask.title}» pospuesta al final`);
+    setParallelToast(`«${currentTask.title}» pospuesta al final`);
     setTimeout(() => setParallelToast(null), 3000);
   }, [currentTask, index, activeTaskIds.length, sequenceTaskIds]);
 
@@ -437,6 +438,12 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     setIndex(i => i + 1);
   }, [currentTask, currentDurationInfo, toggleTask]);
 
+  // Dar por terminada una tarea en segundo plano sin esperar a su cuenta atrás.
+  const handleFinishParallel = (id: string) => {
+    HapticService.selection();
+    setRunningParallelTasks(prev => prev.filter(p => p.id !== id));
+  };
+
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
     const sec = s % 60;
@@ -444,7 +451,8 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
   };
 
   const progress = initialDuration > 0 ? (initialDuration - timeLeft) / initialDuration : 0;
-  const strokeR = 86;
+  const ringSize = 232;
+  const strokeR = 106;
   const strokeDash = 2 * Math.PI * strokeR;
   const strokeOffset = strokeDash * (1 - progress);
 
@@ -459,7 +467,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     const elapsedMins = Math.max(1, Math.ceil((lastStepAt - startedAt) / 60000));
 
     const handleShare = async () => {
-      const text = `✅ ¡He completado ${listName}! ${completedIds.length} tareas en ${elapsedMins} min.`;
+      const text = `He completado ${listName}: ${completedIds.length} tareas en ${elapsedMins} min.`;
       if (navigator.share) {
         try {
           await navigator.share({ text });
@@ -546,7 +554,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
             border: '1px solid rgba(0,122,255,0.25)', maxWidth: 400
           }}>
             <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#007aff', marginBottom: 6 }}>
-              🧺 Tareas en curso en segundo plano:
+              Siguen en marcha en segundo plano:
             </div>
             {runningParallelTasks.map(p => (
               <div key={p.id} style={{ fontSize: '0.8rem', color: secondaryText }}>
@@ -589,6 +597,36 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
   }
 
   // ── MAIN SCREEN ──────────────────────────────────────────────────────────
+  // Una sola cosa grande (el reloj), una sola acción principal (abajo) y lo demás, plegado: sonido en la
+  // barra de arriba, «+1 / +5 / +10» tras «Cambiar tiempo», «Para luego» y «Omitir» como texto.
+  const muted = isDark ? 'rgba(255,255,255,0.6)' : 'var(--text-secondary, #636366)';
+  const faint = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)';
+  const chipBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)';
+  const isParallelTask = Boolean(currentDurationInfo?.isParallel);
+  // Texto sobre el color de la lista: negro o blanco según su luminosidad (un azul claro con letra blanca no se lee).
+  const onAccent = (() => {
+    const m = /^#?([0-9a-f]{6})$/i.exec(listColor || '');
+    if (!m) return '#fff';
+    const [r, g, b] = [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16) / 255).map(c => c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.4 ? '#000' : '#fff';
+  })();
+  const titleLength = currentTask?.title?.length ?? 0;
+  const SOUND_LABELS: Record<AmbientType, string> = { off: 'Sin', rain: 'Lluvia', waves: 'Olas', binaural: 'Binaural', focus: 'Foco' };
+  const addTime = (secs: number) => {
+    HapticService.selection();
+    setTimeLeft(prev => prev + secs);
+    setInitialDuration(prev => Math.max(prev, (timeLeft || 0) + secs));
+    if (!isActive) setIsActive(true);
+  };
+  const quietButton: React.CSSProperties = {
+    minHeight: 44, padding: '0 14px', background: 'transparent', border: 'none', cursor: 'pointer',
+    color: muted, fontSize: '0.95rem', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap'
+  };
+  const iconButton: React.CSSProperties = {
+    width: 44, height: 44, borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer',
+    color: muted, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+  };
+
   return (
     <AnimatePresence>
       <motion.div
@@ -599,465 +637,239 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
           position: 'fixed', inset: 0, zIndex: 99999,
           height: '100dvh', maxHeight: '100dvh',
           background: screenBackground,
-          backdropFilter: 'blur(32px)',
-          WebkitBackdropFilter: 'blur(32px)',
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'space-between',
-          padding: 'clamp(12px, 2.2vh, 24px) clamp(16px, 3.5vw, 32px)',
-          boxSizing: 'border-box', overflow: 'hidden',
-          touchAction: 'none'
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          padding: 'max(env(safe-area-inset-top), 8px) 16px max(env(safe-area-inset-bottom), 16px)',
+          boxSizing: 'border-box', overflow: 'hidden', touchAction: 'manipulation'
         }}
       >
-        {/* Toast for completed background parallel tasks */}
+        {/* Aviso (pospuesta, terminada en segundo plano…) */}
         <AnimatePresence>
           {parallelToast && (
             <motion.div
-              initial={{ opacity: 0, y: -20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              initial={{ opacity: 0, y: -12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              role="status"
               style={{
-                position: 'fixed', top: 24, zIndex: 100000,
-                background: '#30d158', color: '#000',
-                padding: '10px 20px', borderRadius: 999,
-                fontWeight: 700, fontSize: '0.9rem',
-                display: 'flex', alignItems: 'center', gap: 10,
-                boxShadow: '0 10px 30px rgba(48,209,88,0.5)'
+                position: 'fixed', top: 'calc(env(safe-area-inset-top, 0px) + 12px)', left: 16, right: 16, margin: '0 auto', width: 'fit-content', maxWidth: 'calc(100% - 32px)', zIndex: 100000,
+                background: isDark ? '#2c2c2e' : '#1c1c1e', color: '#fff',
+                padding: '10px 8px 10px 18px', borderRadius: 14, fontWeight: 500, fontSize: '0.9rem',
+                display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 8px 24px rgba(0,0,0,0.25)'
               }}
             >
               <span>{parallelToast}</span>
-              <button
-                onClick={() => setParallelToast(null)}
-                style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#000' }}
-              >
+              <button onClick={() => setParallelToast(null)} aria-label="Cerrar aviso"
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', color: '#fff', opacity: 0.7, padding: 10 }}>
                 <X size={16} />
               </button>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* ── TOP BAR ─────────────────────────────────────────────────────── */}
-        <div style={{ width: '100%', maxWidth: 720, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-          {/* List name + progress + total time */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: listColor, fontSize: '0.82rem', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              <ListChecks size={16} style={{ flexShrink: 0 }} />
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listName}</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                {activeTaskIds.map((_, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      width: i < index ? 20 : (i === index ? 28 : 12),
-                      height: 4, borderRadius: 2,
-                      background: i < index ? '#30d158' : i === index ? listColor : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'),
-                      transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.3s ease'
-                    }}
-                  />
-                ))}
-              </div>
-              {totalEstimatedMins > 0 && (
-                <div style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  fontSize: '0.74rem',
-                  fontVariantNumeric: 'tabular-nums',
-                  color: isDark ? 'rgba(255,255,255,0.65)' : 'var(--text-secondary, #636366)',
-                  fontWeight: 550,
-                  whiteSpace: 'nowrap'
-                }}>
-                  <Clock size={11} strokeWidth={2.2} style={{ opacity: 0.75 }} />
-                  <span>~{formatDuration(totalEstimatedMins)} total</span>
-                  {index > 0 && remainingEstimatedMins > 0 && (
-                    <span style={{ opacity: 0.8 }}>· restan {formatDuration(remainingEstimatedMins)}</span>
-                  )}
-                </div>
-              )}
+        {/* ── Barra superior: salir · dónde vas · sonido ── */}
+        <div style={{ width: '100%', maxWidth: 520, display: 'flex', alignItems: 'center', gap: 4, minHeight: 48 }}>
+          <button onClick={() => { SoundService.stopAmbientSound(); onClose(); }} style={iconButton} title="Salir (Esc)" aria-label="Salir del modo secuencia">
+            <X size={20} />
+          </button>
+          <div style={{ flex: 1, minWidth: 0, textAlign: 'center', lineHeight: 1.25 }}>
+            <div style={{ fontSize: '0.95rem', fontWeight: 600, color: primaryText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listName}</div>
+            <div style={{ fontSize: '0.8rem', color: muted, fontVariantNumeric: 'tabular-nums' }}>
+              {index + 1} de {activeTaskIds.length}
+              {totalEstimatedMins > 0 && remainingEstimatedMins > 0 ? `, quedan ${formatDuration(remainingEstimatedMins)}` : ''}
             </div>
           </div>
-
-          {/* Running parallel tasks pills */}
-          {runningParallelTasks.length > 0 && (
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center' }}>
-              {runningParallelTasks.map(pt => (
-                <div
-                  key={pt.id}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                    padding: '5px 12px', borderRadius: 999,
-                    background: isDark ? 'rgba(0, 122, 255, 0.18)' : 'rgba(0, 122, 255, 0.1)',
-                    border: '1px solid rgba(0, 122, 255, 0.35)',
-                    color: '#007aff', fontSize: '0.78rem', fontWeight: 600
-                  }}
-                >
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#30d158' }} />
-                  🧺 {pt.title}: {formatDuration(Math.ceil(pt.secondsLeft / 60))}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Close */}
           <button
-            onClick={() => { SoundService.stopAmbientSound(); onClose(); }}
-            style={{
-              width: 40, height: 40, borderRadius: '50%',
-              background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-              border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
-              color: isDark ? 'rgba(255,255,255,0.6)' : 'var(--text-secondary, #636366)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer'
-            }}
-            title="Salir (Esc)"
-            aria-label="Salir del modo secuencia"
+            onClick={() => setShowSound(v => !v)}
+            style={{ ...iconButton, color: ambient !== 'off' ? listColor : muted }}
+            title="Sonido ambiente" aria-label={`Sonido ambiente: ${SOUND_LABELS[ambient]}`} aria-expanded={showSound}
           >
-            <X size={18} />
+            {ambient === 'off' ? <VolumeX size={20} /> : <Headphones size={20} />}
           </button>
         </div>
+        <div style={{ width: '100%', maxWidth: 520, height: 3, borderRadius: 2, background: faint, overflow: 'hidden' }} aria-hidden="true">
+          <div style={{ width: `${Math.min(100, (index / Math.max(1, activeTaskIds.length)) * 100)}%`, height: '100%', background: listColor, transition: 'width 0.4s ease' }} />
+        </div>
 
-        {/* ── MAIN CONTENT ─────────────────────────────────────────────────── */}
-        <AnimatePresence mode="wait">
-          {showDurationPicker && currentTask ? (
-            <DurationPicker
-              key={`picker-${currentTask.id}`}
-              taskTitle={currentTask.title}
-              initialMins={currentDurationInfo?.activeMinutes || 15}
-              onConfirm={handleDurationConfirm}
-              onSkip={handleSkipTask}
-              isDark={isDark}
-              listColor={listColor}
-            />
-          ) : (
+        <AnimatePresence initial={false}>
+          {showSound && (
             <motion.div
-              key={`task-${currentTask?.id}`}
-              initial={{ x: 40, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -40, opacity: 0 }}
-              transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-              style={{ textAlign: 'center', maxWidth: 660, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', margin: 'auto 0', gap: 0 }}
+              initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+              style={{ width: '100%', maxWidth: 520, overflow: 'hidden' }}
             >
-              {/* Step indicator */}
-              <div style={{ fontSize: '0.8rem', color: isDark ? 'rgba(255,255,255,0.5)' : 'var(--text-tertiary, #8e8e93)', fontWeight: 600, marginBottom: 8, fontVariantNumeric: 'tabular-nums' }}>
-                {index + 1} de {activeTaskIds.length} {activeTaskIds.length === 1 ? 'tarea' : 'tareas'}
-              </div>
-
-              {/* Parallel Task Badge */}
-              {currentDurationInfo?.isParallel && (
-                <div style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                  padding: '6px 14px', borderRadius: 999,
-                  background: isDark ? 'rgba(0, 122, 255, 0.16)' : 'rgba(0, 122, 255, 0.08)',
-                  border: '1px solid rgba(0, 122, 255, 0.28)',
-                  color: '#007aff', fontSize: '0.82rem', fontWeight: 600,
-                  marginBottom: 14
-                }}>
-                  <Zap size={14} fill="currentColor" />
-                  <span>Tarea en paralelo</span>
-                  <span style={{ opacity: 0.5 }}>·</span>
-                  <span>~{formatDuration(currentDurationInfo.activeMinutes)} activo + ~{formatDuration(currentDurationInfo.parallelMinutes)} en segundo plano</span>
-                </div>
-              )}
-
-              {/* Task title */}
-              <h2 style={{
-                fontSize: 'clamp(1.4rem, 3.4vh, 2.3rem)',
-                fontWeight: 700, lineHeight: 1.16,
-                color: primaryText,
-                fontFamily: 'var(--font-display)',
-                letterSpacing: '-0.025em', margin: '0 0 4px', wordBreak: 'break-word'
-              }}>
-                {currentTask?.title}
-              </h2>
-
-              {currentTask?.description && (
-                <p style={{
-                  fontSize: '0.88rem',
-                  color: isDark ? 'rgba(255,255,255,0.55)' : 'var(--text-secondary, #636366)',
-                  margin: '0 0 10px',
-                  lineHeight: 1.4,
-                  maxWidth: 440,
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden'
-                }}>
-                  {currentTask.description}
-                </p>
-              )}
-
-              {/* Circular timer */}
-              {initialDuration > 0 && (
-                <div
-                  role="button"
-                  tabIndex={0}
-                  aria-label={isActive ? 'Pausar' : 'Reanudar'}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsActive(v => !v); } }}
-                  onClick={() => setIsActive(v => !v)}
-                  style={{ position: 'relative', width: 196, height: 196, margin: '2px 0 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  title={isActive ? 'Pausar' : 'Reanudar'}
-                >
-                  <svg width="196" height="196" style={{ transform: 'rotate(-90deg)', position: 'absolute', inset: 0 }}>
-                    <circle cx="98" cy="98" r={strokeR} stroke={isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)"} strokeWidth="7" fill="none" />
-                    <circle
-                      cx="98" cy="98" r={strokeR}
-                      stroke={`url(#seqGrad-${listColor.replace('#', '')})`}
-                      strokeWidth="7" strokeDasharray={strokeDash}
-                      strokeDashoffset={strokeOffset} strokeLinecap="round" fill="none"
-                      style={{ transition: 'stroke-dashoffset 0.5s ease' }}
-                    />
-                    <defs>
-                      <linearGradient id={`seqGrad-${listColor.replace('#', '')}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor={listColor} />
-                        <stop offset="100%" stopColor="#30d158" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1, gap: 4 }}>
-                    <span style={{ fontSize: 'clamp(2.3rem, 4.2vh, 3rem)', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: primaryText, letterSpacing: '-0.03em', lineHeight: 1 }}>
-                      {formatTime(timeLeft)}
-                    </span>
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: 5,
-                      padding: '3px 10px', borderRadius: 999,
-                      background: isActive ? (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)') : listColor,
-                      color: isActive ? (isDark ? 'white' : 'var(--text-secondary, #636366)') : 'white',
-                      fontSize: '0.74rem', fontWeight: 700,
-                      boxShadow: isActive ? 'none' : `0 4px 14px ${listColor}60`,
-                      transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.2s ease'
-                    }}>
-                      {isActive ? <><Pause size={11} fill={isDark ? "white" : "currentColor"} /> Pausar</> : <><Play size={11} fill="white" style={{ marginLeft: 2 }} /> Reanudar</>}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Controles para alargar / dar más tiempo */}
-              {initialDuration > 0 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      HapticService.selection();
-                      setTimeLeft(prev => prev + 60);
-                      setInitialDuration(prev => Math.max(prev, (timeLeft || 0) + 60));
-                    }}
-                    style={{
-                      padding: '4px 12px',
-                      borderRadius: 999,
-                      background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                      border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
-                      color: primaryText,
-                      fontSize: '0.78rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
-                    }}
-                    title="Añadir 1 minuto más a esta tarea"
-                  >
-                    <Plus size={12} strokeWidth={2.6} /> 1 min
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      HapticService.selection();
-                      setTimeLeft(prev => prev + 300);
-                      setInitialDuration(prev => Math.max(prev, (timeLeft || 0) + 300));
-                    }}
-                    style={{
-                      padding: '4px 12px',
-                      borderRadius: 999,
-                      background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                      border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
-                      color: primaryText,
-                      fontSize: '0.78rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
-                    }}
-                    title="Añadir 5 minutos más a esta tarea"
-                  >
-                    <Plus size={12} strokeWidth={2.6} /> 5 min
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      HapticService.selection();
-                      setTimeLeft(prev => prev + 600);
-                      setInitialDuration(prev => Math.max(prev, (timeLeft || 0) + 600));
-                      if (!isActive) setIsActive(true);
-                    }}
-                    style={{
-                      padding: '4px 12px',
-                      borderRadius: 999,
-                      background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                      border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
-                      color: primaryText,
-                      fontSize: '0.78rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
-                    }}
-                    title="Añadir 10 minutos más a esta tarea"
-                  >
-                    <Plus size={12} strokeWidth={2.6} /> 10 min
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowDurationPicker(true)}
-                    style={{
-                      padding: '4px 12px',
-                      borderRadius: 999,
-                      background: 'transparent',
-                      border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.06)',
-                      color: isDark ? 'rgba(255,255,255,0.5)' : 'var(--text-tertiary, #8e8e93)',
-                      fontSize: '0.76rem',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4
-                    }}
-                  >
-                    <Clock size={12} /> Ajustar ({formatDuration(initialDuration / 60)})
-                  </button>
-                </div>
-              )}
-
-              {/* Ambient sound dock */}
-              <div style={{
-                width: '100%', maxWidth: 480, padding: '6px 10px',
-                background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-                borderRadius: 16,
-                border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)',
-                display: 'flex', gap: 6, alignItems: 'center', marginBottom: 12
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginRight: 'auto', paddingLeft: 4 }}>
-                  <span style={{ fontSize: '0.78rem', color: isDark ? 'rgba(255,255,255,0.55)' : 'var(--text-secondary, #636366)', fontWeight: 600 }}>Sonido</span>
-                  {ambient !== 'off' && isActive && (
-                    <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 11, marginLeft: 2 }}>
-                      <span className="equalizer-bar" style={{ width: 2, background: listColor, borderRadius: 1, height: 5, animation: 'equalizerPulse 0.9s ease-in-out infinite alternate' }} />
-                      <span className="equalizer-bar" style={{ width: 2, background: '#30d158', borderRadius: 1, height: 11, animation: 'equalizerPulse 0.6s ease-in-out infinite alternate 0.2s' }} />
-                      <span className="equalizer-bar" style={{ width: 2, background: listColor, borderRadius: 1, height: 7, animation: 'equalizerPulse 0.8s ease-in-out infinite alternate 0.4s' }} />
-                    </div>
-                  )}
-                </div>
+              <div role="radiogroup" aria-label="Sonido ambiente" style={{ display: 'flex', gap: 4, padding: '10px 0 2px', justifyContent: 'center' }}>
                 {(['off', 'rain', 'waves', 'binaural', 'focus'] as AmbientType[]).map(type => (
                   <button
-                    key={type}
-                    onClick={() => setAmbient(type)}
+                    key={type} role="radio" aria-checked={ambient === type}
+                    onClick={() => { setAmbient(type); setShowSound(false); }}
                     style={{
-                      padding: '5px 9px', borderRadius: 12,
-                      background: ambient === type ? listColor : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'),
-                      border: 'none',
-                      color: ambient === type ? 'white' : (isDark ? 'white' : 'var(--text-secondary, #636366)'),
-                      fontSize: '0.74rem', fontWeight: 600, cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', gap: 4,
-                      boxShadow: ambient === type ? `0 2px 8px ${listColor}40` : 'none',
-                      transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
+                      minHeight: 44, padding: '0 12px', borderRadius: 22, border: 'none', cursor: 'pointer',
+                      background: ambient === type ? listColor : chipBg,
+                      color: ambient === type ? onAccent : primaryText, fontSize: '0.85rem', fontWeight: 500
                     }}
                   >
-                    {type === 'off' && <VolumeX size={11} />}
-                    {type === 'rain' && <CloudRain size={11} />}
-                    {type === 'waves' && <Waves size={11} />}
-                    {type === 'binaural' && <Volume2 size={11} />}
-                    {type === 'focus' && <Headphones size={11} />}
-                    {type === 'off' ? 'Sin' : type === 'rain' ? 'Lluvia' : type === 'waves' ? 'Olas' : type === 'binaural' ? 'Binaural' : 'Foco'}
+                    {SOUND_LABELS[type]}
                   </button>
                 ))}
-              </div>
-
-              {/* Action buttons */}
-              <div style={{ display: 'flex', gap: 8, width: '100%', maxWidth: 480 }}>
-                {/* Dedicated Parallel Task Action Button */}
-                {currentDurationInfo?.isParallel && (
-                  <motion.button
-                    onClick={handleStartParallelAndNext}
-                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                    style={{
-                      flex: 2, height: 48, borderRadius: 16,
-                      background: '#007aff', color: 'white',
-                      border: 'none', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                      boxShadow: '0 6px 20px rgba(0,122,255,0.4)'
-                    }}
-                  >
-                    <Zap size={16} fill="white" /> Poner en marcha y seguir
-                  </motion.button>
-                )}
-
-                {/* Pausar y reanudar viven en el propio reloj: un segundo botón repetía la acción. */}
-                <motion.button
-                  onClick={handleCompleteTask}
-                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                  style={{
-                    flex: currentDurationInfo?.isParallel ? 1 : 1.3, height: 48, borderRadius: 16,
-                    background: '#30d158', color: '#000',
-                    border: 'none', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    boxShadow: '0 6px 20px rgba(48,209,88,0.4)'
-                  }}
-                >
-                  <CheckCircle size={18} /> Completar
-                </motion.button>
-
-                {/* Botón Dejar para luego (posponer al final de la lista) */}
-                <motion.button
-                  onClick={handlePostponeTask}
-                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                  style={{
-                    padding: '0 12px', height: 48, borderRadius: 16,
-                    background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                    border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
-                    color: isDark ? 'rgba(255,255,255,0.85)' : 'var(--text-primary, #1c1c1e)',
-                    cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                    fontWeight: 600, fontSize: '0.82rem',
-                    whiteSpace: 'nowrap',
-                    transition: 'background-color, border-color, color, fill, opacity, transform, box-shadow 0.15s ease'
-                  }}
-                  title="Mover esta tarea al final de la lista"
-                  aria-label="Dejar para luego"
-                >
-                  <Clock size={15} />
-                  <span>Para luego</span>
-                </motion.button>
-
-                <button
-                  onClick={handleSkipTask}
-                  style={{
-                    width: 48, height: 48, borderRadius: 16,
-                    background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
-                    border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
-                    color: isDark ? 'rgba(255,255,255,0.5)' : 'var(--text-secondary, #636366)',
-                    cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    flexShrink: 0
-                  }}
-                  title="Omitir tarea"
-                  aria-label="Omitir tarea"
-                >
-                  <SkipForward size={18} />
-                </button>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* ── FOOTER ──────────────────────────────────────────────────────── */}
-        <div className="kbd-hint" style={{ color: isDark ? 'rgba(255,255,255,0.28)' : 'var(--text-tertiary, #8e8e93)', fontSize: '0.78rem', textAlign: 'center' }}>
-          <kbd style={{ background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', padding: '2px 6px', borderRadius: 4, color: isDark ? 'rgba(255,255,255,0.5)' : 'var(--text-secondary, #636366)' }}>Esc</kbd> para salir
-        </div>
+        {/* ── Centro ── */}
+        <AnimatePresence mode="wait">
+          {showDurationPicker && currentTask ? (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'center' }}>
+              <DurationPicker
+                key={`picker-${currentTask.id}`}
+                taskTitle={currentTask.title}
+                initialMins={currentDurationInfo?.activeMinutes || 15}
+                onConfirm={handleDurationConfirm}
+                onSkip={handleSkipTask}
+                isDark={isDark}
+                listColor={listColor}
+              />
+            </div>
+          ) : (
+            <motion.div
+              key={`task-${currentTask?.id}`}
+              initial={{ x: 32, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -32, opacity: 0 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+              style={{ flex: 1, minHeight: 0, width: '100%', maxWidth: 520, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: 6 }}
+            >
+              <h2 style={{
+                fontSize: titleLength > 90 ? 'clamp(1.05rem, 2.4vh, 1.4rem)' : titleLength > 45 ? 'clamp(1.25rem, 3vh, 1.75rem)' : 'clamp(1.6rem, 3.6vh, 2.2rem)',
+                display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                fontWeight: 700, lineHeight: 1.18, color: primaryText, fontFamily: 'var(--font-display)',
+                letterSpacing: '-0.02em', margin: 0, wordBreak: 'break-word'
+              }}>
+                {currentTask?.title}
+              </h2>
+
+              {currentTask?.description && (
+                <p style={{ fontSize: '0.95rem', color: muted, margin: 0, lineHeight: 1.4, maxWidth: 400, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  {currentTask.description}
+                </p>
+              )}
+
+              {isParallelTask && currentDurationInfo && (
+                <p style={{ fontSize: '0.9rem', color: muted, margin: '2px 0 0', maxWidth: 360 }}>
+                  Tarea en paralelo: {formatDuration(currentDurationInfo.activeMinutes)} tuyos y luego {formatDuration(currentDurationInfo.parallelMinutes)} sola
+                </p>
+              )}
+
+              {initialDuration > 0 && (
+                <div
+                  role="button" tabIndex={0}
+                  aria-label={isActive ? 'Pausar' : 'Reanudar'}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsActive(v => !v); } }}
+                  onClick={() => setIsActive(v => !v)}
+                  style={{ position: 'relative', width: ringSize, height: ringSize, margin: '14px 0 4px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 1, maxHeight: '36dvh', aspectRatio: '1' }}
+                  title={isActive ? 'Pausar' : 'Reanudar'}
+                >
+                  <svg viewBox={`0 0 ${ringSize} ${ringSize}`} style={{ transform: 'rotate(-90deg)', position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+                    <circle cx={ringSize / 2} cy={ringSize / 2} r={strokeR} stroke={faint} strokeWidth="6" fill="none" />
+                    <circle
+                      cx={ringSize / 2} cy={ringSize / 2} r={strokeR} stroke={listColor}
+                      strokeWidth="6" strokeDasharray={strokeDash} strokeDashoffset={strokeOffset} strokeLinecap="round" fill="none"
+                      style={{ transition: 'stroke-dashoffset 0.5s linear' }}
+                    />
+                  </svg>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1, gap: 6 }}>
+                    <span style={{ fontSize: 'clamp(2.6rem, 6vh, 3.4rem)', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: primaryText, letterSpacing: '-0.02em', lineHeight: 1 }}>
+                      {formatTime(timeLeft)}
+                    </span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.85rem', fontWeight: 500, color: isActive ? muted : listColor }}>
+                      {isActive ? <><Pause size={12} fill="currentColor" /> Pausar</> : <><Play size={12} fill="currentColor" /> Reanudar</>}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {initialDuration > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <button type="button" onClick={() => setShowTimeTools(v => !v)} aria-expanded={showTimeTools} style={quietButton}>
+                    <Clock size={15} aria-hidden="true" /> Cambiar tiempo
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {showTimeTools && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                        style={{ overflow: 'hidden' }}
+                      >
+                        <div style={{ display: 'flex', gap: 8, padding: '2px 0 4px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                          {[1, 5, 10].map(m => (
+                            <button key={m} type="button" onClick={() => addTime(m * 60)} title={`Añadir ${m} ${m === 1 ? 'minuto' : 'minutos'}`}
+                              style={{ minHeight: 44, padding: '0 16px', borderRadius: 22, border: 'none', background: chipBg, color: primaryText, fontSize: '0.95rem', fontWeight: 500, cursor: 'pointer', fontVariantNumeric: 'tabular-nums' }}>
+                              + {m} min
+                            </button>
+                          ))}
+                          <button type="button" onClick={() => setShowDurationPicker(true)}
+                            style={{ minHeight: 44, padding: '0 16px', borderRadius: 22, border: 'none', background: chipBg, color: primaryText, fontSize: '0.95rem', fontWeight: 500, cursor: 'pointer' }}>
+                            Otro…
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── En segundo plano: lo que sigue corriendo, con control para darlo por terminado ── */}
+        {runningParallelTasks.length > 0 && !showDurationPicker && (
+          <div style={{ width: '100%', maxWidth: 520, marginBottom: 8, borderRadius: 14, background: chipBg, padding: '4px 4px 4px 14px' }} aria-label="En segundo plano">
+            {runningParallelTasks.map((pt, i) => (
+              <div key={pt.id} style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 44, borderTop: i ? `0.5px solid ${faint}` : 'none' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.9rem', color: primaryText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pt.title}</div>
+                  <div style={{ height: 2, borderRadius: 1, background: faint, marginTop: 4 }} aria-hidden="true">
+                    <div style={{ width: `${Math.min(100, ((pt.totalSeconds - pt.secondsLeft) / Math.max(1, pt.totalSeconds)) * 100)}%`, height: '100%', background: listColor, borderRadius: 1 }} />
+                  </div>
+                </div>
+                <span style={{ fontSize: '0.85rem', color: muted, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{formatDuration(Math.ceil(pt.secondsLeft / 60))}</span>
+                <button onClick={() => handleFinishParallel(pt.id)} style={{ ...quietButton, color: primaryText, fontWeight: 600, padding: '0 12px' }} aria-label={`Dar por terminada «${pt.title}»`}>
+                  Ya está
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Acciones: una principal, dos discretas ── */}
+        {!showDurationPicker && (
+          <div style={{ width: '100%', maxWidth: 520, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {isParallelTask ? (
+              <motion.button
+                onClick={handleStartParallelAndNext} whileTap={{ scale: 0.98 }}
+                style={{ width: '100%', minHeight: 52, borderRadius: 16, border: 'none', cursor: 'pointer', background: listColor, color: onAccent, fontWeight: 600, fontSize: '1.05rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              >
+                <Zap size={18} fill="currentColor" aria-hidden="true" /> Poner en marcha y seguir
+              </motion.button>
+            ) : (
+              <motion.button
+                onClick={handleCompleteTask} whileTap={{ scale: 0.98 }}
+                style={{ width: '100%', minHeight: 52, borderRadius: 16, border: 'none', cursor: 'pointer', background: '#30d158', color: '#000', fontWeight: 600, fontSize: '1.05rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              >
+                <CheckCircle size={20} aria-hidden="true" /> Completar
+              </motion.button>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
+              {isParallelTask && (
+                <button onClick={handleCompleteTask} style={quietButton} title="Marcarla como hecha sin dejarla en segundo plano">
+                  <CheckCircle size={16} aria-hidden="true" /> Completar
+                </button>
+              )}
+              <button onClick={handlePostponeTask} style={quietButton} title="Mover esta tarea al final de la lista" aria-label="Dejar para luego">
+                <Clock size={16} aria-hidden="true" /> Para luego
+              </button>
+              <button onClick={handleSkipTask} style={quietButton} title="Pasar a la siguiente sin marcarla" aria-label="Omitir tarea">
+                <SkipForward size={16} aria-hidden="true" /> Omitir
+              </button>
+            </div>
+          </div>
+        )}
       </motion.div>
     </AnimatePresence>
   );

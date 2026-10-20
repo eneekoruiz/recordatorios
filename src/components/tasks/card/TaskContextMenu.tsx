@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { isTaskDurationDisabled } from '../../../utils/taskDuration';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { 
   CheckCircle, Info, IndentIncrease, IndentDecrease, Calendar, 
   AlertCircle, Flag, FolderInput, LayoutList, Copy, Play, Trash2, 
@@ -72,6 +72,9 @@ export function TaskContextMenu({
   const updateTask = useAppStore(state => state.updateTask);
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
   const sheetRef = useRef<HTMLDivElement>(null);
+  // En el móvil solo se arrastra la hoja desde su asa: si arrastrara todo el cuerpo, el gesto vertical
+  // le quitaba el desplazamiento al contenido y «Más opciones» no se podía recorrer.
+  const dragControls = useDragControls();
   // Escritorio: con su altura real, el menú cabe siempre (debajo, encima o pegado al borde).
   useFitMenuInViewport(sheetRef, triggerRect, isOpen && !isMobile);
 
@@ -108,6 +111,8 @@ export function TaskContextMenu({
             exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.95, y: -4 }}
             transition={{ type: 'spring', damping: 28, stiffness: 450 }}
             drag={isMobile ? "y" : false}
+            dragListener={false}
+            dragControls={dragControls}
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0.05, bottom: 0.7 }}
             onDragEnd={isMobile ? (_e, info) => {
@@ -130,7 +135,9 @@ export function TaskContextMenu({
               boxShadow: '0 -10px 40px rgba(0,0,0,0.3)',
               display: 'flex',
               flexDirection: 'column',
-              maxHeight: '85vh',
+              // dvh: la altura visible real en iOS (con vh la hoja pasaba por debajo de la barra de Safari y
+              // tapaba la fila de arriba); siempre queda un hueco para ver a qué tarea se refiere.
+              maxHeight: 'min(78dvh, calc(100dvh - 120px))',
               overflowY: 'auto',
               overflowX: 'hidden',
               boxSizing: 'border-box',
@@ -164,7 +171,18 @@ export function TaskContextMenu({
             onClick={e => e.stopPropagation()}
           >
             {isMobile && (
-              <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border-subtle, rgba(142, 142, 147, 0.4))', margin: '0 auto 10px', flexShrink: 0 }} />
+              <div
+                onPointerDown={(e) => dragControls.start(e)}
+                style={{ touchAction: 'none', padding: '4px 0 12px', margin: '-4px 0 0', flexShrink: 0, cursor: 'grab' }}
+                aria-hidden="true"
+              >
+                <div style={{ width: 36, height: 5, borderRadius: 3, background: 'var(--border-subtle, rgba(142, 142, 147, 0.4))', margin: '0 auto' }} />
+              </div>
+            )}
+            {isMobile && (
+              <div style={{ padding: '0 8px 8px', fontSize: '0.82rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                {task.title}
+              </div>
             )}
             <MenuActions 
               task={task} 
@@ -697,6 +715,8 @@ function MenuActions({
           }} 
         />
       )}
+
+      <div className="ios-dropdown-divider" />
 
       {/* 2. Editar recordatorio (Panel de metadatos) */}
       <ActionRow

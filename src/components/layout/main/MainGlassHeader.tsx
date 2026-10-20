@@ -199,7 +199,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
         {showProminentStartButton && (
           <button
             type="button"
-            className="apple-nav-start-btn"
+            className={`apple-nav-start-btn${isGlassActive ? ' is-compact' : ''}`}
             disabled={isStartDisabled}
             onClick={() => {
               if (isStartDisabled || !onStartSequence) return;
@@ -211,7 +211,10 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
             style={{
               ['--start-color' as string]: listAccentColor || '#007aff',
               height: 34,
-              padding: '0 14px',
+              // Con el título ya en la barra, «Empezar» se queda en el icono: gana sitio para nombres largos.
+              padding: isGlassActive ? 0 : '0 14px',
+              width: isGlassActive ? 34 : undefined,
+              justifyContent: 'center',
               borderRadius: 999,
               display: 'inline-flex',
               alignItems: 'center',
@@ -229,7 +232,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
             }}
           >
             <Play size={12} fill="currentColor" style={{ flexShrink: 0 }} />
-            <span>Empezar</span>
+            <span className={isGlassActive ? 'sr-only' : undefined}>Empezar</span>
           </button>
         )}
 
