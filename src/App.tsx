@@ -1,3 +1,4 @@
+import { BackgroundTimersBar } from './components/layout/BackgroundTimersBar';
 import { useState, useEffect, useEffectEvent, useRef, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -432,6 +433,8 @@ function App() {
       {zenModeTaskId && (
         <Suspense fallback={null}><ZenMode taskId={zenModeTaskId} onClose={() => setZenModeTaskId(null)} /></Suspense>
       )}
+
+      <BackgroundTimersBar />
 
       {sequenceMode && (
         <Suspense fallback={null}>

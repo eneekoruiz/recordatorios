@@ -109,9 +109,10 @@
 .greeting-focus { display: flex; flex-direction: column; gap: 1px; }
 .greeting-focus-label {
   margin-bottom: 4px;
-  font-size: 0.70rem;
+  font-size: var(--type-title3, 1.25rem);
   font-weight: 700;
-  color: var(--text-tertiary);
+  letter-spacing: -0.015em;
+  color: var(--label-1, var(--text-primary));
 }
 .greeting-task {
   display: flex;
@@ -214,7 +215,6 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  box-shadow: 0 4px 14px rgba(0, 122, 255, 0.28);
   transition: transform 0.16s var(--ease-spring), filter 0.16s ease;
 }
 @media (hover: hover) and (pointer: fine) {

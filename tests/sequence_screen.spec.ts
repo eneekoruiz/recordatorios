@@ -24,7 +24,7 @@ test('pantalla de cuenta atrás: acciones plegadas y tareas en segundo plano con
   await expect(page.getByRole('radio', { name: 'Lluvia' })).toHaveCount(0);
 
   // El tiempo y el sonido se abren a petición.
-  await page.getByRole('button', { name: 'Cambiar tiempo' }).click();
+  await page.getByRole('button', { name: 'Alargar hoy' }).click();
   await expect(page.getByRole('button', { name: '+ 5 min' })).toBeVisible();
   await page.getByRole('button', { name: /Sonido ambiente/ }).click();
   await expect(page.getByRole('radio', { name: 'Lluvia' })).toBeVisible();
@@ -39,7 +39,35 @@ test('pantalla de cuenta atrás: acciones plegadas y tareas en segundo plano con
   await background.getByRole('button', { name: /Dar por terminada/ }).click();
   await expect(background).toHaveCount(0);
 
+  // Alargar es solo de hoy: no toca la duración guardada de la tarea.
+  await page.getByRole('button', { name: 'Alargar hoy' }).click();
+  await page.getByRole('button', { name: '+ 5 min' }).click();
+  expect(await page.evaluate(() => (window as any).useAppStore.getState().tasks['c2'].duration)).toBe(10);
+
   // Y la pantalla cabe sin desbordar.
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test('lo que sigue en segundo plano sobrevive a cerrar la pantalla y recargar la app', async ({ page }) => {
+  await bootApp(page);
+  await page.evaluate(() => {
+    const st = (window as any).useAppStore.getState();
+    st.addList({ id: 'colada2', name: 'Colada', color: '#5ac8fa', listType: 'routines' });
+    st.addTask({ id: 'l1', title: 'Poner la lavadora', categoryId: 'colada2', duration: 5, isParallel: true, parallelDuration: 90, status: 'pending', created_at: new Date().toISOString() });
+    st.addTask({ id: 'l2', title: 'Barrer', categoryId: 'colada2', duration: 5, status: 'pending', created_at: new Date().toISOString() });
+    window.dispatchEvent(new CustomEvent('select-view', { detail: 'list_colada2' }));
+  });
+  await page.getByRole('button', { name: 'Empezar lista' }).first().click();
+  await page.getByRole('button', { name: /Poner en marcha y seguir/ }).click();
+  await page.getByRole('button', { name: 'Salir del modo secuencia' }).click();
+  // Fuera del modo secuencia sigue a la vista, con lo que queda.
+  const bar = page.locator('.background-timers');
+  await expect(bar).toContainText('Poner la lavadora');
+  await expect(bar).toContainText('quedan');
+  // Y tras recargar la app, también (se guarda su hora de fin).
+  await page.reload();
+  await expect(page.locator('.background-timers')).toContainText('Poner la lavadora');
+  await page.locator('.background-timers').getByRole('button', { name: /Dar por terminada/ }).click();
+  await expect(page.locator('.background-timers')).toHaveCount(0);
 });

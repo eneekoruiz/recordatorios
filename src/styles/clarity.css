@@ -403,3 +403,23 @@ html.dark .habit-counter.is-done { color: #30d158; }
 @media (max-resolution: 1.5dppx) {
   .ios-dropdown-menu .ios-dropdown-divider { height: 1px; min-height: 1px; flex-basis: 1px; }
 }
+
+/* ---------- Tareas en segundo plano (visibles en toda la app) ---------- */
+.background-timers {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(max(18px, env(safe-area-inset-bottom)) + 74px);
+  z-index: 41;
+  margin: 0 auto;
+  max-width: 560px;
+  border-radius: 14px;
+  background: var(--bg-elevated);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.14);
+  padding: 2px 4px 2px 14px;
+}
+.background-timer { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.background-timer + .background-timer { border-top: 0.5px solid var(--separator-hair); }
+.background-timer-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--label-1); font-size: var(--type-subhead); }
+.background-timer-time { color: var(--label-2); font-size: var(--type-footnote); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.background-timer-done { min-height: 44px; padding: 0 12px; border: 0; background: transparent; color: var(--accent-primary); font: inherit; font-size: var(--type-subhead); font-weight: 600; cursor: pointer; }

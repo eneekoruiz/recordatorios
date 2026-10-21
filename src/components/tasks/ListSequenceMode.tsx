@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, Play, Pause, CheckCircle, SkipForward, Clock, VolumeX, Zap, Share, Headphones, ArrowRight
+  X, Play, Pause, CheckCircle, SkipForward, Clock, VolumeX, Zap, Share, Headphones, ArrowRight, Plus
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
 import { getTaskDuration, formatDuration } from '../../utils/taskDuration';
 import { ConfettiService } from '../../services/ConfettiService';
+import { BackgroundTimers, useBackgroundTimers } from '../../services/BackgroundTimers';
 
 interface ListSequenceModeProps {
   /** IDs de las tareas a recorrer en orden */
@@ -87,7 +88,7 @@ function DurationPicker({
         margin: '0 0 6px',
         letterSpacing: '-0.025em'
       }}>
-        ¿Cuánto tiempo?
+        Duración de la tarea
       </h3>
       <p style={{
         fontSize: '0.88rem',
@@ -95,7 +96,7 @@ function DurationPicker({
         margin: '0 0 24px',
         lineHeight: 1.5
       }}>
-        Duración estimada para<br />
+        Se guarda para las próximas veces:<br />
         <strong style={{ color: isDark ? 'rgba(255,255,255,0.85)' : 'var(--text-primary, #1c1c1e)', fontWeight: 600 }}>
           "{taskTitle}"
         </strong>
@@ -193,7 +194,6 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     ? '#000000'
     : '#f2f2f7';
   const primaryText = isDark ? 'white' : 'var(--text-primary, #1c1c1e)';
-  const secondaryText = isDark ? 'rgba(255,255,255,0.6)' : 'var(--text-secondary, #636366)';
 
   // Sequence state
   const [index, setIndex] = useState(0);
@@ -210,7 +210,21 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
   const [lastStepAt, setLastStepAt] = useState(startedAt);
 
   // Background / Parallel running tasks
-  const [runningParallelTasks, setRunningParallelTasks] = useState<RunningParallelTask[]>([]);
+  // Viven en un servicio con hora de fin absoluta: siguen contando si se cierra esta pantalla o la app.
+  const backgroundTimers = useBackgroundTimers();
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    if (backgroundTimers.length === 0) return;
+    const id = window.setInterval(() => setNowTick(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [backgroundTimers.length]);
+  const runningParallelTasks: RunningParallelTask[] = backgroundTimers.map(t => ({
+    id: t.id,
+    title: t.title,
+    totalSeconds: Math.round((t.endsAt - t.startedAt) / 1000),
+    secondsLeft: t.done ? 0 : Math.max(0, Math.ceil((t.endsAt - nowTick) / 1000)),
+    startedAt: t.startedAt
+  }));
   const [parallelToast, setParallelToast] = useState<string | null>(null);
 
   // Ambient sound
@@ -276,6 +290,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
       // Segundos exactos para la cuenta atrás
       const secs = Math.max(10, Math.round(effectiveMins * 60));
       setShowDurationPicker(false);
+      setShowTimeTools(false);
       setTimeLeft(secs);
       setInitialDuration(secs);
       setIsActive(true);
@@ -301,31 +316,6 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     }, 1000);
     return () => clearTimeout(timer);
   }, [isActive, timeLeft]);
-
-  // Parallel background countdown interval
-  useEffect(() => {
-    if (runningParallelTasks.length === 0) return;
-    const interval = setInterval(() => {
-      setRunningParallelTasks(prev => {
-        let finishedTitle: string | null = null;
-        const updated = prev.map(p => {
-          const nextSecs = p.secondsLeft - 1;
-          if (nextSecs <= 0 && p.secondsLeft > 0) {
-            finishedTitle = p.title;
-          }
-          return { ...p, secondsLeft: Math.max(0, nextSecs) };
-        }).filter(p => p.secondsLeft > 0);
-
-        if (finishedTitle) {
-          SoundService.playComplete();
-          HapticService.notification('success');
-          setParallelToast(`«${finishedTitle}» ha terminado`);
-        }
-        return updated;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [runningParallelTasks.length]);
 
   // Ambient sound
   useEffect(() => {
@@ -414,16 +404,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     HapticService.notification('success');
 
     const parallelSeconds = (currentDurationInfo.parallelMinutes || 120) * 60;
-    setRunningParallelTasks(prev => [
-      ...prev.filter(p => p.id !== currentTask.id),
-      {
-        id: currentTask.id,
-        title: currentTask.title,
-        totalSeconds: parallelSeconds,
-        secondsLeft: parallelSeconds,
-        startedAt: Date.now()
-      }
-    ]);
+    BackgroundTimers.start(currentTask.id, currentTask.title, parallelSeconds);
 
     const elapsedSeconds = activeElapsedRef.current;
     if (elapsedSeconds > 0) {
@@ -441,7 +422,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
   // Dar por terminada una tarea en segundo plano sin esperar a su cuenta atrás.
   const handleFinishParallel = (id: string) => {
     HapticService.selection();
-    setRunningParallelTasks(prev => prev.filter(p => p.id !== id));
+    BackgroundTimers.finish(id);
   };
 
   const formatTime = (s: number) => {
@@ -480,117 +461,66 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
       }
     };
 
+    const rowsMuted = isDark ? 'rgba(255,255,255,0.6)' : 'var(--text-secondary, #636366)';
+    const rowLine = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
+    const summary: [string, string][] = [
+      ['Completadas', String(completedIds.length)],
+      ...(skippedIds.length > 0 ? [['Omitidas', String(skippedIds.length)] as [string, string]] : []),
+      ['Tiempo empleado', formatDuration(elapsedMins)],
+      ['Estimado', formatDuration(totalEstimatedMins)],
+    ];
     return (
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         style={{
-          position: 'fixed', inset: 0, zIndex: 99999,
-          background: screenBackground,
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
-          padding: 32, boxSizing: 'border-box', textAlign: 'center'
+          position: 'fixed', inset: 0, zIndex: 99999, background: screenBackground,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          padding: 'max(env(safe-area-inset-top), 24px) 24px max(env(safe-area-inset-bottom), 24px)', boxSizing: 'border-box', textAlign: 'center', overflowY: 'auto'
         }}
       >
-        <motion.div
-          initial={{ scale: 0.7, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', damping: 18, stiffness: 280, delay: 0.1 }}
-          style={{
-            width: 88, height: 88, borderRadius: '50%', marginBottom: 20,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(52, 199, 89, 0.14)'
-          }}
-        >
-          <CheckCircle size={44} color="#34c759" strokeWidth={2} />
-        </motion.div>
-        <h2 style={{ fontSize: '2.2rem', fontWeight: 800, color: primaryText, margin: '0 0 12px', letterSpacing: '-0.03em' }}>
-          ¡Lista completada!
-        </h2>
-        <p style={{ fontSize: '1rem', color: secondaryText, marginBottom: 24, maxWidth: 360, lineHeight: 1.5 }}>
-          Has recorrido <strong style={{ color: primaryText }}>{listName}</strong> de principio a fin.
-        </p>
+        <div style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+            style={{ width: 72, height: 72, borderRadius: '50%', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#30d158' }}
+          >
+            <CheckCircle size={40} color="#000" strokeWidth={2} aria-hidden="true" />
+          </motion.div>
+          <h2 style={{ fontSize: '1.9rem', fontWeight: 700, color: primaryText, margin: '0 0 6px', letterSpacing: '-0.02em' }}>Lista completada</h2>
+          <p style={{ fontSize: '1rem', color: rowsMuted, margin: '0 0 28px', lineHeight: 1.4 }}>Has terminado {listName}.</p>
 
-        {/* Stats Card */}
-        <div style={{
-          display: 'flex', flexWrap: 'wrap', gap: 16, justifyContent: 'center',
-          marginBottom: 32, maxWidth: 500, width: '100%'
-        }}>
-          <div style={{
-            flex: '1 1 45%', background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-            borderRadius: 16, padding: '16px', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.05)'
-          }}>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#34c759' }}>{completedIds.length}</div>
-            <div style={{ fontSize: '0.8rem', color: secondaryText, fontWeight: 600 }}>COMPLETADAS</div>
-          </div>
-          <div style={{
-            flex: '1 1 45%', background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-            borderRadius: 16, padding: '16px', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.05)'
-          }}>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: isDark ? 'white' : 'black' }}>{skippedIds.length}</div>
-            <div style={{ fontSize: '0.8rem', color: secondaryText, fontWeight: 600 }}>OMITIDAS</div>
-          </div>
-          <div style={{
-            flex: '1 1 45%', background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-            borderRadius: 16, padding: '16px', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.05)'
-          }}>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#0a84ff' }}>{elapsedMins} <span style={{ fontSize: '1rem' }}>min</span></div>
-            <div style={{ fontSize: '0.8rem', color: secondaryText, fontWeight: 600 }}>TIEMPO EMPLEADO</div>
-          </div>
-          <div style={{
-            flex: '1 1 45%', background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-            borderRadius: 16, padding: '16px', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.05)'
-          }}>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)' }}>{totalEstimatedMins} <span style={{ fontSize: '1rem' }}>min</span></div>
-            <div style={{ fontSize: '0.8rem', color: secondaryText, fontWeight: 600 }}>ESTIMADO</div>
-          </div>
-        </div>
-
-        {runningParallelTasks.length > 0 && (
-          <div style={{
-            marginBottom: 28, padding: '12px 18px', borderRadius: 16,
-            background: isDark ? 'rgba(0,122,255,0.12)' : 'rgba(0,122,255,0.06)',
-            border: '1px solid rgba(0,122,255,0.25)', maxWidth: 400
-          }}>
-            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#007aff', marginBottom: 6 }}>
-              Siguen en marcha en segundo plano:
-            </div>
-            {runningParallelTasks.map(p => (
-              <div key={p.id} style={{ fontSize: '0.8rem', color: secondaryText }}>
-                • {p.title}: <strong>{formatDuration(Math.ceil(p.secondsLeft / 60))}</strong> restante
+          {/* Resumen: filas con línea fina, como una lista de ajustes; sin tarjetas de colores */}
+          <dl style={{ width: '100%', margin: '0 0 24px', padding: 0 }}>
+            {summary.map(([label, value], i) => (
+              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '12px 4px', borderTop: i === 0 ? 'none' : `0.5px solid ${rowLine}` }}>
+                <dt style={{ color: rowsMuted, fontSize: '1rem' }}>{label}</dt>
+                <dd style={{ margin: 0, color: primaryText, fontSize: '1.05rem', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{value}</dd>
               </div>
             ))}
-          </div>
-        )}
+          </dl>
 
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', width: '100%', maxWidth: 400 }}>
+          {runningParallelTasks.length > 0 && (
+            <div style={{ width: '100%', marginBottom: 20, borderRadius: 14, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', padding: '2px 4px 2px 14px', textAlign: 'left' }}>
+              {runningParallelTasks.map((p, i) => (
+                <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 44, borderTop: i ? `0.5px solid ${rowLine}` : 'none' }}>
+                  <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: primaryText, fontSize: '0.95rem' }}>{p.title}</span>
+                  <span style={{ color: rowsMuted, fontSize: '0.85rem', fontVariantNumeric: 'tabular-nums' }}>{p.secondsLeft === 0 ? 'Terminó' : `quedan ${formatDuration(Math.ceil(p.secondsLeft / 60))}`}</span>
+                  <button onClick={() => handleFinishParallel(p.id)} style={{ minHeight: 44, padding: '0 12px', background: 'transparent', border: 'none', cursor: 'pointer', color: primaryText, fontWeight: 600, fontSize: '0.95rem' }}
+                    aria-label={`Dar por terminada «${p.title}»`}>Ya está</button>
+                </div>
+              ))}
+            </div>
+          )}
+
           <motion.button
-            onClick={onClose}
-            whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-            style={{
-              flex: 1, padding: '14px 20px', borderRadius: 20,
-              background: listColor, color: 'white', border: 'none',
-              fontWeight: 700, fontSize: '1rem', cursor: 'pointer',
-              boxShadow: `0 8px 28px ${listColor}55`
-            }}
+            onClick={onClose} whileTap={{ scale: 0.98 }}
+            style={{ width: '100%', minHeight: 52, borderRadius: 16, border: 'none', cursor: 'pointer', background: '#30d158', color: '#000', fontWeight: 600, fontSize: '1.05rem' }}
           >
             Volver
           </motion.button>
-          
-          <motion.button
-            onClick={handleShare}
-            whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-            style={{
-              flex: 1, padding: '14px 20px', borderRadius: 20,
-              background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', 
-              color: primaryText, border: 'none',
-              fontWeight: 700, fontSize: '1rem', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
-            }}
-          >
-            <Share size={18} /> Compartir
-          </motion.button>
+          <button onClick={handleShare} style={{ minHeight: 44, marginTop: 4, padding: '0 14px', background: 'transparent', border: 'none', cursor: 'pointer', color: rowsMuted, fontSize: '0.95rem', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Share size={16} aria-hidden="true" /> Compartir
+          </button>
         </div>
       </motion.div>
     );
@@ -787,27 +717,32 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
 
               {initialDuration > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <button type="button" onClick={() => setShowTimeTools(v => !v)} aria-expanded={showTimeTools} style={quietButton}>
-                    <Clock size={15} aria-hidden="true" /> Cambiar tiempo
-                  </button>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center' }}>
+                    {/* Alargar es solo de hoy; «Cambiar duración» cambia lo que dura la tarea siempre. */}
+                    <button type="button" onClick={() => setShowTimeTools(v => !v)} aria-expanded={showTimeTools} style={quietButton}
+                      title="Darte más tiempo solo en esta ocasión">
+                      <Plus size={15} aria-hidden="true" /> Alargar hoy
+                    </button>
+                    <button type="button" onClick={() => setShowDurationPicker(true)} style={quietButton}
+                      title="Cambiar lo que dura esta tarea siempre">
+                      <Clock size={15} aria-hidden="true" /> Cambiar duración
+                    </button>
+                  </div>
                   <AnimatePresence initial={false}>
                     {showTimeTools && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
                         style={{ overflow: 'hidden' }}
                       >
-                        <div style={{ display: 'flex', gap: 8, padding: '2px 0 4px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                        <div style={{ display: 'flex', gap: 8, padding: '2px 0 4px', justifyContent: 'center' }}>
                           {[1, 5, 10].map(m => (
-                            <button key={m} type="button" onClick={() => addTime(m * 60)} title={`Añadir ${m} ${m === 1 ? 'minuto' : 'minutos'}`}
+                            <button key={m} type="button" onClick={() => addTime(m * 60)} title={`Añadir ${m} ${m === 1 ? 'minuto' : 'minutos'} solo hoy`}
                               style={{ minHeight: 44, padding: '0 16px', borderRadius: 22, border: 'none', background: chipBg, color: primaryText, fontSize: '0.95rem', fontWeight: 500, cursor: 'pointer', fontVariantNumeric: 'tabular-nums' }}>
                               + {m} min
                             </button>
                           ))}
-                          <button type="button" onClick={() => setShowDurationPicker(true)}
-                            style={{ minHeight: 44, padding: '0 16px', borderRadius: 22, border: 'none', background: chipBg, color: primaryText, fontSize: '0.95rem', fontWeight: 500, cursor: 'pointer' }}>
-                            Otro…
-                          </button>
                         </div>
+                        <div style={{ fontSize: '0.8rem', color: muted, paddingBottom: 4 }}>Solo esta vez: la tarea sigue durando lo mismo.</div>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -828,7 +763,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                     <div style={{ width: `${Math.min(100, ((pt.totalSeconds - pt.secondsLeft) / Math.max(1, pt.totalSeconds)) * 100)}%`, height: '100%', background: listColor, borderRadius: 1 }} />
                   </div>
                 </div>
-                <span style={{ fontSize: '0.85rem', color: muted, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{formatDuration(Math.ceil(pt.secondsLeft / 60))}</span>
+                <span style={{ fontSize: '0.85rem', color: muted, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{pt.secondsLeft === 0 ? 'Terminó' : formatDuration(Math.ceil(pt.secondsLeft / 60))}</span>
                 <button onClick={() => handleFinishParallel(pt.id)} style={{ ...quietButton, color: primaryText, fontWeight: 600, padding: '0 12px' }} aria-label={`Dar por terminada «${pt.title}»`}>
                   Ya está
                 </button>

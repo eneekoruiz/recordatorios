@@ -118,7 +118,7 @@ export class NotificationService {
    * En Android `new Notification()` lanza «Illegal constructor»: allí solo vale el
    * service worker. Se usa siempre que exista y el constructor queda de respaldo.
    */
-  private show(title: string, options: NotificationOptions) {
+  public show(title: string, options: NotificationOptions) {
     const fallback = () => {
       try {
         const notification = new Notification(title, options);

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Check, CreditCard, Moon, Sun, Sunset, X } from 'lucide-react';
+import { Check, CreditCard, Moon, Sun, Sunset, X } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { buildDailyBriefing } from '../../services/DailyBriefingService';
 import { HapticService } from '../../services/HapticService';
@@ -248,7 +248,7 @@ export const DailyGreetingModal: React.FC<DailyGreetingModalProps> = ({ onSelect
 
             <div className="greeting-actions">
               <button type="button" className="greeting-primary" onClick={goToToday}>
-                Ver mi día <ArrowRight size={17} strokeWidth={2.4} />
+                Ver mi día
               </button>
               <button type="button" className="greeting-secondary" onClick={toggleMuted} aria-pressed={muted}>
                 <Check size={15} strokeWidth={3} /> No mostrar este resumen al abrir

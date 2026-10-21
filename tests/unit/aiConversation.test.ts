@@ -62,6 +62,7 @@ describe('conversación con el asistente local', () => {
   it('sin lista clara pregunta igualmente dónde, sin inventar', () => {
     const batch = AIService.localSemanticExtract('Llamar a mamá el jueves', lists, tasks);
     expect(batch.tasks[0].listId).toBe('inbox');
-    expect(batch.reply).toMatch(/^¿Apunto «Llamar a mamá» el jueves/);
+    // «el jueves» se dice «mañana» si mañana es jueves: la prueba no depende del día en que se ejecute.
+    expect(batch.reply).toMatch(/^¿Apunto «Llamar a mamá» (el jueves|mañana)/);
   });
 });
