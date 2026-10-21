@@ -184,6 +184,43 @@ export function createCronRouter(context: AppContext) {
           for (let sub = queue.shift(); sub; sub = queue.shift()) await processSubscription(sub);
         })
       );
+      // Tareas en segundo plano que ya terminaron (pasada aparte con lectura fresca: así no pisa los
+      // avisos que el dispositivo acaba de registrar mientras corría la pasada anterior).
+      for (const { id } of subscriptions as any[]) {
+        if (leaseLost) break;
+        try {
+          const fresh: any = await prisma.pushSubscription.findUnique({ where: { id } });
+          const timers: { id: string; title: string; endsAt: number }[] = Array.isArray(fresh?.sentLog?.timers) ? fresh.sentLog.timers : [];
+          const due = timers.filter((t) => t.endsAt <= now.getTime());
+          if (!fresh || due.length === 0) continue;
+          let delivered = true;
+          for (const t of due) {
+            try {
+              await pushSender({ endpoint: fresh.endpoint, keys: fresh.keys }, {
+                title: `«${t.title}» ha terminado`,
+                body: 'Ya puedes volver a ella.',
+                tag: `background-${t.id}`,
+              } as any);
+              sent++;
+            } catch (error) {
+              if ((error as any)?.statusCode === 404 || (error as any)?.statusCode === 410) {
+                await prisma.pushSubscription.delete({ where: { id } });
+                removed++;
+                delivered = false;
+                break;
+              }
+              delivered = false;
+              console.error('Push timer send error:', (error as any)?.statusCode || error);
+            }
+          }
+          if (delivered) {
+            const rest = timers.filter((t) => t.endsAt > now.getTime());
+            await prisma.pushSubscription.update({ where: { id }, data: { sentLog: { ...(fresh.sentLog || {}), timers: rest } as any } });
+          }
+        } catch (error) {
+          console.error('Cron timers error:', error);
+        }
+      }
       res.json({ subscriptions: subscriptions.length, sent, removed });
     } catch (error) {
       console.error('Cron notify error:', error);

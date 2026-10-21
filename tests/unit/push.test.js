@@ -108,4 +108,30 @@ describe('avisos push', () => {
     expect((await call('POST', '/api/push/unsubscribe', { endpoint: 'https://fcm.googleapis.com/fcm/send/baja' }, token)).status).toBe(200);
     expect(await prisma.pushSubscription.findMany({ where: { endpoint: 'https://fcm.googleapis.com/fcm/send/baja' } })).toHaveLength(0);
   });
+
+  it('avisa cuando termina una tarea en segundo plano, una sola vez', async () => {
+    const { token } = await user();
+    await call('POST', '/api/push/subscribe', { subscription: subscription('lavadora'), timeZone: 'Etc/UTC', digestHour: 23 }, token);
+    const endpoint = 'https://fcm.googleapis.com/fcm/send/lavadora';
+    // Sin sesión o desde otro dispositivo no se puede registrar.
+    expect((await call('POST', '/api/push/timers', { endpoint, timers: [] })).status).toBe(401);
+    expect((await call('POST', '/api/push/timers', { endpoint: 'https://fcm.googleapis.com/fcm/send/otro', timers: [] }, token)).status).toBe(404);
+    const now = Date.now();
+    const res = await call('POST', '/api/push/timers', { endpoint, timers: [
+      { id: 'a', title: 'Poner la lavadora', endsAt: now - 1000 },
+      { id: 'b', title: 'Horno', endsAt: now + 3_600_000 },
+      { id: 'c', title: 'Descabellada', endsAt: now + 10 * 24 * 3_600_000 },
+    ] }, token);
+    expect(await res.json()).toEqual({ success: true, count: 2 });
+    sent.length = 0;
+    await call('POST', '/api/cron/notify', null, 'cron-de-prueba');
+    const mine = sent.filter((m) => m.endpoint === endpoint && m.tag?.startsWith('background-'));
+    expect(mine).toHaveLength(1);
+    expect(mine[0]).toMatchObject({ title: '«Poner la lavadora» ha terminado', tag: 'background-a' });
+    sent.length = 0;
+    await call('POST', '/api/cron/notify', null, 'cron-de-prueba');
+    expect(sent.filter((m) => m.tag?.startsWith('background-'))).toHaveLength(0);
+    const [stored] = await prisma.pushSubscription.findMany({ where: { endpoint } });
+    expect(stored.sentLog.timers.map((t) => t.id)).toEqual(['b']);
+  });
 });

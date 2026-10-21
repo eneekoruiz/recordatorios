@@ -24,7 +24,25 @@ function authHeaders(): Record<string, string> {
   return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 }
 
+/** Cuándo terminan las tareas que siguen solas: el servidor avisa aunque la app esté cerrada. */
+async function syncTimers(timers: { id: string; title: string; endsAt: number }[]): Promise<void> {
+  try {
+    if (!isSupported() || Notification.permission !== 'granted' || !useAppStore.getState().token) return;
+    const registration = await navigator.serviceWorker.getRegistration();
+    const subscription = await registration?.pushManager.getSubscription();
+    if (!subscription) return;
+    await fetch(apiUrl('/api/push/timers'), {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ endpoint: subscription.endpoint, timers }),
+    });
+  } catch {
+    // Sin red o sin avisos: el dispositivo sigue avisando por su cuenta cuando la app vuelve a ejecutarse.
+  }
+}
+
 export const PushService = {
+  syncTimers,
   async status(): Promise<PushStatus> {
     if (!isSupported()) return 'unsupported';
     if (Notification.permission === 'denied') return 'denied';

@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { NotificationService } from './NotificationService';
 import { SoundService } from './SoundService';
 import { HapticService } from './HapticService';
+import { PushService } from './PushService';
 
 /**
  * Tareas que siguen solas mientras tú haces otra (lavadora, horno, mascarilla…).
@@ -41,6 +42,10 @@ function emit() {
   timers = [...timers];
   save();
   listeners.forEach((l) => l());
+}
+/** Cuenta al servidor lo que sigue en marcha (si este dispositivo tiene los avisos activados). */
+function syncServer() {
+  void PushService.syncTimers(timers.filter((t) => !t.done).map(({ id, title, endsAt }) => ({ id, title, endsAt })));
 }
 
 /** Marca lo que ya terminó, avisa una vez y deja de latir cuando no queda nada en marcha. */
@@ -88,11 +93,12 @@ export const BackgroundTimers = {
     emit();
     ensureTicker();
     // Pedir permiso de avisos justo al poner en marcha (hay un gesto del usuario y se entiende para qué).
-    void NotificationService.getInstance().requestPermissions();
+    void NotificationService.getInstance().requestPermissions().then(syncServer);
   },
   finish(id: string) {
     timers = timers.filter((t) => t.id !== id);
     emit();
+    syncServer();
   },
   list: () => timers,
 };

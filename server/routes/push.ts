@@ -52,6 +52,29 @@ export function createPushRouter(context: AppContext) {
     }
   });
 
+  // Tareas que siguen solas (lavadora, horno…): el dispositivo avisa de cuándo terminan y el planificador
+  // manda el aviso aunque la app esté cerrada. Se guardan en el registro de la suscripción (sin migración).
+  router.post('/push/timers', apiLimiter, authenticateToken, async (req: express.Request, res: express.Response) => {
+    const { endpoint, timers } = req.body || {};
+    if (typeof endpoint !== 'string' || !Array.isArray(timers) || timers.length > 10) {
+      return res.status(400).json({ error: 'Datos no válidos' });
+    }
+    const now = Date.now();
+    const clean = timers
+      .filter((t: any) => t && typeof t.id === 'string' && t.id.length <= 80 && typeof t.title === 'string'
+        && Number.isFinite(t.endsAt) && t.endsAt > now - 60_000 && t.endsAt < now + 48 * 3_600_000)
+      .map((t: any) => ({ id: t.id, title: t.title.slice(0, 120), endsAt: Math.round(t.endsAt) }));
+    try {
+      const sub = await prisma.pushSubscription.findFirst({ where: { endpoint, userId: req.user!.id } });
+      if (!sub) return res.status(404).json({ error: 'Este dispositivo no tiene los avisos activados' });
+      const sentLog = { ...((sub as any).sentLog || {}), timers: clean };
+      await prisma.pushSubscription.update({ where: { id: (sub as any).id }, data: { sentLog: sentLog as any } });
+      res.json({ success: true, count: clean.length });
+    } catch (error) {
+      console.error('Push timers error:', error);
+      res.status(503).json({ error: 'No se pudo guardar el aviso.' });
+    }
+  });
 
   return router;
 }

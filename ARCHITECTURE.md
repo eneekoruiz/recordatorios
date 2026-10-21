@@ -42,6 +42,7 @@ Los IDs los genera el cliente y algunos son fijos (`compras`, `caducidades`, `cy
 - `shared/periodicity.js` es la única definición de «qué frecuencia tiene un recordatorio» (prefijo del título, `cycle_id`, lista o sección y su sección padre) y de qué rondas tocan cada día: las semanales en el día elegido, la mensual el primero de esos días del mes y la anual, el de enero. La usan la app (TypeScript, tipos en `periodicity.d.ts`) y el servidor.
 - `server/notifications.js` decide qué avisos mandar a cada suscripción (función pura, probada en `tests/unit/notifications.test.js`): un resumen al día a la hora elegida y las alertas con hora, agrupadas. Lo ya hecho en su periodo no cuenta, con las fechas en la zona horaria del usuario.
 - `/api/cron/notify` (Vercel Cron a diario y GitHub Actions cada 10 min, protegido con `CRON_SECRET`) carga tareas, listas, secciones y el día semanal sincronizado en `User.preferences.weeklyTasksDay`.
+- Tareas en segundo plano (lavadora, horno…): el dispositivo registra su hora de fin en `POST /api/push/timers` (guardada en `PushSubscription.sentLog.timers`) y `/api/cron/notify` manda el aviso al terminar, con una precisión igual a la cadencia del cron (10 min con GitHub Actions). Sin avisos activados, el propio dispositivo avisa en cuanto la app vuelve a ejecutarse.
 - `src/utils/calendar.ts` calcula el calendario (recordatorios con fecha, renovaciones previstas y rondas pendientes) sin React; la vista es `src/components/views/CalendarView.tsx`.
 
 ## Interfaz
