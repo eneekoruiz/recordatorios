@@ -1,12 +1,11 @@
-name: Avisos push (cada 10 minutos)
-
-# Vercel Cron (vercel.json) llama una vez al día para el resumen. Para que las
-# alertas con hora lleguen a su hora, este flujo llama cada 10 minutos.
-# Requiere los secretos del repositorio APP_URL (p. ej. https://tu-app.vercel.app)
-# y CRON_SECRET (el mismo valor que en Vercel). Sin ellos, no hace nada.
+name: Avisos push (manual o programado seguro)
 
 on:
   workflow_dispatch:
+
+concurrency:
+  group: notify-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   notify:

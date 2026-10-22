@@ -3,10 +3,23 @@ name: CodeQL
 on:
   push:
     branches: [main]
+    paths:
+      - 'src/**'
+      - 'server/**'
+      - 'package.json'
+      - 'tsconfig.json'
   pull_request:
     branches: [main]
-  schedule:
-    - cron: '23 4 * * 1' # cada lunes: detecta vulnerabilidades nuevas aunque no haya cambios
+    paths:
+      - 'src/**'
+      - 'server/**'
+      - 'package.json'
+      - 'tsconfig.json'
+  workflow_dispatch:
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -16,8 +29,11 @@ jobs:
   analyze:
     name: Análisis de código (JavaScript/TypeScript)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: false
       - uses: github/codeql-action/init@v3
         with:
           languages: javascript-typescript
