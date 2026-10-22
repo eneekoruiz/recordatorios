@@ -45,7 +45,7 @@ export function createCronRouter(context: AppContext) {
     if (!cronSecret || !safeEqual(req.headers['authorization'] || '', `Bearer ${cronSecret}`)) {
       return res.status(401).json({ error: 'No autorizado' });
     }
-    if (!pushSender) return res.status(503).json({ error: 'Faltan las claves VAPID' });
+    if (!pushSender) return res.status(200).json({ ok: true, status: 'disabled', message: 'Faltan las claves VAPID en variables de entorno' });
 
     const leaseOwner = randomUUID();
     try {
