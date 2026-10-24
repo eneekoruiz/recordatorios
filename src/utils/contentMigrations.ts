@@ -36,7 +36,8 @@ export function runContentMigrations(store: ContentMigrationStore): void {
   const tasks = store.tasks || {};
   const lists = store.lists || [];
   const sections = store.listSections || [];
-  const EPOCH = new Date(0).toISOString();
+  const NOW = new Date().toISOString();
+  const EPOCH = NOW;
 
   // Encontrar o crear secciones de referencia para rutinas
   const findOrCreateSection = (listId: string, periodicityName: string, fallbackId: string) => {
@@ -584,11 +585,13 @@ export function runContentMigrations(store: ContentMigrationStore): void {
   if (targetGoalsList) {
     const gId = targetGoalsList.id;
     const requiredYears = [
-      { id: 'sec_prop_2020', name: '2020', order: 0 },
-      { id: 'sec_prop_2021', name: '2021', order: 1 },
-      { id: 'sec_prop_2022', name: '2022', order: 2 },
+      { id: 'sec_prop_2026', name: '2026', order: 0 },
+      { id: 'sec_prop_2025', name: '2025', order: 1 },
+      { id: 'sec_prop_2024', name: '2024', order: 2 },
       { id: 'sec_prop_2023', name: '2023', order: 3 },
-      { id: 'sec_prop_2026', name: '2026', order: 4 },
+      { id: 'sec_prop_2022', name: '2022', order: 4 },
+      { id: 'sec_prop_2021', name: '2021', order: 5 },
+      { id: 'sec_prop_2020', name: '2020', order: 6 },
     ];
     requiredYears.forEach(req => {
       const exists = sections.some((s: any) => s.listId === gId && (s.id === req.id || normalize(s.name) === req.name));

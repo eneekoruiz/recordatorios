@@ -54,7 +54,8 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
   // Sin un modelo de lenguaje configurado es más fiable que el extractor local para un solo
   // recordatorio, así que se usa para eso; la IA entra con varios a la vez o con preguntas.
   const buildLocalTask = (): Partial<TaskItem> | null => {
-    const cleanTitle = nlp.cleanTitle || text.trim();
+    const hasExplicitCycleTag = text.includes('#') || /^\[[dsmadSMA]\]/i.test(text.trim());
+    const cleanTitle = hasExplicitCycleTag || !nlp.suggestedCycleId ? (nlp.cleanTitle || text.trim()) : text.trim();
     if (!cleanTitle) return null;
 
     // Determinar categoría / lista por defecto
@@ -101,7 +102,7 @@ export function QuickAddBar({ currentView, onExpandDrawer }: QuickAddBarProps) {
     let targetCycleId: string | undefined = undefined;
     if (currentView.startsWith('cycle_')) {
       targetCycleId = currentView;
-    } else if (nlp.suggestedCycleId) {
+    } else if (hasExplicitCycleTag && nlp.suggestedCycleId) {
       targetCycleId = nlp.suggestedCycleId;
     }
 

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Clock, Mic, MicOff, Calendar as CalendarIcon, Repeat, Flag, Sparkles, X } from 'lucide-react';
 import { CustomSelect } from '../../ui/CustomSelect';
 import type { TaskItem, CustomList } from '../../../models/Task';
-import type { HabitSuggestion } from '../../../utils/habitSuggestions';
+import type { TaskSmartSuggestion } from '../../../utils/taskSmartSuggestions';
 import { focusOnMount } from '../../../utils/focusOnMount';
 
 interface DrawerHeaderSectionProps {
@@ -21,9 +21,9 @@ interface DrawerHeaderSectionProps {
   type: 'task' | 'log';
   setType: (type: 'task' | 'log') => void;
   lists: CustomList[];
-  habitSuggestion?: HabitSuggestion | null;
-  onApplyHabitSuggestion?: () => void;
-  onDismissHabitSuggestion?: () => void;
+  smartSuggestion?: TaskSmartSuggestion | null;
+  onApplySmartSuggestion?: () => void;
+  onDismissSmartSuggestion?: () => void;
 }
 
 export const DrawerHeaderSection: React.FC<DrawerHeaderSectionProps> = ({
@@ -40,9 +40,9 @@ export const DrawerHeaderSection: React.FC<DrawerHeaderSectionProps> = ({
   type,
   setType,
   lists,
-  habitSuggestion,
-  onApplyHabitSuggestion,
-  onDismissHabitSuggestion
+  smartSuggestion,
+  onApplySmartSuggestion,
+  onDismissSmartSuggestion
 }) => {
   return (
     <>
@@ -103,8 +103,8 @@ export const DrawerHeaderSection: React.FC<DrawerHeaderSectionProps> = ({
         </div>
       )}
 
-      {/* Sugerencia inteligente de conversión a hábito recurrente */}
-      {habitSuggestion && (
+      {/* Sugerencia inteligente de conversión interactiva */}
+      {smartSuggestion && (
         <motion.div
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
@@ -125,13 +125,13 @@ export const DrawerHeaderSection: React.FC<DrawerHeaderSectionProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
             <Sparkles size={15} style={{ color: '#ff9500', flexShrink: 0 }} />
             <span style={{ lineHeight: 1.3 }}>
-              ¿Convertir en hábito de <strong>{habitSuggestion.targetCount} veces al {habitSuggestion.periodName}</strong>?
+              {smartSuggestion.prompt}
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
             <button
               type="button"
-              onClick={onApplyHabitSuggestion}
+              onClick={onApplySmartSuggestion}
               style={{
                 background: '#ff9500',
                 color: '#ffffff',
@@ -143,12 +143,12 @@ export const DrawerHeaderSection: React.FC<DrawerHeaderSectionProps> = ({
                 cursor: 'pointer'
               }}
             >
-              Convertir
+              {smartSuggestion.actionLabel}
             </button>
-            {onDismissHabitSuggestion && (
+            {onDismissSmartSuggestion && (
               <button
                 type="button"
-                onClick={onDismissHabitSuggestion}
+                onClick={onDismissSmartSuggestion}
                 title="Ignorar sugerencia"
                 style={{
                   background: 'none',

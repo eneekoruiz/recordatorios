@@ -23,6 +23,7 @@ describe('getCleaningPhase', () => {
     expect(getCleaningPhase('Hacer la cama')).toBe(0);
     expect(getCleaningPhase('Vaciar el lavavajillas')).toBe(0);
     expect(getCleaningPhase('Cambiar sábanas')).toBe(0);
+    expect(getCleaningPhase('Tirar el albornoz a la lavadora')).toBe(0);
   });
 
   it('limpia de arriba abajo y deja los suelos casi al final', () => {
@@ -33,13 +34,19 @@ describe('getCleaningPhase', () => {
     expect(getCleaningPhase('Fregar los platos')).toBe(2);
     expect(getCleaningPhase('Barrer el suelo de la cocina')).toBe(3);
     expect(getCleaningPhase('Fregar el suelo de toda la casa')).toBe(4);
+    expect(getCleaningPhase('Fregar zonas comunes')).toBe(4);
     expect(getCleaningPhase('Pasar aspiradora detrás de muebles accesibles')).toBe(3);
   });
 
-  it('deja para el final la basura, el ambientador y las toallas limpias', () => {
+  it('deja para el final la basura, consumibles, espejos y ambientador', () => {
     expect(getCleaningPhase('Sacar la basura orgánica')).toBe(5);
     expect(getCleaningPhase('Cambiar ambientador o recarga')).toBe(5);
     expect(getCleaningPhase('Cambiar toallas')).toBe(5);
+    expect(getCleaningPhase('Poner papel higiénico')).toBe(5);
+    expect(getCleaningPhase('Reponer jabón de manos')).toBe(5);
+    expect(getCleaningPhase('Reponer jabón de platos (Fairy)')).toBe(5);
+    expect(getCleaningPhase('Limpiar espejos')).toBe(5);
+    expect(getCleaningPhase('Limpiar todos los espejos de la casa')).toBe(5);
   });
 
   it('lo que no reconoce queda en la fase intermedia', () => {
@@ -50,7 +57,6 @@ describe('getCleaningPhase', () => {
 
 describe('sortByCleaningOrder', () => {
   it('intercala frecuencias según la fase, no en bloques por frecuencia', () => {
-    // Orden manual "por bloques" (diarias, luego semanales, luego mensuales), como queda al crearlas
     const tasks = [
       task('Fregar los platos', 0, 'cycle_day'),
       task('Vaciar el lavavajillas', 1, 'cycle_day'),
@@ -70,7 +76,7 @@ describe('sortByCleaningOrder', () => {
   });
 
   it('dentro de una misma fase respeta el orden manual', () => {
-    const tasks = [task('Limpiar espejos', 2), task('Limpiar el horno a fondo', 1), task('Limpiar microondas por dentro', 0)];
+    const tasks = [task('Limpiar vitrocerámica', 2), task('Limpiar el horno a fondo', 1), task('Limpiar microondas por dentro', 0)];
     expect(sortByCleaningOrder(tasks).map(t => t.order)).toEqual([0, 1, 2]);
   });
 
@@ -84,17 +90,24 @@ describe('sortByCleaningOrder', () => {
 });
 
 describe('splitWholeHouseTasks', () => {
-  it('ventilar va al principio y los suelos de toda la casa al final', () => {
+  it('ventilar va al principio y los suelos, espejos y consumibles al final', () => {
     const general = [
-      task('Fregar el suelo de toda la casa', 0, 'cycle_week'),
+      task('Fregar zonas comunes', 0, 'cycle_week'),
       task('Cambiar ambientador o recarga', 1, 'cycle_month'),
       task('Quitar el polvo de muebles', 2, 'cycle_week'),
       task('Ventilar toda la casa 10 minutos', 3, 'cycle_day'),
       task('Aspirar alfombras', 4, 'cycle_week'),
+      task('Poner papel higiénico', 5, 'cycle_week'),
+      task('Limpiar todos los espejos de la casa', 6, 'cycle_week'),
     ];
     const { start, end } = splitWholeHouseTasks(general);
     expect(start.map(t => t.title)).toEqual(['Ventilar toda la casa 10 minutos', 'Quitar el polvo de muebles']);
-    // Primero en seco (aspirar), luego mojado (fregar), y lo último el ambientador
-    expect(end.map(t => t.title)).toEqual(['Aspirar alfombras', 'Fregar el suelo de toda la casa', 'Cambiar ambientador o recarga']);
+    expect(end.map(t => t.title)).toEqual([
+      'Aspirar alfombras',
+      'Fregar zonas comunes',
+      'Cambiar ambientador o recarga',
+      'Poner papel higiénico',
+      'Limpiar todos los espejos de la casa'
+    ]);
   });
 });

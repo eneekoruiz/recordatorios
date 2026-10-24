@@ -13,7 +13,7 @@ import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { useTemporalNavigationStore } from '../../store/useTemporalNavigationStore';
 import { isCompletedInCurrentPeriod, isSkippedInCurrentPeriod, calculateExpirationStatus } from '../../services/TaskService';
 import { calculateTaskStreak } from '../../utils/streaks';
-import { detectHabitSuggestion } from '../../utils/habitSuggestions';
+import { detectTaskSmartSuggestion } from '../../utils/taskSmartSuggestions';
 import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
 import { ConfettiService } from '../../services/ConfettiService';
@@ -75,9 +75,9 @@ interface TaskCardProps {
 const SWIPE_COMPLETE_THRESHOLD = 65;
 const SWIPE_DELETE_THRESHOLD = -65;
 
-function isHabitSuggestionDismissed(taskId: string): boolean {
+function isTaskSuggestionDismissed(taskId: string): boolean {
   try {
-    const raw = localStorage.getItem('dismissed_habit_suggestions');
+    const raw = localStorage.getItem('dismissed_task_suggestions') || localStorage.getItem('dismissed_habit_suggestions');
     if (!raw) return false;
     const list = JSON.parse(raw);
     return Array.isArray(list) && list.includes(taskId);
@@ -86,13 +86,13 @@ function isHabitSuggestionDismissed(taskId: string): boolean {
   }
 }
 
-function dismissHabitSuggestion(taskId: string): void {
+function dismissTaskSuggestion(taskId: string): void {
   try {
-    const raw = localStorage.getItem('dismissed_habit_suggestions');
+    const raw = localStorage.getItem('dismissed_task_suggestions') || localStorage.getItem('dismissed_habit_suggestions');
     const list = raw ? JSON.parse(raw) : [];
     if (Array.isArray(list) && !list.includes(taskId)) {
       list.push(taskId);
-      localStorage.setItem('dismissed_habit_suggestions', JSON.stringify(list));
+      localStorage.setItem('dismissed_task_suggestions', JSON.stringify(list));
     }
   } catch {}
 }
@@ -241,35 +241,30 @@ export const TaskCard = React.memo(function TaskCard({
   const setInlineEditingTaskId = useAppStore(state => state.setInlineEditingTaskId);
 
   const [dismissedTaskId, setDismissedTaskId] = useState(task.id);
-  const [isSuggestionDismissed, setIsSuggestionDismissed] = useState(() => isHabitSuggestionDismissed(task.id));
+  const [isSuggestionDismissed, setIsSuggestionDismissed] = useState(() => isTaskSuggestionDismissed(task.id));
   if (dismissedTaskId !== task.id) {
     setDismissedTaskId(task.id);
-    setIsSuggestionDismissed(isHabitSuggestionDismissed(task.id));
+    setIsSuggestionDismissed(isTaskSuggestionDismissed(task.id));
   }
 
-  const habitSuggestion = useMemo(() => {
-    if (isSuggestionDismissed || (task.targetCount && task.targetCount > 1)) return null;
-    return detectHabitSuggestion(task.title);
-  }, [isSuggestionDismissed, task.targetCount, task.title]);
+  const smartSuggestion = useMemo(() => {
+    if (isSuggestionDismissed) return null;
+    return detectTaskSmartSuggestion(task);
+  }, [isSuggestionDismissed, task]);
 
-  const handleApplyHabitSuggestion = useCallback((e: React.MouseEvent) => {
+  const handleApplySmartSuggestion = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    if (!habitSuggestion) return;
+    if (!smartSuggestion) return;
     SoundService.playPop();
     HapticService.impact('medium');
-    updateTask(task.id, {
-      title: habitSuggestion.cleanTitle,
-      targetCount: habitSuggestion.targetCount,
-      cycle_id: habitSuggestion.cycleId,
-      currentCount: 0
-    });
-  }, [habitSuggestion, task.id, updateTask]);
+    updateTask(task.id, smartSuggestion.patch);
+  }, [smartSuggestion, task.id, updateTask]);
 
-  const handleDismissHabitSuggestion = useCallback((e: React.MouseEvent) => {
+  const handleDismissSmartSuggestion = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    dismissHabitSuggestion(task.id);
+    dismissTaskSuggestion(task.id);
     setIsSuggestionDismissed(true);
     HapticService.selection();
   }, [task.id]);
@@ -1851,8 +1846,8 @@ export const TaskCard = React.memo(function TaskCard({
             streak={habitStreak && habitStreak.count >= 2 ? habitStreak : null}
           />
 
-          {/* Smart habit conversion suggestion banner */}
-          {habitSuggestion && !isSuggestionDismissed && !isEffectivelyDone && (
+          {/* Smart suggestion banner for advanced features */}
+          {smartSuggestion && !isSuggestionDismissed && !isEffectivelyDone && (
             <motion.div
               initial={{ opacity: 0, y: -2 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1874,12 +1869,12 @@ export const TaskCard = React.memo(function TaskCard({
             >
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                 <Sparkles size={12} style={{ color: '#ff9500', flexShrink: 0 }} />
-                <span>¿Convertir a hábito de <strong>{habitSuggestion.targetCount}x al {habitSuggestion.periodName}</strong>?</span>
+                <span>{smartSuggestion.prompt}</span>
               </div>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
                 <button
                   type="button"
-                  onClick={handleApplyHabitSuggestion}
+                  onClick={handleApplySmartSuggestion}
                   style={{
                     background: '#ff9500',
                     color: '#ffffff',
@@ -1891,11 +1886,11 @@ export const TaskCard = React.memo(function TaskCard({
                     cursor: 'pointer'
                   }}
                 >
-                  Convertir
+                  {smartSuggestion.actionLabel}
                 </button>
                 <button
                   type="button"
-                  onClick={handleDismissHabitSuggestion}
+                  onClick={handleDismissSmartSuggestion}
                   title="Ignorar sugerencia"
                   style={{
                     background: 'none',

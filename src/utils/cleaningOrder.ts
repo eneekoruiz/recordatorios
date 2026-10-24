@@ -26,9 +26,9 @@ const normalize = (text: string): string =>
 // El orden de evaluación importa: «Recoger ropa del suelo» es preparar, no suelos;
 // «Sacar la basura» es para acabar aunque empiece por un verbo de preparar.
 const PHASE_RULES: Array<[CleaningPhase, RegExp]> = [
-  [5, /\b(sacar|bajar|tirar)\b.*\b(basura|bolsas?|reciclaje|vidrio|carton|papel)\b|\bbasura\b|ambientador|\brecarga\b|\breponer\b|cambiar (las )?toallas|\btender\b|\bdoblar\b/],
-  [0, /\bventila|abrir (las )?ventanas|\brecoger\b|\bordenar\b|\bdespejar\b|hacer (la )?cama|cambiar (las )?sabanas|quitar (las )?sabanas|poner (la )?lavadora|vaciar (el )?lavavajillas|(dejar|poner) (a |en )?remojo/],
-  [4, /\bfregar (el |los )?suelos?\b|\bmopa\b|fregona/],
+  [5, /\b(sacar|bajar|tirar)\b.*\b(basura|bolsas?|reciclaje|vidrio|carton|papel)\b|\bbasura\b|ambientador|\brecarga\b|\breponer\b|\b(poner|cambiar)\b.*\b(papel(\s+higienico)?|jabon|fairy|toallas?|rollo|bolsa|pastilla|consumibles?)\b|cambiar (las )?toallas|\btender\b|\bdoblar\b|\bespejos?\b/],
+  [0, /\bventila|abrir (las )?ventanas|\brecoger\b|\bordenar\b|\bdespejar\b|hacer (la )?cama|cambiar (las )?sabanas|quitar (las )?sabanas|poner (la )?lavadora|\b(tirar|echar|meter)\b.*\blavadora\b|vaciar (el )?lavavajillas|(dejar|poner) (a |en )?remojo/],
+  [4, /\bfregar\b(?!\s+(?:los?\s+)?(?:platos|cacharros|sartenes|ollas|cubiertos))\b|\bmopa\b|fregona/],
   [3, /\baspira|\bbarr(er|o)\b|\bsuelos?\b|\balfombras?\b|\bzocalos?\b/],
   [1, /\bpolvo\b|telaran|\blamparas?\b|\btechos?\b|ventilador|\bcampana\b|\bcortinas?\b|\bpersianas?\b|\bestanterias?\b|\bmarcos?\b|\bpuertas?\b|interruptor|\bpomos?\b|radiador|aire acondicionado/],
 ];

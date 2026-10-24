@@ -18,6 +18,7 @@ import { formatEuro } from '../../../utils/format';
 import { useFitMenuInViewport } from '../../../hooks/useFitMenuInViewport';
 import { IntegrationService } from '../../../services/IntegrationService';
 import { focusOnMount } from '../../../utils/focusOnMount';
+import { formatSectionTitle } from '../../../utils/sectionRoutine';
 
 export interface TaskContextMenuProps {
   task: TaskItem;
@@ -344,7 +345,7 @@ function MenuActions({
             type="button"
             className="ios-dropdown-item"
             onClick={() => {
-              updateTask(task.id, { sectionId: undefined });
+              updateTask(task.id, { sectionId: undefined, parentId: undefined });
               setContextMenuOpen(false);
             }}
             style={{
@@ -367,7 +368,7 @@ function MenuActions({
                 type="button"
                 className="ios-dropdown-item"
                 onClick={() => {
-                  updateTask(task.id, { sectionId: sec.id });
+                  updateTask(task.id, { sectionId: sec.id, parentId: undefined });
                   setContextMenuOpen(false);
                 }}
                 style={{
@@ -382,8 +383,8 @@ function MenuActions({
               >
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
                   {sec.isChild && <span style={{ opacity: 0.45, fontSize: '0.85em' }}>└</span>}
-                  <span>{sec.name}</span>
-                  {sec.parentName && <span style={{ fontSize: '0.75rem', opacity: 0.55, marginLeft: 4 }}>({sec.parentName})</span>}
+                  <span>{formatSectionTitle(sec.name)}</span>
+                  {sec.parentName && <span style={{ fontSize: '0.75rem', opacity: 0.55, marginLeft: 4 }}>({formatSectionTitle(sec.parentName)})</span>}
                 </span>
                 {isCurrent && <CheckCircle size={15} color="var(--accent-primary)" />}
               </button>

@@ -1218,7 +1218,14 @@ const CORE_CYCLES = [
                 }
                 const children = sectionsForList
                   .filter(s => s.parentId === sec.id)
-                  .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+                  .sort((a, b) => {
+            const isYearA = /^\d{4}$/.test((a.name || '').trim());
+            const isYearB = /^\d{4}$/.test((b.name || '').trim());
+            if (isYearA && isYearB) {
+              return Number(b.name.trim()) - Number(a.name.trim());
+            }
+            return (a.order ?? 0) - (b.order ?? 0);
+          });
                 children.forEach(c => renderSectionBranch(c.id, depthLevel));
                 return;
               }
@@ -1271,14 +1278,28 @@ const CORE_CYCLES = [
                 // Child sections
                 const children = sectionsForList
                   .filter(s => s.parentId === sec.id)
-                  .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+                  .sort((a, b) => {
+            const isYearA = /^\d{4}$/.test((a.name || '').trim());
+            const isYearB = /^\d{4}$/.test((b.name || '').trim());
+            if (isYearA && isYearB) {
+              return Number(b.name.trim()) - Number(a.name.trim());
+            }
+            return (a.order ?? 0) - (b.order ?? 0);
+          });
                 children.forEach(c => renderSectionBranch(c.id, depthLevel + 1));
               }
             };
 
             const rootSections = sectionsForList
               .filter(s => !s.parentId)
-              .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+              .sort((a, b) => {
+            const isYearA = /^\d{4}$/.test((a.name || '').trim());
+            const isYearB = /^\d{4}$/.test((b.name || '').trim());
+            if (isYearA && isYearB) {
+              return Number(b.name.trim()) - Number(a.name.trim());
+            }
+            return (a.order ?? 0) - (b.order ?? 0);
+          });
             rootSections.forEach(r => renderSectionBranch(r.id, baseDepth));
           };
 
@@ -1369,7 +1390,14 @@ const CORE_CYCLES = [
         // 2. Sections Hierarchy & Dynamic Cycle Sections
         const sectionsForList = (listSections || [])
           .filter(s => s.listId === currentList?.id && !s.deleted_at)
-          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+          .sort((a, b) => {
+            const isYearA = /^\d{4}$/.test((a.name || '').trim());
+            const isYearB = /^\d{4}$/.test((b.name || '').trim());
+            if (isYearA && isYearB) {
+              return Number(b.name.trim()) - Number(a.name.trim());
+            }
+            return (a.order ?? 0) - (b.order ?? 0);
+          });
 
         const allCycles = useAppStore.getState().cycles || [];
 
@@ -1419,7 +1447,14 @@ const CORE_CYCLES = [
               (sec.id.startsWith('sec_limpieza_') && s.parentId === sec.id.replace('sec_limpieza_', 'sec_limp_')) ||
               (sec.id.startsWith('sec_limp_') && s.parentId === sec.id.replace('sec_limp_', 'sec_limpieza_'))
             )
-            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+            .sort((a, b) => {
+            const isYearA = /^\d{4}$/.test((a.name || '').trim());
+            const isYearB = /^\d{4}$/.test((b.name || '').trim());
+            if (isYearA && isYearB) {
+              return Number(b.name.trim()) - Number(a.name.trim());
+            }
+            return (a.order ?? 0) - (b.order ?? 0);
+          });
 
           const sectionPeriodicity = getSectionPeriodicity(categoryKey, sec.name, listSections, lists);
           let tasksToRender = deduplicateTaskList(categoryTasks);
@@ -1787,7 +1822,14 @@ const CORE_CYCLES = [
               (s.name || '').toLowerCase().includes('habito') ||
               (s.name || '').toLowerCase().includes('hábito')
             ))
-            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+            .sort((a, b) => {
+            const isYearA = /^\d{4}$/.test((a.name || '').trim());
+            const isYearB = /^\d{4}$/.test((b.name || '').trim());
+            if (isYearA && isYearB) {
+              return Number(b.name.trim()) - Number(a.name.trim());
+            }
+            return (a.order ?? 0) - (b.order ?? 0);
+          });
           prioritySections.forEach(ps => processSection(ps.id, 0));
 
           if (presentCycleKeys.length > 0) {
@@ -1842,7 +1884,14 @@ const CORE_CYCLES = [
                 ? sectionsForList.filter(s => s.parentId === manualSec.id ||
                     (manualSec.id.startsWith('sec_limpieza_') && s.parentId === manualSec.id.replace('sec_limpieza_', 'sec_limp_')) ||
                     (manualSec.id.startsWith('sec_limp_') && s.parentId === manualSec.id.replace('sec_limp_', 'sec_limpieza_'))
-                  ).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                  ).sort((a, b) => {
+            const isYearA = /^\d{4}$/.test((a.name || '').trim());
+            const isYearB = /^\d{4}$/.test((b.name || '').trim());
+            if (isYearA && isYearB) {
+              return Number(b.name.trim()) - Number(a.name.trim());
+            }
+            return (a.order ?? 0) - (b.order ?? 0);
+          })
                 : [];
 
               const allChildTasks = childSections.flatMap(cs => [
@@ -1968,7 +2017,14 @@ const CORE_CYCLES = [
           const allSectionIds = new Set(sectionsForList.map(s => s.id));
           const rootSections = sectionsForList
             .filter(s => !s.parentId || !allSectionIds.has(s.parentId) || s.parentId === s.id)
-            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+            .sort((a, b) => {
+            const isYearA = /^\d{4}$/.test((a.name || '').trim());
+            const isYearB = /^\d{4}$/.test((b.name || '').trim());
+            if (isYearA && isYearB) {
+              return Number(b.name.trim()) - Number(a.name.trim());
+            }
+            return (a.order ?? 0) - (b.order ?? 0);
+          })
             .filter(s => {
               const norm = (s?.name || '').trim().toLowerCase();
               if (!norm) return true;
@@ -2259,7 +2315,14 @@ const CORE_CYCLES = [
     if (sourceSectionId === targetSectionId) return;
     const currentListSections = (listSections || [])
       .filter(s => s.listId === currentList?.id && !s.deleted_at)
-      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      .sort((a, b) => {
+            const isYearA = /^\d{4}$/.test((a.name || '').trim());
+            const isYearB = /^\d{4}$/.test((b.name || '').trim());
+            if (isYearA && isYearB) {
+              return Number(b.name.trim()) - Number(a.name.trim());
+            }
+            return (a.order ?? 0) - (b.order ?? 0);
+          });
 
     const sourceIdx = currentListSections.findIndex(s => s.id === sourceSectionId);
     const targetIdx = currentListSections.findIndex(s => s.id === targetSectionId);
@@ -3098,7 +3161,14 @@ const CORE_CYCLES = [
         const curSection = sectionMenu.sectionId ? (listSections || []).find(s => s.id === sectionMenu.sectionId) : null;
         const siblings = curSection ? (listSections || [])
           .filter(s => s.listId === curSection.listId && !s.deleted_at && (s.parentId || undefined) === (curSection.parentId || undefined))
-          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)) : [];
+          .sort((a, b) => {
+            const isYearA = /^\d{4}$/.test((a.name || '').trim());
+            const isYearB = /^\d{4}$/.test((b.name || '').trim());
+            if (isYearA && isYearB) {
+              return Number(b.name.trim()) - Number(a.name.trim());
+            }
+            return (a.order ?? 0) - (b.order ?? 0);
+          }) : [];
         const curSectionIdx = curSection ? siblings.findIndex(s => s.id === curSection.id) : -1;
         const canMoveUp = curSectionIdx > 0;
         const canMoveDown = curSectionIdx >= 0 && curSectionIdx < siblings.length - 1;

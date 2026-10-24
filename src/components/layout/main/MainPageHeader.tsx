@@ -580,6 +580,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                 sortBy === 'dueDate' ? 'Fecha de vencimiento' :
                 sortBy === 'priority' ? 'Prioridad' :
                 sortBy === 'title' ? 'Título (A-Z)' :
+                sortBy === 'title_desc' ? 'Título (Z-A)' :
                 sortBy === 'routine' ? 'Orden de limpieza' :
                 sortBy === 'manual' ? 'Manual' : 'Fecha de creación'
               }</span>

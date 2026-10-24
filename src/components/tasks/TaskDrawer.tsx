@@ -9,7 +9,7 @@ import { parseNaturalLanguage } from '../../utils/nlp';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { isCaducidadesList, getListType, isShoppingList, isLifeLibraryList } from '../../utils/specialLists';
 import { DrawerLibrarySection } from './drawer/DrawerLibrarySection';
-import { detectHabitSuggestion } from '../../utils/habitSuggestions';
+import { detectTaskSmartSuggestion } from '../../utils/taskSmartSuggestions';
 import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
 import './TaskDrawer.css';
@@ -186,7 +186,6 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
       setDueDate(nlp.suggestedDueDate);
       setHasDate(true);
     }
-    if (nlp.suggestedCycleId) setCycleId(nlp.suggestedCycleId);
     if (nlp.suggestedPriority) setPriority(nlp.suggestedPriority);
   }
 
@@ -495,22 +494,36 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
     [titleEdited, title, cycles]
   );
 
-  const habitSuggestion = useMemo(() => {
-    if (isDrawerSuggestionDismissed || (targetCount && targetCount > 1)) return null;
-    return detectHabitSuggestion(title);
-  }, [isDrawerSuggestionDismissed, targetCount, title]);
+  const smartSuggestion = useMemo(() => {
+    if (isDrawerSuggestionDismissed) return null;
+    return detectTaskSmartSuggestion({
+      title,
+      targetCount,
+      cycle_id: cycleId,
+      duration,
+      price,
+      people,
+      locationName
+    });
+  }, [isDrawerSuggestionDismissed, title, targetCount, cycleId, duration, price, people, locationName]);
 
-  const handleApplyHabitSuggestion = () => {
-    if (!habitSuggestion) return;
-    setTitle(habitSuggestion.cleanTitle);
-    setTargetCount(habitSuggestion.targetCount);
-    setCycleId(habitSuggestion.cycleId);
-    if (!currentCount) setCurrentCount(0);
+  const handleApplySmartSuggestion = () => {
+    if (!smartSuggestion) return;
+    setTitle(smartSuggestion.cleanTitle);
+    if (smartSuggestion.patch.cycle_id !== undefined) setCycleId(smartSuggestion.patch.cycle_id);
+    if (smartSuggestion.patch.duration !== undefined) setDuration(smartSuggestion.patch.duration);
+    if (smartSuggestion.patch.targetCount !== undefined) {
+      setTargetCount(smartSuggestion.patch.targetCount);
+      setCurrentCount(0);
+    }
+    if (smartSuggestion.patch.price !== undefined) setPrice(smartSuggestion.patch.price);
+    if (smartSuggestion.patch.people !== undefined) setPeople(smartSuggestion.patch.people);
+    if (smartSuggestion.patch.locationName !== undefined) setLocationName(smartSuggestion.patch.locationName);
     SoundService.playPop();
     HapticService.impact('medium');
   };
 
-  const handleDismissHabitSuggestion = () => {
+  const handleDismissSmartSuggestion = () => {
     setIsDrawerSuggestionDismissed(true);
     HapticService.selection();
   };
@@ -883,9 +896,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                 type={type}
                 setType={setType}
                 lists={lists}
-                habitSuggestion={habitSuggestion}
-                onApplyHabitSuggestion={handleApplyHabitSuggestion}
-                onDismissHabitSuggestion={handleDismissHabitSuggestion}
+                smartSuggestion={smartSuggestion}
+                onApplySmartSuggestion={handleApplySmartSuggestion}
+                onDismissSmartSuggestion={handleDismissSmartSuggestion}
               />
 
               {/* Card 1: Fecha y Horarios */}
