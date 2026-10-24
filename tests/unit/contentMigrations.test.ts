@@ -177,4 +177,64 @@ describe('runContentMigrations (Misiones 4 y 5)', () => {
     expect(migrated.notes).toBe('Con el desayuno');
     expect(lists.some(l => l.id === VITAL_HABITS_LIST_ID)).toBe(false);
   });
+
+  it('migra y completa la rutina de ejercicios con pajita con 3 subtareas', () => {
+    let tasks: Record<string, TaskItem> = {
+      pajita_parent: {
+        id: 'pajita_parent',
+        title: 'Ejercicio con pajita',
+        categoryId: 'care',
+        sectionId: 'sec_care_diaria',
+        status: 'pending',
+        duration: 1,
+        created_at: '',
+        version: 1,
+        user_id: 'u1',
+        type: 'task'
+      },
+      pajita_sub1: {
+        id: 'pajita_sub1',
+        title: 'Ponte la pajita entre los labios',
+        parentId: 'pajita_parent',
+        categoryId: 'care',
+        sectionId: 'sec_care_diaria',
+        status: 'pending',
+        created_at: '',
+        version: 1,
+        user_id: 'u1',
+        type: 'task'
+      }
+    };
+    let lists: any[] = [{ id: 'care', name: 'Care', listType: 'routines' }];
+    let listSections: any[] = [{ id: 'sec_care_diaria', listId: 'care', name: 'Diarias', order: 0 }];
+
+    const store: any = {
+      get tasks() { return tasks; },
+      get lists() { return lists; },
+      get listSections() { return listSections; },
+      addList: (l: any) => { lists.push(l); },
+      addListSection: (s: any) => { listSections.push(s); },
+      addTask: (t: any) => {
+        const id = t.id || 'gen_' + Math.random().toString(36).slice(2);
+        tasks[id] = { id, ...t };
+      },
+      updateTask: (id: string, updates: any) => {
+        if (tasks[id]) {
+          tasks[id] = { ...tasks[id], ...updates };
+        }
+      }
+    };
+
+    runContentMigrations(store);
+
+    const parent = tasks['pajita_parent'];
+    expect(parent.title).toBe('Ejercicios con pajita');
+    expect(parent.duration).toBe(3);
+
+    const subtasks = Object.values(tasks).filter(t => t.parentId === 'pajita_parent');
+    expect(subtasks).toHaveLength(3);
+    expect(subtasks.some(s => s.title.includes('Papada'))).toBe(true);
+    expect(subtasks.some(s => s.title.includes('Pómulos'))).toBe(true);
+    expect(subtasks.some(s => s.title.includes('Labios'))).toBe(true);
+  });
 });
