@@ -22,7 +22,8 @@ export function getPeriodicityFromPrefix(title) {
 }
 
 const periodicityFromText = (text) => {
-  if (text.includes('diari') || text.includes('recurrent') || /\b(d[ií]as?)\b/i.test(text)) return 'day';
+  if (text.includes('aburr')) return null;
+  if (text.includes('diari') || text.includes('recurrent') || text.includes('vital') || text.includes('hábito') || text.includes('habito') || /\b(d[ií]as?)\b/i.test(text)) return 'day';
   if (text.includes('seman') || /\b(sem)\b/i.test(text)) return 'week';
   if (text.includes('mensu') || /\b(mes(es)?)\b/i.test(text)) return 'month';
   if (text.includes('anual') || /\b(a[ñn]os?)\b/i.test(text)) return 'year';
@@ -34,6 +35,11 @@ const periodicityFromText = (text) => {
  * lista de procedencia o sección (las subsecciones heredan de su sección padre).
  */
 export function getTaskPeriodicity(task, sections, lists) {
+  const secId = task.sectionId || task.section_id;
+  if (secId && (secId.includes('aburr') || secId === 'sec_quehaceres_te_aburres')) return null;
+  const taskTitle = (task.title || '').toLowerCase();
+  if (taskTitle.includes('te aburres') || taskTitle.includes('que quiero aprender')) return null;
+
   // 0. Prefijo en el título
   const fromPrefix = getPeriodicityFromPrefix(task.title);
   if (fromPrefix) return fromPrefix;
@@ -74,10 +80,9 @@ export function getTaskPeriodicity(task, sections, lists) {
   }
 
   // 5. Sección asignada (las subsecciones heredan de su sección padre)
-  const secId = task.sectionId || task.section_id;
   if (secId) {
     const secLower = (secId || '').toLowerCase();
-    if (secLower.includes('diari')) return 'day';
+    if (secLower.includes('diari') || secLower.includes('vital') || secLower.includes('habito')) return 'day';
     if (secLower.includes('seman')) return 'week';
     if (secLower.includes('mensu')) return 'month';
     if (secLower.includes('anual')) return 'year';
@@ -100,6 +105,8 @@ const CYCLE_BY_PERIODICITY = { day: 'cycle_day', week: 'cycle_week', month: 'cyc
 
 /** cycle_id canónico ('cycle_day', 'cycle_week'…) deducido o explícito. */
 export function getEffectiveCycleId(task, sections, lists) {
+  const secId = task.sectionId || task.section_id;
+  if (secId && (secId.includes('aburr') || secId === 'sec_quehaceres_te_aburres')) return null;
   const p = getTaskPeriodicity(task, sections, lists);
   if (p) return CYCLE_BY_PERIODICITY[p];
   if (task.cycle_id) return task.cycle_id;

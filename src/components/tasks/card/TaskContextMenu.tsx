@@ -261,9 +261,31 @@ function MenuActions({
   const [currentSubmenu, setCurrentSubmenu] = useState<'main' | 'move_list' | 'move_section' | 'due_date' | 'priority' | 'price' | 'duration'>('main');
   const [showMoreActions, setShowMoreActions] = useState(false);
 
-  const availableSections = (listSections || []).filter(
-    s => s.listId === task.categoryId && !s.deleted_at
-  );
+  const availableSections = React.useMemo(() => {
+    const raw = (listSections || []).filter(
+      s => s.listId === task.categoryId && !s.deleted_at
+    );
+    const parentMap = new Map(raw.map(s => [s.id, s]));
+    const roots = raw.filter(s => !s.parentId).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    const children = raw.filter(s => s.parentId);
+    
+    const result: Array<{ id: string; name: string; isChild: boolean; parentName?: string }> = [];
+    roots.forEach(r => {
+      result.push({ id: r.id, name: r.name, isChild: false });
+      const myChildren = children.filter(c => c.parentId === r.id).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      myChildren.forEach(c => {
+        result.push({ id: c.id, name: c.name, isChild: true, parentName: r.name });
+      });
+    });
+
+    const addedIds = new Set(result.map(x => x.id));
+    raw.filter(s => !addedIds.has(s.id)).forEach(s => {
+      const parent = s.parentId ? parentMap.get(s.parentId) : undefined;
+      result.push({ id: s.id, name: s.name, isChild: Boolean(parent), parentName: parent?.name });
+    });
+
+    return result;
+  }, [listSections, task.categoryId]);
 
   const taskList = lists?.find(l => l.id === task.categoryId);
   const isFinancialMode = Boolean(
@@ -353,11 +375,16 @@ function MenuActions({
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   width: '100%',
+                  paddingLeft: sec.isChild ? '22px' : '10px',
                   color: isCurrent ? 'var(--accent-primary)' : 'var(--text-primary)',
-                  fontWeight: isCurrent ? 600 : 500,
+                  fontWeight: isCurrent ? 600 : sec.isChild ? 450 : 600,
                 }}
               >
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sec.name}</span>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {sec.isChild && <span style={{ opacity: 0.45, fontSize: '0.85em' }}>└</span>}
+                  <span>{sec.name}</span>
+                  {sec.parentName && <span style={{ fontSize: '0.75rem', opacity: 0.55, marginLeft: 4 }}>({sec.parentName})</span>}
+                </span>
                 {isCurrent && <CheckCircle size={15} color="var(--accent-primary)" />}
               </button>
             );

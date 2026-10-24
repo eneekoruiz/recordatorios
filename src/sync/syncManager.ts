@@ -11,7 +11,7 @@ import {
 } from './merge';
 import { isValidWeekday, writeStoredWeeklyDay } from '../utils/routineDay';
 import { DEFAULT_SMART_LIST_VISIBILITY } from '../constants/smartLists';
-import { writeStoredDisplayName } from '../utils/userIdentity';
+import { writeStoredDisplayName, writeStoredActiveMode } from '../utils/userIdentity';
 
 // En producción se usan URLs relativas (mismo dominio). En desarrollo, el backend corre en :3001
 // del mismo host para que los móviles de la red local también puedan conectarse.
@@ -278,6 +278,7 @@ class SyncManager {
           hideOnboarding: safeLocalStorageGet('hide_onboarding_guide') === 'true',
           weeklyTasksDay: state.weeklyTasksDay,
           displayName: state.displayName,
+          activeMode: state.activeMode || { mode: 'normal' },
           updated_at: preferencesUpdatedAt,
         }
       : undefined;
@@ -473,6 +474,10 @@ class SyncManager {
           if (isValidWeekday(prefs.weeklyTasksDay)) {
             update.weeklyTasksDay = prefs.weeklyTasksDay;
             writeStoredWeeklyDay(prefs.weeklyTasksDay);
+          }
+          if (prefs.activeMode && typeof prefs.activeMode === 'object' && prefs.activeMode.mode) {
+            update.activeMode = prefs.activeMode;
+            writeStoredActiveMode(prefs.activeMode);
           }
           if (serverUpdatedAt >= localUpdatedAt) {
             update._preferences_dirty = false;

@@ -98,7 +98,11 @@ export const DrawerRecurrenceSection: React.FC<DrawerRecurrenceSectionProps> = (
                     { value: 'new', label: '+ Crear nueva sección...' },
                     ...listSections
                       .filter(s => s.listId === category && !s.deleted_at)
-                      .map(s => ({ value: s.id, label: formatSectionTitle(s.name) }))
+                      .map(s => {
+                        const parent = s.parentId ? listSections.find(p => p.id === s.parentId) : null;
+                        const label = parent ? `${formatSectionTitle(parent.name)} › ${formatSectionTitle(s.name)}` : formatSectionTitle(s.name);
+                        return { value: s.id, label };
+                      })
                   ]} aria-label="Sección de lista"
                 />
 

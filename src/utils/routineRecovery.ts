@@ -38,7 +38,24 @@ export function buildRoutineRecovery(
       const missed = group.tasks.filter(row => row.status === 'missed').map(row => row.task);
       const available = missed.filter(task => pendingNow.has(task.id));
       if (!available.length) continue;
-      const candidate = [...available].sort((a, b) => durationOf(a) - durationOf(b) || a.title.localeCompare(b.title, 'es'))[0];
+      const candidate = [...available].sort((a, b) => {
+        const prio = (p?: string) => (p === 'high' ? 3 : p === 'medium' ? 2 : p === 'low' ? 1 : 0);
+        const pDiff = prio(b.priority) - prio(a.priority);
+        if (pDiff !== 0) return pDiff;
+
+        // Categorizar duración: ideal entre 2 y 15 min; microtareas (< 1 min) van al final para no sugerir checks triviales
+        const durTier = (t: TaskItem) => {
+          const d = t.duration && t.duration > 0 ? t.duration : 0;
+          if (d >= 2 && d <= 15) return 1;
+          if (d > 15) return 2;
+          if (d >= 1) return 3;
+          return 4; // microtareas o sin duración
+        };
+        const tDiff = durTier(a) - durTier(b);
+        if (tDiff !== 0) return tDiff;
+
+        return durationOf(a) - durationOf(b) || a.title.localeCompare(b.title, 'es');
+      })[0];
       recovery.push({
         id: `${frequency}:${history.start.getTime()}:${group.id}`, frequency,
         periodStart: history.start, listId: group.listId, sectionId: group.sectionId,

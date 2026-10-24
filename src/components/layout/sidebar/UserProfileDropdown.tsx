@@ -15,7 +15,10 @@ import {
   UserPlus,
   Trash2,
   ShieldCheck,
-  Share2
+  Share2,
+  GraduationCap,
+  Palmtree,
+  Zap
 } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { SoundService } from '../../../services/SoundService';
@@ -70,6 +73,8 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
   const isGuest = useAppStore((state) => !state.token || state.token.startsWith('local_offline'));
   const displayName = useAppStore((state) => state.displayName);
   const setDisplayName = useAppStore((state) => state.setDisplayName);
+  const activeMode = useAppStore((state) => state.activeMode || { mode: 'normal' });
+  const setActiveMode = useAppStore((state) => state.setActiveMode);
   const editName = async () => {
     onClose(); // el menú se cierra: el diálogo no queda debajo de él
     const next = await usePromptStore.getState().openPrompt('¿Cómo quieres que te llamemos?', 'Tu nombre');
@@ -168,6 +173,114 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           </div>
           <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</div>
         </button>
+
+        {/* Selector de Modo Estacional (Normal / Exámenes / Vacaciones) */}
+        <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--border-subtle)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span style={{ fontSize: '0.70rem', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Modo de ritmo
+            </span>
+            <span style={{ fontSize: '0.68rem', fontWeight: 500, color: activeMode.mode === 'examenes' ? '#ff9500' : activeMode.mode === 'vacaciones' ? '#34c759' : 'var(--text-secondary)' }}>
+              {activeMode.mode === 'examenes' ? 'Foco académico' : activeMode.mode === 'vacaciones' ? 'Descanso activo' : 'Equilibrado'}
+            </span>
+          </div>
+          <div style={{
+            display: 'flex',
+            background: 'var(--bg-base, rgba(0,0,0,0.06))',
+            borderRadius: 8,
+            padding: 2,
+            gap: 2,
+            border: '1px solid var(--border-subtle)'
+          }}>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                HapticService.selection();
+                setActiveMode('normal');
+              }}
+              title="Modo Normal: Todas las rutinas y recordatorios activos"
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                padding: '5px 4px',
+                borderRadius: 6,
+                border: 'none',
+                background: activeMode.mode === 'normal' ? 'var(--bg-elevated, #ffffff)' : 'transparent',
+                color: activeMode.mode === 'normal' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                boxShadow: activeMode.mode === 'normal' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                fontWeight: activeMode.mode === 'normal' ? 600 : 400,
+                fontSize: '0.72rem',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Zap size={12} color={activeMode.mode === 'normal' ? 'var(--accent-primary)' : 'currentColor'} />
+              Normal
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                HapticService.selection();
+                setActiveMode('examenes', { reason: 'Convocatoria de exámenes y entregas' });
+              }}
+              title="Modo Exámenes: Prioriza entregas y TFG; silencia avisos domésticos no urgentes"
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                padding: '5px 4px',
+                borderRadius: 6,
+                border: 'none',
+                background: activeMode.mode === 'examenes' ? 'var(--bg-elevated, #ffffff)' : 'transparent',
+                color: activeMode.mode === 'examenes' ? '#ff9500' : 'var(--text-secondary)',
+                boxShadow: activeMode.mode === 'examenes' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                fontWeight: activeMode.mode === 'examenes' ? 600 : 400,
+                fontSize: '0.72rem',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <GraduationCap size={12} color={activeMode.mode === 'examenes' ? '#ff9500' : 'currentColor'} />
+              Exámenes
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                HapticService.selection();
+                setActiveMode('vacaciones', { reason: 'Vacaciones de descanso' });
+              }}
+              title="Modo Vacaciones: Pausa alertas académicas y mantiene hábitos personales ligeros"
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                padding: '5px 4px',
+                borderRadius: 6,
+                border: 'none',
+                background: activeMode.mode === 'vacaciones' ? 'var(--bg-elevated, #ffffff)' : 'transparent',
+                color: activeMode.mode === 'vacaciones' ? '#34c759' : 'var(--text-secondary)',
+                boxShadow: activeMode.mode === 'vacaciones' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                fontWeight: activeMode.mode === 'vacaciones' ? 600 : 400,
+                fontSize: '0.72rem',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Palmtree size={12} color={activeMode.mode === 'vacaciones' ? '#34c759' : 'currentColor'} />
+              Vacaciones
+            </button>
+          </div>
+        </div>
 
         {isGuest ? (
           <button

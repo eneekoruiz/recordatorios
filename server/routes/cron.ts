@@ -235,6 +235,45 @@ export function createCronRouter(context: AppContext) {
     }
   });
 
+  // Tarea programada mensual (Vercel Cron día 1 de cada mes): purga registros soft-deleted > 30 días
+  // y leases/rateLimits caducados para no saturar el almacenamiento ni los límites de Neon.
+  router.all('/cron/cleanup', async (req: express.Request, res: express.Response) => {
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret || !safeEqual(req.headers['authorization'] || '', `Bearer ${cronSecret}`)) {
+      return res.status(401).json({ error: 'No autorizado' });
+    }
+
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const now = new Date();
+
+    try {
+      const [deletedTasks, deletedCycles, deletedSections, deletedLists, expiredRateLimits, expiredLeases] =
+        await prisma.$transaction([
+          prisma.task.deleteMany({ where: { deletedAt: { lte: cutoff } } }),
+          prisma.cycle.deleteMany({ where: { deletedAt: { lte: cutoff } } }),
+          prisma.listSection.deleteMany({ where: { deletedAt: { lte: cutoff } } }),
+          prisma.list.deleteMany({ where: { deletedAt: { lte: cutoff } } }),
+          prisma.rateLimit.deleteMany({ where: { resetAt: { lte: now } } }),
+          prisma.cronLease.deleteMany({ where: { expiresAt: { lte: now } } }),
+        ]);
+
+      res.json({
+        ok: true,
+        purged: {
+          tasks: deletedTasks.count,
+          cycles: deletedCycles.count,
+          listSections: deletedSections.count,
+          lists: deletedLists.count,
+          rateLimits: expiredRateLimits.count,
+          cronLeases: expiredLeases.count,
+        },
+        cutoff: cutoff.toISOString(),
+      });
+    } catch (error) {
+      console.error('Cron cleanup error:', error);
+      res.status(500).json({ error: 'No se pudo ejecutar la limpieza' });
+    }
+  });
 
   return router;
 }

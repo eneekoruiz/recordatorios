@@ -87,10 +87,23 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
       const secObj = secId ? (state.listSections || []).find(s => s.id === secId) : null;
       const secName = (secObj?.name || '').toLowerCase();
       const clean = (t.title || '').toLowerCase();
-      const isBoredom = clean.includes('aburr') || secName.includes('aburr');
+      const isBoredom = clean.includes('aburr') || secName.includes('aburr') || secId === 'sec_quehaceres_te_aburres';
       const isHabit = /\b(beber agua|vaso de agua|lavarse los dientes|lavar los dientes|cepillarse los dientes|lavarse las manos|lavar las manos)\b/i.test(clean) || secName.includes('recurrent');
       if ((isBoredom || isHabit) && (t.duration || t.parallelDuration)) {
         state.updateTask(t.id, { duration: undefined, parallelDuration: undefined });
+      }
+      if (isBoredom && t.cycle_id) {
+        state.updateTask(t.id, { cycle_id: undefined });
+      }
+      if (/\b(lavarse los dientes|cepillarse los dientes|lavar los dientes)\b/i.test(clean)) {
+        if (!t.targetCount || t.targetCount !== 3 || t.cycle_id !== 'cycle_day' || t.title !== 'Lavarse los dientes') {
+          state.updateTask(t.id, { title: 'Lavarse los dientes', targetCount: 3, cycle_id: 'cycle_day' });
+        }
+      }
+      if (/\b(lavarse las manos|lavar las manos)\b/i.test(clean)) {
+        if (!t.targetCount || t.targetCount !== 4 || t.cycle_id !== 'cycle_day' || t.title !== 'Lavarse las manos') {
+          state.updateTask(t.id, { title: 'Lavarse las manos', targetCount: 4, cycle_id: 'cycle_day' });
+        }
       }
     });
 

@@ -68,3 +68,4 @@ scripts/local/
 /*.bundle
 /task_audit_dump.md
 *.zip
+.env*

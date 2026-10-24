@@ -4,7 +4,7 @@ import { ArrowRight, CheckCircle2, Eye, EyeOff, KeyRound, LogIn, Mail, RotateCcw
 import { useAppStore } from '../../store/useAppStore';
 import { apiUrl } from '../../sync/syncManager';
 import { DEFAULT_SMART_LIST_VISIBILITY } from '../../constants/smartLists';
-import { writeStoredDisplayName } from '../../utils/userIdentity';
+import { writeStoredDisplayName, writeStoredActiveMode } from '../../utils/userIdentity';
 import { isValidWeekday, writeStoredWeeklyDay } from '../../utils/routineDay';
 import './AuthScreen.css';
 
@@ -41,6 +41,10 @@ function applyServerPreferences(prefs: any) {
   if (isValidWeekday(prefs.weeklyTasksDay)) {
     update.weeklyTasksDay = prefs.weeklyTasksDay;
     writeStoredWeeklyDay(prefs.weeklyTasksDay);
+  }
+  if (prefs.activeMode && typeof prefs.activeMode === 'object' && prefs.activeMode.mode) {
+    update.activeMode = prefs.activeMode;
+    writeStoredActiveMode(prefs.activeMode);
   }
   update._preferences_dirty = false;
   if (prefs.updated_at) update.preferences_updated_at = prefs.updated_at;

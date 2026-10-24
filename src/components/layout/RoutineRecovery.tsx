@@ -4,6 +4,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { useNavigation } from '../../hooks/useNavigation';
 import { buildRoutineRecovery, type RoutineRecoveryGroup } from '../../utils/routineRecovery';
 import { showUndoToast } from '../../utils/undoToast';
+
 import { formatDuration } from '../../utils/taskDuration';
 import './RoutineRecovery.css';
 
@@ -128,6 +129,7 @@ export function RoutineRecovery({ groups, onStartTask, onOpenTask, onSelectView 
                 </div>
               )}
             </div>
+
           </div>
         );
       })}

@@ -514,6 +514,28 @@ describe('MCP', () => {
     expect(updData.updated[0].price).toBe(20);
     expect(updData.updated[0].quantity).toBe(5);
   });
+
+  it('expone descubrimiento en /api/mcp con herramientas y transportes', async () => {
+    const res = await get('/api/mcp');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.version).toBe('1.2.0');
+    expect(body.transports.sse).toBe('/api/mcp/sse');
+    expect(body.tools.some((t) => t.name === 'get_stats')).toBe(true);
+    expect(body.tools.some((t) => t.name === 'get_periodic_routines')).toBe(true);
+  });
+
+  it('el endpoint SSE /api/mcp/sse requiere autenticación y envía evento endpoint', async () => {
+    const unauth = await get('/api/mcp/sse');
+    expect(unauth.status).toBe(401);
+
+    const a = await register(`mcp_sse_${Date.now()}@example.com`);
+    const controller = new AbortController();
+    const sseRes = await fetch(`${base}/api/mcp/sse?token=${a.token}`, { signal: controller.signal });
+    expect(sseRes.status).toBe(200);
+    expect(sseRes.headers.get('content-type')).toContain('text/event-stream');
+    controller.abort();
+  });
 });
 
 describe('listas compartidas — privacidad', () => {
@@ -631,3 +653,65 @@ describe('resetLinkBase', () => {
       .toBe('http://localhost:5173');
   });
 });
+
+describe('cron/cleanup', () => {
+  it('exige autenticación con CRON_SECRET', async () => {
+    process.env.CRON_SECRET = 'super-cron-secret-1234';
+    try {
+      const unauthorized = await fetch(base + '/api/cron/cleanup');
+      expect(unauthorized.status).toBe(401);
+
+      const wrongSecret = await fetch(base + '/api/cron/cleanup', {
+        headers: { Authorization: 'Bearer bad-secret' },
+      });
+      expect(wrongSecret.status).toBe(401);
+    } finally {
+      delete process.env.CRON_SECRET;
+    }
+  });
+
+  it('purga registros soft-deleted > 30 días y leases caducados', async () => {
+    process.env.CRON_SECRET = 'super-cron-secret-1234';
+    const oldDate = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000);
+    const recentDate = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+    const userId = `cleanup_user_${Date.now()}`;
+    await prisma.user.create({
+      data: { id: userId, email: `${userId}@example.com`, password: 'hashedpassword' },
+    });
+
+    // Insertar tareas directamente en memoryPrisma
+    await prisma.task.create({
+      data: { id: 'old-task', userId, payload: {}, deletedAt: oldDate },
+    });
+    await prisma.task.create({
+      data: { id: 'recent-task', userId, payload: {}, deletedAt: recentDate },
+    });
+    await prisma.task.create({
+      data: { id: 'active-task', userId, payload: {} },
+    });
+
+    try {
+      const res = await fetch(base + '/api/cron/cleanup', {
+        headers: { Authorization: 'Bearer super-cron-secret-1234' },
+      });
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.ok).toBe(true);
+      expect(data.purged.tasks).toBeGreaterThanOrEqual(1);
+
+      // old-task debe haber sido eliminada
+      const foundOld = await prisma.task.findUnique({ where: { id: 'old-task' } });
+      expect(foundOld).toBeNull();
+
+      // recent-task y active-task deben conservarse
+      const foundRecent = await prisma.task.findUnique({ where: { id: 'recent-task' } });
+      expect(foundRecent).toBeTruthy();
+      const foundActive = await prisma.task.findUnique({ where: { id: 'active-task' } });
+      expect(foundActive).toBeTruthy();
+    } finally {
+      delete process.env.CRON_SECRET;
+    }
+  });
+});
+
+

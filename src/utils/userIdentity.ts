@@ -37,3 +37,31 @@ export function getUserDisplayName(): string {
 export function getUserFirstName(): string {
   return getUserDisplayName().split(' ')[0] || '';
 }
+
+export type AppSeasonMode = 'normal' | 'examenes' | 'vacaciones';
+export interface ActiveAppMode {
+  mode: AppSeasonMode;
+  until?: string;
+  reason?: string;
+  updatedAt?: string;
+}
+
+export function readStoredActiveMode(): ActiveAppMode {
+  try {
+    const raw = localStorage.getItem('app_active_mode');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed.mode === 'string') return parsed;
+    }
+  } catch {}
+  return { mode: 'normal' };
+}
+
+export function writeStoredActiveMode(modeObj: ActiveAppMode): void {
+  try {
+    localStorage.setItem('app_active_mode', JSON.stringify(modeObj));
+  } catch {
+    /* sin almacenamiento */
+  }
+}
+

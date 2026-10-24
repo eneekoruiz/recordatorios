@@ -10,7 +10,7 @@ import { isPersistedRecordSafe } from '../utils/persistedStateValidation';
 import { isValidWeekday, readStoredWeeklyDay, writeStoredWeeklyDay } from '../utils/routineDay';
 import { DEFAULT_SMART_LIST_VISIBILITY } from '../constants/smartLists';
 import { smartSortTasks } from '../utils/smartSort';
-import { readStoredDisplayName, writeStoredDisplayName } from '../utils/userIdentity';
+import { readStoredDisplayName, writeStoredDisplayName, type AppSeasonMode, type ActiveAppMode, readStoredActiveMode, writeStoredActiveMode } from '../utils/userIdentity';
 import { findDuplicateTask, TaskDuplicateIndex } from '../utils/taskDeduplication';
 import { FREQUENCY_RESERVED_COLORS, getReservedFrequencyColor } from '../constants/colors';
 
@@ -163,6 +163,9 @@ interface AppState {
   emptyTrash: () => void;
   
   toggleSmartList: (listId: string) => void;
+  /** Modo estacional de la aplicación: 'normal' | 'examenes' | 'vacaciones'; se sincroniza entre dispositivos. */
+  activeMode: ActiveAppMode;
+  setActiveMode: (mode: AppSeasonMode, options?: { until?: string; reason?: string }) => void;
   /** Día de las tareas semanales (0 = domingo … 6 = sábado); se sincroniza entre dispositivos. */
   weeklyTasksDay: number;
   setWeeklyTasksDay: (day: number) => void;
@@ -429,6 +432,21 @@ export const useAppStore = create<AppState>()(
       }),
 
 
+      activeMode: readStoredActiveMode(),
+      setActiveMode: (mode, options) => {
+        const next: ActiveAppMode = {
+          mode,
+          until: options?.until,
+          reason: options?.reason,
+          updatedAt: new Date().toISOString(),
+        };
+        writeStoredActiveMode(next);
+        set({
+          activeMode: next,
+          preferences_updated_at: new Date().toISOString(),
+          _preferences_dirty: true,
+        });
+      },
       displayName: readStoredDisplayName(),
       setDisplayName: (name) => {
         const clean = name.trim().slice(0, 60);
@@ -547,14 +565,27 @@ export const useAppStore = create<AppState>()(
         
         let updatedTask: TaskItem;
         const alerts = existingTask.alerts || [];
-        const completedAlerts = existingTask.completedAlerts || [];
         const effCycle = getEffectiveCycleId(existingTask, state.listSections, state.lists);
         const isOneOff = !effCycle;
         const isTargetTask = Boolean(existingTask.targetCount && existingTask.targetCount > 1);
-        const currentCount = existingTask.currentCount || 0;
         const targetCount = existingTask.targetCount || 1;
         
         const targetDate = customTimestamp ? new Date(customTimestamp) : new Date();
+        const lastUpdate = existingTask.updated_at ? new Date(existingTask.updated_at) : null;
+        const isSameDay = Boolean(lastUpdate &&
+          lastUpdate.getFullYear() === targetDate.getFullYear() &&
+          lastUpdate.getMonth() === targetDate.getMonth() &&
+          lastUpdate.getDate() === targetDate.getDate());
+
+        const isDailyTask = effCycle === 'cycle_day' || existingTask.cycle_id === 'cycle_day' || isTargetTask || existingTask.sectionId === 'sec_habitos_vitales';
+
+        let currentCount = existingTask.currentCount || 0;
+        let completedAlerts = existingTask.completedAlerts || [];
+
+        if (isDailyTask && !isSameDay) {
+          currentCount = 0;
+          completedAlerts = [];
+        }
         const effectiveTimestamp = customTimestamp
           ? (typeof customTimestamp === 'number' ? customTimestamp : customTimestamp.getTime())
           : Date.now();

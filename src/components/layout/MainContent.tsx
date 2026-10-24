@@ -1189,10 +1189,13 @@ const CORE_CYCLES = [
               }
 
               // Si es una sección pura de periodicidad (Diarias, Semanales, Mensuales, Anuales):
-              // en vista de ciclo no creamos una cabecera redundante ("Diarias" dentro de "Diario"),
-              // sino que mostramos directamente sus tareas en este ciclo y procesamos sus posibles subsecciones hijas.
+              // solo omitimos la cabecera si es la ÚNICA sección activa de la lista (para no duplicar "Diario" -> "Diarias").
+              // Si la lista tiene otras secciones (ej. Hábitos vitales + Diarias en Quehaceres), mostramos cabecera separada.
               const purePeriodicity = getPureCyclicPeriodicity(sec.name);
-              if (currentCycle && purePeriodicity) {
+              const activeRootSections = sectionsForList.filter(s => !s.parentId && hasTasksRecursively(s.id));
+              const isOnlyRootSection = activeRootSections.length <= 1 && !activeRootSections.some(s => !getPureCyclicPeriodicity(s.name));
+
+              if (currentCycle && purePeriodicity && isOnlyRootSection) {
                 const cycleOrder: Record<string, number> = { day: 1, week: 2, month: 3, year: 4 };
                 const currentCycleRank = currentCycle.id === 'cycle_day' ? 1 : currentCycle.id === 'cycle_week' ? 2 : currentCycle.id === 'cycle_month' ? 3 : 4;
                 const secRank = cycleOrder[purePeriodicity] || 1;
@@ -1211,7 +1214,7 @@ const CORE_CYCLES = [
                       children.forEach(c => processNode(c, d + 1));
                     }
                   };
-                  roots.forEach(r => processNode(r, depthLevel));
+                  roots.forEach(r => processNode(r, 0));
                 }
                 const children = sectionsForList
                   .filter(s => s.parentId === sec.id)

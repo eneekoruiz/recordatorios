@@ -273,7 +273,11 @@ export function createApp({ prisma, pushSender = defaultPushSender() }: any) {
 
   const bearerToken = (req: any) => {
     const authHeader = req.headers['authorization'];
-    return typeof authHeader === 'string' && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) return authHeader.slice(7);
+    if (typeof req.headers['x-api-key'] === 'string') return req.headers['x-api-key'];
+    if (typeof req.query?.token === 'string') return req.query.token;
+    if (typeof req.query?.apiKey === 'string') return req.query.apiKey;
+    return null;
   };
 
   const authenticateToken = async (req: express.Request, res: express.Response, next: express.NextFunction): Promise<void> => {

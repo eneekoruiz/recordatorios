@@ -196,6 +196,15 @@ export const TaskCard = React.memo(function TaskCard({
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (touchDragGhostRef.current) {
+        touchDragGhostRef.current.remove();
+        touchDragGhostRef.current = null;
+      }
+    };
+  }, []);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -572,12 +581,25 @@ export const TaskCard = React.memo(function TaskCard({
     }
   }, [isBlocked, isEffectivelyDone, onToggle, task.id, setIsDeleteConfirmOpen, propReferenceDate]);
 
-  const totalAlerts = task.alerts?.length || 0;
-  const completedAlertsCount = task.completedAlerts?.length || 0;
+  const refDate = propReferenceDate || new Date();
+  const lastUpdate = task.updated_at ? new Date(task.updated_at) : null;
+  const isSameDay = Boolean(lastUpdate &&
+    lastUpdate.getFullYear() === refDate.getFullYear() &&
+    lastUpdate.getMonth() === refDate.getMonth() &&
+    lastUpdate.getDate() === refDate.getDate());
+
   const hasTargetCount = Boolean(task.targetCount && task.targetCount > 1);
   const targetCount = task.targetCount || 1;
-  const effectiveCurrentCount = (task.cycle_id && !isCompletedPeriod && (task.currentCount || 0) >= targetCount)
-    ? 0
+  const isDailyHabit = effCycleId === 'cycle_day' || task.cycle_id === 'cycle_day' || hasTargetCount || task.sectionId === 'sec_habitos_vitales';
+
+  const totalAlerts = task.alerts?.length || 0;
+  const rawCompletedAlerts = task.completedAlerts?.length || 0;
+  const completedAlertsCount = (isDailyHabit && !isSameDay) ? 0 : rawCompletedAlerts;
+
+  const effectiveCurrentCount = hasTargetCount
+    ? (isCompletedPeriod
+        ? targetCount
+        : (isSameDay ? (task.currentCount || 0) : 0))
     : (task.currentCount || 0);
 
   const isTargetPartial = hasTargetCount && effectiveCurrentCount > 0 && effectiveCurrentCount < targetCount;
@@ -702,17 +724,22 @@ export const TaskCard = React.memo(function TaskCard({
       updateTarget();
     };
 
-    // Un solo final para soltar y para cancelar: quita las tres escuchas a la vez (con «once» por
-    // separado, la que no se disparaba quedaba viva y actuaba en un toque posterior).
+    // Un solo final para soltar y para cancelar: quita las escuchas a la vez.
     const finish = (commit: boolean) => {
       autoScroll.stop();
       document.removeEventListener('touchmove', onMove);
       document.removeEventListener('touchend', onEnd);
       document.removeEventListener('touchcancel', onCancel);
+      document.removeEventListener('pointerup', onEnd);
+      document.removeEventListener('pointercancel', onCancel);
+      document.removeEventListener('mouseup', onEnd);
       touchDragGhostRef.current?.remove();
       touchDragGhostRef.current = null;
+      document.querySelectorAll<HTMLElement>('[data-touch-drag-ghost]').forEach(el => el.remove());
+      document.querySelectorAll<HTMLElement>('[data-touch-drag-over]').forEach(el => el.removeAttribute('data-touch-drag-over'));
       setIsDraggingTouch(false);
       touchDragLiftedRef.current = false;
+      touchDragActiveRef.current = false;
       document.body.style.overflow = '';
       x.set(0);
       if (!commit) {
@@ -738,7 +765,6 @@ export const TaskCard = React.memo(function TaskCard({
           HapticService.impact('medium');
         }
       }
-      touchDragActiveRef.current = false;
     };
     const onEnd = () => finish(true);
     const onCancel = () => finish(false);
@@ -747,6 +773,9 @@ export const TaskCard = React.memo(function TaskCard({
     document.addEventListener('touchmove', onMove, { passive: false });
     document.addEventListener('touchend', onEnd);
     document.addEventListener('touchcancel', onCancel);
+    document.addEventListener('pointerup', onEnd);
+    document.addEventListener('pointercancel', onCancel);
+    document.addEventListener('mouseup', onEnd);
   }, [onReorderTasks, task.id, nestTask, x]);
 
   return (
@@ -818,7 +847,7 @@ export const TaskCard = React.memo(function TaskCard({
         }
       }}
       onPointerMove={(e) => {
-        if (didLongPressRef.current && touchDragLiftedRef.current && !isDraggingTouch) {
+        if (e.pointerType === 'touch' && didLongPressRef.current && touchDragLiftedRef.current && !isDraggingTouch) {
           const dx = Math.abs(e.clientX - touchStartX.current);
           const dy = Math.abs(e.clientY - touchStartY.current);
           if (dx > 10 || dy > 10) {

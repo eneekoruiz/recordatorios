@@ -12,7 +12,9 @@ import {
   ExternalLink,
   GitBranch,
   Key,
-  RefreshCw
+  RefreshCw,
+  Bot,
+  Terminal
 } from 'lucide-react';
 import { IntegrationService } from '../../services/IntegrationService';
 import type { TaskItem } from '../../models/Task';
@@ -48,6 +50,10 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
   const [copiedNotion, setCopiedNotion] = useState(false);
   const [copiedGitHub, setCopiedGitHub] = useState(false);
   const [downloadedIcs, setDownloadedIcs] = useState(false);
+  const [copiedMcpClaude, setCopiedMcpClaude] = useState(false);
+  const [copiedMcpCursor, setCopiedMcpCursor] = useState(false);
+  const [copiedMcpUrl, setCopiedMcpUrl] = useState(false);
+  const [showMcpDetails, setShowMcpDetails] = useState(false);
   const userId = useAppStore(state => state.userId);
   const sessionGeneration = useAppStore(state => state.sessionGeneration);
   const accountIdentity = `${userId ?? 'anonymous'}:${sessionGeneration}`;
@@ -196,6 +202,53 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
     navigator.clipboard.writeText(md);
     setCopiedNotion(true);
     setTimeout(() => setCopiedNotion(false), 2000);
+  };
+
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001';
+  const serverBase = baseUrl.includes(':5173') ? baseUrl.replace(':5173', ':3001') : baseUrl;
+  const mcpSseUrl = `${serverBase}/api/mcp/sse`;
+  const authToken = (typeof window !== 'undefined' ? (localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token')) : '') || '';
+
+  const handleCopyMcpClaude = () => {
+    HapticService.selection();
+    const config = JSON.stringify({
+      mcpServers: {
+        recordatorios: {
+          command: "npx",
+          args: [
+            "-y",
+            "mcp-remote",
+            mcpSseUrl,
+            "--header",
+            `Authorization: Bearer ${authToken || '<TU_TOKEN_JWT>'}`
+          ]
+        }
+      }
+    }, null, 2);
+    navigator.clipboard.writeText(config);
+    setCopiedMcpClaude(true);
+    setTimeout(() => setCopiedMcpClaude(false), 2000);
+  };
+
+  const handleCopyMcpCursor = () => {
+    HapticService.selection();
+    const config = JSON.stringify({
+      mcpServers: {
+        recordatorios: {
+          url: `${mcpSseUrl}?token=${authToken || '<TU_TOKEN_JWT>'}`
+        }
+      }
+    }, null, 2);
+    navigator.clipboard.writeText(config);
+    setCopiedMcpCursor(true);
+    setTimeout(() => setCopiedMcpCursor(false), 2000);
+  };
+
+  const handleCopyMcpUrl = () => {
+    HapticService.selection();
+    navigator.clipboard.writeText(mcpSseUrl);
+    setCopiedMcpUrl(true);
+    setTimeout(() => setCopiedMcpUrl(false), 2000);
   };
 
   const handleDownloadNotionCsv = () => {
@@ -893,6 +946,170 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
                     <Key size={13} /> {isGitHubConfigured ? 'Editar Token' : 'Vincular Token'}
                   </button>
                 </div>
+              </div>
+
+              {/* 5. Conexión Directa con IA (MCP - Model Context Protocol) */}
+              <div
+                style={{
+                  padding: '16px 18px',
+                  borderRadius: 18,
+                  background: 'var(--bg-secondary, rgba(0,0,0,0.025))',
+                  border: '1px solid var(--border-subtle, rgba(0,0,0,0.06))'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 10,
+                        background: 'linear-gradient(135deg, #10a37f, #0d8a6a)',
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 8px rgba(16, 163, 127, 0.25)'
+                      }}
+                    >
+                      <Bot size={20} />
+                    </div>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 650 }}>
+                        Conexión MCP con tu IA (Claude / Cursor)
+                      </h4>
+                      <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                        Controla recordatorios, rutinas periódicas y estadísticas en tiempo real
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 650,
+                      padding: '3px 8px',
+                      borderRadius: 12,
+                      background: 'rgba(16, 163, 127, 0.12)',
+                      color: '#10a37f',
+                      border: '1px solid rgba(16, 163, 127, 0.2)'
+                    }}
+                  >
+                    SSE / Remoto
+                  </span>
+                </div>
+
+                <p style={{ margin: '8px 0 12px', fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                  Conecta cualquier IA por MCP para que gestione tus tareas: puede supervisar rutinas (diarias, semanales, mensuales, anuales), sugerir comandos técnicos como <code>winget upgrade --all</code> o avisos de <code>Egela</code>, y preguntarte amablemente por tareas físicas (limpieza, compras) para marcar su progreso.
+                </p>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={handleCopyMcpClaude}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '8px 14px',
+                      borderRadius: 12,
+                      background: 'var(--bg-elevated, #ffffff)',
+                      color: 'var(--text-primary)',
+                      border: '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
+                      fontSize: '0.82rem',
+                      fontWeight: 650,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {copiedMcpClaude ? <Check size={14} color="#10a37f" /> : <Copy size={14} />}
+                    {copiedMcpClaude ? '¡JSON Claude copiado!' : 'Copiar para Claude Desktop'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleCopyMcpCursor}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '8px 14px',
+                      borderRadius: 12,
+                      background: 'var(--bg-elevated, #ffffff)',
+                      color: 'var(--text-primary)',
+                      border: '1px solid var(--border-subtle, rgba(0,0,0,0.12))',
+                      fontSize: '0.82rem',
+                      fontWeight: 650,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {copiedMcpCursor ? <Check size={14} color="#10a37f" /> : <Copy size={14} />}
+                    {copiedMcpCursor ? '¡JSON Cursor copiado!' : 'Copiar para Cursor'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleCopyMcpUrl}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '8px 12px',
+                      borderRadius: 12,
+                      background: 'transparent',
+                      color: 'var(--text-secondary)',
+                      border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {copiedMcpUrl ? <Check size={13} color="#10a37f" /> : <Terminal size={13} />}
+                    {copiedMcpUrl ? '¡URL copiada!' : 'Copiar URL SSE'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowMcpDetails(prev => !prev)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: '8px 10px',
+                      borderRadius: 12,
+                      background: 'transparent',
+                      color: 'var(--text-tertiary, #999)',
+                      border: 'none',
+                      fontSize: '0.78rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {showMcpDetails ? 'Ocultar guía' : '¿Cómo funciona?'}
+                  </button>
+                </div>
+
+                {showMcpDetails && (
+                  <div
+                    style={{
+                      marginTop: 12,
+                      padding: '12px 14px',
+                      borderRadius: 14,
+                      background: 'var(--bg-elevated, #ffffff)',
+                      border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
+                      fontSize: '0.78rem',
+                      color: 'var(--text-secondary)',
+                      lineHeight: 1.5
+                    }}
+                  >
+                    <p style={{ margin: '0 0 6px', fontWeight: 650, color: 'var(--text-primary)' }}>
+                      Herramientas que tu IA tendrá disponibles:
+                    </p>
+                    <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <li><strong>get_stats:</strong> Estadísticas en tiempo real (cumplimiento, vencidas, compras).</li>
+                      <li><strong>get_periodic_routines:</strong> Rutinas periódicas (winget, Egela, limpieza, compras).</li>
+                      <li><strong>complete_reminder:</strong> Marcar cualquier recordatorio completado al instante.</li>
+                      <li><strong>create_reminders:</strong> Crear nuevas tareas estructuradas con ciclos y listas.</li>
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>
