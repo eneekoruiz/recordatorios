@@ -1,8 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Clock, Mic, MicOff, Calendar as CalendarIcon, Repeat, Flag } from 'lucide-react';
+import { Clock, Mic, MicOff, Calendar as CalendarIcon, Repeat, Flag, Sparkles, X } from 'lucide-react';
 import { CustomSelect } from '../../ui/CustomSelect';
 import type { TaskItem, CustomList } from '../../../models/Task';
+import type { HabitSuggestion } from '../../../utils/habitSuggestions';
 import { focusOnMount } from '../../../utils/focusOnMount';
 
 interface DrawerHeaderSectionProps {
@@ -20,6 +21,9 @@ interface DrawerHeaderSectionProps {
   type: 'task' | 'log';
   setType: (type: 'task' | 'log') => void;
   lists: CustomList[];
+  habitSuggestion?: HabitSuggestion | null;
+  onApplyHabitSuggestion?: () => void;
+  onDismissHabitSuggestion?: () => void;
 }
 
 export const DrawerHeaderSection: React.FC<DrawerHeaderSectionProps> = ({
@@ -35,7 +39,10 @@ export const DrawerHeaderSection: React.FC<DrawerHeaderSectionProps> = ({
   setCategory,
   type,
   setType,
-  lists
+  lists,
+  habitSuggestion,
+  onApplyHabitSuggestion,
+  onDismissHabitSuggestion
 }) => {
   return (
     <>
@@ -94,6 +101,71 @@ export const DrawerHeaderSection: React.FC<DrawerHeaderSectionProps> = ({
             </div>
           ))}
         </div>
+      )}
+
+      {/* Sugerencia inteligente de conversión a hábito recurrente */}
+      {habitSuggestion && (
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+            padding: '8px 12px',
+            marginBottom: '16px',
+            borderRadius: '12px',
+            background: 'rgba(255, 149, 0, 0.08)',
+            border: '1px solid rgba(255, 149, 0, 0.25)',
+            fontSize: '0.8rem',
+            color: 'var(--text-primary)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+            <Sparkles size={15} style={{ color: '#ff9500', flexShrink: 0 }} />
+            <span style={{ lineHeight: 1.3 }}>
+              ¿Convertir en hábito de <strong>{habitSuggestion.targetCount} veces al {habitSuggestion.periodName}</strong>?
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={onApplyHabitSuggestion}
+              style={{
+                background: '#ff9500',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '4px 10px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              Convertir
+            </button>
+            {onDismissHabitSuggestion && (
+              <button
+                type="button"
+                onClick={onDismissHabitSuggestion}
+                title="Ignorar sugerencia"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-tertiary)',
+                  cursor: 'pointer',
+                  padding: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+        </motion.div>
       )}
 
       {/* List and Type pickers */}

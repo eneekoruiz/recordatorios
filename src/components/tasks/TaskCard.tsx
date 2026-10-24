@@ -6,13 +6,14 @@ import {
   ChevronDown, X, Info, RotateCcw, Flag,
   ShieldAlert, Clock, CheckCircle2, CreditCard,
   User, MapPin, Link2, Check, GripVertical,
-  SkipForward
+  SkipForward, Sparkles
 } from 'lucide-react';
 import type { TaskItem, ListSection } from '../../models/Task';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { useTemporalNavigationStore } from '../../store/useTemporalNavigationStore';
 import { isCompletedInCurrentPeriod, isSkippedInCurrentPeriod, calculateExpirationStatus } from '../../services/TaskService';
 import { calculateTaskStreak } from '../../utils/streaks';
+import { detectHabitSuggestion } from '../../utils/habitSuggestions';
 import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
 import { ConfettiService } from '../../services/ConfettiService';
@@ -73,6 +74,28 @@ interface TaskCardProps {
 // Recorrido del dedo (px) a partir del cual deslizar completa (→) o pide borrar (←).
 const SWIPE_COMPLETE_THRESHOLD = 65;
 const SWIPE_DELETE_THRESHOLD = -65;
+
+function isHabitSuggestionDismissed(taskId: string): boolean {
+  try {
+    const raw = localStorage.getItem('dismissed_habit_suggestions');
+    if (!raw) return false;
+    const list = JSON.parse(raw);
+    return Array.isArray(list) && list.includes(taskId);
+  } catch {
+    return false;
+  }
+}
+
+function dismissHabitSuggestion(taskId: string): void {
+  try {
+    const raw = localStorage.getItem('dismissed_habit_suggestions');
+    const list = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(list) && !list.includes(taskId)) {
+      list.push(taskId);
+      localStorage.setItem('dismissed_habit_suggestions', JSON.stringify(list));
+    }
+  } catch {}
+}
 
 export const TaskCard = React.memo(function TaskCard({
   task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, showListName = true, hideDueDate = false, frequencyMode = 'glyph', isFirstInSection, isLastInSection, previousTaskId, hasChildren, childCount = 0, isExpanded, onToggleExpand, indent = 0, onNavigateView, onPersonClick, isGracePeriod,
@@ -216,6 +239,40 @@ export const TaskCard = React.memo(function TaskCard({
   const updateTask = useAppStore(state => state.updateTask);
   const inlineEditingTaskId = useAppStore(state => state.inlineEditingTaskId);
   const setInlineEditingTaskId = useAppStore(state => state.setInlineEditingTaskId);
+
+  const [dismissedTaskId, setDismissedTaskId] = useState(task.id);
+  const [isSuggestionDismissed, setIsSuggestionDismissed] = useState(() => isHabitSuggestionDismissed(task.id));
+  if (dismissedTaskId !== task.id) {
+    setDismissedTaskId(task.id);
+    setIsSuggestionDismissed(isHabitSuggestionDismissed(task.id));
+  }
+
+  const habitSuggestion = useMemo(() => {
+    if (isSuggestionDismissed || (task.targetCount && task.targetCount > 1)) return null;
+    return detectHabitSuggestion(task.title);
+  }, [isSuggestionDismissed, task.targetCount, task.title]);
+
+  const handleApplyHabitSuggestion = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!habitSuggestion) return;
+    SoundService.playPop();
+    HapticService.impact('medium');
+    updateTask(task.id, {
+      title: habitSuggestion.cleanTitle,
+      targetCount: habitSuggestion.targetCount,
+      cycle_id: habitSuggestion.cycleId,
+      currentCount: 0
+    });
+  }, [habitSuggestion, task.id, updateTask]);
+
+  const handleDismissHabitSuggestion = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    dismissHabitSuggestion(task.id);
+    setIsSuggestionDismissed(true);
+    HapticService.selection();
+  }, [task.id]);
 
   const adjustTitleTextarea = useCallback((el: HTMLTextAreaElement | null) => {
     if (!el) return;
@@ -1793,6 +1850,68 @@ export const TaskCard = React.memo(function TaskCard({
             onOpenFrequencyPicker={handleFrequencyBadgeClick}
             streak={habitStreak && habitStreak.count >= 2 ? habitStreak : null}
           />
+
+          {/* Smart habit conversion suggestion banner */}
+          {habitSuggestion && !isSuggestionDismissed && !isEffectivelyDone && (
+            <motion.div
+              initial={{ opacity: 0, y: -2 }}
+              animate={{ opacity: 1, y: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                marginTop: 6,
+                padding: '4px 8px',
+                borderRadius: '8px',
+                background: 'rgba(255, 149, 0, 0.1)',
+                border: '1px solid rgba(255, 149, 0, 0.25)',
+                fontSize: '0.74rem',
+                color: 'var(--text-primary)',
+                maxWidth: '100%',
+                flexWrap: 'wrap'
+              }}
+            >
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Sparkles size={12} style={{ color: '#ff9500', flexShrink: 0 }} />
+                <span>¿Convertir a hábito de <strong>{habitSuggestion.targetCount}x al {habitSuggestion.periodName}</strong>?</span>
+              </div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
+                <button
+                  type="button"
+                  onClick={handleApplyHabitSuggestion}
+                  style={{
+                    background: '#ff9500',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '2px 8px',
+                    fontSize: '0.72rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Convertir
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDismissHabitSuggestion}
+                  title="Ignorar sugerencia"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-tertiary)',
+                    cursor: 'pointer',
+                    padding: '2px 4px',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            </motion.div>
+          )}
         </div>
 
         {/* Subtask Chevron */}

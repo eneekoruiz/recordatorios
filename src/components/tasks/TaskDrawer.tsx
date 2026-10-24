@@ -9,6 +9,9 @@ import { parseNaturalLanguage } from '../../utils/nlp';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { isCaducidadesList, getListType, isShoppingList, isLifeLibraryList } from '../../utils/specialLists';
 import { DrawerLibrarySection } from './drawer/DrawerLibrarySection';
+import { detectHabitSuggestion } from '../../utils/habitSuggestions';
+import { SoundService } from '../../services/SoundService';
+import { HapticService } from '../../services/HapticService';
 import './TaskDrawer.css';
 
 // Modular drawer subcomponents
@@ -136,6 +139,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   const [parallelDuration, setParallelDuration] = useState<number | undefined>(undefined);
   const [targetCount, setTargetCount] = useState<number | undefined>(undefined);
   const [currentCount, setCurrentCount] = useState<number | undefined>(undefined);
+  const [isDrawerSuggestionDismissed, setIsDrawerSuggestionDismissed] = useState(false);
   const [timeOfDay, setTimeOfDay] = useState<'morning' | 'afternoon' | 'night' | undefined>(undefined);
   const [, setShowAdvanced] = useState(false);
   const [people, setPeople] = useState<string[]>([]);
@@ -195,6 +199,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   const [loadedFormKey, setLoadedFormKey] = useState<string | null>(null);
   if (formKey !== loadedFormKey) {
     setLoadedFormKey(formKey);
+    setIsDrawerSuggestionDismissed(false);
     if (formKey !== null) {
       if (task) {
         setTitle(task.title || '');
@@ -490,9 +495,30 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
     [titleEdited, title, cycles]
   );
 
+  const habitSuggestion = useMemo(() => {
+    if (isDrawerSuggestionDismissed || (targetCount && targetCount > 1)) return null;
+    return detectHabitSuggestion(title);
+  }, [isDrawerSuggestionDismissed, targetCount, title]);
+
+  const handleApplyHabitSuggestion = () => {
+    if (!habitSuggestion) return;
+    setTitle(habitSuggestion.cleanTitle);
+    setTargetCount(habitSuggestion.targetCount);
+    setCycleId(habitSuggestion.cycleId);
+    if (!currentCount) setCurrentCount(0);
+    SoundService.playPop();
+    HapticService.impact('medium');
+  };
+
+  const handleDismissHabitSuggestion = () => {
+    setIsDrawerSuggestionDismissed(true);
+    HapticService.selection();
+  };
+
   const handleTitleInput = (value: string) => {
     setTitle(value);
     setTitleEdited(true);
+    setIsDrawerSuggestionDismissed(false);
     applyTitleSuggestions(value, true);
   };
 
@@ -857,6 +883,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                 type={type}
                 setType={setType}
                 lists={lists}
+                habitSuggestion={habitSuggestion}
+                onApplyHabitSuggestion={handleApplyHabitSuggestion}
+                onDismissHabitSuggestion={handleDismissHabitSuggestion}
               />
 
               {/* Card 1: Fecha y Horarios */}
