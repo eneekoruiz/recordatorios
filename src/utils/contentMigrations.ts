@@ -686,4 +686,102 @@ export function runContentMigrations(store: ContentMigrationStore): void {
       });
     }
   }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 12. Autocuidado mensual: 'Hacerme las cejas', 'Manicura y pedicura', 'Ir al fisio'
+  // ──────────────────────────────────────────────────────────────────────────
+  if (careList) {
+    const careId = careList.id;
+    const careMensualSec = sections.find((s: any) => s.listId === careId && (s.id === 'sec_care_mensual' || s.id === 'sec_care_mensuales' || normalize(s.name).includes('mensu')));
+    const mensualSectionId = careMensualSec ? careMensualSec.id : `sec_${careId}_mensuales`;
+
+    // 1. Hacerme las cejas
+    const hasCejas = allActiveTasks.some(t => normalize(t.title).includes('ceja'));
+    if (!hasCejas) {
+      store.addTask({
+        id: 'task_hacerme_cejas_mensual',
+        title: 'Hacerme las cejas',
+        description: 'Depilar o repasar las cejas según necesidad (aprox. 1 vez al mes).',
+        notes: 'Depilar o repasar las cejas según necesidad (aprox. 1 vez al mes).',
+        categoryId: careId,
+        sectionId: mensualSectionId,
+        cycle_id: 'cycle_month',
+        duration: 10,
+        priority: 'medium',
+        status: 'pending'
+      });
+    }
+
+    // 2. Manicura y pedicura
+    const hasManiPedi = allActiveTasks.some(t => (normalize(t.title).includes('manicura') || normalize(t.title).includes('pedicura')) && !t.parentId);
+    if (!hasManiPedi) {
+      const newManiPediId = 'task_manicura_pedicura_mensual';
+      store.addTask({
+        id: newManiPediId,
+        title: 'Manicura y pedicura',
+        description: 'Cuidado completo de uñas de manos y pies cuando se necesite.',
+        notes: 'Cuidado completo de uñas de manos y pies cuando se necesite (limar, cutículas, exfoliación e hidratación aprox. 1 vez al mes).',
+        categoryId: careId,
+        sectionId: mensualSectionId,
+        cycle_id: 'cycle_month',
+        duration: 20,
+        priority: 'medium',
+        status: 'pending'
+      });
+      store.addTask({
+        id: 'task_sub_manicura',
+        title: 'Manicura (manos)',
+        notes: 'Cortar/limar uñas de las manos, repasar cutículas e hidratar.',
+        parentId: newManiPediId,
+        categoryId: careId,
+        sectionId: mensualSectionId,
+        order: 0,
+        duration: 10,
+        status: 'pending',
+        priority: 'none'
+      });
+      store.addTask({
+        id: 'task_sub_pedicura',
+        title: 'Pedicura (pies)',
+        notes: 'Cortar/limar uñas de los pies, piedra pómez o exfoliación e hidratar.',
+        parentId: newManiPediId,
+        categoryId: careId,
+        sectionId: mensualSectionId,
+        order: 1,
+        duration: 10,
+        status: 'pending',
+        priority: 'none'
+      });
+    }
+  }
+
+  // 3. Compra mensual: 'Ir al fisio (o masaje)'
+  const compraList = lists.find((l: any) => l.id === 'compra' || l.id === 'compras' || normalize(l.name).includes('compra'));
+  if (compraList) {
+    const compraId = compraList.id;
+    const compraMensualSec = sections.find((s: any) => s.listId === compraId && (s.id === 'sec_compra_mensuales' || s.id === 'sec_compras_mensuales' || normalize(s.name).includes('mensu')));
+    const compraMensualSecId = compraMensualSec ? compraMensualSec.id : `sec_${compraId}_mensuales`;
+
+    const fisioTask = allActiveTasks.find(t => (normalize(t.title).includes('fisio') || normalize(t.title).includes('masaje')) && (t.categoryId === compraId || t.categoryId === 'compra' || t.categoryId === 'compras'));
+    if (fisioTask) {
+      if (!normalize(fisioTask.title).includes('fisio')) {
+        store.updateTask(fisioTask.id, {
+          title: 'Ir al fisio (o masaje)',
+          notes: fisioTask.notes || 'Sesión mensual de fisioterapia o masaje de descarga (50€ aprox.).'
+        });
+      }
+    } else {
+      store.addTask({
+        id: 'task_ir_al_fisio_mensual',
+        title: 'Ir al fisio (o masaje)',
+        notes: 'Sesión mensual de fisioterapia o masaje de descarga (50€ aprox.).',
+        price: 50,
+        categoryId: compraId,
+        sectionId: compraMensualSecId,
+        cycle_id: 'cycle_month',
+        priority: 'none',
+        status: 'pending'
+      });
+    }
+  }
 }

@@ -237,4 +237,63 @@ describe('runContentMigrations (Misiones 4 y 5)', () => {
     expect(subtasks.some(s => s.title.includes('Pómulos'))).toBe(true);
     expect(subtasks.some(s => s.title.includes('Labios'))).toBe(true);
   });
+
+  it('crea tareas de cejas, manicura/pedicura y asegura fisio en compra mensual', () => {
+    let tasks: Record<string, TaskItem> = {
+      t_masaje: {
+        id: 't_masaje',
+        title: 'Masaje o fisio',
+        categoryId: 'compra',
+        sectionId: 'sec_compra_mensuales',
+        status: 'pending',
+        created_at: '',
+        version: 1,
+        user_id: 'u1',
+        type: 'task'
+      }
+    };
+    let lists: any[] = [
+      { id: 'care', name: 'Care', listType: 'routines' },
+      { id: 'compra', name: 'Compra', listType: 'shopping' }
+    ];
+    let listSections: any[] = [
+      { id: 'sec_care_mensual', listId: 'care', name: 'Mensuales', order: 1 },
+      { id: 'sec_compra_mensuales', listId: 'compra', name: 'Mensuales', order: 1 }
+    ];
+
+    const store: any = {
+      get tasks() { return tasks; },
+      get lists() { return lists; },
+      get listSections() { return listSections; },
+      addList: (l: any) => { lists.push(l); },
+      addListSection: (s: any) => { listSections.push(s); },
+      addTask: (t: any) => {
+        const id = t.id || 'gen_' + Math.random().toString(36).slice(2);
+        tasks[id] = { id, ...t };
+      },
+      updateTask: (id: string, updates: any) => {
+        if (tasks[id]) {
+          tasks[id] = { ...tasks[id], ...updates };
+        }
+      }
+    };
+
+    runContentMigrations(store);
+
+    const cejas = Object.values(tasks).find(t => t.title.toLowerCase().includes('cejas'));
+    expect(cejas).toBeDefined();
+    expect(cejas?.categoryId).toBe('care');
+    expect(cejas?.cycle_id).toBe('cycle_month');
+
+    const maniPedi = Object.values(tasks).find(t => t.title.toLowerCase().includes('manicura') && !t.parentId);
+    expect(maniPedi).toBeDefined();
+    expect(maniPedi?.categoryId).toBe('care');
+    expect(maniPedi?.cycle_id).toBe('cycle_month');
+
+    const maniPediSubs = Object.values(tasks).filter(t => t.parentId === maniPedi?.id);
+    expect(maniPediSubs).toHaveLength(2);
+
+    const fisio = tasks['t_masaje'];
+    expect(fisio.title).toContain('fisio');
+  });
 });
