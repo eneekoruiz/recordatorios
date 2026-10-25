@@ -38,8 +38,11 @@ export const AppUpdateBanner: React.FC = () => {
 
     // Escuchar cuando el nuevo ServiceWorker toma el control para recargar limpiamente
     let refreshing = false;
+    let previousController = navigator.serviceWorker.controller;
     const onControllerChange = () => {
-      if (!refreshing) {
+      const hadController = Boolean(previousController);
+      previousController = navigator.serviceWorker.controller;
+      if (hadController && previousController && !refreshing) {
         refreshing = true;
         window.location.reload();
       }

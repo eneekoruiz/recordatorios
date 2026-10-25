@@ -281,8 +281,9 @@ export function getNextPeriodDate(
     nextMon.setHours(12, 0, 0, 0);
     return nextMon;
   }
-  // day
-  return new Date(d.getTime() + 86400000);
+  d.setDate(d.getDate() + 1);
+  d.setHours(12, 0, 0, 0);
+  return d;
 }
 
 /**
@@ -404,7 +405,7 @@ export function getPeriodContextLabel(
     const dayName = DAY_SHORTS[referenceDate.getDay()];
     const mName = MONTH_SHORTS[referenceDate.getMonth()];
     if (isRolledOver) {
-      const tom = new Date(referenceDate.getTime() + 86400000);
+      const tom = getNextPeriodDate('day', referenceDate);
       const tomDayName = DAY_SHORTS[tom.getDay()];
       const tomMName = MONTH_SHORTS[tom.getMonth()];
       return {

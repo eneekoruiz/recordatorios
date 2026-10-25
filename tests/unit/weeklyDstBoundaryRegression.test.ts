@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getStartOfNextWeek, isCompletedInCurrentPeriod } from '../../src/services/TaskService';
+import { getNextPeriodDate } from '../../src/utils/sectionRoutine';
 
 const originalTimeZone = process.env.TZ;
 
@@ -22,6 +23,11 @@ const completed = (cycle_id: string, completion: Date, cycles: any[], reference:
   );
 
 describe('weekly recurrence boundaries across daylight-saving changes', () => {
+  it('advances a calendar day rather than 24 hours on the autumn clock change', () => {
+    const next = getNextPeriodDate('day', new Date(2026, 9, 25, 0));
+    expect(next.getDay()).toBe(1);
+    expect(next.getDate()).toBe(26);
+  });
   it('keeps the last Sunday hour in the autumn week', () => {
     const reference = new Date(2026, 9, 25, 12);
     const sundayLate = new Date(2026, 9, 25, 23, 30);

@@ -131,6 +131,7 @@ export function isQueHeHechoList(listIdOrView?: string | null, list?: CustomList
   if (cleanId === 'que_he_hecho' || cleanId === 'quehehecho') return true;
 
   if (list) {
+    if (list.listType) return list.listType === 'que_he_hecho';
     if (list.specialType === 'que_he_hecho') return true;
     if (list.id === 'que_he_hecho') return true;
 

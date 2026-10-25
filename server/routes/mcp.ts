@@ -67,6 +67,10 @@ export function createMcpRouter(context: AppContext) {
       res.status(404).json({ jsonrpc: '2.0', id: null, error: { code: -32001, message: 'Sesión MCP no encontrada o expirada' } });
       return;
     }
+    if (!req.user?.id || req.user.id !== session.userId) {
+      res.status(req.user?.id ? 403 : 401).json({ jsonrpc: '2.0', id: null, error: { code: -32001, message: 'La sesión MCP pertenece a otro usuario o requiere autenticación' } });
+      return;
+    }
 
     try {
       const response = await handleMcpRequest(req.body, prisma, session.userId);

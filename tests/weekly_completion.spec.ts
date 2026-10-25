@@ -13,6 +13,13 @@ async function changeDate(page: Page, date: string) {
   await page.evaluate(() => window.dispatchEvent(new Event('focus')));
 }
 
+async function expandCompletedWeek(page: Page) {
+  const week = weeklyHeader(page).locator('.section-head-chevron');
+  if (await week.getAttribute('aria-expanded') === 'false') await week.click();
+  const room = page.locator('.group-header', { has: page.locator('.section-head-title', { hasText: /^Cocina$/ }) }).first().locator('.section-head-chevron');
+  if (await room.getAttribute('aria-expanded') === 'false') await room.click();
+}
+
 for (const width of [375, 768, 1440]) {
   test.describe(`weekly routines at ${width}px`, () => {
     test.use({ viewport: { width, height: 900 }, timezoneId: 'Europe/Madrid', reducedMotion: 'reduce' });
@@ -23,6 +30,8 @@ for (const width of [375, 768, 1440]) {
       page.on('pageerror', error => errors.push(error.message));
       await page.clock.install({ time: new Date('2026-10-24T20:00:00+02:00') });
       await bootApp(page);
+      const navigations: string[] = [];
+      page.on('framenavigated', frame => { if (frame === page.mainFrame()) navigations.push(frame.url()); });
       await page.evaluate(() => {
         const store = (window as any).useAppStore;
         store.getState().addList({ id: 'weekly_regression', name: 'Quehaceres diarios personalizados', color: '#007aff', listType: 'routines' });
@@ -42,6 +51,7 @@ for (const width of [375, 768, 1440]) {
 
       const duration = page.locator('.list-duration-meta');
       await expect(duration).toContainText('3 h');
+      await expect(first(page).getByRole('button', { name: 'Completar tarea', exact: true })).toBeVisible();
       await first(page).getByRole('button', { name: 'Completar tarea', exact: true }).click();
       await expect(duration).toContainText('2 h 30 min');
       await first(page).getByRole('button', { name: 'Marcar como pendiente', exact: true }).click();
@@ -50,7 +60,7 @@ for (const width of [375, 768, 1440]) {
       await second(page).getByRole('button', { name: 'Completar tarea', exact: true }).click();
       const chevron = weeklyHeader(page).locator('.section-head-chevron');
       await expect(chevron).toHaveAttribute('aria-expanded', 'false', { timeout: 7000 });
-      await chevron.click();
+      await expandCompletedWeek(page);
       await expect(first(page).getByRole('button', { name: 'Marcar como pendiente', exact: true })).toBeVisible();
       await expect(weeklyHeader(page)).toContainText('se renuevan el lunes 26 oct');
       await expect(duration).toHaveCount(0);
@@ -68,11 +78,12 @@ for (const width of [375, 768, 1440]) {
       }
       await page.screenshot({ path: testInfo.outputPath('weekly-sunday.png') });
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
+      expect(navigations).toEqual([]);
 
       await page.reload();
       await page.waitForFunction(() => (window as any).useAppStore?.getState().hasHydrated);
       await page.evaluate(() => window.dispatchEvent(new CustomEvent('select-view', { detail: 'list_weekly_regression' })));
-      await weeklyHeader(page).locator('.section-head-chevron').click();
+      await expandCompletedWeek(page);
       await expect(first(page).getByRole('button', { name: 'Marcar como pendiente', exact: true })).toBeVisible();
 
       await page.clock.fastForward(60_100);

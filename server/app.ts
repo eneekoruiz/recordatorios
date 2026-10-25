@@ -6,6 +6,7 @@ import { createShareRouter } from './routes/share.js';
 import { createPushRouter } from './routes/push.js';
 import { createCronRouter } from './routes/cron.js';
 import { createMcpRouter } from './routes/mcp.js';
+import { createHelenRouter } from './routes/helen.js';
 
 import crypto from 'node:crypto';
 import net from 'node:net';
@@ -396,6 +397,7 @@ export function createApp({ prisma, pushSender = defaultPushSender() }: any) {
 
   app.use('/api', createMcpRouter(context));
   app.use('/', createMcpRouter(context));
+  app.use('/api', createHelenRouter(context));
 
   // --- 404 y errores en JSON (nunca HTML ni trazas) ---
   app.use(['/api', '/auth', '/sync', '/share', '/mcp'], (req: express.Request, res: express.Response) => res.status(404).json({ error: 'Ruta no encontrada' }));

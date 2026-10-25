@@ -7,12 +7,19 @@ import {
   isGoalsList, 
   isRoutineList, 
   isShoppingList,
+  isQueHeHechoList,
   LIST_TYPE_CONFIG 
 } from '../../src/utils/specialLists';
 import { getTaskDuration, calculateTasksDuration } from '../../src/utils/taskDuration';
 import type { CustomList, TaskItem } from '../../src/models/Task';
 
 describe('List Types & Duration Engine', () => {
+  it('keeps checkboxes when a routines list is named Quehaceres diarios', () => {
+    const list: CustomList = { id: 'house', name: 'Quehaceres diarios', color: '#007aff', listType: 'routines' };
+    expect(isQueHeHechoList(list.id, list)).toBe(false);
+    expect(isRoutineList(list.id, list)).toBe(true);
+    expect(isQueHeHechoList('journal', { ...list, id: 'journal', listType: 'que_he_hecho' })).toBe(true);
+  });
   describe('getListType detection', () => {
     it('respects explicit listType over name heuristics', () => {
       const explicitSimple: CustomList = {
