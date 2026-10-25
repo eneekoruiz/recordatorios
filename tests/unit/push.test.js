@@ -134,4 +134,20 @@ describe('avisos push', () => {
     const [stored] = await prisma.pushSubscription.findMany({ where: { endpoint } });
     expect(stored.sentLog.timers.map((t) => t.id)).toEqual(['b']);
   });
+
+  it('permite enviar un aviso de prueba inmediato a los dispositivos del usuario', async () => {
+    const { token } = await user();
+    expect((await call('POST', '/api/push/test')).status).toBe(401);
+    // Sin suscripciones aún
+    expect((await call('POST', '/api/push/test', null, token)).status).toBe(404);
+
+    await call('POST', '/api/push/subscribe', { subscription: subscription('prueba-directa') }, token);
+    sent.length = 0;
+    const res = await call('POST', '/api/push/test', null, token);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.sent).toBe(1);
+    expect(sent.some((s) => s.tag === 'test-push')).toBe(true);
+  });
 });

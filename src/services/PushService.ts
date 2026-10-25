@@ -77,9 +77,19 @@ export const PushService = {
       if (!keyResponse.ok) return { ok: false, reason: 'Los avisos todavía no están activados en el servidor.' };
       const { publicKey } = await keyResponse.json();
       const registration = await navigator.serviceWorker.ready;
-      const subscription =
-        (await registration.pushManager.getSubscription()) ||
-        (await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64UrlToBytes(publicKey) }));
+      // Desuscribir cualquier token previo con claves antiguas para evitar errores de clave VAPID
+      const existing = await registration.pushManager.getSubscription();
+      if (existing) {
+        try {
+          await existing.unsubscribe();
+        } catch {
+          // Ignorar si el navegador ya la había invalidado
+        }
+      }
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: base64UrlToBytes(publicKey),
+      });
       const subController = new AbortController();
       const subTimeout = setTimeout(() => subController.abort(), 15000);
       let response;
@@ -102,6 +112,21 @@ export const PushService = {
       return { ok: true };
     } catch {
       return { ok: false, reason: 'No se pudieron activar los avisos. Revisa la conexión e inténtalo de nuevo.' };
+    }
+  },
+
+  async test(): Promise<{ ok: boolean; reason?: string }> {
+    if (!useAppStore.getState().token) return { ok: false, reason: 'Inicia sesión primero.' };
+    try {
+      const res = await fetch(apiUrl('/api/push/test'), {
+        method: 'POST',
+        headers: authHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok) return { ok: false, reason: data.error || 'Error al enviar prueba' };
+      return { ok: true };
+    } catch {
+      return { ok: false, reason: 'Error de conexión con el servidor' };
     }
   },
 

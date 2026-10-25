@@ -52,6 +52,45 @@ export function createPushRouter(context: AppContext) {
     }
   });
 
+  router.post('/push/test', apiLimiter, authenticateToken, async (req: express.Request, res: express.Response) => {
+    if (!pushSender) {
+      return res.status(503).json({ error: 'El servidor no tiene configuradas las claves VAPID.' });
+    }
+    try {
+      const subscriptions = await prisma.pushSubscription.findMany({
+        where: { userId: req.user!.id }
+      });
+      if (!subscriptions || subscriptions.length === 0) {
+        return res.status(404).json({ error: 'No tienes ningún dispositivo suscrito a las notificaciones en este usuario.' });
+      }
+      let successCount = 0;
+      for (const sub of subscriptions) {
+        const keys = sub.keys as any;
+        if (!keys?.p256dh || !keys?.auth) continue;
+        try {
+          await pushSender(
+            { endpoint: sub.endpoint, keys: { p256dh: keys.p256dh, auth: keys.auth } },
+            {
+              title: 'Recordatorios',
+              body: '🔔 ¡Prueba de notificación recibida con éxito!',
+              tag: 'test-push',
+              url: '/'
+            }
+          );
+          successCount++;
+        } catch (err: any) {
+          if (err?.statusCode === 410 || err?.statusCode === 404) {
+            await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => undefined);
+          }
+        }
+      }
+      res.json({ success: true, sent: successCount, total: subscriptions.length });
+    } catch (error) {
+      console.error('Push test error:', error);
+      res.status(500).json({ error: 'Error al enviar la prueba de notificación.' });
+    }
+  });
+
   // Tareas que siguen solas (lavadora, horno…): el dispositivo avisa de cuándo terminan y el planificador
   // manda el aviso aunque la app esté cerrada. Se guardan en el registro de la suscripción (sin migración).
   router.post('/push/timers', apiLimiter, authenticateToken, async (req: express.Request, res: express.Response) => {

@@ -432,7 +432,25 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
                             transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                           }} />
                         </div>
-                      </button></details>
+                      </button>
+                      {pushStatus === 'on' && (
+                        <button
+                          className="ios-dropdown-item"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Enviando aviso de prueba...' }));
+                            const res = await PushService.test();
+                            window.dispatchEvent(new CustomEvent('show-toast', {
+                              detail: res.ok ? '🔔 Aviso de prueba enviado con éxito' : (res.reason || 'Error al enviar prueba')
+                            }));
+                          }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.85rem', color: 'var(--accent-primary)', paddingLeft: '40px', cursor: 'pointer' }}
+                          type="button"
+                        >
+                          <span>🔔 Enviar aviso de prueba ahora</span>
+                        </button>
+                      )}
+                    </details>
         {/* Included in device preferences disclosure above. */}
         {/* Included in device preferences disclosure above. */}
         <button
