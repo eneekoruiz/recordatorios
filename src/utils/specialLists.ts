@@ -521,8 +521,10 @@ export function getRoomForCleaningTask(title?: string | null): 'Cocina' | 'Baño
     t.includes('canapé') || t.includes('canape') || t.includes('almohada') ||
     t.includes('edredón') || t.includes('edredon') || t.includes('sábana') ||
     t.includes('sabana') || t.includes('mesilla') || t.includes('escritorio') ||
-    t.includes('armario de ropa') || t.includes('ropa de temporada') ||
-    t.includes('armario a fondo') || t.includes('habitación') || t.includes('habitacion') ||
+    t.includes('armario') || t.includes('ropa de temporada') ||
+    t.includes('habitación') || t.includes('habitacion') || t.includes('cuarto') ||
+    t.includes('balda') || t.includes('baldas') || t.includes('estante') ||
+    t.includes('estantería') || t.includes('tele') || t.includes('televisi') ||
     t.includes('cortina') || t.includes('estor') || t.includes('ropa sucia') ||
     t.includes('cesto') || t.includes('manta') || t.includes('funda')
   ) {
@@ -548,7 +550,10 @@ export function getRoomForCleaningTask(title?: string | null): 'Cocina' | 'Baño
     return 'Balcón';
   }
 
-  // General
+  // General (matabichos, telarañas, zócalos, techos, etc.)
+  if (t.includes('matabicho') || t.includes('telaraña') || t.includes('insecticida')) {
+    return 'General';
+  }
   return 'General';
 }
 

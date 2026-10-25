@@ -414,4 +414,62 @@ describe('runContentMigrations (Misiones 4 y 5)', () => {
     const recuerdaSec = listSections.find(s => s.name === 'Recuerda' && !s.deleted_at);
     expect(recuerdaSec).toBeUndefined();
   });
+
+  it('asegura las tareas mensuales de limpieza del hogar y habitación', () => {
+    let tasks: Record<string, TaskItem> = {};
+    let lists: any[] = [{ id: 'limpieza', name: 'Limpieza', listType: 'routines' }];
+    let listSections: any[] = [
+      { id: 'sec_limpieza_mensual', listId: 'limpieza', name: 'Mensuales', order: 2 },
+      { id: 'sec_limp_mensual_hab', listId: 'limpieza', parentId: 'sec_limpieza_mensual', name: 'Habitación', order: 0 },
+      { id: 'sec_limp_mensual_general', listId: 'limpieza', parentId: 'sec_limpieza_mensual', name: 'General', order: 1 }
+    ];
+
+    const store: any = {
+      get tasks() { return tasks; },
+      get lists() { return lists; },
+      get listSections() { return listSections; },
+      addList: (l: any) => { lists.push(l); },
+      addListSection: (s: any) => { listSections.push(s); },
+      addTask: (t: any) => {
+        const id = t.id || 'gen_' + Math.random().toString(36).slice(2);
+        tasks[id] = { id, ...t };
+      },
+      updateTask: (id: string, updates: any) => {
+        if (tasks[id]) {
+          tasks[id] = { ...tasks[id], ...updates };
+        }
+      }
+    };
+
+    runContentMigrations(store);
+
+    const taskList = Object.values(tasks);
+
+    // 1. Matabichos y telarañas
+    const matabichos = taskList.find(t => t.title.includes('matabichos') && t.title.includes('telarañas') && !t.parentId);
+    expect(matabichos).toBeDefined();
+    expect(matabichos?.cycle_id).toBe('cycle_month');
+    expect(matabichos?.sectionId).toBe('sec_limp_mensual_general');
+    expect(matabichos?.duration).toBe(10);
+    const matabichosSubs = taskList.filter(t => t.parentId === matabichos?.id);
+    expect(matabichosSubs).toHaveLength(2);
+
+    // 2. Arriba del armario y arriba de la tele
+    const armarioTele = taskList.find(t => t.title.includes('armario') && t.title.includes('tele') && !t.parentId);
+    expect(armarioTele).toBeDefined();
+    expect(armarioTele?.cycle_id).toBe('cycle_month');
+    expect(armarioTele?.sectionId).toBe('sec_limp_mensual_hab');
+    expect(armarioTele?.duration).toBe(10);
+    const armarioSubs = taskList.filter(t => t.parentId === armarioTele?.id);
+    expect(armarioSubs).toHaveLength(2);
+
+    // 3. Baldas a fondo
+    const baldas = taskList.find(t => t.title.includes('baldas') && !t.parentId);
+    expect(baldas).toBeDefined();
+    expect(baldas?.cycle_id).toBe('cycle_month');
+    expect(baldas?.sectionId).toBe('sec_limp_mensual_hab');
+    expect(baldas?.duration).toBe(15);
+    const baldaSubs = taskList.filter(t => t.parentId === baldas?.id);
+    expect(baldaSubs).toHaveLength(3);
+  });
 });

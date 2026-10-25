@@ -691,6 +691,13 @@ const CORE_CYCLES = [
           setRecentlyCompletedIds(prev => prev.filter(x => !idsToGrace.includes(x)));
         }, 3000);
 
+        showUndoToast(
+          task.title ? `«${task.title}» completado` : 'Recordatorio completado',
+          () => {
+            handleToggleTask(taskId, true, customTimestamp);
+          }
+        );
+
         const remainingActive = Object.values(tasks).filter((t: any) => !t.deleted_at && !isTaskCompleted(t)).length;
         if (remainingActive === 1) {
           setShowCelebration(true);
@@ -3010,10 +3017,32 @@ const CORE_CYCLES = [
                       />
                     );
                   } else if (data.type === 'empty-section') {
+                    const isCustomSection = Boolean(data.sectionId);
+                    const isOver = dragOverSectionId === data.sectionId && isCustomSection;
                     return (
                       <div 
                         key={itemKey}
                         data-index={index}
+                        data-section-drag-key={data.sectionId}
+                        onDragOver={(e) => {
+                          if (data.sectionId) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setDragOverSectionId(data.sectionId);
+                          }
+                        }}
+                        onDragLeave={() => {
+                          if (data.sectionId) setDragOverSectionId(null);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setDragOverSectionId(null);
+                          if (data.sectionId) {
+                            const taskId = e.dataTransfer.getData('text/task-id') || e.dataTransfer.getData('text/plain');
+                            if (taskId) updateTaskSection(taskId, data.sectionId);
+                          }
+                        }}
                         style={{ 
                           ...itemStyle, 
                           paddingLeft: '16px',
@@ -3021,7 +3050,10 @@ const CORE_CYCLES = [
                           margin: '0 0 4px 0',
                           boxSizing: 'border-box',
                           display: 'flex',
-                          alignItems: 'center'
+                          alignItems: 'center',
+                          borderRadius: 8,
+                          background: isOver ? 'rgba(0, 122, 255, 0.08)' : undefined,
+                          transition: 'background 0.15s ease'
                         }}
                       >
                         {/* Sección vacía: una sola fila gris para añadir, alineada con las casillas. */}

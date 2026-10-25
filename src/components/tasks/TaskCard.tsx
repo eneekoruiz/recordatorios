@@ -227,6 +227,12 @@ export const TaskCard = React.memo(function TaskCard({
         touchDragGhostRef.current.remove();
         touchDragGhostRef.current = null;
       }
+      if (typeof document !== 'undefined') {
+        document.querySelectorAll('.drag-ghost, [data-drag-ghost], [data-touch-drag-ghost]').forEach(el => el.remove());
+        document.querySelectorAll<HTMLElement>('[data-touch-drag-over]').forEach(el => el.removeAttribute('data-touch-drag-over'));
+        document.querySelectorAll<HTMLElement>('[data-task-drop-section]').forEach(el => el.removeAttribute('data-task-drop-section'));
+        document.body.style.overflow = '';
+      }
     };
   }, []);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -722,6 +728,10 @@ export const TaskCard = React.memo(function TaskCard({
     touchDragLiftedRef.current = true;
     touchDragActiveRef.current = true;
 
+    if (typeof document !== 'undefined') {
+      document.querySelectorAll<HTMLElement>('.drag-ghost, [data-drag-ghost], [data-touch-drag-ghost]').forEach(el => el.remove());
+    }
+
     // La copia flota bajo el dedo: sin identificador para que nunca cuente como fila de destino.
     touchDragGhostRef.current = createDragGhost(wrapperRef.current, startY, ['data-task-id']);
     setIsDraggingTouch(true);
@@ -748,13 +758,13 @@ export const TaskCard = React.memo(function TaskCard({
         if (rel >= -slack && rel <= 1 + slack) next = target;
       }
       if (!next) {
-        next = dropTargetAt(lastX, lastY, '.task-item-wrapper[data-task-id], .group-header[data-section-drag-key]');
+        next = dropTargetAt(lastX, lastY, '.task-item-wrapper[data-task-id], .group-header[data-section-drag-key], [data-section-drag-key]');
         if (next?.getAttribute('data-task-id') === task.id) next = null;
       }
       if (next !== target) clearTarget();
       target = next;
       if (!target) return;
-      if (target.classList.contains('group-header')) {
+      if (target.classList.contains('group-header') || target.hasAttribute('data-section-drag-key')) {
         zone = 'section';
         target.setAttribute('data-task-drop-section', 'true');
         return;
@@ -765,8 +775,9 @@ export const TaskCard = React.memo(function TaskCard({
     const autoScroll = createEdgeAutoScroll(findScrollableParent(wrapperRef.current), updateTarget);
 
     const onMove = (ev: TouchEvent) => {
-      const t = ev.touches[0];
-      ev.preventDefault();
+      const t = ev.touches && ev.touches.length > 0 ? ev.touches[0] : null;
+      if (!t) return;
+      if (ev.cancelable) ev.preventDefault();
       touchDragGhostRef.current?.move(t.clientY);
       lastX = t.clientX;
       lastY = t.clientY;
@@ -785,8 +796,9 @@ export const TaskCard = React.memo(function TaskCard({
       document.removeEventListener('mouseup', onEnd);
       touchDragGhostRef.current?.remove();
       touchDragGhostRef.current = null;
-      document.querySelectorAll<HTMLElement>('[data-touch-drag-ghost]').forEach(el => el.remove());
+      document.querySelectorAll<HTMLElement>('.drag-ghost, [data-drag-ghost], [data-touch-drag-ghost]').forEach(el => el.remove());
       document.querySelectorAll<HTMLElement>('[data-touch-drag-over]').forEach(el => el.removeAttribute('data-touch-drag-over'));
+      document.querySelectorAll<HTMLElement>('[data-task-drop-section]').forEach(el => el.removeAttribute('data-task-drop-section'));
       setIsDraggingTouch(false);
       touchDragLiftedRef.current = false;
       touchDragActiveRef.current = false;
@@ -897,10 +909,12 @@ export const TaskCard = React.memo(function TaskCard({
         }
       }}
       onPointerMove={(e) => {
-        if (e.pointerType === 'touch' && didLongPressRef.current && touchDragLiftedRef.current && !isDraggingTouch) {
+        if (e.pointerType === 'touch' && didLongPressRef.current && touchDragLiftedRef.current && !touchDragActiveRef.current && !isDraggingTouch) {
           const dx = Math.abs(e.clientX - touchStartX.current);
           const dy = Math.abs(e.clientY - touchStartY.current);
           if (dx > 10 || dy > 10) {
+            touchDragActiveRef.current = true;
+            touchDragLiftedRef.current = false;
             setContextMenuOpen(false);
             startTouchDrag(touchStartY.current, touchStartX.current);
           }
@@ -1487,8 +1501,8 @@ export const TaskCard = React.memo(function TaskCard({
                   cursor: 'text',
                   position: 'relative',
                   display: 'inline-block',
-                  flex: '1 1 12ch',
-                  minWidth: 0
+                  minWidth: 0,
+                  maxWidth: '100%'
                 }}
               >
                 {Boolean(task.priority && task.priority !== 'none' && (task.priority as any) !== 0) && (
@@ -1529,34 +1543,36 @@ export const TaskCard = React.memo(function TaskCard({
                   </span>
                   </>
                 )}
-                {task.title ? (
-                  stripPeriodicityPrefix(task.title).split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
-                    part.match(/^https?:\/\//) ? (
-                      <a key={i} href={part} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>
-                        {part}
-                      </a>
-                    ) : part
-                  )
-                ) : (
-                  <span style={{ color: 'var(--text-tertiary)', fontStyle: 'italic' }}>Nuevo recordatorio</span>
-                )}
+                <span style={{ position: 'relative', display: 'inline', wordBreak: 'normal', overflowWrap: 'anywhere' }}>
+                  {task.title ? (
+                    stripPeriodicityPrefix(task.title).split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
+                      part.match(/^https?:\/\//) ? (
+                        <a key={i} href={part} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>
+                          {part}
+                        </a>
+                      ) : part
+                    )
+                  ) : (
+                    <span style={{ color: 'var(--text-tertiary)', fontStyle: 'italic' }}>Nuevo recordatorio</span>
+                  )}
 
-                {/* Línea de tachado animada de izquierda a derecha */}
-                <motion.span
-                  initial={{ scaleX: 0 }}
-                  animate={{ scaleX: isEffectivelyDone ? 1 : 0 }}
-                  transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-                  style={{
-                    position: 'absolute',
-                    top: '52%',
-                    left: 0,
-                    right: 0,
-                    height: '1.5px',
-                    background: 'var(--text-tertiary)',
-                    transformOrigin: 'left center',
-                    pointerEvents: 'none'
-                  }}
-                />
+                  {/* Línea de tachado animada de izquierda a derecha SOLO sobre el texto exacto */}
+                  <motion.span
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: isEffectivelyDone ? 1 : 0 }}
+                    transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                    style={{
+                      position: 'absolute',
+                      top: '52%',
+                      left: 0,
+                      right: 0,
+                      height: '1.5px',
+                      background: 'var(--text-tertiary)',
+                      transformOrigin: 'left center',
+                      pointerEvents: 'none'
+                    }}
+                  />
+                </span>
               </motion.span>
             )}
             {isSkippedThisPeriod && (
@@ -1588,41 +1604,7 @@ export const TaskCard = React.memo(function TaskCard({
                 <span>Omitida{task.consecutiveSkipCount && task.consecutiveSkipCount > 1 ? ` (${task.consecutiveSkipCount} seguidas)` : ''}</span>
               </span>
             )}
-            {isGracePeriod && (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.85, x: -4 }}
-                animate={{ opacity: 1, scale: 1, x: 0 }}
-                exit={{ opacity: 0, scale: 0.85 }}
-                transition={{ duration: 0.2 }}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  HapticService.impact('light');
-                  SoundService.playUncomplete();
-                  onToggle(task.id, true, propReferenceDate ? propReferenceDate.getTime() : undefined);
-                }}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  padding: '2px 8px',
-                  borderRadius: 999,
-                  fontSize: '0.74rem',
-                  fontWeight: 600,
-                  background: 'rgba(0, 122, 255, 0.1)',
-                  border: '1px solid rgba(0, 122, 255, 0.25)',
-                  color: 'var(--accent-primary, #007aff)',
-                  cursor: 'pointer',
-                  marginLeft: 4,
-                  verticalAlign: 'middle',
-                  lineHeight: '1.2'
-                }}
-                title="Deshacer y mantener pendiente"
-              >
-                <RotateCcw size={11} />
-                <span>Deshacer</span>
-              </motion.button>
-            )}
+
             {task.flagged && <Flag size={13} color="var(--accent-orange)" fill="var(--accent-orange)" style={{ marginTop: 'calc((var(--task-title-lh) - 13px) / 2)', flexShrink: 0 }} />}
             {task.targetCount && task.targetCount > 1 && (
               <TaskHabitCounter

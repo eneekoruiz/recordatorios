@@ -126,6 +126,9 @@ export function guardNativeScroll(el: HTMLElement, isArmed: () => boolean): () =
  * suave y sujeta por el mismo punto por el que se cogió (no salta a centrarse bajo el dedo).
  */
 export function createDragGhost(source: HTMLElement, pointerY: number, stripAttributes: string[] = []) {
+  if (typeof document !== 'undefined') {
+    document.querySelectorAll('.drag-ghost, [data-drag-ghost], [data-touch-drag-ghost]').forEach(el => el.remove());
+  }
   const rect = source.getBoundingClientRect();
   const grabOffset = Math.min(Math.max(pointerY - rect.top, 0), rect.height);
   const clone = source.cloneNode(true) as HTMLElement;
@@ -136,6 +139,7 @@ export function createDragGhost(source: HTMLElement, pointerY: number, stripAttr
   clone.style.opacity = '1';
   const ghost = document.createElement('div');
   ghost.setAttribute('data-drag-ghost', 'true');
+  ghost.setAttribute('data-touch-drag-ghost', 'true');
   ghost.className = 'drag-ghost';
   ghost.style.left = `${rect.left}px`;
   ghost.style.width = `${rect.width}px`;
@@ -147,7 +151,12 @@ export function createDragGhost(source: HTMLElement, pointerY: number, stripAttr
   requestAnimationFrame(() => ghost.classList.add('is-lifted'));
   return {
     move(y: number) { ghost.style.top = `${y - grabOffset}px`; },
-    remove() { ghost.remove(); },
+    remove() {
+      ghost.remove();
+      if (typeof document !== 'undefined') {
+        document.querySelectorAll('.drag-ghost, [data-drag-ghost], [data-touch-drag-ghost]').forEach(el => el.remove());
+      }
+    },
   };
 }
 

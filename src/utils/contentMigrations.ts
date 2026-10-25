@@ -897,4 +897,165 @@ export function runContentMigrations(store: ContentMigrationStore): void {
       });
     }
   }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 5. Limpieza mensual del hogar y habitación:
+  //    a) Echar matabichos por las esquinas y pasar las telarañas por las esquinas del techo (General)
+  //    b) Limpiar arriba del armario y arriba de la tele (Habitación)
+  //    c) Limpiar las baldas a fondo (Habitación)
+  // ──────────────────────────────────────────────────────────────────────────
+  const secMensualHab = sections.find((s: any) =>
+    (s.id === 'sec_limp_mensual_hab' || s.id === 'sec_limpieza_mensual_hab' || (normalize(s.name) === 'habitacion' && (s.parentId === secMensuales.id || s.listId === routinesListId)))
+  );
+  const secMensualGeneral = sections.find((s: any) =>
+    (s.id === 'sec_limp_mensual_general' || s.id === 'sec_limpieza_mensual_general' || (normalize(s.name) === 'general' && (s.parentId === secMensuales.id || s.listId === routinesListId)))
+  );
+
+  const habSectionId = secMensualHab ? secMensualHab.id : secMensuales.id;
+  const genSectionId = secMensualGeneral ? secMensualGeneral.id : secMensuales.id;
+
+  // a) Echar matabichos y telarañas
+  const hasMatabichos = allActiveTasks.some(t =>
+    normalize(t.title).includes('matabicho') || normalize(t.title).includes('telarana')
+  );
+  if (!hasMatabichos) {
+    const parentId = 'task_matabichos_telaranas_mensual';
+    store.addTask({
+      id: parentId,
+      title: 'Echar matabichos por las esquinas y pasar las telarañas por las esquinas del techo',
+      description: 'Mantenimiento mensual preventivo: retirar telarañas de esquinas y techos, y aplicar insecticida en rincones.',
+      notes: 'Pasar el plumero/cepillo por las esquinas del techo para retirar telarañas y echar matabichos/insecticida por las esquinas del suelo y zócalos 1 vez al mes.',
+      categoryId: routinesListId,
+      sectionId: genSectionId,
+      cycle_id: 'cycle_month',
+      duration: 10,
+      priority: 'medium',
+      status: 'pending'
+    });
+    store.addTask({
+      id: 'task_sub_telaranas_techo',
+      title: 'Pasar las telarañas por las esquinas del techo',
+      notes: 'Retirar telarañas con plumero o cepillo largo por techos y molduras.',
+      parentId,
+      categoryId: routinesListId,
+      sectionId: genSectionId,
+      order: 0,
+      duration: 5,
+      status: 'pending',
+      priority: 'none'
+    });
+    store.addTask({
+      id: 'task_sub_matabichos_esquinas',
+      title: 'Echar matabichos por las esquinas',
+      notes: 'Pulverizar o aplicar insecticida en zócalos y esquinas estratégicas.',
+      parentId,
+      categoryId: routinesListId,
+      sectionId: genSectionId,
+      order: 1,
+      duration: 5,
+      status: 'pending',
+      priority: 'none'
+    });
+  }
+
+  // b) Limpiar arriba del armario y arriba de la tele (Habitación)
+  const hasArmarioTele = allActiveTasks.some(t =>
+    (normalize(t.title).includes('armario') && normalize(t.title).includes('tele')) ||
+    (normalize(t.title).includes('arriba del armario') || normalize(t.title).includes('arriba de la tele'))
+  );
+  if (!hasArmarioTele) {
+    const parentId = 'task_armario_tele_mensual';
+    store.addTask({
+      id: parentId,
+      title: 'Limpiar arriba del armario y arriba de la tele',
+      description: 'Limpieza mensual a fondo en mi cuarto: retirar polvo de las partes altas de muebles.',
+      notes: 'Una vez al mes en mi cuarto: limpiar con bayeta húmeda la parte superior del armario y de la televisión para retirar el polvo acumulado.',
+      categoryId: routinesListId,
+      sectionId: habSectionId,
+      cycle_id: 'cycle_month',
+      duration: 10,
+      priority: 'medium',
+      status: 'pending'
+    });
+    store.addTask({
+      id: 'task_sub_arriba_armario',
+      title: 'Limpiar arriba del armario',
+      notes: 'Bayeta húmeda con producto multiusos sobre el techo del armario.',
+      parentId,
+      categoryId: routinesListId,
+      sectionId: habSectionId,
+      order: 0,
+      duration: 5,
+      status: 'pending',
+      priority: 'none'
+    });
+    store.addTask({
+      id: 'task_sub_arriba_tele',
+      title: 'Limpiar arriba de la tele',
+      notes: 'Pasar trapo suave o bayeta sobre la televisión y soporte sin presionar la pantalla.',
+      parentId,
+      categoryId: routinesListId,
+      sectionId: habSectionId,
+      order: 1,
+      duration: 5,
+      status: 'pending',
+      priority: 'none'
+    });
+  }
+
+  // c) Limpiar las baldas a fondo (quitar todo, limpiar y recolocar)
+  const hasBaldas = allActiveTasks.some(t =>
+    normalize(t.title).includes('balda') && (normalize(t.title).includes('fondo') || normalize(t.title).includes('quitar todo'))
+  );
+  if (!hasBaldas) {
+    const parentId = 'task_baldas_fondo_mensual';
+    store.addTask({
+      id: parentId,
+      title: 'Limpiar las baldas a fondo',
+      description: 'Quitar todo lo de las baldas, limpiar la superficie a fondo y volver a colocarlo todo ordenado.',
+      notes: 'No solo sacudir el polvo: despejar completamente las baldas de mi cuarto, limpiar bien la superficie con bayeta y volver a colocarlo todo en orden.',
+      categoryId: routinesListId,
+      sectionId: habSectionId,
+      cycle_id: 'cycle_month',
+      duration: 15,
+      priority: 'medium',
+      status: 'pending'
+    });
+    store.addTask({
+      id: 'task_sub_baldas_quitar',
+      title: 'Quitar todo lo de las baldas',
+      notes: 'Bajar libros y objetos a la cama o escritorio.',
+      parentId,
+      categoryId: routinesListId,
+      sectionId: habSectionId,
+      order: 0,
+      duration: 5,
+      status: 'pending',
+      priority: 'none'
+    });
+    store.addTask({
+      id: 'task_sub_baldas_limpiar',
+      title: 'Limpiar la superficie a fondo',
+      notes: 'Pasar bayeta húmeda y secar para que quede impecable.',
+      parentId,
+      categoryId: routinesListId,
+      sectionId: habSectionId,
+      order: 1,
+      duration: 5,
+      status: 'pending',
+      priority: 'none'
+    });
+    store.addTask({
+      id: 'task_sub_baldas_colocar',
+      title: 'Volver a colocarlo todo ordenado',
+      notes: 'Recolocar libros y elementos organizados.',
+      parentId,
+      categoryId: routinesListId,
+      sectionId: habSectionId,
+      order: 2,
+      duration: 5,
+      status: 'pending',
+      priority: 'none'
+    });
+  }
 }
