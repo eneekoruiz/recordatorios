@@ -753,9 +753,26 @@ export function runContentMigrations(store: ContentMigrationStore): void {
         priority: 'none'
       });
     }
+
+    // 3. Ir al podólogo
+    const hasPodologo = allActiveTasks.some(t => normalize(t.title).includes('podolog'));
+    if (!hasPodologo) {
+      store.addTask({
+        id: 'task_ir_al_podologo',
+        title: 'Ir al podólogo',
+        description: 'Revisión podológica, quiropodia y cuidado de los pies/pisada cuando se necesite.',
+        notes: 'Revisión de quiropodia, uñas, durezas y pisada cuando se necesite (o revisión periódica).',
+        categoryId: careId,
+        sectionId: mensualSectionId,
+        cycle_id: 'cycle_month',
+        duration: 30,
+        priority: 'medium',
+        status: 'pending'
+      });
+    }
   }
 
-  // 3. Compra mensual: 'Ir al fisio (o masaje)'
+  // 4. Compra mensual: 'Ir al fisio (o masaje)'
   const compraList = lists.find((l: any) => l.id === 'compra' || l.id === 'compras' || normalize(l.name).includes('compra'));
   if (compraList) {
     const compraId = compraList.id;

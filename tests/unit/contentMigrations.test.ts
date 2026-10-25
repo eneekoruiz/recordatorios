@@ -295,5 +295,10 @@ describe('runContentMigrations (Misiones 4 y 5)', () => {
 
     const fisio = tasks['t_masaje'];
     expect(fisio.title).toContain('fisio');
+
+    const podologo = Object.values(tasks).find(t => t.title.toLowerCase().includes('podólogo') || t.title.toLowerCase().includes('podologo'));
+    expect(podologo).toBeDefined();
+    expect(podologo?.categoryId).toBe('care');
+    expect(podologo?.cycle_id).toBe('cycle_month');
   });
 });
