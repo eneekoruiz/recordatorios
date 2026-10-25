@@ -694,7 +694,12 @@ const CORE_CYCLES = [
         showUndoToast(
           task.title ? `«${task.title}» completado` : 'Recordatorio completado',
           () => {
-            handleToggleTask(taskId, true, customTimestamp);
+            const undoRefTs = customTimestamp !== undefined
+              ? (typeof customTimestamp === 'number' ? customTimestamp : customTimestamp.getTime())
+              : (temporalDate ? new Date(temporalDate).getTime() : undefined);
+            toggleTask(taskId, true, undoRefTs);
+            SoundService.playUncomplete();
+            HapticService.selection();
           }
         );
 
