@@ -249,9 +249,9 @@ export const WeeklyReviewModal: React.FC<WeeklyReviewModalProps> = ({ isOpen, on
 
                     <div style={{ padding: '16px', borderRadius: 18, background: 'var(--bg-secondary, rgba(0,0,0,0.03))', textAlign: 'center' }}>
                       <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-tertiary)' }}>
-                        Tiempo invertido
+                        Tiempo estimado
                       </span>
-                      <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#0a84ff', marginTop: 4 }}>
+                      <div style={{ fontSize: 'clamp(1.25rem, 5vw, 1.8rem)', fontWeight: 800, color: '#0a84ff', marginTop: 4 }}>
                         ~{formatDuration(report.completedMinutes)}
                       </div>
                     </div>
@@ -503,7 +503,7 @@ export const WeeklyReviewModal: React.FC<WeeklyReviewModalProps> = ({ isOpen, on
                   gap: 6,
                   padding: '10px 20px',
                   borderRadius: 14,
-                  background: 'var(--accent-primary, #0a84ff)',
+                  background: 'var(--accent-fill, #0068d6)',
                   border: 'none',
                   color: '#ffffff',
                   fontWeight: 700,

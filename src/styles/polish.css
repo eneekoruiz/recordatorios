@@ -1987,7 +1987,7 @@ body.dark .cad-summary-cost strong {
 }
 .spotlight-field input::placeholder { color: var(--text-tertiary); }
 .spotlight-clear {
-  width: 18px; height: 18px;
+  width: 24px; height: 24px;
   border-radius: 50%;
   border: none;
   display: inline-flex; align-items: center; justify-content: center;
@@ -1999,6 +1999,7 @@ body.dark .cad-summary-cost strong {
 }
 [data-theme="dark"] .spotlight-clear { color: #2c2c2e; }
 .spotlight-cancel {
+  min-height: 32px;
   display: none;
   border: none;
   background: none;
@@ -2033,6 +2034,21 @@ body.dark .cad-summary-cost strong {
   box-sizing: border-box;
 }
 .spotlight-row.is-selected { background: color-mix(in srgb, var(--accent-primary, #007aff) 14%, transparent); }
+.spotlight-result-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
 .spotlight-icon {
   width: 26px; height: 26px;
   border-radius: 7px;
@@ -2056,6 +2072,7 @@ body.dark .cad-summary-cost strong {
 .spotlight-shortcut { font-size: 0.72rem; flex-shrink: 0; }
 .spotlight-enter { color: var(--text-tertiary); flex-shrink: 0; }
 .spotlight-focus {
+  min-height: 32px;
   display: none;
   align-items: center;
   gap: 4px;
@@ -2097,7 +2114,6 @@ body.dark .cad-summary-cost strong {
 @media (hover: none), (max-width: 640px) {
   .spotlight-footer, .spotlight-enter, .spotlight-shortcut { display: none !important; }
   .spotlight-cancel { display: inline-block; }
-  .spotlight-row.is-selected { background: transparent; }
   .spotlight-row:active { background: color-mix(in srgb, var(--text-primary) 8%, transparent); }
   .spotlight-focus { display: inline-flex; background: none; padding: 4px 6px; }
 }

@@ -69,3 +69,13 @@ scripts/local/
 /task_audit_dump.md
 *.zip
 .env*
+
+# Modelos, cachés y artefactos generados
+*.joblib
+*.pth
+*.pt
+*.bin
+*.weights
+__pycache__/
+.pytest_cache/
+.next/

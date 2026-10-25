@@ -1,7 +1,8 @@
-import type { TaskItem } from '../models/Task';
+import type { TaskItem, CustomList, ListSection } from '../models/Task';
 import { isTaskCompleted } from '../store/useAppStore';
 import { isVitalHabitTask } from '../utils/vitalHabits';
-import { calculateCompletedTasksDuration } from '../utils/taskDuration';
+import { calculateRecordedTasksDuration } from '../utils/taskDuration';
+import { getEffectiveCycleId } from '../utils/sectionRoutine';
 
 export interface WeeklyReviewReport {
   weekStartDate: Date;
@@ -22,27 +23,32 @@ export class ReviewAgentService {
    */
   public static generateWeeklyAudit(
     allTasks: Record<string, TaskItem>,
-    lists?: any[],
-    listSections?: any[]
+    lists?: CustomList[],
+    listSections?: ListSection[]
   ): WeeklyReviewReport {
     const now = new Date();
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
     const tasksList = Object.values(allTasks).filter(t => !t.deleted_at);
 
     // 1. Tareas completadas en los últimos 7 días
     const completedTasks = tasksList.filter(t => {
-      if (!isTaskCompleted(t)) return false;
-      if (!t.completed_at) return true; // Si no tiene fecha pero está completa, se cuenta
-      const completedDate = new Date(t.completed_at);
-      return completedDate >= sevenDaysAgo;
+      const completions: (number | string)[] = [...(t.completionHistory || [])];
+      if (t.completed_at) completions.push(t.completed_at);
+      if (completions.length) return completions.some(mark => {
+        const time = new Date(mark).getTime();
+        return time >= sevenDaysAgo.getTime() && time <= now.getTime();
+      });
+      // Compatibilidad con tareas antiguas que no guardaban fecha.
+      return isTaskCompleted(t);
     });
 
-    const completedDuration = calculateCompletedTasksDuration(completedTasks, listSections, lists);
+    const completedDuration = calculateRecordedTasksDuration(completedTasks, listSections, lists);
 
     // 2. Tareas estancadas (pendientes con más de 7 días o postergadas)
     const staleTasks = tasksList.filter(t => {
-      if (isTaskCompleted(t) || isVitalHabitTask(t)) return false;
+      if (isTaskCompleted(t) || isVitalHabitTask(t) || getEffectiveCycleId(t, listSections, lists)) return false;
       const createdDate = new Date(t.created_at || t.updated_at);
       const isOld = createdDate < sevenDaysAgo;
       const isPostponed = (t.postponeCount ?? 0) >= 2;

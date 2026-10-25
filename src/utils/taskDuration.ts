@@ -406,6 +406,15 @@ export function calculateTasksDuration(
   return aggregateDurations(tasks, t => !isCompletedInCurrentPeriod(t, cycles ?? state.cycles, sections, lists, referenceDate), sections, lists);
 }
 
+/** Suma tareas ya seleccionadas por un informe histórico, sin volver a filtrarlas por el periodo actual. */
+export function calculateRecordedTasksDuration(
+  tasks: TaskItem[],
+  sections?: ListSection[],
+  lists?: CustomList[]
+): TasksDurationSummary {
+  return aggregateDurations(tasks, () => true, sections, lists);
+}
+
 /** Tiempo activo de lo ya COMPLETADO, con los mismos criterios que `calculateTasksDuration`. */
 export function calculateCompletedTasksDuration(
   tasks: TaskItem[],

@@ -5,11 +5,12 @@ import {
   Search, Sun, Moon, Sparkles, Calendar, CalendarDays, CalendarClock, Inbox, Check,
   Plus, List, X, BarChart2, FileText, Play, Repeat, CornerDownLeft
 } from 'lucide-react';
-import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
+import { useAppStore } from '../../store/useAppStore';
+import { useTemporalNavigationStore } from '../../store/useTemporalNavigationStore';
+import { isTaskActuallyCompletedInCurrentPeriod } from '../../services/TaskService';
 import type { TaskItem } from '../../models/Task';
 import { formatEuro } from '../../utils/format';
 import { modShortcut } from '../../utils/platform';
-import { useRef as useSheetRef } from "react";
 import { useModalFocus } from "../../hooks/useModalFocus";
 
 interface SpotlightModalProps {
@@ -69,8 +70,8 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
   }, [onClose]);
 
   const [query, setQuery] = useState('');
-    const focusSheetRef = useSheetRef<HTMLDivElement>(null);
-    useModalFocus(focusSheetRef, isModalOpen, handleClose);
+  const focusSheetRef = useRef<HTMLDivElement>(null);
+  useModalFocus(focusSheetRef, isModalOpen, handleClose);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listContainerRef = useRef<HTMLDivElement>(null);
@@ -78,6 +79,8 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
   const tasks = useAppStore(state => state.tasks);
   const lists = useAppStore(state => state.lists);
   const cycles = useAppStore(state => state.cycles);
+  const sections = useAppStore(state => state.listSections);
+  const today = useTemporalNavigationStore(state => state.today);
   const theme = useAppStore(state => state.theme);
   const setTheme = useAppStore(state => state.setTheme);
 
@@ -146,10 +149,10 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
         .filter(t => !t.deleted_at && t.title)
         .map(task => ({ task, score: matchScore(q, task.title, task.description || '') }))
         .filter(m => m.score >= 0)
-        .sort((a, b) => a.score - b.score || Number(isTaskCompleted(a.task)) - Number(isTaskCompleted(b.task)))
+        .map(m => ({ ...m, completed: isTaskActuallyCompletedInCurrentPeriod(m.task, cycles, sections, lists, new Date(today)) }))
+        .sort((a, b) => a.score - b.score || Number(a.completed) - Number(b.completed))
         .slice(0, 12)
-        .forEach(({ task, score }) => {
-          const completed = isTaskCompleted(task);
+        .forEach(({ task, score, completed }) => {
           const taskList = lists?.find(l => l.id === task.categoryId);
           const listColor = taskList?.color || '#007aff';
           const price = Number(task.price);
@@ -157,7 +160,7 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
             id: `task_${task.id}`,
             group: 'task',
             title: task.title,
-            subtitle: [taskList?.name || 'Bandeja', price > 0 ? formatEuro(price) : ''].filter(Boolean).join(' · '),
+            subtitle: [completed ? 'Completada' : '', taskList?.name || 'Bandeja', price > 0 ? formatEuro(price) : ''].filter(Boolean).join(' · '),
             icon: completed
               ? <span className="spotlight-check is-done" style={{ background: listColor, borderColor: listColor }}><Check size={10} strokeWidth={3.5} /></span>
               : <span className="spotlight-check" style={{ borderColor: listColor }} />,
@@ -173,6 +176,7 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
     }
 
     (lists || []).forEach(list => {
+      if (list.deleted_at) return;
       if (list.id === 'user_preferences_smart_lists' || list.id === 'user_preferences_cycle_visibility') return;
       const score = matchScore(q, list.name || '');
       if (score < 0) return;
@@ -184,6 +188,7 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
     });
 
     (cycles || []).forEach(cycle => {
+      if (cycle.deleted_at) return;
       const score = matchScore(q, cycle.name || '');
       if (score < 0) return;
       result.push({
@@ -201,29 +206,24 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
     // Sin búsqueda: primero las acciones. Con búsqueda: primero los recordatorios y, dentro de cada grupo, lo más parecido.
     const order: Group[] = q ? ['task', 'list', 'cycle', 'action'] : ['action', 'list', 'cycle', 'task'];
     return order.flatMap(g => result.filter(r => r.group === g).sort((a, b) => a.score - b.score));
-  }, [query, tasks, lists, cycles, theme, onSelectView, onEditTask, onOpenZenMode, setTheme, handleClose]);
+  }, [query, tasks, lists, cycles, sections, today, theme, onSelectView, onEditTask, onOpenZenMode, setTheme, handleClose]);
 
-  const selected = items[selectedIndex];
+  const activeIndex = Math.max(0, Math.min(selectedIndex, items.length - 1));
+  const selected = items[activeIndex];
 
   useEffect(() => {
     if (!isModalOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Tab') {
+      if (e.target !== inputRef.current && e.target !== listContainerRef.current) return;
+      if (e.key === 'ArrowDown') {
         e.preventDefault();
-        if (e.shiftKey) {
-          setSelectedIndex(prev => (prev - 1 >= 0 ? prev - 1 : items.length - 1));
-        } else {
-          setSelectedIndex(prev => (prev + 1 < items.length ? prev + 1 : 0));
-        }
-      } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSelectedIndex(prev => (prev + 1 < items.length ? prev + 1 : 0));
+        setSelectedIndex(activeIndex + 1 < items.length ? activeIndex + 1 : 0);
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setSelectedIndex(prev => (prev - 1 >= 0 ? prev - 1 : items.length - 1));
+        setSelectedIndex(activeIndex > 0 ? activeIndex - 1 : Math.max(0, items.length - 1));
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        const item = items[selectedIndex];
+        const item = items[activeIndex];
         if (!item) return;
         if ((e.metaKey || e.ctrlKey) && item.focus) item.focus();
         else item.action();
@@ -234,12 +234,12 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isModalOpen, items, selectedIndex, handleClose]);
+  }, [isModalOpen, items, activeIndex, handleClose]);
 
   useEffect(() => {
-    const el = listContainerRef.current?.querySelector<HTMLElement>(`[data-idx="${selectedIndex}"]`);
+    const el = listContainerRef.current?.querySelector<HTMLElement>(`[data-idx="${activeIndex}"]`);
     el?.scrollIntoView({ block: 'nearest' });
-  }, [selectedIndex]);
+  }, [activeIndex, items]);
 
   if (!isModalOpen) return null;
 
@@ -268,6 +268,7 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
               onChange={e => { setQuery(e.target.value); setSelectedIndex(0); }}
               placeholder="Buscar recordatorios, listas o acciones..."
               aria-label="Buscar"
+              aria-describedby="spotlight-selection"
               enterKeyHint="go"
               autoComplete="off"
               spellCheck={false}
@@ -280,36 +281,39 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
             <button type="button" className="spotlight-cancel" onClick={handleClose}>Cancelar</button>
           </div>
 
-          <div ref={listContainerRef} className="spotlight-results" role="listbox" aria-label="Resultados" tabIndex={0}>
+          <div id="spotlight-selection" className="sr-only" role="status" aria-atomic="true">
+            {query.trim() && (selected ? `${items.length} resultados. ${activeIndex + 1}: ${selected.title}${selected.subtitle ? `. ${selected.subtitle}` : ''}` : 'Sin resultados')}
+          </div>
+          <div ref={listContainerRef} className="spotlight-results" role="list" aria-label="Resultados" tabIndex={0}>
             {items.length === 0 ? (
-              <div className="spotlight-empty">Sin resultados para «{query.trim()}»</div>
+              <div className="spotlight-empty" role="listitem">Sin resultados para «{query.trim()}»</div>
             ) : items.map((item, idx) => {
               const header = item.group !== lastGroup ? GROUP_LABEL[item.group] : null;
               lastGroup = item.group;
-              const isSelected = idx === selectedIndex;
+              const isSelected = idx === activeIndex;
               return (
-                <React.Fragment key={item.id}>
+                <div key={item.id} role="listitem">
                   {header && <div className="spotlight-section">{header}</div>}
                   <div
                     data-idx={idx}
-                    role="option"
-                    aria-selected={isSelected}
                     className={`spotlight-row${isSelected ? ' is-selected' : ''}`}
-                    onClick={() => item.action()}
                     onMouseMove={() => { if (!isSelected) setSelectedIndex(idx); }}
                   >
-                    <span className={item.tint ? 'spotlight-icon' : 'spotlight-icon is-plain'} style={item.tint ? { background: item.tint } : undefined}>
-                      {item.icon}
-                    </span>
-                    <span className="spotlight-text">
-                      <span className="spotlight-title">{item.title}</span>
-                      {item.subtitle && <span className="spotlight-subtitle">{item.subtitle}</span>}
-                    </span>
+                    <button type="button" className="spotlight-result-main" onClick={() => item.action()}>
+                      <span className={item.tint ? 'spotlight-icon' : 'spotlight-icon is-plain'} style={item.tint ? { background: item.tint } : undefined}>
+                        {item.icon}
+                      </span>
+                      <span className="spotlight-text">
+                        <span className="spotlight-title">{item.title}</span>
+                        {item.subtitle && <span className="spotlight-subtitle">{item.subtitle}</span>}
+                      </span>
+                    </button>
                     {item.focus && (
                       <button
                         type="button"
                         className="spotlight-focus"
                         title={`Enfocar (${modShortcut('↵')})`}
+                        aria-label={`Enfocar «${item.title}»`}
                         onClick={e => { e.stopPropagation(); item.focus?.(); }}
                       >
                         <Play size={11} fill="currentColor" /> Enfocar
@@ -318,7 +322,7 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
                     {item.shortcut && <kbd className="kbd spotlight-shortcut">{item.shortcut}</kbd>}
                     {isSelected && <CornerDownLeft size={14} className="spotlight-enter" aria-hidden="true" />}
                   </div>
-                </React.Fragment>
+                </div>
               );
             })}
           </div>

@@ -469,7 +469,7 @@ export function AnalyticsView({ onBack, onOpenTask }: AnalyticsViewProps) {
           </div>
         }
       />
-      <WeeklyReviewModal isOpen={isReviewOpen} onClose={() => setIsReviewOpen(false)} />
+      <WeeklyReviewModal key={String(isReviewOpen)} isOpen={isReviewOpen} onClose={() => setIsReviewOpen(false)} />
 
       {/* ── Banners Inteligentes de Reconocimiento y Cierre de Período ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
