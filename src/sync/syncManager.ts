@@ -25,7 +25,8 @@ const getApiBase = () => {
 };
 export const apiUrl = (path: string) => `${getApiBase()}${path}`;
 
-const SYNC_INTERVAL_MS = 30 * 1000;
+// Serverless deployments cannot keep SSE sessions; visible tabs reconcile within five seconds.
+const SYNC_INTERVAL_MS = 5 * 1000;
 const PUSH_CHUNK_SIZE = 400;
 const SETTINGS_LIST_PREFIX = 'user_preferences_';
 

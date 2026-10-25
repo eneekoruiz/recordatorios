@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import express from 'express';
+import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import type { AppContext } from '../context.js';
 import { getTaskPeriodicity } from '../../shared/periodicity.js';
@@ -11,7 +12,7 @@ import { isAllowedPushEndpoint } from '../app.js';
 const date = z.iso.datetime({ offset: true });
 const patchSchema = z.object({ text: z.string().trim().min(1).max(300).optional(), list: z.string().min(1).max(100).optional(), status: z.enum(['open', 'done']).optional(), priority: z.enum(['high', 'normal', 'low']).optional(), due: date.nullable().optional() }).strict();
 const modeSchema = z.object({ mode: z.enum(['normal', 'examenes', 'vacaciones']), updatedAt: date, until: date.optional(), reason: z.string().max(500).optional(), expectedUpdatedAt: date }).strict();
-const syncSchema = z.object({ mutations: z.array(z.object({ id: z.string().min(1).max(200), expectedVersion: z.number().int().min(0).nullable(), patch: patchSchema.optional(), deleted: z.boolean().optional() }).strict()).max(200).refine((items) => new Set(items.map((item) => item.id)).size === items.length, 'Duplicate mutation ids'), mode: modeSchema.optional() }).strict();
+const syncSchema = z.object({ mutations: z.array(z.object({ id: z.string().min(1).max(200), expectedVersion: z.number().int().min(0).nullable(), patch: patchSchema.optional(), deleted: z.boolean().optional() }).strict()).max(200).refine((items) => new Set(items.map((item) => item.id)).size === items.length, 'Duplicate mutation ids').refine((items) => items.every((item) => item.expectedVersion !== null || item.patch?.text), 'New tasks need text'), mode: modeSchema.optional() }).strict();
 const EPOCH = new Date(0).toISOString();
 const object = (value: any): Record<string, any> => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 export function helenListKey(value: string): string {
@@ -22,7 +23,9 @@ export function helenListKey(value: string): string {
 }
 function currentMode(preferences: any) {
   const raw = object(object(preferences).activeMode);
-  return { mode: ['normal', 'examenes', 'vacaciones'].includes(raw.mode) && (!raw.until || new Date(raw.until).getTime() > Date.now()) ? raw.mode : 'normal', updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : EPOCH, ...(raw.until ? { until: raw.until } : {}), ...(raw.reason ? { reason: raw.reason } : {}) };
+  const until = raw.until && Number.isFinite(new Date(raw.until).getTime()) ? new Date(raw.until).toISOString() : undefined;
+  const updatedAt = raw.updatedAt && Number.isFinite(new Date(raw.updatedAt).getTime()) ? new Date(raw.updatedAt).toISOString() : EPOCH;
+  return { mode: ['normal', 'examenes', 'vacaciones'].includes(raw.mode) && (!until || new Date(until).getTime() > Date.now()) ? raw.mode : 'normal', updatedAt, ...(until ? { until } : {}), ...(raw.reason ? { reason: String(raw.reason).slice(0, 500) } : {}) };
 }
 function done(payload: any, periodicity: string | null, now: Date, timeZone: string): boolean {
   if (periodicity && payload.targetCount > 1 && !isDone({ completionHistory: [new Date(payload.updated_at || 0).getTime()] }, periodicity, now, timeZone)) return false;
@@ -39,10 +42,18 @@ export function createHelenRouter(context: AppContext) {
       prisma.user.findUnique({ where: { id: userId }, select: { preferences: true } }),
     ]);
     if (rows.length > 5000 || listRows.length > 5000 || sectionRows.length > 5000) throw Object.assign(new Error('Demasiados registros para sincronizar con HELEN'), { status: 413 });
-    const lists = listRows.map((row) => toClientPayload(userId, row));
-    const sections = sectionRows.map((row) => toClientPayload(userId, row));
+    const preferred = <T extends { id: string }>(items: T[]): T[] => {
+      const found = new Map<string, T>();
+      for (const row of items) {
+        const id = clientIdOf(userId, row.id);
+        if (!found.has(id) || row.id === scopedId(userId, id)) found.set(id, row);
+      }
+      return [...found.values()];
+    };
+    const lists = preferred(listRows).map((row) => toClientPayload(userId, row));
+    const sections = preferred(sectionRows).map((row) => toClientPayload(userId, row));
     const preferences = object(user?.preferences);
-    return { rows, lists, sections, preferences, timeZone: safeTimeZone(preferences.timeZone || preferences.timezone) };
+    return { rows: preferred(rows), lists, sections, preferences, timeZone: safeTimeZone(preferences.timeZone || preferences.timezone) };
   }
   function project(userId: string, row: any, data: Awaited<ReturnType<typeof snapshot>>) {
     const payload = object(row.payload);
@@ -53,9 +64,10 @@ export function createHelenRouter(context: AppContext) {
     const list = data.lists.find((item: any) => item.id === category);
     const iso = (value: any, fallback: string) => Number.isFinite(new Date(value).getTime()) ? new Date(value).toISOString() : fallback;
     const updated = iso(row.updatedAt, iso(payload.updated_at, EPOCH));
-    return { id: clientIdOf(userId, row.id), version: Math.max(0, Number.isSafeInteger(payload.version) ? payload.version : 0), deleted: Boolean(row.deletedAt || payload.deleted_at), task: { text: String(payload.title || payload.text || '(sin título)').slice(0, 300), list: helenListKey(String(list?.name || category)), status: completed ? 'done' : 'open', priority: ['high', 'normal', 'low'].includes(payload.priority) ? payload.priority : 'normal', created: iso(payload.created_at || payload.createdAt, updated), updated, ...(completed ? { done: iso(payload.completed_at || payload.completionHistory?.at(-1), updated) } : {}), ...(payload.dueDate && Number.isFinite(new Date(payload.dueDate).getTime()) ? { due: new Date(payload.dueDate).toISOString() } : {}) } };
+    const completions = [...new Set([...(Array.isArray(payload.completionHistory) ? payload.completionHistory : []), ...(payload.completed_at ? [payload.completed_at] : [])].map((value) => new Date(value).getTime()).filter((at) => Number.isFinite(at) && at >= 0 && at <= now.getTime()).map((at) => new Date(at).toISOString()))].slice(-10000);
+    return { id: clientIdOf(userId, row.id), version: Math.max(0, Number.isSafeInteger(payload.version) ? payload.version : 0), deleted: Boolean(row.deletedAt || payload.deleted_at), task: { text: String(payload.title || payload.text || '(sin título)').slice(0, 300), list: helenListKey(String(list?.name || category)), status: completed ? 'done' : 'open', priority: ['high', 'normal', 'low'].includes(payload.priority) ? payload.priority : 'normal', created: iso(payload.created_at || payload.createdAt, updated), updated, completions, ...(completed ? { done: iso(payload.completed_at || payload.completionHistory?.at(-1), updated) } : {}), ...(payload.dueDate && Number.isFinite(new Date(payload.dueDate).getTime()) ? { due: new Date(payload.dueDate).toISOString() } : {}) } };
   }
-  const notify = (userId: string) => { for (const response of clients.get(userId) || []) { try { response.write('data: {"type":"check_sync"}\n\n'); } catch { /* Closed clients are removed by their SSE handler. */ } } };
+  const notify = (userId: string) => { for (const response of clients.get(userId) || []) { try { response.write('data: check_sync\n\n'); } catch { /* Closed clients are removed by their SSE handler. */ } } };
   const failure = (res: express.Response, error: any) => res.status(error?.status || 503).json({ error: error?.status === 413 ? error.message : 'No se pudo completar la operación de HELEN.' });
   router.get('/helen/sync', apiLimiter, authenticateToken, async (req, res) => {
     const raw = req.query.since;
@@ -73,6 +85,9 @@ export function createHelenRouter(context: AppContext) {
     try {
       const userId = req.user!.id;
       const data = await snapshot(userId);
+      const creates = parsed.data.mutations.filter((item) => item.expectedVersion === null && !data.rows.some((row) => clientIdOf(userId, row.id) === item.id)).length;
+      const missingLists = new Set(parsed.data.mutations.map((item) => item.patch?.list).filter((name): name is string => name !== undefined).map(helenListKey).filter((key) => key !== 'inbox' && !data.lists.some((list: any) => helenListKey(String(list.name || list.id)) === key || list.id === key)));
+      if (data.rows.length + creates > 5000 || data.lists.length + missingLists.size > 5000) return res.status(413).json({ error: 'Demasiados registros para sincronizar con HELEN' });
       const applied: any[] = [];
       const conflicts: any[] = [];
       for (const mutation of parsed.data.mutations) {
@@ -124,7 +139,7 @@ export function createHelenRouter(context: AppContext) {
         if (mutation.deleted !== undefined) payload.deleted_at = mutation.deleted ? stamp : null;
         let row: any;
         if (existing) {
-          const changed = await prisma.task.updateMany({ where: { id: existing.id, userId, updatedAt: { equals: existing.updatedAt } }, data: { payload, deletedAt, updatedAt: new Date(stamp) } });
+          const changed = await prisma.task.updateMany({ where: { id: existing.id, userId, updatedAt: { equals: existing.updatedAt }, payload: { equals: existing.payload === null ? Prisma.JsonNull : existing.payload } }, data: { payload, deletedAt, updatedAt: new Date(stamp) } });
           row = await prisma.task.findFirst({ where: { id: existing.id, userId } });
           if (!changed.count) { conflicts.push(project(userId, row || existing, data)); continue; }
         } else {
@@ -149,9 +164,9 @@ export function createHelenRouter(context: AppContext) {
         if (previous.updatedAt !== incoming.expectedUpdatedAt) { mode = previous; modeConflict = true; }
         else {
           const activeMode = { mode: incoming.mode, updatedAt: new Date(Math.max(Date.now(), new Date(previous.updatedAt).getTime() + 1)).toISOString(), ...(incoming.until ? { until: incoming.until } : {}), ...(incoming.reason ? { reason: incoming.reason } : {}) };
-          const changed = await prisma.user.updateMany({ where: { id: userId, preferences: preferencesEqualsFilter(user?.preferences) }, data: { preferences: { ...old, activeMode } } });
+          const changed = await prisma.user.updateMany({ where: { id: userId, preferences: preferencesEqualsFilter(user?.preferences) }, data: { preferences: { ...old, activeMode, updated_at: activeMode.updatedAt } } });
           modeConflict = !changed.count;
-          mode = changed.count ? activeMode : currentMode((await prisma.user.findUnique({ where: { id: userId } }))?.preferences);
+          mode = changed.count ? currentMode({ activeMode }) : currentMode((await prisma.user.findUnique({ where: { id: userId } }))?.preferences);
         }
       }
       if (applied.length || (mode && !modeConflict)) notify(userId);
@@ -183,7 +198,8 @@ export function createHelenRouter(context: AppContext) {
         catch (error) { if ((error as any)?.code === 'P2002') { uncertain = true; continue; } throw error; }
         try {
           await pushSender({ endpoint: sub.endpoint, keys: sub.keys }, { title: event.sensitive ? 'HELEN' : event.title, body: event.sensitive ? 'Tienes un aviso privado. Abre tu asistente para revisarlo.' : event.text, tag: key, data: { url: '/', kind: event.kind } });
-          await prisma.cronLease.updateMany({ where: { key, owner }, data: { owner: `sent:${owner.slice(9)}` } });
+          const recorded = await prisma.cronLease.updateMany({ where: { key, owner }, data: { owner: `sent:${owner.slice(9)}` } });
+          if (!recorded.count) { uncertain = true; continue; }
           delivered++;
         } catch (error) {
           const status = Number((error as any)?.statusCode);
@@ -192,7 +208,7 @@ export function createHelenRouter(context: AppContext) {
             await prisma.cronLease.deleteMany({ where: { key, owner } });
             rejected = true;
           } else {
-            await prisma.cronLease.updateMany({ where: { key, owner }, data: { owner: `uncertain:${owner.slice(9)}` } });
+            await prisma.cronLease.updateMany({ where: { key, owner }, data: { owner: `uncertain:${owner.slice(9)}` } }).catch(() => {});
             uncertain = true;
           }
         }
