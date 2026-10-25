@@ -160,19 +160,13 @@ export function isTaskActuallyCompletedInCurrentPeriod(
   // (Las omitidas se tratan aparte en isCompletedInCurrentPeriod)
 
 
-  // Si la tarea tiene meta de repeticiones (ej. 3 vasos de agua), no está completada hasta alcanzar la meta
-  if (task.targetCount && task.targetCount > 1) {
-    if ((task.currentCount || 0) < task.targetCount) {
-      return false;
-    }
-  }
-
   // Deducir ciclo efectivo (explícito o por sección Diarias/Semanales, título [D], etc.)
   const effCycleId = getEffectiveCycleId(task, sec, lst);
 
   // Si no es una tarea de ciclo (es puntual) y tiene status completed
   const isDone = task.status === 'completed' || !!(task as any).completed_at || !!(task as any).completed;
   if (!effCycleId) {
+    if (task.targetCount && task.targetCount > 1 && (task.currentCount || 0) < task.targetCount) return false;
     return isDone;
   }
 

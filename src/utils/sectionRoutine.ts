@@ -374,26 +374,21 @@ export function getPeriodContextLabel(
 
     const mMonth = MONTH_SHORTS[monday.getMonth()];
     const sMonth = MONTH_SHORTS[sunday.getMonth()];
-    const formatRange = (from: Date, to: Date) => from.getMonth() === to.getMonth()
-      ? `${from.getDate()}–${to.getDate()} ${MONTH_SHORTS[to.getMonth()]}`
-      : `${from.getDate()} ${MONTH_SHORTS[from.getMonth()]}–${to.getDate()} ${MONTH_SHORTS[to.getMonth()]}`;
     const dateRange = monday.getMonth() === sunday.getMonth()
       ? `${monday.getDate()}–${sunday.getDate()} ${sMonth}`
       : `${monday.getDate()} ${mMonth}–${sunday.getDate()} ${sMonth}`;
 
     if (isRolledOver) {
-      const nextRange = formatRange(
-        new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 7),
-        new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + 7)
-      );
+      const nextMonday = getNextPeriodDate('week', referenceDate);
+      const renewal = `se renuevan el lunes ${nextMonday.getDate()} ${MONTH_SHORTS[nextMonday.getMonth()]}`;
       return {
-        label: `Semana hecha. Las que ves son para la que viene (${nextRange}).`,
-        shortLabel: `Sem. ${weekNo + 1}`,
+        label: `Semana hecha. Se mantienen marcadas hasta el lunes ${nextMonday.getDate()} ${MONTH_SHORTS[nextMonday.getMonth()]}.`,
+        shortLabel: `Sem. ${weekNo}`,
         compactLabel: 'Semana hecha',
-        nextLabel: 'estas son para la que viene',
+        nextLabel: renewal,
         isRolledOver: true,
-        activePeriod: `Semana ${weekNo + 1}`,
-        nextPeriodDate: getNextPeriodDate('week', referenceDate)
+        activePeriod: `Semana ${weekNo}`,
+        nextPeriodDate: nextMonday
       };
     }
     return {

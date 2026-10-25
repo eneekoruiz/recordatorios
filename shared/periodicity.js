@@ -60,26 +60,7 @@ export function getTaskPeriodicity(task, sections, lists) {
   if (freq.includes('month') || freq.includes('mensu')) return 'month';
   if (freq.includes('year') || freq.includes('anual')) return 'year';
 
-  // 3. Hábitos o contador diario
-  if (task.targetCount && task.targetCount > 1) return 'day';
-
-  // 4. Sublista o lista (ej. limpieza_diaria, limpieza_semanal, etc.)
-  const catId = task.categoryId || task.category_id;
-  if (catId) {
-    const catLower = (catId || '').toLowerCase();
-    if (catLower === 'limpieza_diaria' || catLower.includes('diari')) return 'day';
-    if (catLower === 'limpieza_semanal' || catLower.includes('seman')) return 'week';
-    if (catLower === 'limpieza_mensual' || catLower.includes('mensu')) return 'month';
-    if (catLower === 'limpieza_anual' || catLower.includes('anual')) return 'year';
-
-    const listObj = lists?.find((l) => l.id === catId);
-    if (listObj) {
-      const fromList = periodicityFromText((listObj.name || catId || '').toLowerCase());
-      if (fromList) return fromList;
-    }
-  }
-
-  // 5. Sección asignada (las subsecciones heredan de su sección padre)
+  // La sección concreta manda sobre el nombre general de la lista y el contador.
   if (secId) {
     const secLower = (secId || '').toLowerCase();
     if (secLower.includes('diari') || secLower.includes('vital') || secLower.includes('habito')) return 'day';
@@ -95,6 +76,25 @@ export function getTaskPeriodicity(task, sections, lists) {
       if (fromSection) return fromSection;
       const parentId = secObj.parentId;
       secObj = parentId ? sections?.find((s) => s.id === parentId) : undefined;
+    }
+  }
+
+  // Hábitos sin otra frecuencia: contador diario.
+  if (task.targetCount && task.targetCount > 1) return 'day';
+
+  // Frecuencia heredada de la lista cuando la sección no la define.
+  const catId = task.categoryId || task.category_id;
+  if (catId) {
+    const catLower = (catId || '').toLowerCase();
+    if (catLower === 'limpieza_diaria' || catLower.includes('diari')) return 'day';
+    if (catLower === 'limpieza_semanal' || catLower.includes('seman')) return 'week';
+    if (catLower === 'limpieza_mensual' || catLower.includes('mensu')) return 'month';
+    if (catLower === 'limpieza_anual' || catLower.includes('anual')) return 'year';
+
+    const listObj = lists?.find((l) => l.id === catId);
+    if (listObj) {
+      const fromList = periodicityFromText((listObj.name || catId || '').toLowerCase());
+      if (fromList) return fromList;
     }
   }
 

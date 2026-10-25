@@ -30,12 +30,13 @@ export function buildRoutineParts(
   tasks: TaskItem[],
   sections?: ListSection[],
   lists?: CustomList[],
-  cycles?: CustomCycle[]
+  cycles?: CustomCycle[],
+  referenceDate: Date = new Date()
 ): RoutinePart[] {
   const groups = new Map<RoutinePeriod, TaskItem[]>();
   for (const t of tasks) {
     if (isTaskCompleted(t)) continue;
-    if (cycles && isCompletedInCurrentPeriod(t, cycles, sections, lists)) continue;
+    if (cycles && isCompletedInCurrentPeriod(t, cycles, sections, lists, referenceDate)) continue;
     const p = (getTaskPeriodicity(t, sections, lists) || 'day') as RoutinePeriod;
     if (!ORDER.includes(p)) continue;
     groups.set(p, [...(groups.get(p) || []), t]);
@@ -43,7 +44,7 @@ export function buildRoutineParts(
   return ORDER.filter((p) => groups.has(p)).map((p) => ({
     periodicity: p,
     count: groups.get(p)!.length,
-    minutes: calculateTasksDuration(groups.get(p)!, sections, lists).activeMinutes,
+    minutes: calculateTasksDuration(groups.get(p)!, sections, lists, cycles, referenceDate).activeMinutes,
   }));
 }
 
@@ -60,12 +61,13 @@ export function buildMixParts(
   tasks: TaskItem[],
   sections?: ListSection[],
   lists?: CustomList[],
-  cycles?: CustomCycle[]
+  cycles?: CustomCycle[],
+  referenceDate: Date = new Date()
 ): RoutinePart[] | null {
   const groups = new Map<MixKind, TaskItem[]>();
   for (const t of tasks) {
     if (isTaskCompleted(t)) continue;
-    if (cycles && isCompletedInCurrentPeriod(t, cycles, sections, lists)) continue;
+    if (cycles && isCompletedInCurrentPeriod(t, cycles, sections, lists, referenceDate)) continue;
     const p = (getTaskPeriodicity(t, sections, lists) || 'none') as MixKind;
     if (!MIX_ORDER.includes(p)) continue;
     groups.set(p, [...(groups.get(p) || []), t]);
@@ -73,7 +75,7 @@ export function buildMixParts(
   const parts = MIX_ORDER.filter((p) => groups.has(p)).map((p) => ({
     periodicity: p,
     count: groups.get(p)!.length,
-    minutes: calculateTasksDuration(groups.get(p)!, sections, lists).activeMinutes,
+    minutes: calculateTasksDuration(groups.get(p)!, sections, lists, cycles, referenceDate).activeMinutes,
   }));
   return parts.length >= 2 ? parts : null;
 }

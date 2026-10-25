@@ -11,6 +11,7 @@ import {
   X, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
+import { useTemporalNavigationStore } from '../../store/useTemporalNavigationStore';
 import { isCompletedInCurrentPeriod } from '../../services/TaskService';
 import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
@@ -36,6 +37,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ currentView, onSelectView }: SidebarProps) {
+  const today = useTemporalNavigationStore(state => state.today);
   const lists = useAppStore((state) => state.lists);
   const cycles = useAppStore((state) => state.cycles);
   const listSections = useAppStore((state) => state.listSections);
@@ -75,7 +77,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
   
   const getTaskCount = (listId: string) => {
     const all = Object.values(tasks || {}).filter(t => !t.deleted_at);
-    const isDone = (t: any) => isTaskCompleted(t) || isCompletedInCurrentPeriod(t, cycles, listSections, lists);
+    const isDone = (t: any) => isTaskCompleted(t) || isCompletedInCurrentPeriod(t, cycles, listSections, lists, new Date(today));
     const active = all.filter(t => !isDone(t));
     const todayStr = new Date().toDateString();
     

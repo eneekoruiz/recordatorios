@@ -11,7 +11,7 @@ import {
 import type { TaskItem, ListSection } from '../../models/Task';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { useTemporalNavigationStore } from '../../store/useTemporalNavigationStore';
-import { isCompletedInCurrentPeriod, isSkippedInCurrentPeriod, calculateExpirationStatus } from '../../services/TaskService';
+import { isCompletedInCurrentPeriod, isSkippedInCurrentPeriod, calculateExpirationStatus, matchesPeriod } from '../../services/TaskService';
 import { calculateTaskStreak } from '../../utils/streaks';
 import { detectTaskSmartSuggestion } from '../../utils/taskSmartSuggestions';
 import { SoundService } from '../../services/SoundService';
@@ -538,10 +538,11 @@ export const TaskCard = React.memo(function TaskCard({
   };
 
   const temporalDate = useTemporalNavigationStore((state) => state.temporalDate);
+  const today = useTemporalNavigationStore((state) => state.today);
   const referenceDate = useMemo(() => {
     if (propReferenceDate) return propReferenceDate;
-    return temporalDate ? new Date(temporalDate) : new Date();
-  }, [propReferenceDate, temporalDate]);
+    return temporalDate ? new Date(temporalDate) : new Date(today);
+  }, [propReferenceDate, temporalDate, today]);
 
   const isBlocked = hasPendingBlocker;
   // Se decide por el puntero, no por el ancho: una ventana estrecha con ratón también revela el (i) al pasar.
@@ -633,25 +634,21 @@ export const TaskCard = React.memo(function TaskCard({
     }
   }, [isBlocked, isEffectivelyDone, onToggle, task.id, setIsDeleteConfirmOpen, propReferenceDate]);
 
-  const refDate = propReferenceDate || new Date();
-  const lastUpdate = task.updated_at ? new Date(task.updated_at) : null;
-  const isSameDay = Boolean(lastUpdate &&
-    lastUpdate.getFullYear() === refDate.getFullYear() &&
-    lastUpdate.getMonth() === refDate.getMonth() &&
-    lastUpdate.getDate() === refDate.getDate());
+  const isSameCountPeriod = matchesPeriod(
+    task.updated_at ? [task.updated_at] : [], effCycleId || 'cycle_day', referenceDate, cycles
+  );
 
   const hasTargetCount = Boolean(task.targetCount && task.targetCount > 1);
   const targetCount = task.targetCount || 1;
-  const isDailyHabit = effCycleId === 'cycle_day' || task.cycle_id === 'cycle_day' || hasTargetCount || task.sectionId === 'sec_habitos_vitales';
 
   const totalAlerts = task.alerts?.length || 0;
   const rawCompletedAlerts = task.completedAlerts?.length || 0;
-  const completedAlertsCount = (isDailyHabit && !isSameDay) ? 0 : rawCompletedAlerts;
+  const completedAlertsCount = (isRecurring && !isSameCountPeriod) ? 0 : rawCompletedAlerts;
 
   const effectiveCurrentCount = hasTargetCount
     ? (isCompletedPeriod
         ? targetCount
-        : (isSameDay ? (task.currentCount || 0) : 0))
+        : (isSameCountPeriod ? (task.currentCount || 0) : 0))
     : (task.currentCount || 0);
 
   const isTargetPartial = hasTargetCount && effectiveCurrentCount > 0 && effectiveCurrentCount < targetCount;

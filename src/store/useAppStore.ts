@@ -571,18 +571,14 @@ export const useAppStore = create<AppState>()(
         const targetCount = existingTask.targetCount || 1;
         
         const targetDate = customTimestamp ? new Date(customTimestamp) : new Date();
-        const lastUpdate = existingTask.updated_at ? new Date(existingTask.updated_at) : null;
-        const isSameDay = Boolean(lastUpdate &&
-          lastUpdate.getFullYear() === targetDate.getFullYear() &&
-          lastUpdate.getMonth() === targetDate.getMonth() &&
-          lastUpdate.getDate() === targetDate.getDate());
-
-        const isDailyTask = effCycle === 'cycle_day' || existingTask.cycle_id === 'cycle_day' || isTargetTask || existingTask.sectionId === 'sec_habitos_vitales';
+        const isSameCountPeriod = matchesPeriod(
+          existingTask.updated_at ? [existingTask.updated_at] : [], effCycle || 'cycle_day', targetDate, state.cycles
+        );
 
         let currentCount = existingTask.currentCount || 0;
         let completedAlerts = existingTask.completedAlerts || [];
 
-        if (isDailyTask && !isSameDay) {
+        if (effCycle && !isSameCountPeriod) {
           currentCount = 0;
           completedAlerts = [];
         }
@@ -600,8 +596,9 @@ export const useAppStore = create<AppState>()(
           const newHistory = [...(existingTask.completionHistory || [])];
           
           if (isTargetTask) {
-            if (newHistory.length > 0 && isTaskCompleted(existingTask)) {
-              newHistory.pop();
+            if (newHistory.length > 0 && isDone) {
+              const index = effCycle ? findPeriodIndexInHistory(newHistory, effCycle, targetDate) : newHistory.length - 1;
+              if (index >= 0) newHistory.splice(index, 1);
             }
             const decrementedCount = Math.max(0, currentCount > 0 ? currentCount - 1 : 0);
             updatedTask = TaskRepository.update(existingTask, {

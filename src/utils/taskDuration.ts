@@ -6,10 +6,11 @@
  * parallel/background tasks (e.g. washing machine, dishwasher, soaking).
  */
 
-import type { TaskItem, ListSection, CustomList } from '../models/Task';
+import type { TaskItem, ListSection, CustomList, CustomCycle } from '../models/Task';
 import { getTaskPeriodicity } from './sectionRoutine';
 import { getListType, doesListSupportDuration } from './specialLists';
-import { useAppStore, isTaskCompleted } from '../store/useAppStore';
+import { useAppStore } from '../store/useAppStore';
+import { isCompletedInCurrentPeriod, isTaskActuallyCompletedInCurrentPeriod } from '../services/TaskService';
 import { isVitalHabitTask } from './vitalHabits';
 
 export interface TaskDurationInfo {
@@ -392,22 +393,27 @@ function aggregateDurations(
 }
 
 /**
- * Tiempo activo de lo PENDIENTE. Usa `isTaskCompleted` (el mismo criterio que la interfaz), de modo
- * que tachar/destachar —también metas con contador— recalcula el restante al instante.
+ * Lo pendiente se decide para el mismo periodo que las casillas, incluido el historial recurrente.
  */
 export function calculateTasksDuration(
   tasks: TaskItem[],
   sections?: ListSection[],
-  lists?: CustomList[]
+  lists?: CustomList[],
+  cycles?: CustomCycle[],
+  referenceDate: Date = new Date()
 ): TasksDurationSummary {
-  return aggregateDurations(tasks, t => !isTaskCompleted(t), sections, lists);
+  const state = useAppStore.getState();
+  return aggregateDurations(tasks, t => !isCompletedInCurrentPeriod(t, cycles ?? state.cycles, sections, lists, referenceDate), sections, lists);
 }
 
 /** Tiempo activo de lo ya COMPLETADO, con los mismos criterios que `calculateTasksDuration`. */
 export function calculateCompletedTasksDuration(
   tasks: TaskItem[],
   sections?: ListSection[],
-  lists?: CustomList[]
+  lists?: CustomList[],
+  cycles?: CustomCycle[],
+  referenceDate: Date = new Date()
 ): TasksDurationSummary {
-  return aggregateDurations(tasks, t => isTaskCompleted(t), sections, lists);
+  const state = useAppStore.getState();
+  return aggregateDurations(tasks, t => isTaskActuallyCompletedInCurrentPeriod(t, cycles ?? state.cycles, sections, lists, referenceDate), sections, lists);
 }

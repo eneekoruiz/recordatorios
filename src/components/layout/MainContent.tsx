@@ -149,6 +149,8 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const getTasksByList = useAppStore((state) => state.getTasksByList);
   const getTasksByCycle = useAppStore((state) => state.getTasksByCycle);
   const temporalDate = useTemporalNavigationStore((state) => state.temporalDate);
+  const today = useTemporalNavigationStore((state) => state.today);
+  const periodReferenceDate = useMemo(() => temporalDate || new Date(today), [temporalDate, today]);
 
   // Local state
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -425,7 +427,7 @@ const CORE_CYCLES = [
     allTasks.forEach(t => {
       if (t.deleted_at) return;
       if (t.categoryId === 'primeros_pasos') return;
-      const isDone = isTaskCompleted(t) || isCompletedInCurrentPeriod(t, cycles, listSections, lists, temporalDate || undefined);
+      const isDone = isTaskCompleted(t) || isCompletedInCurrentPeriod(t, cycles, listSections, lists, periodReferenceDate);
       if (!resolvedShowCompleted && isDone && !recentlyCompletedIds.includes(t.id)) return;
 
       const effCycle = getEffectiveCycleId(t, listSections, lists);
@@ -442,7 +444,7 @@ const CORE_CYCLES = [
     });
 
     return counts;
-  }, [currentCycle, tasks, cycles, listSections, lists, resolvedShowCompleted, recentlyCompletedIds, temporalDate]);
+  }, [currentCycle, tasks, cycles, listSections, lists, resolvedShowCompleted, recentlyCompletedIds, periodReferenceDate]);
 
   // Helper de ordenamiento: delega en la única función de orden de la app (ver sectionRoutine.ts)
   // para que el criterio sea siempre el mismo, se mezclen o no periodicidades distintas.
@@ -463,7 +465,7 @@ const CORE_CYCLES = [
         filteredTasks = validTasks.filter(t => t.categoryId === 'primeros_pasos');
         break;
       case 'smart_today': {
-        const targetDate = temporalDate || new Date();
+        const targetDate = periodReferenceDate;
         const todayStr = targetDate.toDateString();
         filteredTasks = validTasks.filter(t => {
           if (!t.dueDate) return false;
@@ -525,14 +527,14 @@ const CORE_CYCLES = [
       grouped[catId].push(task);
     });
     return grouped;
-  }, [currentView, tasks, temporalDate]);
+  }, [currentView, tasks, periodReferenceDate]);
 
   const groupedTasks = useTaskGrouping({
     currentView, isFolderView, isSmartView, isListView, getTasksForSmartView, getTasksByList, 
     getTasksByCycle, tasks, resolvedShowCompleted: true, recentlyCompletedIds, lists, listSections, cycles, 
     currentCycle, cycleViewMode, listSectionFilter, dailyTimeFilter, resolveTimeOfDay, currentList, 
     sortTaskList, lifeLogViewMode, selectedPersonFilter, extractPeopleFromText,
-    referenceDate: temporalDate || undefined
+    referenceDate: periodReferenceDate
   });
 
     
@@ -870,7 +872,7 @@ const CORE_CYCLES = [
     const sectionTasksByKey: Record<string, TaskItem[]> = {};
     // Mismo criterio que el recuento de la barra lateral: lo hecho en su periodo no cuenta.
     const countPending = (list: TaskItem[]) => {
-      const ref = temporalDate ? new Date(temporalDate) : new Date();
+      const ref = periodReferenceDate;
       return list.filter(t => {
         const effCycle = getEffectiveCycleId(t, listSections, lists);
         const isDone = effCycle
@@ -880,10 +882,10 @@ const CORE_CYCLES = [
       }).length;
     };
 
-    const filterTasks = (tasks: TaskItem[], targetRefDate?: Date) => {
+    const filterTasks = (tasks: TaskItem[], targetRefDate?: Date, keepCompleted = false) => {
       let filtered = tasks;
-      if (!resolvedShowCompleted) {
-        const ref = targetRefDate || (temporalDate ? new Date(temporalDate) : new Date());
+      if (!resolvedShowCompleted && !keepCompleted) {
+        const ref = targetRefDate || periodReferenceDate;
         filtered = tasks.filter(t => {
           const effCycle = getEffectiveCycleId(t, listSections, lists);
           const isDone = effCycle
@@ -1487,10 +1489,10 @@ const CORE_CYCLES = [
                 only: pendingThisSection
               };
 
-              const onlyDuration = calculateTasksDuration(thisSectionTasksTotal, listSections, lists);
-              const fullDuration = calculateTasksDuration(fullRoutineTasks, listSections, lists);
+              const onlyDuration = calculateTasksDuration(thisSectionTasksTotal, listSections, lists, cycles, periodReferenceDate);
+              const fullDuration = calculateTasksDuration(fullRoutineTasks, listSections, lists, cycles, periodReferenceDate);
               routineDurations = { only: onlyDuration, full: fullDuration };
-              routineParts = buildRoutineParts(fullRoutineTasks, listSections, lists, cycles);
+              routineParts = buildRoutineParts(fullRoutineTasks, listSections, lists, cycles, periodReferenceDate);
 
               const currentRoutineMode = sectionRoutineModes[categoryKey] || 'only_section';
               if (currentRoutineMode === 'full_routine') {
@@ -1507,17 +1509,17 @@ const CORE_CYCLES = [
 
           const currentRoutineMode = sectionRoutineModes[categoryKey] || 'only_section';
           const sectionScopeForCounts = currentRoutineMode === 'full_routine' && routineCounts ? tasksToRender : thisSectionTasksTotal;
-          const ref = temporalDate ? new Date(temporalDate) : new Date();
+          const ref = periodReferenceDate;
           const isManualSecRolledOver = Boolean(
             sectionPeriodicity &&
             sectionScopeForCounts.length > 0 &&
             countPending(sectionScopeForCounts) === 0
           );
-          const effectiveManualSecRefDate = (isManualSecRolledOver && sectionPeriodicity)
+          const effectiveManualSecRefDate = (isManualSecRolledOver && sectionPeriodicity && sectionPeriodicity !== 'week')
             ? getNextPeriodDate(sectionPeriodicity, ref)
             : ref;
 
-          tasksToRender = filterTasks(tasksToRender, effectiveManualSecRefDate);
+          tasksToRender = filterTasks(tasksToRender, effectiveManualSecRefDate, isManualSecRolledOver && sectionPeriodicity === 'week');
           const allSectionPendingTaskIds = sectionScopeForCounts.filter(t => !isTaskCompleted(t)).map(t => t.id);
 
           flat.push({
@@ -1632,10 +1634,10 @@ const CORE_CYCLES = [
               full: pendingCumulative
             } : null;
 
-            const onlyDuration = calculateTasksDuration(freqTasks, listSections, lists);
-            const fullDuration = calculateTasksDuration(cumulativeTasks, listSections, lists);
+            const onlyDuration = calculateTasksDuration(freqTasks, listSections, lists, cycles, periodReferenceDate);
+            const fullDuration = calculateTasksDuration(cumulativeTasks, listSections, lists, cycles, periodReferenceDate);
             const routineDurations = routineCounts ? { only: onlyDuration, full: fullDuration } : null;
-            const routineParts = routineCounts ? buildRoutineParts(cumulativeTasks, listSections, lists, cycles) : null;
+            const routineParts = routineCounts ? buildRoutineParts(cumulativeTasks, listSections, lists, cycles, periodReferenceDate) : null;
 
             const mode = sectionRoutineModes[`limpieza_freq_${periodicity}`] || 'only_section';
             // Con «+ Acumuladas», las incluidas se mezclan en su habitación, al mismo nivel.
@@ -1651,16 +1653,16 @@ const CORE_CYCLES = [
 
             // Con el periodo hecho se ven las del siguiente: se filtra con esa fecha (con la de hoy
             // salían todas como hechas y la sección quedaba vacía bajo «Octubre hecho»).
-            const ref = temporalDate ? new Date(temporalDate) : new Date();
+            const ref = periodReferenceDate;
             const isLimpiezaRolledOver = Boolean(
               periodicity &&
               tasksToGroup.length > 0 &&
               countPending(tasksToGroup) === 0
             );
-            const effectiveLimpiezaRefDate = isLimpiezaRolledOver
+            const effectiveLimpiezaRefDate = isLimpiezaRolledOver && periodicity !== 'week'
               ? getNextPeriodDate(periodicity as PeriodicityType, ref)
               : ref;
-            const filteredTasksToGroup = filterTasks(tasksToGroup, effectiveLimpiezaRefDate);
+            const filteredTasksToGroup = filterTasks(tasksToGroup, effectiveLimpiezaRefDate, isLimpiezaRolledOver && periodicity === 'week');
 
             // Agrupar por habitación. Con «Orden de limpieza», lo que no tiene habitación se parte en
             // «Para empezar» (ventilar, recoger, polvo…) y «Para terminar» (suelos de toda la casa,
@@ -1911,10 +1913,10 @@ const CORE_CYCLES = [
                 full: pendingFull
               } : null;
 
-              const onlyDuration = calculateTasksDuration(thisSectionTasksTotal, listSections, lists);
-              const fullDuration = calculateTasksDuration(fullTasksTotal, listSections, lists);
+              const onlyDuration = calculateTasksDuration(thisSectionTasksTotal, listSections, lists, cycles, periodReferenceDate);
+              const fullDuration = calculateTasksDuration(fullTasksTotal, listSections, lists, cycles, periodReferenceDate);
               const routineDurations = routineCounts ? { only: onlyDuration, full: fullDuration } : null;
-              const routineParts = routineCounts ? buildRoutineParts(fullTasksTotal, listSections, lists, cycles) : null;
+              const routineParts = routineCounts ? buildRoutineParts(fullTasksTotal, listSections, lists, cycles, periodReferenceDate) : null;
 
               const mode = sectionRoutineModes[catKey] || 'only_section';
               // Con «+ Diarias», las incluidas se mezclan con las propias, al mismo nivel.
@@ -1925,17 +1927,17 @@ const CORE_CYCLES = [
               );
 
               const countScope = mode === 'full_routine' && routineCounts ? fullTasksTotal : thisSectionTasksTotal;
-              const ref = temporalDate ? new Date(temporalDate) : new Date();
+              const ref = periodReferenceDate;
               const isSectionRolledOver = Boolean(
                 sectionPeriodicity &&
                 countScope.length > 0 &&
                 countPending(countScope) === 0
               );
-              const effectiveSectionRefDate = isSectionRolledOver
+              const effectiveSectionRefDate = isSectionRolledOver && sectionPeriodicity !== 'week'
                 ? getNextPeriodDate(sectionPeriodicity, ref)
                 : ref;
 
-              let finalTasksToRender = filterTasks(tasksToRender, effectiveSectionRefDate);
+              let finalTasksToRender = filterTasks(tasksToRender, effectiveSectionRefDate, isSectionRolledOver && sectionPeriodicity === 'week');
 
               const allSectionPendingTaskIds = countScope.filter(t => {
                 const effCycle = getEffectiveCycleId(t, listSections, lists);
@@ -2053,7 +2055,7 @@ const CORE_CYCLES = [
     }
 
     return { flattenedData: flat, renderedSectionTasks: sectionTasksByKey };
-  }, [groupedTasks, currentView, currentCycle, cycleViewMode, collapsed, isListView, lists, listSections, cycles, currentList, listSectionFilter, sortBy, defaultSortForList, isCatCollapsed, isolatedSectionKey, sectionRoutineModes, cycleRoutineCounts, temporalDate, resolvedShowCompleted, recentlyCompletedIds]);
+  }, [groupedTasks, currentView, currentCycle, cycleViewMode, collapsed, isListView, lists, listSections, cycles, currentList, listSectionFilter, sortBy, defaultSortForList, isCatCollapsed, isolatedSectionKey, sectionRoutineModes, cycleRoutineCounts, periodReferenceDate, resolvedShowCompleted, recentlyCompletedIds]);
 
   // Tareas visibles en pantalla respetando el orden visual exacto de renderizado
   // En las vistas inteligentes (Con marca, Todos…) una sección sin tareas no aporta nada: ni su cabecera ni su
@@ -2111,12 +2113,12 @@ const CORE_CYCLES = [
 
   // Duración estimada agregada de todas las tareas de la vista
   const viewTasksDuration = useMemo(() => {
-    return calculateTasksDuration(viewTasks, listSections, lists);
-  }, [viewTasks, listSections, lists]);
+    return calculateTasksDuration(viewTasks, listSections, lists, cycles, periodReferenceDate);
+  }, [viewTasks, listSections, lists, cycles, periodReferenceDate]);
 
   const viewCompletedTasksDuration = useMemo(() => {
-    return calculateCompletedTasksDuration(viewTasks, listSections, lists);
-  }, [viewTasks, listSections, lists]);
+    return calculateCompletedTasksDuration(viewTasks, listSections, lists, cycles, periodReferenceDate);
+  }, [viewTasks, listSections, lists, cycles, periodReferenceDate]);
 
   const visibleIndexById = useMemo(() => new Map(visibleTasks.map((t, i) => [t.id, i])), [visibleTasks]);
 
@@ -2397,14 +2399,14 @@ const CORE_CYCLES = [
 
   // Número del título: como en la barra lateral (lo hecho en su periodo no cuenta)
   const titleCount = useMemo(() => new Set(viewTasks.filter(t =>
-    !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists, temporalDate || undefined)
-  ).map(t => t.id)).size, [viewTasks, cycles, listSections, lists, temporalDate]);
+    !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists, periodReferenceDate)
+  ).map(t => t.id)).size, [viewTasks, cycles, listSections, lists, periodReferenceDate]);
   const completedVisibleCount = useMemo(() => new Set(viewTasks.filter(t => isTaskCompleted(t)).map(t => t.id)).size, [viewTasks]);
 
   const cycleBreakdown = useMemo(() => {
     if (!currentCycle || cycleViewMode !== 'full_routine') return undefined;
 
-    const pending = viewTasks.filter(t => !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists, temporalDate || undefined));
+    const pending = viewTasks.filter(t => !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists, periodReferenceDate));
     const groups = new Map<string, { cycleId: string; cycleName: string; color?: string; count: number; durationMinutes: number; daysValue: number }>();
 
     for (const t of pending) {
@@ -2443,12 +2445,12 @@ const CORE_CYCLES = [
       accumulatedDurationMinutes,
       details: sortedGroups
     };
-  }, [currentCycle, cycleViewMode, viewTasks, cycles, listSections, lists, temporalDate]);
+  }, [currentCycle, cycleViewMode, viewTasks, cycles, listSections, lists, periodReferenceDate]);
 
   // Vistas sin desglose por frecuencia: la duración total se reparte en puntuales y frecuencias (si hay mezcla).
   const viewMixParts = useMemo(
-    () => (currentCycle || cycleBreakdown || isShoppingList(currentView, currentList) ? null : buildMixParts(viewTasks, listSections, lists, cycles)),
-    [currentCycle, cycleBreakdown, currentView, currentList, viewTasks, listSections, lists, cycles]
+    () => (currentCycle || cycleBreakdown || isShoppingList(currentView, currentList) ? null : buildMixParts(viewTasks, listSections, lists, cycles, periodReferenceDate)),
+    [currentCycle, cycleBreakdown, currentView, currentList, viewTasks, listSections, lists, cycles, periodReferenceDate]
   );
 
   // Las tareas de una sección se alinean con su título (como en Recordatorios): la sangría solo expresa
@@ -2930,13 +2932,13 @@ const CORE_CYCLES = [
                     const activeMode = sectionRoutineModes[data.category] || data.routineMode || 'only_section';
                     const sectionDurationSummary = !isShoppingList(currentView, currentList) ? (data.routineDurations
                       ? (activeMode === 'full_routine' ? data.routineDurations.full : data.routineDurations.only)
-                      : calculateTasksDuration(tasksForSection, listSections, lists)) : undefined;
+                      : calculateTasksDuration(tasksForSection, listSections, lists, cycles, periodReferenceDate)) : undefined;
                     const sectionCompletedDurationSummary = !isShoppingList(currentView, currentList)
-                      ? calculateCompletedTasksDuration(tasksForSection, listSections, lists)
+                      ? calculateCompletedTasksDuration(tasksForSection, listSections, lists, cycles, periodReferenceDate)
                       : undefined;
                     // Con «+ Diarias» ya hay desglose por frecuencia; si no, se reparte por tipo de tarea (solo en listas sin periodicidad fija).
                     const sectionMixParts = !isShoppingList(currentView, currentList) && !data.periodicity && !(activeMode === 'full_routine' && data.routineParts)
-                      ? buildMixParts(tasksForSection, listSections, lists, cycles)
+                      ? buildMixParts(tasksForSection, listSections, lists, cycles, periodReferenceDate)
                       : null;
                     return (
                       <MainSectionHeader
@@ -2973,7 +2975,7 @@ const CORE_CYCLES = [
                         onAddSection={handleAddSection}
                         deleteListSection={deleteListSection}
                         hidePeriodContext={!!currentCycle}
-                        referenceDate={temporalDate || undefined}
+                        referenceDate={periodReferenceDate}
                         isolatedSectionKey={isolatedSectionKey}
                         setIsolatedSectionKey={setIsolatedSectionKey}
                         isolatedRoutineMode={isolatedRoutineMode}
@@ -3156,7 +3158,7 @@ const CORE_CYCLES = [
       {(() => {
         const sectionMenuTasks = (sectionMenu.category ? renderedSectionTasks[sectionMenu.category] : null)
           || (sectionMenu.category ? (groupedTasks[sectionMenu.category] || []) : []);
-        const pendingSectionTasks = sectionMenuTasks.filter(t => !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists, temporalDate || undefined));
+        const pendingSectionTasks = sectionMenuTasks.filter(t => !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists, periodReferenceDate));
         const allCompleted = sectionMenuTasks.length > 0 && pendingSectionTasks.length === 0;
         const curSection = sectionMenu.sectionId ? (listSections || []).find(s => s.id === sectionMenu.sectionId) : null;
         const siblings = curSection ? (listSections || [])

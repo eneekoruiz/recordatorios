@@ -48,6 +48,24 @@ const SharedListView = lazyWithRetry(() => import('./components/share/SharedList
 const IntegrationsModal = lazyWithRetry(() => import('./components/integrations/IntegrationsModal'), 'IntegrationsModal');
 
 function App() {
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const refresh = () => {
+      useTemporalNavigationStore.getState().refreshToday();
+      clearTimeout(timer);
+      const midnight = new Date();
+      midnight.setHours(24, 0, 0, 0);
+      timer = setTimeout(refresh, midnight.getTime() - Date.now() + 50);
+    };
+    refresh();
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, []);
   useSystemTheme();
   // ── All hooks FIRST (before any conditional returns) ──────────────
   const token = useAppStore((state) => state.token);

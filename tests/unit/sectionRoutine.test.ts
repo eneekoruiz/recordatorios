@@ -314,12 +314,13 @@ describe('sectionRoutine utility', () => {
       expect(info?.isRolledOver).toBe(false);
     });
 
-    it('returns next week when all weekly tasks are completed', () => {
+    it('keeps the completed week and names the Monday when it renews', () => {
       const info = getPeriodContextLabel('week', 0, 3, fixedDate);
       expect(info).toBeDefined();
       expect(info?.compactLabel).toBe('Semana hecha');
-      expect(info?.nextLabel).toBe('estas son para la que viene');
-      expect(info?.label).toBe('Semana hecha. Las que ves son para la que viene (12–18 oct).');
+      expect(info?.nextLabel).toBe('se renuevan el lunes 12 oct');
+      expect(info?.label).toBe('Semana hecha. Se mantienen marcadas hasta el lunes 12 oct.');
+      expect(info?.activePeriod).toBe('Semana 41');
       expect(info?.isRolledOver).toBe(true);
     });
 

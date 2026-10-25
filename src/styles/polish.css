@@ -184,13 +184,13 @@ h1, h2, h3,
   display: none !important;
 }
 .ios-list-block .ios-list-item.active .title {
-  color: var(--accent-primary) !important;
+  color: color-mix(in srgb, var(--accent-primary) 80%, var(--text-primary)) !important;
   font-weight: 600 !important;
 }
 .ios-list-block .ios-list-item.active .count {
-  color: var(--accent-primary) !important;
+  color: color-mix(in srgb, var(--accent-primary) 80%, var(--text-primary)) !important;
   font-weight: 600 !important;
-  opacity: 0.9 !important;
+  opacity: 1 !important;
 }
 .list-separator-line {
   display: block !important;
@@ -2971,6 +2971,8 @@ body.dark .stats-page .stat-card-hint {
 }
 .section-head-period.is-done {
   color: #248a3d;
+  min-width: 0;
+  white-space: normal;
 }
 [data-theme="dark"] .section-head-period.is-done,
 html.dark .section-head-period.is-done {

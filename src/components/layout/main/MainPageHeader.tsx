@@ -309,6 +309,8 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                                       return (
                                         <div
                                           className="list-duration-meta"
+                                          aria-live="polite"
+                                          aria-atomic="true"
                                           style={{
                                             width: '100%',
                                             boxSizing: 'border-box',
@@ -350,7 +352,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                                                 <span
                                                   className="apple-list-duration-chip"
                                                   style={{ cursor: 'default' }}
-                                                  title={`Tiempo estimado: ${formatSummaryDuration(totalDuration!.activeMinutes)}`}
+                                                  title={`Tiempo pendiente de este periodo: ${formatSummaryDuration(totalDuration!.activeMinutes)}`}
                                                 >
                                                   <Clock size={11} strokeWidth={1.8} className="apple-list-duration-icon" />
                                                   <span>{formatSummaryDuration(totalDuration!.activeMinutes)}</span>

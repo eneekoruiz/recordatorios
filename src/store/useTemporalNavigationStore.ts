@@ -3,6 +3,8 @@ import { create } from 'zustand';
 export type TemporalGranularity = 'day' | 'week' | 'month' | 'year';
 
 interface TemporalNavigationState {
+  today: number;
+  refreshToday: () => void;
   /**
    * Fecha de referencia temporal activa.
    * `null` representa el presente en tiempo real (Hoy).
@@ -31,6 +33,11 @@ function isSameIsoWeek(d1: Date, d2: Date): boolean {
 }
 
 export const useTemporalNavigationStore = create<TemporalNavigationState>((set, get) => ({
+  today: new Date().setHours(0, 0, 0, 0),
+  refreshToday: () => {
+    const today = new Date().setHours(0, 0, 0, 0);
+    if (today !== get().today) set({ today });
+  },
   temporalDate: null,
   granularity: null,
 
