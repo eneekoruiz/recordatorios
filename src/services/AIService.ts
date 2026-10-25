@@ -1,4 +1,4 @@
-import type { CustomList, TaskItem, ListSection } from '../models/Task';
+import type { CustomList, TaskItem, ListSection, AlertDef } from '../models/Task';
 import { extractPrice } from '../utils/priceExtractor';
 import { detectFormatAndParse } from '../utils/importerParser';
 import { readExtendedDate } from '../utils/nlp';
@@ -28,6 +28,7 @@ export interface ProposedTask {
   locationName?: string;
   mediaType?: 'series' | 'movie' | 'book' | 'music' | 'podcast' | 'other';
   mediaStatus?: 'want_to_watch' | 'in_progress' | 'completed' | 'dropped' | 'favorite';
+  alerts?: AlertDef[];
   selected: boolean;
 }
 
@@ -846,7 +847,7 @@ También puedo marcar algo como hecho («marca hecha la leche»), cambiarlo («p
     // If only one segment and it contains multiple actions joined by " y también ", " y luego ", " y ", commas
     let splitByConjunction = false;
     if (rawSegments.length === 1 && (spoken.includes(',') || /\s+y\s+(?:también\s+|luego\s+)?/i.test(spoken))) {
-      const parts = spoken.split(/(?:,(?!\d)\s*(?:y\s+)?|\s+y\s+(?!(?:media|cuarto)\b)(?:también\s+|luego\s+)?)/i);
+      const parts = spoken.split(/(?:,(?!\d)(?!\s*(?:as[ií]\s+que|para\s+que|de\s+(?:modo|forma|manera)\s+que|porque|ya\s+que|puesto\s+que|por\s+lo\s+que|con\s+el\s+fin\s+de\s+que|si\s+puedes|cuando\s+puedas)\b)\s*(?:y\s+)?|\s+y\s+(?!(?:media|cuarto)\b)(?:también\s+|luego\s+)?)/i);
       if (parts.length > 1) {
         rawSegments = parts;
         splitByConjunction = true;
@@ -1173,7 +1174,11 @@ También puedo marcar algo como hecho («marca hecha la leche»), cambiarlo («p
         .replace(/^(?:he\s+hecho|hice|estuve|fui\s+a|quedé\s+con|tengo\s+que|debo|hay\s+que)\s+/i, (m) => m)
         .replace(/\s{2,}/g, ' ')
         .trim();
+      const isNotificationTest = /\b(?:probar(?:\s+lo\s+de)?\s+(?:las\s+)?notificaciones|prueba(?:\s+de)?\s+notificaci[oó]n|test(?:ear)?\s+(?:las\s+)?notificaciones)\b/i.test(trimmed);
       cleanTitle = tidyTitle(cleanTitle.replace(/^tengo\s+(?!que\b|ganas\b|hambre\b|sue[ñn]o\b|sed\b)/i, ''));
+      if (isNotificationTest || /^(?:lo\s+que\s+t[úu]\s+quieras|lo\s+que\s+sea|cualquier\s+cosa|algo|probar\s+(?:lo\s+de\s+)?(?:las\s+)?notificaciones)$/i.test(cleanTitle.trim())) {
+        cleanTitle = 'Prueba de notificaciones';
+      }
       const segmentVerb = leadingInfinitive(cleanTitle);
       // Sin lista dicha: la que encaje por tema o por lo que ya contiene (cejas → Care). Si no hay
       // una clara, se queda en la bandeja y la pregunta lo dice.
@@ -1222,6 +1227,16 @@ También puedo marcar algo como hecho («marca hecha la leche»), cambiarlo («p
           finalDueDateString = dueDate.toISOString();
         }
 
+        let taskAlerts: AlertDef[] | undefined;
+        if (timeString) {
+          taskAlerts = [{
+            id: `alert_${Date.now()}_${tasks.length}`,
+            type: 'at_time',
+            time: timeString,
+            label: 'En el momento'
+          }];
+        }
+
         tasks.push({
           id: `ai_task_${Date.now()}_${tasks.length}`,
           title: cleanTitle,
@@ -1242,6 +1257,7 @@ También puedo marcar algo como hecho («marca hecha la leche»), cambiarlo («p
           locationName,
           mediaType: inferredMediaType,
           mediaStatus: inferredMediaStatus,
+          alerts: taskAlerts,
           selected: true
         });
         if (ownDate && dueDate) dayCtx = new Date(dueDate);
@@ -1267,6 +1283,14 @@ También puedo marcar algo como hecho («marca hecha la leche»), cambiarlo («p
     let suggestedReplies: string[] | undefined = tasks.length === 1
       ? ['Sí', 'En otra lista', 'Cambiar frecuencia']
       : tasks.length > 1 ? ['Sí, todos', 'En otra lista'] : undefined;
+
+    const isNotificationTestPrompt = /\b(?:probar(?:\s+lo\s+de)?\s+(?:las\s+)?notificaciones|prueba(?:\s+de)?\s+notificaci[oó]n|test(?:ear)?\s+(?:las\s+)?notificaciones)\b/i.test(trimmed);
+    if (isNotificationTestPrompt && tasks.length > 0) {
+      const first = tasks[0];
+      const timeStr = first.alerts?.[0]?.time || (first.dueDate ? new Date(first.dueDate).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : undefined);
+      reply = `He programado un recordatorio de prueba para dentro de un minuto${timeStr ? ` (a las ${timeStr})` : ''}. Cuando se cumpla el tiempo te saltará la notificación para verificar que todo funciona correctamente.`;
+      suggestedReplies = ['Sí', 'Añadir'];
+    }
 
     // Empathetic & conversational companion reply if the user talked about their day
     if (isNarrative && tasks.length > 0) {

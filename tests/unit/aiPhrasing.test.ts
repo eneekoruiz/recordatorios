@@ -61,6 +61,17 @@ describe('aiPhrasing — piezas', () => {
     expect(isBareNounPhrase('cepillos de dientes')).toBe(true);
     expect(isBareNounPhrase('llamar al dentista')).toBe(false);
   });
+
+  it('«Quiero probar lo de las notificaciones, así que recuérdame dentro de un minuto lo que tú quieras» genera 1 sola tarea de prueba con alerta', () => {
+    const res = AIService.localSemanticExtract('Quiero probar lo de las notificaciones, así que recuérdame dentro de un minuto lo que tú quieras', [], {});
+    expect(res.tasks).toHaveLength(1);
+    const t = res.tasks[0];
+    expect(t.title).toBe('Prueba de notificaciones');
+    expect(t.dueDate).toBeDefined();
+    expect(t.alerts).toBeDefined();
+    expect(t.alerts!.length).toBeGreaterThan(0);
+    expect(res.reply).toContain('notificación');
+  });
 });
 
 describe('AIService.localSemanticExtract — frases enrevesadas', () => {

@@ -224,13 +224,52 @@ export function isCompletedInCurrentPeriod(
   cycles?: CustomCycle[] | Date,
   sections?: ListSection[],
   lists?: CustomList[],
-  referenceDate: Date = new Date()
+  referenceDate: Date = new Date(),
+  sessionDates?: Set<string> | string[]
 ): boolean {
   const { cycles: cyclesList, sections: sec, lists: lst, refDate: ref } = parseCycleParams(cycles, sections, lists, referenceDate);
   if (isSkippedInCurrentPeriod(task, cyclesList, sec, lst, ref)) {
     return true;
   }
-  return isTaskActuallyCompletedInCurrentPeriod(task, cyclesList, sec, lst, ref);
+  if (isTaskActuallyCompletedInCurrentPeriod(task, cyclesList, sec, lst, ref)) {
+    return true;
+  }
+  if (sessionDates && task.completionHistory && task.completionHistory.length > 0) {
+    const datesSet = sessionDates instanceof Set ? sessionDates : new Set(sessionDates);
+    if (datesSet.size > 0) {
+      return task.completionHistory.some(ts => datesSet.has(new Date(ts).toDateString()));
+    }
+  }
+  return false;
+}
+
+/**
+ * Obtiene los días (toDateString) en que se completaron tareas de un ciclo padre (ej. 'cycle_week')
+ * durante el período de referencia. En «Rutina completa» las tareas de frecuencias más cortas
+ * (como las diarias) no se marcan como pendientes si ya se hicieron el día de la sesión de rutina.
+ */
+export function getRoutineSessionDates(
+  parentCycleId: string,
+  tasks: TaskItem[] | Record<string, TaskItem>,
+  referenceDate: Date,
+  cycles: CustomCycle[],
+  listSections?: ListSection[],
+  lists?: CustomList[]
+): Set<string> {
+  const sessionDates = new Set<string>();
+  const taskList = Array.isArray(tasks) ? tasks : Object.values(tasks);
+  for (const task of taskList) {
+    if (task.deleted_at || !task.completionHistory || task.completionHistory.length === 0) continue;
+    const eff = getEffectiveCycleId(task, listSections, lists) || task.cycle_id;
+    if (eff === parentCycleId) {
+      for (const ts of task.completionHistory) {
+        if (matchesPeriod([ts], parentCycleId, referenceDate, cycles)) {
+          sessionDates.add(new Date(ts).toDateString());
+        }
+      }
+    }
+  }
+  return sessionDates;
 }
 
 /**

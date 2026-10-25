@@ -69,6 +69,7 @@ interface TaskCardProps {
   referenceDate?: Date;
   /** Frecuencia de la sección que contiene la fila: si coincide con la de la tarea, no se repite. */
   contextPeriodicity?: 'day' | 'week' | 'month' | 'year' | null;
+  sessionDates?: Set<string> | string[];
 }
 
 // Recorrido del dedo (px) a partir del cual deslizar completa (→) o pide borrar (←).
@@ -100,7 +101,7 @@ function dismissTaskSuggestion(taskId: string): void {
 export const TaskCard = React.memo(function TaskCard({
   task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, showListName = true, hideDueDate = false, frequencyMode = 'glyph', isFirstInSection, isLastInSection, previousTaskId, hasChildren, childCount = 0, isExpanded, onToggleExpand, indent = 0, onNavigateView, onPersonClick, isGracePeriod,
   onMoveUp, onMoveDown, canMoveUp, canMoveDown, onReorderTasks, onStartTask,
-  isSelected, onToggleSelect, isSelectionMode, referenceDate: propReferenceDate, contextPeriodicity
+  isSelected, onToggleSelect, isSelectionMode, referenceDate: propReferenceDate, contextPeriodicity, sessionDates
 }: TaskCardProps) {
   const cycles = useAppStore(state => state.cycles);
   const hasPendingBlocker = useAppStore(state => Boolean(task.blockedBy?.some(id => state.tasks[id]?.status === 'pending')));
@@ -550,7 +551,7 @@ export const TaskCard = React.memo(function TaskCard({
   const showInfoButton = contextMenuOpen || (canHover ? isHovered : (isEditingTitle || isEditingNote));
   const effCycleId = getEffectiveCycleId(task, listSections, lists);
   const isRecurring = Boolean(effCycleId);
-  const isCompletedPeriod = isCompletedInCurrentPeriod(task, cycles, listSections, lists, referenceDate);
+  const isCompletedPeriod = isCompletedInCurrentPeriod(task, cycles, listSections, lists, referenceDate, sessionDates);
   const isSkippedThisPeriod = isSkippedInCurrentPeriod(task, cycles, listSections, lists, referenceDate);
   const isJournalEntry = task.type === 'log' || isQueHeHechoList(task.categoryId, lists.find(l => l.id === task.categoryId));
   const isEffectivelyDone = isRecurring

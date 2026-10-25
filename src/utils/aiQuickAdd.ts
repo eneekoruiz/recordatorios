@@ -94,6 +94,7 @@ export function buildTasksFromBatch(
       sectionId: t.sectionId,
       dueDate: t.dueDate || options.defaultDueDate,
       timeOfDay: t.timeOfDay,
+      alerts: t.alerts,
       price: t.price,
       quantity: t.quantity,
       targetCount: t.targetCount,

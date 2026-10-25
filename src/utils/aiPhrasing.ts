@@ -40,11 +40,11 @@ export function normalizeSpokenPrompt(text: string): string {
 // ── Marcos conversacionales ─────────────────────────────────────────────────────────────────
 
 const LEAD_FILLER =
-  /^(?:oye|mira|pues|bueno|vale|eh+|ah+|hombre|a\s+ver|no\s+s[eé]|igual|quiz[aá]s?|por\s+favor|si\s+puedes|cuando\s+puedas|cuando\s+te\s+venga\s+bien|cuando\s+tengas\s+un\s+rato|te\s+pido\s+que|te\s+ruego\s+que|una\s+cosa|por\s+cierto)\b[\s,.:;]*/i;
+  /^(?:as[ií]\s+que|entonces|por\s+tanto|por\s+eso|de\s+modo\s+que|de\s+forma\s+que|de\s+manera\s+que|oye|mira|pues|bueno|vale|eh+|ah+|hombre|a\s+ver|no\s+s[eé]|igual|quiz[aá]s?|por\s+favor|si\s+puedes|cuando\s+puedas|cuando\s+te\s+venga\s+bien|cuando\s+tengas\s+un\s+rato|te\s+pido\s+que|te\s+ruego\s+que|una\s+cosa|por\s+cierto)\b[\s,.:;]*/i;
 
 /** «recuérdame que», «apúntame», «no me dejes olvidar», «tengo que», «debería»… en cualquier punto. */
 const REQUEST_FRAME =
-  /\b(?:(?:por\s+favor,?\s+)?(?:recu[eé]rdame|ap[uú]nta(?:me|lo)?|anota(?:me)?|a[ñn]ade(?:me)?|agrega(?:me)?|pon(?:me)?\s+un\s+recordatorio(?:\s+para)?|crea(?:me)?\s+(?:un\s+)?recordatorio(?:\s+para)?)(?:\s+que)?|no\s+(?:te\s+)?(?:olvides|me\s+dejes\s+olvidar)(?:\s+de)?|acu[eé]rdate\s+de|(?:tendr[ií]a|deber[ií]a|tengo|debo|hay|necesito|quiero)\s+(?:que\s+)?(?=[a-záéíóúñ]+(?:ar|er|ir|arme|erme|irme)\b)|(?:deber[ií]a|debo)\s+)/gi;
+  /\b(?:(?:por\s+favor,?\s+)?(?:recu[eé]rdame|av[ií]same|ap[uú]nta(?:me|lo)?|anota(?:me)?|a[ñn]ade(?:me)?|agrega(?:me)?|pon(?:me)?\s+(?:un\s+)?recordatorio(?:\s+para)?|crea(?:me)?\s+(?:un\s+)?recordatorio(?:\s+para)?)(?:\s+que)?|no\s+(?:te\s+)?(?:olvides|me\s+dejes\s+olvidar)(?:\s+de)?|acu[eé]rdate\s+de|(?:tendr[ií]a|deber[ií]a|tengo|debo|hay|necesito|quiero)\s+(?:que\s+)?(?=[a-záéíóúñ]+(?:ar|er|ir|arme|erme|irme)\b)|(?:deber[ií]a|debo)\s+)/gi;
 
 /** Quita muletillas iniciales y verbos de petición; conserva el contenido. */
 export function stripRequestFrames(segment: string): string {

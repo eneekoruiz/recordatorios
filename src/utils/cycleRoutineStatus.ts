@@ -1,6 +1,6 @@
 import type { TaskItem, CustomCycle, ListSection, CustomList } from '../models/Task';
 import { isTaskCompleted } from '../store/useAppStore';
-import { isCompletedInCurrentPeriod } from '../services/TaskService';
+import { isCompletedInCurrentPeriod, getRoutineSessionDates } from '../services/TaskService';
 import { getEffectiveCycleId } from './sectionRoutine';
 import { getReservedFrequencyColor } from '../constants/colors';
 
@@ -141,6 +141,9 @@ export function calculateCycleRoutineStatus({
   const ownDaysValue =
     currentCycle.daysValue || CORE_DAYS[currentCycle.id] || 999;
   const isFullRoutine = cycleRoutineMode === 'full_routine';
+  const routineSessionDates = isFullRoutine && ownDaysValue > 1
+    ? getRoutineSessionDates(currentCycle.id, activeTasks, referenceDate, cycles, listSections, lists)
+    : undefined;
 
   interface CycleStat {
     cycleId: string;
@@ -180,7 +183,8 @@ export function calculateCycleRoutineStatus({
         cycles,
         listSections,
         lists,
-        referenceDate
+        referenceDate,
+        taskDaysValue < ownDaysValue ? routineSessionDates : undefined
       );
 
     const stat = statsMap.get(effCycleId) || {

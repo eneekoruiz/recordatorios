@@ -261,6 +261,19 @@ function MenuActions({
 
   const [currentSubmenu, setCurrentSubmenu] = useState<'main' | 'move_list' | 'move_section' | 'due_date' | 'priority' | 'price' | 'duration'>('main');
   const [showMoreActions, setShowMoreActions] = useState(false);
+  const moreActionsBtnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (showMoreActions && moreActionsBtnRef.current) {
+      const timer = setTimeout(() => {
+        moreActionsBtnRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [showMoreActions]);
 
   const availableSections = React.useMemo(() => {
     const raw = (listSections || []).filter(
@@ -834,6 +847,7 @@ function MenuActions({
 
       {/* Botón desplegable: Más opciones... */}
       <button
+        ref={moreActionsBtnRef}
         type="button"
         className="ios-dropdown-item"
         onClick={() => {

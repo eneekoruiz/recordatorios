@@ -2,7 +2,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import type { CustomList, ListSection, TaskItem } from '../../src/models/Task';
 import { useAppStore } from '../../src/store/useAppStore';
 import { getTaskPeriodicity } from '../../src/utils/sectionRoutine';
-import { isCompletedInCurrentPeriod } from '../../src/services/TaskService';
+import { isCompletedInCurrentPeriod, getRoutineSessionDates } from '../../src/services/TaskService';
+import { calculateCycleRoutineStatus } from '../../src/utils/cycleRoutineStatus';
 import { calculateCompletedTasksDuration, calculateTasksDuration } from '../../src/utils/taskDuration';
 
 const originalTimeZone = process.env.TZ;
@@ -110,5 +111,52 @@ describe('weekly completion and remaining time', () => {
     expect(calculateTasksDuration([done], [], [], cycles, sunday).activeMinutes).toBe(0);
     expect(calculateTasksDuration([done], [], [], cycles, monday).activeMinutes).toBe(30);
     expect(calculateCompletedTasksDuration([done], [], [], cycles, sunday).activeMinutes).toBe(30);
+  });
+
+  it('en rutina completa semanal, las diarias hechas el día de la sesión semanal cuentan como completadas al día siguiente', () => {
+    // Sábado 24 de octubre de 2026
+    const satTimestamp = new Date(2026, 9, 24, 18, 0).getTime();
+    // Domingo 25 de octubre de 2026
+    const sundayDate = new Date(2026, 9, 25, 12, 0);
+
+    const weeklyDone = task({
+      id: 'w1',
+      cycle_id: 'cycle_week',
+      completionHistory: [satTimestamp]
+    });
+    const dailyDoneOnSaturday = task({
+      id: 'd1',
+      cycle_id: 'cycle_day',
+      sectionId: undefined,
+      completionHistory: [satTimestamp]
+    });
+
+    const cycles = [
+      { id: 'cycle_day', name: 'Diarias', daysValue: 1, isPinned: true, icon: 'sun' },
+      { id: 'cycle_week', name: 'Semanales', daysValue: 7, isPinned: true, icon: 'calendar' }
+    ];
+
+    // Sin sessionDates (evaluando estrictamente contra el domingo), la diaria está pendiente hoy:
+    expect(isCompletedInCurrentPeriod(dailyDoneOnSaturday, cycles, [], [], sundayDate)).toBe(false);
+
+    // Con getRoutineSessionDates, detecta que la sesión semanal se hizo el sábado:
+    const sessionDates = getRoutineSessionDates('cycle_week', [weeklyDone], sundayDate, cycles);
+    expect(sessionDates.has(new Date(satTimestamp).toDateString())).toBe(true);
+
+    // Con sessionDates, la diaria hecha el sábado se reconoce como cumplida para esa rutina:
+    expect(isCompletedInCurrentPeriod(dailyDoneOnSaturday, cycles, [], [], sundayDate, sessionDates)).toBe(true);
+
+    // En calculateCycleRoutineStatus con rutina completa:
+    const status = calculateCycleRoutineStatus({
+      tasks: [weeklyDone, dailyDoneOnSaturday],
+      cycles,
+      currentCycle: cycles[1], // Semanales
+      cycleRoutineMode: 'full_routine',
+      referenceDate: sundayDate
+    });
+
+    expect(status.isAllDone).toBe(true);
+    expect(status.totalPending).toBe(0);
+    expect(status.statusState).toBe('all_done');
   });
 });

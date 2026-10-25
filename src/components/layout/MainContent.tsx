@@ -15,7 +15,7 @@ import { QuickAddBar } from '../ui/QuickAddBar';
 import { BottomShortcutBar } from './BottomShortcutBar';
 import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
-import { extractPeopleFromText, calculateExpirationStatus, calculateSubscriptionCosts, findFlashbackMemories, isCompletedInCurrentPeriod } from '../../services/TaskService';
+import { extractPeopleFromText, calculateExpirationStatus, calculateSubscriptionCosts, findFlashbackMemories, isCompletedInCurrentPeriod, getRoutineSessionDates } from '../../services/TaskService';
 import { AIService } from '../../services/AIService';
 import { isCaducidadesList, isQueHeHechoList, isGoalsList, ensureCaducidadesSections, isLimpiezaList, isRoutineList, isShoppingList, isLifeLibraryList, getRoomForCleaningTask, getListType, doesListSupportSequenceMode } from '../../utils/specialLists';
 import { isVitalHabitsList } from '../../utils/vitalHabits';
@@ -96,7 +96,7 @@ type VirtualItemType =
       foldedByDefault?: boolean
     }
   | { type: 'empty-section', title: string, category: string, color: string, sectionId?: string, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean }
-  | { type: 'task', task: TaskItem, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean, referenceDate?: Date, contextPeriodicity?: PeriodicityType | null };
+  | { type: 'task', task: TaskItem, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean, referenceDate?: Date, contextPeriodicity?: PeriodicityType | null, sessionDates?: Set<string> };
 
 
 const getRoomIcon = (key: string): ReactNode => {
@@ -423,11 +423,12 @@ const CORE_CYCLES = [
     const counts: Record<string, { only: number; full: number }> = {};
     const allTasks = Object.values(tasks);
     const validCycles = cycles.filter(c => c.daysValue <= currentCycle.daysValue).map(c => c.id);
+    const sessionDates = getRoutineSessionDates(currentCycle.id, allTasks, periodReferenceDate, cycles, listSections, lists);
 
     allTasks.forEach(t => {
       if (t.deleted_at) return;
       if (t.categoryId === 'primeros_pasos') return;
-      const isDone = isTaskCompleted(t) || isCompletedInCurrentPeriod(t, cycles, listSections, lists, periodReferenceDate);
+      const isDone = isTaskCompleted(t) || isCompletedInCurrentPeriod(t, cycles, listSections, lists, periodReferenceDate, sessionDates);
       if (!resolvedShowCompleted && isDone && !recentlyCompletedIds.includes(t.id)) return;
 
       const effCycle = getEffectiveCycleId(t, listSections, lists);
@@ -1937,12 +1938,16 @@ const CORE_CYCLES = [
                 ? getNextPeriodDate(sectionPeriodicity, ref)
                 : ref;
 
+              const sessionDates = (sectionPeriodicity && sectionPeriodicity !== 'day')
+                ? getRoutineSessionDates(`cycle_${sectionPeriodicity}`, fullTasksTotal, effectiveSectionRefDate, cycles, listSections, lists)
+                : (currentCycle && currentCycle.id !== 'cycle_day' ? getRoutineSessionDates(currentCycle.id, fullTasksTotal, effectiveSectionRefDate, cycles, listSections, lists) : undefined);
+
               let finalTasksToRender = filterTasks(tasksToRender, effectiveSectionRefDate, isSectionRolledOver && sectionPeriodicity === 'week');
 
               const allSectionPendingTaskIds = countScope.filter(t => {
                 const effCycle = getEffectiveCycleId(t, listSections, lists);
                 return effCycle
-                  ? !isCompletedInCurrentPeriod(t, cycles, listSections, lists, effectiveSectionRefDate)
+                  ? !isCompletedInCurrentPeriod(t, cycles, listSections, lists, effectiveSectionRefDate, sessionDates)
                   : !isTaskCompleted(t);
               }).map(t => t.id);
 
@@ -2655,7 +2660,7 @@ const CORE_CYCLES = [
   }, [onStartSequence]);
 
 
-  const renderTask = useCallback((task: TaskItem, itemStyle: React.CSSProperties, index: number, depth: number, isFirst: boolean, isLast: boolean, previousTaskId?: string, itemKey?: React.Key, referenceDate?: Date, contextPeriodicity?: PeriodicityType | null) => {
+  const renderTask = useCallback((task: TaskItem, itemStyle: React.CSSProperties, index: number, depth: number, isFirst: boolean, isLast: boolean, previousTaskId?: string, itemKey?: React.Key, referenceDate?: Date, contextPeriodicity?: PeriodicityType | null, sessionDates?: Set<string>) => {
     const childCount = childCountByTaskId.get(task.id) || 0;
     const hasChildren = childCount > 0;
     const isExpanded = !isCatCollapsed(`task_${task.id}`);
@@ -2701,6 +2706,7 @@ const CORE_CYCLES = [
             isSelectionMode={selectedTaskIds.size > 0 || isExplicitSelectionMode}
             referenceDate={referenceDate}
             contextPeriodicity={contextPeriodicity}
+            sessionDates={sessionDates}
             {...({
             hasChildren,
             childCount,
@@ -3063,7 +3069,8 @@ const CORE_CYCLES = [
                       previousTaskId, 
                       itemKey,
                       data.referenceDate,
-                      data.contextPeriodicity ?? viewPeriodicity
+                      data.contextPeriodicity ?? viewPeriodicity,
+                      data.sessionDates
                     );
                   }
 

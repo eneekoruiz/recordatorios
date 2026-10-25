@@ -1304,7 +1304,16 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                           t.listName || 'Bandeja de entrada',
                           t.sectionName,
                           describeRepeat(t.cycle, t.targetCount) ? describeRepeat(t.cycle, t.targetCount).replace(/^./, c => c.toUpperCase()) : undefined,
-                          t.dueDate ? new Date(t.dueDate).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }) : undefined,
+                          t.dueDate ? (
+  (() => {
+    const d = new Date(t.dueDate);
+    const dateStr = d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+    const hasTime = d.getHours() !== 12 || d.getMinutes() !== 0 || t.timeOfDay || (t.alerts && t.alerts.length > 0);
+    const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    return hasTime ? `${dateStr} a las ${timeStr}` : dateStr;
+  })()
+) : undefined,
+t.alerts && t.alerts.length > 0 ? `🔔 Aviso ${t.alerts[0].time || ''}`.trim() : undefined,
                           t.timeOfDay ? (t.timeOfDay === 'morning' ? 'Por la mañana' : t.timeOfDay === 'afternoon' ? 'Por la tarde' : 'Por la noche') : undefined,
                           t.price !== undefined ? formatEuro(Number(t.price)) : undefined,
                           t.priority === 'high' ? 'Urgente' : t.priority === 'medium' ? 'Prioridad media' : undefined,
