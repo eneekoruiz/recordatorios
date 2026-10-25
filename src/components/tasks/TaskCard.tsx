@@ -1472,8 +1472,7 @@ export const TaskCard = React.memo(function TaskCard({
                 onClick={() => setIsEditingTitle(true)}
                 className="task-title"
                 animate={{
-                  color: isEffectivelyDone ? 'var(--text-tertiary)' : 'var(--text-primary)',
-                  opacity: isEffectivelyDone ? 0.65 : 1
+                  color: isEffectivelyDone ? 'var(--text-secondary)' : 'var(--text-primary)'
                 }}
                 transition={{ duration: 0.25, ease: 'easeOut' }}
                 style={{

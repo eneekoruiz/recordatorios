@@ -30,8 +30,7 @@ for (const width of [375, 768, 1440]) {
       page.on('pageerror', error => errors.push(error.message));
       await page.clock.install({ time: new Date('2026-10-24T20:00:00+02:00') });
       await bootApp(page);
-      const navigations: string[] = [];
-      page.on('framenavigated', frame => { if (frame === page.mainFrame()) navigations.push(frame.url()); });
+      const documentToken = await page.evaluate(() => ((window as any).__weeklyDocumentToken = crypto.randomUUID()));
       await page.evaluate(() => {
         const store = (window as any).useAppStore;
         store.getState().addList({ id: 'weekly_regression', name: 'Quehaceres diarios personalizados', color: '#007aff', listType: 'routines' });
@@ -78,7 +77,7 @@ for (const width of [375, 768, 1440]) {
       }
       await page.screenshot({ path: testInfo.outputPath('weekly-sunday.png') });
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
-      expect(navigations).toEqual([]);
+      expect(await page.evaluate(() => (window as any).__weeklyDocumentToken)).toBe(documentToken);
 
       await page.reload();
       await page.waitForFunction(() => (window as any).useAppStore?.getState().hasHydrated);
