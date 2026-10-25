@@ -116,7 +116,8 @@ describe('runContentMigrations (Misiones 4 y 5)', () => {
     expect(secNames).toContain('Música');
     expect(secNames).toContain('Libros');
     expect(secNames).toContain('Apellidos');
-    expect(secNames).toContain('Recuerda');
+    expect(secNames).toContain('Recursos y Web');
+    expect(secNames).not.toContain('Recuerda');
 
     // Segunda ejecución (Idempotencia)
     const countBefore = Object.values(tasks).filter(t => !t.deleted_at).length;
@@ -300,5 +301,117 @@ describe('runContentMigrations (Misiones 4 y 5)', () => {
     expect(podologo).toBeDefined();
     expect(podologo?.categoryId).toBe('care');
     expect(podologo?.cycle_id).toBe('cycle_month');
+  });
+
+  it('clasifica correctamente medios en Biblioteca de vida (Titanes como peli, series, apellidos con orden) y elimina seccion Recuerda', () => {
+    let tasks: Record<string, TaskItem> = {
+      t_titanes: {
+        id: 't_titanes',
+        title: 'Titanes',
+        categoryId: 'biblioteca_vida',
+        sectionId: 'sec_biblioteca_vida_recuerda',
+        status: 'pending',
+        created_at: '',
+        version: 1,
+        user_id: 'u1',
+        type: 'task'
+      },
+      t_asesino: {
+        id: 't_asesino',
+        title: 'Cómo defender a un asesino',
+        categoryId: 'recuerda',
+        status: 'pending',
+        created_at: '',
+        version: 1,
+        user_id: 'u1',
+        type: 'task'
+      },
+      t_catastroficas: {
+        id: 't_catastroficas',
+        title: 'Una serie de catastróficas desdichas',
+        categoryId: 'biblioteca_vida',
+        status: 'pending',
+        created_at: '',
+        version: 1,
+        user_id: 'u1',
+        type: 'task'
+      },
+      t_protegidos: {
+        id: 't_protegidos',
+        title: 'Los protegidos',
+        categoryId: 'biblioteca_vida',
+        status: 'pending',
+        created_at: '',
+        version: 1,
+        user_id: 'u1',
+        type: 'task'
+      },
+      t_ruiz: {
+        id: 't_ruiz',
+        title: 'Ruiz',
+        categoryId: 'biblioteca_vida',
+        status: 'pending',
+        created_at: '',
+        version: 1,
+        user_id: 'u1',
+        type: 'task'
+      },
+      t_koldokoak: {
+        id: 't_koldokoak',
+        title: 'Koldokoak2005a',
+        categoryId: 'recuerda',
+        status: 'pending',
+        created_at: '',
+        version: 1,
+        user_id: 'u1',
+        type: 'task'
+      }
+    };
+    let lists: any[] = [
+      { id: 'biblioteca_vida', name: 'Biblioteca de vida', listType: 'library' }
+    ];
+    let listSections: any[] = [
+      { id: 'sec_biblioteca_vida_recuerda', listId: 'biblioteca_vida', name: 'Recuerda', order: 5 }
+    ];
+
+    const store: any = {
+      get tasks() { return tasks; },
+      get lists() { return lists; },
+      get listSections() { return listSections; },
+      addList: (l: any) => { lists.push(l); },
+      addListSection: (s: any) => { listSections.push(s); },
+      deleteListSection: (id: string) => {
+        listSections = listSections.filter(s => s.id !== id);
+      },
+      addTask: (t: any) => {
+        const id = t.id || 'gen_' + Math.random().toString(36).slice(2);
+        tasks[id] = { id, ...t };
+      },
+      updateTask: (id: string, updates: any) => {
+        if (tasks[id]) {
+          tasks[id] = { ...tasks[id], ...updates };
+        }
+      }
+    };
+
+    runContentMigrations(store);
+
+    expect(tasks['t_titanes'].mediaType).toBe('movie');
+    expect(tasks['t_titanes'].sectionId).toContain('peliculas');
+
+    expect(tasks['t_asesino'].mediaType).toBe('series');
+    expect(tasks['t_asesino'].sectionId).toContain('series');
+    expect(tasks['t_catastroficas'].mediaType).toBe('series');
+    expect(tasks['t_catastroficas'].sectionId).toContain('series');
+    expect(tasks['t_protegidos'].mediaType).toBe('series');
+    expect(tasks['t_protegidos'].sectionId).toContain('series');
+
+    expect(tasks['t_ruiz'].sectionId).toContain('apellidos');
+    expect(tasks['t_ruiz'].order).toBe(0);
+
+    expect(tasks['t_koldokoak'].sectionId).toContain('recursos');
+
+    const recuerdaSec = listSections.find(s => s.name === 'Recuerda' && !s.deleted_at);
+    expect(recuerdaSec).toBeUndefined();
   });
 });

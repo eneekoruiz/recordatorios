@@ -16,6 +16,8 @@ export interface ContentMigrationStore {
   updateList?: (id: string, updates: any) => void;
   deleteList?: (id: string) => void;
   addListSection: (sec: any) => void;
+  updateListSection?: (id: string, updates: any) => void;
+  deleteListSection?: (id: string) => void;
   addTask: (task: Partial<TaskItem>) => void;
   updateTask: (id: string, updates: Partial<TaskItem>) => void;
   deleteTask?: (id: string) => void;
@@ -326,7 +328,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 7. 'Biblioteca de vida': unificar con 'Recuerda' si existe, o crearla con sus secciones
+  // 7. 'Biblioteca de vida': unificar con 'Recuerda' si existe, crearla con sus secciones y clasificar medios
   // ──────────────────────────────────────────────────────────────────────────
   const isLibraryOrRecuerda = (l: any) => {
     if (!l) return false;
@@ -373,7 +375,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
     { name: 'Música', key: 'musica' },
     { name: 'Libros', key: 'libros' },
     { name: 'Apellidos', key: 'apellidos' },
-    { name: 'Recuerda', key: 'recuerda' }
+    { name: 'Recursos y Web', key: 'recursos' }
   ];
 
   const currentLibSections = sections.filter(s => s.listId === libListId && !s.deleted_at);
@@ -394,9 +396,90 @@ export function runContentMigrations(store: ContentMigrationStore): void {
     }
   });
 
+  // Soft-delete o eliminar secciones 'Recuerda' obsoletas en biblioteca_vida
+  const obsoleteRecuerdaSecs = (store.listSections || sections).filter(
+    s => s.listId === libListId && (normalize(s.name) === 'recuerda' || s.id.endsWith('_recuerda')) && !s.deleted_at
+  );
+  obsoleteRecuerdaSecs.forEach(s => {
+    if (store.deleteListSection) {
+      store.deleteListSection(s.id);
+    } else if (store.updateListSection) {
+      store.updateListSection(s.id, { deleted_at: NOW, updated_at: NOW });
+    } else {
+      s.deleted_at = NOW;
+    }
+  });
+
   const updatedLibSections = (store.listSections || sections).filter(s => s.listId === libListId && !s.deleted_at);
   const getSectionForType = (key: string) => {
-    return updatedLibSections.find(s => s.id === `sec_${libListId}_${key}` || normalize(s.name).includes(key))?.id;
+    return updatedLibSections.find(s => s.id === `sec_${libListId}_${key}` || normalize(s.name).includes(key))?.id
+      || updatedLibSections[0]?.id;
+  };
+
+  const CANONICAL_MEDIA_MAP: Record<string, { type: TaskItem['mediaType']; sectionKey: string; order?: number }> = {
+    // 14 Apellidos familiares preservando su orden exacto (0 a 13)
+    'ruiz': { type: 'other', sectionKey: 'apellidos', order: 0 },
+    'mollon': { type: 'other', sectionKey: 'apellidos', order: 1 },
+    'jaurena': { type: 'other', sectionKey: 'apellidos', order: 2 },
+    'vega': { type: 'other', sectionKey: 'apellidos', order: 3 },
+    'vela': { type: 'other', sectionKey: 'apellidos', order: 4 },
+    'abril': { type: 'other', sectionKey: 'apellidos', order: 5 },
+    'mujica': { type: 'other', sectionKey: 'apellidos', order: 6 },
+    'iraola': { type: 'other', sectionKey: 'apellidos', order: 7 },
+    'gonzalez': { type: 'other', sectionKey: 'apellidos', order: 8 },
+    'colomo': { type: 'other', sectionKey: 'apellidos', order: 9 },
+    'alberdi': { type: 'other', sectionKey: 'apellidos', order: 10 },
+    'salaberria': { type: 'other', sectionKey: 'apellidos', order: 11 },
+    'perez': { type: 'other', sectionKey: 'apellidos', order: 12 },
+    'goikoetxea': { type: 'other', sectionKey: 'apellidos', order: 13 },
+
+    // Películas y Documentales (incluyendo Titanes, Still Alice, Mommy be mine, Salvados, Generación porno, Maspalomas)
+    'titanes': { type: 'movie', sectionKey: 'peliculas' },
+    'siempre alice': { type: 'movie', sectionKey: 'peliculas' },
+    'mommy be mine': { type: 'movie', sectionKey: 'peliculas' },
+    'salvados - redes sociales': { type: 'movie', sectionKey: 'peliculas' },
+    'salvados redes sociales': { type: 'movie', sectionKey: 'peliculas' },
+    'generacion porno creo que era': { type: 'movie', sectionKey: 'peliculas' },
+    'generacion porno': { type: 'movie', sectionKey: 'peliculas' },
+    'maspalomas': { type: 'movie', sectionKey: 'peliculas' },
+
+    // Series (Cómo defender a un asesino, Una serie de catastróficas desdichas, Los protegidos, etc.)
+    'como defender a un asesino': { type: 'series', sectionKey: 'series' },
+    'una serie de catastroficas desdichas': { type: 'series', sectionKey: 'series' },
+    'los protegidos': { type: 'series', sectionKey: 'series' },
+    'single parents': { type: 'series', sectionKey: 'series' },
+    'new mexico': { type: 'series', sectionKey: 'series' },
+    'clase letal': { type: 'series', sectionKey: 'series' },
+    'matadero': { type: 'series', sectionKey: 'series' },
+    'skam': { type: 'series', sectionKey: 'series' },
+    'true detective': { type: 'series', sectionKey: 'series' },
+    'derry girls': { type: 'series', sectionKey: 'series' },
+    'legends of tomorrow': { type: 'series', sectionKey: 'series' },
+    'mr. inbetween': { type: 'series', sectionKey: 'series' },
+    'mr inbetween': { type: 'series', sectionKey: 'series' },
+    'the looming tower': { type: 'series', sectionKey: 'series' },
+    'stranger things': { type: 'series', sectionKey: 'series' },
+    'the crown': { type: 'series', sectionKey: 'series' },
+    'los originales': { type: 'series', sectionKey: 'series' },
+    'the witcher': { type: 'series', sectionKey: 'series' },
+    'succes': { type: 'series', sectionKey: 'series' },
+    'succession': { type: 'series', sectionKey: 'series' },
+    'erase una vez': { type: 'series', sectionKey: 'series' },
+    'roswell': { type: 'series', sectionKey: 'series' },
+    'el embarcadero': { type: 'series', sectionKey: 'series' },
+    'the blacklist': { type: 'series', sectionKey: 'series' },
+    'young justice': { type: 'series', sectionKey: 'series' },
+    'dia a dia': { type: 'series', sectionKey: 'series' },
+    'la otra mirada': { type: 'series', sectionKey: 'series' },
+    'sorry for your loss': { type: 'series', sectionKey: 'series' },
+    'call my agent': { type: 'series', sectionKey: 'series' },
+    'vedex': { type: 'series', sectionKey: 'series' },
+    '19-2': { type: 'series', sectionKey: 'series' },
+    'hola': { type: 'series', sectionKey: 'series' },
+
+    // Recursos y Web
+    'koldokoak2005a': { type: 'other', sectionKey: 'recursos' },
+    'coldocuak2005': { type: 'other', sectionKey: 'recursos' }
   };
 
   // Mover tareas de listas redundantes (ej. lista independiente 'Recuerda') a la canónica
@@ -406,15 +489,19 @@ export function runContentMigrations(store: ContentMigrationStore): void {
     redTasks.forEach(t => {
       const oldSec = sections.find(s => s.id === t.sectionId);
       const oldSecName = normalize(oldSec?.name);
+      const titleNorm = normalize(t.title);
       let targetSecId = t.sectionId;
 
-      if (!oldSec || oldSec.listId !== libListId) {
+      const mapped = CANONICAL_MEDIA_MAP[titleNorm];
+      if (mapped) {
+        targetSecId = getSectionForType(mapped.sectionKey);
+      } else if (!oldSec || oldSec.listId !== libListId || oldSecName === 'recuerda') {
         if (oldSecName.includes('pelicula')) targetSecId = getSectionForType('peliculas');
         else if (oldSecName.includes('serie')) targetSecId = getSectionForType('series');
         else if (oldSecName.includes('musica') || oldSecName.includes('cancion')) targetSecId = getSectionForType('musica');
         else if (oldSecName.includes('libro')) targetSecId = getSectionForType('libros');
         else if (oldSecName.includes('apellido')) targetSecId = getSectionForType('apellidos');
-        else targetSecId = getSectionForType('recuerda');
+        else targetSecId = getSectionForType('series');
       }
 
       store.updateTask(t.id, {
@@ -434,9 +521,12 @@ export function runContentMigrations(store: ContentMigrationStore): void {
   // Reasignar también tareas huérfanas con categoryId 'recuerda' o 'biblioteca'
   Object.values(store.tasks || {}).forEach(t => {
     if ((t.categoryId === 'recuerda' || t.categoryId === 'biblioteca') && t.categoryId !== libListId) {
+      const titleNorm = normalize(t.title);
+      const mapped = CANONICAL_MEDIA_MAP[titleNorm];
+      const targetSecId = mapped ? getSectionForType(mapped.sectionKey) : getSectionForType('series');
       store.updateTask(t.id, {
         categoryId: libListId,
-        sectionId: getSectionForType('recuerda'),
+        sectionId: targetSecId,
         deleted_at: undefined
       });
     }
@@ -452,31 +542,37 @@ export function runContentMigrations(store: ContentMigrationStore): void {
 
     const titleNorm = normalize(t.title);
     const notesNorm = normalize(t.notes || t.description);
+    const mapped = CANONICAL_MEDIA_MAP[titleNorm];
 
-    if (!inferredType) {
+    if (mapped) {
+      inferredType = mapped.type;
+    } else if (!inferredType) {
       if (secName.includes('pelicula') || titleNorm.includes('pelicula') || notesNorm.includes('pelicula')) inferredType = 'movie';
       else if (secName.includes('serie') || titleNorm.includes('serie')) inferredType = 'series';
       else if (secName.includes('musica') || secName.includes('cancion') || titleNorm.includes('cancion') || titleNorm.includes('disco')) inferredType = 'music';
       else if (secName.includes('libro') || titleNorm.includes('libro')) inferredType = 'book';
       else if (secName.includes('apellido') || titleNorm.includes('apellido')) inferredType = 'other';
-      else inferredType = 'other';
+      else inferredType = 'series';
     }
 
-    // Si la tarea no tiene sección, asignarle la mejor sección por tipo o contenido
+    // Si la tarea está en mapa o su sección es obsoleta (ej. Recuerda), reasignar a su sección precisa
     let newSectionId = t.sectionId;
-    if (!newSectionId || !updatedLibSections.some(s => s.id === newSectionId)) {
+    if (mapped) {
+      newSectionId = getSectionForType(mapped.sectionKey);
+    } else if (!newSectionId || !updatedLibSections.some(s => s.id === newSectionId) || secName === 'recuerda') {
       if (inferredType === 'movie' || titleNorm.includes('pelicula')) newSectionId = getSectionForType('peliculas');
       else if (inferredType === 'series' || titleNorm.includes('serie')) newSectionId = getSectionForType('series');
       else if (inferredType === 'music' || titleNorm.includes('cancion') || titleNorm.includes('musica')) newSectionId = getSectionForType('musica');
       else if (inferredType === 'book' || titleNorm.includes('libro')) newSectionId = getSectionForType('libros');
       else if (titleNorm.includes('apellido') || notesNorm.includes('apellido')) newSectionId = getSectionForType('apellidos');
-      else newSectionId = getSectionForType('recuerda');
+      else newSectionId = getSectionForType('series');
     }
 
     const updates: Partial<TaskItem> = {};
     if (inferredType && t.mediaType !== inferredType) updates.mediaType = inferredType;
     if (!t.mediaStatus) updates.mediaStatus = 'want_to_watch';
     if (newSectionId && t.sectionId !== newSectionId) updates.sectionId = newSectionId;
+    if (mapped?.order !== undefined && t.order !== mapped.order) updates.order = mapped.order;
     if (t.disableDuration === undefined || !t.disableDuration) updates.disableDuration = true;
     if (t.duration !== undefined) updates.duration = undefined;
 
