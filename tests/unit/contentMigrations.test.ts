@@ -126,19 +126,29 @@ describe('runContentMigrations (Misiones 4 y 5)', () => {
     expect(countAfter).toBe(countBefore);
   });
 
-  it('P1-1: restaura tareas personalizadas de hábitos vitales que estuvieran en la lista eliminada o con deleted_at', () => {
+  it('P1-1: reasigna tareas de hábitos vitales de la lista eliminada pero NUNCA resucita tareas borradas', () => {
     let tasks: Record<string, TaskItem> = {
       t_custom: {
         id: 't_custom',
         title: 'Tomar suplemento vitamínico',
         categoryId: VITAL_HABITS_LIST_ID,
         status: 'pending',
-        deleted_at: '2026-10-01T12:00:00.000Z',
         created_at: '',
         version: 1,
         user_id: 'u1',
         type: 'task',
         notes: 'Con el desayuno'
+      },
+      t_deleted_vital: {
+        id: 't_deleted_vital',
+        title: 'Beber agua fresca',
+        categoryId: VITAL_HABITS_LIST_ID,
+        status: 'pending',
+        deleted_at: '2026-10-01T12:00:00.000Z',
+        created_at: '',
+        version: 1,
+        user_id: 'u1',
+        type: 'task'
       }
     };
     let lists: any[] = [
@@ -177,6 +187,101 @@ describe('runContentMigrations (Misiones 4 y 5)', () => {
     expect(migrated.disableDuration).toBe(true);
     expect(migrated.notes).toBe('Con el desayuno');
     expect(lists.some(l => l.id === VITAL_HABITS_LIST_ID)).toBe(false);
+
+    // La tarea borrada DEBE permanecer borrada
+    expect(tasks['t_deleted_vital'].deleted_at).toBe('2026-10-01T12:00:00.000Z');
+  });
+
+  it('respeta escrupulosamente las tareas borradas: NUNCA desmarca deleted_at ni recrea tareas eliminadas', () => {
+    let tasks: Record<string, TaskItem> = {
+      t_cejas_del: {
+        id: 'task_hacerme_cejas_mensual',
+        title: 'Hacerme las cejas',
+        categoryId: 'care',
+        status: 'pending',
+        deleted_at: '2026-10-25T15:00:00.000Z',
+        created_at: '',
+        version: 1,
+        user_id: 'u1',
+        type: 'task'
+      },
+      t_horno_del: {
+        id: 't_horno',
+        title: 'Limpiar el horno a fondo',
+        categoryId: 'limpieza',
+        status: 'pending',
+        deleted_at: '2026-10-25T15:00:00.000Z',
+        created_at: '',
+        version: 1,
+        user_id: 'u1',
+        type: 'task'
+      },
+      t_matabichos_del: {
+        id: 'task_matabichos_telaranas_mensual',
+        title: 'Echar matabichos por las esquinas y pasar las telarañas por las esquinas del techo',
+        categoryId: 'limpieza',
+        status: 'pending',
+        deleted_at: '2026-10-25T15:00:00.000Z',
+        created_at: '',
+        version: 1,
+        user_id: 'u1',
+        type: 'task'
+      },
+      t_compra_mensual_del: {
+        id: 't_compra_mensual',
+        title: 'compra mensual',
+        categoryId: 'compra',
+        status: 'pending',
+        deleted_at: '2026-10-25T15:00:00.000Z',
+        created_at: '',
+        version: 1,
+        user_id: 'u1',
+        type: 'task'
+      }
+    };
+    let lists: any[] = [
+      { id: 'care', name: 'Care', listType: 'routines' },
+      { id: 'limpieza', name: 'Limpieza', listType: 'routines' },
+      { id: 'compra', name: 'Compra', listType: 'shopping' }
+    ];
+    let listSections: any[] = [
+      { id: 'sec_care_mensual', listId: 'care', name: 'Mensuales', order: 1 },
+      { id: 'sec_limpieza_mensual', listId: 'limpieza', name: 'Mensuales', order: 2 }
+    ];
+    const store: any = {
+      get tasks() { return tasks; },
+      get lists() { return lists; },
+      get listSections() { return listSections; },
+      addList: (l: any) => { lists.push(l); },
+      addListSection: (s: any) => { listSections.push(s); },
+      addTask: (t: any) => {
+        const id = t.id || 'gen_' + Math.random().toString(36).slice(2);
+        tasks[id] = { id, ...t };
+      },
+      updateTask: (id: string, updates: any) => {
+        if (tasks[id]) {
+          tasks[id] = { ...tasks[id], ...updates };
+        }
+      }
+    };
+
+    runContentMigrations(store);
+
+    // 1. deleted_at jamás se desmarca
+    expect(tasks['t_cejas_del'].deleted_at).toBe('2026-10-25T15:00:00.000Z');
+    expect(tasks['t_horno_del'].deleted_at).toBe('2026-10-25T15:00:00.000Z');
+    expect(tasks['t_matabichos_del'].deleted_at).toBe('2026-10-25T15:00:00.000Z');
+    expect(tasks['t_compra_mensual_del'].deleted_at).toBe('2026-10-25T15:00:00.000Z');
+
+    // 2. Ninguna tarea borrada se ha recreado como activa
+    const cejasActivas = Object.values(tasks).filter(t => !t.deleted_at && t.title.toLowerCase().includes('ceja'));
+    expect(cejasActivas).toHaveLength(0);
+
+    const hornoActivo = Object.values(tasks).filter(t => !t.deleted_at && t.title.toLowerCase().includes('horno'));
+    expect(hornoActivo).toHaveLength(0);
+
+    const matabichosActivo = Object.values(tasks).filter(t => !t.deleted_at && t.title.toLowerCase().includes('matabicho'));
+    expect(matabichosActivo).toHaveLength(0);
   });
 
   it('migra y completa la rutina de ejercicios con pajita con 3 subtareas', () => {

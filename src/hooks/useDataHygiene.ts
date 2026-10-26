@@ -63,24 +63,6 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
 
     const activeTasks = Object.values(state.tasks || {}).filter((t: any) => !t.deleted_at);
 
-    // Hygiene: Restaurar tareas legítimas que fueron erróneamente soft-deleted por filtros de limpieza agresivos
-    const titlesToProtectAndRestore = new Set([
-      'compra mensual', 'compra anual', 'limpieza mensual', 'limpieza anual',
-      'skincare semanal', 'skin-care semanal', 'skin-care mensual', 'skin-care diaria'
-    ]);
-    const allStoredTasks = Object.values(state.tasks || {});
-    allStoredTasks.forEach((t: any) => {
-      const clean = (t.title || '').trim().toLowerCase();
-      if (titlesToProtectAndRestore.has(clean) && t.deleted_at) {
-        state.updateTaskRaw({
-          ...t,
-          deleted_at: undefined,
-          updated_at: new Date().toISOString(),
-          _is_dirty: true
-        });
-      }
-    });
-
     // Hygiene: eliminar duración por completo de "¿Te aburres?" y micro-hábitos recurrentes (agua, dientes, manos)
     activeTasks.forEach((t: any) => {
       const secId = t.sectionId || (t as any).section_id;

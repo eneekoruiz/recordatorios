@@ -12,6 +12,7 @@ export interface ContentMigrationStore {
   tasks: Record<string, TaskItem>;
   lists?: any[];
   listSections?: any[];
+  tombstones?: { tasks?: any[]; lists?: any[] };
   addList: (list: any) => void;
   updateList?: (id: string, updates: any) => void;
   deleteList?: (id: string) => void;
@@ -35,6 +36,13 @@ export interface ContentMigrationStore {
  * 8. Configura la Biblioteca de vida unificada.
  */
 export function runContentMigrations(store: ContentMigrationStore): void {
+  const allEverTasks = [
+    ...Object.values(store.tasks || {}),
+    ...(store.tombstones?.tasks || [])
+  ];
+  const hasTaskEver = (predicate: (t: TaskItem) => boolean): boolean => {
+    return allEverTasks.some(t => predicate(t as TaskItem));
+  };
   const tasks = store.tasks || {};
   const lists = store.lists || [];
   const sections = store.listSections || [];
@@ -91,8 +99,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
         sectionId: secHabitosVitales.id,
         duration: undefined,
         parallelDuration: undefined,
-        disableDuration: true,
-        deleted_at: undefined
+        disableDuration: true
       };
       if (titleNorm.includes('agua')) {
         updatePayload.title = 'Beber agua';
@@ -117,8 +124,10 @@ export function runContentMigrations(store: ContentMigrationStore): void {
   const vitalTasks = Object.values(store.tasks || {}).filter(t => !t.deleted_at && (t.sectionId === secHabitosVitales.id || (t.categoryId === vitalListId && (normalize(t.title).includes('beber agua') || normalize(t.title).includes('comer')))));
   const hasAgua = vitalTasks.some(t => normalize(t.title).includes('beber agua'));
   const hasComer = vitalTasks.some(t => normalize(t.title).includes('comer'));
+  const hasEverAgua = hasTaskEver(t => normalize(t.title).includes('beber agua'));
+  const hasEverComer = hasTaskEver(t => normalize(t.title).includes('comer'));
 
-  if (!hasAgua) {
+  if (!hasAgua && !hasEverAgua) {
     store.addTask({
       title: 'Beber agua',
       categoryId: vitalListId,
@@ -144,7 +153,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
     }
   }
 
-  if (!hasComer) {
+  if (!hasComer && !hasEverComer) {
     store.addTask({
       title: 'Comer',
       categoryId: vitalListId,
@@ -185,6 +194,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
   // 3. 'Limpiar el horno a fondo' -> MENSUAL
   // ──────────────────────────────────────────────────────────────────────────
   let hornoTask = allActiveTasks.find(t => normalize(t.title).includes('horno'));
+  const hasEverHorno = hasTaskEver(t => normalize(t.title).includes('horno'));
   if (hornoTask) {
     if (hornoTask.sectionId !== secMensuales.id || hornoTask.categoryId !== routinesListId) {
       store.updateTask(hornoTask.id, {
@@ -193,7 +203,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
         sectionId: secMensuales.id
       });
     }
-  } else {
+  } else if (!hasEverHorno) {
     store.addTask({
       title: 'Limpiar el horno a fondo',
       categoryId: routinesListId,
@@ -207,12 +217,13 @@ export function runContentMigrations(store: ContentMigrationStore): void {
   // 4. 'Regar las plantas' -> Incluir 'Añadir abono para que crezcan más rápido'
   // ──────────────────────────────────────────────────────────────────────────
   const EXACT_ABONO_TEXT = 'Añadir abono para que crezcan más rápido';
+  const hasEverPlantas = hasTaskEver(t => normalize(t.title).includes('regar') && normalize(t.title).includes('planta'));
   const plantasTask = allActiveTasks.find(t => normalize(t.title).includes('regar') && normalize(t.title).includes('planta'));
   if (plantasTask) {
-    // Comprobar si ya existe una subtarea con ese texto
     const existingSubtasks = allActiveTasks.filter(t => t.parentId === plantasTask.id);
     const hasAbonoSubtask = existingSubtasks.some(s => (s.title || '').trim() === EXACT_ABONO_TEXT);
-    if (!hasAbonoSubtask) {
+    const hasEverAbono = hasTaskEver(s => s.parentId === plantasTask.id && (s.title || '').trim() === EXACT_ABONO_TEXT);
+    if (!hasAbonoSubtask && !hasEverAbono) {
       store.addTask({
         title: EXACT_ABONO_TEXT,
         parentId: plantasTask.id,
@@ -222,8 +233,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
         status: 'pending'
       });
     }
-  } else {
-    // Si no existía, crear la tarea con su subtarea
+  } else if (!hasEverPlantas) {
     const newPlantasId = 'task_regar_plantas_' + Date.now();
     store.addTask({
       id: newPlantasId,
@@ -252,6 +262,11 @@ export function runContentMigrations(store: ContentMigrationStore): void {
     'Espejo del baño'
   ];
 
+  const hasEverEspejos = hasTaskEver(t => {
+    const n = normalize(t.title);
+    return n.includes('espejo') && !EXACT_ESPEJOS_SUBTASKS.map(normalize).includes(n) && !t.parentId;
+  });
+
   let espejosTask = allActiveTasks.find(t => {
     const n = normalize(t.title);
     return n.includes('espejo') && !EXACT_ESPEJOS_SUBTASKS.map(normalize).includes(n) && !t.parentId;
@@ -265,7 +280,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
       duration: 10,
       disableDuration: false
     });
-  } else {
+  } else if (!hasEverEspejos) {
     const newEspejosId = 'task_limpiar_espejos_' + Date.now();
     store.addTask({
       id: newEspejosId,
@@ -284,7 +299,8 @@ export function runContentMigrations(store: ContentMigrationStore): void {
   const currentSubtaskTitles = new Set(currentEspejosSubtasks.map(s => (s.title || '').trim()));
 
   EXACT_ESPEJOS_SUBTASKS.forEach(subTitle => {
-    if (!currentSubtaskTitles.has(subTitle)) {
+    const hasEverSub = hasTaskEver(s => s.parentId === espejosTask!.id && (s.title || '').trim() === subTitle);
+      if (!currentSubtaskTitles.has(subTitle) && !hasEverSub) {
       store.addTask({
         title: subTitle,
         parentId: espejosTask!.id,
@@ -315,8 +331,9 @@ export function runContentMigrations(store: ContentMigrationStore): void {
   // 6. 'Tirar el albornoz a la lavadora' -> SEMANAL
   // ──────────────────────────────────────────────────────────────────────────
   const EXACT_ALBORNOZ_TITLE = 'Tirar el albornoz a la lavadora';
+  const hasEverAlbornoz = hasTaskEver(t => normalize(t.title).includes('albornoz'));
   const hasAlbornoz = allActiveTasks.some(t => normalize(t.title).includes('albornoz'));
-  if (!hasAlbornoz) {
+  if (!hasAlbornoz && !hasEverAlbornoz) {
     store.addTask({
       title: EXACT_ALBORNOZ_TITLE,
       categoryId: routinesListId,
@@ -506,8 +523,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
 
       store.updateTask(t.id, {
         categoryId: libListId,
-        sectionId: targetSecId,
-        deleted_at: undefined
+        sectionId: targetSecId
       });
     });
 
@@ -526,8 +542,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
       const targetSecId = mapped ? getSectionForType(mapped.sectionKey) : getSectionForType('series');
       store.updateTask(t.id, {
         categoryId: libListId,
-        sectionId: targetSecId,
-        deleted_at: undefined
+        sectionId: targetSecId
       });
     }
   });
@@ -756,6 +771,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
 
       subtaskDefs.forEach((def, idx) => {
         const found = existingSubtasks.find(s => normalize(s.title).includes(def.key));
+        const hasEverSub = hasTaskEver(s => s.parentId === pajitaParent.id && normalize(s.title).includes(def.key));
         if (found) {
           if (found.title !== def.title || found.notes !== def.notes || found.duration !== 1) {
             store.updateTask(found.id, {
@@ -765,7 +781,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
               order: idx
             });
           }
-        } else {
+        } else if (!hasEverSub) {
           store.addTask({
             id: `task_sub_pajita_${def.key}`,
             title: def.title,
@@ -792,8 +808,8 @@ export function runContentMigrations(store: ContentMigrationStore): void {
     const mensualSectionId = careMensualSec ? careMensualSec.id : `sec_${careId}_mensuales`;
 
     // 1. Hacerme las cejas
-    const hasCejas = allActiveTasks.some(t => normalize(t.title).includes('ceja'));
-    if (!hasCejas) {
+    const hasEverCejas = hasTaskEver(t => normalize(t.title).includes('ceja'));
+    if (!hasEverCejas) {
       store.addTask({
         id: 'task_hacerme_cejas_mensual',
         title: 'Hacerme las cejas',
@@ -809,8 +825,8 @@ export function runContentMigrations(store: ContentMigrationStore): void {
     }
 
     // 2. Manicura y pedicura
-    const hasManiPedi = allActiveTasks.some(t => (normalize(t.title).includes('manicura') || normalize(t.title).includes('pedicura')) && !t.parentId);
-    if (!hasManiPedi) {
+    const hasEverManiPedi = hasTaskEver(t => (normalize(t.title).includes('manicura') || normalize(t.title).includes('pedicura')) && !t.parentId);
+    if (!hasEverManiPedi) {
       const newManiPediId = 'task_manicura_pedicura_mensual';
       store.addTask({
         id: newManiPediId,
@@ -851,8 +867,8 @@ export function runContentMigrations(store: ContentMigrationStore): void {
     }
 
     // 3. Ir al podólogo
-    const hasPodologo = allActiveTasks.some(t => normalize(t.title).includes('podolog'));
-    if (!hasPodologo) {
+    const hasEverPodologo = hasTaskEver(t => normalize(t.title).includes('podolog'));
+    if (!hasEverPodologo) {
       store.addTask({
         id: 'task_ir_al_podologo',
         title: 'Ir al podólogo',
@@ -875,6 +891,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
     const compraMensualSec = sections.find((s: any) => s.listId === compraId && (s.id === 'sec_compra_mensuales' || s.id === 'sec_compras_mensuales' || normalize(s.name).includes('mensu')));
     const compraMensualSecId = compraMensualSec ? compraMensualSec.id : `sec_${compraId}_mensuales`;
 
+    const hasEverFisio = hasTaskEver(t => (normalize(t.title).includes('fisio') || normalize(t.title).includes('masaje')) && (t.categoryId === compraId || t.categoryId === 'compra' || t.categoryId === 'compras'));
     const fisioTask = allActiveTasks.find(t => (normalize(t.title).includes('fisio') || normalize(t.title).includes('masaje')) && (t.categoryId === compraId || t.categoryId === 'compra' || t.categoryId === 'compras'));
     if (fisioTask) {
       if (!normalize(fisioTask.title).includes('fisio')) {
@@ -883,7 +900,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
           notes: fisioTask.notes || 'Sesión mensual de fisioterapia o masaje de descarga (50€ aprox.).'
         });
       }
-    } else {
+    } else if (!hasEverFisio) {
       store.addTask({
         id: 'task_ir_al_fisio_mensual',
         title: 'Ir al fisio (o masaje)',
@@ -915,10 +932,10 @@ export function runContentMigrations(store: ContentMigrationStore): void {
   const genSectionId = secMensualGeneral ? secMensualGeneral.id : secMensuales.id;
 
   // a) Echar matabichos y telarañas
-  const hasMatabichos = allActiveTasks.some(t =>
+  const hasEverMatabichos = hasTaskEver(t =>
     normalize(t.title).includes('matabicho') || normalize(t.title).includes('telarana')
   );
-  if (!hasMatabichos) {
+  if (!hasEverMatabichos) {
     const parentId = 'task_matabichos_telaranas_mensual';
     store.addTask({
       id: parentId,
@@ -959,11 +976,11 @@ export function runContentMigrations(store: ContentMigrationStore): void {
   }
 
   // b) Limpiar arriba del armario y arriba de la tele (Habitación)
-  const hasArmarioTele = allActiveTasks.some(t =>
+  const hasEverArmarioTele = hasTaskEver(t =>
     (normalize(t.title).includes('armario') && normalize(t.title).includes('tele')) ||
     (normalize(t.title).includes('arriba del armario') || normalize(t.title).includes('arriba de la tele'))
   );
-  if (!hasArmarioTele) {
+  if (!hasEverArmarioTele) {
     const parentId = 'task_armario_tele_mensual';
     store.addTask({
       id: parentId,
@@ -1004,10 +1021,10 @@ export function runContentMigrations(store: ContentMigrationStore): void {
   }
 
   // c) Limpiar las baldas a fondo (quitar todo, limpiar y recolocar)
-  const hasBaldas = allActiveTasks.some(t =>
+  const hasEverBaldas = hasTaskEver(t =>
     normalize(t.title).includes('balda') && (normalize(t.title).includes('fondo') || normalize(t.title).includes('quitar todo'))
   );
-  if (!hasBaldas) {
+  if (!hasEverBaldas) {
     const parentId = 'task_baldas_fondo_mensual';
     store.addTask({
       id: parentId,
