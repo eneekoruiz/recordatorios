@@ -5,6 +5,7 @@ import { getTaskPeriodicity } from '../../src/utils/sectionRoutine';
 import { isCompletedInCurrentPeriod, getRoutineSessionDates } from '../../src/services/TaskService';
 import { calculateCycleRoutineStatus } from '../../src/utils/cycleRoutineStatus';
 import { calculateCompletedTasksDuration, calculateTasksDuration } from '../../src/utils/taskDuration';
+import { buildRoutineParts } from '../../src/utils/routineBreakdown';
 
 const originalTimeZone = process.env.TZ;
 const lists: CustomList[] = [{ id: 'house', name: 'Quehaceres diarios', color: '#007aff', listType: 'routines' }];
@@ -145,6 +146,15 @@ describe('weekly completion and remaining time', () => {
 
     // Con sessionDates, la diaria hecha el sábado se reconoce como cumplida para esa rutina:
     expect(isCompletedInCurrentPeriod(dailyDoneOnSaturday, cycles, [], [], sundayDate, sessionDates)).toBe(true);
+    const routine = [weeklyDone, dailyDoneOnSaturday];
+    expect(calculateTasksDuration(routine, [], [], cycles, sundayDate, sessionDates).activeMinutes).toBe(0);
+    expect(calculateCompletedTasksDuration(routine, [], [], cycles, sundayDate, sessionDates).activeMinutes).toBe(60);
+    expect(buildRoutineParts(routine, [], [], cycles, sundayDate, sessionDates)).toEqual([]);
+    expect(calculateTasksDuration([dailyDoneOnSaturday], [], [], cycles, sundayDate).activeMinutes).toBe(30);
+    const monday = new Date(2026, 9, 26, 12);
+    const nextSessions = getRoutineSessionDates('cycle_week', routine, monday, cycles);
+    expect(nextSessions.size).toBe(0);
+    expect(calculateTasksDuration(routine, [], [], cycles, monday, nextSessions).activeMinutes).toBe(60);
 
     // En calculateCycleRoutineStatus con rutina completa:
     const status = calculateCycleRoutineStatus({

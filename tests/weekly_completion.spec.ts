@@ -80,7 +80,8 @@ for (const width of [375, 768, 1440]) {
       expect(await page.evaluate(() => (window as any).__weeklyDocumentToken)).toBe(documentToken);
 
       await page.reload();
-      await page.waitForFunction(() => (window as any).useAppStore?.getState().hasHydrated);
+      // Poll from the test runner: the simulated page clock also controls animation frames.
+      await expect.poll(() => page.evaluate(() => (window as any).useAppStore?.getState().hasHydrated)).toBe(true);
       await page.evaluate(() => window.dispatchEvent(new CustomEvent('select-view', { detail: 'list_weekly_regression' })));
       await expandCompletedWeek(page);
       await expect(first(page).getByRole('button', { name: 'Marcar como pendiente', exact: true })).toBeVisible();

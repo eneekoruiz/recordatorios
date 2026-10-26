@@ -295,15 +295,17 @@ export function runContentMigrations(store: ContentMigrationStore): void {
   }
 
   // Sincronizar las 3 subtareas exactas de espejos
-  const currentEspejosSubtasks = allActiveTasks.filter(t => t.parentId === espejosTask!.id);
+  const espejosTaskId = espejosTask?.id;
+  const currentEspejosSubtasks = espejosTaskId ? allActiveTasks.filter(t => t.parentId === espejosTaskId) : [];
   const currentSubtaskTitles = new Set(currentEspejosSubtasks.map(s => (s.title || '').trim()));
 
   EXACT_ESPEJOS_SUBTASKS.forEach(subTitle => {
-    const hasEverSub = hasTaskEver(s => s.parentId === espejosTask!.id && (s.title || '').trim() === subTitle);
+    if (!espejosTaskId) return;
+    const hasEverSub = hasTaskEver(s => s.parentId === espejosTaskId && (s.title || '').trim() === subTitle);
       if (!currentSubtaskTitles.has(subTitle) && !hasEverSub) {
       store.addTask({
         title: subTitle,
-        parentId: espejosTask!.id,
+        parentId: espejosTaskId,
         categoryId: routinesListId,
         sectionId: secSemanales.id,
         status: 'pending',

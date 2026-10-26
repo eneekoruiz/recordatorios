@@ -17,6 +17,15 @@ beforeEach(() => {
 });
 
 describe('deshacer eliminaciones', () => {
+  it('aplica una sola vez un deshacer aunque se invoque de nuevo el aviso anterior', () => {
+    const undo = vi.fn();
+    showUndoToast('Recordatorio completado', undo);
+    const callback = toasts.at(-1).onUndo;
+    callback();
+    callback();
+    expect(undo).toHaveBeenCalledTimes(1);
+  });
+
   it('restoreListSection devuelve la sección con una fecha de edición nueva', () => {
     const before = new Date(Date.now() - 60_000).toISOString();
     useAppStore.setState({ listSections: [{ id: 's1', listId: 'l', name: 'Sección', order: 0, updated_at: before } as any] } as any);

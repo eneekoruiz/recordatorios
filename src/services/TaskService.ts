@@ -151,7 +151,8 @@ export function isTaskActuallyCompletedInCurrentPeriod(
   cycles?: CustomCycle[] | Date,
   sections?: ListSection[],
   lists?: CustomList[],
-  referenceDate: Date = new Date()
+  referenceDate: Date = new Date(),
+  sessionDates?: Set<string> | string[]
 ): boolean {
   if (task._isRolledOver) return false;
 
@@ -168,6 +169,11 @@ export function isTaskActuallyCompletedInCurrentPeriod(
   if (!effCycleId) {
     if (task.targetCount && task.targetCount > 1 && (task.currentCount || 0) < task.targetCount) return false;
     return isDone;
+  }
+
+  if (sessionDates && task.completionHistory?.length) {
+    const dates = sessionDates instanceof Set ? sessionDates : new Set(sessionDates);
+    if (dates.size && task.completionHistory.some(ts => dates.has(new Date(ts).toDateString()))) return true;
   }
 
   // Si es periódica pero no tiene historial de finalizaciones, está pendiente para el periodo actual
@@ -231,16 +237,7 @@ export function isCompletedInCurrentPeriod(
   if (isSkippedInCurrentPeriod(task, cyclesList, sec, lst, ref)) {
     return true;
   }
-  if (isTaskActuallyCompletedInCurrentPeriod(task, cyclesList, sec, lst, ref)) {
-    return true;
-  }
-  if (sessionDates && task.completionHistory && task.completionHistory.length > 0) {
-    const datesSet = sessionDates instanceof Set ? sessionDates : new Set(sessionDates);
-    if (datesSet.size > 0) {
-      return task.completionHistory.some(ts => datesSet.has(new Date(ts).toDateString()));
-    }
-  }
-  return false;
+  return isTaskActuallyCompletedInCurrentPeriod(task, cyclesList, sec, lst, ref, sessionDates);
 }
 
 /**

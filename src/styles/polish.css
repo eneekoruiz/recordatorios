@@ -2082,7 +2082,7 @@ body.dark .cad-summary-cost strong {
   font: inherit;
   font-size: 0.78rem;
   font-weight: 600;
-  color: var(--accent-primary, #007aff);
+  color: color-mix(in srgb, var(--accent-primary, #007aff) 60%, var(--text-primary) 40%);
   background: color-mix(in srgb, var(--accent-primary, #007aff) 14%, transparent);
   cursor: pointer;
   flex-shrink: 0;

@@ -267,7 +267,7 @@ function MenuActions({
     if (showMoreActions && moreActionsBtnRef.current) {
       const timer = setTimeout(() => {
         moreActionsBtnRef.current?.scrollIntoView({
-          behavior: 'smooth',
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
           block: 'start',
         });
       }, 50);

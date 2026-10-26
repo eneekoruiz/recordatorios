@@ -1286,9 +1286,7 @@ También puedo marcar algo como hecho («marca hecha la leche»), cambiarlo («p
 
     const isNotificationTestPrompt = /\b(?:probar(?:\s+lo\s+de)?\s+(?:las\s+)?notificaciones|prueba(?:\s+de)?\s+notificaci[oó]n|test(?:ear)?\s+(?:las\s+)?notificaciones)\b/i.test(trimmed);
     if (isNotificationTestPrompt && tasks.length > 0) {
-      const first = tasks[0];
-      const timeStr = first.alerts?.[0]?.time || (first.dueDate ? new Date(first.dueDate).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : undefined);
-      reply = `He programado un recordatorio de prueba para dentro de un minuto${timeStr ? ` (a las ${timeStr})` : ''}. Cuando se cumpla el tiempo te saltará la notificación para verificar que todo funciona correctamente.`;
+      reply = 'Te propongo este recordatorio para probar la notificación. Revisa la fecha y el aviso antes de confirmarlo.';
       suggestedReplies = ['Sí', 'Añadir'];
     }
 

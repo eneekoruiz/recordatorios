@@ -3,6 +3,33 @@ import { runContentMigrations } from '../../src/utils/contentMigrations';
 import { VITAL_HABITS_LIST_ID, VITAL_HABITS_SECTION_ID } from '../../src/utils/vitalHabits';
 import { calculateTasksDuration } from '../../src/utils/taskDuration';
 import type { TaskItem } from '../../src/models/Task';
+import type { ContentMigrationStore } from '../../src/utils/contentMigrations';
+
+describe('deleted routine parents', () => {
+  it.each(['stored', 'tombstone'])('does not crash or recreate mirror subtasks after deleting their parent (%s)', mode => {
+    const deleted = { id: 'removed-mirror', title: 'Limpiar espejos', status: 'pending', deleted_at: '2026-10-25T10:00:00Z' } as TaskItem;
+    let nextId = 0;
+    const store: ContentMigrationStore = {
+      tasks: { live: { id: 'live', title: 'Guardar papeles', status: 'pending' } as TaskItem,
+        ...(mode === 'stored' ? { [deleted.id]: deleted } : {}),
+      },
+      lists: [{ id: 'limpieza', name: 'Limpieza' }], listSections: [],
+      tombstones: { tasks: mode === 'tombstone' ? [deleted] : [] },
+      addList: list => { store.lists!.push(list); },
+      addListSection: section => { store.listSections!.push(section); },
+      addTask: task => {
+        const id = task.id || `created-${++nextId}`;
+        store.tasks[id] = { ...task, id } as TaskItem;
+      },
+      updateTask: (id, patch) => { store.tasks[id] = { ...store.tasks[id], ...patch }; },
+    };
+    expect(() => runContentMigrations(store)).not.toThrow();
+    expect(() => runContentMigrations(store)).not.toThrow();
+    expect(Object.values(store.tasks).some(task => !task.deleted_at && /espejo/i.test(task.title))).toBe(false);
+    expect(store.tasks.live.deleted_at).toBeUndefined();
+    if (mode === 'stored') expect(store.tasks[deleted.id].deleted_at).toBe(deleted.deleted_at);
+  });
+});
 
 describe('runContentMigrations (Misiones 4 y 5)', () => {
   it('ejecuta todas las migraciones correctamente e idempotentemente', () => {

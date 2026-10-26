@@ -166,7 +166,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
 
   const [isSectionDurationOpen, setIsSectionDurationOpen] = useState(false);
 
-  const hasAccumulatedBreakdown = isFullRoutine && Boolean(data.routineCounts && data.routineCounts.full > data.routineCounts.only);
+  const hasAccumulatedBreakdown = isFullRoutine && Boolean(data.routineCounts);
   const hasMixBreakdown = Boolean(mixParts && mixParts.length > 1);
   const canShowDurationBreakdown = hasAccumulatedBreakdown || hasMixBreakdown;
 
@@ -415,7 +415,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
 
   const isTopLevel = data.depth === 0;
   const isExpanded = !(data.foldedByDefault || isCatCollapsed(data.category));
-  const canIncludeShorter = Boolean(data.routineCounts && data.routineCounts.full > data.routineCounts.only);
+  const canIncludeShorter = Boolean(data.routineCounts);
   // El interruptor solo aparece donde se usa: con la sección abierta, o si ya está encendido
   // (para que se vea qué está sumando el número aunque la sección esté plegada).
   const showRoutineToggle = isTopLevel && canIncludeShorter && (isExpanded || isFullRoutine);

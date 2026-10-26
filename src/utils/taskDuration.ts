@@ -400,10 +400,11 @@ export function calculateTasksDuration(
   sections?: ListSection[],
   lists?: CustomList[],
   cycles?: CustomCycle[],
-  referenceDate: Date = new Date()
+  referenceDate: Date = new Date(),
+  sessionDates?: Set<string> | string[]
 ): TasksDurationSummary {
   const state = useAppStore.getState();
-  return aggregateDurations(tasks, t => !isCompletedInCurrentPeriod(t, cycles ?? state.cycles, sections, lists, referenceDate), sections, lists);
+  return aggregateDurations(tasks, t => !isCompletedInCurrentPeriod(t, cycles ?? state.cycles, sections, lists, referenceDate, sessionDates), sections, lists);
 }
 
 /** Suma tareas ya seleccionadas por un informe histórico, sin volver a filtrarlas por el periodo actual. */
@@ -421,8 +422,9 @@ export function calculateCompletedTasksDuration(
   sections?: ListSection[],
   lists?: CustomList[],
   cycles?: CustomCycle[],
-  referenceDate: Date = new Date()
+  referenceDate: Date = new Date(),
+  sessionDates?: Set<string> | string[]
 ): TasksDurationSummary {
   const state = useAppStore.getState();
-  return aggregateDurations(tasks, t => isTaskActuallyCompletedInCurrentPeriod(t, cycles ?? state.cycles, sections, lists, referenceDate), sections, lists);
+  return aggregateDurations(tasks, t => isTaskActuallyCompletedInCurrentPeriod(t, cycles ?? state.cycles, sections, lists, referenceDate, sessionDates), sections, lists);
 }

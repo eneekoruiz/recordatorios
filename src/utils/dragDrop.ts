@@ -153,9 +153,6 @@ export function createDragGhost(source: HTMLElement, pointerY: number, stripAttr
     move(y: number) { ghost.style.top = `${y - grabOffset}px`; },
     remove() {
       ghost.remove();
-      if (typeof document !== 'undefined') {
-        document.querySelectorAll('.drag-ghost, [data-drag-ghost], [data-touch-drag-ghost]').forEach(el => el.remove());
-      }
     },
   };
 }

@@ -5,7 +5,10 @@ const WINDOW_MS = 30_000;
 let pending: { undo: () => void; at: number } | null = null;
 
 export function showUndoToast(message: string, undo: () => void): void {
+  let undone = false;
   const run = () => {
+    if (undone) return;
+    undone = true;
     if (pending?.undo === run) pending = null;
     undo();
     HapticService.selection();
@@ -22,7 +25,7 @@ export function undoLastDeletion(): boolean {
   }
   const { undo } = pending;
   undo();
-  window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Hecho: eliminación deshecha' }));
+  window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Acción deshecha' }));
   return true;
 }
 

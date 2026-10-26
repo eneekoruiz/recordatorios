@@ -204,6 +204,7 @@ export const TaskCard = React.memo(function TaskCard({
   // ── Touch drag-to-reorder (long press → drag, no handle needed) ──────────
   const [isDraggingTouch, setIsDraggingTouch] = useState(false);
   const touchDragGhostRef = useRef<ReturnType<typeof createDragGhost> | null>(null);
+  const touchDragCleanupRef = useRef<(() => void) | null>(null);
   const touchDragActiveRef = useRef(false); // true once finger moves after long-press lift
   const touchDragLiftedRef = useRef(false); // true after 380ms (card "lifted", waiting to see if drag or menu)
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -223,15 +224,11 @@ export const TaskCard = React.memo(function TaskCard({
 
   useEffect(() => {
     return () => {
+      if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
+      touchDragCleanupRef.current?.();
       if (touchDragGhostRef.current) {
         touchDragGhostRef.current.remove();
         touchDragGhostRef.current = null;
-      }
-      if (typeof document !== 'undefined') {
-        document.querySelectorAll('.drag-ghost, [data-drag-ghost], [data-touch-drag-ghost]').forEach(el => el.remove());
-        document.querySelectorAll<HTMLElement>('[data-touch-drag-over]').forEach(el => el.removeAttribute('data-touch-drag-over'));
-        document.querySelectorAll<HTMLElement>('[data-task-drop-section]').forEach(el => el.removeAttribute('data-task-drop-section'));
-        document.body.style.overflow = '';
       }
     };
   }, []);
@@ -724,13 +721,11 @@ export const TaskCard = React.memo(function TaskCard({
   // ── Touch drag helpers ─────────────────────────────────────────────────────
   const startTouchDrag = useCallback((startY: number, startX: number) => {
     if (!onReorderTasks || !wrapperRef.current) return;
+    touchDragCleanupRef.current?.();
+    const previousBodyOverflow = document.body.style.overflow;
     x.set(0); // Cancel any horizontal swipe translation
     touchDragLiftedRef.current = true;
     touchDragActiveRef.current = true;
-
-    if (typeof document !== 'undefined') {
-      document.querySelectorAll<HTMLElement>('.drag-ghost, [data-drag-ghost], [data-touch-drag-ghost]').forEach(el => el.remove());
-    }
 
     // La copia flota bajo el dedo: sin identificador para que nunca cuente como fila de destino.
     touchDragGhostRef.current = createDragGhost(wrapperRef.current, startY, ['data-task-id']);
@@ -786,7 +781,11 @@ export const TaskCard = React.memo(function TaskCard({
     };
 
     // Un solo final para soltar y para cancelar: quita las escuchas a la vez.
+    let finished = false;
     const finish = (commit: boolean) => {
+      if (finished) return;
+      finished = true;
+      touchDragCleanupRef.current = null;
       autoScroll.stop();
       document.removeEventListener('touchmove', onMove);
       document.removeEventListener('touchend', onEnd);
@@ -796,13 +795,10 @@ export const TaskCard = React.memo(function TaskCard({
       document.removeEventListener('mouseup', onEnd);
       touchDragGhostRef.current?.remove();
       touchDragGhostRef.current = null;
-      document.querySelectorAll<HTMLElement>('.drag-ghost, [data-drag-ghost], [data-touch-drag-ghost]').forEach(el => el.remove());
-      document.querySelectorAll<HTMLElement>('[data-touch-drag-over]').forEach(el => el.removeAttribute('data-touch-drag-over'));
-      document.querySelectorAll<HTMLElement>('[data-task-drop-section]').forEach(el => el.removeAttribute('data-task-drop-section'));
       setIsDraggingTouch(false);
       touchDragLiftedRef.current = false;
       touchDragActiveRef.current = false;
-      document.body.style.overflow = '';
+      document.body.style.overflow = previousBodyOverflow;
       x.set(0);
       if (!commit) {
         clearTarget();
@@ -830,6 +826,7 @@ export const TaskCard = React.memo(function TaskCard({
     };
     const onEnd = () => finish(true);
     const onCancel = () => finish(false);
+    touchDragCleanupRef.current = onCancel;
 
     document.body.style.overflow = 'hidden';
     document.addEventListener('touchmove', onMove, { passive: false });
@@ -1543,7 +1540,7 @@ export const TaskCard = React.memo(function TaskCard({
                   </span>
                   </>
                 )}
-                <span style={{ position: 'relative', display: 'inline', wordBreak: 'normal', overflowWrap: 'anywhere' }}>
+                <span style={{ display: 'inline', wordBreak: 'normal', overflowWrap: 'anywhere', textDecorationLine: isEffectivelyDone ? 'line-through' : 'none', textDecorationColor: 'var(--text-tertiary)', textDecorationThickness: '1.5px' }}>
                   {task.title ? (
                     stripPeriodicityPrefix(task.title).split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
                       part.match(/^https?:\/\//) ? (
@@ -1556,22 +1553,6 @@ export const TaskCard = React.memo(function TaskCard({
                     <span style={{ color: 'var(--text-tertiary)', fontStyle: 'italic' }}>Nuevo recordatorio</span>
                   )}
 
-                  {/* Línea de tachado animada de izquierda a derecha SOLO sobre el texto exacto */}
-                  <motion.span
-                    initial={{ scaleX: 0 }}
-                    animate={{ scaleX: isEffectivelyDone ? 1 : 0 }}
-                    transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-                    style={{
-                      position: 'absolute',
-                      top: '52%',
-                      left: 0,
-                      right: 0,
-                      height: '1.5px',
-                      background: 'var(--text-tertiary)',
-                      transformOrigin: 'left center',
-                      pointerEvents: 'none'
-                    }}
-                  />
                 </span>
               </motion.span>
             )}
