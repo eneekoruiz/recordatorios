@@ -74,6 +74,14 @@ export interface Attachment {
   version: number;
 }
 
+export interface TaskWeightLog {
+  set: number;
+  weightKg: number;
+  reps?: number;
+  notes?: string;
+  date?: string;
+}
+
 export interface TaskItem {
   id: string;
   user_id: string; // Foreign key to users
@@ -123,6 +131,7 @@ export interface TaskItem {
   targetCount?: number;
   currentCount?: number;
   restDuration?: number; // Descanso entre series en segundos (ej: 60, 90, 120)
+  weightLogs?: TaskWeightLog[]; // Historial de pesos y repeticiones registradas por serie
 
   // --- SHOPPING & FINANCE FIELDS ---
   isDetailed?: boolean; 

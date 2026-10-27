@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Settings2, Timer } from 'lucide-react';
 import { SectionTrailing } from './SectionTrailing';
 import { CustomSelect } from '../../ui/CustomSelect';
+import type { TaskWeightLog } from '../../../models/Task';
 
 interface DrawerMetaSectionProps {
   cardDetailsOpen: boolean;
@@ -19,6 +20,7 @@ interface DrawerMetaSectionProps {
   setTargetCount: (count?: number) => void;
   restDuration?: number;
   setRestDuration?: (seconds?: number) => void;
+  weightLogs?: TaskWeightLog[];
 }
 
 export const DrawerMetaSection: React.FC<DrawerMetaSectionProps> = ({
@@ -35,7 +37,8 @@ export const DrawerMetaSection: React.FC<DrawerMetaSectionProps> = ({
   targetCount,
   setTargetCount,
   restDuration,
-  setRestDuration
+  setRestDuration,
+  weightLogs
 }) => {
   const hasSeries = Boolean(targetCount && targetCount > 1);
 
@@ -183,7 +186,9 @@ export const DrawerMetaSection: React.FC<DrawerMetaSectionProps> = ({
                       { label: '90s', sec: 90 },
                       { label: '2 min', sec: 120 },
                       { label: '2.5 min', sec: 150 },
-                      { label: '3 min', sec: 180 }
+                      { label: '3 min', sec: 180 },
+                      { label: '3.5 min', sec: 210 },
+                      { label: '4 min', sec: 240 }
                     ].map(preset => {
                       const isSelected = restDuration === preset.sec || (!restDuration && preset.sec === 90);
                       return (
@@ -207,6 +212,33 @@ export const DrawerMetaSection: React.FC<DrawerMetaSectionProps> = ({
                       );
                     })}
                   </div>
+
+                  {/* Historial de pesos / cargas registradas */}
+                  {weightLogs && weightLogs.length > 0 && (
+                    <div
+                      style={{
+                        marginTop: 10,
+                        padding: '10px 12px',
+                        background: 'var(--bg-elevated, #ffffff)',
+                        borderRadius: 10,
+                        border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))'
+                      }}
+                    >
+                      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
+                        🏋️ Historial de cargas registradas
+                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {weightLogs.slice(-6).map((log, idx) => (
+                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--text-primary)' }}>
+                            <span>Serie {log.set}</span>
+                            <span style={{ fontWeight: 600, color: 'var(--accent-primary, #0a84ff)' }}>
+                              {log.weightKg} kg {log.reps ? `× ${log.reps} reps` : ''}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
               )}
             </div>

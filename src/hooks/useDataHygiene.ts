@@ -345,6 +345,71 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
             defaultGymTasks.forEach(task => state.addTask({ ...task, categoryId: gymList.id, updated_at: EPOCH }));
           }
         }
+
+        // Actualizar tareas de tren inferior por defecto a la rutina real del usuario (Jaca, Femoral, Aducción, Glúteos)
+        const allTasks = state.tasks || {};
+        const legacyGymMap: Record<string, { title: string; desc: string; rest: number; duration: number }> = {
+          'task_gym_2_sentadilla': {
+            title: 'Sentadilla Jaca',
+            desc: '4 series pesadas en máquina Jaca / Hack. Coloca los pies en ancho medio y desciende controlado. Descanso amplio.',
+            rest: 180,
+            duration: 3
+          },
+          'task_gym_2_peso_muerto_rumano': {
+            title: 'Curl femoral en máquina',
+            desc: '4 series de 10-12 reps. En máquina sentado o tumbado. Controla la fase excéntrica y aprieta en contracción.',
+            rest: 90,
+            duration: 2
+          },
+          'task_gym_2_prensa': {
+            title: 'Máquina de aducción',
+            desc: '3 series de 12-15 reps. Cierra controlado con pausa de 1 segundo en el punto de máxima contracción.',
+            rest: 75,
+            duration: 2
+          },
+          'task_gym_2_extensiones_cuadriceps': {
+            title: 'Máquina de glúteos',
+            desc: '3 series de 12 reps por pierna (o máquina de glute drive). Extensión completa con glúteo bloqueado.',
+            rest: 75,
+            duration: 2
+          },
+          'task_gym_4_prensa_pesada': {
+            title: 'Sentadilla Jaca',
+            desc: '4 series pesadas en Jaca. Foco en empujar con fuerza desde los talones y controlar la bajada. Descanso amplio.',
+            rest: 180,
+            duration: 3
+          },
+          'task_gym_4_sentadilla': {
+            title: 'Curl femoral en máquina',
+            desc: '4 series de 10-12 reps. Puedes alternar curl sentado o curl tumbado en máquina.',
+            rest: 90,
+            duration: 2
+          },
+          'task_gym_4_peso_muerto_rumano': {
+            title: 'Máquina de aducción',
+            desc: '3 series de 12-15 reps para estabilidad de aductores y cadera.',
+            rest: 75,
+            duration: 2
+          },
+          'task_gym_4_extensiones_cuadriceps': {
+            title: 'Máquina de glúteos',
+            desc: '3 series de 12 reps con contracción pico en cada repetición.',
+            rest: 75,
+            duration: 2
+          }
+        };
+
+        for (const [legacyId, spec] of Object.entries(legacyGymMap)) {
+          const t = allTasks[legacyId];
+          if (t && !t.deleted_at && (t.title === 'Sentadilla' || t.title === 'Peso muerto rumano' || t.title === 'Prensa' || t.title === 'Extensiones de cuádriceps')) {
+            state.updateTask(legacyId, {
+              title: spec.title,
+              description: spec.desc,
+              restDuration: spec.rest,
+              duration: spec.duration
+            });
+          }
+        }
       }
 
       // Unificación homogénea de nombres de secciones en todas las listas (Quehaceres, Limpieza, etc.)

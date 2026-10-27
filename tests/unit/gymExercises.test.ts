@@ -46,6 +46,42 @@ describe('Gimnasio y Rutinas - Catálogo y Alternativas', () => {
     expect(cardio.alternatives.some(a => a.name.toLowerCase().includes('bici'))).toBe(true);
   });
 
+  it('devuelve alternativas y reconoce Sentadilla Jaca (Hack Squat) con descanso amplio', () => {
+    const jaca = getExerciseAlternatives('Sentadilla Jaca');
+    expect(jaca.found).toBe(true);
+    expect(jaca.category).toBe('pierna');
+    expect(jaca.alternatives.some(a => a.name.toLowerCase().includes('prensa'))).toBe(true);
+
+    const hack = getExerciseAlternatives('hack');
+    expect(hack.found).toBe(true);
+    expect(hack.matchedTitle).toBe('Sentadilla Jaca');
+
+    const catItem = GYM_EXERCISE_CATALOG.find(e => e.id === 'sentadilla_jaca');
+    expect(catItem?.defaultRestSeconds).toBe(180);
+  });
+
+  it('devuelve alternativas para Curl femoral (Leg curl)', () => {
+    const curl = getExerciseAlternatives('Curl femoral en máquina');
+    expect(curl.found).toBe(true);
+    expect(curl.category).toBe('femoral');
+
+    const legCurl = getExerciseAlternatives('leg curl');
+    expect(legCurl.found).toBe(true);
+  });
+
+  it('devuelve alternativas para Máquina de aducción y Máquina de glúteos', () => {
+    const aduccion = getExerciseAlternatives('Máquina de aducción');
+    expect(aduccion.found).toBe(true);
+    expect(aduccion.category).toBe('pierna');
+
+    const gluteos = getExerciseAlternatives('máquina de glúteos');
+    expect(gluteos.found).toBe(true);
+
+    const culoMatch = getExerciseAlternatives('culo');
+    expect(culoMatch.found).toBe(true);
+    expect(culoMatch.matchedTitle).toBe('Máquina de glúteos');
+  });
+
   it('ofrece alternativas de fallback incluso si el ejercicio no está en el catálogo', () => {
     const custom = getExerciseAlternatives('Ejercicio inventado de bíceps');
     expect(custom.alternatives.length).toBeGreaterThan(0);
@@ -80,6 +116,22 @@ describe('Gimnasio y Rutinas - Rutina de 4 Días', () => {
     expect(day1Tasks).toContain('Elevaciones laterales');
     expect(day1Tasks).toContain('Extensión de tríceps');
 
+    // Comprobar ejercicios de Tren Inferior A y B configurados con la rutina real del usuario
+    const day2Tasks = tasks.filter(t => t.sectionId === 'sec_gym_inf_a').map(t => t.title);
+    expect(day2Tasks).toContain('Sentadilla Jaca');
+    expect(day2Tasks).toContain('Curl femoral en máquina');
+    expect(day2Tasks).toContain('Máquina de aducción');
+    expect(day2Tasks).toContain('Máquina de glúteos');
+    expect(day2Tasks).toContain('Gemelos en máquina');
+
+    // Comprobar que no hay saturación de 3 ejercicios de cuádriceps en el mismo día
+    expect(day2Tasks).not.toContain('Extensiones de cuádriceps');
+    expect(day2Tasks).not.toContain('Prensa');
+
+    const jacaTask = tasks.find(t => t.title === 'Sentadilla Jaca');
+    expect(jacaTask).toBeDefined();
+    expect(jacaTask?.restDuration).toBe(180); // 3 minutos de descanso para Jaca
+
     // Comprobar que cada día finaliza con un apartado de cardio flexible
     const cardioTasks = tasks.filter(t => t.title.toLowerCase().includes('cardio'));
     expect(cardioTasks.length).toBe(4);
@@ -90,6 +142,32 @@ describe('Gimnasio y Rutinas - Rutina de 4 Días', () => {
     expect(benchTask?.targetCount).toBe(4);
     expect(benchTask?.duration).toBe(3);
     expect(benchTask?.restDuration).toBe(120);
+  });
+
+  it('valida weightLogs en el esquema de importación e IndexedDB sin errores', () => {
+    const rawData = {
+      tasks: [
+        {
+          id: 'test_task_gym_weights',
+          title: 'Sentadilla Jaca',
+          targetCount: 4,
+          currentCount: 2,
+          restDuration: 180,
+          weightLogs: [
+            { set: 1, weightKg: 80, reps: 10, date: '2026-10-27T08:00:00Z' },
+            { set: 2, weightKg: 85, reps: 8, date: '2026-10-27T08:05:00Z' }
+          ],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          version: 1
+        }
+      ]
+    };
+
+    const validated = validateJsonImport(rawData);
+    expect(validated.tasks?.[0].weightLogs).toHaveLength(2);
+    expect(validated.tasks?.[0].weightLogs?.[0].weightKg).toBe(80);
+    expect(validated.tasks?.[0].weightLogs?.[1].weightKg).toBe(85);
   });
 
   it('valida restDuration en el esquema de importación e IndexedDB sin errores', () => {

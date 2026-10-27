@@ -187,6 +187,70 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
 
   // --- PIERNA (CUÁDRICEPS / DOMINANTE RODILLA) ---
   {
+    id: 'sentadilla_jaca',
+    name: 'Sentadilla Jaca',
+    synonyms: ['sentadilla jaca', 'jaca', 'hack squat', 'sentadilla hack', 'hack', 'maquina jaca', 'prensa jaca'],
+    category: 'pierna',
+    categoryLabel: 'Cuádriceps / Dominante rodilla guiada',
+    defaultSets: 4,
+    defaultWorkMinutes: 3,
+    defaultRestSeconds: 180,
+    alternatives: [
+      { name: 'Prensa de piernas a 45º', equipment: 'Prensa', note: 'Gran empuje de cuádriceps con cero compresión axial en columna' },
+      { name: 'Sentadilla en multipower con pies adelantados', equipment: 'Multipower', note: 'Trayectoria vertical guiada con foco total en cuádriceps' },
+      { name: 'Sentadilla libre con barra', equipment: 'Barra', note: 'Trabajo funcional de fuerza completa si la máquina está ocupada' },
+      { name: 'Sentadilla búlgara con mancuernas', equipment: 'Mancuernas', note: 'Aislamiento unilateral tremendo sin máquinas pesadas' }
+    ]
+  },
+  {
+    id: 'maquina_aduccion',
+    name: 'Máquina de aducción',
+    synonyms: ['maquina de aduccion', 'maquina de aducción', 'aduccion', 'aducción', 'aductor', 'aductores', 'maquina aductores', 'inner thigh'],
+    category: 'pierna',
+    categoryLabel: 'Aductores / Cadera interna',
+    defaultSets: 3,
+    defaultWorkMinutes: 2,
+    defaultRestSeconds: 75,
+    alternatives: [
+      { name: 'Aducción en polea baja con tobillera', equipment: 'Polea', note: 'Tensión continua en todo el rango de cierre' },
+      { name: 'Sentadilla sumo con mancuerna pesada', equipment: 'Mancuerna', note: 'Apertura amplia con gran reclutamiento del aductor mayor' },
+      { name: 'Copenhagen plank en banco', equipment: 'Suelo / Banco', note: 'Isometría de fuerza funcional para estabilizadores de cadera' },
+      { name: 'Zancadas laterales controladas', equipment: 'Mancuerna', note: 'Movilidad frontal y fuerza activa del compartimento medial' }
+    ]
+  },
+  {
+    id: 'maquina_gluteos',
+    name: 'Máquina de glúteos',
+    synonyms: ['maquina de gluteos', 'maquina de glúteos', 'gluteos', 'glúteos', 'gluteo', 'glúteo', 'culo', 'patada de gluteo', 'patada de glúteos', 'glute drive', 'abduccion', 'abducción', 'abductores'],
+    category: 'pierna',
+    categoryLabel: 'Glúteo mayor y medio',
+    defaultSets: 3,
+    defaultWorkMinutes: 2,
+    defaultRestSeconds: 75,
+    alternatives: [
+      { name: 'Patada de glúteo en polea baja', equipment: 'Polea', note: 'Extensión de cadera pura sin sobrecarga lumbar' },
+      { name: 'Hip thrust en máquina o multipower', equipment: 'Máquina / Multipower', note: 'Carga directa y máxima activación del glúteo mayor' },
+      { name: 'Máquina de abducción de cadera', equipment: 'Máquina', note: 'Aislamiento del glúteo medio para estabilidad pélvica' },
+      { name: 'Puente de glúteo unilateral con mancuerna', equipment: 'Mancuerna / Suelo', note: 'Trabajo unilateral sin necesidad de máquinas' }
+    ]
+  },
+  {
+    id: 'curl_femoral',
+    name: 'Curl femoral en máquina',
+    synonyms: ['curl femoral', 'curl femoral en maquina', 'curl femoral en máquina', 'leg curl', 'curl femoral sentado', 'curl femoral tumbado', 'femoral maquina', 'femoral'],
+    category: 'femoral',
+    categoryLabel: 'Isquiosurales / Flexión de rodilla',
+    defaultSets: 4,
+    defaultWorkMinutes: 2,
+    defaultRestSeconds: 90,
+    alternatives: [
+      { name: 'Curl femoral sentado en máquina', equipment: 'Máquina', note: 'Máximo estiramiento del bíceps femoral con cadera a 90º' },
+      { name: 'Curl femoral tumbado en máquina', equipment: 'Máquina', note: 'Tensión directa en la contracción pico de isquios' },
+      { name: 'Peso muerto rumano con mancuernas', equipment: 'Mancuernas', note: 'Bisagra de cadera y estiramiento excéntrico profundo' },
+      { name: 'Nordic curl / Curl con fitball', equipment: 'Peso corporal', note: 'Flexión de rodilla funcional sin máquinas' }
+    ]
+  },
+  {
     id: 'sentadilla',
     name: 'Sentadilla',
     synonyms: ['sentadilla', 'squat', 'back squat', 'sentadilla con barra', 'sentadilla trasera'],
@@ -372,6 +436,22 @@ export function getExerciseAlternatives(title: string): {
   }
   if (normTitle.includes('militar') || normTitle.includes('hombro') || normTitle.includes('lateral')) {
     const item = GYM_EXERCISE_CATALOG.find(e => e.id === 'press_militar')!;
+    return { found: true, matchedTitle: item.name, categoryLabel: item.categoryLabel, category: item.category, alternatives: item.alternatives };
+  }
+  if (normTitle.includes('jaca') || normTitle.includes('hack')) {
+    const item = GYM_EXERCISE_CATALOG.find(e => e.id === 'sentadilla_jaca')!;
+    return { found: true, matchedTitle: item.name, categoryLabel: item.categoryLabel, category: item.category, alternatives: item.alternatives };
+  }
+  if (normTitle.includes('aducc') || normTitle.includes('aductor')) {
+    const item = GYM_EXERCISE_CATALOG.find(e => e.id === 'maquina_aduccion')!;
+    return { found: true, matchedTitle: item.name, categoryLabel: item.categoryLabel, category: item.category, alternatives: item.alternatives };
+  }
+  if (normTitle.includes('glute') || normTitle.includes('culo') || normTitle.includes('patada')) {
+    const item = GYM_EXERCISE_CATALOG.find(e => e.id === 'maquina_gluteos')!;
+    return { found: true, matchedTitle: item.name, categoryLabel: item.categoryLabel, category: item.category, alternatives: item.alternatives };
+  }
+  if (normTitle.includes('curl femoral') || normTitle.includes('leg curl') || (normTitle.includes('femoral') && !normTitle.includes('rumano'))) {
+    const item = GYM_EXERCISE_CATALOG.find(e => e.id === 'curl_femoral')!;
     return { found: true, matchedTitle: item.name, categoryLabel: item.categoryLabel, category: item.category, alternatives: item.alternatives };
   }
   if (normTitle.includes('sentadilla') || normTitle.includes('prensa') || normTitle.includes('squat')) {
@@ -567,17 +647,17 @@ export function createDefaultGymRoutine(userId: string = '') {
 
     // --- DÍA 2: TREN INFERIOR A ---
     {
-      id: 'task_gym_2_sentadilla',
+      id: 'task_gym_2_sentadilla_jaca',
       user_id: userId,
       type: 'task',
       categoryId: listId,
       sectionId: 'sec_gym_inf_a',
-      title: 'Sentadilla',
-      description: '4 series efectivas. Profundidad cómoda paralela o sub-paralela. Descanso amplio.',
+      title: 'Sentadilla Jaca',
+      description: '4 series pesadas en máquina Jaca / Hack. Coloca los pies en ancho medio y desciende controlado. Descanso amplio.',
       targetCount: 4,
       currentCount: 0,
       duration: 3,
-      restDuration: 150,
+      restDuration: 180, // 3 min descanso
       cycle_id: 'cycle_week',
       status: 'pending',
       order: 0,
@@ -586,17 +666,17 @@ export function createDefaultGymRoutine(userId: string = '') {
       updated_at: EPOCH
     },
     {
-      id: 'task_gym_2_peso_muerto_rumano',
+      id: 'task_gym_2_curl_femoral',
       user_id: userId,
       type: 'task',
       categoryId: listId,
       sectionId: 'sec_gym_inf_a',
-      title: 'Peso muerto rumano',
-      description: '4 series. Barra o mancuernas. Bisagra de cadera hacia atrás sintiendo el estiramiento en isquios.',
+      title: 'Curl femoral en máquina',
+      description: '4 series de 10-12 reps. En máquina sentado o tumbado. Controla la fase excéntrica y aprieta en contracción.',
       targetCount: 4,
       currentCount: 0,
-      duration: 3,
-      restDuration: 120,
+      duration: 2,
+      restDuration: 90,
       cycle_id: 'cycle_week',
       status: 'pending',
       order: 1,
@@ -605,17 +685,17 @@ export function createDefaultGymRoutine(userId: string = '') {
       updated_at: EPOCH
     },
     {
-      id: 'task_gym_2_prensa',
+      id: 'task_gym_2_maquina_aduccion',
       user_id: userId,
       type: 'task',
       categoryId: listId,
       sectionId: 'sec_gym_inf_a',
-      title: 'Prensa',
-      description: '3 series pesadas de 10-12 reps. Pies en posición media para empuje equilibrado.',
+      title: 'Máquina de aducción',
+      description: '3 series de 12-15 reps. Cierra controlado con pausa de 1 segundo en el punto de máxima contracción.',
       targetCount: 3,
       currentCount: 0,
-      duration: 2.5,
-      restDuration: 120,
+      duration: 2,
+      restDuration: 75,
       cycle_id: 'cycle_week',
       status: 'pending',
       order: 2,
@@ -624,17 +704,17 @@ export function createDefaultGymRoutine(userId: string = '') {
       updated_at: EPOCH
     },
     {
-      id: 'task_gym_2_extensiones_cuadriceps',
+      id: 'task_gym_2_maquina_gluteos',
       user_id: userId,
       type: 'task',
       categoryId: listId,
       sectionId: 'sec_gym_inf_a',
-      title: 'Extensiones de cuádriceps',
-      description: '3 series de 12-15 reps en máquina. Pausa de 1 segundo en la máxima extensión.',
+      title: 'Máquina de glúteos',
+      description: '3 series de 12 reps por pierna (o máquina de glute drive). Extensión completa con glúteo bloqueado.',
       targetCount: 3,
       currentCount: 0,
       duration: 2,
-      restDuration: 90,
+      restDuration: 75,
       cycle_id: 'cycle_week',
       status: 'pending',
       order: 3,
@@ -667,8 +747,8 @@ export function createDefaultGymRoutine(userId: string = '') {
       type: 'task',
       categoryId: listId,
       sectionId: 'sec_gym_inf_a',
-      title: 'Cardio final (Andar con pendiente / Bici / Remo)',
-      description: '15 minutos de recuperación activa en cinta con inclinación o bicicleta.',
+      title: 'Cardio final (Remo / Andar con pendiente / Bici)',
+      description: '15 minutos de recuperación activa en cinta con inclinación, máquina de remo o bicicleta.',
       targetCount: 1,
       currentCount: 0,
       duration: 15,
@@ -818,17 +898,17 @@ export function createDefaultGymRoutine(userId: string = '') {
 
     // --- DÍA 4: TREN INFERIOR B ---
     {
-      id: 'task_gym_4_prensa_pesada',
+      id: 'task_gym_4_sentadilla_jaca',
       user_id: userId,
       type: 'task',
       categoryId: listId,
       sectionId: 'sec_gym_inf_b',
-      title: 'Prensa',
-      description: '4 series pesadas a 10-12 reps. Baja controlado sin despegar la pelvis del respaldo.',
+      title: 'Sentadilla Jaca',
+      description: '4 series pesadas en Jaca. Foco en empujar con fuerza desde los talones y controlar la bajada. Descanso amplio.',
       targetCount: 4,
       currentCount: 0,
       duration: 3,
-      restDuration: 120,
+      restDuration: 180, // 3 min descanso
       cycle_id: 'cycle_week',
       status: 'pending',
       order: 0,
@@ -837,17 +917,17 @@ export function createDefaultGymRoutine(userId: string = '') {
       updated_at: EPOCH
     },
     {
-      id: 'task_gym_4_sentadilla',
+      id: 'task_gym_4_curl_femoral',
       user_id: userId,
       type: 'task',
       categoryId: listId,
       sectionId: 'sec_gym_inf_b',
-      title: 'Sentadilla',
-      description: '3 series. Puedes hacerla en multipower o libre con peso moderado y técnica estricta.',
-      targetCount: 3,
+      title: 'Curl femoral en máquina',
+      description: '4 series de 10-12 reps. Puedes alternar curl sentado o curl tumbado en máquina.',
+      targetCount: 4,
       currentCount: 0,
-      duration: 3,
-      restDuration: 120,
+      duration: 2,
+      restDuration: 90,
       cycle_id: 'cycle_week',
       status: 'pending',
       order: 1,
@@ -856,17 +936,17 @@ export function createDefaultGymRoutine(userId: string = '') {
       updated_at: EPOCH
     },
     {
-      id: 'task_gym_4_peso_muerto_rumano',
+      id: 'task_gym_4_maquina_aduccion',
       user_id: userId,
       type: 'task',
       categoryId: listId,
       sectionId: 'sec_gym_inf_b',
-      title: 'Peso muerto rumano',
-      description: '4 series. Con mancuernas o curl femoral en máquina si la espalda baja está cansada.',
-      targetCount: 4,
+      title: 'Máquina de aducción',
+      description: '3 series de 12-15 reps para estabilidad de aductores y cadera.',
+      targetCount: 3,
       currentCount: 0,
-      duration: 3,
-      restDuration: 120,
+      duration: 2,
+      restDuration: 75,
       cycle_id: 'cycle_week',
       status: 'pending',
       order: 2,
@@ -875,17 +955,17 @@ export function createDefaultGymRoutine(userId: string = '') {
       updated_at: EPOCH
     },
     {
-      id: 'task_gym_4_extensiones_cuadriceps',
+      id: 'task_gym_4_maquina_gluteos',
       user_id: userId,
       type: 'task',
       categoryId: listId,
       sectionId: 'sec_gym_inf_b',
-      title: 'Extensiones de cuádriceps',
-      description: '3 series de 12 reps con 2 segundos de bajada excéntrica.',
+      title: 'Máquina de glúteos',
+      description: '3 series de 12 reps con contracción pico en cada repetición.',
       targetCount: 3,
       currentCount: 0,
       duration: 2,
-      restDuration: 90,
+      restDuration: 75,
       cycle_id: 'cycle_week',
       status: 'pending',
       order: 3,

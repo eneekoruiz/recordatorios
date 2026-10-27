@@ -1056,6 +1056,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                 setTargetCount={setTargetCount}
                 restDuration={restDuration}
                 setRestDuration={setRestDuration}
+                weightLogs={task?.weightLogs}
               />
 
               {/* Card 5: Precio y costes (compras, checklists y caducidades; o si ya tiene precio) */}

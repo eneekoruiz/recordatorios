@@ -43,6 +43,8 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
   const [gymPhase, setGymPhase] = useState<'work' | 'rest'>('work');
   const [showAlternativesModal, setShowAlternativesModal] = useState<boolean>(false);
   const [customAltText, setCustomAltText] = useState<string>('');
+  const [weightKgInput, setWeightKgInput] = useState<string>('');
+  const [repsInput, setRepsInput] = useState<string>('');
 
   // Acumulador de segundos activos trabajados (inmune a pausas y a botones de +1 min / +5 min)
   const activeElapsedRef = useRef<number>(0);
@@ -71,6 +73,14 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
       }
       setGymPhase('work');
       setAmbientType('off');
+      if (task.weightLogs && task.weightLogs.length > 0) {
+        const lastLog = task.weightLogs[task.weightLogs.length - 1];
+        setWeightKgInput(lastLog.weightKg.toString());
+        if (lastLog.reps) setRepsInput(lastLog.reps.toString());
+      } else {
+        setWeightKgInput('');
+        setRepsInput('');
+      }
     }
   }
 
@@ -89,11 +99,29 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
         if (isGymSeries && gymPhase === 'work') {
           // Ha concluido la serie de trabajo activa
           const nextCount = (task?.currentCount || 0) + 1;
+          const wKg = parseFloat(weightKgInput);
+          const rCount = parseInt(repsInput, 10) || undefined;
+          let nextWeightLogs = task?.weightLogs ? [...task.weightLogs] : [];
+          if (!isNaN(wKg) && wKg > 0) {
+            nextWeightLogs.push({
+              set: currentSeriesNumber,
+              weightKg: wKg,
+              reps: rCount,
+              date: new Date().toISOString()
+            });
+          }
+
           if (nextCount >= targetSeries) {
+            if (nextWeightLogs.length > (task?.weightLogs?.length || 0)) {
+              updateTask(task!.id, { currentCount: nextCount, weightLogs: nextWeightLogs });
+            }
             handleComplete();
           } else {
             SoundService.playComplete();
-            updateTask(task!.id, { currentCount: nextCount });
+            updateTask(task!.id, {
+              currentCount: nextCount,
+              ...(nextWeightLogs.length > (task?.weightLogs?.length || 0) ? { weightLogs: nextWeightLogs } : {})
+            });
             setGymPhase('rest');
             setInitialDuration(restSeconds);
             setTimeLeft(restSeconds);
@@ -185,12 +213,30 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
 
   // Terminar serie manualmente y pasar de inmediato a descanso (o completar si es la última)
   const handleFinishSetEarly = () => {
+    const wKg = parseFloat(weightKgInput);
+    const rCount = parseInt(repsInput, 10) || undefined;
+    let nextWeightLogs = task.weightLogs ? [...task.weightLogs] : [];
+    if (!isNaN(wKg) && wKg > 0) {
+      nextWeightLogs.push({
+        set: currentSeriesNumber,
+        weightKg: wKg,
+        reps: rCount,
+        date: new Date().toISOString()
+      });
+    }
+
     const nextCount = (task.currentCount || 0) + 1;
     if (nextCount >= targetSeries) {
+      if (nextWeightLogs.length > (task.weightLogs?.length || 0)) {
+        updateTask(task.id, { currentCount: nextCount, weightLogs: nextWeightLogs });
+      }
       handleComplete();
     } else {
       SoundService.playPop();
-      updateTask(task.id, { currentCount: nextCount });
+      updateTask(task.id, {
+        currentCount: nextCount,
+        ...(nextWeightLogs.length > (task.weightLogs?.length || 0) ? { weightLogs: nextWeightLogs } : {})
+      });
       setGymPhase('rest');
       setInitialDuration(restSeconds);
       setTimeLeft(restSeconds);
@@ -228,6 +274,9 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
 
   // Obtener alternativas conocidas para este ejercicio
   const exerciseInfo = getExerciseAlternatives(task.title);
+  const previousRecordedWeight = task?.weightLogs && task.weightLogs.length > 0
+    ? task.weightLogs[task.weightLogs.length - 1].weightKg
+    : null;
 
   return (
     <AnimatePresence>
@@ -602,31 +651,58 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
             {/* Botones de ajuste de tiempo rápido (+30s / +1 min / +5 min) */}
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', marginBottom: 18 }}>
               {gymPhase === 'rest' && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    HapticService.selection();
-                    setTimeLeft(prev => prev + 30);
-                    setInitialDuration(prev => Math.max(prev, (timeLeft || 0) + 30));
-                    if (!isActive) setIsActive(true);
-                  }}
-                  style={{
-                    padding: '5px 12px',
-                    borderRadius: 999,
-                    background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                    border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
-                    color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)',
-                    fontSize: '0.78rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4
-                  }}
-                  title="Añadir 30 segundos más de descanso"
-                >
-                  <Plus size={12} strokeWidth={2.6} /> 30s
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      HapticService.selection();
+                      setTimeLeft(prev => prev + 30);
+                      setInitialDuration(prev => Math.max(prev, (timeLeft || 0) + 30));
+                      if (!isActive) setIsActive(true);
+                    }}
+                    style={{
+                      padding: '5px 12px',
+                      borderRadius: 999,
+                      background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                      border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
+                      color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4
+                    }}
+                    title="Añadir 30 segundos más de descanso"
+                  >
+                    <Plus size={12} strokeWidth={2.6} /> 30s
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      HapticService.selection();
+                      setTimeLeft(prev => prev + 120);
+                      setInitialDuration(prev => Math.max(prev, (timeLeft || 0) + 120));
+                      if (!isActive) setIsActive(true);
+                    }}
+                    style={{
+                      padding: '5px 12px',
+                      borderRadius: 999,
+                      background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                      border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
+                      color: isDark ? 'white' : 'var(--text-primary, #1c1c1e)',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4
+                    }}
+                    title="Añadir 2 minutos más de descanso (Jaca / Sentadilla pesada)"
+                  >
+                    <Plus size={12} strokeWidth={2.6} /> 2 min
+                  </button>
+                </>
               )}
 
               <button
@@ -703,6 +779,105 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                 <Clock size={12} /> Ajustar
               </button>
             </div>
+
+            {/* Input de Peso y Reps para gimnasio */}
+            {isGymSeries && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  marginBottom: 16,
+                  flexWrap: 'wrap'
+                }}
+              >
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '4px 10px',
+                    borderRadius: 12,
+                    background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                    border: surfaceBorder
+                  }}
+                >
+                  <span style={{ fontSize: '0.78rem', fontWeight: 600, color: mutedText }}>🏋️ Peso:</span>
+                  <input
+                    type="number"
+                    step="0.5"
+                    placeholder="kg"
+                    value={weightKgInput}
+                    onChange={(e) => setWeightKgInput(e.target.value)}
+                    style={{
+                      width: 58,
+                      padding: '3px 4px',
+                      borderRadius: 6,
+                      background: isDark ? 'rgba(0,0,0,0.4)' : '#ffffff',
+                      border: isDark ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.15)',
+                      color: isDark ? 'white' : 'var(--text-primary)',
+                      fontSize: '0.88rem',
+                      fontWeight: 700,
+                      textAlign: 'center',
+                      outline: 'none'
+                    }}
+                    aria-label="Peso en kilogramos"
+                  />
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: mutedText }}>kg</span>
+                </div>
+
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '4px 10px',
+                    borderRadius: 12,
+                    background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                    border: surfaceBorder
+                  }}
+                >
+                  <span style={{ fontSize: '0.78rem', fontWeight: 600, color: mutedText }}>🔁 Reps:</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    placeholder="reps"
+                    value={repsInput}
+                    onChange={(e) => setRepsInput(e.target.value)}
+                    style={{
+                      width: 50,
+                      padding: '3px 4px',
+                      borderRadius: 6,
+                      background: isDark ? 'rgba(0,0,0,0.4)' : '#ffffff',
+                      border: isDark ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.15)',
+                      color: isDark ? 'white' : 'var(--text-primary)',
+                      fontSize: '0.88rem',
+                      fontWeight: 700,
+                      textAlign: 'center',
+                      outline: 'none'
+                    }}
+                    aria-label="Repeticiones"
+                  />
+                </div>
+
+                {previousRecordedWeight !== null && (
+                  <span
+                    style={{
+                      fontSize: '0.74rem',
+                      color: 'var(--accent-primary, #0a84ff)',
+                      fontWeight: 600,
+                      background: isDark ? 'rgba(10, 132, 255, 0.12)' : 'rgba(10, 132, 255, 0.08)',
+                      padding: '4px 10px',
+                      borderRadius: 999
+                    }}
+                  >
+                    Último: {previousRecordedWeight} kg
+                  </span>
+                )}
+              </div>
+            )}
 
             {/* --- SECCIÓN DE SONIDO AMBIENTAL ZEN --- */}
             <div style={{
