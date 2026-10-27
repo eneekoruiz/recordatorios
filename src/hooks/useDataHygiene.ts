@@ -328,7 +328,7 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
       }
 
 
-      // Asegurar que Gimnasio esté presente con su rutina completa de 4 días
+            // Asegurar que Gimnasio esté presente con su rutina completa y sección diaria
       const gymList = lists.find(l => l.id === 'gimnasio' || (l.name || '').toLowerCase() === 'gimnasio');
       if (!gymList && !isCloudHidden) {
         const { list: defaultGymList, sections: defaultGymSecs, tasks: defaultGymTasks } = createDefaultGymRoutine(state.userId || '');
@@ -346,8 +346,120 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
           }
         }
 
-        // Actualizar tareas de tren inferior por defecto a la rutina real del usuario (Jaca, Femoral, Aducción, Glúteos)
+        // Asegurar la sección diaria en Gimnasio: 'Diaria: Core y Estiramientos'
+        let diariaSec = gymSections.find(s => s.id === 'sec_gym_diaria' || /diaria|core/i.test(s.name));
+        if (!diariaSec) {
+          diariaSec = { id: 'sec_gym_diaria', listId: gymList.id, name: 'Diaria: Core y Estiramientos', order: 0, updated_at: EPOCH };
+          state.addListSection(diariaSec);
+        }
+
         const allTasks = state.tasks || {};
+
+        // Mudar tareas existentes de curl, abs 50 y estiramientos a Gimnasio > Diaria: Core y Estiramientos
+        for (const t of Object.values(allTasks)) {
+          if (t && !t.deleted_at) {
+            const norm = (t.title || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            const isAbs50 = norm.includes('abs') || norm.includes('abdominal');
+            const isCurl = norm.includes('curl') && !norm.includes('femoral') && !norm.includes('pierna');
+            const isEstiramiento = (norm.includes('estiramiento') || norm.includes('movilidad')) && t.categoryId !== gymList.id;
+
+            if ((isAbs50 || isCurl || isEstiramiento) && t.categoryId !== gymList.id) {
+              state.updateTask(t.id, {
+                categoryId: gymList.id,
+                sectionId: diariaSec.id,
+                cycle_id: 'cycle_day',
+                ...(isAbs50 && !t.targetCount ? { targetCount: 50, currentCount: t.currentCount ?? 0 } : {})
+              });
+            }
+          }
+        }
+
+        // Asegurar que las tareas clave diarias existen en Gimnasio
+        const currentGymTasks = Object.values(state.tasks || {}).filter(t => !t.deleted_at && (t.categoryId === gymList.id || t.sectionId === diariaSec!.id));
+        const hasPrevios = currentGymTasks.some(t => /estiramiento.*previo|calentamiento|movilidad/i.test(t.title));
+        const hasAbs = currentGymTasks.some(t => /abs|abdominal/i.test(t.title));
+        const hasCurl = currentGymTasks.some(t => /curl/i.test(t.title) && !/femoral/i.test(t.title));
+        const hasPosteriores = currentGymTasks.some(t => /estiramiento.*posterior|descarga|relajaci/i.test(t.title));
+
+        if (!hasPrevios) {
+          state.addTask({
+            id: 'task_gym_daily_estiramientos_previos',
+            user_id: state.userId || '',
+            type: 'task',
+            categoryId: gymList.id,
+            sectionId: diariaSec.id,
+            title: 'Estiramientos previos y movilidad',
+            description: 'Movilidad articular dinámica (hombros, caderas, tobillos) antes de comenzar el entrenamiento.',
+            duration: 5,
+            cycle_id: 'cycle_day',
+            status: 'pending',
+            order: 0,
+            version: 1,
+            created_at: EPOCH,
+            updated_at: EPOCH
+          });
+        }
+        if (!hasAbs) {
+          state.addTask({
+            id: 'task_gym_daily_abs',
+            user_id: state.userId || '',
+            type: 'task',
+            categoryId: gymList.id,
+            sectionId: diariaSec.id,
+            title: 'Abs 50 (Abdominales)',
+            description: '50 repeticiones diarias de core / abdominales.',
+            targetCount: 50,
+            currentCount: 0,
+            duration: 5,
+            cycle_id: 'cycle_day',
+            status: 'pending',
+            order: 1,
+            version: 1,
+            created_at: EPOCH,
+            updated_at: EPOCH
+          });
+        }
+        if (!hasCurl) {
+          state.addTask({
+            id: 'task_gym_daily_curl',
+            user_id: state.userId || '',
+            type: 'task',
+            categoryId: gymList.id,
+            sectionId: diariaSec.id,
+            title: 'Curl de bíceps',
+            description: '3 series de curl con mancuernas, barra Z o polea.',
+            targetCount: 3,
+            currentCount: 0,
+            duration: 3,
+            restDuration: 60,
+            cycle_id: 'cycle_day',
+            status: 'pending',
+            order: 2,
+            version: 1,
+            created_at: EPOCH,
+            updated_at: EPOCH
+          });
+        }
+        if (!hasPosteriores) {
+          state.addTask({
+            id: 'task_gym_daily_estiramientos_posteriores',
+            user_id: state.userId || '',
+            type: 'task',
+            categoryId: gymList.id,
+            sectionId: diariaSec.id,
+            title: 'Estiramientos posteriores y descarga',
+            description: 'Estiramientos estáticos y relajación de los músculos trabajados tras la sesión.',
+            duration: 5,
+            cycle_id: 'cycle_day',
+            status: 'pending',
+            order: 3,
+            version: 1,
+            created_at: EPOCH,
+            updated_at: EPOCH
+          });
+        }
+
+        // Actualizar tareas de tren inferior por defecto a la rutina real del usuario (Jaca, Leg curl, Máquina de glúteos, Extensiones de cuádriceps)
         const legacyGymMap: Record<string, { title: string; desc: string; rest: number; duration: number }> = {
           'task_gym_2_sentadilla': {
             title: 'Sentadilla Jaca',
@@ -357,20 +469,20 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
           },
           'task_gym_2_peso_muerto_rumano': {
             title: 'Curl femoral en máquina',
-            desc: '4 series de 10-12 reps. En máquina sentado o tumbado. Controla la fase excéntrica y aprieta en contracción.',
+            desc: '4 series de 10-12 reps en leg curl. Controla la fase excéntrica y aprieta en contracción.',
             rest: 90,
             duration: 2
           },
           'task_gym_2_prensa': {
-            title: 'Máquina de aducción',
-            desc: '3 series de 12-15 reps. Cierra controlado con pausa de 1 segundo en el punto de máxima contracción.',
+            title: 'Máquina de glúteos',
+            desc: '3 series de 12 reps (máquina de culo / glute drive). Extensión completa con glúteo bloqueado.',
             rest: 75,
             duration: 2
           },
           'task_gym_2_extensiones_cuadriceps': {
-            title: 'Máquina de glúteos',
-            desc: '3 series de 12 reps por pierna (o máquina de glute drive). Extensión completa con glúteo bloqueado.',
-            rest: 75,
+            title: 'Extensiones de cuádriceps',
+            desc: '3 series de 12-15 reps (leg extension). Control en todo el recorrido con 1s de pausa.',
+            rest: 90,
             duration: 2
           },
           'task_gym_4_prensa_pesada': {
@@ -381,20 +493,20 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
           },
           'task_gym_4_sentadilla': {
             title: 'Curl femoral en máquina',
-            desc: '4 series de 10-12 reps. Puedes alternar curl sentado o curl tumbado en máquina.',
+            desc: '4 series de 10-12 reps en leg curl.',
             rest: 90,
             duration: 2
           },
           'task_gym_4_peso_muerto_rumano': {
-            title: 'Máquina de aducción',
-            desc: '3 series de 12-15 reps para estabilidad de aductores y cadera.',
+            title: 'Máquina de glúteos',
+            desc: '3 series de 12 reps con contracción pico en cada repetición.',
             rest: 75,
             duration: 2
           },
           'task_gym_4_extensiones_cuadriceps': {
-            title: 'Máquina de glúteos',
-            desc: '3 series de 12 reps con contracción pico en cada repetición.',
-            rest: 75,
+            title: 'Extensiones de cuádriceps',
+            desc: '3 series de 12 reps (leg extension).',
+            rest: 90,
             duration: 2
           }
         };

@@ -167,6 +167,23 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     ]
   },
 
+  // --- BRAZOS / BÍCEPS ---
+  {
+    id: 'curl_biceps',
+    name: 'Curl de bíceps',
+    synonyms: ['curl de biceps', 'curl de bíceps', 'curl biceps', 'curl bíceps', 'curl barra', 'curl mancuernas', 'biceps', 'bíceps', 'curl mancuerna'],
+    category: 'biceps',
+    categoryLabel: 'Bíceps / Flexores de codo',
+    defaultSets: 3,
+    defaultWorkMinutes: 2,
+    defaultRestSeconds: 75,
+    alternatives: [
+      { name: 'Curl con mancuernas en banco inclinado', equipment: 'Mancuernas', note: 'Máximo estiramiento de la cabeza larga del bíceps' },
+      { name: 'Curl predicador en banco Scott', equipment: 'Barra Z / Máquina', note: 'Aislamiento estricto sin balanceo del cuerpo' },
+      { name: 'Curl martillo con mancuernas', equipment: 'Mancuernas', note: 'Enfoque en braquiorradial y braquial anterior' },
+      { name: 'Curl en polea baja con barra recta', equipment: 'Polea', note: 'Tensión constante en todo el recorrido' }
+    ]
+  },
   // --- BRAZOS / TRÍCEPS ---
   {
     id: 'extension_triceps',
@@ -333,6 +350,23 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     ]
   },
 
+  // --- MOVILIDAD Y ESTIRAMIENTOS ---
+  {
+    id: 'estiramientos_movilidad',
+    name: 'Estiramientos y movilidad',
+    synonyms: ['estiramientos', 'movilidad', 'calentamiento', 'flexibilidad', 'stretching', 'estiramiento', 'estiramientos previos', 'estiramientos posteriores'],
+    category: 'core',
+    categoryLabel: 'Movilidad / Flexibilidad / Prevención',
+    defaultSets: 1,
+    defaultWorkMinutes: 5,
+    defaultRestSeconds: 0,
+    alternatives: [
+      { name: 'Movilidad articular dinámica previa', equipment: 'Suelo', note: 'Círculos escapulares, rotaciones torácicas y apertura de cadera' },
+      { name: 'Foam roller y automasaje miofascial', equipment: 'Rodillo', note: 'Descarga de puntos gatillo y tensión acumulada' },
+      { name: 'Estiramientos estáticos de descarga', equipment: 'Colchoneta', note: 'Elongación suave de grupos musculares trabajados' },
+      { name: 'Rutina de movilidad de cadera 90/90', equipment: 'Suelo', note: 'Descompresión y rotación articular de cadera' }
+    ]
+  },
   // --- CORE / ABDOMINALES ---
   {
     id: 'abdominales_core',
@@ -454,6 +488,14 @@ export function getExerciseAlternatives(title: string): {
     const item = GYM_EXERCISE_CATALOG.find(e => e.id === 'curl_femoral')!;
     return { found: true, matchedTitle: item.name, categoryLabel: item.categoryLabel, category: item.category, alternatives: item.alternatives };
   }
+  if (normTitle.includes('curl') || normTitle.includes('biceps')) {
+    const item = GYM_EXERCISE_CATALOG.find(e => e.id === 'curl_biceps')!;
+    return { found: true, matchedTitle: item.name, categoryLabel: item.categoryLabel, category: item.category, alternatives: item.alternatives };
+  }
+  if (normTitle.includes('estiramiento') || normTitle.includes('movilidad') || normTitle.includes('flexibilidad') || normTitle.includes('calentamiento')) {
+    const item = GYM_EXERCISE_CATALOG.find(e => e.id === 'estiramientos_movilidad')!;
+    return { found: true, matchedTitle: item.name, categoryLabel: item.categoryLabel, category: item.category, alternatives: item.alternatives };
+  }
   if (normTitle.includes('sentadilla') || normTitle.includes('prensa') || normTitle.includes('squat')) {
     const item = GYM_EXERCISE_CATALOG.find(e => e.id === 'sentadilla')!;
     return { found: true, matchedTitle: item.name, categoryLabel: item.categoryLabel, category: item.category, alternatives: item.alternatives };
@@ -503,13 +545,85 @@ export function createDefaultGymRoutine(userId: string = '') {
   };
 
   const sections: ListSection[] = [
-    { id: 'sec_gym_sup_a', listId, name: 'Día 1: Tren Superior A', order: 0, updated_at: EPOCH },
-    { id: 'sec_gym_inf_a', listId, name: 'Día 2: Tren Inferior A', order: 1, updated_at: EPOCH },
-    { id: 'sec_gym_sup_b', listId, name: 'Día 3: Tren Superior B', order: 2, updated_at: EPOCH },
-    { id: 'sec_gym_inf_b', listId, name: 'Día 4: Tren Inferior B', order: 3, updated_at: EPOCH },
+    { id: 'sec_gym_diaria', listId, name: 'Diaria: Core y Estiramientos', order: 0, updated_at: EPOCH },
+    { id: 'sec_gym_sup_a', listId, name: 'Día 1: Tren Superior A', order: 1, updated_at: EPOCH },
+    { id: 'sec_gym_inf_a', listId, name: 'Día 2: Tren Inferior A', order: 2, updated_at: EPOCH },
+    { id: 'sec_gym_sup_b', listId, name: 'Día 3: Tren Superior B', order: 3, updated_at: EPOCH },
+    { id: 'sec_gym_inf_b', listId, name: 'Día 4: Tren Inferior B', order: 4, updated_at: EPOCH },
   ];
 
   const tasks: TaskItem[] = [
+    // --- DIARIA: CORE Y ESTIRAMIENTOS ---
+    {
+      id: 'task_gym_daily_estiramientos_previos',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_diaria',
+      title: 'Estiramientos previos y movilidad',
+      description: 'Movilidad dinámica articular (hombros, caderas, tobillos) antes de comenzar la sesión.',
+      duration: 5,
+      cycle_id: 'cycle_day',
+      status: 'pending',
+      order: 0,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_daily_abs',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_diaria',
+      title: 'Abs 50 (Abdominales)',
+      description: '50 repeticiones diarias de core / abdominales.',
+      targetCount: 50,
+      currentCount: 0,
+      duration: 5,
+      cycle_id: 'cycle_day',
+      status: 'pending',
+      order: 1,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_daily_curl',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_diaria',
+      title: 'Curl de bíceps',
+      description: '3 series de curl con mancuernas, barra Z o polea.',
+      targetCount: 3,
+      currentCount: 0,
+      duration: 3,
+      restDuration: 60,
+      cycle_id: 'cycle_day',
+      status: 'pending',
+      order: 2,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_daily_estiramientos_posteriores',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_diaria',
+      title: 'Estiramientos posteriores y descarga',
+      description: 'Estiramientos estáticos y relajación de los músculos trabajados tras el entrenamiento.',
+      duration: 5,
+      cycle_id: 'cycle_day',
+      status: 'pending',
+      order: 3,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+
     // --- DÍA 1: TREN SUPERIOR A ---
     {
       id: 'task_gym_1_press_banca',
@@ -672,7 +786,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       categoryId: listId,
       sectionId: 'sec_gym_inf_a',
       title: 'Curl femoral en máquina',
-      description: '4 series de 10-12 reps. En máquina sentado o tumbado. Controla la fase excéntrica y aprieta en contracción.',
+      description: '4 series de 10-12 reps. En máquina sentado o tumbado (leg curl). Controla la fase excéntrica y aprieta en contracción.',
       targetCount: 4,
       currentCount: 0,
       duration: 2,
@@ -680,6 +794,44 @@ export function createDefaultGymRoutine(userId: string = '') {
       cycle_id: 'cycle_week',
       status: 'pending',
       order: 1,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_2_maquina_gluteos',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_inf_a',
+      title: 'Máquina de glúteos',
+      description: '3 series de 12 reps (máquina de culo / glute drive). Extensión completa con glúteo bloqueado.',
+      targetCount: 3,
+      currentCount: 0,
+      duration: 2,
+      restDuration: 75,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 2,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_2_extensiones_cuadriceps',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_inf_a',
+      title: 'Extensiones de cuádriceps',
+      description: '3 series de 12-15 reps (leg extension). Control en todo el recorrido con 1s de pausa en extensión.',
+      targetCount: 3,
+      currentCount: 0,
+      duration: 2,
+      restDuration: 90,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 3,
       version: 1,
       created_at: EPOCH,
       updated_at: EPOCH
@@ -698,26 +850,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       restDuration: 75,
       cycle_id: 'cycle_week',
       status: 'pending',
-      order: 2,
-      version: 1,
-      created_at: EPOCH,
-      updated_at: EPOCH
-    },
-    {
-      id: 'task_gym_2_maquina_gluteos',
-      user_id: userId,
-      type: 'task',
-      categoryId: listId,
-      sectionId: 'sec_gym_inf_a',
-      title: 'Máquina de glúteos',
-      description: '3 series de 12 reps por pierna (o máquina de glute drive). Extensión completa con glúteo bloqueado.',
-      targetCount: 3,
-      currentCount: 0,
-      duration: 2,
-      restDuration: 75,
-      cycle_id: 'cycle_week',
-      status: 'pending',
-      order: 3,
+      order: 4,
       version: 1,
       created_at: EPOCH,
       updated_at: EPOCH
@@ -736,7 +869,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       restDuration: 60,
       cycle_id: 'cycle_week',
       status: 'pending',
-      order: 4,
+      order: 5,
       version: 1,
       created_at: EPOCH,
       updated_at: EPOCH
@@ -755,7 +888,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       restDuration: 0,
       cycle_id: 'cycle_week',
       status: 'pending',
-      order: 5,
+      order: 6,
       version: 1,
       created_at: EPOCH,
       updated_at: EPOCH
@@ -923,7 +1056,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       categoryId: listId,
       sectionId: 'sec_gym_inf_b',
       title: 'Curl femoral en máquina',
-      description: '4 series de 10-12 reps. Puedes alternar curl sentado o curl tumbado en máquina.',
+      description: '4 series de 10-12 reps en leg curl.',
       targetCount: 4,
       currentCount: 0,
       duration: 2,
@@ -931,25 +1064,6 @@ export function createDefaultGymRoutine(userId: string = '') {
       cycle_id: 'cycle_week',
       status: 'pending',
       order: 1,
-      version: 1,
-      created_at: EPOCH,
-      updated_at: EPOCH
-    },
-    {
-      id: 'task_gym_4_maquina_aduccion',
-      user_id: userId,
-      type: 'task',
-      categoryId: listId,
-      sectionId: 'sec_gym_inf_b',
-      title: 'Máquina de aducción',
-      description: '3 series de 12-15 reps para estabilidad de aductores y cadera.',
-      targetCount: 3,
-      currentCount: 0,
-      duration: 2,
-      restDuration: 75,
-      cycle_id: 'cycle_week',
-      status: 'pending',
-      order: 2,
       version: 1,
       created_at: EPOCH,
       updated_at: EPOCH
@@ -968,7 +1082,45 @@ export function createDefaultGymRoutine(userId: string = '') {
       restDuration: 75,
       cycle_id: 'cycle_week',
       status: 'pending',
+      order: 2,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_4_extensiones_cuadriceps',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_inf_b',
+      title: 'Extensiones de cuádriceps',
+      description: '3 series de 12 reps (leg extension).',
+      targetCount: 3,
+      currentCount: 0,
+      duration: 2,
+      restDuration: 90,
+      cycle_id: 'cycle_week',
+      status: 'pending',
       order: 3,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_4_maquina_aduccion',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_inf_b',
+      title: 'Máquina de aducción',
+      description: '3 series de 12-15 reps para estabilidad de aductores y cadera.',
+      targetCount: 3,
+      currentCount: 0,
+      duration: 2,
+      restDuration: 75,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 4,
       version: 1,
       created_at: EPOCH,
       updated_at: EPOCH
@@ -987,7 +1139,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       restDuration: 60,
       cycle_id: 'cycle_week',
       status: 'pending',
-      order: 4,
+      order: 5,
       version: 1,
       created_at: EPOCH,
       updated_at: EPOCH
@@ -1006,7 +1158,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       restDuration: 0,
       cycle_id: 'cycle_week',
       status: 'pending',
-      order: 5,
+      order: 6,
       version: 1,
       created_at: EPOCH,
       updated_at: EPOCH

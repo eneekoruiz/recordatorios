@@ -82,21 +82,33 @@ describe('Gimnasio y Rutinas - Catálogo y Alternativas', () => {
     expect(culoMatch.matchedTitle).toBe('Máquina de glúteos');
   });
 
+  it('devuelve alternativas para Curl de bíceps y Estiramientos', () => {
+    const curl = getExerciseAlternatives('Curl de bíceps');
+    expect(curl.found).toBe(true);
+    expect(curl.category).toBe('biceps');
+    expect(curl.alternatives.some(a => a.name.toLowerCase().includes('mancuernas'))).toBe(true);
+
+    const estiramientos = getExerciseAlternatives('Estiramientos previos');
+    expect(estiramientos.found).toBe(true);
+    expect(estiramientos.category).toBe('core');
+  });
+
   it('ofrece alternativas de fallback incluso si el ejercicio no está en el catálogo', () => {
     const custom = getExerciseAlternatives('Ejercicio inventado de bíceps');
     expect(custom.alternatives.length).toBeGreaterThan(0);
   });
 });
 
-describe('Gimnasio y Rutinas - Rutina de 4 Días', () => {
-  it('crea la estructura completa con 4 secciones y todos los ejercicios pedidos', () => {
+describe('Gimnasio y Rutinas - Rutina Completa con Sección Diaria', () => {
+  it('crea la estructura completa con sección diaria y los 4 días de entreno', () => {
     const { list, sections, tasks } = createDefaultGymRoutine('test_user');
 
     expect(list.id).toBe('gimnasio');
     expect(list.name).toBe('Gimnasio');
-    expect(sections).toHaveLength(4);
+    expect(sections).toHaveLength(5);
 
     const sectionNames = sections.map(s => s.name);
+    expect(sectionNames).toContain('Diaria: Core y Estiramientos');
     expect(sectionNames).toContain('Día 1: Tren Superior A');
     expect(sectionNames).toContain('Día 2: Tren Inferior A');
     expect(sectionNames).toContain('Día 3: Tren Superior B');
@@ -107,6 +119,17 @@ describe('Gimnasio y Rutinas - Rutina de 4 Días', () => {
     expect(taskTitles.some(t => t.includes('hip thrust'))).toBe(false);
     expect(taskTitles.some(t => t.includes('zancada'))).toBe(false);
 
+    // Comprobar tareas de la sección Diaria (Core, bíceps, estiramientos)
+    const dailyTasks = tasks.filter(t => t.sectionId === 'sec_gym_diaria').map(t => t.title);
+    expect(dailyTasks).toContain('Estiramientos previos y movilidad');
+    expect(dailyTasks).toContain('Abs 50 (Abdominales)');
+    expect(dailyTasks).toContain('Curl de bíceps');
+    expect(dailyTasks).toContain('Estiramientos posteriores y descarga');
+
+    const absTask = tasks.find(t => t.title === 'Abs 50 (Abdominales)');
+    expect(absTask?.cycle_id).toBe('cycle_day');
+    expect(absTask?.targetCount).toBe(50);
+
     // Comprobar ejercicios de Tren Superior A
     const day1Tasks = tasks.filter(t => t.sectionId === 'sec_gym_sup_a').map(t => t.title);
     expect(day1Tasks).toContain('Press de banca');
@@ -116,17 +139,14 @@ describe('Gimnasio y Rutinas - Rutina de 4 Días', () => {
     expect(day1Tasks).toContain('Elevaciones laterales');
     expect(day1Tasks).toContain('Extensión de tríceps');
 
-    // Comprobar ejercicios de Tren Inferior A y B configurados con la rutina real del usuario
+    // Comprobar ejercicios de Tren Inferior A y B configurados con la rutina real del usuario (Jaca, Leg curl, Glúteos, Leg extension)
     const day2Tasks = tasks.filter(t => t.sectionId === 'sec_gym_inf_a').map(t => t.title);
     expect(day2Tasks).toContain('Sentadilla Jaca');
     expect(day2Tasks).toContain('Curl femoral en máquina');
-    expect(day2Tasks).toContain('Máquina de aducción');
     expect(day2Tasks).toContain('Máquina de glúteos');
+    expect(day2Tasks).toContain('Extensiones de cuádriceps');
+    expect(day2Tasks).toContain('Máquina de aducción');
     expect(day2Tasks).toContain('Gemelos en máquina');
-
-    // Comprobar que no hay saturación de 3 ejercicios de cuádriceps en el mismo día
-    expect(day2Tasks).not.toContain('Extensiones de cuádriceps');
-    expect(day2Tasks).not.toContain('Prensa');
 
     const jacaTask = tasks.find(t => t.title === 'Sentadilla Jaca');
     expect(jacaTask).toBeDefined();
