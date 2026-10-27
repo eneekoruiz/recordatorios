@@ -9,6 +9,8 @@ import { HapticService } from '../../services/HapticService';
 import { getTaskDuration, formatDuration } from '../../utils/taskDuration';
 import { ConfettiService } from '../../services/ConfettiService';
 import { BackgroundTimers, useBackgroundTimers } from '../../services/BackgroundTimers';
+import { useTrainingStore } from '../../store/useTrainingStore';
+import { InsightCard } from '../training/InsightCard';
 
 interface ListSequenceModeProps {
   /** IDs de las tareas a recorrer en orden */
@@ -204,6 +206,11 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
   const [timeLeft, setTimeLeft] = useState(0);
   const [sequencePhase, setSequencePhase] = useState<'work' | 'rest'>('work');
   const [initialDuration, setInitialDuration] = useState(0);
+  // Lo estimado al empezar la tarea (sin lo que se alargue después): base para comparar con lo real.
+  const [plannedSecs, setPlannedSecs] = useState(0);
+  // Pausa guiada entre tareas (si la lista la tiene activada).
+  const [pause, setPause] = useState<{ startedAt: number; plannedSec: number; adjustSec: number; nextTitle: string } | null>(null);
+  const [pauseNow, setPauseNow] = useState(() => Date.now());
   const [isActive, setIsActive] = useState(false);
   const activeElapsedRef = useRef<number>(0);
   const [showDurationPicker, setShowDurationPicker] = useState(false);
@@ -244,6 +251,10 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
   const isFinished = index >= activeTaskIds.length;
 
   const currentDurationInfo = currentTask ? getTaskDuration(currentTask, listSections, lists) : null;
+  const sequenceList = lists.find(l => l.id === tasks[taskIds[0]]?.categoryId);
+  const guidedBreaks = Boolean(sequenceList?.guidedBreaks);
+  const breakSeconds = sequenceList?.breakSeconds ?? 300;
+  const recordEvents = useTrainingStore(s => s.recordEvents);
 
   // Duración total estimada y restante de la secuencia
   const totalEstimatedMins = useMemo(() => {
@@ -295,6 +306,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
       setShowTimeTools(false);
       setTimeLeft(secs);
       setInitialDuration(secs);
+      setPlannedSecs(secs);
       setIsActive(true);
     }
   }
@@ -350,6 +362,43 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     SoundService.playPop();
   }, [currentTask, updateTask, setLearnedDuration]);
 
+  // Hechos observados para las sugerencias: cuánto tardó de verdad y si se pospone u omite con frecuencia.
+  const observeCompletion = useCallback((taskId: string) => {
+    const elapsed = activeElapsedRef.current;
+    if (elapsed >= 10 && plannedSecs > 0) {
+      recordEvents([{ at: Date.now(), scope: 'task', subjectId: taskId, type: 'time_delta', value: elapsed - plannedSecs, planned: plannedSecs }]);
+    }
+  }, [plannedSecs, recordEvents]);
+
+  // Tras una tarea, si la lista tiene pausas guiadas y quedan más, se abre la pausa.
+  const maybeStartPause = useCallback(() => {
+    if (!guidedBreaks || index + 1 >= activeTaskIds.length) return;
+    const nextTask = tasks[activeTaskIds[index + 1]];
+    setPause({ startedAt: Date.now(), plannedSec: breakSeconds, adjustSec: 0, nextTitle: nextTask?.title ?? '' });
+    setPauseNow(Date.now());
+  }, [guidedBreaks, index, activeTaskIds, tasks, breakSeconds]);
+
+  const endPause = useCallback((skipped: boolean) => {
+    if (!pause) return;
+    const now = Date.now();
+    const taken = Math.round((now - pause.startedAt) / 1000);
+    const delta = taken - pause.plannedSec;
+    if (sequenceList) {
+      const type = skipped && taken < pause.plannedSec * 0.8 ? 'rest_skipped' : delta >= 15 || pause.adjustSec > 0 ? 'rest_extended' : delta <= -15 ? 'rest_shortened' : 'rest_ok';
+      recordEvents([{ at: now, scope: 'list', subjectId: sequenceList.id, type, value: delta, planned: pause.plannedSec }]);
+    }
+    setPause(null);
+    SoundService.playPop();
+  }, [pause, sequenceList, recordEvents]);
+
+  useEffect(() => {
+    if (!pause) return;
+    const id = window.setInterval(() => setPauseNow(Date.now()), 250);
+    // Aviso una sola vez cuando la pausa llega a cero.
+    const end = window.setTimeout(() => { SoundService.playComplete(); HapticService.notification('success'); }, Math.max(0, pause.startedAt + (pause.plannedSec + pause.adjustSec) * 1000 - Date.now()));
+    return () => { window.clearInterval(id); window.clearTimeout(end); };
+  }, [pause]);
+
   const handleCompleteTask = useCallback(() => {
     if (!currentTask) return;
     SoundService.playComplete();
@@ -361,24 +410,27 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
       useAppStore.getState().trackTaskExecution(currentTask.id, elapsedSeconds);
     }
 
+    observeCompletion(currentTask.id);
     toggleTask(currentTask.id);
     setCompletedIds(prev => [...prev, currentTask.id]);
     setIsActive(false);
     SoundService.stopAmbientSound();
     setLastStepAt(Date.now());
+    maybeStartPause();
     setIndex(i => i + 1);
-  }, [currentTask, toggleTask]);
+  }, [currentTask, toggleTask, observeCompletion, maybeStartPause]);
 
   const handleSkipTask = useCallback(() => {
     if (!currentTask) return;
     HapticService.selection();
     SoundService.playPop();
     setSkippedIds(prev => [...prev, currentTask.id]);
+    recordEvents([{ at: Date.now(), scope: 'task', subjectId: currentTask.id, type: 'task_skipped' }]);
     setIsActive(false);
     SoundService.stopAmbientSound();
     setLastStepAt(Date.now());
     setIndex(i => i + 1);
-  }, [currentTask]);
+  }, [currentTask, recordEvents]);
 
   // Posponer tarea ("Dejar para luego"): la coloca al final de la secuencia
   const handlePostponeTask = useCallback(() => {
@@ -395,9 +447,10 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     // Se mueve por su posición real (el índice cuenta solo las tareas que siguen existiendo).
     const position = sequenceTaskIds.indexOf(currentId);
     setSequenceTaskIds([...sequenceTaskIds.slice(0, position), ...sequenceTaskIds.slice(position + 1), currentId]);
+    recordEvents([{ at: Date.now(), scope: 'task', subjectId: currentId, type: 'task_postponed' }]);
     setParallelToast(`«${currentTask.title}» pospuesta al final`);
     setTimeout(() => setParallelToast(null), 3000);
-  }, [currentTask, index, activeTaskIds.length, sequenceTaskIds]);
+  }, [currentTask, index, activeTaskIds.length, sequenceTaskIds, recordEvents]);
 
   // Parallel task launcher: completes active setup and advances sequence immediately!
   const handleStartParallelAndNext = useCallback(() => {
@@ -413,13 +466,15 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
       useAppStore.getState().trackTaskExecution(currentTask.id, elapsedSeconds);
     }
 
+    observeCompletion(currentTask.id);
     toggleTask(currentTask.id);
     setCompletedIds(prev => [...prev, currentTask.id]);
     setIsActive(false);
     SoundService.stopAmbientSound();
     setLastStepAt(Date.now());
+    maybeStartPause();
     setIndex(i => i + 1);
-  }, [currentTask, currentDurationInfo, toggleTask]);
+  }, [currentTask, currentDurationInfo, toggleTask, observeCompletion, maybeStartPause]);
 
   // Dar por terminada una tarea en segundo plano sin esperar a su cuenta atrás.
   const handleFinishParallel = (id: string) => {
@@ -531,6 +586,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
             </div>
           )}
 
+          <InsightCard scope={['task', 'list']} />
           <motion.button
             onClick={onClose} whileTap={{ scale: 0.98 }}
             style={{ width: '100%', minHeight: 52, borderRadius: 16, border: 'none', cursor: 'pointer', background: '#30d158', color: '#000', fontWeight: 600, fontSize: '1.05rem' }}
@@ -539,6 +595,37 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
           </motion.button>
           <button onClick={handleShare} style={{ minHeight: 44, marginTop: 4, padding: '0 14px', background: 'transparent', border: 'none', cursor: 'pointer', color: rowsMuted, fontSize: '0.95rem', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <Share size={16} aria-hidden="true" /> Compartir
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // ── PAUSA GUIADA entre tareas (opcional, por lista) ──────────────────────
+  if (pause) {
+    const total = pause.plannedSec + pause.adjustSec;
+    const left = Math.ceil((pause.startedAt + total * 1000 - pauseNow) / 1000);
+    const pr = total > 0 ? Math.min(1, Math.max(0, 1 - left / total)) : 1;
+    const mm = (sec: number) => `${Math.floor(Math.abs(sec) / 60)}:${String(Math.abs(sec) % 60).padStart(2, '0')}`;
+    const mutedText = isDark ? 'rgba(255,255,255,0.6)' : 'var(--text-secondary, #636366)';
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} role="dialog" aria-modal="true" aria-label="Pausa"
+        style={{ position: 'fixed', inset: 0, zIndex: 99999, background: screenBackground, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 24, boxSizing: 'border-box', textAlign: 'center' }}>
+        <p style={{ margin: 0, color: mutedText, fontSize: '0.95rem' }}>Pausa</p>
+        <div role="timer" aria-label={left > 0 ? `Quedan ${mm(left)}` : 'Pausa terminada'} style={{ position: 'relative', width: 232, height: 232, margin: '8px 0' }}>
+          <svg viewBox="0 0 232 232" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }} aria-hidden="true">
+            <circle cx="116" cy="116" r="106" fill="none" stroke={isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)'} strokeWidth="6" />
+            <circle cx="116" cy="116" r="106" fill="none" stroke={listColor} strokeWidth="6" strokeLinecap="round" strokeDasharray={2 * Math.PI * 106} strokeDashoffset={2 * Math.PI * 106 * (1 - pr)} style={{ transition: 'stroke-dashoffset 0.3s linear' }} />
+          </svg>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3.2rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: primaryText }}>{left > 0 ? mm(left) : 'Listo'}</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button type="button" onClick={() => setPause(p => p && ({ ...p, adjustSec: p.adjustSec + 60 }))} style={{ minHeight: 44, padding: '0 18px', borderRadius: 22, border: 'none', background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', color: primaryText, fontSize: '1rem', cursor: 'pointer' }}>+ 1 min</button>
+        </div>
+        {pause.nextTitle && <p style={{ margin: '12px 0 0', color: mutedText, fontSize: '0.95rem', maxWidth: 320 }}>Siguiente: {pause.nextTitle}</p>}
+        <div style={{ width: '100%', maxWidth: 420, marginTop: 24 }}>
+          <button type="button" onClick={() => endPause(left > 0)} style={{ width: '100%', minHeight: 52, borderRadius: 16, border: 'none', cursor: 'pointer', background: '#30d158', color: '#000', fontWeight: 600, fontSize: '1.05rem' }}>
+            {left > 0 ? 'Saltar pausa' : 'Seguir'}
           </button>
         </div>
       </motion.div>
@@ -563,6 +650,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
   const SOUND_LABELS: Record<AmbientType, string> = { off: 'Sin', rain: 'Lluvia', waves: 'Olas', binaural: 'Binaural', focus: 'Foco' };
   const addTime = (secs: number) => {
     HapticService.selection();
+    if (currentTask) recordEvents([{ at: Date.now(), scope: 'task', subjectId: currentTask.id, type: 'task_extended', value: secs, planned: plannedSecs }]);
     setTimeLeft(prev => prev + secs);
     setInitialDuration(prev => Math.max(prev, (timeLeft || 0) + secs));
     if (!isActive) setIsActive(true);

@@ -12,6 +12,8 @@ import { getCycleIcon } from '../../constants/icons';
 import { ListConfigModal } from './ListConfigModal';
 import { SMART_LISTS } from '../../constants/smartLists';
 import { QuickAddBar } from '../ui/QuickAddBar';
+import { InsightCard } from '../training/InsightCard';
+import '../training/Training.css';
 import { BottomShortcutBar } from './BottomShortcutBar';
 import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
@@ -2936,6 +2938,9 @@ const CORE_CYCLES = [
                 flexDirection: isActuallyEmpty ? 'column' : undefined
               }}
             >
+              {(currentView === 'smart_today' || isListView) && (
+                <div style={{ padding: '0 16px' }}><InsightCard scope={['task', 'list']} /></div>
+              )}
               {sectionGroups.map((group, groupIndex) => {
                 const renderItem = (item: any, index: number) => {
                   const data = item as any;

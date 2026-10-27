@@ -18,7 +18,8 @@ import {
   Share2,
   GraduationCap,
   Palmtree,
-  Zap
+  Zap,
+  Dumbbell
 } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { SoundService } from '../../../services/SoundService';
@@ -512,6 +513,14 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', cursor: 'pointer' }} type="button"
         >
           <BarChart size={16} /> Estadísticas y productividad
+        </button>
+        <button
+          className="ios-dropdown-item"
+          data-testid="profile-item-training"
+          onClick={(e) => { e.stopPropagation(); onSelectView('TRAINING'); onClose(); }}
+          style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', cursor: 'pointer' }} type="button"
+        >
+          <Dumbbell size={16} /> Entrenamiento
         </button>
         <button
           className="ios-dropdown-item"

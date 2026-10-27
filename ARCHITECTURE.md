@@ -45,6 +45,15 @@ Los IDs los genera el cliente y algunos son fijos (`compras`, `caducidades`, `cy
 - Tareas en segundo plano (lavadora, horno…): el dispositivo registra su hora de fin en `POST /api/push/timers` (guardada en `PushSubscription.sentLog.timers`) y `/api/cron/notify` manda el aviso al terminar, con una precisión igual a la cadencia del cron (10 min con GitHub Actions). Sin avisos activados, el propio dispositivo avisa en cuanto la app vuelve a ejecutarse.
 - `src/utils/calendar.ts` calcula el calendario (recordatorios con fecha, renovaciones previstas y rondas pendientes) sin React; la vista es `src/components/views/CalendarView.tsx`.
 
+## Entrenamiento y motor de patrones
+
+- Módulo opcional «Entrenamiento» (oculto por defecto en la barra lateral; también en Spotlight y en el menú de usuario). Datos propios en `useTrainingStore` (`training-storage`), **solo en el dispositivo**: no se sincronizan con el servidor y se vacían únicamente si entra otra cuenta real.
+- Modelo en `src/models/Training.ts`; biblioteca de ejercicios con alternativas en `src/data/exerciseLibrary.ts`; plantillas (PPL, torso/pierna, cuerpo completo, 5 días) en `src/data/routineTemplates.ts`.
+- `src/utils/sessionMachine.ts` es un reductor puro de la sesión en directo (`READY → IN_SET → RESTING → EXERCISE_TRANSITION → COMPLETED`). El descanso se guarda como instante absoluto (`restEndsAt`), así que sobrevive a recargas y a la app en segundo plano; la sesión sin terminar se retoma desde la vista.
+- `src/utils/strength.ts`: 1RM (Epley), tonelaje, récords, sugerencia de carga por RIR, volumen semanal por músculo, fatiga y descarga. Todo puro y probado en `tests/unit/training.test.ts`.
+- `src/utils/patternEngine.ts` convierte eventos (`rest_extended`, `rest_skipped`, `task_postponed`, `time_delta`…) en propuestas con umbrales explícitos (`PATTERN_RULES`): mínimo de observaciones, de días y de consistencia. Nada cambia sin un toque del usuario en `InsightCard` (Aceptar / Más tarde / Ahora no); lo rechazado no vuelve durante 30 días.
+- Las pausas guiadas entre tareas son opcionales por lista (`CustomList.guidedBreaks`, `breakSeconds`, ajuste en la configuración de la lista) y las usa `ListSequenceMode`.
+
 ## Interfaz
 
 - Componentes por dominio en `src/components`. La capa `src/styles/polish.css` se carga al final y unifica tipografía (Inter/SF), paleta clara y oscura estilo iOS, barra lateral y columna de lectura.

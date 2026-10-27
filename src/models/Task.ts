@@ -29,6 +29,10 @@ export interface CustomList {
   showCompleted?: boolean; // Persist preference to show completed tasks for this list
   isPinned?: boolean; // Pinned lists appear as large cards at the top of sidebar
   isFolder?: boolean; // Habilita comportamiento de carpeta organizativa (contiene listas/subcarpetas)
+  /** Pausas guiadas entre tareas en el modo secuencia (descanso opcional, estilo Pomodoro). */
+  guidedBreaks?: boolean;
+  /** Duración de esa pausa en segundos. */
+  breakSeconds?: number;
   listType?: ListType; // Tipo de lista: 'routines' (limpieza/compra), 'simple' (apuntar cosas), 'events' (citas/eventos), 'goals' (propósitos/metas), 'caducidades', 'que_he_hecho'
   autoEstimateDuration?: boolean; // Permite activar o desactivar la estimación automática de duración de tareas para esta lista
   specialType?: 'caducidades' | 'que_he_hecho'; // Tipo especial para comportamiento enriquecido (retrocompatibilidad)

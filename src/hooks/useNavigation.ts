@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type ViewType = 'HOME' | 'UNIVERSAL_IMPORTER' | 'ANALYTICS';
+export type ViewType = 'HOME' | 'UNIVERSAL_IMPORTER' | 'ANALYTICS' | 'TRAINING';
 
 export interface RoutineAnalyticsFocus {
   frequency: 'day' | 'week' | 'month' | 'year';

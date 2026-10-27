@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Sun, Moon, Sparkles, Calendar, CalendarDays, CalendarClock, Inbox, Check,
   Plus, List, X, BarChart2, FileText, Play, Repeat, CornerDownLeft
-} from 'lucide-react';
+, Dumbbell } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { useTemporalNavigationStore } from '../../store/useTemporalNavigationStore';
 import { isTaskActuallyCompletedInCurrentPeriod } from '../../services/TaskService';
@@ -129,6 +129,7 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
         action: () => { handleClose(); window.dispatchEvent(new CustomEvent('open-ai-assistant')); },
       },
       { id: 'action_importer', title: 'Importar', subtitle: 'Pegar listas o notas y convertirlas en recordatorios', icon: <FileText size={15} />, tint: '#30b0c7', keywords: 'pegar notas volcado', action: go('DATA') },
+      { id: 'action_training', title: 'Entrenamiento', subtitle: 'Rutinas, series y descansos', icon: <Dumbbell size={15} />, tint: '#ff6b35', keywords: 'gimnasio fuerza rutina series pesas gym', action: go('TRAINING') },
       { id: 'action_analytics', title: 'Estadísticas', subtitle: 'Progreso y productividad', icon: <BarChart2 size={15} />, tint: '#ff9500', keywords: 'metricas progreso', action: go('ANALYTICS') },
       {
         id: 'action_theme', title: theme === 'dark' ? 'Usar aspecto claro' : 'Usar aspecto oscuro', icon: theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />,

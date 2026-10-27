@@ -52,6 +52,8 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
   const [isFolder, setIsFolder] = useState(defaultIsFolder || false);
   const [listType, setListType] = useState<ListType>('simple');
   const [autoEstimateDuration, setAutoEstimateDuration] = useState<boolean>(true);
+  const [guidedBreaks, setGuidedBreaks] = useState<boolean>(false);
+  const [breakSeconds, setBreakSeconds] = useState<number>(300);
   const [showAllColors, setShowAllColors] = useState(false);
   const [showAllIcons, setShowAllIcons] = useState(false);
 
@@ -74,6 +76,8 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
         setIsFolder(!!existingList.isFolder);
         setListType(getListType(existingList, existingList.id));
         setAutoEstimateDuration(existingList.autoEstimateDuration !== false);
+        setGuidedBreaks(Boolean(existingList.guidedBreaks));
+        setBreakSeconds(existingList.breakSeconds ?? 300);
         setShowAllColors(!(COLORS.slice(0, COLOR_PREVIEW_COUNT) as readonly string[]).includes(cleanColor));
         setShowAllIcons(!Object.keys(ICONS).slice(0, 12).includes(initialIcon));
       } else {
@@ -129,7 +133,9 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
         isFolder,
         listType,
         specialType: resolvedSpecialType,
-        autoEstimateDuration: !isFolder ? autoEstimateDuration : undefined
+        autoEstimateDuration: !isFolder ? autoEstimateDuration : undefined,
+        guidedBreaks: !isFolder ? guidedBreaks : undefined,
+        breakSeconds: !isFolder && guidedBreaks ? breakSeconds : undefined
       });
       if (listType === 'caducidades' || isCaducidadesList(existingList.id, { ...existingList, name: name.trim(), listType, specialType: resolvedSpecialType })) {
         ensureCaducidadesSections(existingList.id, listSections, addListSection);
@@ -151,7 +157,9 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
         isFolder,
         listType,
         specialType: resolvedSpecialType,
-        autoEstimateDuration: !isFolder ? autoEstimateDuration : undefined
+        autoEstimateDuration: !isFolder ? autoEstimateDuration : undefined,
+        guidedBreaks: !isFolder && guidedBreaks ? true : undefined,
+        breakSeconds: !isFolder && guidedBreaks ? breakSeconds : undefined
       };
       addList(listData);
       if (listType === 'caducidades' || isCaducidadesList(newId, listData)) {
@@ -376,6 +384,29 @@ export function ListConfigModal({ isOpen, onClose, listId, parentId, defaultIsFo
                       />
                       <span className="slider round"></span>
                     </span>
+                  </label>
+                )}
+                {!isFolder && (
+                  <label className="form-row">
+                    <span className="form-row-icon" style={{ background: '#30b0c7' }}><Clock size={16} /></span>
+                    <span className="form-row-text">
+                      <span className="form-row-title">Pausas guiadas entre tareas</span>
+                      <span className="form-row-sub">En el modo secuencia, un descanso opcional tras cada tarea (como el Pomodoro). Apagado, es una lista rápida.</span>
+                    </span>
+                    <span className="switch" style={{ flexShrink: 0, margin: 0 }}>
+                      <input type="checkbox" role="switch" checked={guidedBreaks} onChange={() => setGuidedBreaks(!guidedBreaks)} />
+                      <span className="slider round"></span>
+                    </span>
+                  </label>
+                )}
+                {!isFolder && guidedBreaks && (
+                  <label className="form-row">
+                    <span className="form-row-text">
+                      <span className="form-row-title">Duración de la pausa</span>
+                    </span>
+                    <select value={breakSeconds} onChange={(e) => setBreakSeconds(Number(e.target.value))} aria-label="Duración de la pausa">
+                      {[60, 120, 180, 300, 600, 900].map((sec) => <option key={sec} value={sec}>{sec / 60} min</option>)}
+                    </select>
                   </label>
                 )}
               </div>

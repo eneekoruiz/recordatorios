@@ -39,6 +39,7 @@ import { lazyWithRetry } from './utils/lazyWithRetry';
 // Piezas pesadas o de uso ocasional: se descargan bajo demanda con recuperación de chunks.
 const UniversalImporter = lazyWithRetry(() => import('./components/views/UniversalImporter'), 'UniversalImporter');
 const AnalyticsView = lazyWithRetry(() => import('./components/analytics/AnalyticsView'), 'AnalyticsView');
+const TrainingView = lazyWithRetry(() => import('./components/training/TrainingView'), 'TrainingView');
 const ZenMode = lazyWithRetry(() => import('./components/tasks/ZenMode'), 'ZenMode');
 const ListSequenceMode = lazyWithRetry(() => import('./components/tasks/ListSequenceMode'), 'ListSequenceMode');
 const SecuritySheet = lazyWithRetry(() => import('./components/account/SecuritySheet'), 'SecuritySheet');
@@ -275,6 +276,9 @@ function App() {
     } else if (view === 'ANALYTICS') {
       navReset('ANALYTICS');
       if (isMobile) setMobileView('content');
+    } else if (view === 'TRAINING' || view === 'smart_training') {
+      navReset('TRAINING');
+      if (isMobile) setMobileView('content');
     } else if (view === 'TRASH') {
       setCurrentView(view);
       navReset('HOME');
@@ -325,10 +329,15 @@ function App() {
     const handleSelectViewCustom = (e: any) => {
       if (e.detail) selectViewFromEvent(e.detail);
     };
+    const handleOpenTaskEditor = (e: any) => {
+      if (typeof e.detail === 'string') { setEditingTaskId(e.detail); setIsDrawerOpen(true); }
+    };
+    window.addEventListener('open-task-editor', handleOpenTaskEditor);
     window.addEventListener('open-shortcuts-modal', handleOpenShortcuts);
     window.addEventListener('open-new-task-drawer', handleOpenNewTask);
     window.addEventListener('select-view', handleSelectViewCustom);
     return () => {
+      window.removeEventListener('open-task-editor', handleOpenTaskEditor);
       window.removeEventListener('open-shortcuts-modal', handleOpenShortcuts);
       window.removeEventListener('open-new-task-drawer', handleOpenNewTask);
       window.removeEventListener('select-view', handleSelectViewCustom);
@@ -407,6 +416,7 @@ function App() {
             />
           )}
           {navView === 'UNIVERSAL_IMPORTER' && <Suspense fallback={null}><UniversalImporter onBack={handleBack} /></Suspense>}
+          {navView === 'TRAINING' && <Suspense fallback={null}><TrainingView onBack={handleBack} /></Suspense>}
           {navView === 'ANALYTICS' && (
             <Suspense fallback={
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
