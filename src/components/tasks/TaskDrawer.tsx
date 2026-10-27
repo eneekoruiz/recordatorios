@@ -10,6 +10,7 @@ import { ConfirmModal } from '../ui/ConfirmModal';
 import { isCaducidadesList, getListType, isShoppingList, isLifeLibraryList } from '../../utils/specialLists';
 import { DrawerLibrarySection } from './drawer/DrawerLibrarySection';
 import { detectTaskSmartSuggestion } from '../../utils/taskSmartSuggestions';
+import { getExerciseAlternatives } from '../../utils/gymExercises';
 import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
 import './TaskDrawer.css';
@@ -138,6 +139,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
   const [isParallel, setIsParallel] = useState<boolean>(false);
   const [parallelDuration, setParallelDuration] = useState<number | undefined>(undefined);
   const [targetCount, setTargetCount] = useState<number | undefined>(undefined);
+  const [restDuration, setRestDuration] = useState<number | undefined>(undefined);
   const [currentCount, setCurrentCount] = useState<number | undefined>(undefined);
   const [isDrawerSuggestionDismissed, setIsDrawerSuggestionDismissed] = useState(false);
   const [timeOfDay, setTimeOfDay] = useState<'morning' | 'afternoon' | 'night' | undefined>(undefined);
@@ -249,6 +251,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
         setIsParallel(Boolean(task.isParallel));
         setParallelDuration(task.parallelDuration);
         setTargetCount(task.targetCount);
+        setRestDuration(task.restDuration);
         setCurrentCount(task.currentCount);
         setTimeOfDay(task.timeOfDay);
         setHasDate(!!task.dueDate);
@@ -699,6 +702,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
       isParallel: isParallel ? true : undefined,
       parallelDuration: isParallel && parallelDuration ? Number(parallelDuration) : undefined,
       targetCount: targetCount && targetCount > 1 ? Number(targetCount) : undefined,
+      restDuration: targetCount && targetCount > 1 ? (restDuration ? Number(restDuration) : 90) : undefined,
       currentCount: targetCount && targetCount > 1 ? (currentCount || 0) : undefined,
       people: people.length > 0 ? people : undefined,
       expirationType: expirationType || (isCaducidadesList(category) ? (sectionId?.includes('suscrip') ? 'subscription' : 'card') : undefined),
@@ -753,6 +757,7 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
     setDuration('');
     setDisableDuration(false);
     setTargetCount(undefined);
+    setRestDuration(undefined);
     setCurrentCount(undefined);
     setPeople([]);
     setExpirationType(undefined);
@@ -900,6 +905,59 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                 onApplySmartSuggestion={handleApplySmartSuggestion}
                 onDismissSmartSuggestion={handleDismissSmartSuggestion}
               />
+              {/* Sugerencias de ejercicios alternativos si coincide con ejercicios de gimnasio */}
+              {title && (() => {
+                const gymInfo = getExerciseAlternatives(title);
+                if (!gymInfo.found || gymInfo.alternatives.length === 0) return null;
+                return (
+                  <div
+                    style={{
+                      background: 'var(--bg-surface, rgba(0,0,0,0.03))',
+                      borderRadius: 14,
+                      padding: '12px 14px',
+                      border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
+                      margin: '10px 0'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                        ¿No te apetece «{title}» hoy? Alternativas:
+                      </span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--accent-primary, #0a84ff)', fontWeight: 700 }}>
+                        {gymInfo.categoryLabel}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {gymInfo.alternatives.slice(0, 4).map(alt => (
+                        <button
+                          key={alt.name}
+                          type="button"
+                          onClick={() => {
+                            SoundService.playPop();
+                            handleTitleInput(alt.name);
+                          }}
+                          title={`${alt.equipment}: ${alt.note}`}
+                          style={{
+                            padding: '5px 10px',
+                            borderRadius: 999,
+                            background: 'var(--bg-elevated, #ffffff)',
+                            border: '1px solid var(--border-subtle, rgba(0,0,0,0.1))',
+                            color: 'var(--text-primary)',
+                            fontSize: '0.78rem',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4
+                          }}
+                        >
+                          <span style={{ color: 'var(--accent-primary, #0a84ff)', fontWeight: 700 }}>+</span> {alt.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Card 1: Fecha y Horarios */}
               <DrawerDateTimeSection
@@ -996,6 +1054,8 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                 setImage={setImage}
                 targetCount={targetCount}
                 setTargetCount={setTargetCount}
+                restDuration={restDuration}
+                setRestDuration={setRestDuration}
               />
 
               {/* Card 5: Precio y costes (compras, checklists y caducidades; o si ya tiene precio) */}

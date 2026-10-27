@@ -740,8 +740,14 @@ export const TaskCard = React.memo(function TaskCard({
     let lastX = startX;
     let lastY = startY;
     const clearTarget = () => {
-      target?.removeAttribute('data-touch-drag-over');
-      target?.removeAttribute('data-task-drop-section');
+      if (typeof document !== 'undefined') {
+        document.querySelectorAll('[data-touch-drag-over], [data-task-drop-section], [data-drag-over-pos], [data-section-drag-over]').forEach(el => {
+          el.removeAttribute('data-touch-drag-over');
+          el.removeAttribute('data-task-drop-section');
+          el.removeAttribute('data-drag-over-pos');
+          el.removeAttribute('data-section-drag-over');
+        });
+      }
       target = null;
       zone = null;
     };

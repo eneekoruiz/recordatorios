@@ -135,6 +135,32 @@ class SoundServiceClass {
   /**
    * Click háptico / pop de interfaz para botones y selección
    */
+
+  /**
+   * Tono de aviso al terminar el descanso entre series (Gym / Modo Zen)
+   */
+  public playRestEnd() {
+    HapticService.notification('warning');
+    if (!this._enabled || typeof window === 'undefined') return;
+    try {
+      this.initCtx();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      [0, 0.15, 0.30].forEach((delay, idx) => {
+        const osc = this.ctx!.createOscillator();
+        const gain = this.ctx!.createGain();
+        const freq = idx === 2 ? 1760 : 1318.5;
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + delay);
+        gain.gain.setValueAtTime(0.12, now + delay);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.12);
+        osc.connect(gain);
+        gain.connect(this.ctx!.destination);
+        osc.start(now + delay);
+        osc.stop(now + delay + 0.12);
+      });
+    } catch (err) { console.error('SoundService playRestEnd error:', err); }
+  }
   public playPop() {
     HapticService.impact('light');
     if (!this._enabled || typeof window === 'undefined') return;

@@ -92,7 +92,7 @@ const taskSchema = z.object({
   priority,
   flagged: flag, url: text, image: text, timeOfDay: optional(z.enum(['morning', 'afternoon', 'night'])),
   duration: nonnegative, disableDuration: flag, isParallel: flag, parallelDuration: nonnegative,
-  targetCount: optional(z.number().int().nonnegative()), currentCount: optional(z.number().int().nonnegative()),
+  targetCount: optional(z.number().int().nonnegative()), currentCount: optional(z.number().int().nonnegative()), restDuration: optional(z.number().int().nonnegative()),
   isDetailed: flag, price: nonnegative, quantity: nonnegative, brand: text,
   location: optional(z.object({
     lat: z.number().finite().min(-90).max(90), lng: z.number().finite().min(-180).max(180),

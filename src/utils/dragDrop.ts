@@ -8,8 +8,8 @@
  * es fácil de acertar y anidar es un gesto deliberado, no un accidente por unos píxeles de más.
  */
 export function classifyDropZone(relY: number): 'top' | 'bottom' | 'inside' {
-  if (relY < 0.35) return 'top';
-  if (relY > 0.65) return 'bottom';
+  if (relY < 0.25) return 'top';
+  if (relY > 0.75) return 'bottom';
   return 'inside';
 }
 

@@ -202,6 +202,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
 
   // Timer state per active task
   const [timeLeft, setTimeLeft] = useState(0);
+  const [sequencePhase, setSequencePhase] = useState<'work' | 'rest'>('work');
   const [initialDuration, setInitialDuration] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const activeElapsedRef = useRef<number>(0);
@@ -289,6 +290,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
       const effectiveMins = rawMins > 0 ? rawMins : 5;
       // Segundos exactos para la cuenta atrás
       const secs = Math.max(10, Math.round(effectiveMins * 60));
+      setSequencePhase('work');
       setShowDurationPicker(false);
       setShowTimeTools(false);
       setTimeLeft(secs);
@@ -486,7 +488,24 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
           >
             <CheckCircle size={40} color="#000" strokeWidth={2} aria-hidden="true" />
           </motion.div>
-          <h2 style={{ fontSize: '1.9rem', fontWeight: 700, color: primaryText, margin: '0 0 6px', letterSpacing: '-0.02em' }}>Lista completada</h2>
+          
+              {currentTask?.targetCount && currentTask.targetCount > 1 && (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: '0 0 4px' }}>
+                  <span style={{
+                    padding: '3px 12px',
+                    borderRadius: 999,
+                    background: sequencePhase === 'rest' ? 'rgba(255, 149, 0, 0.16)' : 'rgba(10, 132, 255, 0.16)',
+                    color: sequencePhase === 'rest' ? '#ff9500' : (listColor || 'var(--accent-primary, #0a84ff)'),
+                    fontWeight: 700,
+                    fontSize: '0.8rem'
+                  }}>
+                    {sequencePhase === 'rest'
+                      ? `⏳ Descanso post-serie ${currentTask.currentCount || 1}`
+                      : `🔥 Serie ${(currentTask.currentCount || 0) + 1} de ${currentTask.targetCount}`}
+                  </span>
+                </div>
+              )}
+              <h2 style={{ fontSize: '1.9rem', fontWeight: 700, color: primaryText, margin: '0 0 6px', letterSpacing: '-0.02em' }}>Lista completada</h2>
           <p style={{ fontSize: '1rem', color: rowsMuted, margin: '0 0 28px', lineHeight: 1.4 }}>Has terminado {listName}.</p>
 
           {/* Resumen: filas con línea fina, como una lista de ajustes; sin tarjetas de colores */}
@@ -787,7 +806,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                 onClick={handleCompleteTask} whileTap={{ scale: 0.98 }}
                 style={{ width: '100%', minHeight: 52, borderRadius: 16, border: 'none', cursor: 'pointer', background: '#30d158', color: '#000', fontWeight: 600, fontSize: '1.05rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
               >
-                <CheckCircle size={20} aria-hidden="true" /> Completar
+                {currentTask?.targetCount && currentTask.targetCount > 1 ? (sequencePhase === "rest" ? <><Zap size={18} /> Empezar siguiente serie</> : <><CheckCircle size={20} /> Terminar Serie {(currentTask.currentCount || 0) + 1}</>) : <><CheckCircle size={20} /> Completar</>}
               </motion.button>
             )}
             <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>

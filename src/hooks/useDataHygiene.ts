@@ -12,6 +12,7 @@ import { ensureLimpiezaSections, getRoomForCleaningTask, isCaducidadesList, isQu
 import { semanticKey, normalizeTitle } from '../utils/taskDeduplication';
 import { runContentMigrations } from '../utils/contentMigrations';
 import type { TaskItem } from '../models/Task';
+import { createDefaultGymRoutine } from '../utils/gymExercises';
 
 export function useDataHygiene(hasHydrated: boolean): boolean {
   const [isDone, setIsDone] = useState(false);
@@ -324,6 +325,26 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
             });
           }
         });
+      }
+
+
+      // Asegurar que Gimnasio esté presente con su rutina completa de 4 días
+      const gymList = lists.find(l => l.id === 'gimnasio' || (l.name || '').toLowerCase() === 'gimnasio');
+      if (!gymList && !isCloudHidden) {
+        const { list: defaultGymList, sections: defaultGymSecs, tasks: defaultGymTasks } = createDefaultGymRoutine(state.userId || '');
+        state.addList({ ...defaultGymList, updated_at: EPOCH });
+        defaultGymSecs.forEach(sec => state.addListSection({ ...sec, updated_at: EPOCH }));
+        defaultGymTasks.forEach(task => state.addTask({ ...task, updated_at: EPOCH }));
+      } else if (gymList) {
+        const gymSections = (state.listSections || []).filter(s => s.listId === gymList.id);
+        if (gymSections.length === 0) {
+          const { sections: defaultGymSecs, tasks: defaultGymTasks } = createDefaultGymRoutine(state.userId || '');
+          defaultGymSecs.forEach(sec => state.addListSection({ ...sec, listId: gymList.id, updated_at: EPOCH }));
+          const hasGymTasks = Object.values(state.tasks || {}).some((t: any) => !t.deleted_at && (t.categoryId === gymList.id || t.category_id === gymList.id));
+          if (!hasGymTasks) {
+            defaultGymTasks.forEach(task => state.addTask({ ...task, categoryId: gymList.id, updated_at: EPOCH }));
+          }
+        }
       }
 
       // Unificación homogénea de nombres de secciones en todas las listas (Quehaceres, Limpieza, etc.)

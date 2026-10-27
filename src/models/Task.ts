@@ -122,6 +122,7 @@ export interface TaskItem {
   // --- HABIT & REPETITION FIELDS ---
   targetCount?: number;
   currentCount?: number;
+  restDuration?: number; // Descanso entre series en segundos (ej: 60, 90, 120)
 
   // --- SHOPPING & FINANCE FIELDS ---
   isDetailed?: boolean; 

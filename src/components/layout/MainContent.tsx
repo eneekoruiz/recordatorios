@@ -1209,10 +1209,11 @@ const CORE_CYCLES = [
               // solo omitimos la cabecera si es la ÚNICA sección activa de la lista (para no duplicar "Diario" -> "Diarias").
               // Si la lista tiene otras secciones (ej. Hábitos vitales + Diarias en Quehaceres), mostramos cabecera separada.
               const purePeriodicity = getPureCyclicPeriodicity(sec.name);
+              const isMatchingCurrentCycle = Boolean(currentCycle && purePeriodicity === currentCycle.id.replace('cycle_', ''));
               const activeRootSections = sectionsForList.filter(s => !s.parentId && hasTasksRecursively(s.id));
               const isOnlyRootSection = activeRootSections.length <= 1 && !activeRootSections.some(s => !getPureCyclicPeriodicity(s.name));
 
-              if (currentCycle && purePeriodicity && isOnlyRootSection) {
+              if (currentCycle && purePeriodicity && (isMatchingCurrentCycle || isOnlyRootSection)) {
                 const cycleOrder: Record<string, number> = { day: 1, week: 2, month: 3, year: 4 };
                 const currentCycleRank = currentCycle.id === 'cycle_day' ? 1 : currentCycle.id === 'cycle_week' ? 2 : currentCycle.id === 'cycle_month' ? 3 : 4;
                 const secRank = cycleOrder[purePeriodicity] || 1;
@@ -2285,12 +2286,9 @@ const CORE_CYCLES = [
         else if (prevTask && nextTask && prevTask.parentId && nextTask.parentId && prevTask.parentId === nextTask.parentId) {
           newParentId = prevTask.parentId;
         }
-        // Escenario 3: Soltado después de la última subtarea de un grupo → queda como tarea normal,
-        // tras el grupo. (Entre dos subtareas ya lo cubre el escenario 2; para añadirla como subtarea
-        // se suelta sobre el centro del padre.) Así llevar una tarea al final de la lista no la
-        // convierte por sorpresa en subtarea de la última.
+        // Escenario 3: Soltado después de una subtarea de un grupo → queda como subtarea del mismo padre
         else if (position === 'after' && targetTask.parentId) {
-          newParentId = undefined;
+          newParentId = targetTask.parentId;
         }
         // Escenario 4: Soltado antes de una subtarea, cuando el elemento anterior es el padre o un hermano
         else if (position === 'before' && targetTask.parentId && prevTask && (prevTask.id === targetTask.parentId || prevTask.parentId === targetTask.parentId)) {

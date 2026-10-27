@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings2 } from 'lucide-react';
+import { Settings2, Timer } from 'lucide-react';
 import { SectionTrailing } from './SectionTrailing';
 import { CustomSelect } from '../../ui/CustomSelect';
 
@@ -17,6 +17,8 @@ interface DrawerMetaSectionProps {
   setImage: (image: string) => void;
   targetCount?: number;
   setTargetCount: (count?: number) => void;
+  restDuration?: number;
+  setRestDuration?: (seconds?: number) => void;
 }
 
 export const DrawerMetaSection: React.FC<DrawerMetaSectionProps> = ({
@@ -31,100 +33,182 @@ export const DrawerMetaSection: React.FC<DrawerMetaSectionProps> = ({
   image,
   setImage,
   targetCount,
-  setTargetCount
+  setTargetCount,
+  restDuration,
+  setRestDuration
 }) => {
+  const hasSeries = Boolean(targetCount && targetCount > 1);
+
   return (
     <div className="section-card">
       <button
         type="button"
         className="section-card-header"
         onClick={() => setCardDetailsOpen(!cardDetailsOpen)}
-        aria-expanded={cardDetailsOpen}
       >
-        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Settings2 size={16} color="var(--text-secondary)" />
-          Detalles adicionales
+        <span className="section-card-title">
+          <Settings2 size={16} /> Metadatos y Series
         </span>
-        <SectionTrailing open={cardDetailsOpen} summary={[priority !== 'none' ? `Prioridad ${({ low: 'baja', medium: 'media', high: 'alta' } as const)[priority]}` : '', flagged ? 'Con marca' : ''].filter(Boolean).join(' · ')} />
+        <SectionTrailing open={cardDetailsOpen} />
       </button>
+
       <AnimatePresence>
         {cardDetailsOpen && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ height: { duration: 0.3, ease: [0.22, 1, 0.36, 1] }, opacity: { duration: 0.2 } }} style={{ overflow: 'hidden' }}>
-            <div className="section-card-content">
-              <div className="detail-row" style={{ padding: '8px 0' }}>
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="section-card-content" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="detail-row">
                 <span className="detail-label">Prioridad</span>
                 <CustomSelect
-                  className="detail-select"
                   value={priority}
-                  onChange={val => setPriority(val as any)}
+                  onChange={(val) => setPriority(val as any)}
                   options={[
                     { value: 'none', label: 'Ninguna' },
-                    { value: 'low', label: 'Baja' },
-                    { value: 'medium', label: 'Media' },
-                    { value: 'high', label: 'Alta' }
-                  ]} aria-label="Prioridad"
+                    { value: 'low', label: 'Baja (!)' },
+                    { value: 'medium', label: 'Media (!!)' },
+                    { value: 'high', label: 'Alta (!!!)' }
+                  ]}
+                  aria-label="Prioridad"
                 />
               </div>
 
-              <div className="divider"></div>
-
-              <div className="detail-row" style={{ padding: '8px 0' }}>
-                <span className="detail-label">Destacado</span>
-                <label className="switch">
-                  <input type="checkbox" checked={flagged} onChange={e => setFlagged(e.target.checked)} aria-label="Destacado" />
-                  <span className="slider round"></span>
-                </label>
+              <div className="detail-row">
+                <span className="detail-label">Destacado (Flag)</span>
+                <button
+                  type="button"
+                  onClick={() => setFlagged(!flagged)}
+                  className={`chip ${flagged ? 'active' : ''}`}
+                  style={{
+                    borderRadius: 999,
+                    padding: '6px 14px',
+                    fontWeight: 600,
+                    fontSize: '0.82rem',
+                    border: flagged ? 'none' : '1px solid var(--border-subtle)',
+                    background: flagged ? 'var(--accent-orange, #ff9500)' : 'transparent',
+                    color: flagged ? '#ffffff' : 'var(--text-secondary)'
+                  }}
+                >
+                  {flagged ? 'Marcado' : 'Sin marcar'}
+                </button>
               </div>
 
-              <div className="divider"></div>
-
-              <div className="detail-row" style={{ padding: '8px 0' }}>
-                <span className="detail-label">URL del enlace</span>
+              <div className="detail-row">
+                <span className="detail-label">URL Enlace</span>
                 <input
                   type="url"
-                  placeholder="https://example.com"
+                  placeholder="https://..."
                   value={url}
                   onChange={e => setUrl(e.target.value)}
-                  style={{ width: '60%', textAlign: 'right', border: 'none', background: 'transparent', outline: 'none', color: 'var(--text-secondary)' }} aria-label="URL del enlace"
+                  style={{ flex: 1, minWidth: 0, background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '6px 10px', color: 'var(--text-primary)' }}
                 />
               </div>
 
-              <div className="divider"></div>
-
-              <div className="detail-row" style={{ padding: '8px 0' }}>
-                <span className="detail-label">Adjuntar Imagen</span>
-                <label className="switch">
-                  <input type="checkbox" checked={!!image} onChange={e => setImage(e.target.checked ? 'https://picsum.photos/200/300' : '')} aria-label="Adjuntar imagen" />
-                  <span className="slider round"></span>
-                </label>
+              <div className="detail-row">
+                <span className="detail-label">URL Imagen</span>
+                <input
+                  type="url"
+                  placeholder="https://..."
+                  value={image}
+                  onChange={e => setImage(e.target.value)}
+                  style={{ flex: 1, minWidth: 0, background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '6px 10px', color: 'var(--text-primary)' }}
+                />
               </div>
-              {!!image && (
-                <div className="detail-row" style={{ padding: '4px 0', marginTop: -8 }}>
-                  <input
-                    type="text"
-                    className="detail-select"
-                    placeholder="URL de imagen..."
-                    value={image === 'https://picsum.photos/200/300' ? '' : image}
-                    onChange={e => setImage(e.target.value)}
-                    style={{ width: '100%', textAlign: 'right', borderBottom: '1px solid var(--border-subtle)' }} aria-label="URL de la imagen"
+
+              {image && (
+                <div style={{ marginTop: 4, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border-subtle)', maxHeight: 120, display: 'flex', justifyContent: 'center', background: 'var(--bg-surface)' }}>
+                  <img
+                    src={image}
+                    alt="Preview"
+                    style={{ maxHeight: 120, width: '100%', objectFit: 'cover' }}
+                    onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
                   />
                 </div>
               )}
 
               <div className="divider"></div>
 
-              <div className="detail-row" style={{ padding: '8px 0' }}>
-                <span className="detail-label">Repeticiones diarias (Hábito)</span>
+              {/* Repeticiones / Series del ejercicio */}
+              <div className="detail-row" style={{ padding: '4px 0' }}>
+                <div>
+                  <span className="detail-label" style={{ display: 'block' }}>Repeticiones / Series</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+                    Para gimnasio (número de series) o hábitos diarios
+                  </span>
+                </div>
                 <input
                   type="number"
                   min="1"
                   max="100"
-                  placeholder="Ej: 10 (veces)"
+                  placeholder="Ej: 3 ó 4"
                   value={targetCount || ''}
-                  onChange={e => setTargetCount(e.target.value ? parseInt(e.target.value) : undefined)}
-                  style={{ width: 90, textAlign: 'right', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-primary)' }} aria-label="Repeticiones diarias"
+                  onChange={e => setTargetCount(e.target.value ? parseInt(e.target.value, 10) : undefined)}
+                  style={{ width: 85, textAlign: 'right', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '6px 8px', color: 'var(--text-primary)', fontWeight: 600 }}
+                  aria-label="Repeticiones o series"
                 />
               </div>
+
+              {/* Descanso entre series si tiene series configuradas */}
+              {hasSeries && setRestDuration && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  style={{
+                    background: 'var(--bg-surface, rgba(0,0,0,0.03))',
+                    borderRadius: 12,
+                    padding: '10px 12px',
+                    border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Timer size={14} color="var(--accent-primary, #0a84ff)" /> Descanso entre series
+                    </span>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-primary, #0a84ff)' }}>
+                      {restDuration ? `${Math.floor(restDuration / 60)}m ${restDuration % 60 ? (restDuration % 60) + 's' : ''}`.trim() : '90s (defecto)'}
+                    </span>
+                  </div>
+
+                  {/* Chips rápidos de descanso */}
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {[
+                      { label: '60s', sec: 60 },
+                      { label: '90s', sec: 90 },
+                      { label: '2 min', sec: 120 },
+                      { label: '2.5 min', sec: 150 },
+                      { label: '3 min', sec: 180 }
+                    ].map(preset => {
+                      const isSelected = restDuration === preset.sec || (!restDuration && preset.sec === 90);
+                      return (
+                        <button
+                          key={preset.sec}
+                          type="button"
+                          onClick={() => setRestDuration(preset.sec)}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: 8,
+                            fontSize: '0.78rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            background: isSelected ? 'var(--accent-primary, #0a84ff)' : 'transparent',
+                            color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                            border: isSelected ? 'none' : '1px solid var(--border-subtle)'
+                          }}
+                        >
+                          {preset.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
             </div>
           </motion.div>
         )}
