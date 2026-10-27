@@ -280,6 +280,7 @@ class SyncManager {
           weeklyTasksDay: state.weeklyTasksDay,
           displayName: state.displayName,
           activeMode: state.activeMode || { mode: 'normal' },
+          aiConfig: state.aiConfig,
           updated_at: preferencesUpdatedAt,
         }
       : undefined;
@@ -479,6 +480,9 @@ class SyncManager {
           if (prefs.activeMode && typeof prefs.activeMode === 'object' && prefs.activeMode.mode) {
             update.activeMode = prefs.activeMode;
             writeStoredActiveMode(prefs.activeMode);
+          }
+          if (prefs.aiConfig && typeof prefs.aiConfig === 'object') {
+            update.aiConfig = prefs.aiConfig;
           }
           if (serverUpdatedAt >= localUpdatedAt) {
             update._preferences_dirty = false;

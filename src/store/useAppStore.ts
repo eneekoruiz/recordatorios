@@ -154,6 +154,8 @@ interface AppState {
   smartListVisibility: Record<string, boolean>;
   pinnedSmartLists: string[];
   cycleVisibility: Record<string, boolean>;
+  aiConfig?: { provider: 'auto' | 'gemini' | 'openai'; apiKey?: string };
+  setAiConfig: (config: { provider: 'auto' | 'gemini' | 'openai'; apiKey?: string }) => void;
   preferences_updated_at?: string;
   _preferences_dirty?: boolean;
   /** Borrados de listas/ciclos/tareas pendientes de comunicar al servidor. */
@@ -458,6 +460,14 @@ export const useAppStore = create<AppState>()(
         if (!isValidWeekday(day)) return;
         writeStoredWeeklyDay(day);
         set({ weeklyTasksDay: day, preferences_updated_at: new Date().toISOString(), _preferences_dirty: true });
+      },
+
+      setAiConfig: (config) => {
+        set({
+          aiConfig: config,
+          preferences_updated_at: new Date().toISOString(),
+          _preferences_dirty: true
+        });
       },
 
       toggleSmartList: (listId) => optimisticUpdate(get, set, (state) => ({

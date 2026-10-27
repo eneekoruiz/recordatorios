@@ -109,11 +109,18 @@ const geminiRequest = (model: string, apiKey: string, body: unknown, signal: Abo
 
 export class AIService {
   public static getConfig(userId: string | null = useAppStore.getState().userId): AIConfig {
+    const storeState = useAppStore.getState();
+    if (userId && storeState.userId === userId && storeState?.aiConfig?.apiKey) {
+      return storeState.aiConfig;
+    }
     const parsed = getAccountSettings<AIConfig>(userId, 'ai-assistant', { provider: 'auto' }, {
       config: 'ai_assistant_config'
     });
     if (parsed.apiKey && (!parsed.provider || parsed.provider === 'auto') && parsed.apiKey.startsWith('AIza')) {
       parsed.provider = 'gemini';
+    }
+    if (parsed.apiKey && storeState?.setAiConfig && !storeState?.aiConfig?.apiKey) {
+      storeState.setAiConfig(parsed);
     }
     return parsed;
   }
@@ -123,7 +130,12 @@ export class AIService {
     if (saved.apiKey && saved.apiKey.startsWith('AIza') && saved.provider === 'auto') {
       saved.provider = 'gemini';
     }
-    return saveAccountSettings(userId, 'ai-assistant', saved, { config: 'ai_assistant_config' });
+    const ok = saveAccountSettings(userId, 'ai-assistant', saved, { config: 'ai_assistant_config' });
+    const storeState = useAppStore.getState();
+    if ((!userId || storeState.userId === userId) && storeState?.setAiConfig) {
+      storeState.setAiConfig(saved);
+    }
+    return ok;
   }
 
   public static async testGeminiConnection(apiKey: string): Promise<{ ok: boolean; model?: string; error?: string }> {

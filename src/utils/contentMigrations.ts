@@ -1067,4 +1067,51 @@ export function runContentMigrations(store: ContentMigrationStore): void {
       priority: 'none'
     });
   }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 6. Lavado de edredón, nórdico y colchas (Habitación - mensual/bimestral)
+  // ──────────────────────────────────────────────────────────────────────────
+  const hasEverEdredon = hasTaskEver(t =>
+    normalize(t.title).includes('edredon') || normalize(t.title).includes('nordico')
+  );
+  if (!hasEverEdredon) {
+    const parentId = 'task_edredon_nordico_mantenimiento';
+    store.addTask({
+      id: parentId,
+      title: 'Lavar el edredón / nórdico y colcha',
+      description: 'Echar a lavar el edredón nórdico y mantas de la cama cada 1-2 meses o cambio de temporada.',
+      notes: 'Lavar en lavadora con programa delicado o en lavandería autoservicio si es voluminoso. Secar completamente antes de guardar o poner.',
+      categoryId: routinesListId,
+      sectionId: habSectionId,
+      cycle_id: 'cycle_month',
+      duration: 15,
+      priority: 'none',
+      status: 'pending'
+    });
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 7. Descalcificar cafetera y hervidor (Cocina - mensual)
+  // ──────────────────────────────────────────────────────────────────────────
+  const hasEverCafetera = hasTaskEver(t =>
+    normalize(t.title).includes('cafetera') && (normalize(t.title).includes('descalc') || normalize(t.title).includes('limp'))
+  );
+  if (!hasEverCafetera) {
+    const secMensualCocina = sections.find((s: any) =>
+      (s.id === 'sec_limp_mensual_cocina' || s.id === 'sec_limpieza_mensual_cocina' || (normalize(s.name) === 'cocina' && (s.parentId === secMensuales.id || s.listId === routinesListId)))
+    );
+    const cocinaSectionId = secMensualCocina ? secMensualCocina.id : secMensuales.id;
+    store.addTask({
+      id: 'task_descalcificar_cafetera_mensual',
+      title: 'Descalcificar cafetera y hervidor',
+      description: 'Ciclo de descalcificación con vinagre o producto antical para alargar la vida útil y mejorar el sabor.',
+      notes: 'Hacer pasar agua con solución descalcificante y luego 2 ciclos de agua limpia.',
+      categoryId: routinesListId,
+      sectionId: cocinaSectionId,
+      cycle_id: 'cycle_month',
+      duration: 10,
+      priority: 'none',
+      status: 'pending'
+    });
+  }
 }

@@ -33,6 +33,8 @@ import {
 } from '../../utils/sectionRoutine';
 import { splitWholeHouseTasks, WHOLE_HOUSE_START, WHOLE_HOUSE_END } from '../../utils/cleaningOrder';
 import { MainEmptyState } from './main/MainEmptyState';
+import { QuickWeightPromptModal } from '../tasks/QuickWeightPromptModal';
+import { shouldPromptWeight } from '../../utils/gymExercises';
 import { MainGlassHeader } from './main/MainGlassHeader';
 import { MainSectionHeader } from './main/MainSectionHeader';
 import { DeletedTaskToast } from './main/DeletedTaskToast';
@@ -650,7 +652,13 @@ const CORE_CYCLES = [
   }, [tasks, currentView, isSmartView, isFolderView, isListView, lists, currentCycle]);
 
   // Handlers
-  const handleToggleTask = useCallback(async (taskId: string, forceReverse?: boolean, customTimestamp?: number | Date) => {
+  const [pendingWeightPrompt, setPendingWeightPrompt] = useState<{
+    task: TaskItem;
+    forceReverse?: boolean;
+    customTimestamp?: number | Date;
+  } | null>(null);
+
+  const executeToggleTask = useCallback(async (taskId: string, forceReverse?: boolean, customTimestamp?: number | Date) => {
     const task = tasks[taskId];
     if (task) {
       
@@ -729,6 +737,54 @@ const CORE_CYCLES = [
       : (temporalDate ? new Date(temporalDate).getTime() : undefined);
     toggleTask(taskId, forceReverse, refTimestamp);
   }, [tasks, cycles, lists, listSections, toggleTask, temporalDate]);
+
+  const handleToggleTask = useCallback((taskId: string, forceReverse?: boolean, customTimestamp?: number | Date) => {
+    const task = tasks[taskId];
+    if (!task) return;
+
+    const effCycle = getEffectiveCycleId(task, listSections, lists);
+    const refDate = customTimestamp !== undefined
+      ? (typeof customTimestamp === 'number' ? new Date(customTimestamp) : customTimestamp)
+      : (temporalDate ? new Date(temporalDate) : new Date());
+    const isDone = effCycle
+      ? isCompletedInCurrentPeriod(task, cycles, listSections, lists, refDate)
+      : isTaskCompleted(task);
+    const willBeCompleted = forceReverse !== undefined ? !forceReverse : !isDone;
+
+    const list = lists.find(l => l.id === task.categoryId);
+    if (willBeCompleted && shouldPromptWeight(task, list?.name)) {
+      setPendingWeightPrompt({ task, forceReverse, customTimestamp });
+      return;
+    }
+
+    executeToggleTask(taskId, forceReverse, customTimestamp);
+  }, [tasks, lists, listSections, cycles, temporalDate, executeToggleTask]);
+
+  const handleConfirmWeight = useCallback((weightKg: number) => {
+    if (!pendingWeightPrompt) return;
+    const { task, forceReverse, customTimestamp } = pendingWeightPrompt;
+    const existingLogs = task.weightLogs ? [...task.weightLogs] : [];
+    existingLogs.push({
+      set: existingLogs.length + 1,
+      weightKg,
+      reps: task.targetCount || 10,
+      date: new Date().toISOString()
+    });
+    updateTask(task.id, { weightLogs: existingLogs });
+    setPendingWeightPrompt(null);
+    executeToggleTask(task.id, forceReverse, customTimestamp);
+  }, [pendingWeightPrompt, updateTask, executeToggleTask]);
+
+  const handleSkipWeight = useCallback(() => {
+    if (!pendingWeightPrompt) return;
+    const { task, forceReverse, customTimestamp } = pendingWeightPrompt;
+    setPendingWeightPrompt(null);
+    executeToggleTask(task.id, forceReverse, customTimestamp);
+  }, [pendingWeightPrompt, executeToggleTask]);
+
+  const handleCancelWeight = useCallback(() => {
+    setPendingWeightPrompt(null);
+  }, []);
 
   const handleDeleteTask = useCallback((taskId: string) => {
     const task = tasks[taskId];
@@ -3446,6 +3502,14 @@ const CORE_CYCLES = [
         listSections={listSections || []}
         tasks={tasks}
         currentListId={currentList?.id}
+      />
+
+      <QuickWeightPromptModal
+        isOpen={Boolean(pendingWeightPrompt)}
+        task={pendingWeightPrompt?.task || null}
+        onConfirm={handleConfirmWeight}
+        onSkip={handleSkipWeight}
+        onCancel={handleCancelWeight}
       />
     </main>
   );

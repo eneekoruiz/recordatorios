@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getExerciseAlternatives, createDefaultGymRoutine, GYM_EXERCISE_CATALOG } from '../../src/utils/gymExercises';
+import { getExerciseAlternatives, shouldPromptWeight, createDefaultGymRoutine, GYM_EXERCISE_CATALOG } from '../../src/utils/gymExercises';
 import { validateJsonImport } from '../../src/utils/importValidation';
 
 describe('Gimnasio y Rutinas - Catálogo y Alternativas', () => {
@@ -51,6 +51,14 @@ describe('Gimnasio y Rutinas - Catálogo y Alternativas', () => {
     expect(jaca.found).toBe(true);
     expect(jaca.category).toBe('pierna');
     expect(jaca.alternatives.some(a => a.name.toLowerCase().includes('prensa'))).toBe(true);
+    expect(jaca.alternatives.some(a => a.name.toLowerCase().includes('pendular'))).toBe(true);
+    expect(jaca.alternatives.some(a => a.name.toLowerCase().includes('sentadilla libre'))).toBe(false);
+
+    const triceps = getExerciseAlternatives('Extensión de tríceps');
+    expect(triceps.found).toBe(true);
+    expect(triceps.category).toBe('triceps');
+    expect(triceps.alternatives.some(a => a.name.toLowerCase().includes('katana'))).toBe(true);
+    expect(triceps.alternatives.some(a => a.name.toLowerCase().includes('asistidos'))).toBe(true);
 
     const hack = getExerciseAlternatives('hack');
     expect(hack.found).toBe(true);
@@ -209,5 +217,16 @@ describe('Gimnasio y Rutinas - Rutina Completa con Sección Diaria', () => {
     const validated = validateJsonImport(rawData);
     expect(validated.tasks?.[0].restDuration).toBe(120);
     expect(validated.tasks?.[0].targetCount).toBe(4);
+  });
+
+  it('determina con precision cuando preguntar el peso (shouldPromptWeight)', () => {
+    expect(shouldPromptWeight({ title: 'Sentadilla Jaca', status: 'pending' } as any)).toBe(true);
+    expect(shouldPromptWeight({ title: 'Press militar', status: 'pending' } as any)).toBe(true);
+    expect(shouldPromptWeight({ title: 'Curl femoral en máquina', status: 'pending' } as any)).toBe(true);
+    expect(shouldPromptWeight({ title: 'Estiramientos previos y movilidad', status: 'pending' } as any)).toBe(false);
+    expect(shouldPromptWeight({ title: 'Cardio final (Remo o Bici)', status: 'pending' } as any)).toBe(false);
+    expect(shouldPromptWeight({ title: 'Sentadilla Jaca', status: 'completed' } as any)).toBe(false);
+    expect(shouldPromptWeight({ title: 'Comprar leche', status: 'pending' } as any)).toBe(false);
+    expect(shouldPromptWeight({ title: 'Ejercicio con carga', status: 'pending', weightLogs: [{ set: 1, weightKg: 50 }] } as any)).toBe(true);
   });
 });

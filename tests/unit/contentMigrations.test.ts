@@ -132,6 +132,11 @@ describe('runContentMigrations (Misiones 4 y 5)', () => {
     expect(albornoz).toBeDefined();
     expect(albornoz?.sectionId).toBe('sec_limpieza_semanal');
 
+    // 5b. Edredon y cafetera
+    const edredon = taskValues.find(t => t.title.toLowerCase().includes('edred'));
+    expect(edredon).toBeDefined();
+    expect(edredon?.cycle_id).toBe('cycle_month');
+
     // 6. Biblioteca de Vida
     const biblio = lists.find(l => l.id === 'biblioteca_vida' || l.name === 'Biblioteca de vida');
     expect(biblio).toBeDefined();

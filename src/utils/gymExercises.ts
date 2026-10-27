@@ -188,7 +188,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
   {
     id: 'extension_triceps',
     name: 'Extensión de tríceps',
-    synonyms: ['extension de triceps', 'extensión de tríceps', 'triceps polea', 'triceps cuerda', 'extension triceps'],
+    synonyms: ['extension de triceps', 'extensión de tríceps', 'triceps polea', 'triceps cuerda', 'extension triceps', 'triceps'],
     category: 'triceps',
     categoryLabel: 'Tríceps braquial',
     defaultSets: 3,
@@ -196,9 +196,11 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     defaultRestSeconds: 90,
     alternatives: [
       { name: 'Extensión de tríceps en polea con cuerda', equipment: 'Polea', note: 'Apertura al final para focalizar en la cabeza lateral' },
-      { name: 'Press francés con barra Z o mancuernas', equipment: 'Barra Z', note: 'Estiramiento superior de la cabeza larga del tríceps' },
-      { name: 'Extensión unilateral cruzada en polea (cross-cable)', equipment: 'Poleas', note: 'Alineación biomecánica ideal con la articulación del codo' },
-      { name: 'Fondos entre bancos o en máquina', equipment: 'Banco / Máquina', note: 'Empuje compuesto de tríceps con alta carga' }
+      { name: 'Extensión katana unilateral tras nuca en polea alta', equipment: 'Polea', note: 'Máximo estiramiento de la cabeza larga con trayectoria natural del codo' },
+      { name: 'Fondos asistidos en máquina para tríceps', equipment: 'Máquina asistida', note: 'Sobrecarga de empuje compuesto con descarga articular' },
+      { name: 'Extensión en polea con barra recta o V', equipment: 'Polea', note: 'Permite mover cargas más pesadas con trayectoria estable' },
+      { name: 'Press francés con mancuernas en banco inclinado (30º)', equipment: 'Mancuernas', note: 'Estiramiento profundo sin forzar los codos en posición rígida' },
+      { name: 'Press de banca con agarre cerrado', equipment: 'Barra / Multipower', note: 'Excelente constructor de masa y fuerza para tríceps' }
     ]
   },
 
@@ -214,9 +216,10 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     defaultRestSeconds: 180,
     alternatives: [
       { name: 'Prensa de piernas a 45º', equipment: 'Prensa', note: 'Gran empuje de cuádriceps con cero compresión axial en columna' },
+      { name: 'Sentadilla pendular (Pendulum squat)', equipment: 'Máquina pendular', note: 'Curva de resistencia biomecánica perfecta y máxima profundidad sin fatiga lumbar' },
       { name: 'Sentadilla en multipower con pies adelantados', equipment: 'Multipower', note: 'Trayectoria vertical guiada con foco total en cuádriceps' },
-      { name: 'Sentadilla libre con barra', equipment: 'Barra', note: 'Trabajo funcional de fuerza completa si la máquina está ocupada' },
-      { name: 'Sentadilla búlgara con mancuernas', equipment: 'Mancuernas', note: 'Aislamiento unilateral tremendo sin máquinas pesadas' }
+      { name: 'Extensiones pesadas de cuádriceps en máquina', equipment: 'Máquina', note: 'Aislamiento directo y seguro de cuádriceps sin fatiga general' },
+      { name: 'Sentadilla búlgara guiada en multipower', equipment: 'Multipower', note: 'Aislamiento unilateral tremendo con estabilidad asistida' }
     ]
   },
   {
@@ -522,6 +525,60 @@ export function getExerciseAlternatives(title: string): {
       { name: 'Cardio suave de descarga', equipment: 'Cardio', note: 'Caminar o bicicleta estática 15 min' }
     ]
   };
+}
+
+/**
+ * Determina si una tarea corresponde a un ejercicio de fuerza/gimnasio que se beneficia
+ * de registrar peso al completarse de forma ágil y sin fricción.
+ */
+export function shouldPromptWeight(task?: TaskItem | null, listName?: string): boolean {
+  if (!task || task.status === 'completed' || task.deleted_at) return false;
+
+  // Si ya tiene historial de pesos registrado, claramente es un ejercicio con carga
+  if (Array.isArray(task.weightLogs) && task.weightLogs.length > 0) return true;
+
+  const title = (task.title || '').trim().toLowerCase();
+  if (!title) return false;
+
+  // Reconocimiento por catálogo de ejercicios de fuerza
+  const exercise = getExerciseAlternatives(title);
+  if (exercise.found && exercise.category) {
+    const strengthCategories = ['pecho', 'espalda', 'hombro', 'triceps', 'biceps', 'pierna', 'femoral', 'gemelos'];
+    if (strengthCategories.includes(exercise.category)) return true;
+  }
+
+  // Si pertenece a una lista de gimnasio o entrenamiento y coincide con patrones de fuerza
+  const isGymList = Boolean(
+    listName && (
+      listName.toLowerCase().includes('gimnasio') ||
+      listName.toLowerCase().includes('gym') ||
+      listName.toLowerCase().includes('entreno') ||
+      listName.toLowerCase().includes('rutina')
+    )
+  );
+
+  if (isGymList) {
+    const strengthTerms = [
+      'press', 'jaca', 'remo', 'jalon', 'jalón', 'sentadilla', 'prensa',
+      'curl', 'extension', 'extensión', 'fondos', 'peso muerto', 'polea',
+      'mancuerna', 'multipower', 'gemelos', 'aduccion', 'aducción', 'gluteo', 'glúteo'
+    ];
+    if (strengthTerms.some(term => title.includes(term))) {
+      // Excluir si es explícitamente cardio o estiramiento
+      if (
+        title.includes('cardio') ||
+        title.includes('estiramiento') ||
+        title.includes('andar') ||
+        title.includes('correr') ||
+        title.includes('movilidad')
+      ) {
+        return false;
+      }
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**
