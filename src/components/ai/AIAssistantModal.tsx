@@ -622,6 +622,17 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
         if (update.cycle) patch.cycle_id = update.cycle;
         if (update.sectionId !== undefined) patch.sectionId = update.sectionId;
         if (update.mediaStatus) patch.mediaStatus = update.mediaStatus;
+        if (update.weightKg !== undefined && update.weightKg > 0) {
+          const currentTask = tasks[update.taskId];
+          const existingLogs = currentTask?.weightLogs ? [...currentTask.weightLogs] : [];
+          existingLogs.push({
+            set: existingLogs.length + 1,
+            weightKg: update.weightKg,
+            reps: update.reps || currentTask?.targetCount || 10,
+            date: new Date().toISOString()
+          });
+          patch.weightLogs = existingLogs;
+        }
         updateTask(update.taskId, patch);
       }
     });
@@ -1209,6 +1220,11 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
                               {u.price !== undefined && (
                                 <span className="apple-price-pill" style={{ padding: '0 5px', fontSize: '0.70rem' }}>
                                   {formatEuro(Number(u.price))}
+                                </span>
+                              )}
+                              {u.weightKg !== undefined && (
+                                <span style={{ fontSize: '0.70rem', color: 'var(--accent-primary, #0a84ff)', background: 'rgba(10, 132, 255, 0.12)', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>
+                                  🏋️ {u.weightKg} kg {u.reps ? `× ${u.reps} reps` : ''}
                                 </span>
                               )}
                               {u.newTitle && (

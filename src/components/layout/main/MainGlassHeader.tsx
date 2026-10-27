@@ -96,7 +96,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
       };
       window.addEventListener('keydown', onKeyDown);
       return () => window.removeEventListener('keydown', onKeyDown);
-    }, [isMobile, isMenuOpen, setIsMenuOpen]);
+    }, [isMobile, isMenuOpen, setIsMenuOpen, menuTriggerRef]);
   const listAccentColor = isSmartView
     ? (SMART_COLORS[currentView] || 'var(--accent-blue, #007AFF)')
     : (currentList?.color || 'var(--accent-blue, #007AFF)');

@@ -18,6 +18,8 @@ export interface ProposedTask {
   dueDate?: string;
   timeOfDay?: 'morning' | 'afternoon' | 'night';
   price?: number;
+  weightKg?: number;
+  reps?: number;
   quantity?: number;
   targetCount?: number;
   currentCount?: number;
@@ -56,6 +58,8 @@ export interface ProposedTaskUpdate {
   dueDate?: string;
   timeOfDay?: 'morning' | 'afternoon' | 'night';
   price?: number;
+  weightKg?: number;
+  reps?: number;
   listId?: string;
   listName?: string;
   sectionId?: string;
@@ -500,20 +504,34 @@ También puedo marcar algo como hecho («marca hecha la leche»), cambiarlo («p
 
     if ((isCompleteIntent || isDeleteIntent || isPriceUpdateIntent) && tasksArray.length > 0) {
       if (isCompleteIntent && isCompleteIntent[1]) {
-        const query = isCompleteIntent[1].trim().toLowerCase().replace(/[.,;]$/, '');
+        const rawQuery = isCompleteIntent[1].trim().toLowerCase().replace(/[.,;]$/, '');
+        const weightMatch = rawQuery.match(/(?:con\s+)?(\d+(?:[.,]\d+)?)\s*(?:kg|kilos|kilo)\b/i);
+        const repsMatch = rawQuery.match(/(?:a\s+|x\s*|por\s*)(\d+)\s*(?:reps?|repeticiones)?\b/i);
+        const cleanQuery = rawQuery
+          .replace(/(?:con\s+)?\d+(?:[.,]\d+)?\s*(?:kg|kilos|kilo)\b/gi, '')
+          .replace(/(?:a\s+|x\s*|por\s*)\d+\s*(?:reps?|repeticiones)?\b/gi, '')
+          .trim();
+        const queryToMatch = cleanQuery || rawQuery;
         const matched = tasksArray.find(t => !t.deleted_at && t.status !== 'completed' && (
-          t.title.toLowerCase().includes(query) || query.includes(t.title.toLowerCase())
+          t.title.toLowerCase().includes(queryToMatch) || queryToMatch.includes(t.title.toLowerCase())
         ));
         if (matched) {
+          const weightKg = weightMatch ? parseFloat(weightMatch[1].replace(',', '.')) : undefined;
+          const reps = repsMatch ? parseInt(repsMatch[1], 10) : undefined;
+          const hasWeight = weightKg !== undefined && !isNaN(weightKg) && weightKg > 0;
           return {
-            reply: `He preparado la modificación para marcar como completada la tarea **"${matched.title}"**. Puedes confirmarla abajo:`,
+            reply: hasWeight
+              ? `He preparado para marcar **"${matched.title}"** como completada con **${weightKg} kg**${reps ? ` × ${reps} reps` : ''}.`
+              : `He preparado la modificación para marcar como completada la tarea **"${matched.title}"**. Puedes confirmarla abajo:`,
             tasks: [],
             taskUpdates: [{
               taskId: matched.id,
               originalTitle: matched.title,
               status: 'completed',
+              weightKg: hasWeight ? weightKg : undefined,
+              reps: hasWeight ? (reps || matched.targetCount || 10) : undefined,
               selected: true,
-              reason: 'Marcar como completada'
+              reason: hasWeight ? `Completar y registrar ${weightKg} kg` : 'Marcar como completada'
             }]
           };
         }

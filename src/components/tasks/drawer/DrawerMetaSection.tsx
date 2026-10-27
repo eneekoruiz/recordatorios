@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings2, Timer } from 'lucide-react';
+import { Settings2, Timer, Trash2, Plus } from 'lucide-react';
 import { SectionTrailing } from './SectionTrailing';
 import { CustomSelect } from '../../ui/CustomSelect';
 import type { TaskWeightLog } from '../../../models/Task';
@@ -21,6 +21,7 @@ interface DrawerMetaSectionProps {
   restDuration?: number;
   setRestDuration?: (seconds?: number) => void;
   weightLogs?: TaskWeightLog[];
+  setWeightLogs?: (logs: TaskWeightLog[]) => void;
 }
 
 export const DrawerMetaSection: React.FC<DrawerMetaSectionProps> = ({
@@ -38,9 +39,35 @@ export const DrawerMetaSection: React.FC<DrawerMetaSectionProps> = ({
   setTargetCount,
   restDuration,
   setRestDuration,
-  weightLogs
+  weightLogs,
+  setWeightLogs
 }) => {
   const hasSeries = Boolean(targetCount && targetCount > 1);
+  const [manualWeight, setManualWeight] = useState('');
+  const [manualReps, setManualReps] = useState('');
+
+  const handleAddLog = () => {
+    const w = parseFloat(manualWeight.replace(',', '.'));
+    const r = parseInt(manualReps, 10);
+    if (!isNaN(w) && w > 0 && setWeightLogs) {
+      const current = weightLogs ? [...weightLogs] : [];
+      current.push({
+        set: current.length + 1,
+        weightKg: w,
+        reps: !isNaN(r) && r > 0 ? r : undefined,
+        date: new Date().toISOString()
+      });
+      setWeightLogs(current);
+      setManualWeight('');
+      setManualReps('');
+    }
+  };
+
+  const handleDeleteLog = (indexToDelete: number) => {
+    if (!setWeightLogs || !weightLogs) return;
+    const updated = weightLogs.filter((_, i) => i !== indexToDelete);
+    setWeightLogs(updated);
+  };
 
   return (
     <div className="section-card">
@@ -214,7 +241,7 @@ export const DrawerMetaSection: React.FC<DrawerMetaSectionProps> = ({
                   </div>
 
                   {/* Historial de pesos / cargas registradas */}
-                  {weightLogs && weightLogs.length > 0 && (
+                  {hasSeries && (
                     <div
                       style={{
                         marginTop: 10,
@@ -227,16 +254,99 @@ export const DrawerMetaSection: React.FC<DrawerMetaSectionProps> = ({
                       <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
                         🏋️ Historial de cargas registradas
                       </span>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {weightLogs.slice(-6).map((log, idx) => (
-                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--text-primary)' }}>
-                            <span>Serie {log.set}</span>
-                            <span style={{ fontWeight: 600, color: 'var(--accent-primary, #0a84ff)' }}>
-                              {log.weightKg} kg {log.reps ? `× ${log.reps} reps` : ''}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                      {weightLogs && weightLogs.length > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          {weightLogs.slice(-8).map((log, idx) => (
+                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: 'var(--text-primary)' }}>
+                              <span>Serie {log.set || idx + 1}</span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ fontWeight: 600, color: 'var(--accent-primary, #0a84ff)' }}>
+                                  {log.weightKg} kg {log.reps ? `× ${log.reps} reps` : ''}
+                                </span>
+                                {setWeightLogs && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteLog(idx)}
+                                    title="Eliminar este registro"
+                                    style={{
+                                      background: 'transparent',
+                                      border: 'none',
+                                      color: 'var(--text-tertiary, #8e8e93)',
+                                      cursor: 'pointer',
+                                      padding: 2,
+                                      display: 'flex',
+                                      alignItems: 'center'
+                                    }}
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', fontStyle: 'italic', display: 'block', marginBottom: 6 }}>
+                          Sin registros de peso aún.
+                        </span>
+                      )}
+
+                      {/* Añadir carga manual */}
+                      {setWeightLogs && (
+                        <div style={{ display: 'flex', gap: 6, marginTop: 8, alignItems: 'center' }}>
+                          <input
+                            type="number"
+                            step="0.5"
+                            placeholder="kg"
+                            value={manualWeight}
+                            onChange={e => setManualWeight(e.target.value)}
+                            style={{
+                              width: 65,
+                              padding: '4px 6px',
+                              fontSize: '0.78rem',
+                              borderRadius: 6,
+                              border: '1px solid var(--border-subtle)',
+                              background: 'var(--bg-surface)',
+                              color: 'var(--text-primary)'
+                            }}
+                          />
+                          <input
+                            type="number"
+                            min="1"
+                            placeholder="reps"
+                            value={manualReps}
+                            onChange={e => setManualReps(e.target.value)}
+                            style={{
+                              width: 55,
+                              padding: '4px 6px',
+                              fontSize: '0.78rem',
+                              borderRadius: 6,
+                              border: '1px solid var(--border-subtle)',
+                              background: 'var(--bg-surface)',
+                              color: 'var(--text-primary)'
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddLog}
+                            style={{
+                              padding: '4px 9px',
+                              fontSize: '0.76rem',
+                              fontWeight: 600,
+                              borderRadius: 6,
+                              background: 'var(--accent-primary, #0a84ff)',
+                              color: '#ffffff',
+                              border: 'none',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 4
+                            }}
+                          >
+                            <Plus size={12} /> Añadir
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </motion.div>

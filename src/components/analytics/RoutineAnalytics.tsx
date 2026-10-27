@@ -31,12 +31,15 @@ export function RoutineAnalytics({ onOpenTask }: { onOpenTask?: (taskId: string)
   const panelRef = useRef<HTMLElement>(null);
   useEffect(() => {
     if (!focus) return;
-    setFrequency(focus.frequency);
-    setReference(focus.reference);
-    setGroupFilter(focus.groupId);
-    setSelectedId(null);
-    setFocus(null);
-    panelRef.current?.scrollIntoView({ block: 'start' });
+    const { frequency: f, reference: r, groupId: g } = focus;
+    queueMicrotask(() => {
+      setFrequency(f);
+      setReference(r);
+      setGroupFilter(g);
+      setSelectedId(null);
+      setFocus(null);
+      panelRef.current?.scrollIntoView({ block: 'start' });
+    });
   }, [focus, setFocus]);
   useEffect(() => {
     const refresh = () => setNow(new Date());

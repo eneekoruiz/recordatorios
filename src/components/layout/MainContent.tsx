@@ -760,14 +760,14 @@ const CORE_CYCLES = [
     executeToggleTask(taskId, forceReverse, customTimestamp);
   }, [tasks, lists, listSections, cycles, temporalDate, executeToggleTask]);
 
-  const handleConfirmWeight = useCallback((weightKg: number) => {
+  const handleConfirmWeight = useCallback((weightKg: number, reps?: number) => {
     if (!pendingWeightPrompt) return;
     const { task, forceReverse, customTimestamp } = pendingWeightPrompt;
     const existingLogs = task.weightLogs ? [...task.weightLogs] : [];
     existingLogs.push({
       set: existingLogs.length + 1,
       weightKg,
-      reps: task.targetCount || 10,
+      reps: reps || task.targetCount || 10,
       date: new Date().toISOString()
     });
     updateTask(task.id, { weightLogs: existingLogs });

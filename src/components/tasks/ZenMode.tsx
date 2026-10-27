@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useModalFocus } from '../../hooks/useModalFocus';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -84,6 +84,19 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
     }
   }
 
+  const handleCompleteRef = useRef<() => void>(() => {});
+  const weightKgInputRef = useRef(weightKgInput);
+  const repsInputRef = useRef(repsInput);
+  const currentSeriesNumberRef = useRef(currentSeriesNumber);
+  const updateTaskRef = useRef(updateTask);
+
+  useEffect(() => {
+    weightKgInputRef.current = weightKgInput;
+    repsInputRef.current = repsInput;
+    currentSeriesNumberRef.current = currentSeriesNumber;
+    updateTaskRef.current = updateTask;
+  });
+
   useEffect(() => {
     activeElapsedRef.current = 0;
   }, [timerKey]);
@@ -99,12 +112,12 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
         if (isGymSeries && gymPhase === 'work') {
           // Ha concluido la serie de trabajo activa
           const nextCount = (task?.currentCount || 0) + 1;
-          const wKg = parseFloat(weightKgInput);
-          const rCount = parseInt(repsInput, 10) || undefined;
+          const wKg = parseFloat(weightKgInputRef.current);
+          const rCount = parseInt(repsInputRef.current, 10) || undefined;
           let nextWeightLogs = task?.weightLogs ? [...task.weightLogs] : [];
           if (!isNaN(wKg) && wKg > 0) {
             nextWeightLogs.push({
-              set: currentSeriesNumber,
+              set: currentSeriesNumberRef.current,
               weightKg: wKg,
               reps: rCount,
               date: new Date().toISOString()
@@ -113,12 +126,12 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
 
           if (nextCount >= targetSeries) {
             if (nextWeightLogs.length > (task?.weightLogs?.length || 0)) {
-              updateTask(task!.id, { currentCount: nextCount, weightLogs: nextWeightLogs });
+              updateTaskRef.current(task!.id, { currentCount: nextCount, weightLogs: nextWeightLogs });
             }
-            handleComplete();
+            handleCompleteRef.current();
           } else {
             SoundService.playComplete();
-            updateTask(task!.id, {
+            updateTaskRef.current(task!.id, {
               currentCount: nextCount,
               ...(nextWeightLogs.length > (task?.weightLogs?.length || 0) ? { weightLogs: nextWeightLogs } : {})
             });
@@ -179,20 +192,8 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
     onClose();
   });
 
-  if (!taskId || !task) return null;
-
-  const handleStartWithDuration = (mins: number) => {
-    const validMins = Math.max(1, Math.min(480, mins));
-    updateTask(task.id, { duration: validMins });
-    const secs = validMins * 60;
-    setInitialDuration(secs);
-    setTimeLeft(secs);
-    setShowDurationPrompt(false);
-    setIsActive(true);
-    SoundService.playPop();
-  };
-
-  const handleComplete = () => {
+  const handleComplete = useCallback(() => {
+    if (!task) return;
     SoundService.stopAmbientSound();
     SoundService.playComplete();
     ConfettiService.fire({ count: 65 });
@@ -204,6 +205,23 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
 
     toggleTask(task.id);
     onClose();
+  }, [task, toggleTask, onClose]);
+
+  useEffect(() => {
+    handleCompleteRef.current = handleComplete;
+  }, [handleComplete]);
+
+  if (!taskId || !task) return null;
+
+  const handleStartWithDuration = (mins: number) => {
+    const validMins = Math.max(1, Math.min(480, mins));
+    updateTask(task.id, { duration: validMins });
+    const secs = validMins * 60;
+    setInitialDuration(secs);
+    setTimeLeft(secs);
+    setShowDurationPrompt(false);
+    setIsActive(true);
+    SoundService.playPop();
   };
 
   const handleToggleTimer = () => {
