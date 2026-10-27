@@ -25,6 +25,7 @@ const pendingWrites = new Map<string, string | null>();
 let drainPromise: Promise<void> | null = null;
 let primaryHydrationPending = false;
 const PRIMARY_STORAGE_KEY = 'reminders-storage';
+let failedReadName: string | null = null;
 
 const publish = (next: PersistenceFailure | null) => {
   failure = next ? { ...next, pendingWrites: pendingWrites.size } : null;
@@ -223,9 +224,11 @@ export const idbStorage: StateStorage = {
           }
         }
       }
-      if (failure?.operation === 'read') publish(null);
+      // Otro almacén que lea bien (p. ej. el de entrenamiento) no debe borrar el fallo de lectura del principal.
+      if (failure?.operation === 'read' && failedReadName === name) publish(null);
       return safeValue ?? null;
     } catch (error) {
+      failedReadName = name;
       publish({ operation: 'read', message: errorMessage(error), pendingWrites: pendingWrites.size });
       // Reject hydration rather than treating a slow or failed read as an empty store.
       // Zustand then leaves persisted data untouched until the user retries hydration.

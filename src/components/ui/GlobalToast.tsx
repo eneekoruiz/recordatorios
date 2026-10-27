@@ -58,7 +58,7 @@ export function GlobalToast() {
                 setGlobalToast(null);
               }}
               style={{
-                background: 'var(--accent-primary, #007aff)',
+                background: '#0071e3',
                 color: '#ffffff',
                 border: 'none',
                 borderRadius: 14,

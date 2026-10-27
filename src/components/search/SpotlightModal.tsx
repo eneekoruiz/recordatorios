@@ -3,8 +3,8 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Sun, Moon, Sparkles, Calendar, CalendarDays, CalendarClock, Inbox, Check,
-  Plus, List, X, BarChart2, FileText, Play, Repeat, CornerDownLeft
-, Dumbbell } from 'lucide-react';
+  Plus, List, X, BarChart2, FileText, Play, Repeat, CornerDownLeft, Dumbbell
+} from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { useTemporalNavigationStore } from '../../store/useTemporalNavigationStore';
 import { isTaskActuallyCompletedInCurrentPeriod } from '../../services/TaskService';

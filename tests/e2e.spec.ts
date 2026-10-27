@@ -347,7 +347,7 @@ test.describe('Recordatorios Élite - Full E2E & Quality Verification', () => {
     await page.waitForTimeout(200);
 
     // Expect 'Ir a Hoy' action visible
-    const actionHoy = page.getByText('Ir a Hoy');
+    const actionHoy = page.locator('.spotlight-title', { hasText: 'Ir a Hoy' });
     await expect(actionHoy).toBeVisible();
 
     // Close via ESC

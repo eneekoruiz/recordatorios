@@ -2344,9 +2344,12 @@ const CORE_CYCLES = [
         else if (prevTask && nextTask && prevTask.parentId && nextTask.parentId && prevTask.parentId === nextTask.parentId) {
           newParentId = prevTask.parentId;
         }
-        // Escenario 3: Soltado después de una subtarea de un grupo → queda como subtarea del mismo padre
+        // Escenario 3: Soltado después de la última subtarea de un grupo → queda como tarea normal,
+        // tras el grupo. (Entre dos subtareas ya lo cubre el escenario 2; para añadirla como subtarea
+        // se suelta sobre el centro del padre.) Así llevar una tarea al final de la lista no la
+        // convierte por sorpresa en subtarea de la última.
         else if (position === 'after' && targetTask.parentId) {
-          newParentId = targetTask.parentId;
+          newParentId = undefined;
         }
         // Escenario 4: Soltado antes de una subtarea, cuando el elemento anterior es el padre o un hermano
         else if (position === 'before' && targetTask.parentId && prevTask && (prevTask.id === targetTask.parentId || prevTask.parentId === targetTask.parentId)) {
