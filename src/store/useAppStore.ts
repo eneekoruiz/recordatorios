@@ -654,11 +654,38 @@ export const useAppStore = create<AppState>()(
               newHistory.pop();
             }
             const restoredAlerts = alerts.length > 1 ? alerts.slice(0, -1).map(a => a.id).filter(Boolean) as string[] : [];
+            let revertedDueDateStr = existingTask.dueDate;
+            if (existingTask.dueDate && !isOneOff) {
+              const currentDue = new Date(existingTask.dueDate);
+              const cycleObj = state.cycles.find(c => c.id === effCycle);
+              const daysVal = cycleObj?.daysValue;
+              if (daysVal) {
+                currentDue.setDate(currentDue.getDate() - daysVal);
+              } else if (effCycle === 'cycle_day') {
+                currentDue.setDate(currentDue.getDate() - 1);
+              } else if (effCycle === 'cycle_week') {
+                currentDue.setDate(currentDue.getDate() - 7);
+              } else if (effCycle === 'cycle_month') {
+                const day = currentDue.getDate();
+                currentDue.setDate(1);
+                currentDue.setMonth(currentDue.getMonth() - 1);
+                const lastDay = new Date(currentDue.getFullYear(), currentDue.getMonth() + 1, 0).getDate();
+                currentDue.setDate(Math.min(day, lastDay));
+              } else if (effCycle === 'cycle_year') {
+                const day = currentDue.getDate();
+                currentDue.setDate(1);
+                currentDue.setFullYear(currentDue.getFullYear() - 1);
+                const lastDay = new Date(currentDue.getFullYear(), currentDue.getMonth() + 1, 0).getDate();
+                currentDue.setDate(Math.min(day, lastDay));
+              }
+              revertedDueDateStr = currentDue.toISOString();
+            }
             updatedTask = TaskRepository.update(existingTask, {
               status: 'pending',
               completedAlerts: restoredAlerts,
               completionHistory: newHistory,
-              currentCount: 0
+              currentCount: 0,
+              ...(revertedDueDateStr ? { dueDate: revertedDueDateStr } : {})
             });
           } else {
             updatedTask = TaskRepository.update(existingTask, { 
@@ -714,6 +741,32 @@ export const useAppStore = create<AppState>()(
             if (skipIdxInPeriod !== -1) cleanedSkipHistory.splice(skipIdxInPeriod, 1);
             const targetCountUpdate = existingTask.targetCount ? { currentCount: existingTask.targetCount } : {};
             if (!isOneOff) {
+              let nextDueDateStr = existingTask.dueDate;
+              if (existingTask.dueDate) {
+                const currentDue = new Date(existingTask.dueDate);
+                const cycleObj = state.cycles.find(c => c.id === effCycle);
+                const daysVal = cycleObj?.daysValue;
+                if (daysVal) {
+                  currentDue.setDate(currentDue.getDate() + daysVal);
+                } else if (effCycle === 'cycle_day') {
+                  currentDue.setDate(currentDue.getDate() + 1);
+                } else if (effCycle === 'cycle_week') {
+                  currentDue.setDate(currentDue.getDate() + 7);
+                } else if (effCycle === 'cycle_month') {
+                  const day = currentDue.getDate();
+                  currentDue.setDate(1);
+                  currentDue.setMonth(currentDue.getMonth() + 1);
+                  const lastDay = new Date(currentDue.getFullYear(), currentDue.getMonth() + 1, 0).getDate();
+                  currentDue.setDate(Math.min(day, lastDay));
+                } else if (effCycle === 'cycle_year') {
+                  const day = currentDue.getDate();
+                  currentDue.setDate(1);
+                  currentDue.setFullYear(currentDue.getFullYear() + 1);
+                  const lastDay = new Date(currentDue.getFullYear(), currentDue.getMonth() + 1, 0).getDate();
+                  currentDue.setDate(Math.min(day, lastDay));
+                }
+                nextDueDateStr = currentDue.toISOString();
+              }
               updatedTask = TaskRepository.update(existingTask, { 
                 cycle_id: existingTask.cycle_id || effCycle || undefined,
                 completedAlerts: [], 
@@ -721,6 +774,7 @@ export const useAppStore = create<AppState>()(
                 skipHistory: cleanedSkipHistory,
                 consecutiveSkipCount: 0,
                 status: 'pending',
+                ...(nextDueDateStr ? { dueDate: nextDueDateStr } : {}),
                 ...targetCountUpdate
               });
             } else {
@@ -761,24 +815,24 @@ export const useAppStore = create<AppState>()(
         }
 
         // Lógica de cascada y desacople padre-hijo:
-        // 1. Si se tacha un padre (!shouldReverse y está terminado), se completan todas sus subtareas recursivamente.
-        // 2. Si se destacha un hijo (shouldReverse), solo se destacha ese hijo, pero el padre reabre a pendiente para que no quede falsamente completado mientras tenga tareas sin hacer.
+        // 1. Si se tacha un padre (!shouldReverse y está terminado), se completan todas sus subtareas recursivamente en el mismo período.
+        // 2. Si se destacha un padre (shouldReverse), se reabren todas sus subtareas para mantener consistencia.
+        // 3. Si se destacha un hijo (shouldReverse), solo se destacha ese hijo, pero el padre reabre a pendiente para que no quede falsamente completado.
         const childUpdates: Record<string, TaskItem> = {};
         const isNowDone = isTaskCompleted(updatedTask) || 
-          isCompletedInCurrentPeriod(updatedTask, state.cycles, state.listSections, state.lists) ||
+          isCompletedInCurrentPeriod(updatedTask, state.cycles, state.listSections, state.lists, targetDate) ||
           (Boolean(updatedTask.targetCount) && (updatedTask.currentCount || 0) >= (updatedTask.targetCount || 1));
 
         if (!shouldReverse && isNowDone) {
           const queue = [id];
-          const nowTs = Date.now();
           while (queue.length > 0) {
             const curParentId = queue.shift()!;
             for (const t of Object.values(state.tasks)) {
               if (t.parentId === curParentId && !t.deleted_at && !childUpdates[t.id]) {
                 queue.push(t.id);
-                const childEffCycle = getEffectiveCycleId(t, state.listSections, state.lists);
+                const childEffCycle = getEffectiveCycleId(t, state.listSections, state.lists) || effCycle;
                 const childIsOneOff = !childEffCycle;
-                const childHistory = [...(t.completionHistory || []), nowTs];
+                const childHistory = [...(t.completionHistory || []), effectiveTimestamp];
                 const childTargetUpdate = t.targetCount ? { currentCount: t.targetCount } : {};
                 const childAlerts = t.alerts || [];
                 const childCompletedAlerts = childAlerts.map(a => a.id).filter(Boolean) as string[];
@@ -802,6 +856,30 @@ export const useAppStore = create<AppState>()(
               }
             }
           }
+        } else if (shouldReverse) {
+          // Reabrir subtareas recursivamente al destachar el padre
+          const queue = [id];
+          while (queue.length > 0) {
+            const curParentId = queue.shift()!;
+            for (const t of Object.values(state.tasks)) {
+              if (t.parentId === curParentId && !t.deleted_at && !childUpdates[t.id]) {
+                queue.push(t.id);
+                const childEffCycle = getEffectiveCycleId(t, state.listSections, state.lists) || effCycle;
+                const newHist = [...(t.completionHistory || [])];
+                if (newHist.length > 0) {
+                  const idx = findPeriodIndexInHistory(newHist, childEffCycle, targetDate, state.cycles);
+                  if (idx !== -1) newHist.splice(idx, 1);
+                  else newHist.pop();
+                }
+                childUpdates[t.id] = TaskRepository.update(t, {
+                  status: 'pending',
+                  completedAlerts: [],
+                  completionHistory: newHist,
+                  currentCount: 0
+                });
+              }
+            }
+          }
         }
 
         // Si se destacha una subtarea específica dentro de un padre, reabrir ancestros completados a pendiente
@@ -814,7 +892,7 @@ export const useAppStore = create<AppState>()(
             const parent: TaskItem | undefined = state.tasks[currParentId];
             if (!parent || parent.deleted_at) break;
 
-            const parentDone = isTaskCompleted(parent) || isCompletedInCurrentPeriod(parent, state.cycles, state.listSections, state.lists);
+            const parentDone = isTaskCompleted(parent) || isCompletedInCurrentPeriod(parent, state.cycles, state.listSections, state.lists, targetDate);
             if (parentDone) {
               const pHistory = [...(parent.completionHistory || [])];
               if (pHistory.length > 0) pHistory.pop();

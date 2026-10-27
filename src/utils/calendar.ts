@@ -150,13 +150,38 @@ export function buildCalendar(tasks: TaskItem[], options: CalendarOptions): Map<
           overdue: !done && dueDay < today,
         });
       }
-      if (!done && isAutoRollover(task)) {
-        const step = task.subscriptionPeriod === 'yearly' ? 12 : 1;
-        for (let k = 1; k <= 240; k++) {
-          const next = startOfDay(addMonthsClamped(due, k * step));
-          if (next > to) break;
-          if (next >= from) {
-            dayOf(dayKey(next)).items.push({ key: `${task.id}@${dayKey(next)}`, task, kind: 'renewal', time, done: false, overdue: false });
+      if (!done && (isAutoRollover(task) || task.cycle_id)) {
+        let stepDays = 0;
+        let isMonthly = task.subscriptionPeriod === 'yearly' ? 12 : (task.subscriptionPeriod === 'monthly' ? 1 : 0);
+        if (!isMonthly && task.cycle_id) {
+          const cyc = options.cycles?.find(c => c.id === task.cycle_id);
+          if (cyc?.daysValue) {
+            stepDays = cyc.daysValue;
+          } else if (task.cycle_id === 'cycle_day') {
+            stepDays = 1;
+          } else if (task.cycle_id === 'cycle_week') {
+            stepDays = 7;
+          } else if (task.cycle_id === 'cycle_month') {
+            isMonthly = 1;
+          } else if (task.cycle_id === 'cycle_year') {
+            isMonthly = 12;
+          }
+        }
+        if (stepDays > 0) {
+          for (let k = 1; k <= 365; k++) {
+            const next = new Date(dueDay.getTime() + k * stepDays * 86400000);
+            if (next > to) break;
+            if (next >= from) {
+              dayOf(dayKey(next)).items.push({ key: `${task.id}@${dayKey(next)}`, task, kind: 'renewal', time, done: false, overdue: false });
+            }
+          }
+        } else if (isMonthly > 0) {
+          for (let k = 1; k <= 240; k++) {
+            const next = startOfDay(addMonthsClamped(due, k * isMonthly));
+            if (next > to) break;
+            if (next >= from) {
+              dayOf(dayKey(next)).items.push({ key: `${task.id}@${dayKey(next)}`, task, kind: 'renewal', time, done: false, overdue: false });
+            }
           }
         }
       }

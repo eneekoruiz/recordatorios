@@ -598,17 +598,7 @@ export function runContentMigrations(store: ContentMigrationStore): void {
     }
   });
 
-  // 9. Blindaje total de integridad: restaurar tareas legítimas y asegurar secciones completas
-  const protectedTitles = new Set([
-    'compra mensual', 'compra anual', 'limpieza mensual', 'limpieza anual',
-    'skincare semanal', 'skin-care semanal', 'skin-care mensual', 'skin-care diaria'
-  ]);
-  Object.values(store.tasks || {}).forEach(t => {
-    const normTitle = normalize(t.title);
-    if (protectedTitles.has(normTitle) && t.deleted_at) {
-      store.updateTask(t.id, { deleted_at: undefined });
-    }
-  });
+  // 9. Blindaje total de integridad: asegurar secciones completas sin resucitar tareas eliminadas por el usuario
 
   // Asegurar secciones completas de Compra
   const targetCompraList = lists.find((l: any) => l.id === 'compra' || l.id === 'compras' || normalize(l.name).includes('compra'));

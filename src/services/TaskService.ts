@@ -80,7 +80,8 @@ export function matchesPeriod(
 export function findPeriodIndexInHistory(
   hist: (number | string)[] | undefined,
   cycleId: string | null | undefined,
-  ref: Date
+  ref: Date,
+  cycles: CustomCycle[] = []
 ): number {
   if (!hist || hist.length === 0) return -1;
   if (cycleId === 'cycle_day' || cycleId === 'day') {
@@ -107,6 +108,18 @@ export function findPeriodIndexInHistory(
     const refYear = ref.getFullYear();
     return hist.findIndex(ts => new Date(ts).getFullYear() === refYear);
   }
+
+  const cycle = cycles.find(c => c.id === cycleId);
+  if (cycle?.daysValue) {
+    const refStart = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate()).getTime();
+    return hist.findIndex(ts => {
+      const d = new Date(ts);
+      const compStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+      const daysDiff = Math.round((refStart - compStart) / (24 * 60 * 60 * 1000));
+      return daysDiff >= 0 && daysDiff < cycle.daysValue;
+    });
+  }
+
   return hist.findIndex(ts => new Date(ts).toDateString() === ref.toDateString());
 }
 
@@ -301,10 +314,13 @@ function checkCyclePeriodMatch(daysValue: number, ref: Date, completionHistory: 
     return completionHistory.some(ts => new Date(ts).getFullYear() === refYear);
   }
 
-  const cycleMs = daysValue * 24 * 60 * 60 * 1000;
-  const lastTs = completionHistory[completionHistory.length - 1];
-  const lastCompletion = typeof lastTs === 'number' ? lastTs : new Date(lastTs).getTime();
-  return (ref.getTime() - lastCompletion) < cycleMs && (ref.getTime() - lastCompletion) >= 0;
+  const refStart = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate()).getTime();
+  return completionHistory.some(ts => {
+    const d = new Date(ts);
+    const compStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const daysDiff = Math.round((refStart - compStart) / (24 * 60 * 60 * 1000));
+    return daysDiff >= 0 && daysDiff < daysValue;
+  });
 }
 
 /**
