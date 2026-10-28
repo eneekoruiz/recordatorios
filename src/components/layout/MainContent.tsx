@@ -61,6 +61,7 @@ import { downloadIcsFile } from '../../utils/icsExporter';
 import { exportReportToPdf } from '../../utils/pdfExport';
 import { parseTaskPrice } from '../../utils/format';
 import { createEdgeAutoScroll, findScrollableParent } from '../../utils/dragDrop';
+import { getTrainingDayPlan, orderTrainingSession, type TrainingDayStatus } from '../../utils/trainingDays';
 
 interface MainContentProps {
   currentView: string;
@@ -98,7 +99,9 @@ type VirtualItemType =
       /** Periodo actual ya hecho: lo que se ve debajo es del siguiente. */
       rolledOver?: boolean,
       /** Por eso empieza plegada (mientras no se abra o pliegue a mano). */
-      foldedByDefault?: boolean
+      foldedByDefault?: boolean,
+      /** En un programa por días: si este día toca hoy, es el siguiente u otro. */
+      trainingDay?: TrainingDayStatus
     }
   | { type: 'empty-section', title: string, category: string, color: string, sectionId?: string, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean }
   | { type: 'task', task: TaskItem, depth: number, isFirstInSection?: boolean, isLastInSection?: boolean, referenceDate?: Date, contextPeriodicity?: PeriodicityType | null, sessionDates?: Set<string> };
@@ -939,6 +942,12 @@ const CORE_CYCLES = [
   }, [sectionMenu, groupedTasks, emptySection]);
 
   // 1. Flatten Data para Virtualización (QA Performance Optimization)
+  // Programa por días (Gimnasio: «Día 1», «Día 2»…): qué día toca hoy y cuál viene después.
+  const trainingPlan = useMemo(
+    () => (currentList && !currentList.isFolder ? getTrainingDayPlan(currentList.id, listSections, allTasksArray) : null),
+    [currentList, listSections, allTasksArray]
+  );
+
   const { flattenedData: rawFlattenedData, renderedSectionTasks } = useMemo(() => {
     const flat: VirtualItemType[] = [{ type: 'page-header' }];
     // Tareas que pinta cada cabecera agrupada (habitaciones de Limpieza…), para su precio y su menú.
@@ -1601,6 +1610,9 @@ const CORE_CYCLES = [
           tasksToRender = filterTasks(tasksToRender, effectiveManualSecRefDate, isManualSecRolledOver && sectionPeriodicity === 'week', rowSessionDates);
           const allSectionPendingTaskIds = sectionScopeForCounts.filter(t => !isCompletedInCurrentPeriod(t, cycles, listSections, lists, effectiveManualSecRefDate, rowSessionDates)).map(t => t.id);
 
+          // Los días que no tocan hoy empiezan plegados (se abren a mano si se quiere mirar).
+          const trainingDayStatus = depth === 0 ? trainingPlan?.status[sec.id] : undefined;
+          const otherTrainingDay = Boolean(trainingDayStatus && trainingDayStatus !== 'today' && trainingDayStatus !== 'done_today' && collapsed[categoryKey] === undefined);
           flat.push({
             type: 'header',
             title: formatSectionTitle(sec.name),
@@ -1617,10 +1629,11 @@ const CORE_CYCLES = [
             pendingCount: countPending(sectionScopeForCounts, activeSessionDates),
             totalCount: sectionScopeForCounts.length,
             rolledOver: isManualSecRolledOver,
-            foldedByDefault: startsFolded(categoryKey, isManualSecRolledOver, sectionScopeForCounts)
+            foldedByDefault: startsFolded(categoryKey, isManualSecRolledOver, sectionScopeForCounts) || otherTrainingDay,
+            trainingDay: trainingDayStatus
           });
 
-          if (!isCatCollapsed(categoryKey) && !startsFolded(categoryKey, isManualSecRolledOver, sectionScopeForCounts)) {
+          if (!isCatCollapsed(categoryKey) && !startsFolded(categoryKey, isManualSecRolledOver, sectionScopeForCounts) && !otherTrainingDay) {
             if (tasksToRender.length === 0 && childSections.length === 0) {
               flat.push({ type: 'empty-section', title: 'Aquí no hay tareas', category: categoryKey, color, sectionId: sec.id, depth });
             } else {
@@ -2149,7 +2162,7 @@ const CORE_CYCLES = [
     }
 
     return { flattenedData: flat, renderedSectionTasks: sectionTasksByKey };
-  }, [groupedTasks, currentView, currentCycle, cycleViewMode, collapsed, isListView, lists, listSections, cycles, currentList, listSectionFilter, sortBy, defaultSortForList, isCatCollapsed, isolatedSectionKey, sectionRoutineModes, cycleRoutineCounts, periodReferenceDate, resolvedShowCompleted, recentlyCompletedIds, viewRoutineSessionDates]);
+  }, [groupedTasks, currentView, currentCycle, cycleViewMode, collapsed, isListView, lists, listSections, cycles, currentList, listSectionFilter, sortBy, defaultSortForList, isCatCollapsed, isolatedSectionKey, sectionRoutineModes, cycleRoutineCounts, periodReferenceDate, resolvedShowCompleted, recentlyCompletedIds, viewRoutineSessionDates, trainingPlan]);
 
   // Tareas visibles en pantalla respetando el orden visual exacto de renderizado
   // En las vistas inteligentes (Con marca, Todos…) una sección sin tareas no aporta nada: ni su cabecera ni su
@@ -2862,9 +2875,12 @@ const CORE_CYCLES = [
         startDuration={canRunExecutionMode ? viewTasksDuration?.formattedActive : undefined}
         isStartDisabled={!viewTasks.some(t => !isTaskCompleted(t))}
         onStartSequence={onStartSequence && canRunExecutionMode ? () => {
-          const pendingTasks = viewTasks.filter(t => !isTaskCompleted(t));
-          if (pendingTasks.length > 0) {
-            onStartSequence(pendingTasks.map(t => t.id), getTitle(), viewColor);
+          const pendingTasks = viewTasks.filter(t => !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists, periodReferenceDate, viewRoutineSessionDates));
+          // En un programa por días solo entra el día de hoy (y lo común: calentamiento, core, estiramientos).
+          const queue = trainingPlan ? orderTrainingSession(trainingPlan, pendingTasks, listSections) : pendingTasks;
+          if (queue.length > 0) {
+            const dayName = trainingPlan ? listSections.find(sec => sec.id === trainingPlan.currentId)?.name : undefined;
+            onStartSequence(queue.map(t => t.id), dayName ? `${getTitle()} · ${dayName}` : getTitle(), viewColor);
           }
         } : undefined}
         onExportIcs={() => {

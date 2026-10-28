@@ -11,6 +11,10 @@ import { ConfettiService } from '../../services/ConfettiService';
 import { BackgroundTimers, useBackgroundTimers } from '../../services/BackgroundTimers';
 import { useTrainingStore } from '../../store/useTrainingStore';
 import { InsightCard } from '../training/InsightCard';
+import { matchesPeriod } from '../../services/TaskService';
+import { getEffectiveCycleId } from '../../utils/sectionRoutine';
+import { isSeriesTask, seriesDone, setRestSeconds, setWorkSeconds, setLogProposal } from '../../utils/seriesTasks';
+import type { TaskItem } from '../../models/Task';
 
 interface ListSequenceModeProps {
   /** IDs de las tareas a recorrer en orden */
@@ -189,7 +193,7 @@ function DurationPicker({
 // Main component
 // ────────────────────────────────────────────────────────────────────────────
 export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onClose }: ListSequenceModeProps) {
-  const { tasks, toggleTask, updateTask, theme, listSections, lists, setLearnedDuration } = useAppStore();
+  const { tasks, toggleTask, updateTask, theme, listSections, lists, cycles, setLearnedDuration } = useAppStore();
   const isDark = theme === 'dark';
 
   const screenBackground = isDark
@@ -204,13 +208,18 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
 
   // Timer state per active task
   const [timeLeft, setTimeLeft] = useState(0);
-  const [sequencePhase, setSequencePhase] = useState<'work' | 'rest'>('work');
   const [initialDuration, setInitialDuration] = useState(0);
   // Lo estimado al empezar la tarea (sin lo que se alargue después): base para comparar con lo real.
   const [plannedSecs, setPlannedSecs] = useState(0);
   // Pausa guiada entre tareas (si la lista la tiene activada).
   const [pause, setPause] = useState<{ startedAt: number; plannedSec: number; adjustSec: number; nextTitle: string } | null>(null);
   const [pauseNow, setPauseNow] = useState(() => Date.now());
+  // Descanso de un ejercicio por series: entre series («kind: set») o antes del siguiente ejercicio
+  // («transition»). Hora absoluta: sigue contando aunque la app pase a segundo plano.
+  const [setRest, setSetRest] = useState<{
+    startedAt: number; plannedSec: number; adjustSec: number; kind: 'set' | 'transition';
+    taskId: string; doneSet: number; totalSets: number; nextLabel: string; kg: string; reps: string; kgHint: string; repsHint: string;
+  } | null>(null);
   const [isActive, setIsActive] = useState(false);
   const activeElapsedRef = useRef<number>(0);
   const [showDurationPicker, setShowDurationPicker] = useState(false);
@@ -251,39 +260,38 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
   const isFinished = index >= activeTaskIds.length;
 
   const currentDurationInfo = currentTask ? getTaskDuration(currentTask, listSections, lists) : null;
+
+  // Series hechas en este periodo (lo de la semana pasada no cuenta).
+  const doneSetsOf = useCallback((task: TaskItem) => seriesDone(task, (updatedAt) =>
+    matchesPeriod([updatedAt], getEffectiveCycleId(task, listSections, lists) || 'cycle_day', new Date(), cycles)
+  ), [listSections, lists, cycles]);
+  const isSeries = isSeriesTask(currentTask);
+  const totalSets = isSeries && currentTask ? currentTask.targetCount || 1 : 1;
+  const setNumber = isSeries && currentTask ? Math.min(totalSets, doneSetsOf(currentTask) + 1) : 1;
+  // Minutos que ocupa una tarea en la secuencia: en un ejercicio por series, las series que faltan y sus descansos.
+  const sequenceMinutes = useCallback((t: TaskItem) => {
+    if (isSeriesTask(t)) {
+      const left = Math.max(1, (t.targetCount || 1) - doneSetsOf(t));
+      return (left * setWorkSeconds(t) + (left - 1) * setRestSeconds(t)) / 60;
+    }
+    const dInfo = getTaskDuration(t, listSections, lists);
+    const learned = useAppStore.getState().learnedDurations[t.id];
+    const rawMins = (typeof t.duration === 'number' && t.duration > 0) ? t.duration : (learned || dInfo.activeMinutes);
+    return rawMins > 0 ? rawMins : 5;
+  }, [doneSetsOf, listSections, lists]);
   const sequenceList = lists.find(l => l.id === tasks[taskIds[0]]?.categoryId);
   const guidedBreaks = Boolean(sequenceList?.guidedBreaks);
   const breakSeconds = sequenceList?.breakSeconds ?? 300;
   const recordEvents = useTrainingStore(s => s.recordEvents);
 
   // Duración total estimada y restante de la secuencia
-  const totalEstimatedMins = useMemo(() => {
-    return activeTaskIds.reduce((acc, id) => {
-      const t = tasks[id];
-      if (!t) return acc;
-      const dInfo = getTaskDuration(t, listSections, lists);
-      const learned = useAppStore.getState().learnedDurations[t.id];
-      const rawMins = (typeof t.duration === 'number' && t.duration > 0)
-        ? t.duration
-        : (learned || dInfo.activeMinutes);
-      const activeMins = rawMins > 0 ? rawMins : 5;
-      return acc + activeMins;
-    }, 0);
-  }, [activeTaskIds, tasks, listSections, lists]);
+  const totalEstimatedMins = useMemo(() => Math.round(activeTaskIds.reduce((acc, id) => (
+    tasks[id] ? acc + sequenceMinutes(tasks[id]) : acc
+  ), 0)), [activeTaskIds, tasks, sequenceMinutes]);
 
-  const remainingEstimatedMins = useMemo(() => {
-    return activeTaskIds.slice(index).reduce((acc, id) => {
-      const t = tasks[id];
-      if (!t) return acc;
-      const dInfo = getTaskDuration(t, listSections, lists);
-      const learned = useAppStore.getState().learnedDurations[t.id];
-      const rawMins = (typeof t.duration === 'number' && t.duration > 0)
-        ? t.duration
-        : (learned || dInfo.activeMinutes);
-      const activeMins = rawMins > 0 ? rawMins : 5;
-      return acc + activeMins;
-    }, 0);
-  }, [activeTaskIds, index, tasks, listSections, lists]);
+  const remainingEstimatedMins = useMemo(() => Math.round(activeTaskIds.slice(index).reduce((acc, id) => (
+    tasks[id] ? acc + sequenceMinutes(tasks[id]) : acc
+  ), 0)), [activeTaskIds, index, tasks, sequenceMinutes]);
 
   // Al pasar a otra tarea, el temporizador arranca con su duración (la del usuario, la
   // aprendida o la estimada). Si no tiene ninguna, arranca con 5 min por defecto para
@@ -299,15 +307,15 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
         ? currentTask.duration
         : (learned || dInfo.activeMinutes);
       const effectiveMins = rawMins > 0 ? rawMins : 5;
-      // Segundos exactos para la cuenta atrás
-      const secs = Math.max(10, Math.round(effectiveMins * 60));
-      setSequencePhase('work');
+      // Segundos exactos para la cuenta atrás (en un ejercicio por series, lo de una serie)
+      const secs = isSeriesTask(currentTask) ? setWorkSeconds(currentTask) : Math.max(10, Math.round(effectiveMins * 60));
       setShowDurationPicker(false);
       setShowTimeTools(false);
       setTimeLeft(secs);
       setInitialDuration(secs);
       setPlannedSecs(secs);
-      setIsActive(true);
+      // Si se llega con el descanso de transición en marcha, el reloj espera a que termine.
+      setIsActive(!setRest);
     }
   }
   useEffect(() => {
@@ -399,8 +407,66 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     return () => { window.clearInterval(id); window.clearTimeout(end); };
   }, [pause]);
 
+  // Serie hecha: cuenta la serie y abre el descanso; tras la última, descanso antes del siguiente ejercicio.
+  const handleSetDone = useCallback(() => {
+    if (!currentTask) return;
+    const done = setNumber;
+    HapticService.notification('success');
+    toggleTask(currentTask.id);
+    setIsActive(false);
+    SoundService.stopAmbientSound();
+    setLastStepAt(Date.now());
+    const { value, hint } = setLogProposal(currentTask, done);
+    const restBase = {
+      startedAt: Date.now(), plannedSec: setRestSeconds(currentTask), adjustSec: 0, taskId: currentTask.id, doneSet: done, totalSets,
+      kg: value ? String(value.weightKg) : '', reps: value?.reps ? String(value.reps) : '',
+      kgHint: hint ? String(hint.weightKg) : '', repsHint: hint?.reps ? String(hint.reps) : '',
+    };
+    if (done < totalSets) {
+      SoundService.playPop();
+      setSetRest({ ...restBase, kind: 'set', nextLabel: `Serie ${done + 1} de ${totalSets}` });
+      return;
+    }
+    SoundService.playComplete();
+    const elapsedSeconds = activeElapsedRef.current;
+    if (elapsedSeconds > 0) useAppStore.getState().trackTaskExecution(currentTask.id, elapsedSeconds);
+    setCompletedIds(prev => [...prev, currentTask.id]);
+    const next = tasks[activeTaskIds[index + 1]];
+    if (next) setSetRest({ ...restBase, kind: 'transition', nextLabel: next.title });
+    setIndex(i => i + 1);
+  }, [currentTask, setNumber, totalSets, toggleTask, tasks, activeTaskIds, index]);
+
+  // Al acabar el descanso: guarda el peso de la serie (si se puso) y arranca lo siguiente.
+  const endSetRest = useCallback(() => {
+    if (!setRest) return;
+    const task = useAppStore.getState().tasks[setRest.taskId];
+    const kg = parseFloat(setRest.kg.replace(',', '.'));
+    const reps = parseInt(setRest.reps, 10);
+    if (task && Number.isFinite(kg) && kg > 0) {
+      updateTask(task.id, {
+        weightLogs: [...(task.weightLogs || []), { set: setRest.doneSet, weightKg: kg, ...(Number.isFinite(reps) && reps > 0 ? { reps } : {}), date: new Date().toISOString() }]
+      });
+    }
+    setSetRest(null);
+    setTimeLeft(initialDuration);
+    setIsActive(true);
+    SoundService.playPop();
+  }, [setRest, updateTask, initialDuration]);
+
+  useEffect(() => {
+    if (!setRest) return;
+    const id = window.setInterval(() => setPauseNow(Date.now()), 250);
+    const end = window.setTimeout(() => { SoundService.playComplete(); HapticService.notification('success'); },
+      Math.max(0, setRest.startedAt + (setRest.plannedSec + setRest.adjustSec) * 1000 - Date.now()));
+    return () => { window.clearInterval(id); window.clearTimeout(end); };
+  }, [setRest]);
+
   const handleCompleteTask = useCallback(() => {
     if (!currentTask) return;
+    // Un contador («Abs 50») se da por hecho entero: no se avanza de uno en uno.
+    if (!isSeriesTask(currentTask) && currentTask.targetCount && currentTask.targetCount > 1) {
+      updateTask(currentTask.id, { currentCount: currentTask.targetCount - 1 });
+    }
     SoundService.playComplete();
     HapticService.notification('success');
     
@@ -418,7 +484,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     setLastStepAt(Date.now());
     maybeStartPause();
     setIndex(i => i + 1);
-  }, [currentTask, toggleTask, observeCompletion, maybeStartPause]);
+  }, [currentTask, toggleTask, updateTask, observeCompletion, maybeStartPause]);
 
   const handleSkipTask = useCallback(() => {
     if (!currentTask) return;
@@ -543,24 +609,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
           >
             <CheckCircle size={40} color="#000" strokeWidth={2} aria-hidden="true" />
           </motion.div>
-          
-              {currentTask?.targetCount && currentTask.targetCount > 1 && (
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: '0 0 4px' }}>
-                  <span style={{
-                    padding: '3px 12px',
-                    borderRadius: 999,
-                    background: sequencePhase === 'rest' ? 'rgba(255, 149, 0, 0.16)' : 'rgba(10, 132, 255, 0.16)',
-                    color: sequencePhase === 'rest' ? '#ff9500' : (listColor || 'var(--accent-primary, #0a84ff)'),
-                    fontWeight: 700,
-                    fontSize: '0.8rem'
-                  }}>
-                    {sequencePhase === 'rest'
-                      ? `⏳ Descanso post-serie ${currentTask.currentCount || 1}`
-                      : `🔥 Serie ${(currentTask.currentCount || 0) + 1} de ${currentTask.targetCount}`}
-                  </span>
-                </div>
-              )}
-              <h2 style={{ fontSize: '1.9rem', fontWeight: 700, color: primaryText, margin: '0 0 6px', letterSpacing: '-0.02em' }}>Lista completada</h2>
+          <h2 style={{ fontSize: '1.9rem', fontWeight: 700, color: primaryText, margin: '0 0 6px', letterSpacing: '-0.02em' }}>Lista completada</h2>
           <p style={{ fontSize: '1rem', color: rowsMuted, margin: '0 0 28px', lineHeight: 1.4 }}>Has terminado {listName}.</p>
 
           {/* Resumen: filas con línea fina, como una lista de ajustes; sin tarjetas de colores */}
@@ -626,6 +675,62 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
         <div style={{ width: '100%', maxWidth: 420, marginTop: 24 }}>
           <button type="button" onClick={() => endPause(left > 0)} style={{ width: '100%', minHeight: 52, borderRadius: 16, border: 'none', cursor: 'pointer', background: '#30d158', color: '#000', fontWeight: 600, fontSize: '1.05rem' }}>
             {left > 0 ? 'Saltar pausa' : 'Seguir'}
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // ── DESCANSO entre series o antes del siguiente ejercicio ───────────────
+  if (setRest) {
+    const total = setRest.plannedSec + setRest.adjustSec;
+    const left = Math.ceil((setRest.startedAt + total * 1000 - pauseNow) / 1000);
+    const pr = total > 0 ? Math.min(1, Math.max(0, 1 - left / total)) : 1;
+    const mm = (sec: number) => `${Math.floor(Math.abs(sec) / 60)}:${String(Math.abs(sec) % 60).padStart(2, '0')}`;
+    const mutedText = isDark ? 'rgba(255,255,255,0.6)' : 'var(--text-secondary, #636366)';
+    const fieldBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)';
+    const restTask = tasks[setRest.taskId];
+    const adjust = (delta: number) => { HapticService.selection(); setSetRest(r => r && ({ ...r, adjustSec: Math.max(-r.plannedSec, r.adjustSec + delta) })); };
+    const field: React.CSSProperties = { width: 84, minHeight: 44, borderRadius: 12, border: 'none', background: fieldBg, color: primaryText, fontSize: '1.05rem', textAlign: 'center', fontVariantNumeric: 'tabular-nums' };
+    const pill: React.CSSProperties = { minHeight: 44, padding: '0 18px', borderRadius: 22, border: 'none', background: fieldBg, color: primaryText, fontSize: '1rem', cursor: 'pointer', fontVariantNumeric: 'tabular-nums' };
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} role="dialog" aria-modal="true" aria-label="Descanso" data-testid="set-rest"
+        style={{ position: 'fixed', inset: 0, zIndex: 99999, background: screenBackground, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 'max(env(safe-area-inset-top), 24px) 24px max(env(safe-area-inset-bottom), 24px)', boxSizing: 'border-box', textAlign: 'center', overflowY: 'auto' }}>
+        <button type="button" onClick={() => { SoundService.stopAmbientSound(); onClose(); }} aria-label="Salir del modo secuencia" title="Salir (Esc)"
+          style={{ position: 'absolute', top: 'max(env(safe-area-inset-top), 8px)', left: 16, width: 44, height: 44, borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer', color: mutedText, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <X size={20} />
+        </button>
+        <p style={{ margin: 0, color: mutedText, fontSize: '0.95rem' }}>
+          {setRest.kind === 'set' ? `Descanso · ${restTask?.title ?? ''}` : 'Descanso antes del siguiente ejercicio'}
+        </p>
+        <div role="timer" aria-label={left > 0 ? `Quedan ${mm(left)}` : 'Descanso terminado'} style={{ position: 'relative', width: 232, height: 232, maxHeight: '34dvh', aspectRatio: '1', margin: '8px 0' }}>
+          <svg viewBox="0 0 232 232" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }} aria-hidden="true">
+            <circle cx="116" cy="116" r="106" fill="none" stroke={isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)'} strokeWidth="6" />
+            <circle cx="116" cy="116" r="106" fill="none" stroke="#ff9f0a" strokeWidth="6" strokeLinecap="round" strokeDasharray={2 * Math.PI * 106} strokeDashoffset={2 * Math.PI * 106 * (1 - pr)} style={{ transition: 'stroke-dashoffset 0.3s linear' }} />
+          </svg>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3.2rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: primaryText }}>{left > 0 ? mm(left) : 'Listo'}</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button type="button" onClick={() => adjust(-15)} style={pill} aria-label="Quitar 15 segundos">− 15 s</button>
+          <button type="button" onClick={() => adjust(30)} style={pill} aria-label="Añadir 30 segundos">+ 30 s</button>
+        </div>
+
+        {/* Peso de la serie recién hecha: lo de la serie anterior ya escrito; lo de la última vez, de pista. Vacío = no se apunta. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, color: mutedText, fontSize: '0.95rem' }}>
+          <span>Serie {setRest.doneSet}</span>
+          <input aria-label={`Kilos de la serie ${setRest.doneSet}`} inputMode="decimal" placeholder={setRest.kgHint || 'kg'} value={setRest.kg}
+            onChange={e => setSetRest(r => r && ({ ...r, kg: e.target.value }))} style={field} />
+          <span aria-hidden="true">×</span>
+          <input aria-label={`Repeticiones de la serie ${setRest.doneSet}`} inputMode="numeric" placeholder={setRest.repsHint || 'reps'} value={setRest.reps}
+            onChange={e => setSetRest(r => r && ({ ...r, reps: e.target.value }))} style={field} />
+        </div>
+
+        <p style={{ margin: '14px 0 0', color: mutedText, fontSize: '0.95rem', maxWidth: 340 }}>
+          Siguiente: <span style={{ color: primaryText, fontWeight: 600 }}>{setRest.nextLabel}</span>
+        </p>
+        <div style={{ width: '100%', maxWidth: 420, marginTop: 20 }}>
+          <button type="button" onClick={endSetRest} style={{ width: '100%', minHeight: 52, borderRadius: 16, border: 'none', cursor: 'pointer', background: left > 0 ? fieldBg : '#30d158', color: left > 0 ? primaryText : '#000', fontWeight: 600, fontSize: '1.05rem' }}>
+            {left > 0 ? 'Saltar descanso' : setRest.kind === 'set' ? `Empezar serie ${setRest.doneSet + 1}` : 'Empezar siguiente'}
           </button>
         </div>
       </motion.div>
@@ -782,6 +887,17 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                 {currentTask?.title}
               </h2>
 
+              {isSeries && (
+                <div data-testid="set-indicator" style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '2px 0 4px' }}>
+                  <span style={{ fontSize: '1.05rem', fontWeight: 600, color: primaryText, fontVariantNumeric: 'tabular-nums' }}>Serie {setNumber} de {totalSets}</span>
+                  <span style={{ display: 'flex', gap: 5 }} aria-hidden="true">
+                    {Array.from({ length: totalSets }, (_, i) => (
+                      <span key={i} style={{ width: 8, height: 8, borderRadius: 4, background: i < setNumber - 1 ? '#30d158' : i === setNumber - 1 ? listColor : faint }} />
+                    ))}
+                  </span>
+                </div>
+              )}
+
               {currentTask?.description && (
                 <p style={{ fontSize: '0.95rem', color: muted, margin: 0, lineHeight: 1.4, maxWidth: 400, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                   {currentTask.description}
@@ -891,10 +1007,10 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
               </motion.button>
             ) : (
               <motion.button
-                onClick={handleCompleteTask} whileTap={{ scale: 0.98 }}
+                onClick={isSeries ? handleSetDone : handleCompleteTask} whileTap={{ scale: 0.98 }}
                 style={{ width: '100%', minHeight: 52, borderRadius: 16, border: 'none', cursor: 'pointer', background: '#30d158', color: '#000', fontWeight: 600, fontSize: '1.05rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
               >
-                {currentTask?.targetCount && currentTask.targetCount > 1 ? (sequencePhase === "rest" ? <><Zap size={18} /> Empezar siguiente serie</> : <><CheckCircle size={20} /> Terminar Serie {(currentTask.currentCount || 0) + 1}</>) : <><CheckCircle size={20} /> Completar</>}
+                <CheckCircle size={20} aria-hidden="true" /> {isSeries ? `Serie ${setNumber} hecha` : 'Completar'}
               </motion.button>
             )}
             <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>

@@ -11,6 +11,7 @@ import { classifyDropZone, DRAG_MOVE_THRESHOLD_PX, createEdgeAutoScroll, findScr
 import { MetaSplit, MONEY_COLOR } from '../../ui/MetaSplit';
 import { routinePeriodLabel, type RoutinePart } from '../../../utils/routineBreakdown';
 import { getPeriodContextLabel } from '../../../utils/sectionRoutine';
+import { TRAINING_DAY_LABEL, type TrainingDayStatus } from '../../../utils/trainingDays';
 
 interface SectionData {
   title: string;
@@ -33,6 +34,8 @@ interface SectionData {
   rolledOver?: boolean;
   /** Por eso empieza plegada (mientras no se abra o pliegue a mano). */
   foldedByDefault?: boolean;
+  /** Programa por días: si este día toca hoy, es el siguiente u otro. */
+  trainingDay?: TrainingDayStatus;
 }
 
 interface MainSectionHeaderProps {
@@ -734,6 +737,14 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
           </button>
         </div>
 
+        {data.trainingDay && (
+          <div className="section-head-sub">
+            <span className={`section-head-training is-${data.trainingDay}`} data-testid="training-day-badge">
+              {data.trainingDay === 'done_today' && <Check size={12} strokeWidth={2.6} aria-hidden="true" />}
+              {TRAINING_DAY_LABEL[data.trainingDay]}
+            </span>
+          </div>
+        )}
         {hasSubRow && (
           <div className="section-head-sub">
             <span className="section-head-meta section-duration">
