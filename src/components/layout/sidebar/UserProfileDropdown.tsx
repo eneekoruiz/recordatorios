@@ -579,6 +579,9 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
         >
           {isGuest ? <><Trash2 size={16} /> Borrar datos y salir</> : <><LogOut size={16} /> Cerrar sesión</>}
         </button>
+        <div data-testid="app-version" style={{ padding: '8px 12px 2px', fontSize: '0.72rem', color: 'var(--text-tertiary)', fontVariantNumeric: 'tabular-nums' }}>
+          Versión {__BUILD_ID__} · {__BUILD_DATE__}
+        </div>
       </motion.div>
     </AnimatePresence>,
     document.body

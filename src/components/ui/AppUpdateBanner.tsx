@@ -49,17 +49,28 @@ export const AppUpdateBanner: React.FC = () => {
     };
     navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
 
-    // Comprobar actualizaciones al volver a la pestaña
+    // Una app instalada puede pasar días en segundo plano: se busca versión nueva al abrirla, al volver
+    // a verla, al recuperar la red y cada 20 minutos mientras está abierta.
+    const checkForUpdate = () => {
+      const reg = registrationRef;
+      if (reg) reg.update().catch(() => {});
+      else navigator.serviceWorker.getRegistration().then((found) => found?.update()).catch(() => {});
+    };
     const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && registrationRef) {
-        registrationRef.update().catch(() => {});
-      }
+      if (document.visibilityState === 'visible') checkForUpdate();
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('pageshow', checkForUpdate);
+    window.addEventListener('online', checkForUpdate);
+    const intervalId = window.setInterval(checkForUpdate, 20 * 60 * 1000);
+    checkForUpdate();
 
     return () => {
       navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
       document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('pageshow', checkForUpdate);
+      window.removeEventListener('online', checkForUpdate);
+      window.clearInterval(intervalId);
     };
   }, []);
 

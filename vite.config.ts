@@ -7,8 +7,14 @@ import { readFileSync } from 'node:fs'
 const deployment = JSON.parse(readFileSync(new URL('./vercel.json', import.meta.url), 'utf8'))
 const productionCsp = deployment.headers[0].headers.find((header: { key: string; value: string }) => header.key === 'Content-Security-Policy').value
 
+const buildId = (process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || 'local').slice(0, 7)
+
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    __BUILD_ID__: JSON.stringify(buildId),
+    __BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 10))
+  },
   server: {
     host: true,
     port: 5173
