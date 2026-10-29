@@ -27,6 +27,7 @@ export interface CustomList {
   icon?: string; // Lucide icon name
   isFinancial?: boolean; // Habilita campos de coste y modo financiero en tareas
   showCompleted?: boolean; // Persist preference to show completed tasks for this list
+  showRestPeriods?: boolean; // Persist preference to show intermediate rest periods for gym/routine lists
   isPinned?: boolean; // Pinned lists appear as large cards at the top of sidebar
   isFolder?: boolean; // Habilita comportamiento de carpeta organizativa (contiene listas/subcarpetas)
   /** Pausas guiadas entre tareas en el modo secuencia (descanso opcional, estilo Pomodoro). */
@@ -135,6 +136,7 @@ export interface TaskItem {
   targetCount?: number;
   currentCount?: number;
   restDuration?: number; // Descanso entre series en segundos (ej: 60, 90, 120)
+  isRest?: boolean; // Marca si este recordatorio es un descanso intermedio entre ejercicios
   weightLogs?: TaskWeightLog[]; // Historial de pesos y repeticiones registradas por serie
 
   // --- SHOPPING & FINANCE FIELDS ---

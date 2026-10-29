@@ -34,6 +34,7 @@ import {
   type TaskSortMode
 } from '../../utils/sectionRoutine';
 import { splitWholeHouseTasks, WHOLE_HOUSE_START, WHOLE_HOUSE_END } from '../../utils/cleaningOrder';
+import { getActiveGymDaySectionId } from '../../utils/gymAdaptiveDay';
 import { MainEmptyState } from './main/MainEmptyState';
 import { QuickWeightPromptModal } from '../tasks/QuickWeightPromptModal';
 import { shouldPromptWeight } from '../../utils/gymExercises';
@@ -334,6 +335,19 @@ const CORE_CYCLES = [
   const currentList = lists?.find((l) => l.id === currentView.replace('list_', '').replace('folder_', ''));
   const currentCycle = (cycles || []).find((c) => c.id === currentView) || (CORE_CYCLES.find((c) => c.id === currentView) as any);
 
+  const isGymList = Boolean(
+    currentList?.id === 'gym-routine' ||
+    currentList?.id === 'gimnasio' ||
+    currentList?.name?.toLowerCase().includes('gimnasio') ||
+    currentList?.name?.toLowerCase().includes('gym')
+  );
+
+  const activeGymSectionId = useMemo(() => {
+    if (!isGymList || !currentList) return null;
+    const gymSections = listSections.filter(s => s.listId === currentList.id);
+    return getActiveGymDaySectionId(gymSections, allTasksArray);
+  }, [isGymList, currentList, listSections, allTasksArray]);
+
   // Cada lista recuerda su orden (como en Recordatorios de Apple). Limpieza empieza en «Orden de
   // limpieza» porque mezcla frecuencias y el orden útil es el del trabajo, no el de creación.
   const defaultSortForList = useCallback((listId?: string | null): TaskSortMode => {
@@ -395,6 +409,19 @@ const CORE_CYCLES = [
       updateList(currentList.id, { showCompleted: !resolvedShowCompleted });
     } else {
       setShowCompleted(!showCompleted);
+    }
+  };
+
+  // Manejo de mostrar descansos intermedios en listas de gimnasio / rutinas
+  const [showRest, setShowRest] = useState<boolean>(false);
+  const resolvedShowRest = currentList?.showRestPeriods ?? showRest;
+
+  const toggleShowRest = () => {
+    HapticService.selection();
+    if (currentList) {
+      updateList(currentList.id, { showRestPeriods: !resolvedShowRest });
+    } else {
+      setShowRest(!showRest);
     }
   };
 
@@ -956,6 +983,7 @@ const CORE_CYCLES = [
     const countPending = (list: TaskItem[], sessionDates = viewRoutineSessionDates) => {
       const ref = periodReferenceDate;
       return list.filter(t => {
+        if (t.isRest) return false;
         const effCycle = getEffectiveCycleId(t, listSections, lists);
         const isDone = effCycle
           ? isCompletedInCurrentPeriod(t, cycles, listSections, lists, ref, sessionDates)
@@ -975,6 +1003,9 @@ const CORE_CYCLES = [
             : isTaskCompleted(t);
           return !isDone || recentlyCompletedIds.includes(t.id);
         });
+      }
+      if (!resolvedShowRest) {
+        filtered = filtered.filter(t => !t.isRest);
       }
       return filtered;
     };
@@ -2864,6 +2895,8 @@ const CORE_CYCLES = [
         setIsMenuOpen={setIsMenuOpen}
         resolvedShowCompleted={resolvedShowCompleted}
         toggleShowCompleted={toggleShowCompleted}
+        resolvedShowRest={resolvedShowRest}
+        toggleShowRest={toggleShowRest}
         sortBy={sortBy}
         setSortBy={setSortBy}
         canUseRoutineOrder={isLimpiezaList(currentList?.id, currentList)}
@@ -3068,6 +3101,7 @@ const CORE_CYCLES = [
                         index={index}
                         itemStyle={itemStyle}
                         showDivider={showDivider}
+                        isActiveGymDay={Boolean(activeGymSectionId && (data.sectionId === activeGymSectionId || (data as any).id === activeGymSectionId))}
                         isCustomSection={isCustomSection}
                         isDraggingOver={isDraggingOver}
                         isCatCollapsed={isCatCollapsed}
@@ -3103,8 +3137,8 @@ const CORE_CYCLES = [
                         sectionRoutineModes={sectionRoutineModes}
                         toggleSectionRoutineMode={toggleSectionRoutineMode}
                         dragOverSectionId={dragOverSectionId}
-                        showStartButton={isFrequencyView && !isCustomSection}
-                        onStartSectionSequence={onStartSequence && canRunExecutionMode && sectionPendingTaskIds.length > 0 ? () => {
+                        showStartButton={(isFrequencyView && !isCustomSection) || (Boolean(currentList && (currentList.id === 'gimnasio' || (currentList.name || '').toLowerCase().includes('gimnasio') || (currentList.name || '').toLowerCase().includes('gym') || (currentList.name || '').toLowerCase().includes('entreno'))) && isCustomSection)}
+                        onStartSectionSequence={onStartSequence && (canRunExecutionMode || Boolean(currentList && (currentList.id === 'gimnasio' || (currentList.name || '').toLowerCase().includes('gimnasio') || (currentList.name || '').toLowerCase().includes('gym') || (currentList.name || '').toLowerCase().includes('entreno')))) && sectionPendingTaskIds.length > 0 ? () => {
                           const rawTitle = (data?.title || '').replace(/^[\p{Emoji}\s⏳]+/gu, '').trim() || (data?.title || '');
                           const cleanTitle = rawTitle.length > 0 
                             ? rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1).toLowerCase() 

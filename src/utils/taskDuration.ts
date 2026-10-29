@@ -110,6 +110,15 @@ export function getTaskDuration(
       const pDur = task.parallelDuration || (title.includes('mascarilla') ? 15 : 120);
       return { activeMinutes: task.duration, parallelMinutes: pDur, isParallel: true };
     }
+    // Multi-set gym exercises: duration is per-set, multiply by sets and add rest periods between sets.
+    // Only activates when the task has multiple sets (targetCount > 1) AND a rest period (restDuration > 0).
+    const sets = (typeof task.targetCount === 'number' && task.targetCount > 1) ? task.targetCount : 1;
+    const restSec = (typeof task.restDuration === 'number' && task.restDuration > 0) ? task.restDuration : 0;
+    if (sets > 1 && restSec > 0) {
+      const totalWork = task.duration * sets;
+      const totalRest = (restSec / 60) * (sets - 1);
+      return { activeMinutes: totalWork + totalRest, parallelMinutes: 0, isParallel: false };
+    }
     return { activeMinutes: task.duration, parallelMinutes: 0, isParallel: false };
   }
 

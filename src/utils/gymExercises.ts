@@ -27,7 +27,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'pecho',
     categoryLabel: 'Pectoral / Empuje horizontal',
     defaultSets: 4,
-    defaultWorkMinutes: 3,
+    defaultWorkMinutes: 1,
     defaultRestSeconds: 120,
     alternatives: [
       { name: 'Press con mancuernas en banco plano', equipment: 'Mancuernas', note: 'Mayor rango de recorrido y libertad articular para hombros' },
@@ -43,7 +43,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'pecho',
     categoryLabel: 'Pectoral superior (clavicular)',
     defaultSets: 4,
-    defaultWorkMinutes: 3,
+    defaultWorkMinutes: 1,
     defaultRestSeconds: 120,
     alternatives: [
       { name: 'Press inclinado con mancuernas (30º)', equipment: 'Mancuernas', note: 'Trayectoria convergente óptima para el haz clavicular' },
@@ -59,7 +59,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'pecho',
     categoryLabel: 'Pectoral inferior / Tríceps',
     defaultSets: 3,
-    defaultWorkMinutes: 2,
+    defaultWorkMinutes: 1,
     defaultRestSeconds: 120,
     alternatives: [
       { name: 'Fondos en máquina asistida', equipment: 'Máquina', note: 'Permite regular el peso exactamente para completar las series' },
@@ -77,7 +77,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'espalda',
     categoryLabel: 'Espalda / Tracción horizontal',
     defaultSets: 4,
-    defaultWorkMinutes: 3,
+    defaultWorkMinutes: 1,
     defaultRestSeconds: 120,
     alternatives: [
       { name: 'Remo Gironda en polea baja', equipment: 'Polea', note: 'Cero fatiga en lumbares y máxima contracción escapular' },
@@ -93,7 +93,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'espalda',
     categoryLabel: 'Dorsal ancho / Tracción vertical',
     defaultSets: 4,
-    defaultWorkMinutes: 2.5,
+    defaultWorkMinutes: 1,
     defaultRestSeconds: 90,
     alternatives: [
       { name: 'Dominadas con peso corporal (o lastradas)', equipment: 'Barra de dominadas', note: 'Fuerza funcional y reclutamiento completo de core y dorsales' },
@@ -109,7 +109,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'espalda',
     categoryLabel: 'Dorsal ancho / Tracción vertical',
     defaultSets: 4,
-    defaultWorkMinutes: 3,
+    defaultWorkMinutes: 1,
     defaultRestSeconds: 120,
     alternatives: [
       { name: 'Jalón al pecho en polea', equipment: 'Polea', note: 'Control de carga exacto si estás fatigado para llegar a 8-10 reps' },
@@ -124,7 +124,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'espalda',
     categoryLabel: 'Dorsal y Espalda media',
     defaultSets: 3,
-    defaultWorkMinutes: 2,
+    defaultWorkMinutes: 1,
     defaultRestSeconds: 90,
     alternatives: [
       { name: 'Remo con mancuerna apoyado en banco inclinado', equipment: 'Mancuernas', note: 'Tensión constante con apoyo pectoral estricto' },
@@ -141,7 +141,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'hombro',
     categoryLabel: 'Deltoides anterior / Empuje vertical',
     defaultSets: 3,
-    defaultWorkMinutes: 2.5,
+    defaultWorkMinutes: 1,
     defaultRestSeconds: 120,
     alternatives: [
       { name: 'Press de hombros con mancuernas sentado', equipment: 'Mancuernas', note: 'Apoyo lumbar y libertad de rotación en la muñeca' },
@@ -157,7 +157,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'hombro',
     categoryLabel: 'Deltoides lateral',
     defaultSets: 4,
-    defaultWorkMinutes: 2,
+    defaultWorkMinutes: 1,
     defaultRestSeconds: 90,
     alternatives: [
       { name: 'Elevaciones laterales en polea baja', equipment: 'Polea', note: 'Tensión mecánica desde el primer grado de abducción' },
@@ -175,7 +175,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'biceps',
     categoryLabel: 'Bíceps / Flexores de codo',
     defaultSets: 3,
-    defaultWorkMinutes: 2,
+    defaultWorkMinutes: 1,
     defaultRestSeconds: 75,
     alternatives: [
       { name: 'Curl con mancuernas en banco inclinado', equipment: 'Mancuernas', note: 'Máximo estiramiento de la cabeza larga del bíceps' },
@@ -192,7 +192,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'triceps',
     categoryLabel: 'Tríceps braquial',
     defaultSets: 3,
-    defaultWorkMinutes: 2,
+    defaultWorkMinutes: 1,
     defaultRestSeconds: 90,
     alternatives: [
       { name: 'Extensión de tríceps en polea con cuerda', equipment: 'Polea', note: 'Apertura al final para focalizar en la cabeza lateral' },
@@ -212,7 +212,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'pierna',
     categoryLabel: 'Cuádriceps / Dominante rodilla guiada',
     defaultSets: 4,
-    defaultWorkMinutes: 3,
+    defaultWorkMinutes: 1,
     defaultRestSeconds: 180,
     alternatives: [
       { name: 'Prensa de piernas a 45º', equipment: 'Prensa', note: 'Gran empuje de cuádriceps con cero compresión axial en columna' },
@@ -229,7 +229,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'pierna',
     categoryLabel: 'Aductores / Cadera interna',
     defaultSets: 3,
-    defaultWorkMinutes: 2,
+    defaultWorkMinutes: 1,
     defaultRestSeconds: 75,
     alternatives: [
       { name: 'Aducción en polea baja con tobillera', equipment: 'Polea', note: 'Tensión continua en todo el rango de cierre' },
@@ -245,7 +245,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'pierna',
     categoryLabel: 'Glúteo mayor y medio',
     defaultSets: 3,
-    defaultWorkMinutes: 2,
+    defaultWorkMinutes: 1,
     defaultRestSeconds: 75,
     alternatives: [
       { name: 'Patada de glúteo en polea baja', equipment: 'Polea', note: 'Extensión de cadera pura sin sobrecarga lumbar' },
@@ -261,7 +261,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'femoral',
     categoryLabel: 'Isquiosurales / Flexión de rodilla',
     defaultSets: 4,
-    defaultWorkMinutes: 2,
+    defaultWorkMinutes: 1,
     defaultRestSeconds: 90,
     alternatives: [
       { name: 'Curl femoral sentado en máquina', equipment: 'Máquina', note: 'Máximo estiramiento del bíceps femoral con cadera a 90º' },
@@ -277,7 +277,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'pierna',
     categoryLabel: 'Cuádriceps y Glúteo / Dominante rodilla',
     defaultSets: 4,
-    defaultWorkMinutes: 3,
+    defaultWorkMinutes: 1,
     defaultRestSeconds: 150,
     alternatives: [
       { name: 'Prensa de piernas a 45º', equipment: 'Prensa', note: 'Cero compresión en columna vertebral con alta carga en cuádriceps' },
@@ -293,7 +293,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'pierna',
     categoryLabel: 'Cuádriceps / Piernas',
     defaultSets: 4,
-    defaultWorkMinutes: 3,
+    defaultWorkMinutes: 1,
     defaultRestSeconds: 120,
     alternatives: [
       { name: 'Sentadilla Hack en máquina', equipment: 'Hack', note: 'Profundidad guiada y foco intenso en cuádriceps' },
@@ -309,7 +309,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'pierna',
     categoryLabel: 'Cuádriceps analítico',
     defaultSets: 3,
-    defaultWorkMinutes: 2,
+    defaultWorkMinutes: 1,
     defaultRestSeconds: 90,
     alternatives: [
       { name: 'Prensa con pies abajo en la plataforma', equipment: 'Prensa', note: 'Mayor flexión de rodilla para activar vastos' },
@@ -326,7 +326,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'femoral',
     categoryLabel: 'Isquiosurales y Cadera posterior',
     defaultSets: 4,
-    defaultWorkMinutes: 3,
+    defaultWorkMinutes: 1,
     defaultRestSeconds: 120,
     alternatives: [
       { name: 'Curl femoral tumbado en máquina', equipment: 'Máquina', note: 'Aislamiento directo de isquiosurales sin fatiga en la espalda baja' },
@@ -404,6 +404,335 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
       { name: 'Bicicleta estática / Spinning', equipment: 'Bici', note: 'Descarga muscular fluida con ritmo constante y cómodo' },
       { name: 'Elíptica', equipment: 'Elíptica', note: 'Movimiento sincronizado suave de tren superior e inferior' },
       { name: 'Escaleras mecánicas (Stairmaster)', equipment: 'Stairmaster', note: 'Intensidad cardiovascular alta con trabajo de glúteos y gemelos' }
+    ]
+  },
+// --- ESPALDA (ADICIONALES) ---
+  {
+    id: 'face_pull',
+    name: 'Face pull con cuerda',
+    synonyms: ['face pull', 'face pull con cuerda', 'cuerda a la cara', 'tiron a la cara', 'tiron facial', 'cuerda cara', 'espalda alta cuerda'],
+    category: 'espalda',
+    categoryLabel: 'Deltoides posterior / Espalda alta',
+    defaultSets: 3,
+    defaultWorkMinutes: 1,
+    defaultRestSeconds: 75,
+    alternatives: [
+      { name: 'Pájaros con mancuernas en banco inclinado', equipment: 'Mancuernas', note: 'Aislamiento puro del deltoides posterior con apoyo pectoral' },
+      { name: 'Rear delt fly en máquina (pec deck inversa)', equipment: 'Máquina', note: 'Trayectoria guiada y tensión constante en deltoides posterior' },
+      { name: 'Band pull-apart con goma', equipment: 'Banda elástica', note: 'Excelente calentamiento y activación de rotadores externos' },
+      { name: 'Remo al mentón con agarre amplio', equipment: 'Barra / Polea', note: 'Combinación de trapecio y deltoides posterior con menos estrés en hombro' }
+    ]
+  },
+  {
+    id: 'remo_horizontal',
+    name: 'Remo horizontal en polea',
+    synonyms: ['remo horizontal', 'remo en polea', 'seated row', 'remo sentado', 'remo polea baja', 'remo cable', 'horizontal row'],
+    category: 'espalda',
+    categoryLabel: 'Dorsal y Espalda media / Tracción horizontal',
+    defaultSets: 4,
+    defaultWorkMinutes: 1,
+    defaultRestSeconds: 90,
+    alternatives: [
+      { name: 'Remo con mancuerna a una mano', equipment: 'Mancuerna', note: 'Mayor rango unilateral y corrección de descompensaciones' },
+      { name: 'Remo en máquina con pecho apoyado', equipment: 'Máquina', note: 'Cero fatiga lumbar con aislamiento estricto' },
+      { name: 'Remo Gironda en polea baja', equipment: 'Polea', note: 'Retracción escapular máxima con torso erguido' },
+      { name: 'Remo con barra T (T-Bar row)', equipment: 'Barra T', note: 'Gran densidad de espalda media con agarre neutro' }
+    ]
+  },
+  {
+    id: 'remo_elevado',
+    name: 'Remo elevado',
+    synonyms: ['remo elevado', 'remo al menton', 'remo al mentón', 'upright row', 'remo vertical', 'tiron vertical'],
+    category: 'hombro',
+    categoryLabel: 'Trapecio y Deltoides lateral',
+    defaultSets: 3,
+    defaultWorkMinutes: 1,
+    defaultRestSeconds: 75,
+    alternatives: [
+      { name: 'Elevaciones laterales con mancuernas', equipment: 'Mancuernas', note: 'Menor estrés en la cápsula del hombro con mismo estímulo del deltoides lateral' },
+      { name: 'Remo al mentón con agarre amplio en polea baja', equipment: 'Polea', note: 'Tensión continua con menor pinzamiento subacromial' },
+      { name: 'Encogimientos de hombros (shrugs)', equipment: 'Mancuernas / Barra', note: 'Aislamiento puro de trapecio superior' }
+    ]
+  },
+  {
+    id: 'pullover',
+    name: 'Pull-over',
+    synonyms: ['pullover', 'pull over', 'pull-over', 'pullover polea', 'pullover mancuerna'],
+    category: 'espalda',
+    categoryLabel: 'Dorsal ancho / Serrato',
+    defaultSets: 3,
+    defaultWorkMinutes: 1,
+    defaultRestSeconds: 75,
+    alternatives: [
+      { name: 'Pull-over en polea alta con barra recta', equipment: 'Polea', note: 'Tensión constante en el dorsal sin involucrar pecho' },
+      { name: 'Pull-over con mancuerna en banco plano', equipment: 'Mancuerna', note: 'Estiramiento profundo del dorsal y serrato' },
+      { name: 'Jalón con brazos rectos en polea alta', equipment: 'Polea', note: 'Mismo patrón motor con mayor aislamiento del dorsal' }
+    ]
+  },
+  {
+    id: 'remo_maquina',
+    name: 'Remo en máquina',
+    synonyms: ['remo en maquina', 'remo en máquina', 'remo maquina', 'remo máquina', 'chest supported row', 'remo con apoyo'],
+    category: 'espalda',
+    categoryLabel: 'Espalda media / Romboides',
+    defaultSets: 3,
+    defaultWorkMinutes: 1,
+    defaultRestSeconds: 90,
+    alternatives: [
+      { name: 'Remo con mancuerna en banco inclinado', equipment: 'Mancuernas', note: 'Mismo apoyo pectoral con libertad de rotación' },
+      { name: 'Remo horizontal en polea', equipment: 'Polea', note: 'Mayor rango con tensión variable' },
+      { name: 'Remo con barra agarre supino (Yates)', equipment: 'Barra', note: 'Gran implicación del dorsal inferior' }
+    ]
+  },
+
+  // --- PECHO (ADICIONALES) ---
+  {
+    id: 'press_mancuernas',
+    name: 'Press con mancuernas',
+    synonyms: ['press con mancuernas', 'press mancuernas', 'dumbbell press', 'press plano mancuernas'],
+    category: 'pecho',
+    categoryLabel: 'Pectoral / Empuje horizontal',
+    defaultSets: 4,
+    defaultWorkMinutes: 1,
+    defaultRestSeconds: 120,
+    alternatives: [
+      { name: 'Press de banca con barra', equipment: 'Barra', note: 'Permite mover más peso total con estabilidad bilateral' },
+      { name: 'Press en máquina convergente', equipment: 'Máquina', note: 'Seguridad total para empujar al fallo' },
+      { name: 'Aperturas con mancuernas en banco plano', equipment: 'Mancuernas', note: 'Aislamiento del pectoral con máximo estiramiento' }
+    ]
+  },
+  {
+    id: 'aperturas_pecho',
+    name: 'Aperturas / Cruces de pecho',
+    synonyms: ['aperturas', 'cruces', 'cruces de pecho', 'aperturas pecho', 'chest fly', 'pec fly', 'aperturas con mancuernas', 'cruces en polea'],
+    category: 'pecho',
+    categoryLabel: 'Pectoral / Aislamiento',
+    defaultSets: 3,
+    defaultWorkMinutes: 1,
+    defaultRestSeconds: 75,
+    alternatives: [
+      { name: 'Cruces en polea alta (cable crossover)', equipment: 'Poleas', note: 'Tensión constante con gran contracción pico' },
+      { name: 'Pec deck / Contractora de pecho', equipment: 'Máquina', note: 'Aislamiento guiado perfecto para pecho' },
+      { name: 'Aperturas con mancuernas en banco inclinado', equipment: 'Mancuernas', note: 'Énfasis en porción clavicular del pectoral' }
+    ]
+  },
+
+  // --- HOMBRO (ADICIONALES) ---
+  {
+    id: 'elevaciones_frontales',
+    name: 'Elevaciones frontales',
+    synonyms: ['elevaciones frontales', 'front raises', 'elevacion frontal', 'deltoides frontal'],
+    category: 'hombro',
+    categoryLabel: 'Deltoides anterior',
+    defaultSets: 3,
+    defaultWorkMinutes: 1,
+    defaultRestSeconds: 60,
+    alternatives: [
+      { name: 'Elevaciones frontales en polea baja', equipment: 'Polea', note: 'Tensión constante desde el inicio del recorrido' },
+      { name: 'Elevaciones frontales con disco', equipment: 'Disco', note: 'Agarre neutro cómodo y recorrido natural' },
+      { name: 'Press Arnold con mancuernas', equipment: 'Mancuernas', note: 'Rotación que activa deltoides anterior y lateral simultáneamente' }
+    ]
+  },
+  {
+    id: 'pajaros',
+    name: 'Pájaros (Rear delt fly)',
+    synonyms: ['pajaros', 'pájaros', 'rear delt fly', 'rear delt', 'deltoides posterior', 'vuelos posteriores', 'pajaros mancuerna', 'reverse fly'],
+    category: 'hombro',
+    categoryLabel: 'Deltoides posterior',
+    defaultSets: 3,
+    defaultWorkMinutes: 1,
+    defaultRestSeconds: 60,
+    alternatives: [
+      { name: 'Face pull con cuerda en polea alta', equipment: 'Polea', note: 'Combina rotación externa con retracción escapular' },
+      { name: 'Pec deck inversa (reverse pec deck)', equipment: 'Máquina', note: 'Aislamiento guiado del deltoides posterior' },
+      { name: 'Pájaros en banco inclinado boca abajo', equipment: 'Mancuernas', note: 'Elimina impulso del cuerpo para máximo aislamiento' }
+    ]
+  },
+  {
+    id: 'press_arnold',
+    name: 'Press Arnold',
+    synonyms: ['press arnold', 'arnold press', 'press de arnold'],
+    category: 'hombro',
+    categoryLabel: 'Deltoides anterior y lateral',
+    defaultSets: 3,
+    defaultWorkMinutes: 1,
+    defaultRestSeconds: 90,
+    alternatives: [
+      { name: 'Press militar con barra', equipment: 'Barra', note: 'Mayor carga total con trayectoria vertical pura' },
+      { name: 'Press de hombros con mancuernas sentado', equipment: 'Mancuernas', note: 'Apoyo lumbar con empuje bilateral' },
+      { name: 'Landmine press a una mano', equipment: 'Barra', note: 'Vector diagonal suave con los hombros' }
+    ]
+  },
+
+  // --- BRAZOS (ADICIONALES) ---
+  {
+    id: 'curl_martillo',
+    name: 'Curl martillo',
+    synonyms: ['curl martillo', 'hammer curl', 'martillo', 'curl neutro', 'curl agarre neutro'],
+    category: 'biceps',
+    categoryLabel: 'Braquiorradial / Bíceps',
+    defaultSets: 3,
+    defaultWorkMinutes: 1,
+    defaultRestSeconds: 75,
+    alternatives: [
+      { name: 'Curl en polea baja con cuerda (agarre neutro)', equipment: 'Polea', note: 'Tensión continua en braquiorradial y braquial' },
+      { name: 'Curl con mancuernas alterno', equipment: 'Mancuernas', note: 'Mayor concentración unilateral' },
+      { name: 'Curl predicador con barra EZ', equipment: 'Barra EZ', note: 'Aislamiento estricto sin balanceo' }
+    ]
+  },
+  {
+    id: 'curl_predicador',
+    name: 'Curl predicador (Scott)',
+    synonyms: ['curl predicador', 'curl scott', 'preacher curl', 'banco scott', 'curl banco predicador'],
+    category: 'biceps',
+    categoryLabel: 'Bíceps / Aislamiento',
+    defaultSets: 3,
+    defaultWorkMinutes: 1,
+    defaultRestSeconds: 75,
+    alternatives: [
+      { name: 'Curl con mancuerna concentrado', equipment: 'Mancuerna', note: 'Aislamiento total con apoyo del codo en la rodilla' },
+      { name: 'Curl en máquina predicador', equipment: 'Máquina', note: 'Trayectoria fija para forzar al fallo con seguridad' },
+      { name: 'Curl araña (spider curl) en banco inclinado', equipment: 'Mancuernas', note: 'Contracción pico brutal del bíceps' }
+    ]
+  },
+  {
+    id: 'press_frances',
+    name: 'Press francés',
+    synonyms: ['press frances', 'press francés', 'skull crusher', 'skull crushers', 'extension triceps tumbado', 'rompe craneos'],
+    category: 'triceps',
+    categoryLabel: 'Tríceps / Cabeza larga',
+    defaultSets: 3,
+    defaultWorkMinutes: 1,
+    defaultRestSeconds: 90,
+    alternatives: [
+      { name: 'Extensión overhead con mancuerna', equipment: 'Mancuerna', note: 'Máximo estiramiento de la cabeza larga del tríceps' },
+      { name: 'Extensión en polea alta con cuerda', equipment: 'Polea', note: 'Tensión constante y apertura al final para cabeza lateral' },
+      { name: 'Press de banca agarre cerrado', equipment: 'Barra', note: 'Compuesto pesado para masa de tríceps' }
+    ]
+  },
+  {
+    id: 'extension_overhead_triceps',
+    name: 'Extensión overhead de tríceps',
+    synonyms: ['extension overhead', 'extensión overhead', 'overhead extension', 'extension por encima de la cabeza', 'triceps overhead', 'extension tras nuca'],
+    category: 'triceps',
+    categoryLabel: 'Tríceps / Cabeza larga',
+    defaultSets: 3,
+    defaultWorkMinutes: 1,
+    defaultRestSeconds: 75,
+    alternatives: [
+      { name: 'Press francés con barra EZ', equipment: 'Barra EZ', note: 'Posición tumbada con estiramiento profundo' },
+      { name: 'Extensión katana unilateral en polea alta', equipment: 'Polea', note: 'Máximo estiramiento con trayectoria natural del codo' },
+      { name: 'Extensión con mancuerna tras nuca sentado', equipment: 'Mancuerna', note: 'Foco en cabeza larga con apoyo en banco vertical' }
+    ]
+  },
+
+  // --- PIERNA (ADICIONALES) ---
+  {
+    id: 'hip_thrust',
+    name: 'Hip thrust',
+    synonyms: ['hip thrust', 'empuje de cadera', 'puente de gluteos', 'puente de glúteos', 'glute bridge', 'hip thrust barra'],
+    category: 'pierna',
+    categoryLabel: 'Glúteo mayor / Extensión de cadera',
+    defaultSets: 4,
+    defaultWorkMinutes: 1.5,
+    defaultRestSeconds: 120,
+    alternatives: [
+      { name: 'Hip thrust en máquina', equipment: 'Máquina', note: 'Carga directa sin montaje de barra' },
+      { name: 'Puente de glúteo unilateral', equipment: 'Suelo', note: 'Corrección de descompensaciones bilaterales' },
+      { name: 'Patada de glúteo en polea baja', equipment: 'Polea', note: 'Extensión de cadera pura con tensión constante' },
+      { name: 'Máquina de glúteos (glute drive)', equipment: 'Máquina', note: 'Cómoda y directa sin montar/desmontar peso' }
+    ]
+  },
+  {
+    id: 'zancada',
+    name: 'Zancada / Lunge',
+    synonyms: ['zancada', 'lunge', 'lunges', 'zancadas', 'estocada', 'tijeras', 'zancada con mancuernas'],
+    category: 'pierna',
+    categoryLabel: 'Cuádriceps y Glúteo / Unilateral',
+    defaultSets: 3,
+    defaultWorkMinutes: 1.5,
+    defaultRestSeconds: 90,
+    alternatives: [
+      { name: 'Sentadilla búlgara', equipment: 'Mancuernas / Banco', note: 'Mayor rango y estabilidad con pie trasero elevado' },
+      { name: 'Zancada caminando con mancuernas', equipment: 'Mancuernas', note: 'Componente dinámico funcional' },
+      { name: 'Step up en cajón', equipment: 'Cajón / Mancuerna', note: 'Unilateral con menor estrés en la rodilla' }
+    ]
+  },
+  {
+    id: 'sentadilla_bulgara',
+    name: 'Sentadilla búlgara',
+    synonyms: ['sentadilla bulgara', 'sentadilla búlgara', 'bulgarian split squat', 'split squat', 'bulgara'],
+    category: 'pierna',
+    categoryLabel: 'Cuádriceps y Glúteo / Unilateral',
+    defaultSets: 3,
+    defaultWorkMinutes: 1.5,
+    defaultRestSeconds: 90,
+    alternatives: [
+      { name: 'Zancada con mancuernas', equipment: 'Mancuernas', note: 'Menos demandante en equilibrio' },
+      { name: 'Sentadilla búlgara en multipower', equipment: 'Multipower', note: 'Estabilidad asistida para cargar más peso' },
+      { name: 'Prensa unilateral (una pierna)', equipment: 'Prensa', note: 'Unilateral sin requisito de equilibrio' }
+    ]
+  },
+  {
+    id: 'peso_muerto',
+    name: 'Peso muerto convencional',
+    synonyms: ['peso muerto', 'peso muerto convencional', 'deadlift', 'conventional deadlift', 'peso muerto suelo'],
+    category: 'pierna',
+    categoryLabel: 'Cadena posterior completa',
+    defaultSets: 4,
+    defaultWorkMinutes: 1.5,
+    defaultRestSeconds: 150,
+    alternatives: [
+      { name: 'Peso muerto rumano', equipment: 'Barra', note: 'Mayor foco en isquiosurales con menos fatiga del SNC' },
+      { name: 'Peso muerto sumo', equipment: 'Barra', note: 'Mayor participación de aductores y cuádriceps' },
+      { name: 'Peso muerto con trap bar (hex bar)', equipment: 'Trap bar', note: 'Centro de gravedad más favorable para la espalda' }
+    ]
+  },
+
+  // --- CORE (ADICIONALES) ---
+  {
+    id: 'crunch_polea',
+    name: 'Crunch en polea',
+    synonyms: ['crunch en polea', 'crunch polea', 'cable crunch', 'crunch con cuerda', 'abdominales polea'],
+    category: 'core',
+    categoryLabel: 'Recto abdominal',
+    defaultSets: 3,
+    defaultWorkMinutes: 1,
+    defaultRestSeconds: 60,
+    alternatives: [
+      { name: 'Crunch en máquina abdominal', equipment: 'Máquina', note: 'Sobrecarga guiada y segura' },
+      { name: 'Elevaciones de piernas colgado', equipment: 'Barra', note: 'Gran trabajo de porción inferior del recto abdominal' },
+      { name: 'Rueda abdominal (ab wheel)', equipment: 'Rueda', note: 'Anti-extensión con activación neuromuscular altísima' }
+    ]
+  },
+  {
+    id: 'plancha',
+    name: 'Plancha (Plank)',
+    synonyms: ['plancha', 'plank', 'plancha isometrica', 'plancha isométrica', 'plancha frontal', 'front plank'],
+    category: 'core',
+    categoryLabel: 'Core / Anti-extensión',
+    defaultSets: 3,
+    defaultWorkMinutes: 1,
+    defaultRestSeconds: 45,
+    alternatives: [
+      { name: 'Plancha lateral', equipment: 'Suelo', note: 'Anti-flexión lateral para oblicuos y cuadrado lumbar' },
+      { name: 'Plancha con brazos extendidos', equipment: 'Suelo', note: 'Mayor demanda en hombros y core superior' },
+      { name: 'Dead bug', equipment: 'Suelo', note: 'Anti-extensión dinámica con coordinación contralateral' }
+    ]
+  },
+  {
+    id: 'elevacion_piernas',
+    name: 'Elevación de piernas colgando',
+    synonyms: ['elevacion de piernas', 'elevación de piernas', 'leg raises', 'hanging leg raises', 'piernas colgando', 'elevacion piernas barra'],
+    category: 'core',
+    categoryLabel: 'Recto abdominal inferior / Flexores de cadera',
+    defaultSets: 3,
+    defaultWorkMinutes: 1,
+    defaultRestSeconds: 60,
+    alternatives: [
+      { name: 'Elevación de rodillas colgando', equipment: 'Barra', note: 'Versión más accesible si no puedes las piernas rectas' },
+      { name: 'Elevación de piernas en banco inclinado', equipment: 'Banco', note: 'Menor demanda de agarre con mismo estímulo abdominal' },
+      { name: 'Dragon flag', equipment: 'Banco', note: 'Nivel avanzado de anti-extensión y control' }
     ]
   }
 ];
@@ -509,6 +838,55 @@ export function getExerciseAlternatives(title: string): {
   }
   if (normTitle.includes('cardio') || normTitle.includes('andar') || normTitle.includes('bici') || normTitle.includes('cinta') || normTitle.includes('caminar')) {
     const item = GYM_EXERCISE_CATALOG.find(e => e.id === 'cardio_final')!;
+    return { found: true, matchedTitle: item.name, categoryLabel: item.categoryLabel, category: item.category, alternatives: item.alternatives };
+  }
+
+  if (normTitle.includes('face pull') || (normTitle.includes('cuerda') && (normTitle.includes('cara') || normTitle.includes('espalda')))) {
+    const item = GYM_EXERCISE_CATALOG.find(e => e.id === 'face_pull')!;
+    return { found: true, matchedTitle: item.name, categoryLabel: item.categoryLabel, category: item.category, alternatives: item.alternatives };
+  }
+  if (normTitle.includes('remo horizontal') || normTitle.includes('remo sentado') || normTitle.includes('seated row')) {
+    const item = GYM_EXERCISE_CATALOG.find(e => e.id === 'remo_horizontal')!;
+    return { found: true, matchedTitle: item.name, categoryLabel: item.categoryLabel, category: item.category, alternatives: item.alternatives };
+  }
+  if (normTitle.includes('remo elevado') || normTitle.includes('al menton') || normTitle.includes('al mentón')) {
+    const item = GYM_EXERCISE_CATALOG.find(e => e.id === 'remo_elevado')!;
+    return { found: true, matchedTitle: item.name, categoryLabel: item.categoryLabel, category: item.category, alternatives: item.alternatives };
+  }
+  if (normTitle.includes('pullover') || normTitle.includes('pull over')) {
+    const item = GYM_EXERCISE_CATALOG.find(e => e.id === 'pullover')!;
+    return { found: true, matchedTitle: item.name, categoryLabel: item.categoryLabel, category: item.category, alternatives: item.alternatives };
+  }
+  if (normTitle.includes('hip thrust') || (normTitle.includes('puente') && normTitle.includes('glute'))) {
+    const item = GYM_EXERCISE_CATALOG.find(e => e.id === 'hip_thrust')!;
+    return { found: true, matchedTitle: item.name, categoryLabel: item.categoryLabel, category: item.category, alternatives: item.alternatives };
+  }
+  if (normTitle.includes('zancada') || normTitle.includes('lunge') || normTitle.includes('estocada')) {
+    const item = GYM_EXERCISE_CATALOG.find(e => e.id === 'zancada')!;
+    return { found: true, matchedTitle: item.name, categoryLabel: item.categoryLabel, category: item.category, alternatives: item.alternatives };
+  }
+  if (normTitle.includes('bulgara') || normTitle.includes('búlgara')) {
+    const item = GYM_EXERCISE_CATALOG.find(e => e.id === 'sentadilla_bulgara')!;
+    return { found: true, matchedTitle: item.name, categoryLabel: item.categoryLabel, category: item.category, alternatives: item.alternatives };
+  }
+  if (normTitle.includes('plancha') || normTitle.includes('plank')) {
+    const item = GYM_EXERCISE_CATALOG.find(e => e.id === 'plancha')!;
+    return { found: true, matchedTitle: item.name, categoryLabel: item.categoryLabel, category: item.category, alternatives: item.alternatives };
+  }
+  if (normTitle.includes('martillo')) {
+    const item = GYM_EXERCISE_CATALOG.find(e => e.id === 'curl_martillo')!;
+    return { found: true, matchedTitle: item.name, categoryLabel: item.categoryLabel, category: item.category, alternatives: item.alternatives };
+  }
+  if (normTitle.includes('frances') || normTitle.includes('francés') || normTitle.includes('skull crusher')) {
+    const item = GYM_EXERCISE_CATALOG.find(e => e.id === 'press_frances')!;
+    return { found: true, matchedTitle: item.name, categoryLabel: item.categoryLabel, category: item.category, alternatives: item.alternatives };
+  }
+  if (normTitle.includes('apertura') || normTitle.includes('cruce') || normTitle.includes('pec fly')) {
+    const item = GYM_EXERCISE_CATALOG.find(e => e.id === 'aperturas_pecho')!;
+    return { found: true, matchedTitle: item.name, categoryLabel: item.categoryLabel, category: item.category, alternatives: item.alternatives };
+  }
+  if (normTitle.includes('pajaro') || normTitle.includes('pájaro') || normTitle.includes('rear delt')) {
+    const item = GYM_EXERCISE_CATALOG.find(e => e.id === 'pajaros')!;
     return { found: true, matchedTitle: item.name, categoryLabel: item.categoryLabel, category: item.category, alternatives: item.alternatives };
   }
 
@@ -655,7 +1033,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '3 series de curl con mancuernas, barra Z o polea.',
       targetCount: 3,
       currentCount: 0,
-      duration: 3,
+      duration: 1,
       restDuration: 60,
       cycle_id: 'cycle_day',
       status: 'pending',
@@ -692,7 +1070,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '4 series pesadas en banco plano. Calienta bien antes de las series efectivas.',
       targetCount: 4,
       currentCount: 0,
-      duration: 3, // 3 min por serie de trabajo estimado
+      duration: 1, // 3 min por serie de trabajo estimado
       restDuration: 120, // 2 min descanso
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -711,7 +1089,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '4 series. Torso inclinado a 45-70º, codos pegados al cuerpo, tracción al ombligo.',
       targetCount: 4,
       currentCount: 0,
-      duration: 3,
+      duration: 1,
       restDuration: 120,
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -730,7 +1108,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '3 series. Empuje vertical con barra o mancuernas. Glúteos y core bien activos.',
       targetCount: 3,
       currentCount: 0,
-      duration: 2.5,
+      duration: 1,
       restDuration: 120,
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -749,7 +1127,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '3 series. Agarre amplio o medio, llevando la barra a la parte superior del pecho.',
       targetCount: 3,
       currentCount: 0,
-      duration: 2.5,
+      duration: 1,
       restDuration: 90,
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -768,7 +1146,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '4 series de 12-15 reps. Con mancuernas o polea. Controla la bajada excéntrica.',
       targetCount: 4,
       currentCount: 0,
-      duration: 2,
+      duration: 1,
       restDuration: 90,
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -787,7 +1165,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '3 series en polea con cuerda o barra. Codos fijos al costado del cuerpo.',
       targetCount: 3,
       currentCount: 0,
-      duration: 2,
+      duration: 1,
       restDuration: 90,
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -816,6 +1194,102 @@ export function createDefaultGymRoutine(userId: string = '') {
       updated_at: EPOCH
     },
 
+    {
+      id: 'task_gym_rest_1_1',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_sup_a',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire y pasar a la siguiente máquina.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 0.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_1_2',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_sup_a',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire y pasar a la siguiente máquina.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 1.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_1_3',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_sup_a',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire y pasar a la siguiente máquina.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 2.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_1_4',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_sup_a',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire y pasar a la siguiente máquina.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 3.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_1_5',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_sup_a',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire y pasar a la siguiente máquina.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 4.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_1_6',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_sup_a',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire y pasar al cardio.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 5.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
     // --- DÍA 2: TREN INFERIOR A ---
     {
       id: 'task_gym_2_sentadilla_jaca',
@@ -827,7 +1301,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '4 series pesadas en máquina Jaca / Hack. Coloca los pies en ancho medio y desciende controlado. Descanso amplio.',
       targetCount: 4,
       currentCount: 0,
-      duration: 3,
+      duration: 1.5,
       restDuration: 180, // 3 min descanso
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -846,7 +1320,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '4 series de 10-12 reps. En máquina sentado o tumbado (leg curl). Controla la fase excéntrica y aprieta en contracción.',
       targetCount: 4,
       currentCount: 0,
-      duration: 2,
+      duration: 1,
       restDuration: 90,
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -865,7 +1339,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '3 series de 12 reps (máquina de culo / glute drive). Extensión completa con glúteo bloqueado.',
       targetCount: 3,
       currentCount: 0,
-      duration: 2,
+      duration: 1,
       restDuration: 75,
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -884,7 +1358,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '3 series de 12-15 reps (leg extension). Control en todo el recorrido con 1s de pausa en extensión.',
       targetCount: 3,
       currentCount: 0,
-      duration: 2,
+      duration: 1,
       restDuration: 90,
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -903,7 +1377,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '3 series de 12-15 reps. Cierra controlado con pausa de 1 segundo en el punto de máxima contracción.',
       targetCount: 3,
       currentCount: 0,
-      duration: 2,
+      duration: 1,
       restDuration: 75,
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -962,7 +1436,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '4 series. Con mancuernas o barra a unos 30º de inclinación.',
       targetCount: 4,
       currentCount: 0,
-      duration: 3,
+      duration: 1,
       restDuration: 120,
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -972,20 +1446,87 @@ export function createDefaultGymRoutine(userId: string = '') {
       updated_at: EPOCH
     },
     {
-      id: 'task_gym_3_dominadas',
+      id: 'task_gym_rest_3_0',
       user_id: userId,
       type: 'task',
       categoryId: listId,
       sectionId: 'sec_gym_sup_b',
-      title: 'Dominadas',
-      description: '4 series con peso corporal (o asistidas en máquina si hace falta para clavar reps).',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire y pasar a la siguiente máquina.',
+      duration: 1,
+      isRest: true,
+      status: 'pending',
+      order: 0.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_3_press_banca',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_sup_b',
+      title: 'Press horizontal (Press de banca)',
+      description: '4 series en banco plano. Trabajo horizontal de pecho junto al press inclinado (2 de pecho y 2 de espalda).',
       targetCount: 4,
       currentCount: 0,
-      duration: 3,
+      duration: 1,
       restDuration: 120,
       cycle_id: 'cycle_week',
       status: 'pending',
       order: 1,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_3_1',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_sup_b',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire y pasar a la siguiente máquina.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 1.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_3_remo_horizontal',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_sup_b',
+      title: 'Remo horizontal en polea',
+      description: '4 series en polea sentado. Espalda erguida, tracción horizontal al ombligo y retracción escapular (en vez de remo gironda).',
+      targetCount: 4,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 90,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 2,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_3_2',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_sup_b',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire y pasar a la siguiente máquina.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 2.5,
       version: 1,
       created_at: EPOCH,
       updated_at: EPOCH
@@ -997,30 +1538,11 @@ export function createDefaultGymRoutine(userId: string = '') {
       categoryId: listId,
       sectionId: 'sec_gym_sup_b',
       title: 'Jalón al pecho',
-      description: '3 series. Agarre neutro o cerrado para variedad de fibras y bombeo dorsal.',
-      targetCount: 3,
+      description: '4 series. Agarre medio o ancho para variedad de fibras y amplitud dorsal.',
+      targetCount: 4,
       currentCount: 0,
-      duration: 2.5,
+      duration: 1,
       restDuration: 90,
-      cycle_id: 'cycle_week',
-      status: 'pending',
-      order: 2,
-      version: 1,
-      created_at: EPOCH,
-      updated_at: EPOCH
-    },
-    {
-      id: 'task_gym_3_fondos',
-      user_id: userId,
-      type: 'task',
-      categoryId: listId,
-      sectionId: 'sec_gym_sup_b',
-      title: 'Fondos',
-      description: '3 series en paralelas (o máquina asistida). Torso ligeramente inclinado.',
-      targetCount: 3,
-      currentCount: 0,
-      duration: 2.5,
-      restDuration: 120,
       cycle_id: 'cycle_week',
       status: 'pending',
       order: 3,
@@ -1029,20 +1551,57 @@ export function createDefaultGymRoutine(userId: string = '') {
       updated_at: EPOCH
     },
     {
-      id: 'task_gym_3_remo_gironda',
+      id: 'task_gym_rest_3_3',
       user_id: userId,
       type: 'task',
       categoryId: listId,
       sectionId: 'sec_gym_sup_b',
-      title: 'Remo gironda',
-      description: '3 series en polea baja. Espalda erguida, retracción escapular completa.',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire y pasar a la siguiente máquina.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 3.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_3_face_pull',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_sup_b',
+      title: 'Face pull con cuerda',
+      description: '3 series en polea alta con cuerda acercándola a la cara para espalda alta y deltoides posterior (30x8, 35x8, 45x3).',
       targetCount: 3,
       currentCount: 0,
-      duration: 2,
-      restDuration: 90,
+      duration: 1,
+      restDuration: 75,
+      weightLogs: [
+        { set: 1, weightKg: 30, reps: 8, date: EPOCH },
+        { set: 2, weightKg: 35, reps: 8, date: EPOCH },
+        { set: 3, weightKg: 45, reps: 3, date: EPOCH }
+      ],
       cycle_id: 'cycle_week',
       status: 'pending',
       order: 4,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_3_4',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_sup_b',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire y pasar a la siguiente máquina.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 4.5,
       version: 1,
       created_at: EPOCH,
       updated_at: EPOCH
@@ -1054,14 +1613,104 @@ export function createDefaultGymRoutine(userId: string = '') {
       categoryId: listId,
       sectionId: 'sec_gym_sup_b',
       title: 'Elevaciones laterales',
-      description: '3 series en polea o mancuerna para redondez del deltoides.',
-      targetCount: 3,
+      description: '4 series en polea o mancuerna para redondez del deltoides.',
+      targetCount: 4,
       currentCount: 0,
-      duration: 2,
-      restDuration: 90,
+      duration: 1,
+      restDuration: 75,
       cycle_id: 'cycle_week',
       status: 'pending',
       order: 5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_3_5',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_sup_b',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire y pasar a la siguiente máquina.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 5.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_3_extension_triceps',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_sup_b',
+      title: 'Extensión de tríceps en polea',
+      description: '3 series unilaterales con cable de polea estirándolo y con giro de muñeca al final para mayor presión (15x10, 20x5 en cada brazo).',
+      targetCount: 3,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 75,
+      weightLogs: [
+        { set: 1, weightKg: 15, reps: 10, date: EPOCH },
+        { set: 2, weightKg: 20, reps: 5, date: EPOCH }
+      ],
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 6,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_3_6',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_sup_b',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire y pasar a la siguiente máquina.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 6.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_3_curl_biceps',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_sup_b',
+      title: 'Curl de bíceps',
+      description: '3 series de curl con mancuernas, barra o polea para completar el trabajo de brazos.',
+      targetCount: 3,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 75,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 7,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_3_7',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_sup_b',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire y pasar al cardio final.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 7.5,
       version: 1,
       created_at: EPOCH,
       updated_at: EPOCH
@@ -1080,7 +1729,26 @@ export function createDefaultGymRoutine(userId: string = '') {
       restDuration: 0,
       cycle_id: 'cycle_week',
       status: 'pending',
-      order: 6,
+      order: 8,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_3_dominadas',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_sup_b',
+      title: 'Intentar practicar dominadas',
+      description: 'Práctica libre al final del todo sin presión. Colgarse, negativas o dominadas asistidas para ir cogiendo fuerza.',
+      targetCount: 2,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 120,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 9,
       version: 1,
       created_at: EPOCH,
       updated_at: EPOCH
@@ -1097,7 +1765,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '4 series pesadas en Jaca. Foco en empujar con fuerza desde los talones y controlar la bajada. Descanso amplio.',
       targetCount: 4,
       currentCount: 0,
-      duration: 3,
+      duration: 1.5,
       restDuration: 180, // 3 min descanso
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -1116,7 +1784,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '4 series de 10-12 reps en leg curl.',
       targetCount: 4,
       currentCount: 0,
-      duration: 2,
+      duration: 1,
       restDuration: 90,
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -1135,7 +1803,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '3 series de 12 reps con contracción pico en cada repetición.',
       targetCount: 3,
       currentCount: 0,
-      duration: 2,
+      duration: 1,
       restDuration: 75,
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -1154,7 +1822,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '3 series de 12 reps (leg extension).',
       targetCount: 3,
       currentCount: 0,
-      duration: 2,
+      duration: 1,
       restDuration: 90,
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -1173,7 +1841,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '3 series de 12-15 reps para estabilidad de aductores y cadera.',
       targetCount: 3,
       currentCount: 0,
-      duration: 2,
+      duration: 1,
       restDuration: 75,
       cycle_id: 'cycle_week',
       status: 'pending',

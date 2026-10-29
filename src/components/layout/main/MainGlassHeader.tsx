@@ -34,6 +34,8 @@ interface MainGlassHeaderProps {
   setIsMenuOpen: (val: boolean) => void;
   resolvedShowCompleted: boolean;
   toggleShowCompleted: () => void;
+  resolvedShowRest?: boolean;
+  toggleShowRest?: () => void;
   sortBy: TaskSortMode;
   setSortBy: (val: TaskSortMode) => void;
   /** Ofrece «Orden de limpieza» (listas de limpieza). */
@@ -66,6 +68,8 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
   setIsMenuOpen,
   resolvedShowCompleted,
   toggleShowCompleted,
+  resolvedShowRest,
+  toggleShowRest,
   sortBy,
   setSortBy,
   canUseRoutineOrder = false,
@@ -100,6 +104,8 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
   const listAccentColor = isSmartView
     ? (SMART_COLORS[currentView] || 'var(--accent-blue, #007AFF)')
     : (currentList?.color || 'var(--accent-blue, #007AFF)');
+
+  const isGymList = Boolean(currentList?.id === 'gym-routine' || currentList?.name?.toLowerCase().includes('gimnasio'));
 
   const isGlassActive = scrollTop !== undefined ? scrollTop > 36 : isScrolled;
   const glassProgress = scrollTop !== undefined
@@ -381,6 +387,23 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                             </span>
                           )}
                         </button>
+                        {isGymList && toggleShowRest && (
+                          <button
+                            type="button"
+                            className="ios-dropdown-item"
+                            onClick={() => { toggleShowRest(); setIsMenuOpen(false); }}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', minHeight: 44 }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                              <Check
+                                size={17}
+                                color="var(--accent-primary)"
+                                style={{ opacity: resolvedShowRest ? 1 : 0, transition: 'opacity 0.15s ease' }}
+                              />
+                              <span style={{ fontSize: '0.95rem', fontWeight: 500 }}>{resolvedShowRest ? 'Ocultar descansos' : 'Mostrar descansos'}</span>
+                            </div>
+                          </button>
+                        )}
 
                         <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '6px 0' }} />
 
@@ -682,6 +705,22 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                           </span>
                         )}
                       </button>
+                      {isGymList && toggleShowRest && (
+                        <button
+                          className="ios-dropdown-item"
+                          onClick={() => { toggleShowRest(); setIsMenuOpen(false); }}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <Check
+                              size={15}
+                              color="var(--accent-primary)"
+                              style={{ opacity: resolvedShowRest ? 1 : 0, transition: 'opacity 0.15s ease' }}
+                            />
+                            <span>{resolvedShowRest ? 'Ocultar descansos' : 'Mostrar descansos'}</span>
+                          </div>
+                        </button>
+                      )}
 
                       <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
 

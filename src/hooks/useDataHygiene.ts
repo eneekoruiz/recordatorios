@@ -460,67 +460,172 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
         }
 
         // Actualizar tareas de tren inferior por defecto a la rutina real del usuario (Jaca, Leg curl, Máquina de glúteos, Extensiones de cuádriceps)
-        const legacyGymMap: Record<string, { title: string; desc: string; rest: number; duration: number }> = {
+        const legacyGymMap: Record<string, { title: string; desc: string; rest: number; duration: number; order?: number; targetCount?: number }> = {
           'task_gym_2_sentadilla': {
             title: 'Sentadilla Jaca',
             desc: '4 series pesadas en máquina Jaca / Hack. Coloca los pies en ancho medio y desciende controlado. Descanso amplio.',
             rest: 180,
-            duration: 3
+            duration: 1.5
           },
           'task_gym_2_peso_muerto_rumano': {
             title: 'Curl femoral en máquina',
             desc: '4 series de 10-12 reps en leg curl. Controla la fase excéntrica y aprieta en contracción.',
             rest: 90,
-            duration: 2
+            duration: 1
           },
           'task_gym_2_prensa': {
             title: 'Máquina de glúteos',
             desc: '3 series de 12 reps (máquina de culo / glute drive). Extensión completa con glúteo bloqueado.',
             rest: 75,
-            duration: 2
+            duration: 1
           },
           'task_gym_2_extensiones_cuadriceps': {
             title: 'Extensiones de cuádriceps',
             desc: '3 series de 12-15 reps (leg extension). Control en todo el recorrido con 1s de pausa.',
             rest: 90,
-            duration: 2
+            duration: 1
           },
           'task_gym_4_prensa_pesada': {
             title: 'Sentadilla Jaca',
             desc: '4 series pesadas en Jaca. Foco en empujar con fuerza desde los talones y controlar la bajada. Descanso amplio.',
             rest: 180,
-            duration: 3
+            duration: 1.5
           },
           'task_gym_4_sentadilla': {
             title: 'Curl femoral en máquina',
             desc: '4 series de 10-12 reps en leg curl.',
             rest: 90,
-            duration: 2
+            duration: 1
           },
           'task_gym_4_peso_muerto_rumano': {
             title: 'Máquina de glúteos',
             desc: '3 series de 12 reps con contracción pico en cada repetición.',
             rest: 75,
-            duration: 2
+            duration: 1
           },
           'task_gym_4_extensiones_cuadriceps': {
             title: 'Extensiones de cuádriceps',
             desc: '3 series de 12 reps (leg extension).',
             rest: 90,
-            duration: 2
+            duration: 1
+          },
+          'task_gym_3_fondos': {
+            title: 'Face pull con cuerda',
+            desc: '3 series en polea alta con cuerda acercándola a la cara para espalda alta y deltoides posterior (30x8, 35x8, 45x3).',
+            rest: 75,
+            duration: 1,
+            targetCount: 3,
+            order: 4
+          },
+          'task_gym_3_remo_gironda': {
+            title: 'Remo horizontal en polea',
+            desc: '4 series en polea sentado. Espalda erguida, tracción horizontal al ombligo y retracción escapular (en vez de remo gironda).',
+            rest: 90,
+            duration: 1,
+            targetCount: 4,
+            order: 2
+          },
+          'task_gym_3_dominadas': {
+            title: 'Intentar practicar dominadas',
+            desc: 'Práctica libre al final del todo sin presión. Colgarse, negativas o dominadas asistidas para ir cogiendo fuerza.',
+            rest: 120,
+            duration: 1,
+            targetCount: 2,
+            order: 9
           }
         };
 
         for (const [legacyId, spec] of Object.entries(legacyGymMap)) {
           const t = allTasks[legacyId];
-          if (t && !t.deleted_at && (t.title === 'Sentadilla' || t.title === 'Peso muerto rumano' || t.title === 'Prensa' || t.title === 'Extensiones de cuádriceps')) {
-            state.updateTask(legacyId, {
-              title: spec.title,
-              description: spec.desc,
-              restDuration: spec.rest,
-              duration: spec.duration
-            });
+          if (t && !t.deleted_at) {
+            const needsUpdate = t.title === 'Sentadilla' || t.title === 'Peso muerto rumano' || t.title === 'Prensa' || 
+              t.title === 'Extensiones de cuádriceps' || t.title === 'Fondos' || t.title === 'Remo gironda' || 
+              (t.title === 'Dominadas' && t.sectionId === 'sec_gym_sup_b') || (t.duration && t.duration > 2);
+            if (needsUpdate) {
+              state.updateTask(legacyId, {
+                title: spec.title,
+                description: spec.desc,
+                restDuration: spec.rest,
+                duration: spec.duration,
+                ...(spec.order !== undefined ? { order: spec.order } : {}),
+                ...(spec.targetCount !== undefined ? { targetCount: spec.targetCount } : {})
+              });
+            }
           }
+        }
+
+        // Asegurar que Día 3 tiene Press horizontal, Tríceps y Bíceps
+        const day3Tasks = Object.values(allTasks).filter(t => !t.deleted_at && t.sectionId === 'sec_gym_sup_b');
+        const hasPressH = day3Tasks.some(t => t.title.includes('Press horizontal') || t.title.includes('Press de banca') || t.id === 'task_gym_3_press_banca');
+        const hasTriceps = day3Tasks.some(t => t.title.includes('tríceps') || t.title.includes('triceps') || t.id === 'task_gym_3_extension_triceps');
+        const hasBiceps = day3Tasks.some(t => t.title.includes('bíceps') || t.title.includes('biceps') || t.id === 'task_gym_3_curl_biceps');
+
+        if (!hasPressH) {
+          state.addTask({
+            id: 'task_gym_3_press_banca',
+            user_id: state.userId || '',
+            type: 'task',
+            categoryId: gymList.id,
+            sectionId: 'sec_gym_sup_b',
+            title: 'Press horizontal (Press de banca)',
+            description: '4 series en banco plano. Trabajo horizontal de pecho junto al press inclinado (2 de pecho y 2 de espalda).',
+            targetCount: 4,
+            currentCount: 0,
+            duration: 1,
+            restDuration: 120,
+            cycle_id: 'cycle_week',
+            status: 'pending',
+            order: 1,
+            version: 1,
+            created_at: EPOCH,
+            updated_at: EPOCH
+          });
+        }
+        if (!hasTriceps) {
+          state.addTask({
+            id: 'task_gym_3_extension_triceps',
+            user_id: state.userId || '',
+            type: 'task',
+            categoryId: gymList.id,
+            sectionId: 'sec_gym_sup_b',
+            title: 'Extensión de tríceps en polea',
+            description: '3 series unilaterales con cable de polea estirándolo y con giro de muñeca al final para mayor presión (15x10, 20x5 en cada brazo).',
+            targetCount: 3,
+            currentCount: 0,
+            duration: 1,
+            restDuration: 75,
+            weightLogs: [
+              { set: 1, weightKg: 15, reps: 10, date: EPOCH },
+              { set: 2, weightKg: 20, reps: 5, date: EPOCH }
+            ],
+            cycle_id: 'cycle_week',
+            status: 'pending',
+            order: 6,
+            version: 1,
+            created_at: EPOCH,
+            updated_at: EPOCH
+          });
+        }
+        if (!hasBiceps) {
+          state.addTask({
+            id: 'task_gym_3_curl_biceps',
+            user_id: state.userId || '',
+            type: 'task',
+            categoryId: gymList.id,
+            sectionId: 'sec_gym_sup_b',
+            title: 'Curl de bíceps',
+            description: '3 series de curl con mancuernas, barra o polea para completar el trabajo de brazos.',
+            targetCount: 3,
+            currentCount: 0,
+            duration: 1,
+            restDuration: 75,
+            cycle_id: 'cycle_week',
+            status: 'pending',
+            order: 7,
+            version: 1,
+            created_at: EPOCH,
+            updated_at: EPOCH
+          });
         }
       }
 

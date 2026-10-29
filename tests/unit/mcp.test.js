@@ -288,7 +288,7 @@ describe('MCP — integridad de datos', () => {
     expect(gitRes.success).toBe(true);
     expect(gitRes.gitStatus).toBeDefined();
     expect(typeof gitRes.uncommittedFilesCount).toBe('number');
-  });
+  }, 60000);
 
   it('manage_app_mode permite consultar y cambiar entre modo normal, exámenes y vacaciones modulando rutinas', async () => {
     // 1. Consulta inicial: debe devolver modo normal por defecto

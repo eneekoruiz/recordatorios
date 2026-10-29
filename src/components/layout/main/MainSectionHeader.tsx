@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
-import { MoreHorizontal, ChevronDown, Check, Plus, Play } from 'lucide-react';
+import { MoreHorizontal, ChevronDown, Check, Plus, Play, Flame } from 'lucide-react';
 import { DurationInfoCard } from '../../ui/DurationInfoCard';
 import { HapticService } from '../../../services/HapticService';
 import type { SectionMenuState } from './SectionContextMenu';
@@ -89,6 +89,7 @@ interface MainSectionHeaderProps {
   hidePeriodContext?: boolean;
   referenceDate?: Date;
   onReorderSections?: (sourceId: string, targetId: string, position: 'before' | 'after') => void;
+  isActiveGymDay?: boolean;
 }
 
 export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
@@ -138,7 +139,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   isRoutine: _isRoutine = false,
   hidePeriodContext,
   referenceDate,
-  onReorderSections
+  onReorderSections,
+  isActiveGymDay,
 }) => {
   const currentSectionRoutineMode = sectionRoutineModes[data.category] || data.routineMode || 'only_section';
   const isShopping = isShoppingList(data.category);
@@ -673,6 +675,25 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               >
                 {data.title}
               </h3>
+              {isActiveGymDay && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '2px 8px',
+                    borderRadius: 999,
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    background: 'rgba(255, 149, 0, 0.15)',
+                    color: '#ff9500',
+                    border: '1px solid rgba(255, 149, 0, 0.3)',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Flame size={12} /> Día activo
+                </span>
+              )}
               {durationInline && <span className="section-head-meta section-head-inline section-duration">{durationNode}</span>}
             </>
           )}

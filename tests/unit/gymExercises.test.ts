@@ -107,6 +107,42 @@ describe('Gimnasio y Rutinas - Catálogo y Alternativas', () => {
   });
 });
 
+
+  it('reconoce ejercicios nuevos del catálogo ampliado (Face pull, Remo horizontal, Remo elevado, etc.)', () => {
+    const facePull = getExerciseAlternatives('Face pull con cuerda');
+    expect(facePull.found).toBe(true);
+    expect(facePull.category).toBe('espalda');
+    expect(facePull.alternatives.length).toBeGreaterThan(0);
+
+    const remoH = getExerciseAlternatives('Remo horizontal en polea');
+    expect(remoH.found).toBe(true);
+
+    const remoE = getExerciseAlternatives('Remo elevado');
+    expect(remoE.found).toBe(true);
+
+    const hipThrust = getExerciseAlternatives('Hip thrust');
+    expect(hipThrust.found).toBe(true);
+  });
+
+  it('verifica que Día 3 incluye Face pull, Remo horizontal, Press horizontal, Brazos y Dominadas al final', () => {
+    const { tasks } = createDefaultGymRoutine('test_user');
+    const day3Tasks = tasks.filter(t => t.sectionId === 'sec_gym_sup_b');
+    const titles = day3Tasks.map(t => t.title);
+
+    expect(titles).toContain('Press inclinado');
+    expect(titles).toContain('Press horizontal (Press de banca)');
+    expect(titles).toContain('Remo horizontal en polea');
+    expect(titles).toContain('Jalón al pecho');
+    expect(titles).toContain('Face pull con cuerda');
+    expect(titles).toContain('Extensión de tríceps en polea');
+    expect(titles).toContain('Curl de bíceps');
+    expect(titles).toContain('Intentar practicar dominadas');
+
+    // Dominadas al final
+    const dominadas = day3Tasks.find(t => t.title.includes('dominadas'));
+    expect(dominadas?.order).toBe(9);
+  });
+
 describe('Gimnasio y Rutinas - Rutina Completa con Sección Diaria', () => {
   it('crea la estructura completa con sección diaria y los 4 días de entreno', () => {
     const { list, sections, tasks } = createDefaultGymRoutine('test_user');
@@ -168,7 +204,7 @@ describe('Gimnasio y Rutinas - Rutina Completa con Sección Diaria', () => {
     const benchTask = tasks.find(t => t.title === 'Press de banca');
     expect(benchTask).toBeDefined();
     expect(benchTask?.targetCount).toBe(4);
-    expect(benchTask?.duration).toBe(3);
+    expect(benchTask?.duration).toBe(1);
     expect(benchTask?.restDuration).toBe(120);
   });
 

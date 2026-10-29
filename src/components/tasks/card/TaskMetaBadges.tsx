@@ -196,6 +196,13 @@ export function TaskMetaBadges({
   );
   // Con racha («3 días») ya se ve que se repite: el icono suelto de repetición sobra.
   const hasStreak = Boolean(streak && streak.count >= 2);
+  if (task.isRest) {
+    items.push(
+      <span key="rest-badge" className="task-meta-item" style={{ color: 'var(--accent-orange, #ff9500)', fontWeight: 600 }}>
+        Descanso
+      </span>
+    );
+  }
   if (cycleBadge && (frequencyAsLabel || !hasStreak)) {
     items.push(renderFrequency(frequencyAsLabel));
   }

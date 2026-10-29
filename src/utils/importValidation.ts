@@ -92,7 +92,7 @@ const taskSchema = z.object({
   priority,
   flagged: flag, url: text, image: text, timeOfDay: optional(z.enum(['morning', 'afternoon', 'night'])),
   duration: nonnegative, disableDuration: flag, isParallel: flag, parallelDuration: nonnegative,
-  targetCount: optional(z.number().int().nonnegative()), currentCount: optional(z.number().int().nonnegative()), restDuration: optional(z.number().int().nonnegative()),
+  targetCount: optional(z.number().int().nonnegative()), currentCount: optional(z.number().int().nonnegative()), restDuration: optional(z.number().int().nonnegative()), isRest: flag,
   weightLogs: optional(z.array(z.object({
     set: z.number(),
     weightKg: z.number(),
@@ -123,7 +123,7 @@ const cycleSchema = z.object({
 });
 const listSchema = z.object({
   id, name: z.string().trim().min(1), color: z.string().default('#007aff'), parentId: reference, icon: text,
-  isFinancial: flag, showCompleted: flag, isPinned: flag, isFolder: flag,
+  isFinancial: flag, showCompleted: flag, showRestPeriods: flag, isPinned: flag, isFolder: flag,
   listType: optional(z.enum(['routines', 'simple', 'events', 'goals', 'caducidades', 'que_he_hecho', 'library'])),
   autoEstimateDuration: flag, specialType: optional(z.enum(['caducidades', 'que_he_hecho'])),
   isShared: flag, order: number,

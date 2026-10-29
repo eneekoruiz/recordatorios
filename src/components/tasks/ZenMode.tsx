@@ -48,6 +48,15 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
 
   // Acumulador de segundos activos trabajados (inmune a pausas y a botones de +1 min / +5 min)
   const activeElapsedRef = useRef<number>(0);
+  const currentSetWorkSecondsRef = useRef<number>(0);
+  const completedSetsWorkDurationsRef = useRef<number[]>([]);
+
+  // Modal para proponer cambio de duración por defecto
+  const [durationProposal, setDurationProposal] = useState<{
+    avgSeconds: number;
+    currentDuration: number;
+    proposedMinutes: number;
+  } | null>(null);
 
   // Prompt Modal if task has no duration set
   const [showDurationPrompt, setShowDurationPrompt] = useState<boolean>(false);
@@ -99,18 +108,30 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
 
   useEffect(() => {
     activeElapsedRef.current = 0;
+    currentSetWorkSecondsRef.current = 0;
+    completedSetsWorkDurationsRef.current = [];
+    setDurationProposal(null);
   }, [timerKey]);
 
   // Manejo del temporizador (trabajo y descanso)
   useEffect(() => {
     if (!isActive || timeLeft <= 0) return;
     const timer = setTimeout(() => {
-      activeElapsedRef.current += 1;
+      if (!isGymSeries || gymPhase === 'work') {
+        currentSetWorkSecondsRef.current += 1;
+        activeElapsedRef.current += 1;
+      }
       const next = timeLeft - 1;
       setTimeLeft(next);
       if (next <= 0) {
         if (isGymSeries && gymPhase === 'work') {
           // Ha concluido la serie de trabajo activa
+          const elapsedForSet = currentSetWorkSecondsRef.current > 0
+            ? currentSetWorkSecondsRef.current
+            : initialDuration;
+          completedSetsWorkDurationsRef.current.push(elapsedForSet);
+          currentSetWorkSecondsRef.current = 0;
+
           const nextCount = (task?.currentCount || 0) + 1;
           const wKg = parseFloat(weightKgInputRef.current);
           const rCount = parseInt(repsInputRef.current, 10) || undefined;
@@ -144,7 +165,8 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
           // Ha concluido el descanso entre series: aviso acústico y háptico
           SoundService.playRestEnd();
           setGymPhase('work');
-          const workSecs = Math.max(10, Math.round((task?.duration || 3) * 60));
+          currentSetWorkSecondsRef.current = 0;
+          const workSecs = Math.max(10, Math.round((task?.duration || 1) * 60));
           setInitialDuration(workSecs);
           setTimeLeft(workSecs);
           setIsActive(true);
@@ -156,7 +178,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
       }
     }, 1000);
     return () => clearTimeout(timer);
-  }, [isActive, timeLeft, isGymSeries, gymPhase, task, targetSeries, restSeconds]);
+  }, [isActive, timeLeft, isGymSeries, gymPhase, task, targetSeries, restSeconds, initialDuration]);
 
   // Manejo del sonido ambiente
   useEffect(() => {
@@ -170,29 +192,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
     };
   }, [ambientType, isActive]);
 
-  // Cerrar con tecla Escape
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (showAlternativesModal) {
-          setShowAlternativesModal(false);
-          return;
-        }
-        SoundService.stopAmbientSound();
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose, showAlternativesModal]);
-
-  const focusRef = useRef<HTMLDivElement>(null);
-  useModalFocus(focusRef, Boolean(taskId && task), () => {
-    SoundService.stopAmbientSound();
-    onClose();
-  });
-
-  const handleComplete = useCallback(() => {
+    const executeFinalComplete = useCallback(() => {
     if (!task) return;
     SoundService.stopAmbientSound();
     SoundService.playComplete();
@@ -207,9 +207,96 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
     onClose();
   }, [task, toggleTask, onClose]);
 
+  const handleComplete = useCallback(() => {
+    if (!task) return;
+
+    // Si había una serie activa sin registrar, capturar su tiempo
+    if (isGymSeries && currentSetWorkSecondsRef.current > 0) {
+      completedSetsWorkDurationsRef.current.push(currentSetWorkSecondsRef.current);
+      currentSetWorkSecondsRef.current = 0;
+    }
+
+    let avgSeconds = 0;
+    if (isGymSeries && completedSetsWorkDurationsRef.current.length > 0) {
+      const sum = completedSetsWorkDurationsRef.current.reduce((acc, curr) => acc + curr, 0);
+      avgSeconds = sum / completedSetsWorkDurationsRef.current.length;
+    } else {
+      avgSeconds = activeElapsedRef.current;
+    }
+
+    if (avgSeconds <= 0) {
+      executeFinalComplete();
+      return;
+    }
+
+    let proposedMinutes: number;
+    if (avgSeconds < 45) {
+      proposedMinutes = 0.5;
+    } else {
+      proposedMinutes = Math.max(1, Math.round(avgSeconds / 60));
+    }
+
+    const currentDuration = task.duration || 1;
+    const diff = Math.abs(currentDuration - proposedMinutes);
+    const percentDiff = diff / currentDuration;
+
+    if (diff >= 0.5 || percentDiff > 0.25) {
+      setIsActive(false);
+      SoundService.stopAmbientSound();
+      setDurationProposal({
+        avgSeconds,
+        currentDuration,
+        proposedMinutes
+      });
+    } else {
+      executeFinalComplete();
+    }
+  }, [task, isGymSeries, executeFinalComplete]);
+
+  const handleAcceptDurationProposal = useCallback(() => {
+    if (!task || !durationProposal) return;
+    const { proposedMinutes } = durationProposal;
+    updateTask(task.id, { duration: proposedMinutes });
+    useAppStore.getState().setLearnedDuration(task.id, proposedMinutes);
+    setDurationProposal(null);
+    executeFinalComplete();
+  }, [task, durationProposal, updateTask, executeFinalComplete]);
+
+  const handleRejectDurationProposal = useCallback(() => {
+    setDurationProposal(null);
+    executeFinalComplete();
+  }, [executeFinalComplete]);
+
   useEffect(() => {
     handleCompleteRef.current = handleComplete;
   }, [handleComplete]);
+
+
+// Cerrar con tecla Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (durationProposal) {
+          handleRejectDurationProposal();
+          return;
+        }
+        if (showAlternativesModal) {
+          setShowAlternativesModal(false);
+          return;
+        }
+        SoundService.stopAmbientSound();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose, showAlternativesModal, durationProposal, handleRejectDurationProposal]);
+
+  const focusRef = useRef<HTMLDivElement>(null);
+  useModalFocus(focusRef, Boolean(taskId && task), () => {
+    SoundService.stopAmbientSound();
+    onClose();
+  });
 
   if (!taskId || !task) return null;
 
@@ -231,6 +318,10 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
 
   // Terminar serie manualmente y pasar de inmediato a descanso (o completar si es la última)
   const handleFinishSetEarly = () => {
+    const elapsedForSet = Math.max(1, currentSetWorkSecondsRef.current);
+    completedSetsWorkDurationsRef.current.push(elapsedForSet);
+    currentSetWorkSecondsRef.current = 0;
+
     const wKg = parseFloat(weightKgInput);
     const rCount = parseInt(repsInput, 10) || undefined;
     let nextWeightLogs = task.weightLogs ? [...task.weightLogs] : [];
@@ -266,7 +357,8 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
   const handleSkipRest = () => {
     SoundService.playPop();
     setGymPhase('work');
-    const workSecs = Math.max(10, Math.round((task.duration || 3) * 60));
+    currentSetWorkSecondsRef.current = 0;
+    const workSecs = Math.max(10, Math.round((task?.duration || 1) * 60));
     setInitialDuration(workSecs);
     setTimeLeft(workSecs);
     setIsActive(true);
@@ -1261,6 +1353,114 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                     }}
                   >
                     Cambiar
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* --- MODAL DE PROPUESTA DE CAMBIO DE DURACIÓN --- */}
+        <AnimatePresence>
+          {durationProposal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: isDark ? 'rgba(0, 0, 0, 0.75)' : 'rgba(0, 0, 0, 0.4)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                zIndex: 110,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 20
+              }}
+              onClick={handleRejectDurationProposal}
+            >
+              <motion.div
+                initial={{ scale: 0.93, opacity: 0, y: 10 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.93, opacity: 0, y: 10 }}
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  background: isDark ? 'rgba(30, 34, 48, 0.95)' : '#ffffff',
+                  border: isDark ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.1)',
+                  borderRadius: 24,
+                  padding: '28px 24px',
+                  maxWidth: 440,
+                  width: '100%',
+                  boxShadow: '0 24px 60px rgba(0,0,0,0.4)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 16,
+                  textAlign: 'center'
+                }}
+              >
+                <div style={{ width: 56, height: 56, borderRadius: '50%', background: isDark ? 'rgba(10, 132, 255, 0.15)' : 'rgba(10, 132, 255, 0.1)', color: 'var(--accent-primary, #0a84ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+                  <Clock size={28} />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: isDark ? 'white' : 'var(--text-primary)' }}>
+                    ¿Quieres cambiar la duración por defecto?
+                  </h3>
+                  <p style={{ margin: 0, fontSize: '0.9rem', color: isDark ? 'rgba(255,255,255,0.7)' : 'var(--text-secondary)', lineHeight: 1.4 }}>
+                    {isGymSeries
+                      ? `Has tardado de media ${Math.round(durationProposal.avgSeconds)}s por serie. La duración actual es de ${durationProposal.currentDuration} min.`
+                      : `Has tardado de media ${Math.round(durationProposal.avgSeconds)}s. La duración actual es de ${durationProposal.currentDuration} min.`}
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
+                  <button
+                    type="button"
+                    onClick={handleAcceptDurationProposal}
+                    style={{
+                      width: '100%',
+                      padding: '14px 20px',
+                      borderRadius: 16,
+                      background: 'var(--accent-primary, #0a84ff)',
+                      color: 'white',
+                      border: 'none',
+                      fontWeight: 700,
+                      fontSize: '1rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      boxShadow: '0 8px 24px rgba(10, 132, 255, 0.35)',
+                      transition: 'transform 0.15s ease'
+                    }}
+                  >
+                    <CheckCircle size={18} />
+                    Cambiar a {durationProposal.proposedMinutes} min
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleRejectDurationProposal}
+                    style={{
+                      width: '100%',
+                      padding: '12px 20px',
+                      borderRadius: 16,
+                      background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                      color: isDark ? 'rgba(255,255,255,0.85)' : 'var(--text-secondary, #636366)',
+                      border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
+                      fontWeight: 600,
+                      fontSize: '0.95rem',
+                      cursor: 'pointer',
+                      transition: 'background 0.15s ease'
+                    }}
+                  >
+                    Mantener {durationProposal.currentDuration} min
                   </button>
                 </div>
               </motion.div>
