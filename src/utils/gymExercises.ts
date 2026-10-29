@@ -1,3 +1,4 @@
+import { useAppStore } from '../store/useAppStore';
 import type { CustomList, ListSection, TaskItem } from '../models/Task';
 
 export interface ExerciseAlternative {
@@ -1891,4 +1892,1044 @@ export function createDefaultGymRoutine(userId: string = '') {
   ];
 
   return { list, sections, tasks };
+}
+
+
+export type GymRoutineSplit = 'torso_pierna_4d' | 'ppl_3d' | 'fullbody_3d';
+
+export function createPplGymRoutine(userId: string = '') {
+  const EPOCH = new Date(0).toISOString();
+  const listId = 'gimnasio';
+
+  const sections: ListSection[] = [
+    { id: 'sec_gym_diaria', listId, name: 'Diaria: Core y Estiramientos', order: 0, updated_at: EPOCH },
+    { id: 'sec_gym_ppl_push', listId, name: 'Día 1: Empuje (Pecho, Hombro, Tríceps)', order: 1, updated_at: EPOCH },
+    { id: 'sec_gym_ppl_pull', listId, name: 'Día 2: Tirón (Espalda, Bíceps, Posterior)', order: 2, updated_at: EPOCH },
+    { id: 'sec_gym_ppl_legs', listId, name: 'Día 3: Pierna y Glúteo', order: 3, updated_at: EPOCH },
+  ];
+
+  const tasks: TaskItem[] = [
+    // --- DIARIA: CORE Y ESTIRAMIENTOS ---
+    {
+      id: 'task_gym_daily_estiramientos_previos',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_diaria',
+      title: 'Estiramientos previos y movilidad',
+      description: 'Movilidad dinámica articular antes de comenzar la sesión.',
+      duration: 5,
+      cycle_id: 'cycle_day',
+      status: 'pending',
+      order: 0,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_daily_abs',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_diaria',
+      title: 'Abs 50 (Abdominales)',
+      description: '50 repeticiones diarias de core / abdominales.',
+      targetCount: 50,
+      currentCount: 0,
+      duration: 5,
+      cycle_id: 'cycle_day',
+      status: 'pending',
+      order: 1,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_daily_curl',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_diaria',
+      title: 'Curl de brazo',
+      description: 'Bíceps y flexores de brazo diarios.',
+      targetCount: 3,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 60,
+      cycle_id: 'cycle_day',
+      status: 'pending',
+      order: 2,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_daily_estiramientos_posteriores',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_diaria',
+      title: 'Estiramientos posteriores y descarga',
+      description: 'Estiramientos estáticos y relajación tras el entreno.',
+      duration: 5,
+      cycle_id: 'cycle_day',
+      status: 'pending',
+      order: 3,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+
+    // --- DÍA 1: EMPUJE ---
+    {
+      id: 'task_gym_ppl_push_banca',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_push',
+      title: 'Press de banca plano',
+      description: '4 series pesadas en banco plano.',
+      targetCount: 4,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 120,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 0,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_ppl_push_1',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_push',
+      title: 'Descanso entre ejercicios',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 0.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_ppl_push_militar',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_push',
+      title: 'Press militar',
+      description: '3 series de empuje vertical para hombro anterior y medio.',
+      targetCount: 3,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 120,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 1,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_ppl_push_2',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_push',
+      title: 'Descanso entre ejercicios',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 1.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_ppl_push_inclinado',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_push',
+      title: 'Press inclinado con mancuernas',
+      description: '3 series con banco a 30º para pectoral superior.',
+      targetCount: 3,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 120,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 2,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_ppl_push_3',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_push',
+      title: 'Descanso entre ejercicios',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 2.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_ppl_push_triceps',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_push',
+      title: 'Extensión de tríceps en polea (cuerda o barra)',
+      description: '3 series de 10-12 reps abriendo al final.',
+      targetCount: 3,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 75,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 3,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_ppl_push_4',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_push',
+      title: 'Descanso entre ejercicios',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 3.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_ppl_push_laterales',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_push',
+      title: 'Elevaciones laterales en polea o mancuernas',
+      description: '3 series de 12-15 reps para deltoides lateral.',
+      targetCount: 3,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 75,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 4,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+
+    // --- DÍA 2: TIRÓN ---
+    {
+      id: 'task_gym_ppl_pull_remo',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_pull',
+      title: 'Remo horizontal con barra o mancuerna',
+      description: '4 series pesadas con recorrido completo.',
+      targetCount: 4,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 120,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 0,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_ppl_pull_1',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_pull',
+      title: 'Descanso entre ejercicios',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 0.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_ppl_pull_jalon',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_pull',
+      title: 'Jalón al pecho',
+      description: '4 series controladas de dorsal ancho.',
+      targetCount: 4,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 90,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 1,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_ppl_pull_2',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_pull',
+      title: 'Descanso entre ejercicios',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 1.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_ppl_pull_facepull',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_pull',
+      title: 'Face pull con cuerda (espalda alta)',
+      description: '3 series tirando hacia la cara, codos altos.',
+      targetCount: 3,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 75,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 2,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_ppl_pull_3',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_pull',
+      title: 'Descanso entre ejercicios',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 2.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_ppl_pull_biceps',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_pull',
+      title: 'Curl de bíceps en polea o mancuerna',
+      description: '3 series unilaterales o con barra.',
+      targetCount: 3,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 75,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 3,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_ppl_pull_4',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_pull',
+      title: 'Descanso entre ejercicios',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 3.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_ppl_pull_dominadas',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_pull',
+      title: 'Dominadas (práctica y series técnicas)',
+      description: 'Intentar practicar al final del tirón con buena forma.',
+      targetCount: 3,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 90,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 4,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+
+    // --- DÍA 3: PIERNA Y GLÚTEO ---
+    {
+      id: 'task_gym_ppl_legs_jaca',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_legs',
+      title: 'Jaca o Sentadilla en multipower',
+      description: '4 series pesadas con profundidad controlada.',
+      targetCount: 4,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 120,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 0,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_ppl_legs_1',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_legs',
+      title: 'Descanso entre ejercicios',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 0.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_ppl_legs_prensa',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_legs',
+      title: 'Prensa de piernas',
+      description: '4 series de 8-10 repeticiones.',
+      targetCount: 4,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 120,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 1,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_ppl_legs_2',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_legs',
+      title: 'Descanso entre ejercicios',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 1.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_ppl_legs_legcurl',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_legs',
+      title: 'Leg curl femoral en máquina',
+      description: '4 series de 10-12 reps para isquios.',
+      targetCount: 4,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 90,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 2,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_ppl_legs_3',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_legs',
+      title: 'Descanso entre ejercicios',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 2.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_ppl_legs_extensiones',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_legs',
+      title: 'Extensiones de cuádriceps',
+      description: '3 series con contracción isométrica de 1s arriba.',
+      targetCount: 3,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 90,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 3,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_ppl_legs_4',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_legs',
+      title: 'Descanso entre ejercicios',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 3.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_ppl_legs_gluteo',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_legs',
+      title: 'Máquina de glúteos / Elevación de pelvis',
+      description: '3 series de 10-12 reps apretando arriba.',
+      targetCount: 3,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 90,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 4,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_ppl_legs_5',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_legs',
+      title: 'Descanso entre ejercicios',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 4.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_ppl_legs_gemelos',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_ppl_legs',
+      title: 'Gemelos en máquina',
+      description: '4 series de 15 reps con pausa abajo.',
+      targetCount: 4,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 60,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    }
+  ];
+
+  return { sections, tasks };
+}
+
+export function createFullBodyGymRoutine(userId: string = '') {
+  const EPOCH = new Date(0).toISOString();
+  const listId = 'gimnasio';
+
+  const sections: ListSection[] = [
+    { id: 'sec_gym_diaria', listId, name: 'Diaria: Core y Estiramientos', order: 0, updated_at: EPOCH },
+    { id: 'sec_gym_fb_a', listId, name: 'Día 1: Full Body A', order: 1, updated_at: EPOCH },
+    { id: 'sec_gym_fb_b', listId, name: 'Día 2: Full Body B', order: 2, updated_at: EPOCH },
+    { id: 'sec_gym_fb_c', listId, name: 'Día 3: Full Body C', order: 3, updated_at: EPOCH },
+  ];
+
+  const tasks: TaskItem[] = [
+    // Día 1 Full Body A
+    {
+      id: 'task_gym_fb_a_banca',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_fb_a',
+      title: 'Press de banca plano',
+      description: '4 series pesadas en banco plano.',
+      targetCount: 4,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 120,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 0,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_fb_a_1',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_fb_a',
+      title: 'Descanso entre ejercicios',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 0.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_fb_a_jaca',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_fb_a',
+      title: 'Jaca o Sentadilla en multipower',
+      description: '4 series de piernas con profundidad controlada.',
+      targetCount: 4,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 120,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 1,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_fb_a_2',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_fb_a',
+      title: 'Descanso entre ejercicios',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 1.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_fb_a_remo',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_fb_a',
+      title: 'Remo horizontal con barra o mancuerna',
+      description: '4 series de espalda media y densidad dorsal.',
+      targetCount: 4,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 120,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 2,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_fb_a_3',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_fb_a',
+      title: 'Descanso entre ejercicios',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 2.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_fb_a_triceps',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_fb_a',
+      title: 'Extensión de tríceps en polea',
+      description: '3 series para finalizar brazo.',
+      targetCount: 3,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 75,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 3,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+
+    // Día 2 Full Body B
+    {
+      id: 'task_gym_fb_b_prensa',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_fb_b',
+      title: 'Prensa de piernas',
+      description: '4 series pesadas para cuadríceps y glúteos.',
+      targetCount: 4,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 120,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 0,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_fb_b_1',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_fb_b',
+      title: 'Descanso entre ejercicios',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 0.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_fb_b_militar',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_fb_b',
+      title: 'Press militar',
+      description: '4 series de empuje vertical de hombros.',
+      targetCount: 4,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 120,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 1,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_fb_b_2',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_fb_b',
+      title: 'Descanso entre ejercicios',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 1.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_fb_b_jalon',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_fb_b',
+      title: 'Jalón al pecho',
+      description: '4 series de dorsal ancho.',
+      targetCount: 4,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 90,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 2,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_fb_b_3',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_fb_b',
+      title: 'Descanso entre ejercicios',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 2.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_fb_b_biceps',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_fb_b',
+      title: 'Curl de bíceps en polea',
+      description: '3 series para rematar brazo.',
+      targetCount: 3,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 75,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 3,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+
+    // Día 3 Full Body C
+    {
+      id: 'task_gym_fb_c_inclinado',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_fb_c',
+      title: 'Press inclinado con mancuernas',
+      description: '4 series para pectoral superior.',
+      targetCount: 4,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 120,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 0,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_fb_c_1',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_fb_c',
+      title: 'Descanso entre ejercicios',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 0.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_fb_c_rumano',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_fb_c',
+      title: 'Peso muerto rumano o Leg curl',
+      description: '4 series para isquiosurales y cadena posterior.',
+      targetCount: 4,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 120,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 1,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_fb_c_2',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_fb_c',
+      title: 'Descanso entre ejercicios',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 1.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_fb_c_facepull',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_fb_c',
+      title: 'Face pull con cuerda en polea',
+      description: '3 series para deltoides posterior y espalda alta.',
+      targetCount: 3,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 75,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 2,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_fb_c_3',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_fb_c',
+      title: 'Descanso entre ejercicios',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 2.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_fb_c_laterales',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_fb_c',
+      title: 'Elevaciones laterales en polea',
+      description: '3 series para deltoides lateral.',
+      targetCount: 3,
+      currentCount: 0,
+      duration: 1,
+      restDuration: 75,
+      cycle_id: 'cycle_week',
+      status: 'pending',
+      order: 3,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    }
+  ];
+
+  return { sections, tasks };
+}
+
+export function switchGymRoutineSplit(
+  listId: string,
+  split: GymRoutineSplit,
+  userId: string = ''
+) {
+  const state = useAppStore.getState();
+  const list = state.lists.find(l => l.id === listId);
+  if (!list) return;
+
+  let newRoutine: { sections: ListSection[]; tasks: TaskItem[] };
+  if (split === 'ppl_3d') {
+    newRoutine = createPplGymRoutine(userId);
+  } else if (split === 'fullbody_3d') {
+    newRoutine = createFullBodyGymRoutine(userId);
+  } else {
+    newRoutine = createDefaultGymRoutine(userId);
+  }
+
+  const currentSections = state.listSections.filter(s => s.listId === listId);
+  const currentTasks = Object.values(state.tasks).filter(t => !t.deleted_at && (t.categoryId === listId || (t as any).category_id === listId));
+
+  const dailySecIds = new Set(currentSections.filter(s => /diaria|core/i.test(s.name)).map(s => s.id));
+
+  // Eliminar secciones no diarias antiguas y sus tareas
+  for (const s of currentSections) {
+    if (!dailySecIds.has(s.id)) {
+      state.deleteListSection(s.id);
+    }
+  }
+
+  for (const t of currentTasks) {
+    if (t.sectionId && !dailySecIds.has(t.sectionId)) {
+      state.deleteTask(t.id);
+    }
+  }
+
+  // Añadir nuevas secciones
+  for (const sec of newRoutine.sections) {
+    if (/diaria|core/i.test(sec.name) && dailySecIds.size > 0) {
+      continue;
+    }
+    state.addListSection({ ...sec, listId });
+  }
+
+  // Añadir nuevas tareas
+  const hasDailyTasks = currentTasks.some(t => t.sectionId && dailySecIds.has(t.sectionId));
+  for (const t of newRoutine.tasks) {
+    if (/diaria|core/i.test(t.sectionId || '') && hasDailyTasks) {
+      continue;
+    }
+    state.addTask({ ...t, categoryId: listId });
+  }
+
+  // Actualizar metadatos de lista
+  state.updateList(listId, {
+    activeRoutineSplit: split,
+    activeGymDaySectionId: undefined
+  });
 }

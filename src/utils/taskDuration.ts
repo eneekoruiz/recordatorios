@@ -17,6 +17,11 @@ export interface TaskDurationInfo {
   activeMinutes: number;
   parallelMinutes: number;
   isParallel: boolean;
+  workMinutes?: number;
+  restMinutes?: number;
+  sets?: number;
+  setDuration?: number;
+  restDurationSec?: number;
 }
 
 export interface TasksDurationSummary {
@@ -102,6 +107,11 @@ export function getTaskDuration(
     return { activeMinutes: 0, parallelMinutes: 0, isParallel: false };
   }
 
+  if (task.isRest) {
+    const restMins = typeof task.duration === 'number' && task.duration > 0 ? task.duration : 2;
+    return { activeMinutes: restMins, parallelMinutes: 0, isParallel: false };
+  }
+
   const parallel = isParallelTask(task);
 
   // 1. Explicit duration set on the task
@@ -117,7 +127,7 @@ export function getTaskDuration(
     if (sets > 1 && restSec > 0) {
       const totalWork = task.duration * sets;
       const totalRest = (restSec / 60) * (sets - 1);
-      return { activeMinutes: totalWork + totalRest, parallelMinutes: 0, isParallel: false };
+      return { activeMinutes: totalWork + totalRest, parallelMinutes: 0, isParallel: false, workMinutes: totalWork, restMinutes: totalRest, sets, setDuration: task.duration, restDurationSec: restSec };
     }
     return { activeMinutes: task.duration, parallelMinutes: 0, isParallel: false };
   }

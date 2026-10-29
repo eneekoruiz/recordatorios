@@ -4,6 +4,7 @@ import { motion, useMotionValue, useTransform, AnimatePresence, useMotionValueEv
 import {
   Lock,
   ChevronDown, X, Info, RotateCcw, Flag,
+  Timer,
   ShieldAlert, Clock, CheckCircle2, CreditCard,
   User, MapPin, Link2, Check, GripVertical,
   SkipForward, Sparkles
@@ -1052,17 +1053,15 @@ export const TaskCard = React.memo(function TaskCard({
           x,
           position: 'relative',
           zIndex: contextMenuOpen ? 999992 : 1,
-          minHeight: 44,
+          minHeight: task.isRest ? 36 : 44,
           display: 'flex',
-          // Como en Recordatorios: la casilla y el (i) se alinean con la primera
-          // línea del título, no con el centro de una tarea de varias líneas.
-          alignItems: 'flex-start',
-          padding: `10px 8px 10px ${4 + indent}px`,
-          margin: 0,
+          alignItems: task.isRest ? 'center' : 'flex-start',
+          padding: task.isRest ? '4px 10px' : `10px 8px 10px ${4 + indent}px`,
+          margin: task.isRest ? '3px 0' : 0,
           width: '100%',
           boxSizing: 'border-box',
-          // Opaca (tapa el fondo del deslizamiento) y del mismo color que la vista en claro y oscuro.
-          background: isSelected ? 'var(--accent-glow, rgba(0, 122, 255, 0.12))' : 'var(--list-row-bg)',
+          border: task.isRest ? '1px dashed var(--border-subtle, rgba(0,0,0,0.12))' : undefined,
+          background: isSelected ? 'var(--accent-glow, rgba(0, 122, 255, 0.12))' : (task.isRest ? 'var(--bg-material, rgba(0,0,0,0.02))' : 'var(--list-row-bg)'),
           boxShadow: isSelected ? 'inset 0 0 0 1.5px var(--accent-primary, #007aff)' : 'none',
           borderRadius: `${isFirstInSection ? 10 : 0}px ${isFirstInSection ? 10 : 0}px ${isLastInSection ? 10 : 0}px ${isLastInSection ? 10 : 0}px`,
           borderBottom: 'none',
@@ -1097,8 +1096,126 @@ export const TaskCard = React.memo(function TaskCard({
           />
         )}
 
-        {/* Checkbox o Botón Restaurar en Papelera */}
-        {task.deleted_at ? (
+        {task.isRest ? (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              padding: '2px 4px',
+              minHeight: 28,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)' }}>
+              <div
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: '50%',
+                  background: 'rgba(255, 149, 0, 0.12)',
+                  color: 'var(--accent-orange, #ff9500)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <Timer size={12} aria-hidden="true" />
+              </div>
+              <span
+                style={{
+                  fontSize: '0.82rem',
+                  fontWeight: 500,
+                  color: 'var(--text-secondary)',
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                {task.title || 'Descanso entre ejercicios'}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {/* Duration button / cycler */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  HapticService.selection();
+                  const currentMins = task.duration || 2;
+                  const nextMins = currentMins === 1 ? 2 : currentMins === 2 ? 3 : currentMins === 3 ? 5 : 1;
+                  updateTask(task.id, { duration: nextMins });
+                }}
+                title="Cambiar duración del descanso (toca para alternar: 1, 2, 3, 5 min)"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  padding: '3px 8px',
+                  borderRadius: 12,
+                  background: 'rgba(255, 149, 0, 0.1)',
+                  border: '1px solid rgba(255, 149, 0, 0.25)',
+                  color: 'var(--accent-orange, #ff9500)',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                }}
+              >
+                <Clock size={11} aria-hidden="true" />
+                <span>{task.duration || 2} min</span>
+              </button>
+
+              {/* Delete button */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  HapticService.impact('light');
+                  onDelete(task.id);
+                }}
+                title="Eliminar este descanso"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 24,
+                  height: 24,
+                  borderRadius: '50%',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-tertiary)',
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
+              >
+                <X size={13} aria-hidden="true" />
+              </button>
+
+              {/* Drag Grip Handle */}
+              {onReorderTasks && (
+                <div
+                  className="drag-handle touch-drag-handle"
+                  title="Arrastrar para mover descanso"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'grab',
+                    opacity: isHovered || contextMenuOpen ? 0.6 : 0.2,
+                    color: 'var(--text-tertiary)',
+                    padding: 2,
+                  }}
+                >
+                  <GripVertical size={13} />
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Checkbox o Botón Restaurar en Papelera */}
+            {task.deleted_at ? (
           <motion.button
             className="hit-44"
             whileTap={{ scale: 0.85 }}
@@ -1977,6 +2094,8 @@ export const TaskCard = React.memo(function TaskCard({
               </div>
             )}
           </div>
+        )}
+          </>
         )}
 
       </motion.div>

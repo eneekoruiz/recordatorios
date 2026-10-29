@@ -36,6 +36,7 @@ import {
 import { splitWholeHouseTasks, WHOLE_HOUSE_START, WHOLE_HOUSE_END } from '../../utils/cleaningOrder';
 import { getActiveGymDaySectionId } from '../../utils/gymAdaptiveDay';
 import { MainEmptyState } from './main/MainEmptyState';
+import { GymRoutineModal } from '../gym/GymRoutineModal';
 import { QuickWeightPromptModal } from '../tasks/QuickWeightPromptModal';
 import { shouldPromptWeight } from '../../utils/gymExercises';
 import { MainGlassHeader } from './main/MainGlassHeader';
@@ -166,6 +167,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const [isScrolled, setIsScrolled] = useState(false);
   const [scrollTop, setScrollTop] = useState(0);
   const [isListConfigOpen, setIsListConfigOpen] = useState(false);
+  const [isGymRoutineModalOpen, setIsGymRoutineModalOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [confirmProps, setConfirmProps] = useState<{ title: string; message: string; onConfirm: () => void }>({ title: '', message: '', onConfirm: () => {} });
   // Orden fuera de una lista (vistas inteligentes y de frecuencia). Cada lista guarda el suyo.
@@ -345,8 +347,14 @@ const CORE_CYCLES = [
   const activeGymSectionId = useMemo(() => {
     if (!isGymList || !currentList) return null;
     const gymSections = listSections.filter(s => s.listId === currentList.id);
-    return getActiveGymDaySectionId(gymSections, allTasksArray);
+    return getActiveGymDaySectionId(gymSections, allTasksArray, currentList.activeGymDaySectionId);
   }, [isGymList, currentList, listSections, allTasksArray]);
+
+  const handleSetActiveGymDay = useCallback((sectionId: string) => {
+    if (!currentList) return;
+    updateList(currentList.id, { activeGymDaySectionId: sectionId });
+    HapticService.selection();
+  }, [currentList, updateList]);
 
   // Cada lista recuerda su orden (como en Recordatorios de Apple). Limpieza empieza en «Orden de
   // limpieza» porque mezcla frecuencias y el orden útil es el del trabajo, no el de creación.
@@ -971,7 +979,7 @@ const CORE_CYCLES = [
   // 1. Flatten Data para Virtualización (QA Performance Optimization)
   // Programa por días (Gimnasio: «Día 1», «Día 2»…): qué día toca hoy y cuál viene después.
   const trainingPlan = useMemo(
-    () => (currentList && !currentList.isFolder ? getTrainingDayPlan(currentList.id, listSections, allTasksArray) : null),
+    () => (currentList && !currentList.isFolder ? getTrainingDayPlan(currentList.id, listSections, allTasksArray, periodReferenceDate.getTime(), currentList.activeGymDaySectionId) : null),
     [currentList, listSections, allTasksArray]
   );
 
@@ -2193,7 +2201,7 @@ const CORE_CYCLES = [
     }
 
     return { flattenedData: flat, renderedSectionTasks: sectionTasksByKey };
-  }, [groupedTasks, currentView, currentCycle, cycleViewMode, collapsed, isListView, lists, listSections, cycles, currentList, listSectionFilter, sortBy, defaultSortForList, isCatCollapsed, isolatedSectionKey, sectionRoutineModes, cycleRoutineCounts, periodReferenceDate, resolvedShowCompleted, recentlyCompletedIds, viewRoutineSessionDates, trainingPlan]);
+  }, [groupedTasks, currentView, currentCycle, cycleViewMode, collapsed, isListView, lists, listSections, cycles, currentList, listSectionFilter, sortBy, defaultSortForList, isCatCollapsed, isolatedSectionKey, sectionRoutineModes, cycleRoutineCounts, periodReferenceDate, resolvedShowCompleted, recentlyCompletedIds, viewRoutineSessionDates, trainingPlan, resolvedShowRest]);
 
   // Tareas visibles en pantalla respetando el orden visual exacto de renderizado
   // En las vistas inteligentes (Con marca, Todos…) una sección sin tareas no aporta nada: ni su cabecera ni su
@@ -2902,6 +2910,7 @@ const CORE_CYCLES = [
         canUseRoutineOrder={isLimpiezaList(currentList?.id, currentList)}
         updateList={updateList}
         setIsListConfigOpen={setIsListConfigOpen}
+        onOpenGymRoutineModal={() => setIsGymRoutineModalOpen(true)}
         onAddSection={handleAddSection}
         completedCount={totalCompletedInCurrentView || completedVisibleCount}
         showProminentStartButton={canRunExecutionMode}
@@ -3102,6 +3111,7 @@ const CORE_CYCLES = [
                         itemStyle={itemStyle}
                         showDivider={showDivider}
                         isActiveGymDay={Boolean(activeGymSectionId && (data.sectionId === activeGymSectionId || (data as any).id === activeGymSectionId))}
+                        onSetActiveGymDay={handleSetActiveGymDay}
                         isCustomSection={isCustomSection}
                         isDraggingOver={isDraggingOver}
                         isCatCollapsed={isCatCollapsed}
@@ -3326,6 +3336,14 @@ const CORE_CYCLES = [
         onClose={() => setIsListConfigOpen(false)} 
         listId={currentList?.id} 
       />
+
+      {currentList && (
+        <GymRoutineModal
+          isOpen={isGymRoutineModalOpen}
+          onClose={() => setIsGymRoutineModalOpen(false)}
+          listId={currentList.id}
+        />
+      )}
 
       <ConfirmModal
         isOpen={isConfirmOpen}

@@ -38,7 +38,8 @@ export function getTrainingDayPlan(
   listId: string | undefined,
   listSections: ListSection[],
   tasks: TaskItem[],
-  now: number = Date.now()
+  now: number = Date.now(),
+  manualOverrideSectionId?: string
 ): TrainingDayPlan | null {
   if (!listId) return null;
   const roots = listSections
@@ -66,7 +67,12 @@ export function getTrainingDayPlan(
 
   let currentIndex = 0;
   let currentDoneToday = false;
-  if (lastIndex >= 0 && lastAt > 0 && sameDay(lastAt, now)) {
+  if (manualOverrideSectionId) {
+    const overrideIdx = days.findIndex(d => d.id === manualOverrideSectionId);
+    if (overrideIdx >= 0) {
+      currentIndex = overrideIdx;
+    }
+  } else if (lastIndex >= 0 && lastAt > 0 && sameDay(lastAt, now)) {
     // Se está entrenando hoy (o ya se terminó): ese es el día de hoy.
     currentIndex = lastIndex;
     const dayTasks = tasksOfDay(days[lastIndex].id);

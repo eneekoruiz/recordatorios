@@ -346,6 +346,17 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
           }
         }
 
+        // Asegurar que los descansos intermedios (isRest) existan en las secciones de entrenamiento
+        const { tasks: defaultGymTasks } = createDefaultGymRoutine(state.userId || '');
+        const defaultRests = defaultGymTasks.filter(t => t.isRest);
+        const allCurrentTasks = Object.values(state.tasks || {});
+        for (const restTask of defaultRests) {
+          const alreadyExists = allCurrentTasks.some(t => !t.deleted_at && (t.id === restTask.id || (t.sectionId === restTask.sectionId && t.isRest && t.order === restTask.order)));
+          if (!alreadyExists) {
+            state.addTask({ ...restTask, user_id: state.userId || '', categoryId: gymList.id, updated_at: EPOCH });
+          }
+        }
+
         // Asegurar la sección diaria en Gimnasio: 'Diaria: Core y Estiramientos'
         let diariaSec = gymSections.find(s => s.id === 'sec_gym_diaria' || /diaria|core/i.test(s.name));
         if (!diariaSec) {

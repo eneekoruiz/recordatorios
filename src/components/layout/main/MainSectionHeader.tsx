@@ -90,6 +90,7 @@ interface MainSectionHeaderProps {
   referenceDate?: Date;
   onReorderSections?: (sourceId: string, targetId: string, position: 'before' | 'after') => void;
   isActiveGymDay?: boolean;
+  onSetActiveGymDay?: (sectionId: string) => void;
 }
 
 export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
@@ -141,6 +142,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   referenceDate,
   onReorderSections,
   isActiveGymDay,
+  onSetActiveGymDay,
 }) => {
   const currentSectionRoutineMode = sectionRoutineModes[data.category] || data.routineMode || 'only_section';
   const isShopping = isShoppingList(data.category);
@@ -693,6 +695,33 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                 >
                   <Flame size={12} /> Día activo
                 </span>
+              )}
+              {!isActiveGymDay && Boolean(data.sectionId && /d[ií]a\s*\d/i.test(data.title)) && onSetActiveGymDay && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    HapticService.selection();
+                    onSetActiveGymDay(data.sectionId!);
+                  }}
+                  title="Marcar este entrenamiento como el día a hacer hoy"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '2px 8px',
+                    borderRadius: 999,
+                    fontSize: '0.70rem',
+                    fontWeight: 600,
+                    background: 'rgba(0, 122, 255, 0.1)',
+                    color: 'var(--accent-primary, #007aff)',
+                    border: '1px solid rgba(0, 122, 255, 0.25)',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                >
+                  Hacer hoy
+                </button>
               )}
               {durationInline && <span className="section-head-meta section-head-inline section-duration">{durationNode}</span>}
             </>

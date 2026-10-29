@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, MoreHorizontal, Check, Settings, FolderPlus, Play, Calendar, Printer, Share2 } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Check, Settings, FolderPlus, Play, Calendar, Printer, Share2, Dumbbell } from 'lucide-react';
 import type { TaskSortMode } from '../../../models/Task';
 import type { CustomList } from '../../../models/Task';
 import { HapticService } from '../../../services/HapticService';
@@ -51,6 +51,7 @@ interface MainGlassHeaderProps {
   onExportIcs?: () => void;
   onExportPdf?: () => void;
   onOpenIntegrations?: () => void;
+  onOpenGymRoutineModal?: () => void;
 }
 
 export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
@@ -84,6 +85,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
   onExportIcs,
   onExportPdf,
   onOpenIntegrations,
+  onOpenGymRoutineModal,
 }) => {
     const focusSheetRef = useSheetRef<HTMLDivElement>(null);
     const menuTriggerRef = useSheetRef<HTMLButtonElement>(null);
@@ -404,6 +406,21 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                             </div>
                           </button>
                         )}
+                        {isGymList && onOpenGymRoutineModal && (
+                          <button
+                            type="button"
+                            className="ios-dropdown-item"
+                            onClick={() => {
+                              HapticService.selection();
+                              setIsMenuOpen(false);
+                              onOpenGymRoutineModal();
+                            }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 44, width: '100%' }}
+                          >
+                            <Dumbbell size={17} color="var(--accent-orange, #ff9500)" />
+                            <span style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-primary)' }}>Gestionar rutina y split...</span>
+                          </button>
+                        )}
 
                         <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '6px 0' }} />
 
@@ -719,6 +736,21 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                             />
                             <span>{resolvedShowRest ? 'Ocultar descansos' : 'Mostrar descansos'}</span>
                           </div>
+                        </button>
+                      )}
+                      {isGymList && onOpenGymRoutineModal && (
+                        <button
+                          type="button"
+                          className="ios-dropdown-item"
+                          onClick={() => {
+                            HapticService.selection();
+                            setIsMenuOpen(false);
+                            onOpenGymRoutineModal();
+                          }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
+                        >
+                          <Dumbbell size={15} color="var(--accent-orange, #ff9500)" />
+                          <span>Gestionar rutina y split...</span>
                         </button>
                       )}
 

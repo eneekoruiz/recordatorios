@@ -168,11 +168,23 @@ export function TaskMetaBadges({
     );
   }
   if (hasDuration) {
+    const isMultiSetExercise = Boolean(
+      durationInfo?.sets &&
+      durationInfo.sets > 1 &&
+      (durationInfo.restMinutes || 0) > 0
+    );
+    const multiSetLabel = isMultiSetExercise
+      ? ` (${durationInfo?.sets}×${durationInfo?.setDuration}m +${Math.round(durationInfo?.restMinutes || 0)}m desc)`
+      : '';
+    const multiSetTooltip = isMultiSetExercise
+      ? ` · ${durationInfo?.sets} series de ${durationInfo?.setDuration}m de trabajo + ${Math.round(durationInfo?.restMinutes || 0)}m descanso entre series`
+      : '';
+
     items.push(
-      <span key="duration" className="task-meta-item task-meta-num" data-meta-field="duration" title={`Duración: ${durationDescription}${isParallel ? `, más ${formatDuration(totalParallelMinutes)} de espera en segundo plano` : ''}`}>
+      <span key="duration" className="task-meta-item task-meta-num" data-meta-field="duration" title={`Duración: ${durationDescription}${multiSetTooltip}${isParallel ? `, más ${formatDuration(totalParallelMinutes)} de espera en segundo plano` : ''}`}>
         <Clock size={13} aria-hidden="true" />
         <span className="sr-only">Duración: </span>
-        <span>{formatDuration(totalActiveMinutes)}</span>
+        <span>{formatDuration(totalActiveMinutes)}{multiSetLabel}</span>
         {/* «+2 h» a secas no se entendía: es el tiempo que la tarea sigue sola (lavadora, horno…). */}
         {isParallel && <span className="task-meta-aside">+ {formatDuration(totalParallelMinutes)} de espera</span>}
       </span>
