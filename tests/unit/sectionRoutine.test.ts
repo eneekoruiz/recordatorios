@@ -6,6 +6,7 @@ import {
   getPureCyclicPeriodicity,
   sortTasksByRoutinePriority,
   sortTasksByUserPreference,
+  sortTasksForContinuousExecution,
   formatSectionTitle,
   getEffectiveCycleId,
   stripPeriodicityPrefix,
@@ -344,6 +345,47 @@ describe('sectionRoutine utility', () => {
       expect(info?.nextLabel).toBe('estas son para mañana');
       expect(info?.label).toContain('para mañana');
       expect(info?.isRolledOver).toBe(true);
+    });
+  });
+
+  describe('sortTasksForContinuousExecution', () => {
+    it('sorts cleaning tasks by logical cleaning phase regardless of frequency', () => {
+      const tasks: TaskItem[] = [
+        { id: '1', title: 'Fregar el suelo de la cocina', order: 1, created_at: '2026-01-01', cycle_id: 'cycle_week', status: 'pending' },
+        { id: '2', title: 'Ventilar la casa', order: 2, created_at: '2026-01-01', cycle_id: 'cycle_day', status: 'pending' },
+        { id: '3', title: 'Sacar la basura', order: 3, created_at: '2026-01-01', cycle_id: 'cycle_day', status: 'pending' },
+        { id: '4', title: 'Limpiar polvo de estanterías altas', order: 4, created_at: '2026-01-01', cycle_id: 'cycle_month', status: 'pending' },
+      ] as any;
+
+      const sorted = sortTasksForContinuousExecution(tasks, 'routine');
+      expect(sorted[0].title).toBe('Ventilar la casa'); // Fase 1: Preparar
+      expect(sorted[1].title).toBe('Limpiar polvo de estanterías altas'); // Fase 2: Arriba
+      expect(sorted[2].title).toBe('Fregar el suelo de la cocina'); // Fase 4: Suelos
+      expect(sorted[3].title).toBe('Sacar la basura'); // Fase 5: Acabar
+    });
+
+    it('interleaves daily and monthly tasks chronologically by timeOfDay', () => {
+      const tasks: TaskItem[] = [
+        { id: '1', title: 'Revisión nocturna mensual', timeOfDay: 'night', cycle_id: 'cycle_month', order: 1, created_at: '2026-01-01', status: 'pending' },
+        { id: '2', title: 'Desayunar y café', timeOfDay: 'morning', cycle_id: 'cycle_day', order: 2, created_at: '2026-01-01', status: 'pending' },
+        { id: '3', title: 'Llamada semanal', timeOfDay: 'afternoon', cycle_id: 'cycle_week', order: 3, created_at: '2026-01-01', status: 'pending' },
+      ] as any;
+
+      const sorted = sortTasksForContinuousExecution(tasks, 'manual');
+      expect(sorted[0].id).toBe('2'); // morning
+      expect(sorted[1].id).toBe('3'); // afternoon
+      expect(sorted[2].id).toBe('1'); // night
+    });
+
+    it('ensures blocking prerequisites appear before the blocked task', () => {
+      const tasks: TaskItem[] = [
+        { id: 'task_b', title: 'Poner la secadora', order: 1, created_at: '2026-01-01', blockedBy: ['task_a'], status: 'pending' },
+        { id: 'task_a', title: 'Poner la lavadora', order: 2, created_at: '2026-01-02', status: 'pending' },
+      ] as any;
+
+      const sorted = sortTasksForContinuousExecution(tasks, 'manual');
+      expect(sorted[0].id).toBe('task_a'); // Lavadora comes before secadora
+      expect(sorted[1].id).toBe('task_b');
     });
   });
 });

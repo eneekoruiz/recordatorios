@@ -158,8 +158,8 @@
 .content-header .page-date::first-letter { text-transform: uppercase; }
 
 /* Vista de frecuencia: «Rutina completa» comparte línea con el recuento, así el navegador cabe solo. */
-.cycle-strip-meta { flex-wrap: nowrap; min-height: 32px; }
-.cycle-strip-toggle { margin-left: auto; flex-shrink: 0; }
+.cycle-strip-meta { flex-wrap: wrap; min-height: 32px; gap: 6px; }
+.cycle-strip-toggle { margin-left: auto; flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; }
 .cycle-strip-toggle .routine-chip { margin: 0; }
 
 /* Periodo hecho: «✓ Octubre hecho» en verde; de cuándo son las tareas que se ven, en gris. */

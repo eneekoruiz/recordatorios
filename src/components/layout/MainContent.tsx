@@ -28,6 +28,7 @@ import {
   getRoutineAllowedPeriodicities, 
   getPureCyclicPeriodicity,
   sortTasksByUserPreference,
+  sortTasksForContinuousExecution,
   formatSectionTitle,
   getNextPeriodDate,
   type PeriodicityType,
@@ -252,6 +253,20 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   const [cycleGeneralModes, setCycleGeneralModes] = useState<Record<string, 'only_section' | 'full_routine'>>(() =>
     safeGetJSON('cycle_general_modes', {})
   );
+
+  // Organización visual de la vista de frecuencia: 'sections' (por secciones) o 'mixed' (todas seguidas en orden óptimo)
+  const [cycleViewLayout, setCycleViewLayout] = useState<'sections' | 'mixed'>(() =>
+    safeGetJSON('cycle_view_layout_pref', 'sections')
+  );
+
+  const toggleCycleViewLayout = useCallback((layout?: 'sections' | 'mixed') => {
+    setCycleViewLayout(prev => {
+      const next = layout ?? (prev === 'sections' ? 'mixed' : 'sections');
+      safeSetJSON('cycle_view_layout_pref', next);
+      return next;
+    });
+    HapticService.selection();
+  }, []);
 
   const handleUndoDelete = useCallback((taskId: string) => {
     if (deletedToast && deletedToast.timeoutId) {
@@ -1121,6 +1136,39 @@ const CORE_CYCLES = [
               )
             );
 
+            if (currentCycle && cycleViewLayout === 'mixed') {
+              const listSortMode = isLimpiezaList(listId) ? 'routine' : sortBy;
+              let flatMixedTasks = deduplicateTaskList(tasksInScope);
+              if (listSortMode === 'routine' || isLimpiezaList(listId)) {
+                flatMixedTasks = sortTasksByUserPreference(flatMixedTasks, 'routine');
+              } else {
+                flatMixedTasks = sortTasksForContinuousExecution(flatMixedTasks, sortBy, listSections, lists);
+              }
+              sectionTasksByKey[categoryOrCycle] = flatMixedTasks;
+
+              if (flatMixedTasks.length === 0) {
+                flat.push({
+                  type: 'empty-section',
+                  title: 'Aquí no hay tareas',
+                  category: categoryOrCycle,
+                  color: parentColor,
+                  depth: baseDepth,
+                });
+              } else {
+                const inScope = new Set(flatMixedTasks.map(t => t.id));
+                const roots = flatMixedTasks.filter(t => !t.parentId || !inScope.has(t.parentId));
+                const processNode = (task: TaskItem, d: number) => {
+                  flat.push({ type: 'task', task, depth: d });
+                  if (!isCatCollapsed(`task_${task.id}`)) {
+                    const children = flatMixedTasks.filter(t => t.parentId === task.id);
+                    children.forEach(c => processNode(c, d + 1));
+                  }
+                };
+                roots.forEach(r => processNode(r, baseDepth));
+              }
+              return;
+            }
+
             if (hasPeriodicChildSections) {
               // UNIFICACIÓN DE ESTANCIAS:
               // En lugar de duplicar secciones de habitación para cada ciclo ("Cocina" en Diarias y "Cocina" en Semanales),
@@ -1319,7 +1367,16 @@ const CORE_CYCLES = [
               const activeRootSections = sectionsForList.filter(s => !s.parentId && hasTasksRecursively(s.id));
               const isOnlyRootSection = activeRootSections.length <= 1 && !activeRootSections.some(s => !getPureCyclicPeriodicity(s.name));
 
-              if (currentCycle && purePeriodicity && (isMatchingCurrentCycle || isOnlyRootSection)) {
+              const shouldOmitSectionHeader = Boolean(
+                currentCycle &&
+                purePeriodicity &&
+                isMatchingCurrentCycle &&
+                isOnlyRootSection &&
+                activeRootSections.length <= 1 &&
+                cycleViewMode !== 'full_routine'
+              );
+
+              if (shouldOmitSectionHeader && purePeriodicity) {
                 const cycleOrder: Record<string, number> = { day: 1, week: 2, month: 3, year: 4 };
                 const currentCycleRank = currentCycle.id === 'cycle_day' ? 1 : currentCycle.id === 'cycle_week' ? 2 : currentCycle.id === 'cycle_month' ? 3 : 4;
                 const secRank = cycleOrder[purePeriodicity] || 1;
@@ -2201,7 +2258,7 @@ const CORE_CYCLES = [
     }
 
     return { flattenedData: flat, renderedSectionTasks: sectionTasksByKey };
-  }, [groupedTasks, currentView, currentCycle, cycleViewMode, collapsed, isListView, lists, listSections, cycles, currentList, listSectionFilter, sortBy, defaultSortForList, isCatCollapsed, isolatedSectionKey, sectionRoutineModes, cycleRoutineCounts, periodReferenceDate, resolvedShowCompleted, recentlyCompletedIds, viewRoutineSessionDates, trainingPlan, resolvedShowRest]);
+  }, [groupedTasks, currentView, currentCycle, cycleViewMode, collapsed, isListView, lists, listSections, cycles, currentList, listSectionFilter, sortBy, defaultSortForList, isCatCollapsed, isolatedSectionKey, sectionRoutineModes, cycleRoutineCounts, periodReferenceDate, resolvedShowCompleted, cycleViewLayout, recentlyCompletedIds, viewRoutineSessionDates, trainingPlan, resolvedShowRest]);
 
   // Tareas visibles en pantalla respetando el orden visual exacto de renderizado
   // En las vistas inteligentes (Con marca, Todos…) una sección sin tareas no aporta nada: ni su cabecera ni su
@@ -2889,6 +2946,8 @@ const CORE_CYCLES = [
     <main className="main-content" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden', overflowX: 'hidden', overscrollBehaviorX: 'none', position: 'relative' }}>
       {/* Sticky Glass Top Bar */}
       <MainGlassHeader
+        cycleViewLayout={currentCycle ? cycleViewLayout : undefined}
+        onToggleCycleViewLayout={currentCycle ? toggleCycleViewLayout : undefined}
         isScrolled={isScrolled}
         scrollTop={scrollTop}
         isMobile={isMobile}

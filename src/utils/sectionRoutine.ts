@@ -242,6 +242,81 @@ export function sortTasksByUserPreference(taskList: TaskItem[], sortBy: TaskSort
   });
 }
 
+/**
+ * Ordena tareas de distintas frecuencias y secciones en una sola secuencia óptima para
+ * ejecutarlas todas seguidas de forma continua:
+ * 1. Respetar fases de limpieza si son tareas domésticas/limpieza.
+ * 2. Si el usuario eligió orden explícito (prioridad, fecha, título, creación), delegar en sortTasksByUserPreference.
+ * 3. En orden manual/por defecto:
+ *    - Franja horaria / momento del día (mañana -> tarde -> noche -> sin hora).
+ *    - Frecuencia natural de ronda (diarias -> semanales -> mensuales -> anuales).
+ *    - Orden manual y antigüedad.
+ *    - Topología de bloqueo (si una tarea bloquea a otra, el prerrequisito se ejecuta antes).
+ */
+export function sortTasksForContinuousExecution(
+  taskList: TaskItem[],
+  sortBy: TaskSortMode = 'manual',
+  sections?: ListSection[],
+  lists?: CustomList[]
+): TaskItem[] {
+  if (sortBy === 'routine') {
+    return sortByCleaningOrder(taskList);
+  }
+  if (sortBy !== 'manual') {
+    return sortTasksByUserPreference(taskList, sortBy);
+  }
+
+  const todOrder: Record<string, number> = { morning: 1, afternoon: 2, night: 3, none: 4 };
+  const cycleOrder: Record<string, number> = { day: 1, week: 2, month: 3, year: 4 };
+
+  const sorted = [...taskList].sort((a, b) => {
+    // 1. Momento del día (si ambas tienen momento y difiere)
+    const todA = todOrder[a.timeOfDay || 'none'] || 4;
+    const todB = todOrder[b.timeOfDay || 'none'] || 4;
+    if (todA !== todB) return todA - todB;
+
+    // 2. Frecuencia/periodicidad (diarias primero, luego semanales, mensuales...)
+    const pA = getTaskPeriodicity(a, sections, lists);
+    const pB = getTaskPeriodicity(b, sections, lists);
+    const cA = pA ? (cycleOrder[pA] || 99) : 99;
+    const cB = pB ? (cycleOrder[pB] || 99) : 99;
+    if (cA !== cB) return cA - cB;
+
+    // 3. Orden manual
+    const orderA = a.order ?? 0;
+    const orderB = b.order ?? 0;
+    if (orderA !== orderB) return orderA - orderB;
+
+    // 4. Antigüedad
+    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+  });
+
+  // Topología: si alguna tarea tiene dependencias (blockedBy), asegurar que los bloqueadores van antes
+  const taskMap = new Map<string, TaskItem>();
+  sorted.forEach(t => taskMap.set(t.id, t));
+
+  const hasBlockers = sorted.some(t => t.blockedBy && t.blockedBy.some(id => taskMap.has(id)));
+  if (!hasBlockers) return sorted;
+
+  const result: TaskItem[] = [];
+  const visited = new Set<string>();
+
+  const visit = (task: TaskItem) => {
+    if (visited.has(task.id)) return;
+    if (task.blockedBy && task.blockedBy.length > 0) {
+      task.blockedBy.forEach(blockerId => {
+        const blocker = taskMap.get(blockerId);
+        if (blocker) visit(blocker);
+      });
+    }
+    visited.add(task.id);
+    result.push(task);
+  };
+
+  sorted.forEach(t => visit(t));
+  return result;
+}
+
 export interface PeriodContextInfo {
   label: string;
   shortLabel: string;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, MoreHorizontal, Check, Settings, FolderPlus, Play, Calendar, Printer, Share2, Dumbbell } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Check, Settings, FolderPlus, Play, Calendar, Printer, Share2, Dumbbell, Sparkles, Layers } from 'lucide-react';
 import type { TaskSortMode } from '../../../models/Task';
 import type { CustomList } from '../../../models/Task';
 import { HapticService } from '../../../services/HapticService';
@@ -52,6 +52,8 @@ interface MainGlassHeaderProps {
   onExportPdf?: () => void;
   onOpenIntegrations?: () => void;
   onOpenGymRoutineModal?: () => void;
+  cycleViewLayout?: 'sections' | 'mixed';
+  onToggleCycleViewLayout?: (layout?: 'sections' | 'mixed') => void;
 }
 
 export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
@@ -86,6 +88,8 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
   onExportPdf,
   onOpenIntegrations,
   onOpenGymRoutineModal,
+  cycleViewLayout = 'sections',
+  onToggleCycleViewLayout,
 }) => {
     const focusSheetRef = useSheetRef<HTMLDivElement>(null);
     const menuTriggerRef = useSheetRef<HTMLButtonElement>(null);
@@ -423,6 +427,45 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                         )}
 
                         <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '6px 0' }} />
+
+                        {onToggleCycleViewLayout && (
+                          <>
+                            <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '6px 0' }} />
+                            <div style={{ padding: '8px 12px 4px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-tertiary)' }}>
+                              Organización
+                            </div>
+                            <button
+                              type="button"
+                              className="ios-dropdown-item"
+                              onClick={() => { onToggleCycleViewLayout('sections'); setIsMenuOpen(false); }}
+                              style={{ justifyContent: 'space-between', minHeight: 44, fontSize: '0.95rem' }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <Layers size={16} color="var(--text-secondary)" />
+                                <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1 }}>
+                                  <span>Por secciones</span>
+                                  <span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>Diferenciar diarias, semanales y mensuales</span>
+                                </span>
+                              </div>
+                              {cycleViewLayout === 'sections' && <Check size={16} color="var(--accent-primary)" />}
+                            </button>
+                            <button
+                              type="button"
+                              className="ios-dropdown-item"
+                              onClick={() => { onToggleCycleViewLayout('mixed'); setIsMenuOpen(false); }}
+                              style={{ justifyContent: 'space-between', minHeight: 44, fontSize: '0.95rem' }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <Sparkles size={16} color="var(--text-secondary)" />
+                                <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1 }}>
+                                  <span>Todas seguidas</span>
+                                  <span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>Mezclar en el mejor orden de ejecución</span>
+                                </span>
+                              </div>
+                              {cycleViewLayout === 'mixed' && <Check size={16} color="var(--accent-primary)" />}
+                            </button>
+                          </>
+                        )}
 
                         <div style={{ padding: '8px 12px 4px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-tertiary)' }}>
                           Ordenar por

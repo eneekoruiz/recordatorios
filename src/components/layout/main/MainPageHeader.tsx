@@ -13,6 +13,8 @@ import {
   ChevronDown,
   Check,
   Plus,
+  Sparkles,
+  Layers,
 } from 'lucide-react';
 import { DurationInfoCard } from '../../ui/DurationInfoCard';
 import { HapticService } from '../../../services/HapticService';
@@ -84,6 +86,8 @@ interface MainPageHeaderProps {
   onStartSequence?: () => void;
   cycleRoutineMode?: 'only_section' | 'full_routine';
   onToggleCycleRoutineMode?: (mode: 'only_section' | 'full_routine') => void;
+  cycleViewLayout?: 'sections' | 'mixed';
+  onToggleCycleViewLayout?: (layout?: 'sections' | 'mixed') => void;
   onNavigateView?: (view: string) => void;
 }
 
@@ -132,7 +136,9 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   caducidadesStats,
   onStartSequence: _onStartSequence,
   cycleRoutineMode = 'only_section',
-  onToggleCycleRoutineMode
+  onToggleCycleRoutineMode,
+  cycleViewLayout = 'sections',
+  onToggleCycleViewLayout
 }) => {
   const updateList = useAppStore((state) => state.updateList);
 
@@ -460,25 +466,61 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                   <span className="section-head-duration">{formatSummaryDuration(totalDuration.activeMinutes)}</span>
                 )
               ) : null}
-              routineToggle={currentCycle.id !== 'cycle_day' && onToggleCycleRoutineMode ? (
-                <button
-                  type="button"
-                  className={`routine-chip-btn${cycleRoutineMode === 'full_routine' ? ' is-on' : ''}`}
-                  aria-pressed={cycleRoutineMode === 'full_routine'}
-                  aria-label={`Rutina completa: incluir ${currentCycle.id === 'cycle_week' ? 'las diarias' : currentCycle.id === 'cycle_month' ? 'las semanales y diarias' : currentCycle.id === 'cycle_year' ? 'las mensuales, semanales y diarias' : 'las de frecuencia más corta'}`}
-                  title={currentCycle.id === 'cycle_week' ? 'Incluir también las diarias' : currentCycle.id === 'cycle_month' ? 'Incluir también las semanales y diarias' : currentCycle.id === 'cycle_year' ? 'Incluir también las mensuales, semanales y diarias' : 'Incluir también las de frecuencia más corta'}
-                  style={{ ['--chip-color' as string]: viewColor }}
-                  onClick={() => {
-                    HapticService.selection();
-                    onToggleCycleRoutineMode(cycleRoutineMode === 'full_routine' ? 'only_section' : 'full_routine');
-                  }}
-                >
-                  <span className={`routine-chip${cycleRoutineMode === 'full_routine' ? ' is-on' : ''}`}>
-                    {cycleRoutineMode === 'full_routine' ? <Check size={12} strokeWidth={3} aria-hidden="true" /> : <Plus size={12} strokeWidth={2.6} aria-hidden="true" />}
-                    <span>Rutina completa</span>
-                  </span>
-                </button>
-              ) : null}
+              routineToggle={
+                (currentCycle.id !== 'cycle_day' && onToggleCycleRoutineMode) || onToggleCycleViewLayout ? (
+                  <div className="cycle-strip-toggle-inner" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    {currentCycle.id !== 'cycle_day' && onToggleCycleRoutineMode && (
+                      <button
+                        type="button"
+                        className={`routine-chip-btn${cycleRoutineMode === 'full_routine' ? ' is-on' : ''}`}
+                        aria-pressed={cycleRoutineMode === 'full_routine'}
+                        aria-label={`Rutina completa: incluir ${currentCycle.id === 'cycle_week' ? 'las diarias' : currentCycle.id === 'cycle_month' ? 'las semanales y diarias' : currentCycle.id === 'cycle_year' ? 'las mensuales, semanales y diarias' : 'las de frecuencia más corta'}`}
+                        title={currentCycle.id === 'cycle_week' ? 'Incluir también las diarias' : currentCycle.id === 'cycle_month' ? 'Incluir también las semanales y diarias' : currentCycle.id === 'cycle_year' ? 'Incluir también las mensuales, semanales y diarias' : 'Incluir también las de frecuencia más corta'}
+                        style={{ ['--chip-color' as string]: viewColor }}
+                        onClick={() => {
+                          HapticService.selection();
+                          onToggleCycleRoutineMode(cycleRoutineMode === 'full_routine' ? 'only_section' : 'full_routine');
+                        }}
+                      >
+                        <span className={`routine-chip${cycleRoutineMode === 'full_routine' ? ' is-on' : ''}`}>
+                          {cycleRoutineMode === 'full_routine' ? <Check size={12} strokeWidth={3} aria-hidden="true" /> : <Plus size={12} strokeWidth={2.6} aria-hidden="true" />}
+                          <span>Rutina completa</span>
+                        </span>
+                      </button>
+                    )}
+
+                    {onToggleCycleViewLayout && (
+                      <button
+                        type="button"
+                        data-testid="cycle-layout-toggle-btn"
+                        className={`routine-chip-btn layout-toggle-btn${cycleViewLayout === 'mixed' ? ' is-on' : ''}`}
+                        aria-pressed={cycleViewLayout === 'mixed'}
+                        aria-label={cycleViewLayout === 'mixed' ? 'Organización: Todas seguidas. Pulsa para separar por secciones' : 'Organización: Por secciones. Pulsa para mezclar todas seguidas en el mejor orden'}
+                        title={cycleViewLayout === 'mixed' ? 'Viendo todas seguidas en orden óptimo. Pulsa para ver por secciones' : 'Viendo por secciones. Pulsa para mezclar todas seguidas en el mejor orden'}
+                        style={{ ['--chip-color' as string]: viewColor }}
+                        onClick={() => {
+                          HapticService.selection();
+                          onToggleCycleViewLayout(cycleViewLayout === 'sections' ? 'mixed' : 'sections');
+                        }}
+                      >
+                        <span className={`routine-chip${cycleViewLayout === 'mixed' ? ' is-on' : ''}`}>
+                          {cycleViewLayout === 'mixed' ? (
+                            <>
+                              <Sparkles size={12} strokeWidth={2.4} aria-hidden="true" />
+                              <span>Todas seguidas</span>
+                            </>
+                          ) : (
+                            <>
+                              <Layers size={12} strokeWidth={2.4} aria-hidden="true" />
+                              <span>Por secciones</span>
+                            </>
+                          )}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                ) : null
+              }
             />
           </div>
         )}
