@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, Play, Pause, CheckCircle, SkipForward, Clock, VolumeX, Zap, Share, Headphones, ArrowRight, Plus
+  X, Play, Pause, CheckCircle, SkipForward, Clock, VolumeX, Zap, Share, Headphones, ArrowRight, Plus,
+  Timer, Flame
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { SoundService } from '../../services/SoundService';
@@ -15,6 +16,8 @@ import { matchesPeriod } from '../../services/TaskService';
 import { getEffectiveCycleId } from '../../utils/sectionRoutine';
 import { isSeriesTask, seriesDone, setRestSeconds, setWorkSeconds, setLogProposal } from '../../utils/seriesTasks';
 import type { TaskItem } from '../../models/Task';
+import { calculateSessionVolume } from '../../utils/weightHistory';
+import { setRestCountdownTitle, notifyRestFinished, restoreDocumentTitle } from '../../utils/timerTitleNotification';
 
 interface ListSequenceModeProps {
   /** IDs de las tareas a recorrer en orden */
@@ -330,6 +333,14 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
       activeElapsedRef.current += 1;
       const next = timeLeft - 1;
       setTimeLeft(next);
+      if (currentTask?.isRest) {
+        if (next > 0) {
+          setRestCountdownTitle(next, true);
+        } else {
+          const nextTask = activeTaskIds[index + 1] ? tasks[activeTaskIds[index + 1]] : null;
+          notifyRestFinished(nextTask?.title);
+        }
+      }
       if (next <= 0) {
         setIsActive(false);
         SoundService.playComplete();
@@ -337,7 +348,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
       }
     }, 1000);
     return () => clearTimeout(timer);
-  }, [isActive, timeLeft]);
+  }, [isActive, timeLeft, currentTask?.isRest, activeTaskIds, index, tasks]);
 
   // Ambient sound
   useEffect(() => {
@@ -349,7 +360,11 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
   // Escape to close
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { SoundService.stopAmbientSound(); onClose(); }
+      if (e.key === 'Escape') { 
+        restoreDocumentTitle();
+        SoundService.stopAmbientSound(); 
+        onClose(); 
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -586,10 +601,23 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
 
     const rowsMuted = isDark ? 'rgba(255,255,255,0.6)' : 'var(--text-secondary, #636366)';
     const rowLine = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
+    const isGymWorkout = Boolean(
+      listName.toLowerCase().includes('gimnasio') || 
+      listName.toLowerCase().includes('gym') || 
+      listName.toLowerCase().includes('entreno') ||
+      activeTaskIds.some(id => tasks[id]?.isRest || (tasks[id]?.weightLogs && tasks[id].weightLogs!.length > 0))
+    );
+
+    const sessionVolume = isGymWorkout 
+      ? calculateSessionVolume(activeTaskIds.map(id => tasks[id]).filter(Boolean)) 
+      : null;
+
     const summary: [string, string][] = [
-      ['Completadas', String(completedIds.length)],
+      [isGymWorkout ? 'Ejercicios completados' : 'Completadas', isGymWorkout ? `${sessionVolume?.exercisesCount || completedIds.length} ejercicios` : String(completedIds.length)],
       ...(skippedIds.length > 0 ? [['Omitidas', String(skippedIds.length)] as [string, string]] : []),
       ['Tiempo empleado', formatDuration(elapsedMins)],
+      ...(sessionVolume && sessionVolume.totalVolumeKg > 0 ? [['Volumen levantado', `${sessionVolume.totalVolumeKg.toLocaleString('es-ES')} kg`] as [string, string]] : []),
+      ...(sessionVolume && sessionVolume.setsCount > 0 ? [['Series registradas', `${sessionVolume.setsCount} series`] as [string, string]] : []),
       ['Estimado', formatDuration(totalEstimatedMins)],
     ];
     return (
@@ -605,12 +633,16 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
             transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-            style={{ width: 72, height: 72, borderRadius: '50%', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#30d158' }}
+            style={{ width: 72, height: 72, borderRadius: '50%', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isGymWorkout ? '#ff9500' : '#30d158' }}
           >
-            <CheckCircle size={40} color="#000" strokeWidth={2} aria-hidden="true" />
+            {isGymWorkout ? <Flame size={40} color="#000" strokeWidth={2.2} aria-hidden="true" /> : <CheckCircle size={40} color="#000" strokeWidth={2} aria-hidden="true" />}
           </motion.div>
-          <h2 style={{ fontSize: '1.9rem', fontWeight: 700, color: primaryText, margin: '0 0 6px', letterSpacing: '-0.02em' }}>Lista completada</h2>
-          <p style={{ fontSize: '1rem', color: rowsMuted, margin: '0 0 28px', lineHeight: 1.4 }}>Has terminado {listName}.</p>
+          <h2 style={{ fontSize: '1.9rem', fontWeight: 700, color: primaryText, margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+            {isGymWorkout ? '¡Entrenamiento completado!' : 'Lista completada'}
+          </h2>
+          <p style={{ fontSize: '1rem', color: rowsMuted, margin: '0 0 28px', lineHeight: 1.4 }}>
+            {isGymWorkout ? `Gran sesión en ${listName}. Has completado tu rutina con éxito.` : `Has terminado ${listName}.`}
+          </p>
 
           {/* Resumen: filas con línea fina, como una lista de ajustes; sin tarjetas de colores */}
           <dl style={{ width: '100%', margin: '0 0 24px', padding: 0 }}>
@@ -731,6 +763,86 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
         <div style={{ width: '100%', maxWidth: 420, marginTop: 20 }}>
           <button type="button" onClick={endSetRest} style={{ width: '100%', minHeight: 52, borderRadius: 16, border: 'none', cursor: 'pointer', background: left > 0 ? fieldBg : '#30d158', color: left > 0 ? primaryText : '#000', fontWeight: 600, fontSize: '1.05rem' }}>
             {left > 0 ? 'Saltar descanso' : setRest.kind === 'set' ? `Empezar serie ${setRest.doneSet + 1}` : 'Empezar siguiente'}
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // ── DESCANSO INTERMEDIO ENTRE EJERCICIOS (isRest: true) ───────────────────
+  if (currentTask?.isRest) {
+    const total = Math.max(10, Math.round(initialDuration || 120));
+    const left = Math.max(0, timeLeft);
+    const pr = total > 0 ? Math.min(1, Math.max(0, 1 - left / total)) : 1;
+    const mm = (sec: number) => `${Math.floor(Math.abs(sec) / 60)}:${String(Math.abs(sec) % 60).padStart(2, '0')}`;
+    const mutedText = isDark ? 'rgba(255,255,255,0.6)' : 'var(--text-secondary, #636366)';
+    const fieldBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)';
+    const nextTask = activeTaskIds[index + 1] ? tasks[activeTaskIds[index + 1]] : null;
+    const adjust = (delta: number) => {
+      HapticService.selection();
+      setTimeLeft(t => Math.max(0, t + delta));
+      setInitialDuration(d => Math.max(d, timeLeft + delta));
+    };
+    const pill: React.CSSProperties = { minHeight: 44, padding: '0 18px', borderRadius: 22, border: 'none', background: fieldBg, color: primaryText, fontSize: '1rem', cursor: 'pointer', fontVariantNumeric: 'tabular-nums' };
+
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} role="dialog" aria-modal="true" aria-label="Descanso entre ejercicios"
+        style={{ position: 'fixed', inset: 0, zIndex: 99999, background: screenBackground, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 'max(env(safe-area-inset-top), 24px) 24px max(env(safe-area-inset-bottom), 24px)', boxSizing: 'border-box', textAlign: 'center', overflowY: 'auto' }}>
+        <button type="button" onClick={() => { restoreDocumentTitle(); SoundService.stopAmbientSound(); onClose(); }} aria-label="Salir del modo secuencia" title="Salir (Esc)"
+          style={{ position: 'absolute', top: 'max(env(safe-area-inset-top), 8px)', left: 16, width: 44, height: 44, borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer', color: mutedText, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <X size={20} />
+        </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#ff9500', fontWeight: 700, fontSize: '0.95rem' }}>
+          <Timer size={20} />
+          <span>Descanso entre ejercicios</span>
+        </div>
+
+        <div role="timer" aria-label={left > 0 ? `Quedan ${mm(left)}` : 'Descanso terminado'} style={{ position: 'relative', width: 232, height: 232, maxHeight: '34dvh', aspectRatio: '1', margin: '12px 0' }}>
+          <svg viewBox="0 0 232 232" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }} aria-hidden="true">
+            <circle cx="116" cy="116" r="106" fill="none" stroke={isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)'} strokeWidth="6" />
+            <circle cx="116" cy="116" r="106" fill="none" stroke="#ff9500" strokeWidth="6" strokeLinecap="round" strokeDasharray={2 * Math.PI * 106} strokeDashoffset={2 * Math.PI * 106 * (1 - pr)} style={{ transition: 'stroke-dashoffset 0.3s linear' }} />
+          </svg>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3.2rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: primaryText }}>
+            {left > 0 ? mm(left) : 'Listo'}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button type="button" onClick={() => adjust(-15)} style={pill} aria-label="Quitar 15 segundos">− 15 s</button>
+          <button type="button" onClick={() => adjust(30)} style={pill} aria-label="Añadir 30 segundos">+ 30 s</button>
+        </div>
+
+        {nextTask && (
+          <div style={{ marginTop: 16, maxWidth: 360, background: fieldBg, padding: '12px 18px', borderRadius: 16, border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)' }}>
+            <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#ff9500', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 2 }}>A continuación</div>
+            <div style={{ fontSize: '1.05rem', fontWeight: 700, color: primaryText }}>{nextTask.title}</div>
+            {nextTask.description && (
+              <div style={{ fontSize: '0.80rem', color: mutedText, marginTop: 4, lineHeight: 1.3 }}>{nextTask.description}</div>
+            )}
+          </div>
+        )}
+
+        <div style={{ width: '100%', maxWidth: 420, marginTop: 16 }}>
+          <button
+            type="button"
+            onClick={() => {
+              restoreDocumentTitle();
+              handleCompleteTask();
+            }}
+            style={{
+              width: '100%',
+              minHeight: 52,
+              borderRadius: 16,
+              border: 'none',
+              cursor: 'pointer',
+              background: left <= 0 ? '#30d158' : fieldBg,
+              color: left <= 0 ? '#000' : primaryText,
+              fontWeight: 600,
+              fontSize: '1.05rem'
+            }}
+          >
+            {left <= 0 ? 'Empezar siguiente ejercicio' : 'Omitir descanso / Empezar ya'}
           </button>
         </div>
       </motion.div>

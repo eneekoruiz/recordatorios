@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Dumbbell, Check, X, ArrowRight, Minus, Plus } from 'lucide-react';
 import type { TaskItem } from '../../models/Task';
+import { getLastSessionWeightAndReps } from '../../utils/weightHistory';
 import { HapticService } from '../../services/HapticService';
 
 interface QuickWeightPromptModalProps {
@@ -26,12 +27,9 @@ const QuickWeightForm: React.FC<QuickWeightFormProps> = ({
   onSkip,
   onCancel,
 }) => {
-  const lastLog = task.weightLogs && task.weightLogs.length > 0
-    ? task.weightLogs[task.weightLogs.length - 1]
-    : null;
-
-  const lastRecordedWeight = lastLog ? lastLog.weightKg : null;
-  const lastRecordedReps = lastLog?.reps || task.targetCount || 10;
+  const lastSession = getLastSessionWeightAndReps(task, (task.currentCount || 0) + 1);
+  const lastRecordedWeight = lastSession ? lastSession.weightKg : (task.weightLogs && task.weightLogs.length > 0 ? task.weightLogs[task.weightLogs.length - 1].weightKg : null);
+  const lastRecordedReps = lastSession?.reps || (task.weightLogs && task.weightLogs.length > 0 ? task.weightLogs[task.weightLogs.length - 1].reps : null) || task.targetCount || 10;
 
   const [weight, setWeight] = useState<string>(
     lastRecordedWeight !== null ? String(lastRecordedWeight) : '50'
@@ -143,7 +141,7 @@ const QuickWeightForm: React.FC<QuickWeightFormProps> = ({
             </h3>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary, #8e8e93)' }}>
               {lastRecordedWeight !== null
-                ? `Último: ${lastRecordedWeight} kg × ${lastRecordedReps} reps`
+                ? `${lastSession?.isPreviousSession ? 'Última vez' : 'Último'}: ${lastRecordedWeight} kg × ${lastRecordedReps} reps`
                 : 'Registrar carga de hoy'}
             </span>
           </div>

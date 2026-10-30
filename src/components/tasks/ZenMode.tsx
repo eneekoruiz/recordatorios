@@ -10,7 +10,9 @@ import { useAppStore } from '../../store/useAppStore';
 import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
 import { ConfettiService } from '../../services/ConfettiService';
-import { getExerciseAlternatives } from '../../utils/gymExercises';
+import { getExerciseAlternatives, GYM_EXERCISE_CATALOG } from '../../utils/gymExercises';
+import { getLastSessionWeightAndReps } from '../../utils/weightHistory';
+import { setRestCountdownTitle, notifyRestFinished, restoreDocumentTitle } from '../../utils/timerTitleNotification';
 
 interface ZenModeProps {
   taskId: string | null;
@@ -123,6 +125,9 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
       }
       const next = timeLeft - 1;
       setTimeLeft(next);
+      if (isGymSeries && gymPhase === 'rest' && next > 0) {
+        setRestCountdownTitle(next);
+      }
       if (next <= 0) {
         if (isGymSeries && gymPhase === 'work') {
           // Ha concluido la serie de trabajo activa
@@ -163,7 +168,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
           }
         } else if (isGymSeries && gymPhase === 'rest') {
           // Ha concluido el descanso entre series: aviso acústico y háptico
-          SoundService.playRestEnd();
+          notifyRestFinished(task?.title);
           setGymPhase('work');
           currentSetWorkSecondsRef.current = 0;
           const workSecs = Math.max(10, Math.round((task?.duration || 1) * 60));
@@ -194,6 +199,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
 
     const executeFinalComplete = useCallback(() => {
     if (!task) return;
+    restoreDocumentTitle();
     SoundService.stopAmbientSound();
     SoundService.playComplete();
     ConfettiService.fire({ count: 65 });
@@ -368,7 +374,25 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
   const handleSelectAlternative = (newTitle: string) => {
     if (!newTitle.trim()) return;
     SoundService.playPop();
-    updateTask(task.id, { title: newTitle.trim() });
+    HapticService.notification('success');
+    const cleanTitle = newTitle.trim();
+    const matchedAlt = exerciseInfo.alternatives.find(a => a.name.toLowerCase() === cleanTitle.toLowerCase());
+    const catalogMatch = GYM_EXERCISE_CATALOG.find(
+      e => e.name.toLowerCase() === cleanTitle.toLowerCase() || e.synonyms.includes(cleanTitle.toLowerCase())
+    );
+
+    const updates: Partial<any> = {
+      title: cleanTitle,
+      ...(matchedAlt && (!task.description || task.description.trim() === '') ? { description: `${matchedAlt.equipment}: ${matchedAlt.note}` } : {}),
+      ...(catalogMatch ? {
+        targetCount: catalogMatch.defaultSets,
+        duration: catalogMatch.defaultWorkMinutes,
+        restDuration: catalogMatch.defaultRestSeconds,
+        currentCount: 0
+      } : {})
+    };
+
+    updateTask(task.id, updates);
     setShowAlternativesModal(false);
     setCustomAltText('');
   };
@@ -384,6 +408,8 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
 
   // Obtener alternativas conocidas para este ejercicio
   const exerciseInfo = getExerciseAlternatives(task.title);
+  const currentSetNumber = (task?.currentCount || 0) + 1;
+  const lastSessionHint = task ? getLastSessionWeightAndReps(task, currentSetNumber) : null;
   const previousRecordedWeight = task?.weightLogs && task.weightLogs.length > 0
     ? task.weightLogs[task.weightLogs.length - 1].weightKg
     : null;
@@ -435,6 +461,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
 
           <button
             onClick={() => {
+              restoreDocumentTitle();
               SoundService.stopAmbientSound();
               onClose();
             }}
@@ -972,7 +999,34 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   />
                 </div>
 
-                {previousRecordedWeight !== null && (
+                {lastSessionHint !== null ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      HapticService.selection();
+                      setWeightKgInput(String(lastSessionHint.weightKg));
+                      if (lastSessionHint.reps) {
+                        setRepsInput(String(lastSessionHint.reps));
+                      }
+                    }}
+                    title="Toca para rellenar este peso y repeticiones"
+                    style={{
+                      fontSize: '0.74rem',
+                      color: 'var(--accent-primary, #0a84ff)',
+                      fontWeight: 600,
+                      background: isDark ? 'rgba(10, 132, 255, 0.14)' : 'rgba(10, 132, 255, 0.08)',
+                      border: '1px solid rgba(10, 132, 255, 0.25)',
+                      padding: '4px 10px',
+                      borderRadius: 999,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4
+                    }}
+                  >
+                    <span>{lastSessionHint.isPreviousSession ? 'Última vez:' : 'Serie anterior:'} {lastSessionHint.weightKg} kg{lastSessionHint.reps ? ` × ${lastSessionHint.reps}` : ''}</span>
+                  </button>
+                ) : previousRecordedWeight !== null ? (
                   <span
                     style={{
                       fontSize: '0.74rem',
@@ -985,7 +1039,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
                   >
                     Último: {previousRecordedWeight} kg
                   </span>
-                )}
+                ) : null}
               </div>
             )}
 

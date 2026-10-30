@@ -10,7 +10,7 @@ import { ConfirmModal } from '../ui/ConfirmModal';
 import { isCaducidadesList, getListType, isShoppingList, isLifeLibraryList } from '../../utils/specialLists';
 import { DrawerLibrarySection } from './drawer/DrawerLibrarySection';
 import { detectTaskSmartSuggestion } from '../../utils/taskSmartSuggestions';
-import { getExerciseAlternatives } from '../../utils/gymExercises';
+import { getExerciseAlternatives, GYM_EXERCISE_CATALOG } from '../../utils/gymExercises';
 import { SoundService } from '../../services/SoundService';
 import { HapticService } from '../../services/HapticService';
 import './TaskDrawer.css';
@@ -934,9 +934,28 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                           type="button"
                           onClick={() => {
                             SoundService.playPop();
+                            HapticService.notification('success');
                             handleTitleInput(alt.name);
+                            if (!notes || notes.trim() === '') {
+                              setNotes(`${alt.equipment}: ${alt.note}`);
+                            }
+                            const catalogMatch = GYM_EXERCISE_CATALOG.find(
+                              e => e.name.toLowerCase() === alt.name.toLowerCase() || e.synonyms.includes(alt.name.toLowerCase())
+                            );
+                            if (catalogMatch) {
+                              if (!targetCount || targetCount === 1) {
+                                setTargetCount(catalogMatch.defaultSets);
+                              }
+                              if (duration === '' || duration <= 1) {
+                                setDuration(catalogMatch.defaultWorkMinutes);
+                              }
+                              if (!restDuration || restDuration === 0) {
+                                setRestDuration(catalogMatch.defaultRestSeconds);
+                              }
+                            }
+                            showAlert(`Cambiado a «${alt.name}»`);
                           }}
-                          title={`${alt.equipment}: ${alt.note}`}
+                          title={`${alt.equipment}: ${alt.note} · Toca para sustituir`}
                           style={{
                             padding: '5px 10px',
                             borderRadius: 999,

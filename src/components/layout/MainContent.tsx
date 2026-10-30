@@ -980,7 +980,7 @@ const CORE_CYCLES = [
   // Programa por días (Gimnasio: «Día 1», «Día 2»…): qué día toca hoy y cuál viene después.
   const trainingPlan = useMemo(
     () => (currentList && !currentList.isFolder ? getTrainingDayPlan(currentList.id, listSections, allTasksArray, periodReferenceDate.getTime(), currentList.activeGymDaySectionId) : null),
-    [currentList, listSections, allTasksArray]
+    [currentList, listSections, allTasksArray, periodReferenceDate]
   );
 
   const { flattenedData: rawFlattenedData, renderedSectionTasks } = useMemo(() => {
