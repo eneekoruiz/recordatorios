@@ -649,5 +649,5 @@ describe('runContentMigrations (Misiones 4 y 5)', () => {
     expect(baldas?.duration).toBe(15);
     const baldaSubs = taskList.filter(t => t.parentId === baldas?.id);
     expect(baldaSubs).toHaveLength(3);
-  });
+});
 });

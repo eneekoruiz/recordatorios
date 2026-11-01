@@ -153,6 +153,7 @@ export const TaskCard = React.memo(function TaskCard({
     }
     if (periodicity && contextPeriodicity && periodicity === contextPeriodicity) return null;
     if (periodicity) {
+      if (isGymTask && (periodicity === 'week' || periodicity === 'day')) return null;
       const labelMap: Record<string, string> = {
         day: 'Diaria',
         week: 'Semanal',
@@ -169,7 +170,10 @@ export const TaskCard = React.memo(function TaskCard({
     const cycleId = task.cycle_id;
     if (cycleId) {
       if (cycleId === 'cycle_day' || cycleId === 'day') return { type: 'day' as const, label: 'Diaria' };
-      if (cycleId === 'cycle_week' || cycleId === 'week') return { type: 'week' as const, label: 'Semanal' };
+      if (cycleId === 'cycle_week' || cycleId === 'week') {
+        if (isGymTask) return null;
+        return { type: 'week' as const, label: 'Semanal' };
+      }
       if (cycleId === 'cycle_month' || cycleId === 'month') return { type: 'month' as const, label: 'Mensual' };
       if (cycleId === 'cycle_year' || cycleId === 'year') return { type: 'year' as const, label: 'Anual' };
       const custom = cycles.find(c => c.id === cycleId);

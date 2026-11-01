@@ -113,18 +113,14 @@
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 
-  /* Scrollbar — Firefox */
+  /* Scrollbar — Hidden globally */
   scrollbar-width: none !important;
-  scrollbar-color: var(--border-subtle) transparent;
 }
 
-.sidebar-scroll-area::-webkit-scrollbar { display: none !important; width: 0 !important; }
-.sidebar-scroll-area::-webkit-scrollbar-track {
-  background: transparent;
-}
-.sidebar-scroll-area::-webkit-scrollbar-thumb {
-  background-color: var(--border-subtle);
-  border-radius: var(--radius-full);
+.sidebar-scroll-area::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* ========================================================

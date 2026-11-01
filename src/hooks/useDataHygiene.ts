@@ -349,18 +349,48 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
         // Asegurar que las rutinas completas (4 días, PPL 3 días, Full Body 3 días) y sus secciones existan
         ensureAllGymRoutinesExist(gymList.id, state.userId || '');
 
-        // Asegurar que los descansos intermedios (isRest) existan en las secciones de entrenamiento
-        const { tasks: defaultGymTasks } = createDefaultGymRoutine(state.userId || '');
-        const defaultRests = defaultGymTasks.filter(t => t.isRest);
-        const allCurrentTasks = Object.values(state.tasks || {});
-        for (const restTask of defaultRests) {
-          const alreadyExists = allCurrentTasks.some(t => !t.deleted_at && (t.id === restTask.id || (t.sectionId === restTask.sectionId && t.isRest && t.order === restTask.order)));
-          if (!alreadyExists) {
-            state.addTask({ ...restTask, user_id: state.userId || '', categoryId: gymList.id, updated_at: EPOCH });
-          }
-        }
+        // Asegurar que los descansos intermedios (isRest) existan entre TODOS los ejercicios de entrenamiento
+        const allGymSections = gymSections.filter(s => /d[ií]a|ppl|fb|fullbody|push|pull|legs/i.test(s.name));
+        const allCurrentTasksList = Object.values(state.tasks || {}).filter(t => !t.deleted_at);
 
-        // Asegurar la sección diaria en Gimnasio: 'Diaria: Core y Estiramientos'
+        allGymSections.forEach(sec => {
+          const secExercises = allCurrentTasksList
+            .filter(t => (t.sectionId === sec.id || (t as any).section_id === sec.id) && !t.isRest && !t.parentId)
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+          if (secExercises.length >= 2) {
+            for (let i = 0; i < secExercises.length - 1; i++) {
+              const exA = secExercises[i];
+              const exB = secExercises[i + 1];
+              const hasRest = allCurrentTasksList.some(t =>
+                (t.sectionId === sec.id || (t as any).section_id === sec.id) &&
+                t.isRest &&
+                ((t.order ?? 0) >= (exA.order ?? 0) && (t.order ?? 0) <= (exB.order ?? 0))
+              );
+              if (!hasRest) {
+                const restOrder = Number(((exA.order ?? 0) + 0.5).toFixed(2));
+                state.addTask({
+                  id: `task_gym_rest_${sec.id}_${i}`,
+                  user_id: state.userId || '',
+                  type: 'task',
+                  categoryId: gymList.id,
+                  sectionId: sec.id,
+                  title: 'Descanso entre ejercicios',
+                  description: 'Recuperar aire y pasar a la siguiente máquina.',
+                  duration: 2,
+                  isRest: true,
+                  status: 'pending',
+                  order: restOrder,
+                  version: 1,
+                  created_at: EPOCH,
+                  updated_at: EPOCH
+                });
+              }
+            }
+          }
+        });
+
+                // Asegurar la sección diaria en Gimnasio: 'Diaria: Core y Estiramientos'
         let diariaSec = gymSections.find(s => s.id === 'sec_gym_diaria' || /diaria|core/i.test(s.name));
         if (!diariaSec) {
           diariaSec = { id: 'sec_gym_diaria', listId: gymList.id, name: 'Diaria: Core y Estiramientos', order: 0, updated_at: EPOCH };
@@ -369,15 +399,16 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
 
         const allTasks = state.tasks || {};
 
-        // Mudar tareas existentes de curl, abs 50 y estiramientos a Gimnasio > Diaria: Core y Estiramientos
+        // Mudar tareas existentes de curl, abs 50, estiramientos y pajita a Gimnasio > Diaria
         for (const t of Object.values(allTasks)) {
           if (t && !t.deleted_at) {
             const norm = (t.title || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
             const isAbs50 = norm.includes('abs') || norm.includes('abdominal');
             const isCurl = norm.includes('curl') && !norm.includes('femoral') && !norm.includes('pierna');
             const isEstiramiento = (norm.includes('estiramiento') || norm.includes('movilidad')) && t.categoryId !== gymList.id;
+            const isPajita = norm.includes('pajita');
 
-            if ((isAbs50 || isCurl || isEstiramiento) && t.categoryId !== gymList.id) {
+            if ((isAbs50 || isCurl || isEstiramiento || isPajita) && (t.categoryId !== gymList.id || (isPajita && t.sectionId !== diariaSec.id))) {
               state.updateTask(t.id, {
                 categoryId: gymList.id,
                 sectionId: diariaSec.id,

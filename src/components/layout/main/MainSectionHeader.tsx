@@ -141,8 +141,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   hidePeriodContext,
   referenceDate,
   onReorderSections,
-  isActiveGymDay,
-  onSetActiveGymDay: _onSetActiveGymDay,
+  isActiveGymDay: _isActiveGymDay,
+  onSetActiveGymDay,
 }) => {
   const currentSectionRoutineMode = sectionRoutineModes[data.category] || data.routineMode || 'only_section';
   const isShopping = isShoppingList(data.category);
@@ -677,25 +677,7 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               >
                 {data.title}
               </h3>
-              {isActiveGymDay && (
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    padding: '2px 8px',
-                    borderRadius: 999,
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    background: 'rgba(255, 149, 0, 0.15)',
-                    color: '#ff9500',
-                    border: '1px solid rgba(255, 149, 0, 0.3)',
-                    flexShrink: 0,
-                  }}
-                >
-                  <Flame size={12} /> Día activo
-                </span>
-              )}
+              {/* Redundant Dia activo removed in favor of unified trainingDay status */}
               
               {durationInline && <span className="section-head-meta section-head-inline section-duration">{durationNode}</span>}
             </>
@@ -762,11 +744,76 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
         </div>
 
         {data.trainingDay && (
-          <div className="section-head-sub">
-            <span className={`section-head-training is-${data.trainingDay}`} data-testid="training-day-badge">
+          <div className="section-head-sub" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <span
+              className={`section-head-training is-${data.trainingDay}`}
+              data-testid="training-day-badge"
+              style={{
+                cursor: data.sectionId && onSetActiveGymDay && data.trainingDay !== 'today' && data.trainingDay !== 'done_today' ? 'pointer' : 'default',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '3px 8px',
+                borderRadius: 999,
+                fontSize: '0.74rem',
+                fontWeight: 650,
+                background: data.trainingDay === 'today'
+                  ? 'rgba(255, 149, 0, 0.14)'
+                  : data.trainingDay === 'done_today'
+                  ? 'rgba(52, 199, 89, 0.14)'
+                  : 'var(--bg-material, rgba(0, 0, 0, 0.04))',
+                color: data.trainingDay === 'today'
+                  ? '#ff9500'
+                  : data.trainingDay === 'done_today'
+                  ? '#34c759'
+                  : 'var(--text-secondary)',
+                border: data.trainingDay === 'today'
+                  ? '1px solid rgba(255, 149, 0, 0.3)'
+                  : '1px solid var(--border-subtle, rgba(0, 0, 0, 0.06))',
+                transition: 'all 0.15s ease'
+              }}
+              onClick={(e) => {
+                if (data.sectionId && onSetActiveGymDay && data.trainingDay !== 'today' && data.trainingDay !== 'done_today') {
+                  e.stopPropagation();
+                  HapticService.selection();
+                  onSetActiveGymDay(data.sectionId!);
+                }
+              }}
+              title={data.trainingDay !== 'today' && data.trainingDay !== 'done_today' ? 'Toca para marcar como entrenamiento de hoy' : undefined}
+            >
+              {data.trainingDay === 'today' && <Flame size={12} strokeWidth={2.4} aria-hidden="true" />}
               {data.trainingDay === 'done_today' && <Check size={12} strokeWidth={2.6} aria-hidden="true" />}
-              {TRAINING_DAY_LABEL[data.trainingDay]}
+              <span>{TRAINING_DAY_LABEL[data.trainingDay]}</span>
             </span>
+
+            {data.sectionId && onSetActiveGymDay && (data.trainingDay === 'next' || data.trainingDay === 'later') && (
+              <button
+                type="button"
+                className="section-head-make-today-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  HapticService.selection();
+                  onSetActiveGymDay(data.sectionId!);
+                }}
+                style={{
+                  fontSize: '0.70rem',
+                  fontWeight: 600,
+                  padding: '2px 8px',
+                  borderRadius: 999,
+                  background: 'var(--accent-glow, rgba(0, 122, 255, 0.08))',
+                  border: '1px solid var(--accent-subtle, rgba(0, 122, 255, 0.2))',
+                  color: 'var(--accent-primary, #007aff)',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3,
+                  lineHeight: '1.4'
+                }}
+                title="Marcar esta sesión como el entrenamiento de hoy"
+              >
+                <span>Hacer hoy</span>
+              </button>
+            )}
           </div>
         )}
         {hasSubRow && (

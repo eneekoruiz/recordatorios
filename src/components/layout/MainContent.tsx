@@ -1140,7 +1140,7 @@ const CORE_CYCLES = [
               )
             );
 
-            if (currentCycle && cycleViewLayout === 'mixed' && !isLimpiezaList(listId)) {
+            if (currentCycle && cycleViewLayout === 'mixed' && !isLimpiezaList(listId) && !hasPeriodicChildSections) {
               const listSortMode = isLimpiezaList(listId) ? 'routine' : sortBy;
               let flatMixedTasks = deduplicateTaskList(tasksInScope);
               if (listSortMode === 'routine' || isLimpiezaList(listId)) {
@@ -1173,7 +1173,7 @@ const CORE_CYCLES = [
               return;
             }
 
-            if (hasPeriodicChildSections && (!isLimpiezaList(listId) || cycleViewLayout !== 'sections')) {
+            if (hasPeriodicChildSections) {
               // UNIFICACIÓN DE ESTANCIAS:
               // En lugar de duplicar secciones de habitación para cada ciclo ("Cocina" en Diarias y "Cocina" en Semanales),
               // unificamos todas las tareas de la estancia en una sola sección coherente ordenada por frecuencia.
@@ -2514,7 +2514,9 @@ const CORE_CYCLES = [
             }
           });
 
-          // Gym other routines and active header removed for clean native layout
+          if (currentList && (currentList.id === 'gimnasio' || currentList.id === 'gym' || /gimnasio|gym/i.test(currentList.name))) {
+            flat.push({ type: 'gym-other-routines' });
+          }
         }
       }
     }

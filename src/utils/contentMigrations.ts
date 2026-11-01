@@ -739,7 +739,23 @@ export function runContentMigrations(store: ContentMigrationStore): void {
       });
     }
 
-    const pajitaParent = allActiveTasks.find(t => normalize(t.title).includes('pajita') && !t.parentId);
+    let pajitaParent = allActiveTasks.find(t => normalize(t.title).includes('pajita') && !t.parentId);
+    if (!pajitaParent && !hasTaskEver(t => normalize(t.title).includes('pajita'))) {
+      const newPajitaId = 'task_gym_daily_pajita_facial';
+      store.addTask({
+        id: newPajitaId,
+        title: 'Ejercicios con pajita',
+        duration: 3,
+        description: 'Rutina facial completa con pajita: papada y cuello, pómulos y mejillas, y contorno de labios (1 minuto por ejercicio).',
+        notes: 'Rutina diaria de ejercicios faciales con pajita:\r\n1. Papada y cuello: Pajita entre los labios, cabeza levantada hacia el techo (1 min).\r\n2. Pómulos y mejillas: Pajita entre los labios, sonreír elevando comisuras (1 min).\r\n3. Labios y contorno: Pajita horizontal solo con fuerza de los labios (1 min).\r\n*Variante opcional: Succión profunda simulando líquido espeso para activar mandíbula y mejillas.',
+        categoryId: targetListId,
+        sectionId: targetSectionId,
+        cycle_id: 'cycle_day',
+        status: 'pending',
+        priority: 'none'
+      });
+      pajitaParent = store.tasks[newPajitaId] || { id: newPajitaId, title: 'Ejercicios con pajita', duration: 3, categoryId: targetListId, sectionId: targetSectionId };
+    }
     if (pajitaParent) {
       if (pajitaParent.title !== 'Ejercicios con pajita' || pajitaParent.duration !== 3 || pajitaParent.categoryId !== targetListId || pajitaParent.sectionId !== targetSectionId) {
         store.updateTask(pajitaParent.id, {

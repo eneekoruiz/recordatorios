@@ -239,7 +239,8 @@ export function TaskMetaBadges({
       </span>
     );
   }
-  if (cycleBadge && (frequencyAsLabel || !hasStreak)) {
+  const isGym = Boolean(task.categoryId === 'gym' || task.categoryId === 'gimnasio' || (taskList?.name && /gimnasio|gym/i.test(taskList.name)));
+  if (cycleBadge && (!isGym || (cycleBadge.label !== 'Semanal' && cycleBadge.type !== 'week')) && (frequencyAsLabel || !hasStreak)) {
     items.push(renderFrequency(frequencyAsLabel));
   }
   if (streak && hasStreak) {
@@ -258,7 +259,7 @@ export function TaskMetaBadges({
     );
   }
   // Una línea entera solo para el icono de repetición no decía nada: si va sola, lleva su nombre («Diaria»).
-  if (cycleBadge && !frequencyAsLabel && items.length === 1) {
+  if (cycleBadge && (!isGym || (cycleBadge.label !== 'Semanal' && cycleBadge.type !== 'week')) && !frequencyAsLabel && items.length === 1) {
     items[0] = renderFrequency(true);
   }
   // Tocar un dato abre su edición (como en la versión original); el teclado llega por el (i) y el menú contextual.

@@ -16,10 +16,12 @@ import {
   Sparkles,
   Layers,
   House,
+  Dumbbell,
 } from 'lucide-react';
 import { DurationInfoCard } from '../../ui/DurationInfoCard';
 import { HapticService } from '../../../services/HapticService';
 import { isCaducidadesList, isQueHeHechoList, isShoppingList, isLimpiezaList } from '../../../utils/specialLists';
+import { GYM_SPLITS_CONFIG, type GymRoutineSplit } from '../../../utils/gymExercises';
 import { confirmDialog } from '../../ui/confirmDialog';
 import { useAppStore } from '../../../store/useAppStore';
 import { deleteCycleWithUndo } from '../../../utils/undoToast';
@@ -90,6 +92,7 @@ interface MainPageHeaderProps {
   cycleViewLayout?: 'sections' | 'mixed';
   onToggleCycleViewLayout?: (layout?: 'sections' | 'mixed') => void;
   onNavigateView?: (view: string) => void;
+  onOpenGymRoutineModal?: () => void;
 }
 
 export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
@@ -139,7 +142,8 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   cycleRoutineMode = 'only_section',
   onToggleCycleRoutineMode,
   cycleViewLayout = 'sections',
-  onToggleCycleViewLayout
+  onToggleCycleViewLayout,
+  onOpenGymRoutineModal
 }) => {
   const updateList = useAppStore((state) => state.updateList);
 
@@ -367,6 +371,35 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                                               )
                                             )}
 
+                                            {Boolean(currentList && (currentList.id === 'gimnasio' || currentList.id === 'gym' || /gimnasio|gym/i.test(currentList.name))) && onOpenGymRoutineModal && (
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  HapticService.selection();
+                                                  onOpenGymRoutineModal();
+                                                }}
+                                                className="apple-list-duration-chip"
+                                                style={{
+                                                  background: 'var(--accent-glow, rgba(0, 122, 255, 0.08))',
+                                                  color: 'var(--accent-primary, #007aff)',
+                                                  border: '1px solid var(--accent-subtle, rgba(0, 122, 255, 0.2))',
+                                                  padding: '2px 8px',
+                                                  borderRadius: 999,
+                                                  fontWeight: 650,
+                                                  fontSize: '0.76rem',
+                                                  cursor: 'pointer',
+                                                  display: 'inline-flex',
+                                                  alignItems: 'center',
+                                                  gap: 4
+                                                }}
+                                                title="Cambiar rutina (Torso/Pierna, PPL, Full Body...)"
+                                              >
+                                                <Dumbbell size={11} strokeWidth={2.4} />
+                                                <span>{GYM_SPLITS_CONFIG[(currentList?.activeRoutineSplit as GymRoutineSplit) || 'torso_pierna_4d']?.name || 'Rutina activa'}</span>
+                                                <ChevronDown size={10} strokeWidth={2} style={{ opacity: 0.5 }} />
+                                              </button>
+                                            )}
+                                            
                                             {hasValidDuration && hasValidPrice && (
                                               <span className="meta-dot" style={{ opacity: 0.4 }}>·</span>
                                             )}
