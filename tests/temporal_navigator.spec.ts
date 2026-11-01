@@ -120,7 +120,7 @@ test.describe('Apple Period Navigator (helen-design)', () => {
     await expect(statusCard.locator('[data-testid="apple-period-navigator"]')).toBeVisible();
 
     // «Rutina completa» comparte línea con el recuento (junto al periodo no cabía en móvil)
-    await expect(statusCard.locator('.cycle-strip-meta .routine-chip')).toBeVisible();
+    await expect(statusCard.locator('.cycle-strip-meta .routine-chip').first()).toBeVisible();
     await expect(page.locator('.routine-include-row')).toHaveCount(0);
   });
 

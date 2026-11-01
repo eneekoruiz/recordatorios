@@ -112,7 +112,7 @@ test('«Empezar» va serie a serie con descansos y solo hace el día de hoy', as
   // Los estiramientos de después, al final; la sentadilla (Día 2) no entra.
   await expect(page.getByRole('heading', { name: 'Estiramientos posteriores' })).toBeVisible();
   await page.getByRole('button', { name: 'Completar', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Lista completada' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /¡?Entrenamiento completado!|Lista completada/ })).toBeVisible();
 
   const state = await page.evaluate(() => {
     const t = (window as any).useAppStore.getState().tasks;

@@ -88,6 +88,8 @@ jobs:
         run: npx playwright install --with-deps chromium webkit
 
       - name: Run E2E Playwright Tests (suite completa)
+        env:
+          PW_BUILD_READY: 1
         run: npx playwright test
 
       - name: Upload Test Report Artifact
