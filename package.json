@@ -22,9 +22,11 @@
     "build": "prisma generate && tsc -b && vite build",
     "typecheck": "tsc -b",
     "lint": "oxlint",
-    "validate": "prisma generate && tsc -b && oxlint && vitest run && vite build",
+    "validate": "concurrently --kill-others-on-fail -n \"types,lint\" \"tsc -b\" \"oxlint\" && vitest run --changed origin/main --passWithNoTests",
+    "validate:all": "prisma generate && tsc -b && oxlint && vitest run && vite build",
     "preview": "vite preview",
-    "test": "vitest run",
+    "test": "vitest run --changed --passWithNoTests",
+    "test:all": "vitest run",
     "test:e2e": "playwright test",
     "postinstall": "prisma generate",
     "prepare": "git config core.hooksPath .githooks || true"

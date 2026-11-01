@@ -79,7 +79,7 @@ jobs:
         run: npm run lint
 
       - name: Unit tests (API, sincronización, NLP)
-        run: npm test
+        run: npm run test:all
 
       - name: Typecheck & Build Frontend
         run: npm run build
