@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, useMotionValue, useTransform, AnimatePresence, useMotionValueEvent } from 'framer-motion';
+import { motion, useMotionValue, useTransform, AnimatePresence, useMotionValueEvent, animate } from 'framer-motion';
 import {
   Lock,
   ChevronDown, X, Info, RotateCcw, Flag,
@@ -430,6 +430,9 @@ export const TaskCard = React.memo(function TaskCard({
 
   // --- SWIPE (iOS-style: card physically moves) ---
   const x = useMotionValue(0);
+  useEffect(() => {
+    x.set(0);
+  }, [task.id, x]);
 
   const getCardElement = useCallback(() => cardRef.current, []);
 
@@ -628,6 +631,7 @@ export const TaskCard = React.memo(function TaskCard({
   }, [isBlocked, isSkippedThisPeriod, skipTask, task.id, task.title, task.consecutiveSkipCount, referenceDate, effCycleId]);
 
   const handleSwipeEnd = useCallback((offsetX: number) => {
+    animate(x, 0, { type: 'spring', damping: 25, stiffness: 400 });
     if (offsetX > SWIPE_COMPLETE_THRESHOLD && !isBlocked) {
       HapticService.notification('success');
       // Always toggle: if completed → uncomplete, if pending → complete
@@ -637,7 +641,7 @@ export const TaskCard = React.memo(function TaskCard({
       HapticService.impact('heavy');
       setIsDeleteConfirmOpen(true);
     }
-  }, [isBlocked, isEffectivelyDone, onToggle, task.id, setIsDeleteConfirmOpen, propReferenceDate]);
+  }, [x, isBlocked, isEffectivelyDone, onToggle, task.id, setIsDeleteConfirmOpen, propReferenceDate]);
 
   const isSameCountPeriod = matchesPeriod(
     task.updated_at ? [task.updated_at] : [], effCycleId || 'cycle_day', referenceDate, cycles

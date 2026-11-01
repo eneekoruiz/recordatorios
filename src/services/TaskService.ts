@@ -186,7 +186,16 @@ export function isTaskActuallyCompletedInCurrentPeriod(
 
   if (sessionDates && task.completionHistory?.length) {
     const dates = sessionDates instanceof Set ? sessionDates : new Set(sessionDates);
-    if (dates.size && task.completionHistory.some(ts => dates.has(new Date(ts).toDateString()))) return true;
+    if (dates.size && effCycleId === 'cycle_day') {
+      const startOfWeek = getStartOfWeek(ref).getTime();
+      const startOfNextWeek = getStartOfNextWeek(ref).getTime();
+      const match = task.completionHistory.some(ts => {
+        const time = typeof ts === 'number' ? ts : new Date(ts).getTime();
+        if (time < startOfWeek || time >= startOfNextWeek) return false;
+        return dates.has(new Date(ts).toDateString());
+      });
+      if (match) return true;
+    }
   }
 
   // Si es periódica pero no tiene historial de finalizaciones, está pendiente para el periodo actual

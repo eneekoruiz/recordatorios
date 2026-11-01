@@ -345,7 +345,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'gemelos',
     categoryLabel: 'Gastrocnemio / Sóleo',
     defaultSets: 4,
-    defaultWorkMinutes: 1.5,
+    defaultWorkMinutes: 1,
     defaultRestSeconds: 60,
     alternatives: [
       { name: 'Elevación de talones en prensa', equipment: 'Prensa', note: 'Punta de los pies en el borde de la plataforma con parada abajo' },
@@ -379,7 +379,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'core',
     categoryLabel: 'Core / Zona media',
     defaultSets: 3,
-    defaultWorkMinutes: 1.5,
+    defaultWorkMinutes: 1,
     defaultRestSeconds: 60,
     alternatives: [
       { name: 'Rueda abdominal (Ab wheel rollout)', equipment: 'Rueda', note: 'Anti-extensión de columna, activación neuromuscular altísima' },
@@ -635,7 +635,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'pierna',
     categoryLabel: 'Glúteo mayor / Extensión de cadera',
     defaultSets: 4,
-    defaultWorkMinutes: 1.5,
+    defaultWorkMinutes: 2,
     defaultRestSeconds: 120,
     alternatives: [
       { name: 'Hip thrust en máquina', equipment: 'Máquina', note: 'Carga directa sin montaje de barra' },
@@ -651,7 +651,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'pierna',
     categoryLabel: 'Cuádriceps y Glúteo / Unilateral',
     defaultSets: 3,
-    defaultWorkMinutes: 1.5,
+    defaultWorkMinutes: 1,
     defaultRestSeconds: 90,
     alternatives: [
       { name: 'Sentadilla búlgara', equipment: 'Mancuernas / Banco', note: 'Mayor rango y estabilidad con pie trasero elevado' },
@@ -666,7 +666,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'pierna',
     categoryLabel: 'Cuádriceps y Glúteo / Unilateral',
     defaultSets: 3,
-    defaultWorkMinutes: 1.5,
+    defaultWorkMinutes: 1,
     defaultRestSeconds: 90,
     alternatives: [
       { name: 'Zancada con mancuernas', equipment: 'Mancuernas', note: 'Menos demandante en equilibrio' },
@@ -681,7 +681,7 @@ export const GYM_EXERCISE_CATALOG: GymExerciseInfo[] = [
     category: 'pierna',
     categoryLabel: 'Cadena posterior completa',
     defaultSets: 4,
-    defaultWorkMinutes: 1.5,
+    defaultWorkMinutes: 2,
     defaultRestSeconds: 150,
     alternatives: [
       { name: 'Peso muerto rumano', equipment: 'Barra', note: 'Mayor foco en isquiosurales con menos fatiga del SNC' },
@@ -1016,7 +1016,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '50 repeticiones diarias de core / abdominales.',
       targetCount: 50,
       currentCount: 0,
-      duration: 5,
+      duration: 3,
       cycle_id: 'cycle_day',
       status: 'pending',
       order: 1,
@@ -1071,7 +1071,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '4 series pesadas en banco plano. Calienta bien antes de las series efectivas.',
       targetCount: 4,
       currentCount: 0,
-      duration: 1, // 3 min por serie de trabajo estimado
+      duration: 1, // 1 min por serie de trabajo estimado
       restDuration: 120, // 2 min descanso
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -1090,7 +1090,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '4 series. Torso inclinado a 45-70º, codos pegados al cuerpo, tracción al ombligo.',
       targetCount: 4,
       currentCount: 0,
-      duration: 1,
+      duration: 2,
       restDuration: 120,
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -1302,11 +1302,27 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '4 series pesadas en máquina Jaca / Hack. Coloca los pies en ancho medio y desciende controlado. Descanso amplio.',
       targetCount: 4,
       currentCount: 0,
-      duration: 1.5,
+      duration: 2,
       restDuration: 180, // 3 min descanso
       cycle_id: 'cycle_week',
       status: 'pending',
       order: 0,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
+      id: 'task_gym_rest_2_1',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_inf_a',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire y pasar a la siguiente máquina.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 0.5,
       version: 1,
       created_at: EPOCH,
       updated_at: EPOCH
@@ -1330,6 +1346,22 @@ export function createDefaultGymRoutine(userId: string = '') {
       created_at: EPOCH,
       updated_at: EPOCH
     },
+        {
+      id: 'task_gym_rest_2_2',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_inf_a',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire y pasar a la máquina de glúteos.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 1.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
     {
       id: 'task_gym_2_maquina_gluteos',
       user_id: userId,
@@ -1345,6 +1377,22 @@ export function createDefaultGymRoutine(userId: string = '') {
       cycle_id: 'cycle_week',
       status: 'pending',
       order: 2,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+        {
+      id: 'task_gym_rest_2_3',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_inf_a',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire y pasar a extensiones.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 2.5,
       version: 1,
       created_at: EPOCH,
       updated_at: EPOCH
@@ -1368,6 +1416,22 @@ export function createDefaultGymRoutine(userId: string = '') {
       created_at: EPOCH,
       updated_at: EPOCH
     },
+        {
+      id: 'task_gym_rest_2_4',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_inf_a',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire y pasar a aducción.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 3.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
     {
       id: 'task_gym_2_maquina_aduccion',
       user_id: userId,
@@ -1387,6 +1451,22 @@ export function createDefaultGymRoutine(userId: string = '') {
       created_at: EPOCH,
       updated_at: EPOCH
     },
+        {
+      id: 'task_gym_rest_2_5',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_inf_a',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire y pasar a gemelos.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 4.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
     {
       id: 'task_gym_2_gemelos',
       user_id: userId,
@@ -1397,11 +1477,27 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '4 series de 15 reps. Pausa abajo en máximo estiramiento y arriba en contracción.',
       targetCount: 4,
       currentCount: 0,
-      duration: 1.5,
+      duration: 1,
       restDuration: 60,
       cycle_id: 'cycle_week',
       status: 'pending',
       order: 5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+        {
+      id: 'task_gym_rest_2_6',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_inf_a',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire antes del cardio.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 5.5,
       version: 1,
       created_at: EPOCH,
       updated_at: EPOCH
@@ -1437,7 +1533,7 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '4 series. Con mancuernas o barra a unos 30º de inclinación.',
       targetCount: 4,
       currentCount: 0,
-      duration: 1,
+      duration: 2,
       restDuration: 120,
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -1766,11 +1862,27 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '4 series pesadas en Jaca. Foco en empujar con fuerza desde los talones y controlar la bajada. Descanso amplio.',
       targetCount: 4,
       currentCount: 0,
-      duration: 1.5,
+      duration: 2,
       restDuration: 180, // 3 min descanso
       cycle_id: 'cycle_week',
       status: 'pending',
       order: 0,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+        {
+      id: 'task_gym_rest_4_1',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_inf_b',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire y pasar a la siguiente máquina.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 0.5,
       version: 1,
       created_at: EPOCH,
       updated_at: EPOCH
@@ -1794,6 +1906,22 @@ export function createDefaultGymRoutine(userId: string = '') {
       created_at: EPOCH,
       updated_at: EPOCH
     },
+        {
+      id: 'task_gym_rest_4_2',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_inf_b',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire y pasar a glúteos.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 1.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
     {
       id: 'task_gym_4_maquina_gluteos',
       user_id: userId,
@@ -1809,6 +1937,22 @@ export function createDefaultGymRoutine(userId: string = '') {
       cycle_id: 'cycle_week',
       status: 'pending',
       order: 2,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+        {
+      id: 'task_gym_rest_4_3',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_inf_b',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire y pasar a extensiones.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 2.5,
       version: 1,
       created_at: EPOCH,
       updated_at: EPOCH
@@ -1832,6 +1976,22 @@ export function createDefaultGymRoutine(userId: string = '') {
       created_at: EPOCH,
       updated_at: EPOCH
     },
+        {
+      id: 'task_gym_rest_4_4',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_inf_b',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire y pasar a aducción.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 3.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
     {
       id: 'task_gym_4_maquina_aduccion',
       user_id: userId,
@@ -1851,6 +2011,22 @@ export function createDefaultGymRoutine(userId: string = '') {
       created_at: EPOCH,
       updated_at: EPOCH
     },
+        {
+      id: 'task_gym_rest_4_5',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_inf_b',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire y pasar a gemelos.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 4.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
     {
       id: 'task_gym_4_gemelos',
       user_id: userId,
@@ -1861,11 +2037,27 @@ export function createDefaultGymRoutine(userId: string = '') {
       description: '4 series de 15 reps con parada abajo.',
       targetCount: 4,
       currentCount: 0,
-      duration: 1.5,
+      duration: 1,
       restDuration: 60,
       cycle_id: 'cycle_week',
       status: 'pending',
       order: 5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+        {
+      id: 'task_gym_rest_4_6',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_inf_b',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire antes del cardio.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 5.5,
       version: 1,
       created_at: EPOCH,
       updated_at: EPOCH
@@ -1991,7 +2183,7 @@ export function createPplGymRoutine(userId: string = '') {
       description: '4 series pesadas en banco plano.',
       targetCount: 4,
       currentCount: 0,
-      duration: 1,
+      duration: 2,
       restDuration: 120,
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -2059,7 +2251,7 @@ export function createPplGymRoutine(userId: string = '') {
       description: '3 series con banco a 30º para pectoral superior.',
       targetCount: 3,
       currentCount: 0,
-      duration: 1,
+      duration: 2,
       restDuration: 120,
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -2148,7 +2340,7 @@ export function createPplGymRoutine(userId: string = '') {
       description: '4 series pesadas con recorrido completo.',
       targetCount: 4,
       currentCount: 0,
-      duration: 1,
+      duration: 2,
       restDuration: 120,
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -2339,7 +2531,7 @@ export function createPplGymRoutine(userId: string = '') {
       description: '4 series de 8-10 repeticiones.',
       targetCount: 4,
       currentCount: 0,
-      duration: 1,
+      duration: 2,
       restDuration: 120,
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -2512,7 +2704,7 @@ export function createFullBodyGymRoutine(userId: string = '') {
       description: '4 series pesadas en banco plano.',
       targetCount: 4,
       currentCount: 0,
-      duration: 1,
+      duration: 2,
       restDuration: 120,
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -2635,7 +2827,7 @@ export function createFullBodyGymRoutine(userId: string = '') {
       description: '4 series pesadas para cuadríceps y glúteos.',
       targetCount: 4,
       currentCount: 0,
-      duration: 1,
+      duration: 2,
       restDuration: 120,
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -2758,7 +2950,7 @@ export function createFullBodyGymRoutine(userId: string = '') {
       description: '4 series para pectoral superior.',
       targetCount: 4,
       currentCount: 0,
-      duration: 1,
+      duration: 2,
       restDuration: 120,
       cycle_id: 'cycle_week',
       status: 'pending',
@@ -2874,6 +3066,97 @@ export function createFullBodyGymRoutine(userId: string = '') {
   return { sections, tasks };
 }
 
+export const GYM_SPLITS_CONFIG: Record<GymRoutineSplit, {
+  id: GymRoutineSplit;
+  name: string;
+  shortName: string;
+  daysCount: number;
+  description: string;
+  badge: string;
+}> = {
+  torso_pierna_4d: {
+    id: 'torso_pierna_4d',
+    name: 'Torso / Pierna (4 días)',
+    shortName: 'Torso / Pierna · 4 días',
+    daysCount: 4,
+    description: '4 días semanales: Día 1 Superior A, Día 2 Inferior A, Día 3 Superior B, Día 4 Inferior B.',
+    badge: '4 días'
+  },
+  ppl_3d: {
+    id: 'ppl_3d',
+    name: 'Empuje / Tirón / Pierna - PPL (3 días)',
+    shortName: 'PPL · 3 días',
+    daysCount: 3,
+    description: '3 días semanales: Día 1 Empuje (pecho/hombro/tríceps), Día 2 Tirón (espalda/bíceps), Día 3 Pierna y glúteo.',
+    badge: '3 días'
+  },
+  fullbody_3d: {
+    id: 'fullbody_3d',
+    name: 'Cuerpo Completo / Full Body (3 días)',
+    shortName: 'Full Body · 3 días',
+    daysCount: 3,
+    description: '3 días semanales (Lunes, Miércoles, Viernes): estímulo global y equilibrado en cada sesión.',
+    badge: '3 días'
+  }
+};
+
+export function getSectionGymSplit(sectionOrName: ListSection | string): GymRoutineSplit | 'daily' | 'other' {
+  const name = typeof sectionOrName === 'string' ? sectionOrName : sectionOrName.name || '';
+  const id = typeof sectionOrName === 'string' ? '' : sectionOrName.id || '';
+  const norm = name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+  if (id === 'sec_gym_diaria' || norm.includes('diaria') || norm.includes('core') || (norm.includes('estiramiento') && !norm.includes('dia'))) {
+    return 'daily';
+  }
+  if (id.includes('ppl') || norm.includes('empuje') || norm.includes('tiron') || norm.includes('push') || norm.includes('pull')) {
+    return 'ppl_3d';
+  }
+  if (id.includes('fb') || norm.includes('full body') || norm.includes('cuerpo completo')) {
+    return 'fullbody_3d';
+  }
+  if (id.includes('sup') || id.includes('inf') || norm.includes('superior') || norm.includes('inferior') || norm.includes('torso')) {
+    return 'torso_pierna_4d';
+  }
+  return 'other';
+}
+
+export function isSectionInGymSplit(section: ListSection, split: GymRoutineSplit): boolean {
+  const secSplit = getSectionGymSplit(section);
+  return secSplit === 'daily' || secSplit === split;
+}
+
+export function ensureAllGymRoutinesExist(listId: string, userId: string = '') {
+  const state = useAppStore.getState();
+  const list = state.lists.find(l => l.id === listId);
+  if (!list) return;
+
+  const routines = [
+    createDefaultGymRoutine(userId),
+    createPplGymRoutine(userId),
+    createFullBodyGymRoutine(userId)
+  ];
+
+  const currentSections = state.listSections.filter(s => s.listId === listId);
+  const currentSectionIds = new Set(currentSections.map(s => s.id));
+  const currentTasks = Object.values(state.tasks).filter(t => !t.deleted_at && (t.categoryId === listId || (t as any).category_id === listId));
+  const currentTaskIds = new Set(currentTasks.map(t => t.id));
+
+  for (const r of routines) {
+    for (const sec of r.sections) {
+      if (!currentSectionIds.has(sec.id)) {
+        state.addListSection({ ...sec, listId });
+        currentSectionIds.add(sec.id);
+      }
+    }
+    for (const task of r.tasks) {
+      if (!currentTaskIds.has(task.id)) {
+        state.addTask({ ...task, categoryId: listId });
+        currentTaskIds.add(task.id);
+      }
+    }
+  }
+}
+
 export function switchGymRoutineSplit(
   listId: string,
   split: GymRoutineSplit,
@@ -2893,38 +3176,22 @@ export function switchGymRoutineSplit(
   }
 
   const currentSections = state.listSections.filter(s => s.listId === listId);
+  const currentSectionIds = new Set(currentSections.map(s => s.id));
   const currentTasks = Object.values(state.tasks).filter(t => !t.deleted_at && (t.categoryId === listId || (t as any).category_id === listId));
+  const currentTaskIds = new Set(currentTasks.map(t => t.id));
 
-  const dailySecIds = new Set(currentSections.filter(s => /diaria|core/i.test(s.name)).map(s => s.id));
-
-  // Eliminar secciones no diarias antiguas y sus tareas
-  for (const s of currentSections) {
-    if (!dailySecIds.has(s.id)) {
-      state.deleteListSection(s.id);
-    }
-  }
-
-  for (const t of currentTasks) {
-    if (t.sectionId && !dailySecIds.has(t.sectionId)) {
-      state.deleteTask(t.id);
-    }
-  }
-
-  // Añadir nuevas secciones
+  // Añadir secciones del split si no existen aún (conservando sin borrar las de las otras rutinas)
   for (const sec of newRoutine.sections) {
-    if (/diaria|core/i.test(sec.name) && dailySecIds.size > 0) {
-      continue;
+    if (!currentSectionIds.has(sec.id)) {
+      state.addListSection({ ...sec, listId });
     }
-    state.addListSection({ ...sec, listId });
   }
 
-  // Añadir nuevas tareas
-  const hasDailyTasks = currentTasks.some(t => t.sectionId && dailySecIds.has(t.sectionId));
+  // Añadir tareas del split si no existen aún (conservando sin borrar las de las otras rutinas)
   for (const t of newRoutine.tasks) {
-    if (/diaria|core/i.test(t.sectionId || '') && hasDailyTasks) {
-      continue;
+    if (!currentTaskIds.has(t.id)) {
+      state.addTask({ ...t, categoryId: listId });
     }
-    state.addTask({ ...t, categoryId: listId });
   }
 
   // Actualizar metadatos de lista

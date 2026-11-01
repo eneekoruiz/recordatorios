@@ -5,6 +5,7 @@ import type { TaskItem, CustomCycle, CustomList, ListSection } from '../models/T
 import { TaskRepository } from '../repositories/TaskRepository';
 import { isCompletedInCurrentPeriod, isSkippedInCurrentPeriod, isTaskActuallyCompletedInCurrentPeriod, findPeriodIndexInHistory, matchesPeriod, wouldCreateDependencyCycle, getStartOfWeek, getStartOfNextWeek } from '../services/TaskService';
 import { getEffectiveCycleId, getPureCyclicPeriodicity } from '../utils/sectionRoutine';
+import { isGymTask } from '../utils/specialLists';
 import { validateJsonImport } from '../utils/importValidation';
 import { isPersistedRecordSafe } from '../utils/persistedStateValidation';
 import { isValidWeekday, readStoredWeeklyDay, writeStoredWeeklyDay } from '../utils/routineDay';
@@ -1681,6 +1682,7 @@ export const useAppStore = create<AppState>()(
           .filter((t: any) => !t.deleted_at && (includeCompleted || !isTaskCompleted(t) || temporarilyShowIds.includes(t.id)))
           .filter((t: any) => {
             if (t.categoryId === 'primeros_pasos') return false;
+            if (isGymTask(t, get().lists)) return false;
             const effCycle = getEffectiveCycleId(t, get().listSections, get().lists);
             if (!effCycle) return false;
             return validCycles.includes(effCycle as string);
@@ -1981,10 +1983,21 @@ export const useAppStore = create<AppState>()(
           // Des-anidar (anular sangrado): mantener la posición visual justo después de su tarea padre
           const oldParentId = task.parentId;
           const oldParent = oldParentId ? state.tasks[oldParentId] : undefined;
+          const targetCatId = oldParent ? (oldParent.categoryId || (oldParent as any).category_id) : (task.categoryId || (task as any).category_id);
+          const targetSecId = oldParent ? oldParent.sectionId : task.sectionId;
+
+          // Hermanos directos bajo oldParentId
+          const siblings = oldParentId
+            ? Object.values(state.tasks)
+                .filter(t => !t.deleted_at && t.parentId === oldParentId)
+                .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+            : [];
+          const myIdx = siblings.findIndex(t => t.id === taskId);
+          const trailingSiblings = myIdx !== -1 ? siblings.slice(myIdx + 1) : [];
 
           // Scope de tareas al mismo nivel (raíz en la misma lista y sección)
           const siblingRoots = Object.values(state.tasks)
-            .filter(t => !t.deleted_at && !t.parentId && t.id !== taskId && t.categoryId === task.categoryId && (t.sectionId || undefined) === (task.sectionId || undefined))
+            .filter(t => !t.deleted_at && !t.parentId && t.id !== taskId && (t.categoryId === targetCatId || (t as any).category_id === targetCatId) && (t.sectionId || undefined) === (targetSecId || undefined))
             .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
           let insertIdx = siblingRoots.length;
@@ -1996,13 +2009,28 @@ export const useAppStore = create<AppState>()(
           }
 
           const reordered = [...siblingRoots];
-          reordered.splice(insertIdx, 0, { ...task, parentId: undefined });
+          reordered.splice(insertIdx, 0, { ...task, parentId: undefined, categoryId: targetCatId, sectionId: targetSecId });
           reordered.forEach((t, idx) => {
             const original = state.tasks[t.id];
             if (original) {
               updatedTasks[t.id] = TaskRepository.update(original, {
                 parentId: undefined,
+                categoryId: targetCatId,
+                sectionId: targetSecId,
                 order: idx
+              });
+            }
+          });
+
+          // Los hijos que estaban debajo de esta tarea pasan a ser hijos suyos
+          trailingSiblings.forEach((child, cIdx) => {
+            const originalChild = state.tasks[child.id];
+            if (originalChild) {
+              updatedTasks[child.id] = TaskRepository.update(originalChild, {
+                parentId: taskId,
+                categoryId: targetCatId,
+                sectionId: targetSecId,
+                order: cIdx
               });
             }
           });

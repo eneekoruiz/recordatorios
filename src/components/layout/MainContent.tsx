@@ -19,7 +19,7 @@ import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
 import { extractPeopleFromText, calculateExpirationStatus, calculateSubscriptionCosts, findFlashbackMemories, isCompletedInCurrentPeriod, isTaskActuallyCompletedInCurrentPeriod, getRoutineSessionDates, matchesPeriod } from '../../services/TaskService';
 import { AIService } from '../../services/AIService';
-import { isCaducidadesList, isQueHeHechoList, isGoalsList, ensureCaducidadesSections, isLimpiezaList, isRoutineList, isShoppingList, isLifeLibraryList, getRoomForCleaningTask, getListType, doesListSupportSequenceMode } from '../../utils/specialLists';
+import { isCaducidadesList, isQueHeHechoList, isGoalsList, ensureCaducidadesSections, isLimpiezaList, isRoutineList, isShoppingList, isLifeLibraryList, getRoomForCleaningTask, getListType, doesListSupportSequenceMode, isGymTask } from '../../utils/specialLists';
 import { isVitalHabitsList } from '../../utils/vitalHabits';
 import { 
   getSectionPeriodicity, 
@@ -38,8 +38,10 @@ import { splitWholeHouseTasks, WHOLE_HOUSE_START, WHOLE_HOUSE_END } from '../../
 import { getActiveGymDaySectionId } from '../../utils/gymAdaptiveDay';
 import { MainEmptyState } from './main/MainEmptyState';
 import { GymRoutineModal } from '../gym/GymRoutineModal';
+import { GymActiveRoutineHeader } from '../gym/GymActiveRoutineHeader';
+import { GymOtherRoutinesSection } from '../gym/GymOtherRoutinesSection';
 import { QuickWeightPromptModal } from '../tasks/QuickWeightPromptModal';
-import { shouldPromptWeight } from '../../utils/gymExercises';
+import { shouldPromptWeight, getSectionGymSplit, isSectionInGymSplit, switchGymRoutineSplit, type GymRoutineSplit } from '../../utils/gymExercises';
 import { MainGlassHeader } from './main/MainGlassHeader';
 import { MainSectionHeader } from './main/MainSectionHeader';
 import { DeletedTaskToast } from './main/DeletedTaskToast';
@@ -79,6 +81,8 @@ interface MainContentProps {
 
 type VirtualItemType = 
   | { type: 'page-header', isFirstInSection?: boolean, isLastInSection?: boolean, depth?: number }
+  | { type: 'gym-active-header', currentSplit: GymRoutineSplit, activeGymSectionId: string | null, isFirstInSection?: boolean, isLastInSection?: boolean, depth?: number }
+  | { type: 'gym-other-routines', isFirstInSection?: boolean, isLastInSection?: boolean, depth?: number }
   | {
       type: 'header',
       title: string,
@@ -998,7 +1002,7 @@ const CORE_CYCLES = [
     [currentList, listSections, allTasksArray, periodReferenceDate]
   );
 
-  const { flattenedData: rawFlattenedData, renderedSectionTasks } = useMemo(() => {
+  const { flattenedData: rawFlattenedData, renderedSectionTasks } = useMemo<{ flattenedData: VirtualItemType[]; renderedSectionTasks: Record<string, TaskItem[]>; }>(() => {
     const flat: VirtualItemType[] = [{ type: 'page-header' }];
     // Tareas que pinta cada cabecera agrupada (habitaciones de Limpieza…), para su precio y su menú.
     const sectionTasksByKey: Record<string, TaskItem[]> = {};
@@ -1329,19 +1333,66 @@ const CORE_CYCLES = [
               return;
             }
 
+            const hasTasksRecursively = (sId: string): boolean => {
+              if (tasksInScope.some(t => t.sectionId === sId)) return true;
+              return sectionsForList.filter(s => s.parentId === sId).some(child => hasTasksRecursively(child.id));
+            };
+
             // 1. Uncategorized tasks in scope
             const uncategorized = deduplicateTaskList(tasksInScope.filter(t => !t.sectionId || !sectionsForList.some(s => s.id === t.sectionId)));
             if (uncategorized.length > 0) {
-              const inUncat = new Set(uncategorized.map(t => t.id));
-              const roots = uncategorized.filter(t => !t.parentId || !inUncat.has(t.parentId));
-              const processNode = (task: TaskItem, depthLevel: number) => {
-                flat.push({ type: 'task', task, depth: depthLevel });
-                if (!isCatCollapsed(`task_${task.id}`)) {
-                  const children = uncategorized.filter(t => t.parentId === task.id);
-                  children.forEach(c => processNode(c, depthLevel + 1));
-                }
-              };
-              roots.forEach(r => processNode(r, baseDepth));
+              if (currentCycle && cycleViewLayout === 'sections' && sectionsForList.some(s => hasTasksRecursively(s.id))) {
+                const uncatByCycle = new Map<string, TaskItem[]>();
+                uncategorized.forEach(t => {
+                  const eff = getEffectiveCycleId(t, listSections, lists) || t.cycle_id || currentCycle.id;
+                  if (!uncatByCycle.has(eff)) uncatByCycle.set(eff, []);
+                  uncatByCycle.get(eff)!.push(t);
+                });
+
+                uncatByCycle.forEach((cycleTasks, cId) => {
+                  const cycleObj = cycles.find(c => c.id === cId) || (cId === currentCycle.id ? currentCycle : null);
+                  const cycleName = cycleObj?.name || (cId === 'cycle_day' ? 'Diarias' : cId === 'cycle_week' ? 'Semanales' : cId === 'cycle_month' ? 'Mensuales' : cId === 'cycle_year' ? 'Anuales' : 'Otras');
+                  const cycleColor = (cycleObj && 'color' in cycleObj && cycleObj.color) ? cycleObj.color : (getReservedFrequencyColor(cId) || parentColor);
+                  const secKey = `sec_uncat_${listId}_${cId}`;
+                  sectionTasksByKey[secKey] = cycleTasks;
+
+                  flat.push({
+                    type: 'header',
+                    title: formatSectionTitle(cycleName),
+                    category: secKey,
+                    color: cycleColor,
+                    depth: baseDepth,
+                    periodicity: cId.replace('cycle_', '') as PeriodicityType,
+                    sectionTaskIds: cycleTasks.filter(t => !isTaskCompleted(t)).map(t => t.id),
+                    pendingCount: countPending(cycleTasks),
+                    totalCount: cycleTasks.length
+                  });
+
+                  if (!isCatCollapsed(secKey)) {
+                    const inGroup = new Set(cycleTasks.map(t => t.id));
+                    const roots = cycleTasks.filter(t => !t.parentId || !inGroup.has(t.parentId));
+                    const processNode = (task: TaskItem, depthLevel: number) => {
+                      flat.push({ type: 'task', task, depth: depthLevel });
+                      if (!isCatCollapsed(`task_${task.id}`)) {
+                        const children = cycleTasks.filter(t => t.parentId === task.id);
+                        children.forEach(c => processNode(c, depthLevel + 1));
+                      }
+                    };
+                    roots.forEach(r => processNode(r, baseDepth));
+                  }
+                });
+              } else {
+                const inUncat = new Set(uncategorized.map(t => t.id));
+                const roots = uncategorized.filter(t => !t.parentId || !inUncat.has(t.parentId));
+                const processNode = (task: TaskItem, depthLevel: number) => {
+                  flat.push({ type: 'task', task, depth: depthLevel });
+                  if (!isCatCollapsed(`task_${task.id}`)) {
+                    const children = uncategorized.filter(t => t.parentId === task.id);
+                    children.forEach(c => processNode(c, depthLevel + 1));
+                  }
+                };
+                roots.forEach(r => processNode(r, baseDepth));
+              }
             }
 
             // 2. Sections in scope
@@ -1569,16 +1620,27 @@ const CORE_CYCLES = [
         }
 
         // 2. Sections Hierarchy & Dynamic Cycle Sections
-        const sectionsForList = (listSections || [])
-          .filter(s => s.listId === currentList?.id && !s.deleted_at)
-          .sort((a, b) => {
-            const isYearA = /^\d{4}$/.test((a.name || '').trim());
-            const isYearB = /^\d{4}$/.test((b.name || '').trim());
-            if (isYearA && isYearB) {
-              return Number(b.name.trim()) - Number(a.name.trim());
-            }
-            return (a.order ?? 0) - (b.order ?? 0);
-          });
+        const isGym = Boolean(
+          currentList?.id === 'gym-routine' ||
+          currentList?.id === 'gimnasio' ||
+          currentList?.name?.toLowerCase().includes('gimnasio') ||
+          currentList?.name?.toLowerCase().includes('gym')
+        );
+        const currentSplit = ((currentList?.activeRoutineSplit as GymRoutineSplit) || 'torso_pierna_4d');
+        let hasPushedGymActiveHeader = false;
+
+        const allListSections = (listSections || []).filter(s => s.listId === currentList?.id && !s.deleted_at);
+        const sectionsForList = (isGym
+          ? allListSections.filter(s => isSectionInGymSplit(s, currentSplit))
+          : allListSections
+        ).sort((a, b) => {
+          const isYearA = /^\d{4}$/.test((a.name || '').trim());
+          const isYearB = /^\d{4}$/.test((b.name || '').trim());
+          if (isYearA && isYearB) {
+            return Number(b.name.trim()) - Number(a.name.trim());
+          }
+          return (a.order ?? 0) - (b.order ?? 0);
+        });
 
         const allCycles = useAppStore.getState().cycles || [];
 
@@ -1709,6 +1771,16 @@ const CORE_CYCLES = [
           // Los días que no tocan hoy empiezan plegados (se abren a mano si se quiere mirar).
           const trainingDayStatus = depth === 0 ? trainingPlan?.status[sec.id] : undefined;
           const otherTrainingDay = Boolean(trainingDayStatus && trainingDayStatus !== 'today' && trainingDayStatus !== 'done_today' && collapsed[categoryKey] === undefined);
+
+          if (isGym && trainingDayStatus && !hasPushedGymActiveHeader) {
+            flat.push({
+              type: 'gym-active-header',
+              currentSplit,
+              activeGymSectionId
+            });
+            hasPushedGymActiveHeader = true;
+          }
+
           flat.push({
             type: 'header',
             title: formatSectionTitle(sec.name),
@@ -1791,7 +1863,116 @@ const CORE_CYCLES = [
 
           const allListTasks = Object.values(groupedTasks).flat();
 
-          FREQ_ORDER.forEach(({ periodicity, label, cycleId }) => {
+          if (cycleViewLayout === 'mixed') {
+            // ── VISTA POR ESTANCIAS (LISTA CONTINUA DE ARRIBA A ABAJO) ────────────
+            // Se combinan diarias, semanales y mensuales en el orden de trabajo por habitaciones
+            const defaultRooms = [
+              { key: 'cocina', name: 'Cocina', order: 0 },
+              { key: 'bano', name: 'Baño', order: 1 },
+              { key: 'habitacion', name: 'Habitación', order: 2 },
+              { key: 'pasillo', name: 'Pasillo / Entrada', order: 3 },
+              { key: 'balcon', name: 'Balcón', order: 4 },
+              { key: 'general', name: 'General', order: 5 },
+            ];
+
+            const buildUnifiedRooms = (source: TaskItem[]) => {
+              const roomBuckets = new Map<string, { key: string; name: string; order: number; tasks: TaskItem[] }>();
+              defaultRooms.forEach(dr => roomBuckets.set(dr.key, { ...dr, tasks: [] }));
+              source.forEach(t => {
+                if (t.deleted_at) return;
+                const tSecId = t.sectionId;
+                let roomKey: string | null = null;
+                if (tSecId) {
+                  const tSec = sectionsForList.find(s => s.id === tSecId);
+                  if (tSec && !getPureCyclicPeriodicity(tSec.name)) {
+                    roomKey = canonicalRoomInfo(tSec.name).key;
+                  }
+                }
+                if (!roomKey) {
+                  roomKey = canonicalRoomInfo(getRoomForCleaningTask(t.title)).key;
+                }
+                if (!roomBuckets.has(roomKey)) {
+                  roomBuckets.set(roomKey, { ...canonicalRoomInfo(roomKey), tasks: [] });
+                }
+                roomBuckets.get(roomKey)!.tasks.push(t);
+              });
+
+              if (sortBy === 'routine') {
+                const general = roomBuckets.get('general');
+                if (general && general.tasks.length > 0) {
+                  const { start, end } = splitWholeHouseTasks(deduplicateTaskList(general.tasks));
+                  roomBuckets.delete('general');
+                  roomBuckets.set(WHOLE_HOUSE_START.key, { ...WHOLE_HOUSE_START, order: -1, tasks: start });
+                  roomBuckets.set(WHOLE_HOUSE_END.key, { ...WHOLE_HOUSE_END, order: 99, tasks: end });
+                }
+              }
+
+              return Array.from(roomBuckets.values())
+                .filter(rb => rb.tasks.length > 0)
+                .sort((a, b) => a.order - b.order)
+                .map(rb => ({ ...rb, tasks: sortTasksByUserPreference(deduplicateTaskList(rb.tasks), sortBy) }));
+            };
+
+            const filteredAllTasks = filterTasks(allListTasks, periodReferenceDate, false);
+            const sortedUnifiedRooms = buildUnifiedRooms(filteredAllTasks);
+
+            sortedUnifiedRooms.forEach(room => {
+              const roomCatKey = `limpieza_estancia_${room.key}`;
+              const roomTasks = room.tasks;
+              sectionTasksByKey[roomCatKey] = roomTasks;
+              const pendingIds = roomTasks.filter(t => !isCompletedInCurrentPeriod(t, cycles, listSections, lists, periodReferenceDate)).map(t => t.id);
+
+              flat.push({
+                type: 'header',
+                title: formatSectionTitle(room.name),
+                titleIcon: getRoomIcon(room.key),
+                category: roomCatKey,
+                color,
+                depth: 0,
+                sectionTaskIds: pendingIds,
+                pendingCount: pendingIds.length,
+                totalCount: roomTasks.length,
+              });
+
+              if (!isCatCollapsed(roomCatKey)) {
+                if (roomTasks.length === 0) {
+                  flat.push({ type: 'empty-section', title: 'Sin tareas', category: roomCatKey, color, depth: 0 });
+                } else {
+                  roomTasks.forEach(task => {
+                    flat.push({
+                      type: 'task',
+                      task,
+                      depth: task.parentId ? 1 : 0,
+                      referenceDate: periodReferenceDate,
+                      contextPeriodicity: undefined
+                    });
+                  });
+                }
+              }
+            });
+
+            const noFreqTasks = deduplicateTaskList(allListTasks.filter(t => !t.deleted_at && !getTaskPeriodicity(t, listSections, lists) && !sortedUnifiedRooms.some(r => r.tasks.some(rt => rt.id === t.id))));
+            if (noFreqTasks.length > 0) {
+              const otherKey = 'limpieza_freq_none';
+              sectionTasksByKey[otherKey] = noFreqTasks;
+              flat.push({
+                type: 'header',
+                title: 'Otras',
+                category: otherKey,
+                color,
+                depth: 0,
+                sectionTaskIds: noFreqTasks.filter(t => !isTaskCompleted(t)).map(t => t.id),
+                pendingCount: countPending(noFreqTasks),
+                totalCount: noFreqTasks.length
+              });
+              if (!isCatCollapsed(otherKey)) {
+                noFreqTasks.forEach(task => {
+                  flat.push({ type: 'task', task, depth: task.parentId ? 1 : 0 });
+                });
+              }
+            }
+          } else {
+            FREQ_ORDER.forEach(({ periodicity, label, cycleId }) => {
             // Tareas que pertenecen a esta frecuencia (por cycle_id o por sectionId cuya sección tiene esta periodicidad)
             const freqTasks = deduplicateTaskList(
               allListTasks.filter(t => {
@@ -2011,6 +2192,7 @@ const CORE_CYCLES = [
                 .forEach(r => processNode(r, 0));
             }
           }
+        }
         } else {
           // Procesar primero secciones prioritarias fijas que deben estar arriba del todo (ej. Hábitos vitales)
           const prioritySections = sectionsForList
@@ -2245,20 +2427,33 @@ const CORE_CYCLES = [
               processSection(s.id, 0);
             }
           });
+
+          if (isGym) {
+            if (!hasPushedGymActiveHeader) {
+              flat.push({
+                type: 'gym-active-header',
+                currentSplit,
+                activeGymSectionId
+              });
+              hasPushedGymActiveHeader = true;
+            }
+            flat.push({ type: 'gym-other-routines' });
+          }
         }
       }
     }
 
     // Identify first and last tasks in sections for Apple-style rounding
     for (let i = 0; i < flat.length; i++) {
-      if (flat[i].type === 'task') {
-        flat[i].isFirstInSection = (i === 0 || flat[i - 1].type !== 'task');
-        flat[i].isLastInSection = (i === flat.length - 1 || flat[i + 1].type !== 'task');
+      const item = flat[i];
+      if (item && item.type === 'task') {
+        item.isFirstInSection = (i === 0 || flat[i - 1]?.type !== 'task');
+        item.isLastInSection = (i === flat.length - 1 || flat[i + 1]?.type !== 'task');
       }
     }
 
     return { flattenedData: flat, renderedSectionTasks: sectionTasksByKey };
-  }, [groupedTasks, currentView, currentCycle, cycleViewMode, collapsed, isListView, lists, listSections, cycles, currentList, listSectionFilter, sortBy, defaultSortForList, isCatCollapsed, isolatedSectionKey, sectionRoutineModes, cycleRoutineCounts, periodReferenceDate, resolvedShowCompleted, cycleViewLayout, recentlyCompletedIds, viewRoutineSessionDates, trainingPlan, resolvedShowRest]);
+  }, [groupedTasks, currentView, currentCycle, cycleViewMode, collapsed, isListView, lists, listSections, cycles, currentList, listSectionFilter, sortBy, defaultSortForList, isCatCollapsed, isolatedSectionKey, sectionRoutineModes, cycleRoutineCounts, periodReferenceDate, resolvedShowCompleted, cycleViewLayout, recentlyCompletedIds, viewRoutineSessionDates, trainingPlan, resolvedShowRest, activeGymSectionId]);
 
   // Tareas visibles en pantalla respetando el orden visual exacto de renderizado
   // En las vistas inteligentes (Con marca, Todos…) una sección sin tareas no aporta nada: ni su cabecera ni su
@@ -2266,13 +2461,13 @@ const CORE_CYCLES = [
   const flattenedData = useMemo(() => {
     if (!isSmartView) return rawFlattenedData;
     const drop = new Set<number>();
-    rawFlattenedData.forEach((item, index) => {
+    rawFlattenedData.forEach((item: VirtualItemType, index: number) => {
       if (item.type !== 'empty-section') return;
       drop.add(index);
       const previous = rawFlattenedData[index - 1];
       if (previous?.type === 'header' && previous.category === item.category) drop.add(index - 1);
     });
-    return drop.size ? rawFlattenedData.filter((_, index) => !drop.has(index)) : rawFlattenedData;
+    return drop.size ? rawFlattenedData.filter((_: VirtualItemType, index: number) => !drop.has(index)) : rawFlattenedData;
   }, [rawFlattenedData, isSmartView]);
 
   const visibleTasks = useMemo(() => {
@@ -2316,12 +2511,14 @@ const CORE_CYCLES = [
 
   // Duración estimada agregada de todas las tareas de la vista
   const viewTasksDuration = useMemo(() => {
-    return calculateTasksDuration(viewTasks, listSections, lists, cycles, periodReferenceDate, viewRoutineSessionDates);
-  }, [viewTasks, listSections, lists, cycles, periodReferenceDate, viewRoutineSessionDates]);
+    const tasksToCalculate = currentCycle ? viewTasks.filter(t => !isGymTask(t, lists)) : viewTasks;
+    return calculateTasksDuration(tasksToCalculate, listSections, lists, cycles, periodReferenceDate, viewRoutineSessionDates);
+  }, [viewTasks, currentCycle, listSections, lists, cycles, periodReferenceDate, viewRoutineSessionDates]);
 
   const viewCompletedTasksDuration = useMemo(() => {
-    return calculateCompletedTasksDuration(viewTasks, listSections, lists, cycles, periodReferenceDate, viewRoutineSessionDates);
-  }, [viewTasks, listSections, lists, cycles, periodReferenceDate, viewRoutineSessionDates]);
+    const tasksToCalculate = currentCycle ? viewTasks.filter(t => !isGymTask(t, lists)) : viewTasks;
+    return calculateCompletedTasksDuration(tasksToCalculate, listSections, lists, cycles, periodReferenceDate, viewRoutineSessionDates);
+  }, [viewTasks, currentCycle, listSections, lists, cycles, periodReferenceDate, viewRoutineSessionDates]);
 
   const visibleIndexById = useMemo(() => new Map(visibleTasks.map((t, i) => [t.id, i])), [visibleTasks]);
 
@@ -2464,9 +2661,11 @@ const CORE_CYCLES = [
         else if (position === 'before' && targetTask.parentId && prevTask && (prevTask.id === targetTask.parentId || prevTask.parentId === targetTask.parentId)) {
           newParentId = targetTask.parentId;
         }
-        // Escenario 5: Soltado después de un padre cuya subtarea sigue a continuación
-        else if (position === 'after' && !targetTask.parentId && nextTask && nextTask.parentId === targetTask.id) {
-          newParentId = targetTask.id;
+        // Escenario 5: Soltado después de un padre: permanece como tarea raíz (para anidar se suelta en el centro 'inside')
+        else if (position === 'after' && !targetTask.parentId) {
+          newParentId = undefined;
+
+
         }
         // Escenario 6: Soltado como tarea raíz ordinaria
         else {
@@ -2601,10 +2800,14 @@ const CORE_CYCLES = [
 
 
   // Número del título: como en la barra lateral (lo hecho en su periodo no cuenta)
-  const titleCount = useMemo(() => new Set(viewTasks.filter(t =>
-    !isCompletedInCurrentPeriod(t, cycles, listSections, lists, periodReferenceDate, viewRoutineSessionDates)
-  ).map(t => t.id)).size, [viewTasks, cycles, listSections, lists, periodReferenceDate, viewRoutineSessionDates]);
-  const completedVisibleCount = useMemo(() => new Set(viewTasks.filter(t => isTaskActuallyCompletedInCurrentPeriod(t, cycles, listSections, lists, periodReferenceDate, viewRoutineSessionDates)).map(t => t.id)).size, [viewTasks, cycles, listSections, lists, periodReferenceDate, viewRoutineSessionDates]);
+  const titleCount = useMemo(() => new Set(viewTasks.filter(t => {
+    if (currentCycle && isGymTask(t, lists)) return false;
+    return !isCompletedInCurrentPeriod(t, cycles, listSections, lists, periodReferenceDate, viewRoutineSessionDates);
+  }).map(t => t.id)).size, [viewTasks, currentCycle, cycles, listSections, lists, periodReferenceDate, viewRoutineSessionDates]);
+  const completedVisibleCount = useMemo(() => new Set(viewTasks.filter(t => {
+    if (currentCycle && isGymTask(t, lists)) return false;
+    return isTaskActuallyCompletedInCurrentPeriod(t, cycles, listSections, lists, periodReferenceDate, viewRoutineSessionDates);
+  }).map(t => t.id)).size, [viewTasks, currentCycle, cycles, listSections, lists, periodReferenceDate, viewRoutineSessionDates]);
 
   const cycleBreakdown = useMemo(() => {
     if (!currentCycle || cycleViewMode !== 'full_routine') return undefined;
@@ -2613,6 +2816,7 @@ const CORE_CYCLES = [
     const groups = new Map<string, { cycleId: string; cycleName: string; color?: string; count: number; durationMinutes: number; daysValue: number }>();
 
     for (const t of pending) {
+      if (isGymTask(t, lists)) continue;
       const effId = getEffectiveCycleId(t, listSections, lists) || t.cycle_id || currentCycle.id;
       const cycleObj = cycles.find(c => c.id === effId);
       const cycleName = cycleObj?.name || (effId === 'cycle_day' ? 'Diarias' : effId === 'cycle_week' ? 'Semanales' : effId === 'cycle_month' ? 'Mensuales' : effId === 'cycle_year' ? 'Anuales' : 'Otras');
@@ -2676,7 +2880,7 @@ const CORE_CYCLES = [
       }
       segment = [];
     };
-    flattenedData.forEach((item, index) => {
+    flattenedData.forEach((item: VirtualItemType, index: number) => {
       if (item.type === 'header') flush();
       else if (item.type === 'task') segment.push({ index, depth: item.depth, kind: getTaskPeriodicity(item.task, listSections, lists) || 'none' });
     });
@@ -2715,6 +2919,18 @@ const CORE_CYCLES = [
         }
         groups.push({
           key: 'page-header-group',
+          depth: 0,
+          items: [{ item, index: i }],
+          subGroups: []
+        });
+      } else if (item.type === 'gym-active-header' || item.type === 'gym-other-routines') {
+        if (currentMasterGroup) {
+          groups.push(currentMasterGroup);
+          currentMasterGroup = null;
+          currentSubGroup = null;
+        }
+        groups.push({
+          key: `group-${item.type}-${i}`,
           depth: 0,
           items: [{ item, index: i }],
           subGroups: []
@@ -2946,8 +3162,8 @@ const CORE_CYCLES = [
     <main className="main-content" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden', overflowX: 'hidden', overscrollBehaviorX: 'none', position: 'relative' }}>
       {/* Sticky Glass Top Bar */}
       <MainGlassHeader
-        cycleViewLayout={currentCycle ? cycleViewLayout : undefined}
-        onToggleCycleViewLayout={currentCycle ? toggleCycleViewLayout : undefined}
+        cycleViewLayout={currentCycle || isLimpiezaList(currentList?.id, currentList) ? cycleViewLayout : undefined}
+        onToggleCycleViewLayout={currentCycle || isLimpiezaList(currentList?.id, currentList) ? toggleCycleViewLayout : undefined}
         isScrolled={isScrolled}
         scrollTop={scrollTop}
         isMobile={isMobile}
@@ -3018,7 +3234,7 @@ const CORE_CYCLES = [
 
       {/* Main Scrollable View */}
       {(() => {
-        const hasSections = flattenedData.some(item => item.type === 'header' || item.type === 'empty-section');
+        const hasSections = flattenedData.some((item: VirtualItemType) => item.type === 'header' || item.type === 'empty-section');
         const isActuallyEmpty = visibleTasks.length === 0 && smartTasks.length === 0 && !hasSections && !isCalendarView;
         return (
           <div 
@@ -3114,10 +3330,12 @@ const CORE_CYCLES = [
                           selectedPersonFilter={selectedPersonFilter}
                           setSelectedPersonFilter={setSelectedPersonFilter}
                           flashbackMemories={flashbackMemories}
-                          onEditTask={onEditTask}
+                          onEditTask={(taskId) => onEditTask?.(taskId)}
                           caducidadesStats={caducidadesStats}
                           cycleRoutineMode={currentCycle ? cycleViewMode : undefined}
                           onToggleCycleRoutineMode={currentCycle ? toggleCycleGeneralMode : undefined}
+                          cycleViewLayout={currentCycle || isLimpiezaList(currentList?.id, currentList) ? cycleViewLayout : undefined}
+                          onToggleCycleViewLayout={currentCycle || isLimpiezaList(currentList?.id, currentList) ? toggleCycleViewLayout : undefined}
                           onStartSequence={onStartSequence && canRunExecutionMode ? () => {
                             const pendingTasks = visibleTasks.filter(t => !isTaskCompleted(t));
                             if (pendingTasks.length > 0) {
@@ -3144,9 +3362,9 @@ const CORE_CYCLES = [
 
                     const showDivider = index > 0 && flattenedData[index - 1]?.type !== 'page-header';
                     const sectionTasks = (data.category ? renderedSectionTasks[data.category] : null) || groupedTasks[data.category] || [];
-                    const sectionTotal = sectionTasks.reduce((sum, t) => sum + (t.price && !isTaskCompleted(t) ? parseTaskPrice(t.price) * (t.quantity || 1) : 0), 0);
-                    const sectionCompletedTotal = sectionTasks.reduce((sum, t) => sum + (t.price && isTaskCompleted(t) ? parseTaskPrice(t.price) * (t.quantity || 1) : 0), 0);
-                    const sectionPendingTaskIds = data.sectionTaskIds || sectionTasks.filter(t => !isTaskCompleted(t)).map(t => t.id);
+                    const sectionTotal = sectionTasks.reduce((sum: number, t: TaskItem) => sum + (t.price && !isTaskCompleted(t) ? parseTaskPrice(t.price) * (t.quantity || 1) : 0), 0);
+                    const sectionCompletedTotal = sectionTasks.reduce((sum: number, t: TaskItem) => sum + (t.price && isTaskCompleted(t) ? parseTaskPrice(t.price) * (t.quantity || 1) : 0), 0);
+                    const sectionPendingTaskIds = data.sectionTaskIds || sectionTasks.filter((t: TaskItem) => !isTaskCompleted(t)).map((t: TaskItem) => t.id);
                     const tasksForSection = data.sectionTaskIds && data.sectionTaskIds.length > 0
                       ? data.sectionTaskIds.map((id: string) => tasks[id]).filter(Boolean)
                       : sectionTasks;
@@ -3296,6 +3514,35 @@ const CORE_CYCLES = [
                         </button>
                       </div>
                     );
+                  } else if (data.type === 'gym-active-header') {
+                    const daySections = (listSections || [])
+                      .filter(s => s.listId === currentList?.id && !s.deleted_at && isSectionInGymSplit(s, (data as any).currentSplit) && getSectionGymSplit(s) === (data as any).currentSplit)
+                      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+                    return (
+                      <div key={itemKey} data-index={index} style={{ ...itemStyle, padding: 0 }}>
+                        <GymActiveRoutineHeader
+                          currentSplit={(data as any).currentSplit}
+                          activeGymSectionId={(data as any).activeGymSectionId}
+                          daySections={daySections}
+                          onSelectDay={handleSetActiveGymDay}
+                          onOpenRoutineModal={() => setIsGymRoutineModalOpen(true)}
+                        />
+                      </div>
+                    );
+                  } else if (data.type === 'gym-other-routines') {
+                    return (
+                      <div key={itemKey} data-index={index} style={{ ...itemStyle, padding: 0 }}>
+                        <GymOtherRoutinesSection
+                          listId={currentList?.id || 'gimnasio'}
+                          currentSplit={((currentList?.activeRoutineSplit as GymRoutineSplit) || 'torso_pierna_4d')}
+                          onSwitchSplit={(newSplit) => {
+                            const state = useAppStore.getState();
+                            switchGymRoutineSplit(currentList?.id || 'gimnasio', newSplit, state.userId || '');
+                          }}
+                          onEditTask={(taskId) => onEditTask?.(taskId)}
+                        />
+                      </div>
+                    );
                   } else if (data.type === 'task') {
                     const previousTaskId = index > 0 && flattenedData[index - 1]?.type === 'task' 
                       ? (flattenedData[index - 1] as any).task.id 
@@ -3415,7 +3662,7 @@ const CORE_CYCLES = [
       {(() => {
         const sectionMenuTasks = (sectionMenu.category ? renderedSectionTasks[sectionMenu.category] : null)
           || (sectionMenu.category ? (groupedTasks[sectionMenu.category] || []) : []);
-        const pendingSectionTasks = sectionMenuTasks.filter(t => !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists, periodReferenceDate));
+        const pendingSectionTasks = sectionMenuTasks.filter((t: TaskItem) => !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists, periodReferenceDate));
         const allCompleted = sectionMenuTasks.length > 0 && pendingSectionTasks.length === 0;
         const curSection = sectionMenu.sectionId ? (listSections || []).find(s => s.id === sectionMenu.sectionId) : null;
         const siblings = curSection ? (listSections || [])
@@ -3442,7 +3689,7 @@ const CORE_CYCLES = [
               if (sectionMenu.sectionId) {
                 handleAddSection(sectionMenu.sectionId);
                 const category = sectionMenu.category;
-                const foldedByDefault = Boolean(category && flattenedData.some(item => item.type === 'header' && item.category === category && item.foldedByDefault));
+                const foldedByDefault = Boolean(category && flattenedData.some((item: VirtualItemType) => item.type === 'header' && item.category === category && item.foldedByDefault));
                 if (category && (foldedByDefault || isCatCollapsed(category))) {
                   toggleCategory(category, true);
                 }
@@ -3450,7 +3697,7 @@ const CORE_CYCLES = [
             } : undefined}
             onStartSequence={onStartSequence ? () => {
               if (sectionMenu.category) {
-                const pendingIds = pendingSectionTasks.map(t => t.id);
+                const pendingIds = pendingSectionTasks.map((t: TaskItem) => t.id);
                 if (pendingIds.length > 0) {
                   const rawTitle = (sectionMenu.sectionName || '').replace(/^[\p{Emoji}\s⏳]+/gu, '').trim() || sectionMenu.sectionName || 'Sección';
                   const cleanTitle = rawTitle.length > 0 
@@ -3489,12 +3736,12 @@ const CORE_CYCLES = [
             taskCount={sectionMenuTasks.length}
             allCompleted={allCompleted}
             onToggleAllCompleted={() => {
-              const taskIds = sectionMenuTasks.map(t => t.id);
+              const taskIds = sectionMenuTasks.map((t: TaskItem) => t.id);
               if (taskIds.length === 0) return;
               if (allCompleted) {
                 setSectionTasksCompleted(taskIds, false);
               } else {
-                setSectionTasksCompleted(pendingSectionTasks.map(t => t.id), true);
+                setSectionTasksCompleted(pendingSectionTasks.map((t: TaskItem) => t.id), true);
               }
             }}
             onDuplicateSection={sectionMenu.sectionId ? () => {
@@ -3521,7 +3768,7 @@ const CORE_CYCLES = [
               reorderTasks(sorted.map(t => t.id));
             }}
             onMoveAllTasks={(targetListId, targetSectionId) => {
-              const taskIds = sectionMenuTasks.map(t => t.id);
+              const taskIds = sectionMenuTasks.map((t: TaskItem) => t.id);
               if (taskIds.length === 0) return;
               moveSectionTasks(taskIds, targetListId, targetSectionId);
             }}

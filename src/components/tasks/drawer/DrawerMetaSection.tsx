@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings2, Timer, Trash2, Plus } from 'lucide-react';
+import { Settings2, Timer, Trash2, Plus, Clock } from 'lucide-react';
 import { SectionTrailing } from './SectionTrailing';
 import { CustomSelect } from '../../ui/CustomSelect';
 import type { TaskWeightLog } from '../../../models/Task';
@@ -22,6 +22,9 @@ interface DrawerMetaSectionProps {
   setRestDuration?: (seconds?: number) => void;
   weightLogs?: TaskWeightLog[];
   setWeightLogs?: (logs: TaskWeightLog[]) => void;
+  duration?: number | '';
+  setDuration?: (duration: number | '') => void;
+  isGymContext?: boolean;
 }
 
 export const DrawerMetaSection: React.FC<DrawerMetaSectionProps> = ({
@@ -40,7 +43,10 @@ export const DrawerMetaSection: React.FC<DrawerMetaSectionProps> = ({
   restDuration,
   setRestDuration,
   weightLogs,
-  setWeightLogs
+  setWeightLogs,
+  duration,
+  setDuration,
+  isGymContext
 }) => {
   const hasSeries = Boolean(targetCount && targetCount > 1);
   const [manualWeight, setManualWeight] = useState('');
@@ -182,6 +188,90 @@ export const DrawerMetaSection: React.FC<DrawerMetaSectionProps> = ({
                 />
               </div>
 
+              {/* Minutos de trabajo por serie */}
+              {(hasSeries || isGymContext) && setDuration && (
+                <div
+                  style={{
+                    background: 'var(--bg-surface, rgba(0,0,0,0.03))',
+                    borderRadius: 12,
+                    padding: '10px 12px',
+                    border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Clock size={14} color="var(--accent-primary, #0a84ff)" /> Minutos de trabajo por serie
+                      </span>
+                      <span style={{ fontSize: '0.73rem', color: 'var(--text-tertiary)', marginTop: 2, display: 'block' }}>
+                        Tiempo estimado de ejecución por cada serie
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <input
+                        type="number"
+                        min="0.5"
+                        max="10"
+                        step="0.5"
+                        value={typeof duration === 'number' && duration > 0 ? duration : (isGymContext ? 1 : '')}
+                        onChange={e => {
+                          const val = e.target.value ? parseFloat(e.target.value) : '';
+                          setDuration(val);
+                        }}
+                        style={{
+                          width: 55,
+                          textAlign: 'center',
+                          fontWeight: 700,
+                          fontSize: '0.85rem',
+                          background: 'var(--bg-elevated, #fff)',
+                          border: '1px solid var(--border-subtle)',
+                          borderRadius: 6,
+                          padding: '3px 4px',
+                          color: 'var(--text-primary)'
+                        }}
+                        aria-label="Minutos por serie de trabajo"
+                      />
+                      <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>min</span>
+                    </div>
+                  </div>
+
+                  {/* Chips rápidos de duración por serie */}
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {[
+                      { label: '1 min · Máquinas / Poleas', val: 1 },
+                      { label: '2 min · Peso libre', val: 2 },
+                      { label: '1.5 min', val: 1.5 },
+                      { label: '3 min', val: 3 }
+                    ].map(preset => {
+                      const currentVal = typeof duration === 'number' && duration > 0 ? duration : (isGymContext ? 1 : 0);
+                      const isSelected = currentVal === preset.val;
+                      return (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => setDuration(preset.val)}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: 8,
+                            fontSize: '0.76rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            background: isSelected ? 'var(--accent-primary, #0a84ff)' : 'transparent',
+                            color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                            border: isSelected ? 'none' : '1px solid var(--border-subtle)'
+                          }}
+                        >
+                          {preset.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Descanso entre series si tiene series configuradas */}
               {hasSeries && setRestDuration && (
                 <motion.div
@@ -239,6 +329,62 @@ export const DrawerMetaSection: React.FC<DrawerMetaSectionProps> = ({
                       );
                     })}
                   </div>
+
+                  {/* Desglose de duración total calculada (Trabajo + Descansos) */}
+                  {(() => {
+                    const count = targetCount || 1;
+                    const workMinsPerSet = typeof duration === 'number' && duration > 0 ? duration : (isGymContext ? 1 : 0);
+                    const restSecs = restDuration !== undefined && restDuration > 0 ? restDuration : 90;
+                    const totalWorkMins = count * workMinsPerSet;
+                    const restCount = Math.max(0, count - 1);
+                    const totalRestSecs = restCount * restSecs;
+                    const totalRestMins = totalRestSecs / 60;
+                    const totalActiveMins = totalWorkMins + totalRestMins;
+
+                    const formatSecToMinSec = (secs: number) => {
+                      const m = Math.floor(secs / 60);
+                      const s = secs % 60;
+                      if (m > 0 && s > 0) return `${m}m ${s}s`;
+                      if (m > 0) return `${m} min`;
+                      return `${s}s`;
+                    };
+
+                    return (
+                      <div
+                        style={{
+                          marginTop: 6,
+                          padding: '10px 12px',
+                          background: 'var(--accent-glow, rgba(0, 122, 255, 0.06))',
+                          borderRadius: 10,
+                          border: '1px solid rgba(10, 132, 255, 0.2)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 5
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem' }}>
+                          <span style={{ color: 'var(--text-secondary)' }}>⏱️ Trabajo ({count} series × {workMinsPerSet} min):</span>
+                          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{totalWorkMins} min</span>
+                        </div>
+                        {restCount > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>⏸️ Descanso ({restCount} pausas × {formatSecToMinSec(restSecs)}):</span>
+                            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{formatSecToMinSec(totalRestSecs)}</span>
+                          </div>
+                        )}
+                        <div style={{ height: 1, background: 'var(--border-subtle)', margin: '2px 0' }} />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.84rem' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--accent-primary, #0a84ff)' }}>📊 Duración total calculada:</span>
+                          <span style={{ fontWeight: 700, color: 'var(--accent-primary, #0a84ff)' }}>
+                            {formatSecToMinSec(Math.round(totalActiveMins * 60))}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '0.70rem', color: 'var(--text-tertiary)', marginTop: 2 }}>
+                          ✓ Los descansos se suman correctamente al tiempo total del entrenamiento.
+                        </span>
+                      </div>
+                    );
+                  })()}
 
                   {/* Historial de pesos / cargas registradas */}
                   {hasSeries && (

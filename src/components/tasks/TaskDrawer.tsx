@@ -1077,6 +1077,9 @@ export function TaskDrawer({ isOpen, onClose, defaultCategoryId, defaultSectionI
                 setRestDuration={setRestDuration}
                 weightLogs={task?.weightLogs}
                 setWeightLogs={task ? (logs) => updateTask(task.id, { weightLogs: logs }) : undefined}
+                duration={duration}
+                setDuration={setDuration}
+                isGymContext={category === 'gimnasio' || category === 'gym-routine' || (lists.find(l => l.id === category)?.name || '').toLowerCase().includes('gimnasio')}
               />
 
               {/* Card 5: Precio y costes (compras, checklists y caducidades; o si ya tiene precio) */}

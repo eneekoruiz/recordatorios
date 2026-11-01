@@ -3,6 +3,7 @@ import { isTaskCompleted } from '../store/useAppStore';
 import { isCompletedInCurrentPeriod, getRoutineSessionDates } from '../services/TaskService';
 import { getEffectiveCycleId } from './sectionRoutine';
 import { getReservedFrequencyColor } from '../constants/colors';
+import { isGymTask } from './specialLists';
 
 export interface FrequencyBreakdownItem {
   cycleId: string;
@@ -159,6 +160,7 @@ export function calculateCycleRoutineStatus({
   const statsMap = new Map<string, CycleStat>();
 
   for (const task of activeTasks) {
+    if (isGymTask(task, lists)) continue;
     const effCycleId =
       getEffectiveCycleId(task, listSections, lists) || task.cycle_id;
     if (!effCycleId) continue;

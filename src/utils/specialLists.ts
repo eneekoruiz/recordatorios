@@ -1,4 +1,4 @@
-import type { CustomList, ListSection, ListType } from '../models/Task';
+import type { CustomList, ListSection, ListType, TaskItem } from '../models/Task';
 import { isVitalHabitsList } from './vitalHabits';
 
 export type { ListType };
@@ -151,6 +151,33 @@ export function isQueHeHechoList(listIdOrView?: string | null, list?: CustomList
     }
   }
 
+  return false;
+}
+
+/**
+ * Determina si una lista o vista corresponde a la rutina de Gimnasio / Entrenamiento físico.
+ * Estas rutinas se gestionan por splits y días de entreno independientes, por lo que no deben acumularse
+ * en las rutinas de ciclos temporales generales (como Semanal o Mensual).
+ */
+export function isGymList(listIdOrView?: string | null, list?: CustomList | null): boolean {
+  if (!listIdOrView && !list) return false;
+  const cleanId = (listIdOrView || '').replace(/^list_/, '').toLowerCase();
+  if (['gimnasio', 'gym', 'gym-routine', 'entrenamiento'].includes(cleanId)) return true;
+  if (list) {
+    const cleanName = (list.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return cleanName.includes('gimnasio') || cleanName.includes('gym') || cleanName.includes('entrenamiento');
+  }
+  return false;
+}
+
+export function isGymTask(task: Partial<TaskItem>, lists?: CustomList[]): boolean {
+  if (!task) return false;
+  const catId = (task.categoryId || (task as any).category_id || '').toLowerCase();
+  if (isGymList(catId)) return true;
+  if (lists && lists.length > 0) {
+    const list = lists.find(l => l.id === task.categoryId || l.id === (task as any).category_id);
+    if (isGymList(null, list)) return true;
+  }
   return false;
 }
 

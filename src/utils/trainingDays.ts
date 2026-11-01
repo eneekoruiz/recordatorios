@@ -1,3 +1,5 @@
+import { isSectionInGymSplit, type GymRoutineSplit } from './gymExercises';
+import { useAppStore } from '../store/useAppStore';
 import type { ListSection, TaskItem } from '../models/Task';
 
 /**
@@ -39,13 +41,28 @@ export function getTrainingDayPlan(
   listSections: ListSection[],
   tasks: TaskItem[],
   now: number = Date.now(),
-  manualOverrideSectionId?: string
+  manualOverrideSectionId?: string,
+  activeSplit?: GymRoutineSplit | string
 ): TrainingDayPlan | null {
   if (!listId) return null;
   const roots = listSections
     .filter(s => s.listId === listId && !s.parentId && !s.deleted_at)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-  const days = roots.filter(s => isTrainingDayName(s.name));
+
+  let eligibleRoots = roots;
+  let splitToUse = activeSplit;
+  if (!splitToUse) {
+    try {
+      const list = useAppStore.getState()?.lists?.find(l => l.id === listId);
+      if (list?.activeRoutineSplit) splitToUse = list.activeRoutineSplit;
+      else if (listId === 'gimnasio' || listId === 'gym') splitToUse = 'torso_pierna_4d';
+    } catch {}
+  }
+  if (splitToUse) {
+    eligibleRoots = roots.filter(s => isSectionInGymSplit(s, splitToUse as any));
+  }
+
+  const days = eligibleRoots.filter(s => isTrainingDayName(s.name));
   if (days.length < 2) return null;
 
   const live = tasks.filter(t => t.categoryId === listId && !t.deleted_at);

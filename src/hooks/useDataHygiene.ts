@@ -12,7 +12,7 @@ import { ensureLimpiezaSections, getRoomForCleaningTask, isCaducidadesList, isQu
 import { semanticKey, normalizeTitle } from '../utils/taskDeduplication';
 import { runContentMigrations } from '../utils/contentMigrations';
 import type { TaskItem } from '../models/Task';
-import { createDefaultGymRoutine } from '../utils/gymExercises';
+import { createDefaultGymRoutine, ensureAllGymRoutinesExist } from '../utils/gymExercises';
 
 export function useDataHygiene(hasHydrated: boolean): boolean {
   const [isDone, setIsDone] = useState(false);
@@ -346,6 +346,9 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
           }
         }
 
+        // Asegurar que las rutinas completas (4 días, PPL 3 días, Full Body 3 días) y sus secciones existan
+        ensureAllGymRoutinesExist(gymList.id, state.userId || '');
+
         // Asegurar que los descansos intermedios (isRest) existan en las secciones de entrenamiento
         const { tasks: defaultGymTasks } = createDefaultGymRoutine(state.userId || '');
         const defaultRests = defaultGymTasks.filter(t => t.isRest);
@@ -476,7 +479,7 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
             title: 'Sentadilla Jaca',
             desc: '4 series pesadas en máquina Jaca / Hack. Coloca los pies en ancho medio y desciende controlado. Descanso amplio.',
             rest: 180,
-            duration: 1.5
+            duration: 2
           },
           'task_gym_2_peso_muerto_rumano': {
             title: 'Curl femoral en máquina',
@@ -500,7 +503,7 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
             title: 'Sentadilla Jaca',
             desc: '4 series pesadas en Jaca. Foco en empujar con fuerza desde los talones y controlar la bajada. Descanso amplio.',
             rest: 180,
-            duration: 1.5
+            duration: 2
           },
           'task_gym_4_sentadilla': {
             title: 'Curl femoral en máquina',
@@ -564,6 +567,15 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
             }
           }
         }
+
+        // Ajustar duraciones de ejercicios de gimnasio: 1 min (máquinas/aislamiento) o 2 min (peso libre/compuestos pesados)
+        const allGymTasks = Object.values(allTasks).filter(t => !t.deleted_at && (t.categoryId === gymList.id || (t as any).category_id === gymList.id));
+        allGymTasks.forEach(t => {
+          if (!t.isRest && typeof t.duration === 'number' && t.duration >= 3 && !/estiramiento|cardio|caminar|correr/i.test(t.title)) {
+            const isHeavyFreeWeight = /sentadilla|peso muerto|hip thrust|press.*banca|remo.*barra/i.test(t.title);
+            state.updateTask(t.id, { duration: isHeavyFreeWeight ? 2 : 1 });
+          }
+        });
 
         // Asegurar que Día 3 tiene Press horizontal, Tríceps y Bíceps
         const day3Tasks = Object.values(allTasks).filter(t => !t.deleted_at && t.sectionId === 'sec_gym_sup_b');

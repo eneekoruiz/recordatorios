@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { TaskItem, CustomCycle as Cycle, ListSection, CustomList as List } from '../models/Task';
 import { isTaskCompleted } from '../store/useAppStore';
 import { getEffectiveCycleId } from '../utils/sectionRoutine';
+import { isGymTask } from '../utils/specialLists';
 // This is a stub for the hook
 export function useTaskGrouping({
   currentView,
@@ -159,6 +160,7 @@ export function useTaskGrouping({
         }
 
         const matching = taskList.filter((t: any) => {
+          if (!currentList && isGymTask(t, lists)) return false;
           const eff = getEffectiveCycleId(t, listSections, lists);
           if (!eff || !allowedCyclesForSection.has(eff)) return false;
           if (currentCycle.id === 'cycle_day' && dailyTimeFilter !== 'all') {
@@ -199,6 +201,7 @@ export function useTaskGrouping({
       const filteredGrouped: Record<string, TaskItem[]> = {};
       Object.entries(rawGrouped).forEach(([key, taskList]) => {
         const matching = taskList.filter((t: any) => {
+          if (!currentList && isGymTask(t, lists)) return false;
           const taskSecId = t.sectionId || (t as any).section_id;
           const secObj = taskSecId ? currentSections.find((s: ListSection) => s.id === taskSecId) : null;
           const textToMatch = `${secObj?.name || ''} ${taskSecId || ''} ${t.cycle_id || ''}`.toLowerCase();

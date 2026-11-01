@@ -15,10 +15,11 @@ import {
   Plus,
   Sparkles,
   Layers,
+  House,
 } from 'lucide-react';
 import { DurationInfoCard } from '../../ui/DurationInfoCard';
 import { HapticService } from '../../../services/HapticService';
-import { isCaducidadesList, isQueHeHechoList, isShoppingList } from '../../../utils/specialLists';
+import { isCaducidadesList, isQueHeHechoList, isShoppingList, isLimpiezaList } from '../../../utils/specialLists';
 import { confirmDialog } from '../../ui/confirmDialog';
 import { useAppStore } from '../../../store/useAppStore';
 import { deleteCycleWithUndo } from '../../../utils/undoToast';
@@ -638,6 +639,36 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                 <X size={13} />
               </button>
             </span>
+          </div>
+        )}
+
+        {isLimpiezaList(currentView, currentList) && onToggleCycleViewLayout && (
+          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button
+              type="button"
+              data-testid="limpieza-layout-toggle-btn"
+              className={`routine-chip-btn layout-toggle-btn${cycleViewLayout === 'mixed' ? ' is-on' : ''}`}
+              aria-pressed={cycleViewLayout === 'mixed'}
+              style={{ ['--chip-color' as string]: viewColor }}
+              onClick={() => {
+                HapticService.selection();
+                onToggleCycleViewLayout(cycleViewLayout === 'sections' ? 'mixed' : 'sections');
+              }}
+            >
+              <span className={`routine-chip${cycleViewLayout === 'mixed' ? ' is-on' : ''}`}>
+                {cycleViewLayout === 'mixed' ? (
+                  <>
+                    <House size={12} strokeWidth={2.4} aria-hidden="true" />
+                    <span>Por estancias (continua)</span>
+                  </>
+                ) : (
+                  <>
+                    <Layers size={12} strokeWidth={2.4} aria-hidden="true" />
+                    <span>Por frecuencias</span>
+                  </>
+                )}
+              </span>
+            </button>
           </div>
         )}
 

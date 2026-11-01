@@ -173,11 +173,18 @@ export function TaskMetaBadges({
       durationInfo.sets > 1 &&
       (durationInfo.restMinutes || 0) > 0
     );
+    const formatRestMins = (mins: number) => {
+      const whole = Math.floor(mins);
+      const secs = Math.round((mins - whole) * 60);
+      if (whole > 0 && secs > 0) return `${whole}m ${secs}s`;
+      if (whole > 0) return `${whole}m`;
+      return `${secs}s`;
+    };
     const multiSetLabel = isMultiSetExercise
-      ? ` (${durationInfo?.sets}×${durationInfo?.setDuration}m +${Math.round(durationInfo?.restMinutes || 0)}m desc)`
+      ? ` (${durationInfo?.sets}×${durationInfo?.setDuration}m +${formatRestMins(durationInfo?.restMinutes || 0)} desc)`
       : '';
     const multiSetTooltip = isMultiSetExercise
-      ? ` · ${durationInfo?.sets} series de ${durationInfo?.setDuration}m de trabajo + ${Math.round(durationInfo?.restMinutes || 0)}m descanso entre series`
+      ? ` · ${durationInfo?.sets} series de ${durationInfo?.setDuration}m de trabajo + ${formatRestMins(durationInfo?.restMinutes || 0)} descanso entre series`
       : '';
 
     items.push(
