@@ -720,23 +720,34 @@ export function runContentMigrations(store: ContentMigrationStore): void {
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 11. 'Ejercicios con pajita' -> Rutina de gimnasia facial diaria con 3 ejercicios
+  // 11. 'Ejercicios con pajita' -> Rutina de gimnasia facial en Gimnasio Diario
   // ──────────────────────────────────────────────────────────────────────────
+  const gymList = lists.find((l: any) => l.id === 'gym' || l.id === 'gimnasio' || normalize(l.name).includes('gimnasio') || normalize(l.name).includes('gym'));
   const careList = lists.find((l: any) => l.id === 'care' || normalize(l.name) === 'care');
-  if (careList) {
-    const careId = careList.id;
-    const careDiariaSec = sections.find((s: any) => s.listId === careId && (s.id === 'sec_care_diaria' || s.id === 'sec_care_diarias' || normalize(s.name).includes('diari')));
-    const targetSectionId = careDiariaSec ? careDiariaSec.id : `sec_${careId}_diarias`;
+  const targetList = gymList || careList;
+  if (targetList) {
+    const targetListId = targetList.id;
+    const gymDiariaSec = sections.find((s: any) => s.listId === targetListId && (s.id === 'g_diaria' || normalize(s.name).includes('diari') || normalize(s.name).includes('core') || normalize(s.name).includes('estiramiento')));
+    let targetSectionId = gymDiariaSec ? gymDiariaSec.id : (targetListId === 'gym' || targetListId === 'gimnasio' ? 'g_diaria' : `sec_${targetListId}_diarias`);
+
+    if (gymList && !gymDiariaSec && store.addListSection) {
+      store.addListSection({
+        id: targetSectionId,
+        listId: targetListId,
+        name: 'Diaria: Core y Estiramientos',
+        order: 0
+      });
+    }
 
     const pajitaParent = allActiveTasks.find(t => normalize(t.title).includes('pajita') && !t.parentId);
     if (pajitaParent) {
-      if (pajitaParent.title !== 'Ejercicios con pajita' || pajitaParent.duration !== 3) {
+      if (pajitaParent.title !== 'Ejercicios con pajita' || pajitaParent.duration !== 3 || pajitaParent.categoryId !== targetListId || pajitaParent.sectionId !== targetSectionId) {
         store.updateTask(pajitaParent.id, {
           title: 'Ejercicios con pajita',
           duration: 3,
           description: 'Rutina facial completa con pajita: papada y cuello, pómulos y mejillas, y contorno de labios (1 minuto por ejercicio).',
-          notes: 'Rutina diaria de ejercicios faciales con pajita:\n1. Papada y cuello: Pajita entre los labios, cabeza levantada hacia el techo (1 min).\n2. Pómulos y mejillas: Pajita entre los labios, sonreír elevando comisuras (1 min).\n3. Labios y contorno: Pajita horizontal solo con fuerza de los labios (1 min).\n*Variante opcional: Succión profunda simulando líquido espeso para activar mandíbula y mejillas.',
-          categoryId: careId,
+          notes: 'Rutina diaria de ejercicios faciales con pajita:\r\n1. Papada y cuello: Pajita entre los labios, cabeza levantada hacia el techo (1 min).\r\n2. Pómulos y mejillas: Pajita entre los labios, sonreír elevando comisuras (1 min).\r\n3. Labios y contorno: Pajita horizontal solo con fuerza de los labios (1 min).\r\n*Variante opcional: Succión profunda simulando líquido espeso para activar mandíbula y mejillas.',
+          categoryId: targetListId,
           sectionId: targetSectionId,
           cycle_id: 'cycle_day'
         });
@@ -765,12 +776,15 @@ export function runContentMigrations(store: ContentMigrationStore): void {
         const found = existingSubtasks.find(s => normalize(s.title).includes(def.key));
         const hasEverSub = hasTaskEver(s => s.parentId === pajitaParent.id && normalize(s.title).includes(def.key));
         if (found) {
-          if (found.title !== def.title || found.notes !== def.notes || found.duration !== 1) {
+          if (found.title !== def.title || found.notes !== def.notes || found.duration !== 1 || found.categoryId !== targetListId || found.sectionId !== targetSectionId) {
             store.updateTask(found.id, {
               title: def.title,
               notes: def.notes,
               duration: 1,
-              order: idx
+              order: idx,
+              categoryId: targetListId,
+              sectionId: targetSectionId,
+              cycle_id: 'cycle_day'
             });
           }
         } else if (!hasEverSub) {
@@ -781,8 +795,9 @@ export function runContentMigrations(store: ContentMigrationStore): void {
             duration: 1,
             order: idx,
             parentId: pajitaParent.id,
-            categoryId: careId,
+            categoryId: targetListId,
             sectionId: targetSectionId,
+            cycle_id: 'cycle_day',
             status: 'pending',
             priority: 'none'
           });

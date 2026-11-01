@@ -26,7 +26,7 @@ const normalize = (text: string): string =>
 // El orden de evaluación importa: «Recoger ropa del suelo» es preparar, no suelos;
 // «Sacar la basura» es para acabar aunque empiece por un verbo de preparar.
 const PHASE_RULES: Array<[CleaningPhase, RegExp]> = [
-  [5, /\b(sacar|bajar|tirar)\b.*\b(basura|bolsas?|reciclaje|vidrio|carton|papel)\b|\bbasura\b|ambientador|\brecarga\b|\breponer\b|\b(poner|cambiar)\b.*\b(papel(\s+higienico)?|jabon|fairy|toallas?|rollo|bolsa|pastilla|consumibles?)\b|cambiar (las )?toallas|\btender\b|\bdoblar\b|\bespejos?\b/],
+  [5, /\b(sacar|bajar|tirar)\b.*\b(basura|bolsas?|reciclaje|vidrio|carton|papel)\b|\bbasura\b|ambientador|\brecarga\b|\breponer\b|\b(poner|cambiar)\b.*\b(papel(\s+higienico)?|jabon|fairy|toallas?|rollo|bolsa|pastilla|consumibles?)\b|cambiar (las )?toallas|\btender\b|\bdoblar\b|\b(espejos?|cristal(es)?)\b/],
   [0, /\bventila|abrir (las )?ventanas|\brecoger\b|\bordenar\b|\bdespejar\b|hacer (la )?cama|cambiar (las )?sabanas|quitar (las )?sabanas|poner (la )?lavadora|\b(tirar|echar|meter)\b.*\blavadora\b|vaciar (el )?lavavajillas|(dejar|poner) (a |en )?remojo/],
   [4, /\bfregar\b(?!\s+(?:los?\s+)?(?:platos|cacharros|sartenes|ollas|cubiertos))\b|\bmopa\b|fregona/],
   [3, /\baspira|\bbarr(er|o)\b|\bsuelos?\b|\balfombras?\b|\bzocalos?\b/],
@@ -71,7 +71,16 @@ export function splitWholeHouseTasks<T extends Pick<TaskItem, 'title' | 'order' 
   const start: T[] = [];
   const end: T[] = [];
   for (const task of sortByCleaningOrder(tasks)) {
-    (getCleaningPhase(task.title) <= 2 ? start : end).push(task);
+    const secId = String((task as any).sectionId || '').toLowerCase();
+    if (secId.includes('terminar') || secId.includes('acabar') || secId.includes('end')) {
+      end.push(task);
+    } else if (secId.includes('empezar') || secId.includes('start')) {
+      start.push(task);
+    } else if (getCleaningPhase(task.title) <= 2) {
+      start.push(task);
+    } else {
+      end.push(task);
+    }
   }
   return { start, end };
 }

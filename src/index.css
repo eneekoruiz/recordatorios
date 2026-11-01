@@ -200,33 +200,21 @@ html, body, #root, .app-container, .main-container, .main-content, .sidebar-cont
   background: var(--bg-surface-glass);
 
   /* Scrollbar — Firefox */
-  scrollbar-width: thin;
+  scrollbar-width: none !important;
   scrollbar-color: var(--border-subtle) transparent;
 }
 
-/* Universal macOS Sequoia Sleek Scrollbars */
+/* Universal Clean Aesthetic — Hide Scrollbars Globally */
 * {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 *::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-*::-webkit-scrollbar-track {
-  background: transparent;
-}
-*::-webkit-scrollbar-thumb {
-  background-color: rgba(120, 120, 128, 0.25);
-  border-radius: 9999px;
-  border: 1px solid transparent;
-  background-clip: padding-box;
-  transition: background-color 0.2s ease;
-}
-@media (hover: hover) and (pointer: fine) {
-  *::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(120, 120, 128, 0.45);
-  }
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* ---------- Main ---------- */
@@ -1161,7 +1149,7 @@ button:disabled {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  scrollbar-width: thin;
+  scrollbar-width: none !important;
 }
 
 [data-theme="dark"] .premium-sheet,
@@ -1354,21 +1342,27 @@ button:disabled {
 .premium-toast {
   position: fixed;
   left: 50%;
-  bottom: max(28px, calc(env(safe-area-inset-bottom) + 18px));
+  bottom: max(24px, calc(env(safe-area-inset-bottom) + 16px));
   z-index: 100001;
-  max-width: min(92vw, 420px);
-  padding: 12px 16px;
-  color: white;
-  border: 1px solid rgba(255,255,255,.16);
+  max-width: min(92vw, 440px);
+  padding: 10px 14px;
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.14));
   border-radius: 999px;
-  background: rgba(20,24,38,.9);
-  box-shadow: 0 18px 48px rgba(15,23,42,.28);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  background: var(--bg-elevated, rgba(28, 28, 30, 0.94));
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22), 0 2px 10px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
   font-size: .88rem;
-  font-weight: 650;
-  text-align: center;
+  font-weight: 600;
   transform: translateX(-50%);
+}
+
+[data-theme="light"] .premium-toast {
+  color: #1d1d1f;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 /* Modernize legacy prompt-based configuration surfaces without changing data logic. */
@@ -1395,7 +1389,7 @@ button:disabled {
   box-shadow: 0 32px 90px rgba(15,23,42,.24), inset 0 1px 0 rgba(255,255,255,.82) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  scrollbar-width: thin;
+  scrollbar-width: none !important;
 }
 .prompt-modal :where(input[type="text"], input[type="number"], textarea) {
   min-height: 50px;
@@ -1787,7 +1781,7 @@ html, body {
   flex-direction: column;
   gap: 22px;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
+  scrollbar-width: none !important;
 }
 
 .list-config-overlay {

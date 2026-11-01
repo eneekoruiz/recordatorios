@@ -258,6 +258,7 @@ function MenuActions({
   const restoreTask = useAppStore(state => state.restoreTask);
   const lists = useAppStore(state => state.lists);
   const listSections = useAppStore(state => state.listSections);
+  const updateTaskSection = useAppStore(state => state.updateTaskSection);
 
   const [currentSubmenu, setCurrentSubmenu] = useState<'main' | 'move_list' | 'move_section' | 'due_date' | 'priority' | 'price' | 'duration'>('main');
   const [showMoreActions, setShowMoreActions] = useState(false);
@@ -324,7 +325,33 @@ function MenuActions({
                 type="button"
                 className="ios-dropdown-item"
                 onClick={() => {
-                  updateTask(task.id, { categoryId: list.id, sectionId: undefined });
+                  updateTask(task.id, { categoryId: list.id, sectionId: undefined, parentId: undefined });
+                  const state = useAppStore.getState();
+                  const allTasks = state.tasks;
+                  const isDescendant = (candidateId: string, rootId: string): boolean => {
+                    let curr = allTasks[candidateId];
+                    const visited = new Set<string>();
+                    while (curr && curr.parentId) {
+                      if (curr.parentId === rootId) return true;
+                      if (visited.has(curr.parentId)) break;
+                      visited.add(curr.parentId);
+                      curr = allTasks[curr.parentId];
+                    }
+                    return false;
+                  };
+                  Object.values(allTasks).forEach(c => {
+                    if (!c.deleted_at && isDescendant(c.id, task.id)) {
+                      state.updateTask(c.id, { categoryId: list.id, sectionId: undefined });
+                    }
+                  });
+                  if (typeof document !== 'undefined') {
+                    document.querySelectorAll('[data-drag-over-pos], [data-touch-drag-over], [data-task-drop-section], [data-section-drag-over]').forEach(el => {
+                      el.removeAttribute('data-drag-over-pos');
+                      el.removeAttribute('data-touch-drag-over');
+                      el.removeAttribute('data-task-drop-section');
+                      el.removeAttribute('data-section-drag-over');
+                    });
+                  }
                   setContextMenuOpen(false);
                 }}
                 style={{
@@ -358,7 +385,15 @@ function MenuActions({
             type="button"
             className="ios-dropdown-item"
             onClick={() => {
-              updateTask(task.id, { sectionId: undefined, parentId: undefined });
+              updateTaskSection(task.id, undefined);
+              if (typeof document !== 'undefined') {
+                document.querySelectorAll('[data-drag-over-pos], [data-touch-drag-over], [data-task-drop-section], [data-section-drag-over]').forEach(el => {
+                  el.removeAttribute('data-drag-over-pos');
+                  el.removeAttribute('data-touch-drag-over');
+                  el.removeAttribute('data-task-drop-section');
+                  el.removeAttribute('data-section-drag-over');
+                });
+              }
               setContextMenuOpen(false);
             }}
             style={{
@@ -381,7 +416,15 @@ function MenuActions({
                 type="button"
                 className="ios-dropdown-item"
                 onClick={() => {
-                  updateTask(task.id, { sectionId: sec.id, parentId: undefined });
+                  updateTaskSection(task.id, sec.id);
+                  if (typeof document !== 'undefined') {
+                    document.querySelectorAll('[data-drag-over-pos], [data-touch-drag-over], [data-task-drop-section], [data-section-drag-over]').forEach(el => {
+                      el.removeAttribute('data-drag-over-pos');
+                      el.removeAttribute('data-touch-drag-over');
+                      el.removeAttribute('data-task-drop-section');
+                      el.removeAttribute('data-section-drag-over');
+                    });
+                  }
                   setContextMenuOpen(false);
                 }}
                 style={{

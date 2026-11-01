@@ -283,6 +283,12 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     return rawMins > 0 ? rawMins : 5;
   }, [doneSetsOf, listSections, lists]);
   const sequenceList = lists.find(l => l.id === tasks[taskIds[0]]?.categoryId);
+  const isGymWorkout = Boolean(
+    listName.toLowerCase().includes('gimnasio') || 
+    listName.toLowerCase().includes('gym') || 
+    listName.toLowerCase().includes('entreno') ||
+    activeTaskIds.some(id => tasks[id]?.isRest || (tasks[id]?.weightLogs && tasks[id].weightLogs!.length > 0))
+  );
   const guidedBreaks = Boolean(sequenceList?.guidedBreaks);
   const breakSeconds = sequenceList?.breakSeconds ?? 300;
   const recordEvents = useTrainingStore(s => s.recordEvents);
@@ -497,9 +503,33 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     setIsActive(false);
     SoundService.stopAmbientSound();
     setLastStepAt(Date.now());
-    maybeStartPause();
+
+    const next = tasks[activeTaskIds[index + 1]];
+    const isWarmupOrStretching = Boolean(
+      /calentamiento|estiramiento|previo|warmup/i.test(currentTask.title) &&
+      !currentTask.restDuration
+    );
+    if (next && (isGymWorkout || currentTask.restDuration) && !isWarmupOrStretching) {
+      const restSec = currentTask.restDuration || 60;
+      setSetRest({
+        startedAt: Date.now(),
+        plannedSec: restSec,
+        adjustSec: 0,
+        taskId: currentTask.id,
+        doneSet: 1,
+        totalSets: 1,
+        kg: '',
+        reps: '',
+        kgHint: '',
+        repsHint: '',
+        kind: 'transition',
+        nextLabel: next.title,
+      });
+    } else {
+      maybeStartPause();
+    }
     setIndex(i => i + 1);
-  }, [currentTask, toggleTask, updateTask, observeCompletion, maybeStartPause]);
+  }, [currentTask, toggleTask, updateTask, observeCompletion, maybeStartPause, tasks, activeTaskIds, index, isGymWorkout]);
 
   const handleSkipTask = useCallback(() => {
     if (!currentTask) return;

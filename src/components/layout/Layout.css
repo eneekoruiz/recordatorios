@@ -114,13 +114,11 @@
   overscroll-behavior: contain;
 
   /* Scrollbar — Firefox */
-  scrollbar-width: thin;
+  scrollbar-width: none !important;
   scrollbar-color: var(--border-subtle) transparent;
 }
 
-.sidebar-scroll-area::-webkit-scrollbar {
-  width: 4px;
-}
+.sidebar-scroll-area::-webkit-scrollbar { display: none !important; width: 0 !important; }
 .sidebar-scroll-area::-webkit-scrollbar-track {
   background: transparent;
 }

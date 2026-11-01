@@ -1645,9 +1645,21 @@ export const useAppStore = create<AppState>()(
 
         updatedTasks[taskId] = TaskRepository.update(task, { sectionId, parentId });
 
-        // Propagar la sección a las subtareas hijas
+        // Propagar la sección a todas las subtareas descendientes
+        const isDescendant = (candidateId: string, rootId: string): boolean => {
+          let curr = state.tasks[candidateId];
+          const visited = new Set<string>();
+          while (curr && curr.parentId) {
+            if (curr.parentId === rootId) return true;
+            if (visited.has(curr.parentId)) break;
+            visited.add(curr.parentId);
+            curr = state.tasks[curr.parentId];
+          }
+          return false;
+        };
+
         Object.values(state.tasks).forEach(c => {
-          if (!c.deleted_at && c.parentId === taskId) {
+          if (!c.deleted_at && isDescendant(c.id, taskId)) {
             updatedTasks[c.id] = TaskRepository.update(c, { sectionId });
           }
         });

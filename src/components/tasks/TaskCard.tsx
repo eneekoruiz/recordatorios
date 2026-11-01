@@ -137,10 +137,20 @@ export const TaskCard = React.memo(function TaskCard({
     }
   })();
 
+  const isGymTask = Boolean(
+    task.categoryId === 'gym' ||
+    task.categoryId === 'gimnasio' ||
+    (taskList?.name && /gimnasio|gym|entreno/i.test(taskList.name)) ||
+    (task.sectionId && listSections?.some(s => s.id === task.sectionId && /gimnasio|gym|tren |pierna|pecho|espalda|brazo|hombro/i.test(s.name)))
+  );
+
   // Helper para etiqueta de frecuencia sobria: según periodicidad detectada o ciclo asignado
   const cycleBadge = (() => {
-    // 1. Detección vía periodicidad calculada (cubre cycle_id, prefijos en título, sección manual, lista y frecuencia)
+    // En el gimnasio no se muestra la frecuencia semanal para mantener la interfaz limpia y despejada
     const periodicity = getTaskPeriodicity(task, listSections, lists);
+    if (isGymTask && (periodicity === 'week' || task.cycle_id === 'cycle_week' || task.cycle_id === 'week')) {
+      return null;
+    }
     if (periodicity && contextPeriodicity && periodicity === contextPeriodicity) return null;
     if (periodicity) {
       const labelMap: Record<string, string> = {
@@ -672,6 +682,37 @@ export const TaskCard = React.memo(function TaskCard({
 
   const [dragOverPosition, setDragOverPosition] = useState<'top' | 'bottom' | 'inside' | null>(null);
 
+  // Escuchar eventos globales de arrastre para limpiar de inmediato el hueco en caso de soltar fuera o cancelar
+  useEffect(() => {
+    if (!dragOverPosition) return;
+    const handleGlobalDragEnd = () => {
+      setDragOverPosition(null);
+      if (typeof document !== 'undefined') {
+        document.querySelectorAll('[data-drag-over-pos]').forEach(el => {
+          el.removeAttribute('data-drag-over-pos');
+        });
+      }
+    };
+    window.addEventListener('dragend', handleGlobalDragEnd);
+    window.addEventListener('drop', handleGlobalDragEnd);
+    return () => {
+      window.removeEventListener('dragend', handleGlobalDragEnd);
+      window.removeEventListener('drop', handleGlobalDragEnd);
+    };
+  }, [dragOverPosition]);
+
+  const handleDragEnd = useCallback(() => {
+    setDragOverPosition(null);
+    if (typeof document !== 'undefined') {
+      document.querySelectorAll('[data-drag-over-pos], [data-touch-drag-over], [data-task-drop-section], [data-section-drag-over]').forEach(el => {
+        el.removeAttribute('data-drag-over-pos');
+        el.removeAttribute('data-touch-drag-over');
+        el.removeAttribute('data-task-drop-section');
+        el.removeAttribute('data-section-drag-over');
+      });
+    }
+  }, []);
+
   const handleDragOver = (e: React.DragEvent) => {
     if (!onReorderTasks) return;
     if (e.dataTransfer.types.includes('text/task-id') || e.dataTransfer.types.includes('text/plain')) {
@@ -695,6 +736,11 @@ export const TaskCard = React.memo(function TaskCard({
     const sourceId = e.dataTransfer.getData('text/task-id') || e.dataTransfer.getData('text/plain');
     const pos = dragOverPosition;
     setDragOverPosition(null);
+    if (typeof document !== 'undefined') {
+      document.querySelectorAll('[data-drag-over-pos]').forEach(el => {
+        el.removeAttribute('data-drag-over-pos');
+      });
+    }
     if (sourceId && sourceId !== task.id) {
       if (pos === 'inside') {
         nestTask(sourceId, task.id);
@@ -2141,6 +2187,7 @@ export const TaskCard = React.memo(function TaskCard({
                 role="img"
                 draggable={!isBlocked && !isEditingTitle && !isEditingNote && !contextMenuOpen}
                 onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
                 onPointerDown={(e) => e.stopPropagation()}
                 title="Arrastrar para reordenar o anidar"
                 aria-label="Arrastrar para reordenar o anidar"

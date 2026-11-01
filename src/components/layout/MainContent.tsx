@@ -1140,7 +1140,7 @@ const CORE_CYCLES = [
               )
             );
 
-            if (currentCycle && cycleViewLayout === 'mixed') {
+            if (currentCycle && cycleViewLayout === 'mixed' && !isLimpiezaList(listId)) {
               const listSortMode = isLimpiezaList(listId) ? 'routine' : sortBy;
               let flatMixedTasks = deduplicateTaskList(tasksInScope);
               if (listSortMode === 'routine' || isLimpiezaList(listId)) {
@@ -1173,12 +1173,14 @@ const CORE_CYCLES = [
               return;
             }
 
-            if (hasPeriodicChildSections) {
+            if (hasPeriodicChildSections && (!isLimpiezaList(listId) || cycleViewLayout !== 'sections')) {
               // UNIFICACIÓN DE ESTANCIAS:
               // En lugar de duplicar secciones de habitación para cada ciclo ("Cocina" en Diarias y "Cocina" en Semanales),
               // unificamos todas las tareas de la estancia en una sola sección coherente ordenada por frecuencia.
               const canonicalRoomInfo = (name: string) => {
                 const norm = (name || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                if (norm.includes('empezar') || norm.includes('start')) return { key: 'para_empezar', name: 'Para empezar', order: -1 };
+                if (norm.includes('terminar') || norm.includes('acabar') || norm.includes('end')) return { key: 'para_terminar', name: 'Para terminar', order: 99 };
                 if (norm.includes('cocin')) return { key: 'cocina', name: 'Cocina', order: 0 };
                 if (norm.includes('ban') || norm.includes('duch') || norm.includes('aseo')) return { key: 'bano', name: 'Baño', order: 1 };
                 if (norm.includes('habitaci') || norm.includes('dormitori') || norm.includes('cam')) return { key: 'habitacion', name: 'Habitación', order: 2 };
@@ -1191,11 +1193,13 @@ const CORE_CYCLES = [
               const roomsMap = new Map<string, { key: string; name: string; order: number; sectionIds: Set<string>; primarySectionId: string }>();
 
               const defaultRooms = [
+                { key: 'para_empezar', name: 'Para empezar', order: -1 },
                 { key: 'cocina', name: 'Cocina', order: 0 },
                 { key: 'bano', name: 'Baño', order: 1 },
                 { key: 'habitacion', name: 'Habitación', order: 2 },
                 { key: 'pasillo', name: 'Pasillo / Entrada', order: 3 },
                 { key: 'balcon', name: 'Balcón', order: 4 },
+                { key: 'para_terminar', name: 'Para terminar', order: 99 },
                 { key: 'general', name: 'General', order: 5 },
               ];
               defaultRooms.forEach(dr => {
@@ -1231,7 +1235,16 @@ const CORE_CYCLES = [
               roomsMap.forEach((_, key) => assignedTasksByRoom.set(key, []));
 
               for (const task of tasksInScope) {
-                const tSec = task.sectionId || (task as any).section_id;
+                // Si la tarea tiene parentId, resolver la estancia a partir de la tarea padre raíz
+                let effectiveTask = task;
+                const visitedParents = new Set<string>();
+                while (effectiveTask.parentId && !visitedParents.has(effectiveTask.parentId)) {
+                  visitedParents.add(effectiveTask.parentId);
+                  const p = tasksInScope.find(t => t.id === effectiveTask.parentId) || (useAppStore.getState().tasks[effectiveTask.parentId]);
+                  if (p) effectiveTask = p;
+                  else break;
+                }
+                const tSec = effectiveTask.sectionId || (effectiveTask as any).section_id;
                 let matchedKey: string | null = null;
 
                 if (tSec) {
@@ -1275,8 +1288,18 @@ const CORE_CYCLES = [
                 if (general && general.tasks.length > 0) {
                   const { start, end } = splitWholeHouseTasks(deduplicateTaskList(general.tasks));
                   roomRenders = roomRenders.filter(r => r.key !== 'general');
-                  roomRenders.push({ ...WHOLE_HOUSE_START, order: -1, primarySectionId: general.primarySectionId, tasks: start });
-                  roomRenders.push({ ...WHOLE_HOUSE_END, order: 99, primarySectionId: general.primarySectionId, tasks: end });
+                  const existingStart = roomRenders.find(r => r.key === 'para_empezar');
+                  if (existingStart) {
+                    existingStart.tasks.push(...start);
+                  } else {
+                    roomRenders.push({ ...WHOLE_HOUSE_START, order: -1, primarySectionId: general.primarySectionId, tasks: start });
+                  }
+                  const existingEnd = roomRenders.find(r => r.key === 'para_terminar');
+                  if (existingEnd) {
+                    existingEnd.tasks.push(...end);
+                  } else {
+                    roomRenders.push({ ...WHOLE_HOUSE_END, order: 99, primarySectionId: general.primarySectionId, tasks: end });
+                  }
                 }
               }
               const sortedRooms = roomRenders.sort((a, b) => a.order - b.order);
@@ -1627,7 +1650,6 @@ const CORE_CYCLES = [
           currentList?.name?.toLowerCase().includes('gym')
         );
         const currentSplit = ((currentList?.activeRoutineSplit as GymRoutineSplit) || 'torso_pierna_4d');
-        let hasPushedGymActiveHeader = false;
 
         const allListSections = (listSections || []).filter(s => s.listId === currentList?.id && !s.deleted_at);
         const sectionsForList = (isGym
@@ -1772,14 +1794,7 @@ const CORE_CYCLES = [
           const trainingDayStatus = depth === 0 ? trainingPlan?.status[sec.id] : undefined;
           const otherTrainingDay = Boolean(trainingDayStatus && trainingDayStatus !== 'today' && trainingDayStatus !== 'done_today' && collapsed[categoryKey] === undefined);
 
-          if (isGym && trainingDayStatus && !hasPushedGymActiveHeader) {
-            flat.push({
-              type: 'gym-active-header',
-              currentSplit,
-              activeGymSectionId
-            });
-            hasPushedGymActiveHeader = true;
-          }
+          // Gym active header replaced by native section badges (Toca hoy, Siguiente, Otro día)
 
           flat.push({
             type: 'header',
@@ -1845,11 +1860,14 @@ const CORE_CYCLES = [
           // Cada sección de frecuencia (Diaria, Semanal, Mensual, Anual) agrupa sus habitaciones.
           const canonicalRoomInfo = (name: string) => {
             const norm = (name || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            if (norm.includes('empezar') || norm.includes('start')) return { key: 'para_empezar', name: 'Para empezar', order: -1 };
+            if (norm.includes('terminar') || norm.includes('acabar') || norm.includes('end')) return { key: 'para_terminar', name: 'Para terminar', order: 99 };
             if (norm.includes('cocin')) return { key: 'cocina', name: 'Cocina', order: 0 };
             if (norm.includes('ban') || norm.includes('duch') || norm.includes('aseo')) return { key: 'bano', name: 'Baño', order: 1 };
             if (norm.includes('habitaci') || norm.includes('dormitori') || norm.includes('cam')) return { key: 'habitacion', name: 'Habitación', order: 2 };
             if (norm.includes('pasill') || norm.includes('entrad') || norm.includes('recibid')) return { key: 'pasillo', name: 'Pasillo / Entrada', order: 3 };
             if (norm.includes('balcon') || norm.includes('terraz')) return { key: 'balcon', name: 'Balcón', order: 4 };
+            if (norm.includes('general')) return { key: 'general', name: 'General', order: 5 };
             return { key: norm.replace(/\s+/g, '_') || 'general', name: name.trim() || 'General', order: 5 };
           };
 
@@ -1867,11 +1885,13 @@ const CORE_CYCLES = [
             // ── VISTA POR ESTANCIAS (LISTA CONTINUA DE ARRIBA A ABAJO) ────────────
             // Se combinan diarias, semanales y mensuales en el orden de trabajo por habitaciones
             const defaultRooms = [
+              { key: 'para_empezar', name: 'Para empezar', order: -1 },
               { key: 'cocina', name: 'Cocina', order: 0 },
               { key: 'bano', name: 'Baño', order: 1 },
               { key: 'habitacion', name: 'Habitación', order: 2 },
               { key: 'pasillo', name: 'Pasillo / Entrada', order: 3 },
               { key: 'balcon', name: 'Balcón', order: 4 },
+              { key: 'para_terminar', name: 'Para terminar', order: 99 },
               { key: 'general', name: 'General', order: 5 },
             ];
 
@@ -1880,16 +1900,31 @@ const CORE_CYCLES = [
               defaultRooms.forEach(dr => roomBuckets.set(dr.key, { ...dr, tasks: [] }));
               source.forEach(t => {
                 if (t.deleted_at) return;
-                const tSecId = t.sectionId;
+                // Si la tarea tiene parentId, sigue la estancia de la tarea padre raíz
+                let effectiveTask = t;
+                const visitedParents = new Set<string>();
+                while (effectiveTask.parentId && !visitedParents.has(effectiveTask.parentId)) {
+                  visitedParents.add(effectiveTask.parentId);
+                  const p = source.find(st => st.id === effectiveTask.parentId) || (useAppStore.getState().tasks[effectiveTask.parentId]);
+                  if (p) effectiveTask = p;
+                  else break;
+                }
+                const tSecId = effectiveTask.sectionId;
                 let roomKey: string | null = null;
                 if (tSecId) {
                   const tSec = sectionsForList.find(s => s.id === tSecId);
                   if (tSec && !getPureCyclicPeriodicity(tSec.name)) {
                     roomKey = canonicalRoomInfo(tSec.name).key;
                   }
+                  if (!roomKey) {
+                    const info = canonicalRoomInfo(tSecId);
+                    if (info.key !== 'general' && info.key !== 'custom') {
+                      roomKey = info.key;
+                    }
+                  }
                 }
                 if (!roomKey) {
-                  roomKey = canonicalRoomInfo(getRoomForCleaningTask(t.title)).key;
+                  roomKey = canonicalRoomInfo(getRoomForCleaningTask(effectiveTask.title)).key;
                 }
                 if (!roomBuckets.has(roomKey)) {
                   roomBuckets.set(roomKey, { ...canonicalRoomInfo(roomKey), tasks: [] });
@@ -1902,8 +1937,13 @@ const CORE_CYCLES = [
                 if (general && general.tasks.length > 0) {
                   const { start, end } = splitWholeHouseTasks(deduplicateTaskList(general.tasks));
                   roomBuckets.delete('general');
-                  roomBuckets.set(WHOLE_HOUSE_START.key, { ...WHOLE_HOUSE_START, order: -1, tasks: start });
-                  roomBuckets.set(WHOLE_HOUSE_END.key, { ...WHOLE_HOUSE_END, order: 99, tasks: end });
+                  const curStart = roomBuckets.get('para_empezar') || { ...WHOLE_HOUSE_START, order: -1, tasks: [] };
+                  curStart.tasks.push(...start);
+                  roomBuckets.set('para_empezar', curStart);
+
+                  const curEnd = roomBuckets.get('para_terminar') || { ...WHOLE_HOUSE_END, order: 99, tasks: [] };
+                  curEnd.tasks.push(...end);
+                  roomBuckets.set('para_terminar', curEnd);
                 }
               }
 
@@ -1922,12 +1962,16 @@ const CORE_CYCLES = [
               sectionTasksByKey[roomCatKey] = roomTasks;
               const pendingIds = roomTasks.filter(t => !isCompletedInCurrentPeriod(t, cycles, listSections, lists, periodReferenceDate)).map(t => t.id);
 
+              const roomSection = sectionsForList.find(s => canonicalRoomInfo(s.name).key === room.key);
+              const effectiveRoomSectionId = roomSection?.id;
+
               flat.push({
                 type: 'header',
                 title: formatSectionTitle(room.name),
                 titleIcon: getRoomIcon(room.key),
                 category: roomCatKey,
                 color,
+                sectionId: effectiveRoomSectionId,
                 depth: 0,
                 sectionTaskIds: pendingIds,
                 pendingCount: pendingIds.length,
@@ -1936,17 +1980,24 @@ const CORE_CYCLES = [
 
               if (!isCatCollapsed(roomCatKey)) {
                 if (roomTasks.length === 0) {
-                  flat.push({ type: 'empty-section', title: 'Sin tareas', category: roomCatKey, color, depth: 0 });
+                  flat.push({ type: 'empty-section', title: 'Sin tareas', category: roomCatKey, color, sectionId: effectiveRoomSectionId, depth: 0 });
                 } else {
-                  roomTasks.forEach(task => {
+                  const inRoom = new Set(roomTasks.map(t => t.id));
+                  const roots = roomTasks.filter(t => !t.parentId || !inRoom.has(t.parentId));
+                  const processNode = (task: TaskItem, d: number) => {
                     flat.push({
                       type: 'task',
                       task,
-                      depth: task.parentId ? 1 : 0,
+                      depth: d,
                       referenceDate: periodReferenceDate,
                       contextPeriodicity: undefined
                     });
-                  });
+                    if (!isCatCollapsed(`task_${task.id}`)) {
+                      const children = roomTasks.filter(t => t.parentId === task.id);
+                      children.forEach(c => processNode(c, d + 1));
+                    }
+                  };
+                  roots.forEach(r => processNode(r, 0));
                 }
               }
             });
@@ -2042,29 +2093,45 @@ const CORE_CYCLES = [
             // «Para empezar» (ventilar, recoger, polvo…) y «Para terminar» (suelos de toda la casa,
             // basura, ambientador), y cada habitación sigue el orden del trabajo, no el de creación.
             const defaultRooms = [
+              { key: 'para_empezar', name: 'Para empezar', order: -1 },
               { key: 'cocina', name: 'Cocina', order: 0 },
               { key: 'bano', name: 'Baño', order: 1 },
               { key: 'habitacion', name: 'Habitación', order: 2 },
               { key: 'pasillo', name: 'Pasillo / Entrada', order: 3 },
               { key: 'balcon', name: 'Balcón', order: 4 },
+              { key: 'para_terminar', name: 'Para terminar', order: 99 },
               { key: 'general', name: 'General', order: 5 },
             ];
             const buildRooms = (source: TaskItem[]) => {
               const roomBuckets = new Map<string, { key: string; name: string; order: number; tasks: TaskItem[] }>();
               defaultRooms.forEach(dr => roomBuckets.set(dr.key, { ...dr, tasks: [] }));
               source.forEach(t => {
-                // Intentar detectar habitación por sección
-                const tSecId = t.sectionId;
+                // Intentar detectar estancia por sección o ancestro
+                let effectiveTask = t;
+                const visitedParents = new Set<string>();
+                while (effectiveTask.parentId && !visitedParents.has(effectiveTask.parentId)) {
+                  visitedParents.add(effectiveTask.parentId);
+                  const p = source.find(st => st.id === effectiveTask.parentId) || (useAppStore.getState().tasks[effectiveTask.parentId]);
+                  if (p) effectiveTask = p;
+                  else break;
+                }
+                const tSecId = effectiveTask.sectionId;
                 let roomKey: string | null = null;
                 if (tSecId) {
                   const tSec = sectionsForList.find(s => s.id === tSecId);
                   if (tSec && !getPureCyclicPeriodicity(tSec.name)) {
                     roomKey = canonicalRoomInfo(tSec.name).key;
                   }
+                  if (!roomKey) {
+                    const info = canonicalRoomInfo(tSecId);
+                    if (info.key !== 'general' && info.key !== 'custom') {
+                      roomKey = info.key;
+                    }
+                  }
                 }
-                // Fallback: detectar por título
+                // Fallback: detectar por título de la tarea raíz
                 if (!roomKey) {
-                  roomKey = canonicalRoomInfo(getRoomForCleaningTask(t.title)).key;
+                  roomKey = canonicalRoomInfo(getRoomForCleaningTask(effectiveTask.title)).key;
                 }
                 if (!roomBuckets.has(roomKey)) {
                   roomBuckets.set(roomKey, { ...canonicalRoomInfo(roomKey), tasks: [] });
@@ -2077,8 +2144,13 @@ const CORE_CYCLES = [
                 if (general && general.tasks.length > 0) {
                   const { start, end } = splitWholeHouseTasks(deduplicateTaskList(general.tasks));
                   roomBuckets.delete('general');
-                  roomBuckets.set(WHOLE_HOUSE_START.key, { ...WHOLE_HOUSE_START, order: -1, tasks: start });
-                  roomBuckets.set(WHOLE_HOUSE_END.key, { ...WHOLE_HOUSE_END, order: 99, tasks: end });
+                  const curStart = roomBuckets.get('para_empezar') || { ...WHOLE_HOUSE_START, order: -1, tasks: [] };
+                  curStart.tasks.push(...start);
+                  roomBuckets.set('para_empezar', curStart);
+
+                  const curEnd = roomBuckets.get('para_terminar') || { ...WHOLE_HOUSE_END, order: 99, tasks: [] };
+                  curEnd.tasks.push(...end);
+                  roomBuckets.set('para_terminar', curEnd);
                 }
               }
 
@@ -2128,6 +2200,14 @@ const CORE_CYCLES = [
                   sectionTasksByKey[roomCatKey] = roomTasks;
                   const roomPendingIds = roomTasks.filter(t => !isCompletedInCurrentPeriod(t, cycles, listSections, lists, effectiveLimpiezaRefDate, rowSessionDates)).map(t => t.id);
 
+                  // Localizar la sección específica de esta habitación bajo esta periodicidad
+                  const roomSection = sectionsForList.find(s => 
+                    (manualFreqSec?.id && s.parentId === manualFreqSec.id && canonicalRoomInfo(s.name).key === room.key) ||
+                    s.id === `sec_limp_${periodicity}_${room.key}` ||
+                    s.id === `sec_limpieza_${periodicity}_${room.key}`
+                  );
+                  const effectiveRoomSectionId = roomSection?.id || manualFreqSec?.id;
+
                   // Cabecera de habitación (depth 1)
                   flat.push({
                     type: 'header',
@@ -2135,7 +2215,7 @@ const CORE_CYCLES = [
                     titleIcon: getRoomIcon(room.key),
                     category: roomCatKey,
                     color: freqColor,
-                    sectionId: manualFreqSec?.id,
+                    sectionId: effectiveRoomSectionId,
                     depth: 1,
                     sectionTaskIds: roomPendingIds,
                     sessionDates: rowSessionDates
@@ -2143,19 +2223,25 @@ const CORE_CYCLES = [
 
                   if (!isCatCollapsed(roomCatKey)) {
                     if (roomTasks.length === 0) {
-                      flat.push({ type: 'empty-section', title: 'Sin tareas', category: roomCatKey, color: freqColor, sectionId: manualFreqSec?.id, depth: 1 });
+                      flat.push({ type: 'empty-section', title: 'Sin tareas', category: roomCatKey, color: freqColor, sectionId: effectiveRoomSectionId, depth: 1 });
                     } else {
-                      roomTasks.forEach(task => {
+                      const inRoom = new Set(roomTasks.map(t => t.id));
+                      const roots = roomTasks.filter(t => !t.parentId || !inRoom.has(t.parentId));
+                      const processNode = (task: TaskItem, d: number) => {
                         flat.push({
                           type: 'task',
                           task,
-                          depth: task.parentId ? 1 : 0,
+                          depth: d,
                           referenceDate: isLimpiezaRolledOver ? effectiveLimpiezaRefDate : undefined,
-                          // Bajo «Mensuales» no hace falta repetir «Mensual» en cada fila; solo las incluidas lo dicen.
                           contextPeriodicity: periodicity as PeriodicityType,
                           sessionDates: rowSessionDates
                         });
-                      });
+                        if (!isCatCollapsed(`task_${task.id}`)) {
+                          const children = roomTasks.filter(t => t.parentId === task.id);
+                          children.forEach(c => processNode(c, d + 1));
+                        }
+                      };
+                      roots.forEach(r => processNode(r, 0));
                     }
                   }
                 });
@@ -2428,17 +2514,7 @@ const CORE_CYCLES = [
             }
           });
 
-          if (isGym) {
-            if (!hasPushedGymActiveHeader) {
-              flat.push({
-                type: 'gym-active-header',
-                currentSplit,
-                activeGymSectionId
-              });
-              hasPushedGymActiveHeader = true;
-            }
-            flat.push({ type: 'gym-other-routines' });
-          }
+          // Gym other routines and active header removed for clean native layout
         }
       }
     }
@@ -2453,7 +2529,7 @@ const CORE_CYCLES = [
     }
 
     return { flattenedData: flat, renderedSectionTasks: sectionTasksByKey };
-  }, [groupedTasks, currentView, currentCycle, cycleViewMode, collapsed, isListView, lists, listSections, cycles, currentList, listSectionFilter, sortBy, defaultSortForList, isCatCollapsed, isolatedSectionKey, sectionRoutineModes, cycleRoutineCounts, periodReferenceDate, resolvedShowCompleted, cycleViewLayout, recentlyCompletedIds, viewRoutineSessionDates, trainingPlan, resolvedShowRest, activeGymSectionId]);
+  }, [groupedTasks, currentView, currentCycle, cycleViewMode, collapsed, isListView, lists, listSections, cycles, currentList, listSectionFilter, sortBy, defaultSortForList, isCatCollapsed, isolatedSectionKey, sectionRoutineModes, cycleRoutineCounts, periodReferenceDate, resolvedShowCompleted, cycleViewLayout, recentlyCompletedIds, viewRoutineSessionDates, trainingPlan, resolvedShowRest]);
 
   // Tareas visibles en pantalla respetando el orden visual exacto de renderizado
   // En las vistas inteligentes (Con marca, Todos…) una sección sin tareas no aporta nada: ni su cabecera ni su
@@ -2570,7 +2646,19 @@ const CORE_CYCLES = [
       autoScroll = createEdgeAutoScroll(findScrollableParent(el));
     };
     const onOver = (e: DragEvent) => autoScroll?.update(e.clientY);
-    const onEnd = () => { autoScroll?.stop(); autoScroll = null; };
+    const onEnd = () => {
+      autoScroll?.stop();
+      autoScroll = null;
+      setDragOverSectionId(null);
+      if (typeof document !== 'undefined') {
+        document.querySelectorAll('[data-drag-over-pos], [data-touch-drag-over], [data-task-drop-section], [data-section-drag-over]').forEach(el => {
+          el.removeAttribute('data-drag-over-pos');
+          el.removeAttribute('data-touch-drag-over');
+          el.removeAttribute('data-task-drop-section');
+          el.removeAttribute('data-section-drag-over');
+        });
+      }
+    };
     document.addEventListener('dragstart', onStart, true);
     document.addEventListener('dragover', onOver, true);
     document.addEventListener('dragend', onEnd, true);
@@ -2684,9 +2772,27 @@ const CORE_CYCLES = [
       const newCategoryId = isSmartView
         ? sourceTask.categoryId
         : (effectiveParent?.categoryId || (isListView && currentList ? currentList.id : targetTask.categoryId || sourceTask.categoryId));
+
+      // Determinar la sección de destino exacta
+      let resolvedTargetSectionId = targetTask.sectionId;
+      // Si la sección de targetTask es nula o es una sección raíz pura de periodicidad (ej. Semanales),
+      // buscar en flattenedData la cabecera de sección más cercana que precede al target
+      if (!resolvedTargetSectionId || getPureCyclicPeriodicity((listSections || []).find(s => s.id === resolvedTargetSectionId)?.name || '')) {
+        const targetFlatIdx = flattenedData.findIndex(item => item.type === 'task' && (item as any).task?.id === targetTaskId);
+        if (targetFlatIdx !== -1) {
+          for (let i = targetFlatIdx - 1; i >= 0; i--) {
+            const prevItem = flattenedData[i];
+            if (prevItem.type === 'header' && prevItem.sectionId) {
+              resolvedTargetSectionId = prevItem.sectionId;
+              break;
+            }
+          }
+        }
+      }
+
       const newSectionId = isSmartView
         ? sourceTask.sectionId
-        : (effectiveParent ? effectiveParent.sectionId : targetTask.sectionId);
+        : (effectiveParent ? effectiveParent.sectionId : resolvedTargetSectionId);
 
       if (
         sourceTask.parentId !== newParentId ||
@@ -2699,9 +2805,9 @@ const CORE_CYCLES = [
           sectionId: newSectionId
         };
 
-        // Mantener consistentes las subtareas de la tarea movida sin cambiarles el parentId
+        // Mantener consistentes todas las subtareas descendientes de la tarea movida
         Object.values(currentTasks).forEach(c => {
-          if (!c.deleted_at && c.parentId === sourceTaskId) {
+          if (!c.deleted_at && isDescendant(c.id, sourceTaskId)) {
             taskUpdates[c.id] = {
               categoryId: newCategoryId,
               sectionId: newSectionId
@@ -2713,7 +2819,7 @@ const CORE_CYCLES = [
 
     reorderTasks(reordered.map(t => t.id), Object.keys(taskUpdates).length > 0 ? taskUpdates : undefined);
     HapticService.selection();
-  }, [visibleTasks, reorderTasks, sortBy, setSortBy, isSmartView, isListView, currentList]);
+  }, [visibleTasks, reorderTasks, sortBy, setSortBy, isSmartView, isListView, currentList, flattenedData, listSections]);
 
   const handleReorderSections = useCallback((sourceSectionId: string, targetSectionId: string, position: 'before' | 'after' = 'before') => {
     if (sourceSectionId === targetSectionId) return;

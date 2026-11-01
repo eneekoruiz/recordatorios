@@ -537,7 +537,7 @@ export function getRoomForCleaningTask(title?: string | null): 'Cocina' | 'Baño
     t.includes('desagüe') || t.includes('mampara') || t.includes('alcachofa') ||
     t.includes('anti-humedad') || t.includes('antihumedad') || t.includes('azulejo') ||
     t.includes('váter') || t.includes('vater') || t.includes('bidet') || t.includes('bidé') ||
-    (t.includes('espejo') && !t.includes('entrada') && !t.includes('recibidor'))
+    (t.includes('espejo') && !t.includes('todos') && !t.includes('casa') && !t.includes('entrada') && !t.includes('recibidor') && !t.includes('cuarto') && !t.includes('habitacion'))
   ) {
     return 'Baño';
   }
@@ -578,7 +578,7 @@ export function getRoomForCleaningTask(title?: string | null): 'Cocina' | 'Baño
   }
 
   // General (matabichos, telarañas, zócalos, techos, etc.)
-  if (t.includes('matabicho') || t.includes('telaraña') || t.includes('insecticida')) {
+  if (t.includes('matabicho') || t.includes('telaraña') || t.includes('insecticida') || t.includes('todos los espejos') || t.includes('espejos de la casa') || t.includes('toda la casa')) {
     return 'General';
   }
   return 'General';
@@ -603,15 +603,17 @@ export function ensureLimpiezaSections(
   const rootAnual = currentSections.find(s => s.id === 'sec_limpieza_anual' || s.id === 'sec_limp_anual' || (!s.parentId && (s.name || '').toLowerCase().includes('anual')));
 
   const roomDefs = [
-    { freq: 'diaria', parentId: rootDiaria?.id || 'sec_limpieza_diaria', rooms: ['Cocina', 'Baño', 'Habitación', 'Pasillo / Entrada', 'General'] },
-    { freq: 'semanal', parentId: rootSemanal?.id || 'sec_limpieza_semanal', rooms: ['Cocina', 'Baño', 'Habitación', 'Pasillo / Entrada', 'Balcón', 'General'] },
-    { freq: 'mensual', parentId: rootMensual?.id || 'sec_limpieza_mensual', rooms: ['Cocina', 'Baño', 'Habitación', 'Pasillo / Entrada', 'Balcón', 'General'] },
-    { freq: 'anual', parentId: rootAnual?.id || 'sec_limpieza_anual', rooms: ['Cocina', 'Baño', 'Habitación', 'Pasillo / Entrada', 'Balcón', 'General'] },
+    { freq: 'diaria', parentId: rootDiaria?.id || 'sec_limpieza_diaria', rooms: ['Para empezar', 'Cocina', 'Baño', 'Habitación', 'Pasillo / Entrada', 'Para terminar', 'General'] },
+    { freq: 'semanal', parentId: rootSemanal?.id || 'sec_limpieza_semanal', rooms: ['Para empezar', 'Cocina', 'Baño', 'Habitación', 'Pasillo / Entrada', 'Balcón', 'Para terminar', 'General'] },
+    { freq: 'mensual', parentId: rootMensual?.id || 'sec_limpieza_mensual', rooms: ['Para empezar', 'Cocina', 'Baño', 'Habitación', 'Pasillo / Entrada', 'Balcón', 'Para terminar', 'General'] },
+    { freq: 'anual', parentId: rootAnual?.id || 'sec_limpieza_anual', rooms: ['Para empezar', 'Cocina', 'Baño', 'Habitación', 'Pasillo / Entrada', 'Balcón', 'Para terminar', 'General'] },
   ];
 
   roomDefs.forEach(def => {
     def.rooms.forEach((roomName, idx) => {
-      const roomSlug = roomName === 'Pasillo / Entrada' ? 'pasillo' :
+      const roomSlug = roomName === 'Para empezar' ? 'para_empezar' :
+                       roomName === 'Para terminar' ? 'para_terminar' :
+                       roomName === 'Pasillo / Entrada' ? 'pasillo' :
                        roomName === 'Habitación' ? 'hab' :
                        roomName === 'Baño' ? 'bano' :
                        roomName === 'Balcón' ? 'balcon' :
