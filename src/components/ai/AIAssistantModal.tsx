@@ -611,7 +611,13 @@ export function AIAssistantModal({ isOpen, onClose, onSelectView }: AIAssistantM
         deleteTask(update.taskId);
       } else {
         const patch: any = {};
-        if (update.status) patch.status = update.status;
+        if (update.status) {
+          patch.status = update.status;
+          if (update.status === 'completed') {
+            patch.completed_at = new Date().toISOString();
+            patch.completedBy = update.completedBy || 'ai';
+          }
+        }
         if (update.newTitle) patch.title = update.newTitle;
         if (update.description !== undefined) patch.description = update.description;
         if (update.price !== undefined) patch.price = update.price;
@@ -1557,6 +1563,7 @@ t.alerts && t.alerts.length > 0 ? `🔔 Aviso ${t.alerts[0].time || ''}`.trim() 
             <div className="ai-chips">
               {[
                 { label: 'Importar PDF o documento', Icon: FileText, action: 'file' },
+                { label: '⚡ Tareas que la IA puede hacer', Icon: Sparkles, action: 'send' },
                 { label: 'Planificar mi semana', Icon: CalendarRange, action: 'send' },
                 { label: 'Hacer la maleta de viaje', Icon: Luggage, action: 'send' },
                 { label: 'Compra semanal con precios', Icon: ShoppingCart, action: 'send' },

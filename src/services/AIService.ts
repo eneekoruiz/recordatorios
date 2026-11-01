@@ -70,6 +70,7 @@ export interface ProposedTaskUpdate {
   mediaStatus?: 'want_to_watch' | 'in_progress' | 'completed' | 'dropped' | 'favorite';
   deleted?: boolean;
   selected: boolean;
+  completedBy?: 'user' | 'ai';
   reason?: string;
 }
 
@@ -493,6 +494,63 @@ También puedo marcar algo como hecho («marca hecha la leche»), cambiarlo («p
           '¿Qué tareas tengo para hoy?',
           'Planificar mi semana',
           'Compra semanal con precios'
+        ]
+      };
+    }
+
+    // 0.05 Intent: Consulta y delegación de tareas técnicas automáticas de la IA
+    const isAiAutomationTasksIntent = /(?:qu[ée]\s+tareas\s+(?:puedes\s+hacer|autom[áa]ticas|tienes|hace\s+la\s+ia)|tareas\s+que\s+la\s+ia\s+puede|automatizaciones|delegar\s+a\s+ia|ejecutar\s+mantenimiento|mantenimiento\s+(?:mensual|t[ée]cnico|de\s+ia)|tareas\s+mensuales\s+de\s+ia)/i.test(trimmed);
+    if (isAiAutomationTasksIntent && tasksArray.length > 0) {
+      const technicalTasks = tasksArray.filter(t => !t.deleted_at && (
+        t.canAiExecute ||
+        /winget\b|upgrade\s+all|cach[eé]|temporales|temp\b|egela|moodle|dependabot/i.test(`${t.title} ${t.description || ''}`)
+      ));
+
+      const doneByAi = technicalTasks.filter(t => t.status === 'completed' && t.completedBy === 'ai');
+      const doneByUser = technicalTasks.filter(t => t.status === 'completed' && t.completedBy !== 'ai');
+      const pending = technicalTasks.filter(t => t.status !== 'completed');
+
+      let reply = '🤖 **Balance de tareas técnicas y automatizaciones de IA:**\n\n';
+      if (pending.length > 0) {
+        reply += `⚡ **Pendientes que puedo hacer por ti ahora (${pending.length}):**\n`;
+        pending.forEach(t => {
+          reply += `• **${t.title}**\n`;
+        });
+        reply += '\nPuedes pulsar abajo para que las ejecute y las marque como hechas por la IA.';
+      } else {
+        reply += '✅ ¡Todo el mantenimiento técnico está al día! No tienes tareas de IA pendientes este mes.\n';
+      }
+
+      if (doneByAi.length > 0) {
+        reply += `\n\n🤖 **Hechas por la IA este mes (${doneByAi.length}):**\n`;
+        doneByAi.forEach(t => {
+          reply += `• ${t.title}\n`;
+        });
+      }
+
+      if (doneByUser.length > 0) {
+        reply += `\n\n👤 **Completadas manualmente por ti (${doneByUser.length}):**\n`;
+        doneByUser.forEach(t => {
+          reply += `• ${t.title}\n`;
+        });
+      }
+
+      const taskUpdates: ProposedTaskUpdate[] = pending.map(t => ({
+        taskId: t.id,
+        originalTitle: t.title,
+        status: 'completed',
+        selected: true,
+        completedBy: 'ai',
+        reason: 'Automatizado y completado por la IA'
+      }));
+
+      return {
+        reply,
+        tasks: [],
+        taskUpdates: taskUpdates.length > 0 ? taskUpdates : undefined,
+        suggestedReplies: [
+          '¿Qué tareas tengo para hoy?',
+          'Planificar mi semana'
         ]
       };
     }
@@ -1742,11 +1800,17 @@ Redacta 2 o 3 párrafos de lectura agradable con emojis sutiles.`;
       ? `Tus pasos te llevaron por lugares como **${uniqueLocations.join(', ')}**.`
       : '';
 
+    const aiCompletedCount = tasks.filter(t => t.status === 'completed' && t.completedBy === 'ai').length;
+    const userCompletedCount = tasks.filter(t => t.status === 'completed' && t.completedBy !== 'ai').length;
+    const aiStatsText = aiCompletedCount > 0
+      ? `\n\n🤖 **Asistencia digital**: ${aiCompletedCount} tarea${aiCompletedCount > 1 ? 's' : ''} técnica${aiCompletedCount > 1 ? 's fueron' : ' fue'} adelantada${aiCompletedCount > 1 ? 's' : ''} y resuelta${aiCompletedCount > 1 ? 's' : ''} de forma autónoma por la IA (${userCompletedCount} completada${userCompletedCount > 1 ? 's' : ''} por ti).`
+      : '';
+
     return `✨ **Memoria de ${monthName || 'este mes'}:**
 
 Ha sido un período lleno de vivencias y movimiento, sumando un total de **${tasks.length} momentos registrados en tu bitácora de vida**. Entre los momentos más señalados destacan: *${sampleMemories}*.
 
-${companionsText} ${locationText}
+${companionsText} ${locationText}${aiStatsText}
 
 Cada uno de estos instantes es un pedacito de tu historia personal. ¡Sigue coleccionando experiencias! 🌟`;
   }

@@ -7,7 +7,7 @@ import {
   Timer,
   ShieldAlert, Clock, CheckCircle2, CreditCard,
   User, MapPin, Link2, Check, GripVertical,
-  SkipForward, Sparkles
+  SkipForward, Sparkles, Bot
 } from 'lucide-react';
 import type { TaskItem, ListSection } from '../../models/Task';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
@@ -1995,6 +1995,69 @@ export const TaskCard = React.memo(function TaskCard({
             </motion.div>
           )}
         </div>
+
+          {/* Banner de delegación a IA para tareas técnicas automatizables */}
+          {!isEffectivelyDone && (task.canAiExecute || /winget\b|upgrade\s+all|cach[eé]|temporales|temp\b|egela|moodle|dependabot/i.test(`${task.title} ${task.description || ''}`)) && (
+            <motion.div
+              initial={{ opacity: 0, y: -2 }}
+              animate={{ opacity: 1, y: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                marginTop: 6,
+                padding: '4px 8px',
+                borderRadius: '8px',
+                background: 'rgba(175, 82, 222, 0.10)',
+                border: '1px solid rgba(175, 82, 222, 0.25)',
+                fontSize: '0.74rem',
+                color: 'var(--text-primary)',
+                maxWidth: '100%',
+                flexWrap: 'wrap'
+              }}
+            >
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Bot size={13} style={{ color: 'var(--accent-purple, #af52de)', flexShrink: 0 }} />
+                <span>La IA puede hacer esta tarea técnica</span>
+              </div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    SoundService.playComplete();
+                    HapticService.notification('success');
+                    updateTask(task.id, {
+                      status: 'completed',
+                      completedBy: 'ai',
+                      completed_at: new Date().toISOString()
+                    });
+                    window.dispatchEvent(new CustomEvent('show-toast', {
+                      detail: `⚡ "${task.title}" completada y registrada por la IA`
+                    }));
+                  }}
+                  style={{
+                    background: 'var(--accent-purple, #af52de)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '2px 8px',
+                    fontSize: '0.72rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 3
+                  }}
+                >
+                  <Sparkles size={11} />
+                  <span>Delegar</span>
+                </button>
+              </div>
+            </motion.div>
+          )}
 
         {/* Subtask Chevron */}
         {hasChildren && (
