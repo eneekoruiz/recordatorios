@@ -1517,6 +1517,7 @@ export async function handleMcpRequest(reqBody: any, prisma: any, userId: string
         ...task,
         status: 'completed',
         completed_at: now,
+        completedBy: 'ai',
         updated_at: now,
         version: (task.version || 1) + 1,
       };

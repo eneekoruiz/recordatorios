@@ -185,6 +185,9 @@ export interface TaskItem {
   gmailQuery?: string;
   gmailThreadId?: string;
   notionPageUrl?: string;
+  completedBy?: 'user' | 'ai';
+  canAiExecute?: boolean;
+  aiExecutionAction?: string;
 
   // --- LOCAL ONLY STATE ---
   _is_dirty?: boolean; // Flag to indicate if it needs to be synced to server

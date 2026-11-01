@@ -30,7 +30,8 @@ export default defineConfig({
   test: {
     include: ['tests/unit/**/*.test.{js,ts}'],
     environment: 'node',
-    maxWorkers: 2,
+    pool: 'threads',
+
     testTimeout: 15000,
   },
   build: {

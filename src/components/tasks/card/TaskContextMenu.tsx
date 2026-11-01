@@ -7,7 +7,7 @@ import {
   AlertCircle, Flag, FolderInput, LayoutList, Copy, Play, Trash2, 
   ChevronRight, ArrowLeft, Sun, CalendarDays, Clock, CalendarX, Edit3,
   ArrowUp, ArrowDown, ChevronDown, SlidersHorizontal, Coins, RotateCcw,
-  CheckSquare, Mail, SkipForward
+  CheckSquare, Mail, SkipForward, Bot
 } from 'lucide-react';
 import type { TaskItem } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
@@ -756,6 +756,31 @@ function MenuActions({
           }} 
         />
       )}
+
+      <div className="ios-dropdown-divider" />
+
+      {/* Marcar o cambiar autoría de ejecución: Usuario vs IA */}
+      <ActionRow 
+        icon={<Bot size={16} color="var(--accent-purple, #af52de)" />} 
+        label={task.completedBy === 'ai' ? "Cambiar a hecha por ti (manual)" : "Marcar como realizada por la IA"} 
+        sublabel={task.completedBy === 'ai' ? "Registrada como completada por la IA" : "Registra que esta tarea la hizo o adelantó la IA"}
+        onClick={() => { 
+          setContextMenuOpen(false); 
+          if (task.completedBy === 'ai') {
+            updateTask(task.id, { completedBy: 'user' });
+            window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Registrada como completada manualmente por ti' }));
+          } else {
+            updateTask(task.id, { 
+              completedBy: 'ai', 
+              status: 'completed', 
+              completed_at: new Date().toISOString() 
+            });
+            SoundService.playComplete();
+            HapticService.notification('success');
+            window.dispatchEvent(new CustomEvent('show-toast', { detail: '🤖 Tarea marcada como realizada por la IA' }));
+          }
+        }} 
+      />
 
       <div className="ios-dropdown-divider" />
 

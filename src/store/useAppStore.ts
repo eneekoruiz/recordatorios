@@ -734,6 +734,7 @@ export const useAppStore = create<AppState>()(
               } else {
                 updatedTask = TaskRepository.update(existingTask, {
                   status: 'completed',
+                  completedBy: existingTask.completedBy || 'user',
                   completedAlerts: [...completedAlerts, alerts[completedAlerts.length]?.id].filter(Boolean) as string[],
                   completionHistory: newCompletionHistory,
                   currentCount: targetCount
@@ -816,6 +817,7 @@ export const useAppStore = create<AppState>()(
               } else {
                 updatedTask = TaskRepository.update(existingTask, { 
                   status: 'completed',
+                  completedBy: existingTask.completedBy || 'user',
                   completedAlerts: [...completedAlerts, alerts[completedAlerts.length]?.id].filter(Boolean) as string[],
                   completionHistory: newCompletionHistory,
                   ...targetCountUpdate
@@ -859,6 +861,7 @@ export const useAppStore = create<AppState>()(
                 } else {
                   childUpdates[t.id] = TaskRepository.update(t, {
                     status: 'completed',
+                  completedBy: existingTask.completedBy || 'user',
                     completedAlerts: childCompletedAlerts,
                     completionHistory: childHistory,
                     ...childTargetUpdate

@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode, type MouseEvent } from 'react';
-import { Calendar, CalendarX2, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen, Flame } from 'lucide-react';
+import { Calendar, CalendarX2, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen, Flame, Bot, Sparkles } from 'lucide-react';
 import type { TaskItem, CustomList } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
@@ -215,6 +215,23 @@ export function TaskMetaBadges({
   );
   // Con racha («3 días») ya se ve que se repite: el icono suelto de repetición sobra.
   const hasStreak = Boolean(streak && streak.count >= 2);
+  if (task.completedBy === 'ai') {
+    items.push(
+      <span key="completed-by-ai" className="task-meta-item" style={{ color: 'var(--accent-purple, #af52de)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '3px' }} title="Completada automáticamente por la IA">
+        <Bot size={13} aria-hidden="true" />
+        <span>Hecha por IA</span>
+      </span>
+    );
+  } else if (task.canAiExecute || /winget\b|upgrade\s+all|cach[eé]|temporales|temp\b|egela|moodle|dependabot/i.test(`${task.title} ${task.description || ''}`)) {
+    if (task.status !== 'completed') {
+      items.push(
+        <span key="can-ai-assist" className="task-meta-item" style={{ color: 'var(--accent-blue, #0a84ff)', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: '3px' }} title="La IA puede automatizar o adelantar esta tarea">
+          <Sparkles size={12} aria-hidden="true" />
+          <span>Delegable a IA</span>
+        </span>
+      );
+    }
+  }
   if (task.isRest) {
     items.push(
       <span key="rest-badge" className="task-meta-item" style={{ color: 'var(--accent-orange, #ff9500)', fontWeight: 600 }}>
