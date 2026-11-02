@@ -17,7 +17,7 @@ import '../training/Training.css';
 import { BottomShortcutBar } from './BottomShortcutBar';
 import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
-import { extractPeopleFromText, calculateExpirationStatus, calculateSubscriptionCosts, findFlashbackMemories, isCompletedInCurrentPeriod, isTaskActuallyCompletedInCurrentPeriod, getRoutineSessionDates, matchesPeriod } from '../../services/TaskService';
+import { extractPeopleFromText, calculateExpirationStatus, calculateSubscriptionCosts, findFlashbackMemories, isCompletedInCurrentPeriod, isTaskActuallyCompletedInCurrentPeriod, getRoutineSessionDates, matchesPeriod, getStartOfWeek } from '../../services/TaskService';
 import { AIService } from '../../services/AIService';
 import { isCaducidadesList, isQueHeHechoList, isGoalsList, ensureCaducidadesSections, isLimpiezaList, isRoutineList, isShoppingList, isLifeLibraryList, getRoomForCleaningTask, getListType, doesListSupportSequenceMode, isGymTask } from '../../utils/specialLists';
 import { isVitalHabitsList } from '../../utils/vitalHabits';
@@ -35,13 +35,12 @@ import {
   type TaskSortMode
 } from '../../utils/sectionRoutine';
 import { splitWholeHouseTasks, WHOLE_HOUSE_START, WHOLE_HOUSE_END } from '../../utils/cleaningOrder';
-import { getActiveGymDaySectionId } from '../../utils/gymAdaptiveDay';
 import { MainEmptyState } from './main/MainEmptyState';
 import { GymRoutineModal } from '../gym/GymRoutineModal';
-import { GymActiveRoutineHeader } from '../gym/GymActiveRoutineHeader';
+import { GymRoutineHub, type GymHubDay } from '../gym/GymRoutineHub';
 import { GymOtherRoutinesSection } from '../gym/GymOtherRoutinesSection';
 import { QuickWeightPromptModal } from '../tasks/QuickWeightPromptModal';
-import { shouldPromptWeight, getSectionGymSplit, isSectionInGymSplit, switchGymRoutineSplit, type GymRoutineSplit } from '../../utils/gymExercises';
+import { shouldPromptWeight, isSectionInGymSplit, switchGymRoutineSplit, GYM_SPLITS_CONFIG, type GymRoutineSplit } from '../../utils/gymExercises';
 import { MainGlassHeader } from './main/MainGlassHeader';
 import { MainSectionHeader } from './main/MainSectionHeader';
 import { DeletedTaskToast } from './main/DeletedTaskToast';
@@ -66,6 +65,7 @@ import { downloadIcsFile } from '../../utils/icsExporter';
 import { exportReportToPdf } from '../../utils/pdfExport';
 import { parseTaskPrice } from '../../utils/format';
 import { createEdgeAutoScroll, findScrollableParent } from '../../utils/dragDrop';
+import { ROOM_ANY_FREQUENCY_PREFIX, roomKeyOf, roomSectionId } from '../../utils/limpiezaRooms';
 import { getTrainingDayPlan, orderTrainingSession, type TrainingDayStatus } from '../../utils/trainingDays';
 
 interface MainContentProps {
@@ -363,17 +363,21 @@ const CORE_CYCLES = [
     currentList?.name?.toLowerCase().includes('gym')
   );
 
-  const activeGymSectionId = useMemo(() => {
-    if (!isGymList || !currentList) return null;
-    const gymSections = listSections.filter(s => s.listId === currentList.id);
-    return getActiveGymDaySectionId(gymSections, allTasksArray, currentList.activeGymDaySectionId);
-  }, [isGymList, currentList, listSections, allTasksArray]);
 
+  // Elegir otro día vale para hoy: mañana vuelve la rotación (antes se quedaba fijo para siempre).
   const handleSetActiveGymDay = useCallback((sectionId: string) => {
     if (!currentList) return;
-    updateList(currentList.id, { activeGymDaySectionId: sectionId });
+    updateList(currentList.id, { activeGymDaySectionId: sectionId, activeGymDaySetAt: Date.now() });
     HapticService.selection();
   }, [currentList, updateList]);
+  const handleResetGymDay = useCallback(() => {
+    if (!currentList) return;
+    updateList(currentList.id, { activeGymDaySectionId: undefined, activeGymDaySetAt: undefined });
+    HapticService.selection();
+  }, [currentList, updateList]);
+  const gymDayOverride = currentList?.activeGymDaySectionId && currentList.activeGymDaySetAt
+    && new Date(currentList.activeGymDaySetAt).toDateString() === new Date().toDateString()
+    ? currentList.activeGymDaySectionId : undefined;
 
   // Cada lista recuerda su orden (como en Recordatorios de Apple). Limpieza empieza en «Orden de
   // limpieza» porque mezcla frecuencias y el orden útil es el del trabajo, no el de creación.
@@ -441,7 +445,8 @@ const CORE_CYCLES = [
 
   // Manejo de mostrar descansos intermedios en listas de gimnasio / rutinas
   const [showRest, setShowRest] = useState<boolean>(false);
-  const resolvedShowRest = currentList?.showRestPeriods ?? showRest;
+  // En Gimnasio los descansos entre ejercicios se ven por defecto (se pueden ocultar desde «···»).
+  const resolvedShowRest = currentList?.showRestPeriods ?? (isGymList || showRest);
 
   const toggleShowRest = () => {
     HapticService.selection();
@@ -996,11 +1001,40 @@ const CORE_CYCLES = [
   }, [sectionMenu, groupedTasks, emptySection]);
 
   // 1. Flatten Data para Virtualización (QA Performance Optimization)
+  // Estancia de Limpieza sin sección guardada (deducida del título): se puede soltar encima, no editar.
+  const isVirtualRoomSection = useCallback((sectionId?: string) => Boolean(
+    sectionId && (sectionId.startsWith(ROOM_ANY_FREQUENCY_PREFIX) || (sectionId.startsWith('sec_limp_') && !(listSections || []).some(sec => sec.id === sectionId)))
+  ), [listSections]);
+
   // Programa por días (Gimnasio: «Día 1», «Día 2»…): qué día toca hoy y cuál viene después.
   const trainingPlan = useMemo(
-    () => (currentList && !currentList.isFolder ? getTrainingDayPlan(currentList.id, listSections, allTasksArray, periodReferenceDate.getTime(), currentList.activeGymDaySectionId) : null),
-    [currentList, listSections, allTasksArray, periodReferenceDate]
+    () => (currentList && !currentList.isFolder ? getTrainingDayPlan(currentList.id, listSections, allTasksArray, periodReferenceDate.getTime(), gymDayOverride) : null),
+    [currentList, listSections, allTasksArray, periodReferenceDate, gymDayOverride]
   );
+
+  // Días de la rutina para la tarjeta «Hoy»: hecho esta semana, ejercicios y duración.
+  const gymHubDays = useMemo<GymHubDay[]>(() => {
+    if (!trainingPlan || !currentList) return [];
+    const weekStart = getStartOfWeek(new Date()).getTime();
+    return trainingPlan.daySectionIds.map(dayId => {
+      const sec = listSections.find(ls => ls.id === dayId);
+      const [shortName, ...rest] = (sec?.name || '').split(':');
+      const dayTasks = allTasksArray.filter(t => !t.deleted_at && t.categoryId === currentList.id && t.sectionId === dayId);
+      const exercises = dayTasks.filter(t => !t.isRest && !t.parentId);
+      const doneThisWeek = exercises.length > 0 && exercises.every(t => (t.completionHistory || []).some(ts => Number(ts) >= weekStart));
+      // Igual que la cabecera del día (sin los descansos entre ejercicios), para que no haya dos cifras.
+      const duration = calculateTasksDuration(exercises, listSections, lists, cycles, periodReferenceDate);
+      return {
+        id: dayId,
+        shortName: shortName.trim(),
+        focus: rest.join(':').trim(),
+        status: trainingPlan.status[dayId],
+        doneThisWeek,
+        exercises: exercises.length,
+        duration: duration.activeMinutes > 0 ? duration.formattedActive : undefined,
+      };
+    });
+  }, [trainingPlan, currentList, listSections, allTasksArray, lists, cycles, periodReferenceDate]);
 
   const { flattenedData: rawFlattenedData, renderedSectionTasks } = useMemo<{ flattenedData: VirtualItemType[]; renderedSectionTasks: Record<string, TaskItem[]>; }>(() => {
     const flat: VirtualItemType[] = [{ type: 'page-header' }];
@@ -1183,7 +1217,7 @@ const CORE_CYCLES = [
                 if (norm.includes('terminar') || norm.includes('acabar') || norm.includes('end')) return { key: 'para_terminar', name: 'Para terminar', order: 99 };
                 if (norm.includes('cocin')) return { key: 'cocina', name: 'Cocina', order: 0 };
                 if (norm.includes('ban') || norm.includes('duch') || norm.includes('aseo')) return { key: 'bano', name: 'Baño', order: 1 };
-                if (norm.includes('habitaci') || norm.includes('dormitori') || norm.includes('cam')) return { key: 'habitacion', name: 'Habitación', order: 2 };
+                if (norm.includes('habitaci') || norm.includes('dormitori') || norm.includes('cam') || /(^|_)hab$/.test(norm)) return { key: 'habitacion', name: 'Habitación', order: 2 };
                 if (norm.includes('pasill') || norm.includes('entrad') || norm.includes('recibid')) return { key: 'pasillo', name: 'Pasillo / Entrada', order: 3 };
                 if (norm.includes('balcon') || norm.includes('terraz')) return { key: 'balcon', name: 'Balcón', order: 4 };
                 if (norm.includes('general')) return { key: 'general', name: 'General', order: 5 };
@@ -1864,7 +1898,7 @@ const CORE_CYCLES = [
             if (norm.includes('terminar') || norm.includes('acabar') || norm.includes('end')) return { key: 'para_terminar', name: 'Para terminar', order: 99 };
             if (norm.includes('cocin')) return { key: 'cocina', name: 'Cocina', order: 0 };
             if (norm.includes('ban') || norm.includes('duch') || norm.includes('aseo')) return { key: 'bano', name: 'Baño', order: 1 };
-            if (norm.includes('habitaci') || norm.includes('dormitori') || norm.includes('cam')) return { key: 'habitacion', name: 'Habitación', order: 2 };
+            if (norm.includes('habitaci') || norm.includes('dormitori') || norm.includes('cam') || /(^|_)hab$/.test(norm)) return { key: 'habitacion', name: 'Habitación', order: 2 };
             if (norm.includes('pasill') || norm.includes('entrad') || norm.includes('recibid')) return { key: 'pasillo', name: 'Pasillo / Entrada', order: 3 };
             if (norm.includes('balcon') || norm.includes('terraz')) return { key: 'balcon', name: 'Balcón', order: 4 };
             if (norm.includes('general')) return { key: 'general', name: 'General', order: 5 };
@@ -1962,8 +1996,9 @@ const CORE_CYCLES = [
               sectionTasksByKey[roomCatKey] = roomTasks;
               const pendingIds = roomTasks.filter(t => !isCompletedInCurrentPeriod(t, cycles, listSections, lists, periodReferenceDate)).map(t => t.id);
 
-              const roomSection = sectionsForList.find(s => canonicalRoomInfo(s.name).key === room.key);
-              const effectiveRoomSectionId = roomSection?.id;
+              // Mezcla frecuencias: la estancia se resuelve con la frecuencia de cada tarea al soltarla
+              // (una semanal no puede pasar a la «Cocina» mensual por moverla de sitio).
+              const effectiveRoomSectionId = `${ROOM_ANY_FREQUENCY_PREFIX}${room.key}`;
 
               flat.push({
                 type: 'header',
@@ -2206,7 +2241,9 @@ const CORE_CYCLES = [
                     s.id === `sec_limp_${periodicity}_${room.key}` ||
                     s.id === `sec_limpieza_${periodicity}_${room.key}`
                   );
-                  const effectiveRoomSectionId = roomSection?.id || manualFreqSec?.id;
+                  // Sin sección guardada, el identificador canónico de la estancia (no el de la frecuencia):
+                  // así soltar aquí una tarea la lleva a esta estancia y no a «Semanales» sin más.
+                  const effectiveRoomSectionId = roomSection?.id || (currentList ? roomSectionId(periodicity as PeriodicityType, room.key, listSections, currentList.id) : manualFreqSec?.id);
 
                   // Cabecera de habitación (depth 1)
                   flat.push({
@@ -2530,6 +2567,11 @@ const CORE_CYCLES = [
       }
     }
 
+    // Programa por días: la tarjeta «Hoy» va justo bajo el título de la lista.
+    if (trainingPlan && flat[0]?.type === 'page-header') {
+      flat.splice(1, 0, { type: 'gym-active-header', currentSplit: ((currentList?.activeRoutineSplit as GymRoutineSplit) || 'torso_pierna_4d'), activeGymSectionId: trainingPlan.currentId });
+    }
+
     return { flattenedData: flat, renderedSectionTasks: sectionTasksByKey };
   }, [groupedTasks, currentView, currentCycle, cycleViewMode, collapsed, isListView, lists, listSections, cycles, currentList, listSectionFilter, sortBy, defaultSortForList, isCatCollapsed, isolatedSectionKey, sectionRoutineModes, cycleRoutineCounts, periodReferenceDate, resolvedShowCompleted, cycleViewLayout, recentlyCompletedIds, viewRoutineSessionDates, trainingPlan, resolvedShowRest]);
 
@@ -2792,6 +2834,17 @@ const CORE_CYCLES = [
         }
       }
 
+      // Limpieza: se cambia de estancia, nunca de frecuencia. Una semanal soltada entre mensuales de
+      // «Cocina» pasa a la «Cocina» semanal.
+      if (resolvedTargetSectionId && currentList && isLimpiezaList(currentList.id, currentList)) {
+        const targetSec = (listSections || []).find(sec => sec.id === resolvedTargetSectionId);
+        const roomKey = roomKeyOf(targetSec?.name || resolvedTargetSectionId);
+        const sourcePeriodicity = getTaskPeriodicity(sourceTask, listSections, lists);
+        if (roomKey && sourcePeriodicity) {
+          resolvedTargetSectionId = roomSectionId(sourcePeriodicity, roomKey, listSections, currentList.id);
+        }
+      }
+
       const newSectionId = isSmartView
         ? sourceTask.sectionId
         : (effectiveParent ? effectiveParent.sectionId : resolvedTargetSectionId);
@@ -2821,7 +2874,7 @@ const CORE_CYCLES = [
 
     reorderTasks(reordered.map(t => t.id), Object.keys(taskUpdates).length > 0 ? taskUpdates : undefined);
     HapticService.selection();
-  }, [visibleTasks, reorderTasks, sortBy, setSortBy, isSmartView, isListView, currentList, flattenedData, listSections]);
+  }, [visibleTasks, reorderTasks, sortBy, setSortBy, isSmartView, isListView, currentList, flattenedData, listSections, lists]);
 
   const handleReorderSections = useCallback((sourceSectionId: string, targetSectionId: string, position: 'before' | 'after' = 'before') => {
     if (sourceSectionId === targetSectionId) return;
@@ -3464,9 +3517,12 @@ const CORE_CYCLES = [
                       </div>
                     );
                   } else if (data.type === 'header') {
-                    const isCustomSection = data.sectionId !== undefined;
+                    // Editable (renombrar, menú, moverla) solo si es una sección guardada; soltar tareas encima,
+                    // también en las estancias de Limpieza que se deducen del título.
+                    const canDropTasks = data.sectionId !== undefined;
+                    const isCustomSection = canDropTasks && (isVirtualRoomSection(data.sectionId) ? false : true);
                     const sectionId = data.sectionId;
-                    const isDraggingOver = dragOverSectionId === sectionId && isCustomSection;
+                    const isDraggingOver = dragOverSectionId === sectionId && canDropTasks;
 
                     const showDivider = index > 0 && flattenedData[index - 1]?.type !== 'page-header';
                     const sectionTasks = (data.category ? renderedSectionTasks[data.category] : null) || groupedTasks[data.category] || [];
@@ -3495,9 +3551,9 @@ const CORE_CYCLES = [
                         index={index}
                         itemStyle={itemStyle}
                         showDivider={showDivider}
-                        isActiveGymDay={Boolean(activeGymSectionId && (data.sectionId === activeGymSectionId || (data as any).id === activeGymSectionId))}
-                        onSetActiveGymDay={handleSetActiveGymDay}
+                        isActiveGymDay={Boolean(trainingPlan && data.sectionId === trainingPlan.currentId)}
                         isCustomSection={isCustomSection}
+                        canDropTasks={canDropTasks}
                         isDraggingOver={isDraggingOver}
                         isCatCollapsed={isCatCollapsed}
                         toggleCategory={toggleCategory}
@@ -3532,7 +3588,7 @@ const CORE_CYCLES = [
                         sectionRoutineModes={sectionRoutineModes}
                         toggleSectionRoutineMode={toggleSectionRoutineMode}
                         dragOverSectionId={dragOverSectionId}
-                        showStartButton={(isFrequencyView && !isCustomSection) || (Boolean(currentList && (currentList.id === 'gimnasio' || (currentList.name || '').toLowerCase().includes('gimnasio') || (currentList.name || '').toLowerCase().includes('gym') || (currentList.name || '').toLowerCase().includes('entreno'))) && isCustomSection)}
+                        showStartButton={!data.trainingDay && ((isFrequencyView && !isCustomSection) || (Boolean(currentList && (currentList.id === 'gimnasio' || (currentList.name || '').toLowerCase().includes('gimnasio') || (currentList.name || '').toLowerCase().includes('gym') || (currentList.name || '').toLowerCase().includes('entreno'))) && isCustomSection))}
                         onStartSectionSequence={onStartSequence && (canRunExecutionMode || Boolean(currentList && (currentList.id === 'gimnasio' || (currentList.name || '').toLowerCase().includes('gimnasio') || (currentList.name || '').toLowerCase().includes('gym') || (currentList.name || '').toLowerCase().includes('entreno')))) && sectionPendingTaskIds.length > 0 ? () => {
                           const rawTitle = (data?.title || '').replace(/^[\p{Emoji}\s⏳]+/gu, '').trim() || (data?.title || '');
                           const cleanTitle = rawTitle.length > 0 
@@ -3623,17 +3679,23 @@ const CORE_CYCLES = [
                       </div>
                     );
                   } else if (data.type === 'gym-active-header') {
-                    const daySections = (listSections || [])
-                      .filter(s => s.listId === currentList?.id && !s.deleted_at && isSectionInGymSplit(s, (data as any).currentSplit) && getSectionGymSplit(s) === (data as any).currentSplit)
-                      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+                    // La duración de hoy, con el mismo cálculo que la cabecera del día (una sola cifra).
+                    const todayHeader = flattenedData.find(it => it.type === 'header' && it.sectionId === (data as any).activeGymSectionId);
+                    const todayDuration = todayHeader && todayHeader.type === 'header' && todayHeader.sectionTaskIds
+                      ? calculateTasksDuration(todayHeader.sectionTaskIds.map(id => tasks[id]).filter(Boolean), listSections, lists, cycles, periodReferenceDate, todayHeader.sessionDates ?? viewRoutineSessionDates)
+                      : null;
+                    const hubDays = todayDuration
+                      ? gymHubDays.map(d => d.id === (data as any).activeGymSectionId ? { ...d, duration: todayDuration.activeMinutes > 0 ? todayDuration.formattedActive : undefined } : d)
+                      : gymHubDays;
                     return (
                       <div key={itemKey} data-index={index} style={{ ...itemStyle, padding: 0 }}>
-                        <GymActiveRoutineHeader
-                          currentSplit={(data as any).currentSplit}
-                          activeGymSectionId={(data as any).activeGymSectionId}
-                          daySections={daySections}
+                        <GymRoutineHub
+                          days={hubDays}
+                          splitName={GYM_SPLITS_CONFIG[(data as any).currentSplit as GymRoutineSplit]?.shortName || 'Rutina'}
+                          isManualPick={Boolean(gymDayOverride)}
                           onSelectDay={handleSetActiveGymDay}
-                          onOpenRoutineModal={() => setIsGymRoutineModalOpen(true)}
+                          onResetDay={handleResetGymDay}
+                          onOpenRoutines={() => setIsGymRoutineModalOpen(true)}
                         />
                       </div>
                     );

@@ -4,7 +4,6 @@ import { motion, useMotionValue, useTransform, AnimatePresence, useMotionValueEv
 import {
   Lock,
   ChevronDown, X, Info, RotateCcw, Flag,
-  Timer,
   ShieldAlert, Clock, CheckCircle2, CreditCard,
   User, MapPin, Link2, Check, GripVertical,
   SkipForward, Sparkles, Bot
@@ -16,6 +15,7 @@ import { isCompletedInCurrentPeriod, isSkippedInCurrentPeriod, calculateExpirati
 import { calculateTaskStreak } from '../../utils/streaks';
 import { detectTaskSmartSuggestion } from '../../utils/taskSmartSuggestions';
 import { SoundService } from '../../services/SoundService';
+import { RestRowTimer } from '../gym/RestRowTimer';
 import { HapticService } from '../../services/HapticService';
 import { ConfettiService } from '../../services/ConfettiService';
 import { ConfirmModal } from '../ui/ConfirmModal';
@@ -1110,12 +1110,11 @@ export const TaskCard = React.memo(function TaskCard({
           minHeight: task.isRest ? 36 : 44,
           display: 'flex',
           alignItems: task.isRest ? 'center' : 'flex-start',
-          padding: task.isRest ? '4px 10px' : `10px 8px 10px ${4 + indent}px`,
-          margin: task.isRest ? '3px 0' : 0,
+          padding: task.isRest ? `2px 8px 2px ${40 + indent}px` : `10px 8px 10px ${4 + indent}px`,
+          margin: 0,
           width: '100%',
           boxSizing: 'border-box',
-          border: task.isRest ? '1px dashed var(--border-subtle, rgba(0,0,0,0.12))' : undefined,
-          background: isSelected ? 'var(--accent-glow, rgba(0, 122, 255, 0.12))' : (task.isRest ? 'var(--bg-material, rgba(0,0,0,0.02))' : 'var(--list-row-bg)'),
+          background: isSelected ? 'var(--accent-glow, rgba(0, 122, 255, 0.12))' : 'var(--list-row-bg)',
           boxShadow: isSelected ? 'inset 0 0 0 1.5px var(--accent-primary, #007aff)' : 'none',
           borderRadius: `${isFirstInSection ? 10 : 0}px ${isFirstInSection ? 10 : 0}px ${isLastInSection ? 10 : 0}px ${isLastInSection ? 10 : 0}px`,
           borderBottom: 'none',
@@ -1151,101 +1150,12 @@ export const TaskCard = React.memo(function TaskCard({
         )}
 
         {task.isRest ? (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '100%',
-              padding: '2px 4px',
-              minHeight: 28,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)' }}>
-              <div
-                style={{
-                  width: 22,
-                  height: 22,
-                  borderRadius: '50%',
-                  background: 'rgba(255, 149, 0, 0.12)',
-                  color: 'var(--accent-orange, #ff9500)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                <Timer size={12} aria-hidden="true" />
-              </div>
-              <span
-                style={{
-                  fontSize: '0.82rem',
-                  fontWeight: 500,
-                  color: 'var(--text-secondary)',
-                  letterSpacing: '-0.01em',
-                }}
-              >
-                {task.title || 'Descanso entre ejercicios'}
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {/* Duration button / cycler */}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  HapticService.selection();
-                  const currentMins = task.duration || 2;
-                  const nextMins = currentMins === 1 ? 2 : currentMins === 2 ? 3 : currentMins === 3 ? 5 : 1;
-                  updateTask(task.id, { duration: nextMins });
-                }}
-                title="Cambiar duración del descanso (toca para alternar: 1, 2, 3, 5 min)"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  padding: '3px 8px',
-                  borderRadius: 12,
-                  background: 'rgba(255, 149, 0, 0.1)',
-                  border: '1px solid rgba(255, 149, 0, 0.25)',
-                  color: 'var(--accent-orange, #ff9500)',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                }}
-              >
-                <Clock size={11} aria-hidden="true" />
-                <span>{task.duration || 2} min</span>
-              </button>
-
-              {/* Delete button */}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  HapticService.impact('light');
-                  onDelete(task.id);
-                }}
-                title="Eliminar este descanso"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 24,
-                  height: 24,
-                  borderRadius: '50%',
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--text-tertiary)',
-                  cursor: 'pointer',
-                  padding: 0,
-                }}
-              >
-                <X size={13} aria-hidden="true" />
-              </button>
-
+          <div style={{ display: 'flex', alignItems: 'center', width: '100%', minHeight: 36 }}>
+            <RestRowTimer
+              title={task.title || 'Descanso entre ejercicios'}
+              minutes={task.duration || 2}
+              onChangeMinutes={(minutes) => updateTask(task.id, { duration: minutes })}
+            />
               {/* Drag Grip Handle */}
               {onReorderTasks && (
                 <div
@@ -1264,7 +1174,6 @@ export const TaskCard = React.memo(function TaskCard({
                   <GripVertical size={13} />
                 </div>
               )}
-            </div>
           </div>
         ) : (
           <>
@@ -1325,9 +1234,8 @@ export const TaskCard = React.memo(function TaskCard({
             onClick={(e: React.MouseEvent) => {
               e.stopPropagation();
               if (isBlocked) return;
-              if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate([8]);
-              
               if (isEffectivelyDone) {
+                HapticService.selection();
                 SoundService.playUncomplete();
                 onToggle(task.id, true, propReferenceDate ? propReferenceDate.getTime() : undefined);
               } else {
@@ -1336,11 +1244,14 @@ export const TaskCard = React.memo(function TaskCard({
                   : (!task.alerts || task.alerts.length <= 1 || completedAlertsCount + 1 >= totalAlerts);
                 
                 if (isNextFinal) {
+                  HapticService.notification('success');
                   SoundService.playComplete();
                   if (hasTargetCount || task.vibe?.includes('Celebración') || task.vibe?.includes('Especial')) {
                     ConfettiService.fire({ count: 55 });
                   }
                 } else {
+                  // Un paso de un hábito (1 de 8 vasos): toque ligero, no el de «hecho».
+                  HapticService.impact('light');
                   SoundService.playPop();
                 }
                 onToggle(task.id, false, propReferenceDate ? propReferenceDate.getTime() : undefined);
@@ -1397,15 +1308,21 @@ export const TaskCard = React.memo(function TaskCard({
                   display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}>
                   {hasTargetCount && (
-                    <span style={{ 
-                      fontSize: '0.62rem', 
-                      fontWeight: 700, 
-                      color: taskColor, 
-                      lineHeight: 1, 
-                      transform: 'translateY(-0.5px)' 
-                    }}>
+                    <motion.span
+                      key={effectiveCurrentCount}
+                      initial={{ scale: 0.4, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ type: 'spring', stiffness: 520, damping: 20 }}
+                      style={{
+                        fontSize: '0.62rem',
+                        fontWeight: 700,
+                        color: taskColor,
+                        lineHeight: 1,
+                        y: -0.5
+                      }}
+                    >
                       {effectiveCurrentCount}
-                    </span>
+                    </motion.span>
                   )}
                 </div>
               </div>

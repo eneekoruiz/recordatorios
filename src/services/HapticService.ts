@@ -42,10 +42,38 @@ class HapticServiceClass {
   }
 
   /**
+   * Safari en iPhone no tiene `navigator.vibrate`, pero desde iOS 18 un interruptor nativo
+   * (`<input type="checkbox" switch>`) da un toque del Taptic Engine al cambiar. Se usa uno oculto
+   * fuera de la pantalla; sin iOS 18 no hace nada.
+   */
+  private switchLabel: HTMLLabelElement | null = null;
+  private tick(times = 1, gap = 70) {
+    if (!this._enabled || typeof document === 'undefined' || !document.body) return;
+    try {
+      if (!this.switchLabel) {
+        const label = document.createElement('label');
+        label.setAttribute('aria-hidden', 'true');
+        label.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;';
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.setAttribute('switch', '');
+        input.tabIndex = -1;
+        label.appendChild(input);
+        document.body.appendChild(label);
+        this.switchLabel = label;
+      }
+      const label = this.switchLabel;
+      for (let i = 0; i < times; i++) window.setTimeout(() => label.click(), i * gap);
+    } catch {
+      // Ignorar
+    }
+  }
+
+  /**
    * Micro-impacto físico para interacciones de interfaz
    */
   public impact(style: 'light' | 'medium' | 'heavy' = 'light') {
-    if (!this.canVibrate()) return;
+    if (!this.canVibrate()) { this.tick(); return; }
     try {
       switch (style) {
         case 'light':
@@ -67,7 +95,7 @@ class HapticServiceClass {
    * Respuesta para eventos clave (completar tarea, error, advertencia)
    */
   public notification(type: 'success' | 'warning' | 'error' = 'success') {
-    if (!this.canVibrate()) return;
+    if (!this.canVibrate()) { this.tick(type === 'error' ? 3 : 2); return; }
     try {
       switch (type) {
         case 'success':
@@ -90,7 +118,7 @@ class HapticServiceClass {
    * Pulsación sutil de selección (para switches, sliders, cambio de tabs)
    */
   public selection() {
-    if (!this.canVibrate()) return;
+    if (!this.canVibrate()) { this.tick(); return; }
     try {
       navigator.vibrate(6);
     } catch {

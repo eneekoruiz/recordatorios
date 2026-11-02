@@ -806,7 +806,7 @@ function MenuActions({
       <ActionRow 
         icon={<Bot size={16} color="var(--accent-purple, #af52de)" />} 
         label={task.completedBy === 'ai' ? "Cambiar a hecha por ti (manual)" : "Marcar como realizada por la IA"} 
-        sublabel={task.completedBy === 'ai' ? "Registrada como completada por la IA" : "Registra que esta tarea la hizo o adelantó la IA"}
+        subtitle={task.completedBy === 'ai' ? "Registrada como completada por la IA" : "Registra que esta tarea la hizo o adelantó la IA"}
         onClick={() => { 
           setContextMenuOpen(false); 
           if (task.completedBy === 'ai') {
@@ -1010,7 +1010,7 @@ function MenuActions({
             <ActionRow 
               icon={<IndentDecrease size={16} color="var(--accent-primary)" />} 
               label="Anular sangría" 
-              sublabel="Convertir en principal"
+              subtitle="Convertir en principal"
               onClick={() => { 
                 setContextMenuOpen(false); 
                 nestTask(task.id, undefined); 

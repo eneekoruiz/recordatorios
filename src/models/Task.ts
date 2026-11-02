@@ -29,6 +29,8 @@ export interface CustomList {
   showCompleted?: boolean; // Persist preference to show completed tasks for this list
   showRestPeriods?: boolean;
   activeGymDaySectionId?: string;
+  /** Cuándo se eligió ese día a mano: vale solo para ese día; después vuelve la rotación. */
+  activeGymDaySetAt?: number;
   activeRoutineSplit?: string; // Persist preference to show intermediate rest periods for gym/routine lists
   isPinned?: boolean; // Pinned lists appear as large cards at the top of sidebar
   isFolder?: boolean; // Habilita comportamiento de carpeta organizativa (contiene listas/subcarpetas)

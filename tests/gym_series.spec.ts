@@ -38,11 +38,17 @@ async function seedGym(page: Page, lastDay1At?: number) {
 
 const header = (page: Page, title: RegExp) => page.locator('.group-header', { has: page.locator('.section-head-title', { hasText: title }) });
 
-test('la lista dice qué día toca: el de hoy abierto, los demás plegados', async ({ page }) => {
+const hub = (page: Page) => page.getByTestId('gym-hub');
+
+test('la tarjeta «Hoy» dice qué día toca: el de hoy abierto, los demás plegados y sin etiquetas repetidas', async ({ page }) => {
   await seedGym(page);
-  await expect(header(page, /^Día 1/).getByTestId('training-day-badge')).toHaveText('Toca hoy');
-  await expect(header(page, /^Día 2/).getByTestId('training-day-badge')).toHaveText('Siguiente');
-  await expect(header(page, /^Día 3/).getByTestId('training-day-badge')).toHaveText('Otro día');
+  await expect(hub(page).getByTestId('gym-hub-title')).toHaveText('Día 1 · Tren Superior A');
+  await expect(hub(page)).toContainText('2 ejercicios');
+  await expect(hub(page).getByRole('radio', { name: /^Día 1/ })).toHaveAttribute('aria-checked', 'true');
+  await expect(hub(page)).toContainText('0 de 3');
+  // Ninguna cabecera repite «Toca hoy» ni lleva «Hacer hoy».
+  await expect(page.getByText('Toca hoy')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Hacer hoy' })).toHaveCount(0);
   await expect(page.getByText('Press de banca')).toBeVisible();
   await expect(page.getByText('Sentadilla')).toHaveCount(0);
   await expect(header(page, /^Día 2/).locator('.section-head-chevron')).toHaveAttribute('aria-expanded', 'false');
@@ -52,11 +58,30 @@ test('la lista dice qué día toca: el de hoy abierto, los demás plegados', asy
   await expect(page.getByText('Sentadilla')).toBeVisible();
 });
 
+test('tocar otro día lo hace el de hoy (solo hoy) y se puede volver al que tocaba', async ({ page }) => {
+  await seedGym(page);
+  await hub(page).getByRole('radio', { name: /^Día 3/ }).click();
+  await expect(hub(page).getByTestId('gym-hub-title')).toHaveText('Día 3 · Tren Superior B');
+  await expect(page.getByText('Press militar')).toBeVisible();
+  await expect(page.getByText('Press de banca')).toHaveCount(0);
+  const setAt = await page.evaluate(() => (window as any).useAppStore.getState().lists.find((l: any) => l.id === 'gym').activeGymDaySetAt);
+  expect(new Date(setAt).toDateString()).toBe(new Date().toDateString());
+  await hub(page).getByRole('button', { name: 'Volver al que tocaba' }).click();
+  await expect(hub(page).getByTestId('gym-hub-title')).toHaveText('Día 1 · Tren Superior A');
+});
+
+test('una elección de otro día ya no manda: vuelve la rotación', async ({ page }) => {
+  await seedGym(page);
+  await page.evaluate(() => (window as any).useAppStore.getState().updateList('gym', { activeGymDaySectionId: 'g_d3', activeGymDaySetAt: Date.now() - 2 * 86400000 }));
+  await expect(hub(page).getByTestId('gym-hub-title')).toHaveText('Día 1 · Tren Superior A');
+});
+
 test('rotación: si el Día 1 se hizo otro día, hoy toca el Día 2', async ({ page }) => {
   await seedGym(page, Date.now() - 2 * 86400000);
-  await expect(header(page, /^Día 2/).getByTestId('training-day-badge')).toHaveText('Toca hoy');
-  await expect(header(page, /^Día 3/).getByTestId('training-day-badge')).toHaveText('Siguiente');
-  await expect(header(page, /^Día 1/).getByTestId('training-day-badge')).toHaveText('Otro día');
+  await expect(hub(page).getByTestId('gym-hub-title')).toHaveText('Día 2 · Tren Inferior A');
+  // El Día 1 se hizo hace dos días: si fue esta semana, cuenta como hecho.
+  const sameWeek = await page.evaluate(() => { const d = new Date(); const day = (d.getDay() + 6) % 7; return day >= 2; });
+  if (sameWeek) await expect(hub(page).getByRole('radio', { name: /^Día 1.*hecho esta semana/ })).toBeVisible();
 });
 
 test('«Empezar» va serie a serie con descansos y solo hace el día de hoy', async ({ page }) => {
@@ -129,5 +154,6 @@ test('«Empezar» va serie a serie con descansos y solo hace el día de hoy', as
   expect(state.sentadilla).toBe(0);
 
   await page.getByRole('button', { name: 'Volver' }).click();
-  await expect(header(page, /^Día 1/).getByTestId('training-day-badge')).toHaveText('Hecho hoy');
+  await expect(hub(page)).toContainText('Hecho hoy');
+  await expect(hub(page)).toContainText('1 de 3');
 });

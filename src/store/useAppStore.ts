@@ -4,7 +4,8 @@ import { completePrimaryHydration, getPersistenceRecovery, idbStorage } from '..
 import type { TaskItem, CustomCycle, CustomList, ListSection } from '../models/Task';
 import { TaskRepository } from '../repositories/TaskRepository';
 import { isCompletedInCurrentPeriod, isSkippedInCurrentPeriod, isTaskActuallyCompletedInCurrentPeriod, findPeriodIndexInHistory, matchesPeriod, wouldCreateDependencyCycle, getStartOfWeek, getStartOfNextWeek } from '../services/TaskService';
-import { getEffectiveCycleId, getPureCyclicPeriodicity } from '../utils/sectionRoutine';
+import { getEffectiveCycleId, getPureCyclicPeriodicity, getTaskPeriodicity } from '../utils/sectionRoutine';
+import { ROOM_ANY_FREQUENCY_PREFIX, roomKeyOf, roomSectionId } from '../utils/limpiezaRooms';
 import { isGymTask } from '../utils/specialLists';
 import { validateJsonImport } from '../utils/importValidation';
 import { isPersistedRecordSafe } from '../utils/persistedStateValidation';
@@ -1633,9 +1634,18 @@ export const useAppStore = create<AppState>()(
         return changed ? { tasks: newTasks } : state;
       }),
 
-      updateTaskSection: (taskId, sectionId) => optimisticUpdate(get, set, (state) => {
+      updateTaskSection: (taskId, requestedSectionId) => optimisticUpdate(get, set, (state) => {
         const task = state.tasks[taskId];
         if (!task) return state;
+        // Cabecera de estancia de Limpieza en la vista continua: la estancia, con la frecuencia de la tarea.
+        let sectionId = requestedSectionId;
+        if (sectionId?.startsWith(ROOM_ANY_FREQUENCY_PREFIX)) {
+          const roomKey = roomKeyOf(sectionId);
+          const periodicity = getTaskPeriodicity(task, state.listSections, state.lists);
+          sectionId = roomKey && periodicity && task.categoryId
+            ? roomSectionId(periodicity, roomKey, state.listSections, task.categoryId)
+            : task.sectionId;
+        }
 
         const updatedTasks = { ...state.tasks };
         let parentId = task.parentId;

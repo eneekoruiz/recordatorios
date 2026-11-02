@@ -439,3 +439,90 @@ html.dark .section-head-training.is-today { color: #409cff; }
 .section-head-training.is-done_today { color: #1c7c34; }
 [data-theme="dark"] .section-head-training.is-done_today,
 html.dark .section-head-training.is-done_today { color: #30d158; }
+
+/* Fila levantada (arrastre o menú de mantener pulsado): toma el fondo elevado de su tarjeta. La fila
+   lleva el fondo de la lista (negro puro en oscuro) y, dentro de la copia gris que flota, se veía
+   como una placa negra. */
+:where([data-theme="dark"], html.dark) .task-row.selected-card { background: #1c1c1e !important; }
+@media (prefers-color-scheme: dark) {
+  :where(:root:not([data-theme="light"])) .task-row.selected-card { background: #1c1c1e !important; }
+}
+/* En la copia que flota manda el fondo de la copia (va después y es más específica). */
+html .drag-ghost .task-row.task-row { background: transparent !important; }
+
+/* ── Gimnasio: cabecera de la rutina (qué toca hoy y cómo va la semana) ── */
+.gym-hub {
+  --gym-orange: #ff9500;
+  --gym-orange-text: #c93400;
+  --gym-green: #30d158;
+  --gym-green-text: #1c7c34;
+  margin: 4px 16px 14px;
+  padding: 14px 16px 12px;
+  border-radius: 16px;
+  background: #f2f2f7;
+  box-shadow: inset 0 0 0 0.5px var(--separator-hair, rgba(60, 60, 67, 0.18));
+}
+:where([data-theme="dark"], html.dark) .gym-hub { background: #1c1c1e; --gym-orange-text: #ff9f0a; --gym-green-text: #30d158; }
+@media (prefers-color-scheme: dark) {
+  :where(:root:not([data-theme="light"])) .gym-hub { background: #1c1c1e; --gym-orange-text: #ff9f0a; --gym-green-text: #30d158; }
+}
+.gym-hub-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 28px; }
+.gym-hub-eyebrow {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: var(--type-footnote, 0.8125rem); font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase;
+  color: var(--gym-orange-text);
+}
+.gym-hub-eyebrow.is-done { color: var(--gym-green-text); }
+.gym-hub-split {
+  position: relative; display: inline-flex; align-items: center; gap: 2px;
+  border: none; background: transparent; padding: 0; cursor: pointer;
+  font-size: var(--type-footnote, 0.8125rem); font-weight: 500; color: var(--label-2);
+}
+.gym-hub-title {
+  margin: 2px 0 0; font-size: 1.3rem; line-height: 1.2; font-weight: 700; letter-spacing: -0.02em;
+  color: var(--label-1);
+}
+.gym-hub-focus { font-weight: 600; color: var(--label-1); }
+.gym-hub-meta {
+  margin: 3px 0 0; font-size: var(--type-subheadline, 0.9375rem); color: var(--label-2);
+  font-variant-numeric: tabular-nums;
+}
+.gym-hub-reset {
+  border: none; background: transparent; padding: 0; cursor: pointer; font: inherit;
+  color: var(--accent-primary, #007aff); text-decoration: none;
+}
+.gym-hub-week { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
+.gym-hub-days { display: flex; gap: 8px; }
+.gym-hub-day {
+  width: 44px; height: 44px; border-radius: 50%; border: none; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--fill-tertiary, rgba(118, 118, 128, 0.12)); color: var(--label-2);
+  font-size: 0.95rem; font-weight: 600; font-variant-numeric: tabular-nums;
+  transition: background-color 0.18s ease, box-shadow 0.18s ease, transform 0.12s ease;
+}
+.gym-hub-day:active { transform: scale(0.94); }
+.gym-hub-day.is-done { background: var(--gym-green); color: #000; }
+.gym-hub-day.is-today { box-shadow: inset 0 0 0 2.5px var(--gym-orange); color: var(--label-1); cursor: default; }
+.gym-hub-day.is-today.is-done { box-shadow: inset 0 0 0 2.5px var(--gym-orange); }
+.gym-hub-day:focus-visible { outline: 2px solid var(--accent-primary, #007aff); outline-offset: 2px; }
+.gym-hub-progress { display: flex; flex-direction: column; align-items: flex-end; font-size: var(--type-footnote, 0.8125rem); color: var(--label-2); font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1.25; }
+.gym-hub-progress strong { font-size: 1rem; font-weight: 600; color: var(--label-1); }
+@media (prefers-reduced-motion: reduce) { .gym-hub-day { transition: none; } }
+
+/* Fila de descanso entre ejercicios: una línea discreta con su cronómetro. */
+.rest-row { --rest-accent: #c93400; display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; color: var(--label-2); }
+.rest-row-icon { color: var(--rest-accent); flex-shrink: 0; }
+.rest-row-title { flex: 1; min-width: 0; font-size: var(--type-subheadline, 0.9375rem); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rest-row-duration {
+  position: relative; border: none; background: transparent; cursor: pointer; padding: 0 4px;
+  font-size: var(--type-subheadline, 0.9375rem); font-weight: 500; color: var(--label-2); font-variant-numeric: tabular-nums;
+}
+.rest-row-clock { font-size: 1rem; font-weight: 600; color: var(--label-1); font-variant-numeric: tabular-nums; }
+.rest-row-toggle {
+  width: 44px; height: 36px; flex-shrink: 0; border: none; background: transparent; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; color: var(--rest-accent);
+}
+:where([data-theme="dark"], html.dark) .rest-row { --rest-accent: #ff9f0a; }
+@media (prefers-color-scheme: dark) { :where(:root:not([data-theme="light"])) .rest-row { --rest-accent: #ff9f0a; } }
+.rest-row.is-finished .rest-row-title, .rest-row.is-finished .rest-row-icon { color: var(--gym-green-text, #1c7c34); }
+:where([data-theme="dark"], html.dark) .rest-row.is-finished .rest-row-title { color: #30d158; }
