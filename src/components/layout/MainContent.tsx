@@ -376,7 +376,7 @@ const CORE_CYCLES = [
     HapticService.selection();
   }, [currentList, updateList]);
   const gymDayOverride = currentList?.activeGymDaySectionId && currentList.activeGymDaySetAt
-    && new Date(currentList.activeGymDaySetAt).toDateString() === new Date().toDateString()
+    && new Date(currentList.activeGymDaySetAt).toDateString() === periodReferenceDate.toDateString()
     ? currentList.activeGymDaySectionId : undefined;
 
   // Cada lista recuerda su orden (como en Recordatorios de Apple). Limpieza empieza en «Orden de
@@ -1015,7 +1015,7 @@ const CORE_CYCLES = [
   // Días de la rutina para la tarjeta «Hoy»: hecho esta semana, ejercicios y duración.
   const gymHubDays = useMemo<GymHubDay[]>(() => {
     if (!trainingPlan || !currentList) return [];
-    const weekStart = getStartOfWeek(new Date()).getTime();
+    const weekStart = getStartOfWeek(periodReferenceDate).getTime();
     return trainingPlan.daySectionIds.map(dayId => {
       const sec = listSections.find(ls => ls.id === dayId);
       const [shortName, ...rest] = (sec?.name || '').split(':');
