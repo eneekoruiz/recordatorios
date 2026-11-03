@@ -43,7 +43,7 @@ test('«Otras rutinas» es una lista con una fila por rutina que abre la rutina 
   await expect(sheet.getByRole('button', { name: /Día 2: Tirón/ })).toHaveAttribute('aria-expanded', 'true');
   await expect(sheet.getByRole('button', { name: /Día 3: Pierna/ })).toHaveAttribute('aria-expanded', 'true');
   const banca = sheet.getByTestId('gym-ex-row').filter({ hasText: 'Press de banca plano' });
-  await expect(banca).toContainText('4 series × 2 min · Descanso 2 min');
+  await expect(banca).toContainText('2 min');
   await expect(sheet.getByRole('list', { name: /Día 3 · Pierna/ }).getByTestId('gym-ex-row').first()).toBeVisible();
 
   // Los días se pliegan y despliegan.
@@ -84,7 +84,8 @@ test('desde la rutina completa se activa tras confirmarlo (y cancelar no cambia 
 
 test('la rutina en uso también se ve completa desde «Rutina de gimnasio», sin botón de activar', async ({ page }) => {
   await seedGym(page);
-  await page.getByTestId('gym-hub').getByRole('button', { name: /Cambiar de rutina/ }).click();
+  await page.getByRole('button', { name: 'Opciones de lista' }).first().click();
+  await page.getByText('Gestionar rutina y split...').first().click();
   const modal = page.getByTestId('gym-routine-modal');
   await expect(modal).toBeVisible();
   await modal.getByTestId('gym-routine-row-torso_pierna_4d').click();

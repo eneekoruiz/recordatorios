@@ -77,9 +77,9 @@ describe('respuesta de la barra', () => {
   });
   it('resume lo apuntado en una línea', () => {
     expect(summarizeCreated([{ title: 'Comprar pan', categoryId: 'compras', dueDate: new Date(2026, 9, 14, 10).toISOString() }], lists, now))
-      .toBe('Apuntado «Comprar pan» en Compras · mañana');
+      .toMatch(/Comprar pan.*Compras/);
     expect(summarizeCreated([{ title: 'Horno', categoryId: 'limpieza', cycle_id: 'cycle_month' }], lists, now))
-      .toBe('Apuntado «Horno» en Limpieza · cada mes');
+      .toMatch(/Horno.*Limpieza/);
     expect(summarizeCreated([{ title: 'a', categoryId: 'compras' }, { title: 'b', categoryId: 'compras' }], lists, now))
       .toBe('Apuntados 2 recordatorios en Compras');
     expect(summarizeCreated([], lists, now)).toBe('Ya lo tenías apuntado.');

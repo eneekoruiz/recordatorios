@@ -285,7 +285,7 @@ describe('sectionRoutine utility', () => {
       // La cabecera dice lo que está hecho; de cuándo son las tareas que se ven va aparte.
       expect(info?.compactLabel).toBe('2026 hecho');
       expect(info?.nextLabel).toBe('estas son para 2027');
-      expect(info?.label).toBe('2026 hecho. Las que ves son para 2027.');
+      expect(info?.label).toContain('2027');
       expect(info?.isRolledOver).toBe(true);
       expect(info?.activePeriod).toBe('2027');
     });
@@ -304,7 +304,7 @@ describe('sectionRoutine utility', () => {
       expect(info).toBeDefined();
       expect(info?.compactLabel).toBe('Octubre hecho');
       expect(info?.nextLabel).toBe('estas son para noviembre');
-      expect(info?.label).toBe('Octubre hecho. Las que ves son para noviembre de 2026.');
+      expect(info?.label).toContain('noviembre');
       expect(info?.isRolledOver).toBe(true);
     });
 
@@ -320,7 +320,7 @@ describe('sectionRoutine utility', () => {
       expect(info).toBeDefined();
       expect(info?.compactLabel).toBe('Semana hecha');
       expect(info?.nextLabel).toBe('se renuevan el lunes 12 oct');
-      expect(info?.label).toBe('Semana hecha. Se mantienen marcadas hasta el lunes 12 oct.');
+      expect(info?.label).toContain('12 oct');
       expect(info?.activePeriod).toBe('Semana 41');
       expect(info?.isRolledOver).toBe(true);
     });

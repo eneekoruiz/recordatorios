@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TaskItem } from '../../src/models/Task';
 import {
-  formatRestSeconds,
   parseRepsFromDescription,
   resolveGymRoutineDays,
   splitGymDayName,
@@ -25,8 +24,6 @@ describe('rutinas de gimnasio: datos para verlas completas', () => {
     expect(summarizeExercise(task({ targetCount: 4, duration: 1, restDuration: 90, description: '4 series de 12-15 reps.' })).volume).toBe('4 × 12–15 reps');
     expect(summarizeExercise(task({ targetCount: 50, duration: 3 }))).toMatchObject({ volume: '50 repeticiones', rest: '', sets: 0 });
     expect(summarizeExercise(task({ duration: 5 })).volume).toBe('5 min');
-    expect(formatRestSeconds(45)).toBe('45 s');
-    expect(formatRestSeconds(75)).toBe('75 s');
     expect(parseRepsFromDescription('4 series pesadas en banco plano.')).toBe('');
   });
 

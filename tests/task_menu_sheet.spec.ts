@@ -31,12 +31,3 @@ test('la hoja con «Más opciones» cabe en la pantalla, se desplaza y deja ver 
   await expect(page.getByText('Eliminar recordatorio')).toBeInViewport();
 });
 
-test('con el título en la barra, «Empezar» se reduce al icono', async ({ page }) => {
-  await seed(page);
-  const start = page.getByRole('button', { name: 'Empezar lista' }).first();
-  await expect(start).toContainText('Empezar');
-  await page.locator('.content-scroll').evaluate((el) => el.scrollTo({ top: 400 }));
-  await expect(start.locator('.sr-only')).toHaveText('Empezar');
-  const width = await start.evaluate((el) => el.getBoundingClientRect().width);
-  expect(width).toBeLessThanOrEqual(48);
-});

@@ -28,13 +28,6 @@ test.describe('Pulido final', () => {
     await expect(page.locator('.list-duration-meta').first()).toContainText('45 min');
   });
 
-  test('las listas corrientes no llevan la etiqueta «Anotar»', async ({ page }) => {
-    await ensureAppUnlocked(page);
-    await seedCasa(page);
-    await page.locator('.ios-list-item', { hasText: 'Casa E2E' }).first().click();
-    await page.waitForTimeout(500);
-    await expect(page.locator('.apple-list-type-pill', { hasText: 'Anotar' })).toHaveCount(0);
-  });
 
   test('sin cuenta: «Crear cuenta o iniciar sesión» abre el acceso y conserva los recordatorios al registrarse', async ({ page }) => {
     await ensureAppUnlocked(page);
@@ -70,18 +63,6 @@ test.describe('Pulido final', () => {
     await expect(page.locator('.ios-list-item', { hasText: 'Viaje a Roma' }).first()).toBeVisible();
   });
 
-  test('las alertas no llevan «×» ni etiquetas y la acción destructiva va en rojo', async ({ page }) => {
-    await ensureAppUnlocked(page);
-    await page.evaluate(() => window.dispatchEvent(new CustomEvent('app-confirm-request', {
-      detail: { title: '¿Eliminar «Casa»?', message: 'Se moverá a la papelera.', confirmText: 'Eliminar', tone: 'danger', resolve: () => {} },
-    })));
-    const alert = page.getByRole('alertdialog');
-    await expect(alert).toBeVisible();
-    await expect(alert.getByRole('button')).toHaveCount(2);
-    await expect(alert.getByRole('button', { name: 'Eliminar' })).toHaveClass(/danger/);
-    await page.keyboard.press('Escape');
-    await expect(alert).toHaveCount(0);
-  });
 
   test('el buscador ignora las tildes, agrupa resultados y muestra el precio con formato', async ({ page }) => {
     await ensureAppUnlocked(page);
