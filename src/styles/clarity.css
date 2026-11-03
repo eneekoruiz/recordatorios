@@ -526,6 +526,32 @@ html .drag-ghost .task-row.task-row { background: transparent !important; }
 .rest-row.is-finished .rest-row-title, .rest-row.is-finished .rest-row-icon { color: var(--gym-green-text, #1c7c34); }
 :where([data-theme="dark"], html.dark) .rest-row.is-finished .rest-row-title { color: #30d158; }
 
-/* Vista por frecuencia: el botón de organización (secciones / seguidas) va solo con su icono, junto al mes. */
-.cycle-strip-row .layout-toggle-btn .routine-chip { width: 32px; height: 32px; padding: 0; justify-content: center; }
-.cycle-strip-row .cycle-strip-toggle { margin-left: auto; }
+.cycle-strip-row { flex-wrap: wrap; }
+.cycle-strip-toggle { min-width: 0; flex-shrink: 1; }
+.cycle-layout-options {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+}
+.cycle-layout-options button {
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.cycle-layout-options button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--text-primary) 12%, transparent);
+  font-weight: 650;
+}
+.cycle-layout-options button:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}

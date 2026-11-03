@@ -7,6 +7,67 @@ async function ensureAppUnlocked(page: any) {
 }
 
 test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', () => {
+  for (const width of [375, 768, 1440]) {
+    test(`Mensual alterna la organización y guarda la elección a ${width}px`, async ({ page }) => {
+      test.setTimeout(120_000);
+      const errors: string[] = [];
+      page.on('pageerror', error => errors.push(error.message));
+      await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: width === 375 ? 'dark' : 'light' });
+      await page.setViewportSize({ width, height: 900 });
+      await bootApp(page);
+      await page.evaluate(() => {
+        const store = (window as any).useAppStore.getState();
+        const listId = 'test_monthly_layout';
+        store.addTasksBatch([], { createList: { id: listId, name: 'Rutina de prueba', color: '#007aff', icon: 'list' } });
+        for (const [index, cycle] of ['month', 'week', 'day'].entries()) {
+          store.addTask({
+            id: `test_layout_${cycle}`,
+            title: `Tarea de prueba ${cycle}`,
+            categoryId: listId,
+            cycle_id: `cycle_${cycle}`,
+            order: index,
+            status: 'pending',
+            created_at: new Date().toISOString(),
+          });
+        }
+      });
+      const monthly = page.locator('.ios-list-item').filter({ hasText: 'Mensual' }).first();
+      await monthly.click();
+      const completeRoutine = page.getByRole('button', { name: /^Rutina completa/ });
+      if (await completeRoutine.getAttribute('aria-pressed') === 'false') await completeRoutine.click();
+      const options = page.getByRole('group', { name: 'Organización', exact: true });
+      const sections = options.getByRole('button', { name: 'Por secciones' });
+      const mixed = options.getByRole('button', { name: 'Todas seguidas' });
+      await expect(sections).toHaveAttribute('aria-pressed', 'true');
+      const frequencyHeaders = page.locator('.group-header').getByText(/^(Diarias|Semanales|Mensuales)$/);
+      for (const title of ['Diarias', 'Semanales', 'Mensuales']) {
+        await expect(frequencyHeaders.filter({ hasText: title }).first()).toBeVisible();
+      }
+      await sections.focus();
+      await sections.press('Tab');
+      await expect(mixed).toBeFocused();
+      await mixed.press('Enter');
+      await expect(mixed).toHaveAttribute('aria-pressed', 'true');
+      await expect(frequencyHeaders).toHaveCount(0);
+      await expect(page.locator('[data-task-id^="test_layout_"]')).toHaveText([
+        /Tarea de prueba month/, /Tarea de prueba week/, /Tarea de prueba day/,
+      ]);
+      expect(await options.evaluate(el => {
+        const rect = el.getBoundingClientRect();
+        return rect.left >= 0 && rect.right <= document.documentElement.clientWidth;
+      })).toBe(true);
+
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.reload();
+      await expect(monthly).toBeVisible();
+      await monthly.click();
+      await expect(mixed).toHaveAttribute('aria-pressed', 'true');
+      await sections.click();
+      await expect(frequencyHeaders.filter({ hasText: 'Mensuales' }).first()).toBeVisible();
+      expect(errors).toEqual([]);
+    });
+  }
+
   test('1. Sidebar displays Frecuencia section and weekly aggregated view works', async ({ page }) => {
     await ensureAppUnlocked(page);
 

@@ -13,7 +13,6 @@ import {
   ChevronDown,
   Check,
   Plus,
-  Sparkles,
   Layers,
   House,
   Dumbbell,
@@ -518,39 +517,26 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                       >
                         <span className={`routine-chip${cycleRoutineMode === 'full_routine' ? ' is-on' : ''}`}>
                           {cycleRoutineMode === 'full_routine' ? <Check size={12} strokeWidth={3} aria-hidden="true" /> : <Plus size={12} strokeWidth={2.6} aria-hidden="true" />}
-                          <span>Completa</span>
+                          <span>Rutina completa</span>
                         </span>
                       </button>
                     )}
 
                     {onToggleCycleViewLayout && (
-                      <button
-                        type="button"
-                        data-testid="cycle-layout-toggle-btn"
-                        className={`routine-chip-btn layout-toggle-btn${cycleViewLayout === 'mixed' ? ' is-on' : ''}`}
-                        aria-pressed={cycleViewLayout === 'mixed'}
-                        aria-label={cycleViewLayout === 'mixed' ? 'Organización: Todas seguidas. Pulsa para separar por secciones' : 'Organización: Por secciones. Pulsa para mezclar todas seguidas en el mejor orden'}
-                        title={cycleViewLayout === 'mixed' ? 'Viendo todas seguidas en orden óptimo. Pulsa para ver por secciones' : 'Viendo por secciones. Pulsa para mezclar todas seguidas en el mejor orden'}
-                        style={{ ['--chip-color' as string]: viewColor }}
-                        onClick={() => {
-                          HapticService.selection();
-                          onToggleCycleViewLayout(cycleViewLayout === 'sections' ? 'mixed' : 'sections');
-                        }}
-                      >
-                        <span className={`routine-chip${cycleViewLayout === 'mixed' ? ' is-on' : ''}`}>
-                          {cycleViewLayout === 'mixed' ? (
-                            <>
-                              <Sparkles size={15} strokeWidth={2.2} aria-hidden="true" />
-                              <span className="sr-only">Seguidas</span>
-                            </>
-                          ) : (
-                            <>
-                              <Layers size={15} strokeWidth={2.2} aria-hidden="true" />
-                              <span className="sr-only">Secciones</span>
-                            </>
-                          )}
-                        </span>
-                      </button>
+                      <span className="cycle-layout-options" role="group" aria-label="Organización">
+                        {(['sections', 'mixed'] as const).map(layout => (
+                          <button
+                            key={layout}
+                            type="button"
+                            aria-pressed={cycleViewLayout === layout}
+                            onClick={() => {
+                              if (cycleViewLayout !== layout) onToggleCycleViewLayout(layout);
+                            }}
+                          >
+                            {layout === 'sections' ? 'Por secciones' : 'Todas seguidas'}
+                          </button>
+                        ))}
+                      </span>
                     )}
                   </div>
                 ) : null

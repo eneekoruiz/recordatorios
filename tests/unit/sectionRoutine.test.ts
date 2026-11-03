@@ -349,6 +349,31 @@ describe('sectionRoutine utility', () => {
   });
 
   describe('sortTasksForContinuousExecution', () => {
+    const pendingTask = {
+      user_id: 'test',
+      type: 'task',
+      status: 'pending',
+      created_at: '2026-01-01',
+      updated_at: '2026-01-01',
+      version: 1,
+    } as const;
+
+    it('intercala frecuencias con la misma franja en el orden de las tareas', () => {
+      const tasks: TaskItem[] = [
+        { ...pendingTask, id: 'daily', title: 'Diaria', cycle_id: 'cycle_day', order: 3 },
+        { ...pendingTask, id: 'monthly', title: 'Mensual', cycle_id: 'cycle_month', order: 1 },
+        { ...pendingTask, id: 'weekly', title: 'Semanal', cycle_id: 'cycle_week', order: 2 },
+      ];
+      expect(sortTasksForContinuousExecution(tasks).map(task => task.id)).toEqual(['monthly', 'weekly', 'daily']);
+    });
+
+    it('conserva cada tarea una sola vez si hay dependencias circulares', () => {
+      const tasks: TaskItem[] = [
+        { ...pendingTask, id: 'a', title: 'A', blockedBy: ['b'] },
+        { ...pendingTask, id: 'b', title: 'B', blockedBy: ['a'] },
+      ];
+      expect(sortTasksForContinuousExecution(tasks).map(task => task.id).sort()).toEqual(['a', 'b']);
+    });
     it('sorts cleaning tasks by logical cleaning phase regardless of frequency', () => {
       const tasks: TaskItem[] = [
         { id: '1', title: 'Fregar el suelo de la cocina', order: 1, created_at: '2026-01-01', cycle_id: 'cycle_week', status: 'pending' },

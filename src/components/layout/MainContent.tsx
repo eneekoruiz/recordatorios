@@ -266,7 +266,7 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
   // Organización visual de la vista de frecuencia: 'sections' (por secciones) o 'mixed' (todas seguidas en orden óptimo)
   const [cycleViewLayout, setCycleViewLayout] = useState<'sections' | 'mixed'>(() =>
-    safeGetJSON('cycle_view_layout_pref', 'sections')
+    safeGetJSON<string>('cycle_view_layout_pref', 'sections') === 'mixed' ? 'mixed' : 'sections'
   );
 
   const toggleCycleViewLayout = useCallback((layout?: 'sections' | 'mixed') => {
@@ -1182,14 +1182,9 @@ const CORE_CYCLES = [
               )
             );
 
-            if (currentCycle && cycleViewLayout === 'mixed' && !isLimpiezaList(listId) && !hasPeriodicChildSections) {
-              const listSortMode = isLimpiezaList(listId) ? 'routine' : sortBy;
-              let flatMixedTasks = deduplicateTaskList(tasksInScope);
-              if (listSortMode === 'routine' || isLimpiezaList(listId)) {
-                flatMixedTasks = sortTasksByUserPreference(flatMixedTasks, 'routine');
-              } else {
-                flatMixedTasks = sortTasksForContinuousExecution(flatMixedTasks, sortBy, listSections, lists);
-              }
+            if (currentCycle && cycleViewLayout === 'mixed') {
+              const listSortMode = sortBy === 'manual' ? defaultSortForList(listId) : sortBy;
+              const flatMixedTasks = sortTasksForContinuousExecution(deduplicateTaskList(tasksInScope), listSortMode);
               sectionTasksByKey[categoryOrCycle] = flatMixedTasks;
 
               if (flatMixedTasks.length === 0) {
@@ -1406,7 +1401,8 @@ const CORE_CYCLES = [
             // 1. Uncategorized tasks in scope
             const uncategorized = deduplicateTaskList(tasksInScope.filter(t => !t.sectionId || !sectionsForList.some(s => s.id === t.sectionId)));
             if (uncategorized.length > 0) {
-              if (currentCycle && cycleViewLayout === 'sections' && sectionsForList.some(s => hasTasksRecursively(s.id))) {
+              if (currentCycle && cycleViewLayout === 'sections' &&
+                (cycleViewMode === 'full_routine' || sectionsForList.some(s => hasTasksRecursively(s.id)))) {
                 const uncatByCycle = new Map<string, TaskItem[]>();
                 uncategorized.forEach(t => {
                   const eff = getEffectiveCycleId(t, listSections, lists) || t.cycle_id || currentCycle.id;
@@ -1414,7 +1410,11 @@ const CORE_CYCLES = [
                   uncatByCycle.get(eff)!.push(t);
                 });
 
-                uncatByCycle.forEach((cycleTasks, cId) => {
+                const daysByCycle = new Map(cycles.map(cycle => [cycle.id, cycle.daysValue]));
+                const orderedGroups = [...uncatByCycle].sort(([a], [b]) =>
+                  (daysByCycle.get(a) ?? Infinity) - (daysByCycle.get(b) ?? Infinity)
+                );
+                orderedGroups.forEach(([cId, cycleTasks]) => {
                   const cycleObj = cycles.find(c => c.id === cId) || (cId === currentCycle.id ? currentCycle : null);
                   const cycleName = cycleObj?.name || (cId === 'cycle_day' ? 'Diarias' : cId === 'cycle_week' ? 'Semanales' : cId === 'cycle_month' ? 'Mensuales' : cId === 'cycle_year' ? 'Anuales' : 'Otras');
                   const cycleColor = (cycleObj && 'color' in cycleObj && cycleObj.color) ? cycleObj.color : (getReservedFrequencyColor(cId) || parentColor);

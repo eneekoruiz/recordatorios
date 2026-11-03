@@ -430,13 +430,13 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
 
                         {onToggleCycleViewLayout && (
                           <>
-                            <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '6px 0' }} />
                             <div style={{ padding: '8px 12px 4px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-tertiary)' }}>
                               Organización
                             </div>
                             <button
                               type="button"
                               className="ios-dropdown-item"
+                              aria-pressed={cycleViewLayout === 'sections'}
                               onClick={() => { onToggleCycleViewLayout('sections'); setIsMenuOpen(false); }}
                               style={{ justifyContent: 'space-between', minHeight: 44, fontSize: '0.95rem' }}
                             >
@@ -444,7 +444,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                                 <Layers size={16} color="var(--text-secondary)" />
                                 <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1 }}>
                                   <span>Por secciones</span>
-                                  <span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>Diferenciar diarias, semanales y mensuales</span>
+                                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Mantener las cabeceras de sección</span>
                                 </span>
                               </div>
                               {cycleViewLayout === 'sections' && <Check size={16} color="var(--accent-primary)" />}
@@ -452,6 +452,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                             <button
                               type="button"
                               className="ios-dropdown-item"
+                              aria-pressed={cycleViewLayout === 'mixed'}
                               onClick={() => { onToggleCycleViewLayout('mixed'); setIsMenuOpen(false); }}
                               style={{ justifyContent: 'space-between', minHeight: 44, fontSize: '0.95rem' }}
                             >
@@ -459,7 +460,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                                 <Sparkles size={16} color="var(--text-secondary)" />
                                 <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1 }}>
                                   <span>Todas seguidas</span>
-                                  <span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>Mezclar en el mejor orden de ejecución</span>
+                                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Intercalar tareas de distintas frecuencias</span>
                                 </span>
                               </div>
                               {cycleViewLayout === 'mixed' && <Check size={16} color="var(--accent-primary)" />}
