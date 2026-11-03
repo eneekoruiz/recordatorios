@@ -485,55 +485,55 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
           'task_gym_2_sentadilla': {
             title: 'Sentadilla Jaca',
             desc: '4 series pesadas en máquina Jaca / Hack. Coloca los pies en ancho medio y desciende controlado. Descanso amplio.',
-            rest: 180,
+            rest: 120,
             duration: 2
           },
           'task_gym_2_peso_muerto_rumano': {
             title: 'Curl femoral en máquina',
             desc: '4 series de 10-12 reps en leg curl. Controla la fase excéntrica y aprieta en contracción.',
-            rest: 90,
+            rest: 60,
             duration: 1
           },
           'task_gym_2_prensa': {
             title: 'Máquina de glúteos',
             desc: '3 series de 12 reps (máquina de culo / glute drive). Extensión completa con glúteo bloqueado.',
-            rest: 75,
+            rest: 60,
             duration: 1
           },
           'task_gym_2_extensiones_cuadriceps': {
             title: 'Extensiones de cuádriceps',
             desc: '3 series de 12-15 reps (leg extension). Control en todo el recorrido con 1s de pausa.',
-            rest: 90,
+            rest: 60,
             duration: 1
           },
           'task_gym_4_prensa_pesada': {
             title: 'Sentadilla Jaca',
             desc: '4 series pesadas en Jaca. Foco en empujar con fuerza desde los talones y controlar la bajada. Descanso amplio.',
-            rest: 180,
+            rest: 120,
             duration: 2
           },
           'task_gym_4_sentadilla': {
             title: 'Curl femoral en máquina',
             desc: '4 series de 10-12 reps en leg curl.',
-            rest: 90,
+            rest: 60,
             duration: 1
           },
           'task_gym_4_peso_muerto_rumano': {
             title: 'Máquina de glúteos',
             desc: '3 series de 12 reps con contracción pico en cada repetición.',
-            rest: 75,
+            rest: 60,
             duration: 1
           },
           'task_gym_4_extensiones_cuadriceps': {
             title: 'Extensiones de cuádriceps',
             desc: '3 series de 12 reps (leg extension).',
-            rest: 90,
+            rest: 60,
             duration: 1
           },
           'task_gym_3_fondos': {
             title: 'Face pull con cuerda',
             desc: '3 series en polea alta con cuerda acercándola a la cara para espalda alta y deltoides posterior (30x8, 35x8, 45x3).',
-            rest: 75,
+            rest: 60,
             duration: 1,
             targetCount: 3,
             order: 4
@@ -541,7 +541,7 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
           'task_gym_3_remo_gironda': {
             title: 'Remo horizontal en polea',
             desc: '4 series en polea sentado. Espalda erguida, tracción horizontal al ombligo y retracción escapular (en vez de remo gironda).',
-            rest: 90,
+            rest: 75,
             duration: 1,
             targetCount: 4,
             order: 2
@@ -597,12 +597,12 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
             type: 'task',
             categoryId: gymList.id,
             sectionId: 'sec_gym_sup_b',
-            title: 'Press horizontal (Press de banca)',
+            title: 'Press horizontal en máquina (Press de banca)',
             description: '4 series en banco plano. Trabajo horizontal de pecho junto al press inclinado (2 de pecho y 2 de espalda).',
             targetCount: 4,
             currentCount: 0,
             duration: 1,
-            restDuration: 120,
+            restDuration: 75,
             cycle_id: 'cycle_week',
             status: 'pending',
             order: 1,

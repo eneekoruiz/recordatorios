@@ -15,7 +15,7 @@ import { isTrainingDayName } from './trainingDays';
 /** Prefijo de los descansos creados automáticamente (rutinas por defecto y limpieza de datos). */
 export const GYM_REST_ID_PREFIX = 'task_gym_rest_';
 
-export const DEFAULT_GYM_REST_MINUTES = 2;
+export const DEFAULT_GYM_REST_MINUTES = 1;
 
 const sectionOf = (t: TaskItem) => t.sectionId || (t as any).section_id;
 

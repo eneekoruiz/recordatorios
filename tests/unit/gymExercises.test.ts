@@ -130,7 +130,7 @@ describe('Gimnasio y Rutinas - Catálogo y Alternativas', () => {
     const titles = day3Tasks.map(t => t.title);
 
     expect(titles).toContain('Press inclinado');
-    expect(titles).toContain('Press horizontal (Press de banca)');
+    expect(titles).toContain('Press horizontal en máquina (Press de banca)');
     expect(titles).toContain('Remo horizontal en polea');
     expect(titles).toContain('Jalón al pecho');
     expect(titles).toContain('Face pull con cuerda');
@@ -176,8 +176,8 @@ describe('Gimnasio y Rutinas - Rutina Completa con Sección Diaria', () => {
 
     // Comprobar ejercicios de Tren Superior A
     const day1Tasks = tasks.filter(t => t.sectionId === 'sec_gym_sup_a').map(t => t.title);
-    expect(day1Tasks).toContain('Press de banca');
-    expect(day1Tasks).toContain('Remo con barra');
+    expect(day1Tasks).toContain('Press de banca en máquina');
+    expect(day1Tasks).toContain('Remo horizontal en polea');
     expect(day1Tasks).toContain('Press militar');
     expect(day1Tasks).toContain('Jalón al pecho');
     expect(day1Tasks).toContain('Elevaciones laterales');
@@ -194,18 +194,18 @@ describe('Gimnasio y Rutinas - Rutina Completa con Sección Diaria', () => {
 
     const jacaTask = tasks.find(t => t.title === 'Sentadilla Jaca');
     expect(jacaTask).toBeDefined();
-    expect(jacaTask?.restDuration).toBe(180); // 3 minutos de descanso para Jaca
+    expect(jacaTask?.restDuration).toBe(120); // 3 minutos de descanso para Jaca
 
     // Comprobar que cada día finaliza con un apartado de cardio flexible
     const cardioTasks = tasks.filter(t => t.title.toLowerCase().includes('cardio'));
     expect(cardioTasks.length).toBe(4);
 
     // Comprobar que las tareas tienen configuradas series (targetCount), duración y descanso (restDuration)
-    const benchTask = tasks.find(t => t.title === 'Press de banca');
+    const benchTask = tasks.find(t => t.title === 'Press de banca en máquina');
     expect(benchTask).toBeDefined();
     expect(benchTask?.targetCount).toBe(4);
     expect(benchTask?.duration).toBe(1);
-    expect(benchTask?.restDuration).toBe(120);
+    expect(benchTask?.restDuration).toBe(90);
   });
 
   it('valida weightLogs en el esquema de importación e IndexedDB sin errores', () => {
