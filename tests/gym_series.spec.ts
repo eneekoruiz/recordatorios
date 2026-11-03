@@ -157,3 +157,12 @@ test('«Empezar» va serie a serie con descansos y solo hace el día de hoy', as
   await expect(hub(page)).toContainText('Hecho hoy');
   await expect(hub(page)).toContainText('1 de 3');
 });
+
+test('cada ejercicio dice sus series, el descanso entre series y el total, sin «Semanal»', async ({ page }) => {
+  await seedGym(page);
+  const meta = page.getByTestId('series-duration').first().locator('xpath=..');
+  // Press de banca: 3 series de 1 min con 1 min de descanso entre series → 3 + 2 = 5 min.
+  await expect(page.getByTestId('series-duration').first()).toHaveAttribute('title', 'Duración: 3 series de 1 min, con 1 min de descanso entre series: 5 min en total');
+  await expect(meta).toHaveText(/3 × 1 min.*descanso 1 min.*5 min/);
+  await expect(meta).not.toContainText('Semanal');
+});

@@ -191,6 +191,8 @@ export class TaskDuplicateIndex {
 
   public addTask(task: TaskItem): void {
     if (task.deleted_at) return;
+    // Los descansos entre ejercicios se llaman todos igual y son filas distintas: no se indexan.
+    if (task.isRest) return;
     const norm = normalizeTitle(task.title || '');
     if (!norm) return;
 
@@ -224,6 +226,7 @@ export class TaskDuplicateIndex {
   }
 
   public findDuplicate(candidate: Partial<TaskItem>): TaskItem | null {
+    if (candidate.isRest) return null;
     const candTitle = normalizeTitle(candidate.title || '');
     if (!candTitle) return null;
 
@@ -273,6 +276,9 @@ export function findDuplicateTask(
   candidate: Partial<TaskItem>,
   existingTasks: Record<string, TaskItem>
 ): TaskItem | null {
+  // Un descanso entre ejercicios («Descanso entre ejercicios») se repite a propósito entre cada
+  // par de ejercicios: nunca es un duplicado. Antes solo sobrevivía el primero de cada día.
+  if (candidate.isRest) return null;
   const candTitle = normalizeTitle(candidate.title || '');
   if (!candTitle) return null;
 
@@ -280,7 +286,7 @@ export function findDuplicateTask(
   const candSec = candidate.sectionId || (candidate as any).section_id || null;
 
   for (const task of Object.values(existingTasks)) {
-    if (task.deleted_at) continue;
+    if (task.deleted_at || task.isRest) continue;
     const taskNorm = normalizeTitle(task.title || '');
     if (!isTitleDuplicate(candTitle, taskNorm)) continue;
 
@@ -309,8 +315,9 @@ export function deduplicateTaskList(tasks: TaskItem[]): TaskItem[] {
 
   for (const t of tasks) {
     if (!t) continue;
-    const norm = normalizeTitle(t.title);
-    const key = norm || t.id;
+    // Los descansos comparten título pero cada uno va entre dos ejercicios distintos: se agrupan por id.
+    const norm = t.isRest ? '' : normalizeTitle(t.title);
+    const key = norm || `id:${t.id}`;
 
     if (!groups.has(key)) {
       groups.set(key, []);

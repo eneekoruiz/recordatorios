@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Play, Square, Timer } from 'lucide-react';
 import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
+import { formatRestSeconds } from '../../utils/seriesTasks';
 
 interface RestRowTimerProps {
   title: string;
@@ -11,7 +12,8 @@ interface RestRowTimerProps {
 
 const STEPS = [1, 1.5, 2, 3, 5];
 const fmt = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
-const label = (min: number) => (min % 1 ? `${Math.floor(min)}:30` : `${min} min`);
+// Igual que el descanso entre series de los ejercicios: «90 s», «2 min» (antes «1:30» junto a «2 min»).
+const label = (min: number) => formatRestSeconds(min * 60);
 
 /**
  * Fila de descanso entre ejercicios: cuánto dura (toca para cambiarlo) y un cronómetro que se pone

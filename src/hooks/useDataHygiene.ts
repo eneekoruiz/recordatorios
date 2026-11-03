@@ -13,6 +13,7 @@ import { semanticKey, normalizeTitle } from '../utils/taskDeduplication';
 import { runContentMigrations } from '../utils/contentMigrations';
 import type { TaskItem } from '../models/Task';
 import { createDefaultGymRoutine, ensureAllGymRoutinesExist } from '../utils/gymExercises';
+import { planGymRestsForSection } from '../utils/gymRests';
 
 export function useDataHygiene(hasHydrated: boolean): boolean {
   const [isDone, setIsDone] = useState(false);
@@ -349,46 +350,21 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
         // Asegurar que las rutinas completas (4 días, PPL 3 días, Full Body 3 días) y sus secciones existan
         ensureAllGymRoutinesExist(gymList.id, state.userId || '');
 
-        // Asegurar que los descansos intermedios (isRest) existan entre TODOS los ejercicios de entrenamiento
-        const allGymSections = gymSections.filter(s => /d[ií]a|ppl|fb|fullbody|push|pull|legs/i.test(s.name));
-        const allCurrentTasksList = Object.values(state.tasks || {}).filter(t => !t.deleted_at);
-
-        allGymSections.forEach(sec => {
-          const secExercises = allCurrentTasksList
-            .filter(t => (t.sectionId === sec.id || (t as any).section_id === sec.id) && !t.isRest && !t.parentId)
-            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-
-          if (secExercises.length >= 2) {
-            for (let i = 0; i < secExercises.length - 1; i++) {
-              const exA = secExercises[i];
-              const exB = secExercises[i + 1];
-              const hasRest = allCurrentTasksList.some(t =>
-                (t.sectionId === sec.id || (t as any).section_id === sec.id) &&
-                t.isRest &&
-                ((t.order ?? 0) >= (exA.order ?? 0) && (t.order ?? 0) <= (exB.order ?? 0))
-              );
-              if (!hasRest) {
-                const restOrder = Number(((exA.order ?? 0) + 0.5).toFixed(2));
-                state.addTask({
-                  id: `task_gym_rest_${sec.id}_${i}`,
-                  user_id: state.userId || '',
-                  type: 'task',
-                  categoryId: gymList.id,
-                  sectionId: sec.id,
-                  title: 'Descanso entre ejercicios',
-                  description: 'Recuperar aire y pasar a la siguiente máquina.',
-                  duration: 2,
-                  isRest: true,
-                  status: 'pending',
-                  order: restOrder,
-                  version: 1,
-                  created_at: EPOCH,
-                  updated_at: EPOCH
-                });
-              }
-            }
-          }
-        });
+        // Asegurar que los descansos intermedios (isRest) existan entre TODOS los ejercicios de cada día
+        // de entrenamiento (nunca en la sección diaria) y respetar los que el usuario borró.
+        // Se leen secciones y tareas frescas: `state` es una foto anterior a ensureAllGymRoutinesExist.
+        {
+          const fresh = useAppStore.getState();
+          const allTasksIncludingDeleted = Object.values(fresh.tasks || {});
+          (fresh.listSections || [])
+            .filter(s => s.listId === gymList.id && !s.deleted_at)
+            .forEach(sec => {
+              const plan = planGymRestsForSection(sec, allTasksIncludingDeleted, { listId: gymList.id, userId: fresh.userId || '', createdAt: EPOCH });
+              plan.reorder.forEach(({ id, order }) => state.updateTask(id, { order }));
+              plan.create.forEach(rest => state.addTask(rest));
+              plan.remove.forEach(id => state.deleteTask(id));
+            });
+        }
 
                 // Asegurar la sección diaria en Gimnasio: 'Diaria: Core y Estiramientos'
         let diariaSec = gymSections.find(s => s.id === 'sec_gym_diaria' || /diaria|core/i.test(s.name));

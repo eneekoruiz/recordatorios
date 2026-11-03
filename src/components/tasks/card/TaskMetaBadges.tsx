@@ -3,7 +3,8 @@ import { Calendar, CalendarX2, Sun, Clock, Moon, LayoutList, ChevronRight, Link2
 import type { TaskItem, CustomList } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
-import { getTaskDuration, formatDuration } from '../../../utils/taskDuration';
+import { getTaskDuration, formatDuration, formatSeriesDuration } from '../../../utils/taskDuration';
+import { getSeriesBreakdown } from '../../../utils/seriesTasks';
 import { isShoppingList } from '../../../utils/specialLists';
 import { formatEuro } from '../../../utils/format';
 
@@ -167,31 +168,28 @@ export function TaskMetaBadges({
       </span>
     );
   }
-  if (hasDuration) {
-    const isMultiSetExercise = Boolean(
-      durationInfo?.sets &&
-      durationInfo.sets > 1 &&
-      (durationInfo.restMinutes || 0) > 0
-    );
-    const formatRestMins = (mins: number) => {
-      const whole = Math.floor(mins);
-      const secs = Math.round((mins - whole) * 60);
-      if (whole > 0 && secs > 0) return `${whole}m ${secs}s`;
-      if (whole > 0) return `${whole}m`;
-      return `${secs}s`;
-    };
-    const multiSetLabel = isMultiSetExercise
-      ? ` (${durationInfo?.sets}×${durationInfo?.setDuration}m +${formatRestMins(durationInfo?.restMinutes || 0)} desc)`
-      : '';
-    const multiSetTooltip = isMultiSetExercise
-      ? ` · ${durationInfo?.sets} series de ${durationInfo?.setDuration}m de trabajo + ${formatRestMins(durationInfo?.restMinutes || 0)} descanso entre series`
-      : '';
-
+  // Ejercicio por series (sin subtareas con tiempo): «4 × 2 min · descanso 90 s · 14 min». Antes se
+  // leía «14 min (4×2m +6m desc)», con el descanso sumado, y no se entendía cuánto se descansa entre series.
+  const seriesBreakdown = hasDuration && !subtasksDuration.hasSubtasksDuration && !isParallel ? getSeriesBreakdown(task) : null;
+  if (seriesBreakdown) {
+    const text = formatSeriesDuration(seriesBreakdown);
     items.push(
-      <span key="duration" className="task-meta-item task-meta-num" data-meta-field="duration" title={`Duración: ${durationDescription}${multiSetTooltip}${isParallel ? `, más ${formatDuration(totalParallelMinutes)} de espera en segundo plano` : ''}`}>
+      <span key="duration" className="task-meta-item task-meta-num" data-meta-field="duration" data-testid="series-duration" title={`Duración: ${text.description}`}>
+        <Clock size={13} aria-hidden="true" />
+        <span className="sr-only">{text.description}</span>
+        <span aria-hidden="true">{text.sets}</span>
+      </span>
+    );
+    if (text.rest) {
+      items.push(<span key="duration-rest" className="task-meta-item task-meta-num" data-meta-field="duration" aria-hidden="true">{text.rest}</span>);
+    }
+    items.push(<span key="duration-total" className="task-meta-item task-meta-num" data-meta-field="duration" aria-hidden="true">{text.total}</span>);
+  } else if (hasDuration) {
+    items.push(
+      <span key="duration" className="task-meta-item task-meta-num" data-meta-field="duration" title={`Duración: ${durationDescription}${isParallel ? `, más ${formatDuration(totalParallelMinutes)} de espera en segundo plano` : ''}`}>
         <Clock size={13} aria-hidden="true" />
         <span className="sr-only">Duración: </span>
-        <span>{formatDuration(totalActiveMinutes)}{multiSetLabel}</span>
+        <span>{formatDuration(totalActiveMinutes)}</span>
         {/* «+2 h» a secas no se entendía: es el tiempo que la tarea sigue sola (lavadora, horno…). */}
         {isParallel && <span className="task-meta-aside">+ {formatDuration(totalParallelMinutes)} de espera</span>}
       </span>
