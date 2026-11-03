@@ -5,16 +5,19 @@ import { bootApp } from './support/bootApp';
 // ejercicios, series y descansos) y desde ahí se activa tras confirmarlo.
 test.use({ viewport: { width: 390, height: 844 } });
 
+// Las plantillas las expone la app en modo prueba (window.__gymTemplates): sirve también contra la
+// app compilada de CI, donde no se pueden importar módulos de /src.
 async function seedGym(page: Page) {
   await bootApp(page);
-  await page.evaluate(async () => {
-    const mod = await import('/src/utils/gymExercises.ts');
+  await page.waitForFunction(() => Boolean((window as any).__gymTemplates));
+  await page.evaluate(() => {
+    const t = (window as any).__gymTemplates;
     const useAppStore = (window as any).useAppStore;
     const st = useAppStore.getState();
-    const r = mod.createDefaultGymRoutine('local_guest_e2e');
-    st.addList(r.list);
-    r.sections.forEach((s: any) => st.addListSection(s));
-    useAppStore.setState((s: any) => ({ tasks: { ...s.tasks, ...Object.fromEntries(r.tasks.map((t: any) => [t.id, t])) } }));
+    const r = t.createDefaultGymRoutine('local_guest_e2e');
+    if (!st.lists.some((l: any) => l.id === 'gimnasio')) st.addList(r.list);
+    r.sections.forEach((sec: any) => st.addListSection(sec));
+    useAppStore.setState((s: any) => ({ tasks: { ...s.tasks, ...Object.fromEntries(r.tasks.map((x: any) => [x.id, x])) } }));
     window.dispatchEvent(new CustomEvent('select-view', { detail: 'list_gimnasio' }));
   });
 }

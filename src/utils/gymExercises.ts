@@ -3217,3 +3217,9 @@ export function switchGymRoutineSplit(
     activeGymDaySectionId: undefined
   });
 }
+
+// Pruebas de extremo a extremo (solo con window.__E2E__): las plantillas, para sembrar el Gimnasio
+// también contra la app compilada, donde no se pueden importar módulos de /src.
+if (typeof window !== 'undefined' && (window as unknown as { __E2E__?: boolean }).__E2E__) {
+  (window as unknown as { __gymTemplates?: unknown }).__gymTemplates = { createDefaultGymRoutine, createPplGymRoutine, createFullBodyGymRoutine };
+}
