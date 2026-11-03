@@ -26,7 +26,7 @@ describe('rutinas de gimnasio: datos para verlas completas', () => {
     expect(summarizeExercise(task({ targetCount: 50, duration: 3 }))).toMatchObject({ volume: '50 repeticiones', rest: '', sets: 0 });
     expect(summarizeExercise(task({ duration: 5 })).volume).toBe('5 min');
     expect(formatRestSeconds(45)).toBe('45 s');
-    expect(formatRestSeconds(75)).toBe('1 min 15 s');
+    expect(formatRestSeconds(75)).toBe('75 s');
     expect(parseRepsFromDescription('4 series pesadas en banco plano.')).toBe('');
   });
 

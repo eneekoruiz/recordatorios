@@ -1,4 +1,5 @@
-import { Check, ChevronRight } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { Check, ChevronDown } from 'lucide-react';
 import { HapticService } from '../../services/HapticService';
 import type { TrainingDayStatus } from '../../utils/trainingDays';
 
@@ -16,54 +17,49 @@ export interface GymHubDay {
 
 interface GymRoutineHubProps {
   days: GymHubDay[];
-  splitName: string;
   /** Hoy se ha elegido a mano (no es el que tocaba por rotación). */
   isManualPick: boolean;
   onSelectDay: (dayId: string) => void;
   onResetDay: () => void;
-  onOpenRoutines: () => void;
+  /** Ejercicios del día, para verlo entero sin tener que recordar qué era «Día 3». */
+  renderDayPreview?: (dayId: string) => ReactNode;
 }
 
 /**
- * Cabecera de la rutina del Gimnasio: qué toca hoy, cuánto es y cómo va la semana. Una sola fuente
- * de «hoy» (antes cada día llevaba su etiqueta y su botón «Hacer hoy»). Las pastillas de los días
- * sirven para cambiar el entreno de hoy con un toque, como el selector de semana de Fitness.
+ * Entreno de hoy en dos líneas: qué día toca y, a la derecha, los días de la rutina (verde = hecho esta
+ * semana, anillo = hoy). Tocar un día lo hace el de hoy; tocar la tarjeta despliega sus ejercicios.
  */
-export function GymRoutineHub({ days, splitName, isManualPick, onSelectDay, onResetDay, onOpenRoutines }: GymRoutineHubProps) {
+export function GymRoutineHub({ days, isManualPick, onSelectDay, onResetDay, renderDayPreview }: GymRoutineHubProps) {
+  const [open, setOpen] = useState(false);
   const today = days.find(d => d.status === 'today' || d.status === 'done_today');
   if (!today) return null;
   const doneToday = today.status === 'done_today';
   const doneCount = days.filter(d => d.doneThisWeek).length;
   const meta = [`${today.exercises} ${today.exercises === 1 ? 'ejercicio' : 'ejercicios'}`, today.duration].filter(Boolean).join(' · ');
+  const canPreview = Boolean(renderDayPreview);
 
   return (
     <section className="gym-hub" aria-label="Entreno de hoy" data-testid="gym-hub">
-      <div className="gym-hub-top">
-        <span className={`gym-hub-eyebrow${doneToday ? ' is-done' : ''}`}>
-          {doneToday ? <><Check size={13} strokeWidth={2.8} aria-hidden="true" /> Hecho hoy</> : 'Hoy'}
+      <button
+        type="button"
+        className="gym-hub-head"
+        onClick={() => { if (!canPreview) return; HapticService.selection(); setOpen(v => !v); }}
+        aria-expanded={canPreview ? open : undefined}
+        aria-label={`${doneToday ? 'Hecho hoy' : 'Hoy'}: ${today.shortName}${today.focus ? `, ${today.focus}` : ''}. ${meta}${canPreview ? (open ? '. Ocultar ejercicios' : '. Ver ejercicios') : ''}`}
+      >
+        <span className="gym-hub-title" data-testid="gym-hub-title">
+          <span className={`gym-hub-eyebrow${doneToday ? ' is-done' : ''}`}>
+            {doneToday && <Check size={12} strokeWidth={2.8} aria-hidden="true" />}
+            {doneToday ? 'Hecho hoy' : 'Hoy'}
+          </span>
+          <span className="gym-hub-name">{today.shortName}{today.focus && <span className="gym-hub-focus"> · {today.focus}</span>}</span>
         </span>
-        <button type="button" className="gym-hub-split hit-44" onClick={onOpenRoutines} aria-label={`Rutina: ${splitName}. Cambiar de rutina`}>
-          {splitName}
-          <ChevronRight size={14} strokeWidth={2.4} aria-hidden="true" />
-        </button>
-      </div>
+        {canPreview && <ChevronDown size={16} strokeWidth={2.4} aria-hidden="true" className={`gym-hub-chevron${open ? ' is-open' : ''}`} />}
+      </button>
 
-      <h2 className="gym-hub-title" data-testid="gym-hub-title">
-        {today.shortName}
-        {today.focus && <span className="gym-hub-focus"> · {today.focus}</span>}
-      </h2>
-      <p className="gym-hub-meta">
-        {meta}
-        {isManualPick && (
-          <>
-            {' · '}
-            <button type="button" className="gym-hub-reset" onClick={onResetDay}>Volver al que tocaba</button>
-          </>
-        )}
-      </p>
-
-      <div className="gym-hub-week">
-        <div className="gym-hub-days" role="radiogroup" aria-label="Entreno de hoy">
+      <div className="gym-hub-row">
+        <span className="gym-hub-meta">{meta}</span>
+        <div className="gym-hub-days" role="radiogroup" aria-label={`Entreno de hoy. ${doneCount} de ${days.length} hechos esta semana`}>
           {days.map(day => {
             const isToday = day.id === today.id;
             return (
@@ -73,23 +69,29 @@ export function GymRoutineHub({ days, splitName, isManualPick, onSelectDay, onRe
                 role="radio"
                 aria-checked={isToday}
                 aria-label={`${day.shortName}: ${day.focus}${day.doneThisWeek ? ', hecho esta semana' : ''}`}
-                className={`gym-hub-day${isToday ? ' is-today' : ''}${day.doneThisWeek ? ' is-done' : ''}`}
+                title={`${day.shortName} · ${day.focus}`}
+                className={`gym-hub-day hit-44${isToday ? ' is-today' : ''}${day.doneThisWeek ? ' is-done' : ''}`}
                 onClick={() => {
                   if (isToday) return;
                   HapticService.selection();
                   onSelectDay(day.id);
                 }}
               >
-                {day.doneThisWeek ? <Check size={15} strokeWidth={3} aria-hidden="true" /> : day.shortName.replace(/\D+/g, '') || '·'}
+                {day.doneThisWeek ? <Check size={12} strokeWidth={3} aria-hidden="true" /> : day.shortName.replace(/\D+/g, '') || '·'}
               </button>
             );
           })}
         </div>
-        <span className="gym-hub-progress" aria-live="polite">
-          <strong>{doneCount} de {days.length}</strong>
-          <span>esta semana</span>
-        </span>
       </div>
+
+      {/* Solo si hoy se eligió otro día a mano: volver al que tocaba por rotación. */}
+      {isManualPick && (
+        <button type="button" className="gym-hub-reset" onClick={onResetDay}>Volver al que tocaba</button>
+      )}
+
+      {open && renderDayPreview && (
+        <div className="gym-hub-preview">{renderDayPreview(today.id)}</div>
+      )}
     </section>
   );
 }

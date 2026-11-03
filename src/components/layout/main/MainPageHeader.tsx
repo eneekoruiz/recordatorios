@@ -518,7 +518,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                       >
                         <span className={`routine-chip${cycleRoutineMode === 'full_routine' ? ' is-on' : ''}`}>
                           {cycleRoutineMode === 'full_routine' ? <Check size={12} strokeWidth={3} aria-hidden="true" /> : <Plus size={12} strokeWidth={2.6} aria-hidden="true" />}
-                          <span>Rutina completa</span>
+                          <span>Completa</span>
                         </span>
                       </button>
                     )}
@@ -540,13 +540,13 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                         <span className={`routine-chip${cycleViewLayout === 'mixed' ? ' is-on' : ''}`}>
                           {cycleViewLayout === 'mixed' ? (
                             <>
-                              <Sparkles size={12} strokeWidth={2.4} aria-hidden="true" />
-                              <span>Todas seguidas</span>
+                              <Sparkles size={15} strokeWidth={2.2} aria-hidden="true" />
+                              <span className="sr-only">Seguidas</span>
                             </>
                           ) : (
                             <>
-                              <Layers size={12} strokeWidth={2.4} aria-hidden="true" />
-                              <span>Por secciones</span>
+                              <Layers size={15} strokeWidth={2.2} aria-hidden="true" />
+                              <span className="sr-only">Secciones</span>
                             </>
                           )}
                         </span>
@@ -637,7 +637,9 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
         )}
 
 
-        {sortBy !== defaultSortBy && (
+        {/* El orden que pone el usuario (arrastrando) es el normal: no es una «ordenación» que avisar.
+            Solo se avisa de las elegidas en el menú (fecha, prioridad, A-Z…), con la X para quitarlas. */}
+        {sortBy !== defaultSortBy && sortBy !== 'manual' && (
           <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
             <span
               style={{
@@ -660,7 +662,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                 sortBy === 'title' ? 'Título (A-Z)' :
                 sortBy === 'title_desc' ? 'Título (Z-A)' :
                 sortBy === 'routine' ? 'Orden de limpieza' :
-                sortBy === 'manual' ? 'Manual' : 'Fecha de creación'
+                'Fecha de creación'
               }</span>
               <button
                 type="button"

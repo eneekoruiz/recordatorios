@@ -1,4 +1,5 @@
 import type { ListSection, TaskItem } from '../../models/Task';
+import { formatRestSeconds } from '../../utils/seriesTasks';
 import {
   GYM_SPLITS_CONFIG,
   createDefaultGymRoutine,
@@ -121,13 +122,8 @@ export function resolveGymRoutineDays(
 }
 
 /** 45 → «45 s», 60 → «1 min», 90 → «1 min 30 s». */
-export function formatRestSeconds(seconds: number): string {
-  const total = Math.max(0, Math.round(seconds));
-  if (total < 60) return `${total} s`;
-  const mins = Math.floor(total / 60);
-  const secs = total % 60;
-  return secs ? `${mins} min ${secs} s` : `${mins} min`;
-}
+// Mismo formato que la fila del ejercicio en la lista («90 s», «2 min»…).
+export { formatRestSeconds };
 
 /** Más de 12 en el contador ya no son series, sino repeticiones (p. ej. «Abs 50»). */
 const MAX_SETS = 12;

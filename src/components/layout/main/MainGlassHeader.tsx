@@ -492,7 +492,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                           onClick={() => { HapticService.selection(); setSortBy('manual'); setIsMenuOpen(false); }}
                           style={{ justifyContent: 'space-between', minHeight: 44, fontSize: '0.95rem' }}
                         >
-                          <span>Manual</span>
+                          <span>Mi orden</span>
                           {sortBy === 'manual' && <Check size={16} color="var(--accent-primary)" />}
                         </button>
 
@@ -808,7 +808,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                         onClick={() => { HapticService.selection(); setSortBy('manual'); setIsMenuOpen(false); }}
                         style={{ justifyContent: 'space-between' }}
                       >
-                        <span>Manual</span>
+                        <span>Mi orden</span>
                         {sortBy === 'manual' && <Check size={14} color="var(--accent-primary)" />}
                       </button>
 

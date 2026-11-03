@@ -181,9 +181,9 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
 
   // La duración es texto; si hay desglose que ver, el mismo texto es el botón (sin icono ni flecha).
   let durationNode: React.ReactNode = null;
-  // Con una sola tarea pendiente su fila ya muestra la duración: repetirla aquí no aporta nada.
-  const onlyOneTask = (pendingTaskCount ?? data.pendingCount) === 1;
-  if (data.depth === 0 && sectionDurationLabel && durSummary && !(onlyOneTask && !canShowDurationBreakdown)) {
+  // Cada sección y cada estancia dice cuánto le queda, aunque sea una sola tarea: así el desglose
+  // (Diarias, Semanales… o Cocina, Baño, Balcón…) suma lo que dice el título de la lista.
+  if (sectionDurationLabel && durSummary) {
     if (canShowDurationBreakdown) {
       durationNode = (
         <button
@@ -441,6 +441,8 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
   // Si lo único que habría en la segunda línea es la duración, va junto al nombre, en gris: una
   // línea entera para «28 min» alejaba las tareas de su cabecera.
   const durationInline = isTopLevel && Boolean(durationNode) && !periodText && !priceNode && !showRoutineToggle;
+  // Subsecciones (estancias de Limpieza…): su tiempo y su dinero van en la misma línea que el nombre.
+  const subsectionMeta = !isTopLevel && !showsNextPeriod && Boolean(durationNode || priceNode);
   const hasSubRow = (isTopLevel || showsNextPeriod) && !durationInline && Boolean(periodText || durationNode || priceNode || showRoutineToggle);
 
   const headerCount = data.pendingCount ?? pendingTaskCount ?? data.sectionTaskIds?.length ?? 0;
@@ -682,6 +684,13 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
               {/* Redundant Dia activo removed in favor of unified trainingDay status */}
               
               {durationInline && <span className="section-head-meta section-head-inline section-duration">{durationNode}</span>}
+              {subsectionMeta && (
+                <span className="section-head-meta section-head-inline section-duration">
+                  {durationNode}
+                  {durationNode && priceNode && <span className="section-head-dot" aria-hidden="true"> · </span>}
+                  {priceNode}
+                </span>
+              )}
             </>
           )}
         </div>

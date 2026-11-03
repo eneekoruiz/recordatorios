@@ -86,7 +86,7 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
       }}
     >
       {/* Línea 1, bajo el título: duración · progreso (el progreso abre el diagnóstico). */}
-      {(durationNode || status.totalGoal > 0 || routineToggle) && (
+      {(durationNode || status.totalGoal > 0) && (
         <div className="cycle-strip-meta">
           {durationNode}
           {durationNode && status.totalGoal > 0 && <span className="section-head-dot" aria-hidden="true">·</span>}
@@ -119,12 +119,10 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
               )}
             </button>
           )}
-          {/* «Rutina completa» cambia qué se cuenta: va junto al recuento, a la derecha. */}
-          {routineToggle && <span className="cycle-strip-toggle">{routineToggle}</span>}
         </div>
       )}
 
-      {/* Línea 2: periodo (‹ Octubre 2026 ›). */}
+      {/* Línea 2: periodo (‹ Octubre 2026 ›) y, a la derecha, cómo se ve (rutina completa, secciones). */}
       <div className="cycle-strip-row">
         <ApplePeriodNavigator
           defaultPeriodicity={effPeriod}
@@ -132,6 +130,7 @@ export const CycleRoutineStatusCard: React.FC<CycleRoutineStatusCardProps> = ({
           isMobile={isMobile}
           fullWidth={false}
         />
+        {routineToggle && <span className="cycle-strip-toggle">{routineToggle}</span>}
       </div>
 
       {/* Modal Apple de Diagnóstico detallado */}

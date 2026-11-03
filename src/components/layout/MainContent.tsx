@@ -38,9 +38,10 @@ import { splitWholeHouseTasks, WHOLE_HOUSE_START, WHOLE_HOUSE_END } from '../../
 import { MainEmptyState } from './main/MainEmptyState';
 import { GymRoutineModal } from '../gym/GymRoutineModal';
 import { GymRoutineHub, type GymHubDay } from '../gym/GymRoutineHub';
+import { GymDayPreview } from '../gym/GymDayPreview';
 import { GymOtherRoutinesSection } from '../gym/GymOtherRoutinesSection';
 import { QuickWeightPromptModal } from '../tasks/QuickWeightPromptModal';
-import { shouldPromptWeight, isSectionInGymSplit, switchGymRoutineSplit, GYM_SPLITS_CONFIG, type GymRoutineSplit } from '../../utils/gymExercises';
+import { shouldPromptWeight, isSectionInGymSplit, switchGymRoutineSplit, type GymRoutineSplit } from '../../utils/gymExercises';
 import { MainGlassHeader } from './main/MainGlassHeader';
 import { MainSectionHeader } from './main/MainSectionHeader';
 import { DeletedTaskToast } from './main/DeletedTaskToast';
@@ -169,6 +170,11 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
 
   // Local state
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  // Las secciones de las listas empiezan plegadas: se ve el resumen (cuántas, cuánto tiempo, cuánto
+  // dinero) y se abre lo que interesa. `recordatorios_sections_open` las deja abiertas (preferencia local).
+  const [sectionsStartOpen] = useState(() => {
+    try { return localStorage.getItem('recordatorios_sections_open') === 'true'; } catch { return false; }
+  });
   const [isScrolled, setIsScrolled] = useState(false);
   const [scrollTop, setScrollTop] = useState(0);
   const [isListConfigOpen, setIsListConfigOpen] = useState(false);
@@ -880,13 +886,13 @@ const CORE_CYCLES = [
     if (isSmartView) {
       return false;
     }
-    // En vistas de frecuencia (Diario, Semanal, etc.), las agrupaciones maestras de lista empiezan abiertas para ver sus secciones
-    if (currentCycle && (category === 'inbox' || category === 'undefined' || category === 'Sin Lista' || lists?.some(l => l.id === category))) {
+    // La sección que se está mirando sola (enfocada) se ve abierta.
+    if (category === isolatedSectionKey) {
       return false;
     }
-    // Las secciones empiezan desplegadas para ver qué hay que hacer sin un toque extra; plegar se recuerda por sección.
-    return false;
-  }, [collapsed, currentView, currentList, isSmartView, currentCycle, lists]);
+    // Las secciones empiezan plegadas (descubrir poco a poco); abrir o plegar se recuerda por sección.
+    return !sectionsStartOpen;
+  }, [collapsed, currentView, currentList, isSmartView, isolatedSectionKey, sectionsStartOpen]);
 
   // `shownCollapsed`: lo que enseña la cabecera, si lo sabe (una sección con el periodo hecho
   // empieza plegada aunque por defecto las secciones estén abiertas).
@@ -915,6 +921,8 @@ const CORE_CYCLES = [
       parentId,
       order: existing.length
     });
+    // Una sección nueva se ve abierta (aunque por defecto empiecen plegadas) para empezar a llenarla.
+    setCollapsed(prev => ({ ...prev, [`section_${newSecId}`]: false }));
     setEditingSectionId(newSecId);
     setEditingSectionName('Nueva sección');
   }, [currentList, listSections]);
@@ -2932,6 +2940,14 @@ const CORE_CYCLES = [
     HapticService.selection();
   }, [listSections, currentList?.id, reorderListSections, updateListSection]);
 
+  // Hecho en su periodo: una compra mensual marcada este mes cuenta como pagada este mes (antes solo
+  // restaba lo que quedaba hecho para siempre y el total no bajaba al ir marcando).
+  const isDoneThisPeriod = useCallback((t: TaskItem) => (
+    getEffectiveCycleId(t, listSections, lists)
+      ? isCompletedInCurrentPeriod(t, cycles, listSections, lists, periodReferenceDate, viewRoutineSessionDates)
+      : isTaskCompleted(t)
+  ), [listSections, lists, cycles, periodReferenceDate, viewRoutineSessionDates]);
+
   // Calcular Resumen Financiero Total
   const totalCost = useMemo(() => {
     let sum = 0;
@@ -2939,12 +2955,12 @@ const CORE_CYCLES = [
       ? Object.values(tasks).filter(t => !t.deleted_at && (t.categoryId === currentList.id || (t as any).category_id === currentList.id))
       : viewTasks;
     taskSet.forEach(t => {
-      if (t.price && !isTaskCompleted(t)) {
+      if (t.price && !isDoneThisPeriod(t)) {
         sum += parseTaskPrice(t.price) * (t.quantity || 1);
       }
     });
     return sum;
-  }, [viewTasks, isListView, currentList, tasks]);
+  }, [viewTasks, isListView, currentList, tasks, isDoneThisPeriod]);
 
   const completedCost = useMemo(() => {
     let sum = 0;
@@ -2952,12 +2968,12 @@ const CORE_CYCLES = [
       ? Object.values(tasks).filter(t => !t.deleted_at && (t.categoryId === currentList.id || (t as any).category_id === currentList.id))
       : viewTasks;
     taskSet.forEach(t => {
-      if (t.price && isTaskCompleted(t)) {
+      if (t.price && isDoneThisPeriod(t)) {
         sum += parseTaskPrice(t.price) * (t.quantity || 1);
       }
     });
     return sum;
-  }, [viewTasks, isListView, currentList, tasks]);
+  }, [viewTasks, isListView, currentList, tasks, isDoneThisPeriod]);
 
 
   // Número del título: como en la barra lateral (lo hecho en su periodo no cuenta)
@@ -3526,8 +3542,8 @@ const CORE_CYCLES = [
 
                     const showDivider = index > 0 && flattenedData[index - 1]?.type !== 'page-header';
                     const sectionTasks = (data.category ? renderedSectionTasks[data.category] : null) || groupedTasks[data.category] || [];
-                    const sectionTotal = sectionTasks.reduce((sum: number, t: TaskItem) => sum + (t.price && !isTaskCompleted(t) ? parseTaskPrice(t.price) * (t.quantity || 1) : 0), 0);
-                    const sectionCompletedTotal = sectionTasks.reduce((sum: number, t: TaskItem) => sum + (t.price && isTaskCompleted(t) ? parseTaskPrice(t.price) * (t.quantity || 1) : 0), 0);
+                    const sectionTotal = sectionTasks.reduce((sum: number, t: TaskItem) => sum + (t.price && !isDoneThisPeriod(t) ? parseTaskPrice(t.price) * (t.quantity || 1) : 0), 0);
+                    const sectionCompletedTotal = sectionTasks.reduce((sum: number, t: TaskItem) => sum + (t.price && isDoneThisPeriod(t) ? parseTaskPrice(t.price) * (t.quantity || 1) : 0), 0);
                     const sectionPendingTaskIds = data.sectionTaskIds || sectionTasks.filter((t: TaskItem) => !isTaskCompleted(t)).map((t: TaskItem) => t.id);
                     const tasksForSection = data.sectionTaskIds && data.sectionTaskIds.length > 0
                       ? data.sectionTaskIds.map((id: string) => tasks[id]).filter(Boolean)
@@ -3691,11 +3707,10 @@ const CORE_CYCLES = [
                       <div key={itemKey} data-index={index} style={{ ...itemStyle, padding: 0 }}>
                         <GymRoutineHub
                           days={hubDays}
-                          splitName={GYM_SPLITS_CONFIG[(data as any).currentSplit as GymRoutineSplit]?.shortName || 'Rutina'}
                           isManualPick={Boolean(gymDayOverride)}
                           onSelectDay={handleSetActiveGymDay}
                           onResetDay={handleResetGymDay}
-                          onOpenRoutines={() => setIsGymRoutineModalOpen(true)}
+                          renderDayPreview={(dayId) => <GymDayPreview sectionId={dayId} onEditTask={(taskId) => onEditTask?.(taskId)} />}
                         />
                       </div>
                     );
