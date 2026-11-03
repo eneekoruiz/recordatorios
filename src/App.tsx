@@ -21,7 +21,7 @@ import { AuthScreen } from './components/auth/AuthScreen';
 import { InstallPromptModal } from './components/layout/InstallPromptModal';
 import { ShortcutsModal } from './components/layout/ShortcutsModal';
 import { DailyGreetingModal } from './components/layout/DailyGreetingModal';
-import { TaskSkeletonLoader } from './components/ui/TaskSkeletonLoader';
+import { LaunchScreen } from './components/ui/LaunchScreen';
 
 import { ConfirmHost } from './components/ui/ConfirmHost';
 
@@ -346,19 +346,8 @@ function App() {
 
   // ── Conditional returns (AFTER all hooks) ────────────────────────
   if (!hasHydrated || !isHygieneDone) {
-    return (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        width: '100vw',
-        background: 'var(--bg-base)',
-      }}>
-        <TaskSkeletonLoader />
-      </div>
-    );
+    // Misma pantalla que la estática de index.html: el arranque se ve como uno solo.
+    return <LaunchScreen />;
   }
 
   if (shareToken) {

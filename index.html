@@ -28,9 +28,67 @@
     <meta property="og:description" content="Listas, hábitos y fechas importantes en calma, con lenguaje natural y sincronización entre dispositivos." />
     <meta property="og:url" content="https://recordatorios-delta.vercel.app/" />
     <meta property="og:locale" content="es_ES" />
+    <!-- Pantalla de arranque: estilos en línea para pintar antes de que llegue el CSS de la app.
+         LaunchScreen.tsx reutiliza estas mismas clases, así no hay salto al montar React. -->
+    <style>
+      html:not([data-theme]) { background: #ffffff; }
+      .launch-screen {
+        position: fixed; inset: 0; /* sin z-index: los avisos fijos de la app (p. ej. fallo al leer datos) quedan encima */
+        display: flex; align-items: center; justify-content: center;
+        background: #ffffff; color: rgba(60, 60, 67, 0.6);
+      }
+      @media (prefers-color-scheme: dark) {
+        html:not([data-theme]) { background: #000000; }
+        .launch-screen { background: #000000; color: rgba(235, 235, 245, 0.6); }
+      }
+      /* Cuando React ya conoce el tema elegido por el usuario, manda sobre el del sistema. */
+      html[data-theme="light"] .launch-screen { background: #ffffff; color: rgba(60, 60, 67, 0.6); }
+      html[data-theme="dark"] .launch-screen { background: #000000; color: rgba(235, 235, 245, 0.6); }
+      .launch-logo {
+        display: block; width: 88px; height: 88px; border-radius: 20px;
+        animation: launch-in 360ms ease-out both;
+      }
+      /* El indicador va fuera del flujo para que el logo no se mueva al aparecer. */
+      .launch-activity {
+        position: absolute; left: 50%; top: calc(50% + 76px);
+        width: 20px; height: 20px; margin-left: -10px;
+        opacity: 0; animation: launch-in 300ms ease-out 1.5s both;
+      }
+      .launch-activity svg { display: block; width: 100%; height: 100%; animation: launch-spin 1s steps(8) infinite; }
+      @keyframes launch-in { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes launch-spin { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) {
+        .launch-logo { animation: none; }
+        .launch-activity svg { animation: launch-pulse 2s ease-in-out infinite; }
+        @keyframes launch-pulse { 50% { opacity: 0.4; } }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Se sustituye al montar React. Sin texto ni animaciones llamativas, como un arranque nativo. -->
+      <div class="launch-screen" role="status" aria-label="Cargando">
+        <svg class="launch-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true">
+          <defs>
+            <linearGradient id="launchBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6E6BF2"/><stop offset="100%" stop-color="#0A84FF"/></linearGradient>
+            <filter id="launchSoft" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#0B2A6B" flood-opacity="0.28"/></filter>
+          </defs>
+          <rect width="512" height="512" rx="114" fill="url(#launchBg)"/>
+          <g filter="url(#launchSoft)">
+            <circle cx="140" cy="164" r="34" fill="#FFFFFF"/>
+            <path d="M124 165 l11 11 l21 -23" fill="none" stroke="#3F7CF6" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="204" y="148" width="212" height="32" rx="16" fill="#FFFFFF"/>
+            <circle cx="140" cy="256" r="30" fill="none" stroke="#FFFFFF" stroke-opacity="0.85" stroke-width="9"/>
+            <rect x="204" y="240" width="164" height="32" rx="16" fill="#FFFFFF" fill-opacity="0.78"/>
+            <circle cx="140" cy="348" r="30" fill="none" stroke="#FFFFFF" stroke-opacity="0.85" stroke-width="9"/>
+            <rect x="204" y="332" width="112" height="32" rx="16" fill="#FFFFFF" fill-opacity="0.6"/>
+          </g>
+        </svg>
+        <div class="launch-activity" aria-hidden="true">
+          <svg viewBox="0 0 20 20"><rect x="9" y="1" width="2" height="5.5" rx="1" fill="currentColor" opacity="1" transform="rotate(0 10 10)"/><rect x="9" y="1" width="2" height="5.5" rx="1" fill="currentColor" opacity="0.86" transform="rotate(-45 10 10)"/><rect x="9" y="1" width="2" height="5.5" rx="1" fill="currentColor" opacity="0.72" transform="rotate(-90 10 10)"/><rect x="9" y="1" width="2" height="5.5" rx="1" fill="currentColor" opacity="0.58" transform="rotate(-135 10 10)"/><rect x="9" y="1" width="2" height="5.5" rx="1" fill="currentColor" opacity="0.44" transform="rotate(-180 10 10)"/><rect x="9" y="1" width="2" height="5.5" rx="1" fill="currentColor" opacity="0.3" transform="rotate(-225 10 10)"/><rect x="9" y="1" width="2" height="5.5" rx="1" fill="currentColor" opacity="0.22" transform="rotate(-270 10 10)"/><rect x="9" y="1" width="2" height="5.5" rx="1" fill="currentColor" opacity="0.16" transform="rotate(-315 10 10)"/></svg>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
