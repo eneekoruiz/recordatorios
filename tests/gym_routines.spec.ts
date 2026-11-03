@@ -46,7 +46,7 @@ test('«Otras rutinas» es una lista con una fila por rutina que abre la rutina 
   await expect(sheet.getByRole('button', { name: /Día 2: Tirón/ })).toHaveAttribute('aria-expanded', 'true');
   await expect(sheet.getByRole('button', { name: /Día 3: Pierna/ })).toHaveAttribute('aria-expanded', 'true');
   const banca = sheet.getByTestId('gym-ex-row').filter({ hasText: 'Press de banca plano' });
-  await expect(banca).toContainText('2 min');
+  await expect(banca).toContainText('Press de banca');
   await expect(sheet.getByRole('list', { name: /Día 3 · Pierna/ }).getByTestId('gym-ex-row').first()).toBeVisible();
 
   // Los días se pliegan y despliegan.

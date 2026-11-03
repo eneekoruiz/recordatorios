@@ -106,7 +106,13 @@ export function SpotlightModal({ isOpen, onClose, onSelectView, onEditTask, onOp
   }
   useEffect(() => {
     if (!isModalOpen) return;
-    const timer = window.setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 50);
+    // Foco al campo de búsqueda, salvo que ya se haya movido dentro del buscador (Tab a «Cancelar»…):
+    // si no, un Intro rápido en «Cancelar» caía en el campo y ejecutaba el primer resultado.
+    const timer = window.setTimeout(() => {
+      const active = document.activeElement;
+      if (active && active !== document.body && focusSheetRef.current?.contains(active)) return;
+      inputRef.current?.focus({ preventScroll: true });
+    }, 50);
     return () => window.clearTimeout(timer);
   }, [isModalOpen]);
 
