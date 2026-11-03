@@ -12,6 +12,7 @@ import { getListType, doesListSupportDuration } from './specialLists';
 import { useAppStore } from '../store/useAppStore';
 import { isCompletedInCurrentPeriod, isTaskActuallyCompletedInCurrentPeriod } from '../services/TaskService';
 import { isVitalHabitTask } from './vitalHabits';
+import { getSeriesBreakdown, formatRestSeconds, type SeriesBreakdown } from './seriesTasks';
 
 export interface TaskDurationInfo {
   activeMinutes: number;
@@ -120,14 +121,13 @@ export function getTaskDuration(
       const pDur = task.parallelDuration || (title.includes('mascarilla') ? 15 : 120);
       return { activeMinutes: task.duration, parallelMinutes: pDur, isParallel: true };
     }
-    // Multi-set gym exercises: duration is per-set, multiply by sets and add rest periods between sets.
-    // Only activates when the task has multiple sets (targetCount > 1) AND a rest period (restDuration > 0).
-    const sets = (typeof task.targetCount === 'number' && task.targetCount > 1) ? task.targetCount : 1;
-    const restSec = (typeof task.restDuration === 'number' && task.restDuration > 0) ? task.restDuration : 0;
-    if (sets > 1 && restSec > 0) {
-      const totalWork = task.duration * sets;
-      const totalRest = (restSec / 60) * (sets - 1);
-      return { activeMinutes: totalWork + totalRest, parallelMinutes: 0, isParallel: false, workMinutes: totalWork, restMinutes: totalRest, sets, setDuration: task.duration, restDurationSec: restSec };
+    // Ejercicio por series: la duración es la de UNA serie. Total = series × trabajo + (series − 1) × descanso,
+    // la misma cuenta que el modo «Empezar» (seriesTasks.ts), para que las cifras coincidan en toda la app.
+    const series = getSeriesBreakdown(task);
+    if (series) {
+      const totalWork = series.workMinutes * series.sets;
+      const totalRest = (series.restSeconds / 60) * (series.sets - 1);
+      return { activeMinutes: series.totalMinutes, parallelMinutes: 0, isParallel: false, workMinutes: totalWork, restMinutes: totalRest, sets: series.sets, setDuration: series.workMinutes, restDurationSec: series.restSeconds };
     }
     return { activeMinutes: task.duration, parallelMinutes: 0, isParallel: false };
   }
@@ -305,6 +305,34 @@ export function formatDuration(minutes: number): string {
   // Como en iOS: «1 h 15 min», igual que «32 min 45 s» por debajo de la hora.
   if (remainingMins === 0) return `${hours} h`;
   return `${hours} h ${remainingMins} min`;
+}
+
+export interface SeriesDurationText {
+  /** «4 × 2 min»: series × trabajo de cada serie. */
+  sets: string;
+  /** «descanso 90 s» (entre series); null si no hay descanso. */
+  rest: string | null;
+  /** «14 min»: total con los descansos entre series. */
+  total: string;
+  /** Frase completa para lectores de pantalla y el título accesible. */
+  description: string;
+}
+
+/**
+ * Texto de un ejercicio por series, para entenderlo de un vistazo en una sola línea:
+ * «4 × 2 min · descanso 90 s · 14 min». Muestra el descanso de CADA pausa (no la suma de todas,
+ * que confundía: «14 min (4×2m +6m desc)») y al final el total, que cuadra con la cabecera del día.
+ */
+export function formatSeriesDuration(series: SeriesBreakdown): SeriesDurationText {
+  const work = formatDuration(series.workMinutes);
+  const rest = series.restSeconds > 0 ? formatRestSeconds(series.restSeconds) : null;
+  const total = formatDuration(series.totalMinutes);
+  return {
+    sets: `${series.sets} × ${work}`,
+    rest: rest ? `descanso ${rest}` : null,
+    total,
+    description: `${series.sets} series de ${work}${rest ? `, con ${rest} de descanso entre series` : ''}: ${total} en total`,
+  };
 }
 
 /**

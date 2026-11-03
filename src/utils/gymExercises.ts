@@ -1832,6 +1832,22 @@ export function createDefaultGymRoutine(userId: string = '') {
       updated_at: EPOCH
     },
     {
+      id: 'task_gym_rest_3_8',
+      user_id: userId,
+      type: 'task',
+      categoryId: listId,
+      sectionId: 'sec_gym_sup_b',
+      title: 'Descanso entre ejercicios',
+      description: 'Recuperar aire antes de practicar dominadas.',
+      duration: 2,
+      isRest: true,
+      status: 'pending',
+      order: 8.5,
+      version: 1,
+      created_at: EPOCH,
+      updated_at: EPOCH
+    },
+    {
       id: 'task_gym_3_dominadas',
       user_id: userId,
       type: 'task',
@@ -3138,8 +3154,9 @@ export function ensureAllGymRoutinesExist(listId: string, userId: string = '') {
 
   const currentSections = state.listSections.filter(s => s.listId === listId);
   const currentSectionIds = new Set(currentSections.map(s => s.id));
-  const currentTasks = Object.values(state.tasks).filter(t => !t.deleted_at && (t.categoryId === listId || (t as any).category_id === listId));
-  const currentTaskIds = new Set(currentTasks.map(t => t.id));
+  // Todas las ids, también las borradas: lo que el usuario borró (un descanso, un ejercicio) no vuelve.
+  // addTask con una id borrada la sobrescribía con una copia nueva y la resucitaba en cada arranque.
+  const currentTaskIds = new Set(Object.keys(state.tasks || {}));
 
   for (const r of routines) {
     for (const sec of r.sections) {

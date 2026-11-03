@@ -30,6 +30,43 @@ export const setWorkSeconds = (task?: TaskItem | null) =>
   Math.max(10, Math.round((task?.duration && task.duration > 0 ? task.duration : 1) * 60));
 
 /**
+ * Desglose de un ejercicio por series para mostrarlo y sumarlo igual en toda la app:
+ * `duration` son los minutos de trabajo DE CADA serie y `restDuration` los segundos de descanso
+ * entre series. Total = series × trabajo + (series − 1) × descanso.
+ *
+ * Solo se considera ejercicio por series si tiene series (2–12), duración y un descanso declarado
+ * (aunque sea 0): un contador sin descanso («Beber agua 3/3, 8 min») sigue siendo una duración total.
+ */
+export interface SeriesBreakdown {
+  sets: number;
+  /** Minutos de trabajo de una serie. */
+  workMinutes: number;
+  /** Segundos de descanso entre dos series. */
+  restSeconds: number;
+  /** Minutos totales: trabajo de todas las series más los descansos entre ellas. */
+  totalMinutes: number;
+}
+
+export function getSeriesBreakdown(task?: TaskItem | null): SeriesBreakdown | null {
+  if (!task || !isSeriesTask(task)) return null;
+  const work = task.duration;
+  const rest = task.restDuration;
+  if (typeof work !== 'number' || !Number.isFinite(work) || work <= 0) return null;
+  if (typeof rest !== 'number' || !Number.isFinite(rest) || rest < 0) return null;
+  const sets = task.targetCount as number;
+  return { sets, workMinutes: work, restSeconds: rest, totalMinutes: sets * work + ((sets - 1) * rest) / 60 };
+}
+
+/** Descanso corto como se dice en el gimnasio: «45 s», «90 s», «2 min», «2 min 30 s». */
+export function formatRestSeconds(seconds: number): string {
+  const s = Math.max(0, Math.round(seconds));
+  if (s < 60) return `${s} s`;
+  if (s % 60 === 0) return `${s / 60} min`;
+  if (s < 120) return `${s} s`;
+  return `${Math.floor(s / 60)} min ${s % 60} s`;
+}
+
+/**
  * Qué proponer al apuntar el peso de una serie:
  * - `value`: lo de la serie anterior de hoy (casi siempre se repite), ya escrito.
  * - `hint`: lo de esta misma serie la última vez que se entrenó, solo como pista (no se guarda si no se escribe).
