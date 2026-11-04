@@ -37,7 +37,7 @@ function project(row, select) {
   return out;
 }
 
-function createDelegate(store, { hasUpdatedAt = true, defaults = {} } = {}) {
+function createDelegate(store, { hasUpdatedAt = true, defaults = {}, unique = [] } = {}) {
   const touch = (row) => {
     if (hasUpdatedAt) {
       // Garantiza timestamps estrictamente crecientes, como haría la BD en la práctica.
@@ -48,6 +48,9 @@ function createDelegate(store, { hasUpdatedAt = true, defaults = {} } = {}) {
     return row;
   };
   const rows = store.rows;
+  const checkUnique = (candidate, ignored) => {
+    if (unique.some((keys) => keys.every((key) => candidate[key] != null) && rows.some((row) => row !== ignored && keys.every((key) => row[key] === candidate[key])))) throw Object.assign(new Error('Unique constraint'), { code: 'P2002' });
+  };
   return {
     async findUnique({ where, select, include }) {
       const row = rows.find((r) => matches(r, where));
@@ -63,6 +66,7 @@ function createDelegate(store, { hasUpdatedAt = true, defaults = {} } = {}) {
       return rows.filter((r) => matches(r, where)).map((r) => project(r, select));
     },
     async create({ data }) {
+      checkUnique(data);
       if (data.id && rows.some((r) => r.id === data.id)) {
         const error = new Error(`Unique constraint failed on id ${data.id}`);
         error.code = 'P2002';
@@ -80,6 +84,7 @@ function createDelegate(store, { hasUpdatedAt = true, defaults = {} } = {}) {
     async update({ where, data }) {
       const row = rows.find((r) => matches(r, where));
       if (!row) throw new Error('Record to update not found');
+      checkUnique({ ...row, ...data }, row);
       for (const [k, v] of Object.entries(clone(data))) {
         row[k] = v && typeof v === 'object' && 'increment' in v ? (row[k] || 0) + v.increment : v;
       }
@@ -90,6 +95,7 @@ function createDelegate(store, { hasUpdatedAt = true, defaults = {} } = {}) {
       let count = 0;
       for (const row of rows) {
         if (!matches(row, where)) continue;
+        checkUnique({ ...row, ...data }, row);
         Object.assign(row, clone(data));
         touch(row);
         count++;
@@ -126,6 +132,8 @@ export function createMemoryPrisma() {
     push: { rows: [] },
     limits: { rows: [] },
     cronLeases: { rows: [] },
+    channelLinks: { rows: [] },
+    channelEvents: { rows: [] },
   };
   stores.links.lists = stores.lists;
   return {
@@ -139,6 +147,8 @@ export function createMemoryPrisma() {
     pushSubscription: createDelegate(stores.push, { hasUpdatedAt: false }),
     rateLimit: createDelegate(stores.limits, { hasUpdatedAt: false }),
     cronLease: createDelegate(stores.cronLeases, { hasUpdatedAt: false }),
+    channelLink: createDelegate(stores.channelLinks, { hasUpdatedAt: false, unique: [['userId', 'channel'], ['channel', 'subjectHash'], ['challengeHash']] }),
+    channelEvent: createDelegate(stores.channelEvents, { hasUpdatedAt: false }),
     async $transaction(ops) {
       return Promise.all(ops);
     },

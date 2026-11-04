@@ -19,6 +19,7 @@ model User {
   lists        List[]
   listSections ListSection[]
   pushSubscriptions PushSubscription[]
+  channelLinks ChannelLink[]
   createdAt    DateTime      @default(now())
 }
 
@@ -114,4 +115,29 @@ model CronLease {
   expiresAt DateTime
 
   @@index([expiresAt])
+}
+
+model ChannelLink {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel String
+  subjectHash String?
+  challengeHash String? @unique
+  challengeExpiresAt DateTime?
+  sessionVersion Int
+  events ChannelEvent[]
+  @@unique([userId, channel])
+  @@unique([channel, subjectHash])
+}
+
+model ChannelEvent {
+  key String @id
+  linkId String
+  link ChannelLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  payloadHash String
+  status Int?
+  result Json?
+  createdAt DateTime @default(now())
+  @@index([linkId])
 }

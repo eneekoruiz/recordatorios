@@ -1,4 +1,9 @@
 {
+  "git": {
+    "deploymentEnabled": {
+      "codex/plan-helen-20261104": false
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",

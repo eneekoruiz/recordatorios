@@ -22,6 +22,7 @@ import { HapticService } from '../../services/HapticService';
 import { downloadIcsFile } from '../../utils/icsExporter';
 import { useAppStore } from '../../store/useAppStore';
 import { getAccountSettings, saveAccountSettings } from '../../utils/accountSettings';
+import { AssistantIntegrations } from './AssistantIntegrations';
 
 const NOTION_LEGACY_KEYS = { apiKey: 'notion_api_key', databaseId: 'notion_db_id' };
 const GITHUB_LEGACY_KEYS = { token: 'github_token', repo: 'github_repo', username: 'github_user' };
@@ -464,7 +465,7 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
                     color: 'var(--text-secondary, #8e8e93)'
                   }}
                 >
-                  Conecta tus tareas con Google Calendar, Gmail, Notion y GitHub
+                  Exporta tus tareas y configura asistentes con tu cuenta
                 </p>
               </div>
 
@@ -491,6 +492,7 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({
 
             {/* Contenido con las 4 integraciones principales */}
             <div style={{ padding: '20px 24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <AssistantIntegrations />
               {/* 1. Google Calendar / iCalendar */}
               <div
                 style={{

@@ -22,12 +22,20 @@ afterEach(() => { server.closeAllConnections?.(); server.close(); });
 const task = (id, extra = {}, userId = 'alice') => prisma.task.create({ data: { id: `${userId}:${id}`, userId, payload: { id, title: 'Tarea', categoryId: 'inbox', status: 'pending', version: 1, created_at: new Date().toISOString(), ...extra } } });
 const subscribe = (id = 'phone', userId = 'alice') => prisma.pushSubscription.create({ data: { id, userId, endpoint: `https://fcm.googleapis.com/fcm/send/${id}`, keys: { p256dh: 'public', auth: 'private' } } });
 describe('HELEN authenticated integration', () => {
+  it('reports API availability only for the authenticated account without claiming a bot connection', async () => {
+    expect((await call('GET', '/api/helen/status', undefined, null)).status).toBe(401);
+    const alice = await call('GET', '/api/helen/status');
+    expect(alice.headers.get('cache-control')).toBe('no-store');
+    expect(await alice.json()).toEqual({ accountId: 'alice', syncAvailable: true });
+    expect(await (await call('GET', '/api/helen/status', undefined, 'bob')).json()).toEqual({ accountId: 'bob', syncAvailable: true });
+  });
   it('rejects record overflow instead of truncating an export or accepting further creates', async () => {
-    for (let index = 0; index < 5000; index++) await task(`full-${index}`);
+    // Bulk fixture avoids the memory delegate's quadratic uniqueness scans; HTTP limits stay unchanged.
+    prisma._stores.tasks.rows.push(...Array.from({ length: 5000 }, (_, index) => ({ id: `alice:full-${index}`, userId: 'alice', payload: { id: `full-${index}`, title: 'Tarea', version: 1 }, updatedAt: new Date(), deletedAt: null })));
     expect((await call('POST', '/api/helen/sync', { mutations: [mutation('overflow', null, { text: 'Too many' })] })).status).toBe(413);
     await task('legacy-overflow');
     expect((await call('GET', '/api/helen/sync')).status).toBe(413);
-  });
+  }, 45000);
   it('prefers a scoped task over a same-user legacy row with the same client id', async () => {
     await prisma.task.create({ data: { id: 'duplicate', userId: 'alice', payload: { title: 'Legacy', version: 1 } } });
     await task('duplicate', { title: 'Current', version: 3 });

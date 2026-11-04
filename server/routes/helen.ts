@@ -8,6 +8,7 @@ import { isDone, safeTimeZone } from '../notifications.js';
 import { preferencesEqualsFilter } from '../security.js';
 import { clientIdOf, scopedId, toClientPayload } from '../syncUtils.js';
 import { isAllowedPushEndpoint } from '../app.js';
+import { createChannelRouter } from './channels.js';
 
 const date = z.iso.datetime({ offset: true });
 const patchSchema = z.object({ text: z.string().trim().min(1).max(300).optional(), list: z.string().min(1).max(100).optional(), status: z.enum(['open', 'done']).optional(), priority: z.enum(['high', 'normal', 'low']).optional(), due: date.nullable().optional() }).strict();
@@ -34,6 +35,10 @@ function done(payload: any, periodicity: string | null, now: Date, timeZone: str
 export function createHelenRouter(context: AppContext) {
   const router = express.Router();
   const { prisma, authenticateToken, apiLimiter, clients, pushSender } = context;
+  router.get('/helen/status', apiLimiter, authenticateToken, (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ accountId: req.user!.id, syncAvailable: true });
+  });
   async function snapshot(userId: string) {
     const [rows, listRows, sectionRows, user] = await Promise.all([
       prisma.task.findMany({ where: { userId }, take: 5001 }),
@@ -69,7 +74,7 @@ export function createHelenRouter(context: AppContext) {
   }
   const notify = (userId: string) => { for (const response of clients.get(userId) || []) { try { response.write('data: check_sync\n\n'); } catch { /* Closed clients are removed by their SSE handler. */ } } };
   const failure = (res: express.Response, error: any) => res.status(error?.status || 503).json({ error: error?.status === 413 ? error.message : 'No se pudo completar la operación de HELEN.' });
-  router.get('/helen/sync', apiLimiter, authenticateToken, async (req, res) => {
+  const readSync: express.RequestHandler = async (req, res) => {
     const raw = req.query.since;
     if (raw !== undefined && (typeof raw !== 'string' || !/^\d{1,16}$/.test(raw) || !Number.isSafeInteger(Number(raw)))) return res.status(400).json({ error: 'since no válido' });
     try {
@@ -78,8 +83,8 @@ export function createHelenRouter(context: AppContext) {
       const data = await snapshot(userId);
       res.json({ accountId: userId, serverTime, tasks: data.rows.filter((row) => !raw || new Date(row.updatedAt).getTime() > Number(raw)).map((row) => project(userId, row, data)), activeIds: data.rows.filter((row) => !row.deletedAt && !object(row.payload).deleted_at).map((row) => clientIdOf(userId, row.id)), mode: currentMode(data.preferences), lists: data.lists.map((list: any) => ({ id: list.id, name: list.name, key: helenListKey(String(list.name || list.id)) })), sections: data.sections, timeZone: data.timeZone });
     } catch (error) { failure(res, error); }
-  });
-  router.post('/helen/sync', apiLimiter, authenticateToken, async (req, res) => {
+  };
+  const writeSync: express.RequestHandler = async (req, res) => {
     const parsed = syncSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Mutaciones de HELEN no válidas' });
     try {
@@ -172,7 +177,10 @@ export function createHelenRouter(context: AppContext) {
       if (applied.length || (mode && !modeConflict)) notify(userId);
       res.json({ accountId: userId, applied, conflicts, ...(mode ? { mode, modeConflict } : {}) });
     } catch (error) { failure(res, error); }
-  });
+  };
+  router.get('/helen/sync', apiLimiter, authenticateToken, readSync);
+  router.post('/helen/sync', apiLimiter, authenticateToken, writeSync);
+  router.use(createChannelRouter(context, { read: readSync, write: writeSync }));
 
   const pushSchema = z.object({ id: z.string().min(1).max(128), title: z.string().min(1).max(100), text: z.string().min(1).max(500), sensitive: z.boolean(), kind: z.enum(['reminder', 'briefing', 'test']) }).strict();
   router.post('/push/helen', apiLimiter, authenticateToken, async (req, res) => {
