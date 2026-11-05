@@ -3330,7 +3330,7 @@ const CORE_CYCLES = [
         </div>
       </div>
     );
-  }, [childCountByTaskId, mixedFrequencyIndexes, isSmartView, visibleIndexById, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, onSelectView, currentView, setSelectedPersonForProfile, recentlyCompletedIds, visibleTasks, handleMoveTaskUp, handleMoveTaskDown, handleReorderTasks, canStartIndividualTasks, handleStartTask, selectedTaskIds, handleToggleSelectTask, isMobile, isExplicitSelectionMode, viewRoutineSessionDates, cycles, listSections, lists, periodReferenceDate]);
+  }, [childCountByTaskId, mixedFrequencyIndexes, isSmartView, visibleIndexById, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, onSelectView, currentView, setSelectedPersonForProfile, recentlyCompletedIds, visibleTasks, handleMoveTaskUp, handleMoveTaskDown, handleReorderTasks, canStartIndividualTasks, handleStartTask, selectedTaskIds, handleToggleSelectTask, isMobile, isExplicitSelectionMode, viewRoutineSessionDates, cycles, listSections, lists, periodReferenceDate, isGymList, gymSeriesLayout]);
 
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
   const smartListInfo = isSmartView ? SMART_LISTS.find(l => l.id === currentView) : null;

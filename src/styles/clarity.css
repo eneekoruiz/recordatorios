@@ -530,27 +530,32 @@ html .drag-ghost .task-row.task-row { background: transparent !important; }
 .rest-picker-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 9999;
-  background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  z-index: 100000;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: 20px;
 }
 .rest-picker-card {
   width: 100%;
-  max-width: 320px;
+  max-width: 340px;
   background: var(--bg-elevated, #1c1c1e);
   color: var(--label-1);
-  border-radius: 20px;
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
-  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.14));
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
+  animation: pickerPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes pickerPop {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
 }
 .rest-picker-header {
   display: flex;

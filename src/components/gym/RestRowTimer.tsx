@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Play, Square, Timer, X, Minus, Plus } from 'lucide-react';
 import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
@@ -124,7 +125,7 @@ export function RestRowTimer({ title, minutes, autoStart = false, onChangeMinute
         {running ? <Square size={12} fill="currentColor" aria-hidden="true" /> : <Play size={13} fill="currentColor" aria-hidden="true" />}
       </button>
 
-      {isPickerOpen && (
+      {isPickerOpen && typeof document !== 'undefined' && createPortal(
         <div
           className="rest-picker-backdrop"
           onClick={(e) => { e.stopPropagation(); setIsPickerOpen(false); }}
@@ -203,7 +204,8 @@ export function RestRowTimer({ title, minutes, autoStart = false, onChangeMinute
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
