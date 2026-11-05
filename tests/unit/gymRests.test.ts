@@ -124,4 +124,21 @@ describe('Gimnasio: los descansos no son duplicados', () => {
     expect(useAppStore.getState().tasks[restsDay1[2].id].deleted_at).toBeTruthy();
     expect(Object.keys(useAppStore.getState().tasks).length).toBe(total);
   });
+  it('modificar la duracion de un descanso en Dia 1 altera el tiempo total agregado', async () => {
+    ensureAllGymRoutinesExist('gimnasio');
+    const store = useAppStore.getState();
+    const day1Tasks = Object.values(store.tasks).filter(t => !t.deleted_at && t.sectionId === 'sec_gym_sup_a');
+    const restTask = day1Tasks.find(t => t.isRest);
+    expect(restTask).toBeDefined();
+
+    const { calculateTasksDuration } = await import('../../src/utils/taskDuration');
+    const durBefore = calculateTasksDuration(day1Tasks, store.listSections, store.lists);
+
+    store.updateTask(restTask.id, { duration: (restTask.duration || 1) + 3 });
+
+    const updatedTasks = Object.values(useAppStore.getState().tasks).filter(t => !t.deleted_at && t.sectionId === 'sec_gym_sup_a');
+    const durAfter = calculateTasksDuration(updatedTasks, store.listSections, store.lists);
+
+    expect(durAfter.activeMinutes).toBe(durBefore.activeMinutes + 3);
+  });
 });

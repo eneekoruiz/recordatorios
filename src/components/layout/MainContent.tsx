@@ -1044,8 +1044,9 @@ const CORE_CYCLES = [
       const dayTasks = allTasksArray.filter(t => !t.deleted_at && t.categoryId === currentList.id && t.sectionId === dayId);
       const exercises = dayTasks.filter(t => !t.isRest && !t.parentId);
       const doneThisWeek = exercises.length > 0 && exercises.every(t => (t.completionHistory || []).some(ts => Number(ts) >= weekStart));
-      // Igual que la cabecera del día (sin los descansos entre ejercicios), para que no haya dos cifras.
-      const duration = calculateTasksDuration(exercises, listSections, lists, cycles, periodReferenceDate);
+      // Incluye ejercicios y descansos entre ellos para que la duración sume el entreno completo en todos los días
+      const tasksForDuration = dayTasks.filter(t => !t.parentId);
+      const duration = calculateTasksDuration(tasksForDuration, listSections, lists, cycles, periodReferenceDate);
       return {
         id: dayId,
         shortName: shortName.trim(),
