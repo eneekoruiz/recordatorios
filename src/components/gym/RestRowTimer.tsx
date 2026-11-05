@@ -2,25 +2,27 @@ import { useEffect, useState, useRef } from 'react';
 import { Play, Square, Timer, X, Minus, Plus } from 'lucide-react';
 import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
+import { NotificationService } from '../../services/NotificationService';
 import { formatRestSeconds } from '../../utils/seriesTasks';
 
 interface RestRowTimerProps {
   title: string;
   minutes: number;
+  autoStart?: boolean;
   onChangeMinutes: (minutes: number) => void;
+  onFinished?: () => void;
 }
 
 const PRESET_SECONDS = [30, 45, 60, 75, 90, 120, 150, 180, 300];
 const fmt = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
-// Igual que el descanso entre series de los ejercicios: «90 s», «2 min» (antes «1:30» junto a «2 min»).
 const label = (min: number) => formatRestSeconds(min * 60);
 
 /**
  * Fila de descanso entre ejercicios: cuánto dura (toca para cambiarlo) y un cronómetro que se pone
- * en marcha con un toque. Al tocar la duración se abre un selector directo para elegir presets o segundos exactos.
+ * en marcha con un toque (o auto-arranque tras una serie). Al tocar la duración se abre un selector directo.
  */
-export function RestRowTimer({ title, minutes, onChangeMinutes }: RestRowTimerProps) {
-  const [endsAt, setEndsAt] = useState<number | null>(null);
+export function RestRowTimer({ title, minutes, autoStart = false, onChangeMinutes, onFinished }: RestRowTimerProps) {
+  const [endsAt, setEndsAt] = useState<number | null>(() => autoStart ? Date.now() + minutes * 60_000 : null);
   const [now, setNow] = useState(() => Date.now());
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -31,16 +33,32 @@ export function RestRowTimer({ title, minutes, onChangeMinutes }: RestRowTimerPr
   const currentSeconds = Math.max(15, Math.round(minutes * 60));
 
   useEffect(() => {
+    if (autoStart && endsAt === null) {
+      setEndsAt(Date.now() + minutes * 60_000);
+    }
+  }, [autoStart, minutes, endsAt]);
+
+  useEffect(() => {
     if (!endsAt) return;
     const tick = window.setInterval(() => setNow(Date.now()), 250);
     const done = window.setTimeout(() => {
       SoundService.playComplete();
       HapticService.notification('success');
+      try {
+        NotificationService.getInstance().show('¡Descanso terminado! ⚡', {
+          body: `${title || 'Descanso'}: Es hora de la siguiente serie. ¡A por ella!`,
+          icon: '/icons/icon-192.png',
+          badge: '/icons/icon-192.png',
+          tag: 'gym-rest',
+        });
+      } catch {}
+      onFinished?.();
     }, Math.max(0, endsAt - Date.now()));
+
     // Tras avisar, vuelve a su estado normal.
     const reset = window.setTimeout(() => setEndsAt(null), Math.max(0, endsAt - Date.now()) + 2500);
     return () => { window.clearInterval(tick); window.clearTimeout(done); window.clearTimeout(reset); };
-  }, [endsAt]);
+  }, [endsAt, title, onFinished]);
 
   useEffect(() => {
     if (!isPickerOpen) return;

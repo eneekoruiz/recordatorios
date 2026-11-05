@@ -1,10 +1,12 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, MoreHorizontal, Check, Settings, FolderPlus, Play, Calendar, Printer, Share2, Dumbbell, Sparkles, Layers, ListOrdered } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Check, RefreshCw, Settings, FolderPlus, Play, Calendar, Printer, Share2, Dumbbell, Sparkles, Layers, ListOrdered } from 'lucide-react';
 import type { TaskSortMode } from '../../../models/Task';
 import type { CustomList } from '../../../models/Task';
 import { HapticService } from '../../../services/HapticService';
+import { useAppStore } from '../../../store/useAppStore';
+import { syncManager } from '../../../sync/syncManager';
 import { getListType, LIST_TYPE_CONFIG } from '../../../utils/specialLists';
 import { useRef as useSheetRef } from "react";
 import { useModalFocus } from "../../../hooks/useModalFocus";
@@ -95,6 +97,14 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
   gymSeriesLayout = 'grouped',
   onToggleGymSeriesLayout,
 }) => {
+    
+  const syncStatus = useAppStore(state => state.syncStatus);
+  const handleSyncClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    HapticService.selection();
+    syncManager.syncNow();
+  };
+
     const focusSheetRef = useSheetRef<HTMLDivElement>(null);
     const menuTriggerRef = useSheetRef<HTMLButtonElement>(null);
     useModalFocus(focusSheetRef, isMobile && isMenuOpen, () => setIsMenuOpen(false));
@@ -255,6 +265,45 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
         {/* Opciones de lista */}
         {(isListView || (isSmartView && currentView !== 'smart_calendar') || isFolderView) && (
           <div style={{ position: 'relative' }}>
+            {/* Indicador de sincronización en tiempo real */}
+            <button
+              type="button"
+              className="icon-btn sync-indicator-btn hit-44"
+              onClick={handleSyncClick}
+              title={
+                syncStatus === "syncing" ? "Sincronizando con la nube..." :
+                syncStatus === "offline" ? "Sin conexión (cambios guardados en local)" :
+                syncStatus === "error" ? "Error al sincronizar. Toca para reintentar" :
+                "Sincronizado con la nube. Toca para forzar sincronización"
+              }
+              aria-label={`Estado de sincronización: ${syncStatus}. Toca para sincronizar.`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "4px 8px",
+                height: 32,
+                borderRadius: 16,
+                background: "var(--bg-elevated)",
+                border: "1px solid var(--border-subtle)",
+                cursor: "pointer",
+                color: syncStatus === "error" ? "var(--accent-red, #ff3b30)" : syncStatus === "offline" ? "var(--accent-orange, #ff9500)" : syncStatus === "syncing" ? "var(--accent-blue, #007aff)" : "var(--gym-green, #30d158)",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                marginRight: 6
+              }}
+            >
+              <RefreshCw
+                size={12}
+                strokeWidth={2.4}
+                style={{
+                  animation: syncStatus === "syncing" ? "spin-anim 1s linear infinite" : "none"
+                }}
+              />
+              <span style={{ fontSize: "0.75rem" }}>
+                {syncStatus === "syncing" ? "Sync..." : syncStatus === "offline" ? "Offline" : syncStatus === "error" ? "Reintentar" : "Nube"}
+              </span>
+            </button>
             <button
               ref={menuTriggerRef}
               type="button"
