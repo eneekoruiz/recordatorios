@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Play, Square, Timer } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { Play, Square, Timer, X, Minus, Plus } from 'lucide-react';
 import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
 import { formatRestSeconds } from '../../utils/seriesTasks';
@@ -10,21 +10,25 @@ interface RestRowTimerProps {
   onChangeMinutes: (minutes: number) => void;
 }
 
-const STEPS = [1, 1.5, 2, 3, 5];
+const PRESET_SECONDS = [30, 45, 60, 75, 90, 120, 150, 180, 300];
 const fmt = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
 // Igual que el descanso entre series de los ejercicios: «90 s», «2 min» (antes «1:30» junto a «2 min»).
 const label = (min: number) => formatRestSeconds(min * 60);
 
 /**
  * Fila de descanso entre ejercicios: cuánto dura (toca para cambiarlo) y un cronómetro que se pone
- * en marcha con un toque. La hora de fin es absoluta, así que sigue bien si la pantalla se apaga.
+ * en marcha con un toque. Al tocar la duración se abre un selector directo para elegir presets o segundos exactos.
  */
 export function RestRowTimer({ title, minutes, onChangeMinutes }: RestRowTimerProps) {
   const [endsAt, setEndsAt] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
   const left = endsAt ? Math.max(0, Math.ceil((endsAt - now) / 1000)) : 0;
   const running = endsAt !== null && left > 0;
   const finished = endsAt !== null && left === 0;
+
+  const currentSeconds = Math.max(15, Math.round(minutes * 60));
 
   useEffect(() => {
     if (!endsAt) return;
@@ -38,6 +42,17 @@ export function RestRowTimer({ title, minutes, onChangeMinutes }: RestRowTimerPr
     return () => { window.clearInterval(tick); window.clearTimeout(done); window.clearTimeout(reset); };
   }, [endsAt]);
 
+  useEffect(() => {
+    if (!isPickerOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsPickerOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isPickerOpen]);
+
   const toggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     HapticService.selection();
@@ -47,11 +62,28 @@ export function RestRowTimer({ title, minutes, onChangeMinutes }: RestRowTimerPr
     setEndsAt(start + minutes * 60_000);
   };
 
-  const cycle = (e: React.MouseEvent) => {
+  const openPicker = (e: React.MouseEvent) => {
     e.stopPropagation();
     HapticService.selection();
-    const i = STEPS.indexOf(minutes);
-    onChangeMinutes(STEPS[(i + 1) % STEPS.length] ?? 2);
+    setIsPickerOpen(true);
+  };
+
+  const applySeconds = (sec: number) => {
+    HapticService.selection();
+    const clamped = Math.max(15, Math.min(600, Math.round(sec)));
+    onChangeMinutes(clamped / 60);
+  };
+
+  const selectPreset = (sec: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    applySeconds(sec);
+    setIsPickerOpen(false);
+  };
+
+  const stepSeconds = (delta: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    HapticService.impact('light');
+    applySeconds(currentSeconds + delta);
   };
 
   return (
@@ -61,13 +93,100 @@ export function RestRowTimer({ title, minutes, onChangeMinutes }: RestRowTimerPr
       {running ? (
         <span className="rest-row-clock" role="timer" aria-label={`Quedan ${fmt(left)} de descanso`}>{fmt(left)}</span>
       ) : (
-        <button type="button" className="rest-row-duration hit-44" onClick={cycle} aria-label={`Descanso de ${label(minutes)}. Cambiar duración`}>
+        <button
+          type="button"
+          className="rest-row-duration hit-44"
+          onClick={openPicker}
+          aria-label={`Descanso de ${label(minutes)}. Abrir selector de tiempo`}
+        >
           {label(minutes)}
         </button>
       )}
       <button type="button" className="rest-row-toggle" onClick={toggle} aria-label={running ? 'Parar el descanso' : 'Empezar el descanso'}>
         {running ? <Square size={12} fill="currentColor" aria-hidden="true" /> : <Play size={13} fill="currentColor" aria-hidden="true" />}
       </button>
+
+      {isPickerOpen && (
+        <div
+          className="rest-picker-backdrop"
+          onClick={(e) => { e.stopPropagation(); setIsPickerOpen(false); }}
+          role="presentation"
+        >
+          <div
+            ref={modalRef}
+            className="rest-picker-card"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Seleccionar tiempo de descanso"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="rest-picker-header">
+              <span className="rest-picker-title">Descanso entre ejercicios</span>
+              <button
+                type="button"
+                className="rest-picker-close hit-44"
+                onClick={(e) => { e.stopPropagation(); setIsPickerOpen(false); }}
+                aria-label="Cerrar selector"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Stepper fino: sumar o restar 15 segundos */}
+            <div className="rest-picker-stepper">
+              <button
+                type="button"
+                className="rest-picker-step-btn hit-44"
+                onClick={(e) => stepSeconds(-15, e)}
+                disabled={currentSeconds <= 15}
+                aria-label="Restar 15 segundos"
+              >
+                <Minus size={14} strokeWidth={2.5} />
+                <span>15 s</span>
+              </button>
+              <span className="rest-picker-current-val">{formatRestSeconds(currentSeconds)}</span>
+              <button
+                type="button"
+                className="rest-picker-step-btn hit-44"
+                onClick={(e) => stepSeconds(15, e)}
+                disabled={currentSeconds >= 600}
+                aria-label="Sumar 15 segundos"
+              >
+                <Plus size={14} strokeWidth={2.5} />
+                <span>15 s</span>
+              </button>
+            </div>
+
+            {/* Presets rápidos */}
+            <div className="rest-picker-grid">
+              {PRESET_SECONDS.map((sec) => {
+                const isActive = Math.abs(currentSeconds - sec) < 2;
+                return (
+                  <button
+                    key={sec}
+                    type="button"
+                    className={`rest-picker-chip${isActive ? ' is-active' : ''}`}
+                    onClick={(e) => selectPreset(sec, e)}
+                    aria-pressed={isActive}
+                  >
+                    {formatRestSeconds(sec)}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="rest-picker-footer">
+              <button
+                type="button"
+                className="rest-picker-done-btn hit-44"
+                onClick={(e) => { e.stopPropagation(); setIsPickerOpen(false); }}
+              >
+                Listo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

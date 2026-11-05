@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, MoreHorizontal, Check, Settings, FolderPlus, Play, Calendar, Printer, Share2, Dumbbell, Sparkles, Layers } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Check, Settings, FolderPlus, Play, Calendar, Printer, Share2, Dumbbell, Sparkles, Layers, ListOrdered } from 'lucide-react';
 import type { TaskSortMode } from '../../../models/Task';
 import type { CustomList } from '../../../models/Task';
 import { HapticService } from '../../../services/HapticService';
@@ -53,6 +53,8 @@ interface MainGlassHeaderProps {
   onOpenIntegrations?: () => void;
   onOpenGymRoutineModal?: () => void;
   cycleViewLayout?: 'sections' | 'mixed';
+  gymSeriesLayout?: 'grouped' | 'detailed';
+  onToggleGymSeriesLayout?: (layout?: 'grouped' | 'detailed') => void;
   onToggleCycleViewLayout?: (layout?: 'sections' | 'mixed') => void;
 }
 
@@ -90,6 +92,8 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
   onOpenGymRoutineModal,
   cycleViewLayout = 'sections',
   onToggleCycleViewLayout,
+  gymSeriesLayout = 'grouped',
+  onToggleGymSeriesLayout,
 }) => {
     const focusSheetRef = useSheetRef<HTMLDivElement>(null);
     const menuTriggerRef = useSheetRef<HTMLButtonElement>(null);
@@ -424,6 +428,39 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                             <Dumbbell size={17} color="var(--accent-orange, #ff9500)" />
                             <span style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-primary)' }}>Gestionar rutina y split...</span>
                           </button>
+                        )}
+                        {isGymList && onToggleGymSeriesLayout && (
+                          <>
+                            <div style={{ padding: "8px 12px 4px", fontSize: "0.8rem", fontWeight: 600, color: "var(--text-tertiary)" }}>
+                              Series en pantalla
+                            </div>
+                            <button
+                              type="button"
+                              className="ios-dropdown-item"
+                              onClick={() => { onToggleGymSeriesLayout("grouped"); setIsMenuOpen(false); }}
+                              aria-pressed={gymSeriesLayout === "grouped"}
+                              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", minHeight: 44 }}
+                            >
+                              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                <Layers size={17} color="var(--accent-primary)" />
+                                <span style={{ fontSize: "0.95rem", fontWeight: 500 }}>Agrupado (por ejercicio)</span>
+                              </div>
+                              {gymSeriesLayout === "grouped" && <Check size={16} color="var(--accent-primary)" />}
+                            </button>
+                            <button
+                              type="button"
+                              className="ios-dropdown-item"
+                              onClick={() => { onToggleGymSeriesLayout("detailed"); setIsMenuOpen(false); }}
+                              aria-pressed={gymSeriesLayout === "detailed"}
+                              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", minHeight: 44 }}
+                            >
+                              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                <ListOrdered size={17} color="var(--accent-primary)" />
+                                <span style={{ fontSize: "0.95rem", fontWeight: 500 }}>Por series y descansos</span>
+                              </div>
+                              {gymSeriesLayout === "detailed" && <Check size={16} color="var(--accent-primary)" />}
+                            </button>
+                          </>
                         )}
 
                         <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '6px 0' }} />
@@ -796,6 +833,39 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                           <Dumbbell size={15} color="var(--accent-orange, #ff9500)" />
                           <span>Gestionar rutina y split...</span>
                         </button>
+                      )}
+                      {isGymList && onToggleGymSeriesLayout && (
+                        <>
+                          <div style={{ padding: "6px 12px 2px", fontSize: "0.75rem", fontWeight: 600, color: "var(--text-tertiary)" }}>
+                            Series en pantalla
+                          </div>
+                          <button
+                            type="button"
+                            className="ios-dropdown-item"
+                            onClick={() => { onToggleGymSeriesLayout("grouped"); setIsMenuOpen(false); }}
+                            aria-pressed={gymSeriesLayout === "grouped"}
+                            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}
+                          >
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                              <Layers size={15} color="var(--accent-primary)" />
+                              <span>Agrupado (por ejercicio)</span>
+                            </div>
+                            {gymSeriesLayout === "grouped" && <Check size={15} color="var(--accent-primary)" />}
+                          </button>
+                          <button
+                            type="button"
+                            className="ios-dropdown-item"
+                            onClick={() => { onToggleGymSeriesLayout("detailed"); setIsMenuOpen(false); }}
+                            aria-pressed={gymSeriesLayout === "detailed"}
+                            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}
+                          >
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                              <ListOrdered size={15} color="var(--accent-primary)" />
+                              <span>Por series y descansos</span>
+                            </div>
+                            {gymSeriesLayout === "detailed" && <Check size={15} color="var(--accent-primary)" />}
+                          </button>
+                        </>
                       )}
 
                       <div className="ios-dropdown-divider" style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />

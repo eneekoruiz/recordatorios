@@ -269,6 +269,20 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     safeGetJSON<string>('cycle_view_layout_pref', 'sections') === 'mixed' ? 'mixed' : 'sections'
   );
 
+
+  // Organización visual de las series de gimnasio: 'grouped' (1 tarjeta por ejercicio) o 'detailed' (serie a serie con descansos)
+  const [gymSeriesLayout, setGymSeriesLayout] = useState<'grouped' | 'detailed'>(() =>
+    safeGetJSON<string>('gym_series_layout_pref', 'grouped') === 'detailed' ? 'detailed' : 'grouped'
+  );
+
+  const toggleGymSeriesLayout = useCallback((layout?: 'grouped' | 'detailed') => {
+    setGymSeriesLayout(prev => {
+      const next = layout ?? (prev === 'grouped' ? 'detailed' : 'grouped');
+      safeSetJSON('gym_series_layout_pref', next);
+      return next;
+    });
+    HapticService.selection();
+  }, []);
   const toggleCycleViewLayout = useCallback((layout?: 'sections' | 'mixed') => {
     setCycleViewLayout(prev => {
       const next = layout ?? (prev === 'sections' ? 'mixed' : 'sections');
@@ -3304,6 +3318,7 @@ const CORE_CYCLES = [
             referenceDate={taskReferenceDate}
             contextPeriodicity={contextPeriodicity}
             sessionDates={sessionDates ?? viewRoutineSessionDates}
+            gymSeriesLayout={isGymList ? gymSeriesLayout : 'grouped'}
             {...({
             hasChildren,
             childCount,
@@ -3340,6 +3355,8 @@ const CORE_CYCLES = [
       {/* Sticky Glass Top Bar */}
       <MainGlassHeader
         cycleViewLayout={currentCycle || isLimpiezaList(currentList?.id, currentList) ? cycleViewLayout : undefined}
+        gymSeriesLayout={isGymList ? gymSeriesLayout : undefined}
+        onToggleGymSeriesLayout={isGymList ? toggleGymSeriesLayout : undefined}
         onToggleCycleViewLayout={currentCycle || isLimpiezaList(currentList?.id, currentList) ? toggleCycleViewLayout : undefined}
         isScrolled={isScrolled}
         scrollTop={scrollTop}

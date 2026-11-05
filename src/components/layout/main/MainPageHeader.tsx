@@ -16,10 +16,11 @@ import {
   Layers,
   House,
   Dumbbell,
+  ListOrdered,
 } from 'lucide-react';
 import { DurationInfoCard } from '../../ui/DurationInfoCard';
 import { HapticService } from '../../../services/HapticService';
-import { isCaducidadesList, isQueHeHechoList, isShoppingList, isLimpiezaList } from '../../../utils/specialLists';
+import { isCaducidadesList, isQueHeHechoList, isShoppingList, isLimpiezaList, isGymList } from '../../../utils/specialLists';
 import { GYM_SPLITS_CONFIG, type GymRoutineSplit } from '../../../utils/gymExercises';
 import { confirmDialog } from '../../ui/confirmDialog';
 import { useAppStore } from '../../../store/useAppStore';
@@ -89,6 +90,8 @@ interface MainPageHeaderProps {
   cycleRoutineMode?: 'only_section' | 'full_routine';
   onToggleCycleRoutineMode?: (mode: 'only_section' | 'full_routine') => void;
   cycleViewLayout?: 'sections' | 'mixed';
+  gymSeriesLayout?: 'grouped' | 'detailed';
+  onToggleGymSeriesLayout?: (layout?: 'grouped' | 'detailed') => void;
   onToggleCycleViewLayout?: (layout?: 'sections' | 'mixed') => void;
   onNavigateView?: (view: string) => void;
   onOpenGymRoutineModal?: () => void;
@@ -142,6 +145,8 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   onToggleCycleRoutineMode,
   cycleViewLayout = 'sections',
   onToggleCycleViewLayout,
+  gymSeriesLayout = 'grouped',
+  onToggleGymSeriesLayout,
   onOpenGymRoutineModal
 }) => {
   const updateList = useAppStore((state) => state.updateList);
@@ -663,6 +668,36 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
           </div>
         )}
 
+        
+        {isGymList(currentView, currentList) && onToggleGymSeriesLayout && (
+          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button
+              type="button"
+              data-testid="gym-series-layout-toggle-btn"
+              className={`routine-chip-btn layout-toggle-btn${gymSeriesLayout === 'detailed' ? ' is-on' : ''}`}
+              aria-pressed={gymSeriesLayout === 'detailed'}
+              style={{ ['--chip-color' as string]: viewColor }}
+              onClick={() => {
+                HapticService.selection();
+                onToggleGymSeriesLayout(gymSeriesLayout === 'grouped' ? 'detailed' : 'grouped');
+              }}
+            >
+              <span className={`routine-chip${gymSeriesLayout === 'detailed' ? ' is-on' : ''}`}>
+                {gymSeriesLayout === 'detailed' ? (
+                  <>
+                    <ListOrdered size={12} strokeWidth={2.4} aria-hidden="true" />
+                    <span>Por series y descansos</span>
+                  </>
+                ) : (
+                  <>
+                    <Layers size={12} strokeWidth={2.4} aria-hidden="true" />
+                    <span>Por ejercicios (agrupado)</span>
+                  </>
+                )}
+              </span>
+            </button>
+          </div>
+        )}
         {isLimpiezaList(currentView, currentList) && onToggleCycleViewLayout && (
           <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
             <button

@@ -16,6 +16,8 @@ import { calculateTaskStreak } from '../../utils/streaks';
 import { detectTaskSmartSuggestion } from '../../utils/taskSmartSuggestions';
 import { SoundService } from '../../services/SoundService';
 import { RestRowTimer } from '../gym/RestRowTimer';
+import { GymSeriesBreakdown } from '../gym/GymSeriesBreakdown';
+import { isSeriesTask } from '../../utils/seriesTasks';
 import { HapticService } from '../../services/HapticService';
 import { ConfettiService } from '../../services/ConfettiService';
 import { ConfirmModal } from '../ui/ConfirmModal';
@@ -71,6 +73,7 @@ interface TaskCardProps {
   /** Frecuencia de la sección que contiene la fila: si coincide con la de la tarea, no se repite. */
   contextPeriodicity?: 'day' | 'week' | 'month' | 'year' | null;
   sessionDates?: Set<string> | string[];
+  gymSeriesLayout?: 'grouped' | 'detailed';
 }
 
 // Recorrido del dedo (px) a partir del cual deslizar completa (→) o pide borrar (←).
@@ -102,7 +105,7 @@ function dismissTaskSuggestion(taskId: string): void {
 export const TaskCard = React.memo(function TaskCard({
   task, virtualStyle, onToggle, onDelete, onOpenZenMode, onEdit, showListName = true, hideDueDate = false, frequencyMode = 'glyph', isFirstInSection, isLastInSection, previousTaskId, hasChildren, childCount = 0, isExpanded, onToggleExpand, indent = 0, onNavigateView, onPersonClick, isGracePeriod,
   onMoveUp, onMoveDown, canMoveUp, canMoveDown, onReorderTasks, onStartTask,
-  isSelected, onToggleSelect, isSelectionMode, referenceDate: propReferenceDate, contextPeriodicity, sessionDates
+  isSelected, onToggleSelect, isSelectionMode, referenceDate: propReferenceDate, contextPeriodicity, sessionDates, gymSeriesLayout = 'grouped'
 }: TaskCardProps) {
   const cycles = useAppStore(state => state.cycles);
   const hasPendingBlocker = useAppStore(state => Boolean(task.blockedBy?.some(id => state.tasks[id]?.status === 'pending')));
@@ -1899,6 +1902,16 @@ export const TaskCard = React.memo(function TaskCard({
             onOpenFrequencyPicker={handleFrequencyBadgeClick}
             streak={habitStreak && habitStreak.count >= 2 ? habitStreak : null}
           />
+
+          {/* Desglose interactivo serie a serie en gimnasio */}
+          {gymSeriesLayout === "detailed" && isSeriesTask(task) && !isEffectivelyDone && (
+            <GymSeriesBreakdown
+              task={task}
+              effectiveCurrentCount={effectiveCurrentCount}
+              onToggle={onToggle}
+              updateTask={updateTask}
+            />
+          )}
 
           {/* Smart suggestion banner for advanced features */}
           {smartSuggestion && !isSuggestionDismissed && !isEffectivelyDone && (
