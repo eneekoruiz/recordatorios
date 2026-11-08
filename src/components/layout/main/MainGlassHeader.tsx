@@ -287,7 +287,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                 background: "var(--bg-elevated)",
                 border: "1px solid var(--border-subtle)",
                 cursor: "pointer",
-                color: syncStatus === "error" ? "var(--accent-red, #ff3b30)" : syncStatus === "offline" ? "var(--accent-orange, #ff9500)" : syncStatus === "syncing" ? "var(--accent-blue, #007aff)" : "var(--gym-green, #30d158)",
+                color: syncStatus === "error" ? "var(--accent-red, #ff453a)" : syncStatus === "offline" ? "var(--accent-orange, #ff9f0a)" : syncStatus === "syncing" ? "var(--accent-blue, #2997ff)" : "var(--accent-green, #30d158)",
                 fontSize: "0.75rem",
                 fontWeight: 600,
                 marginRight: 6

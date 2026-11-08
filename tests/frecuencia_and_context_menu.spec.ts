@@ -49,7 +49,7 @@ test.describe('Frecuencia Smart Lists, Spacing, and Section Routine Toggles', ()
       await mixed.press('Enter');
       await expect(mixed).toHaveAttribute('aria-pressed', 'true');
       await expect(frequencyHeaders).toHaveCount(0);
-      await expect(page.locator('[data-task-id^="test_layout_"]')).toHaveText([
+      await expect(page.locator('.task-item-wrapper[data-task-id^="test_layout_"]')).toHaveText([
         /Tarea de prueba month/, /Tarea de prueba week/, /Tarea de prueba day/,
       ]);
       expect(await options.evaluate(el => {

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type React from 'react';
 import { motion } from 'framer-motion';
-import { Check, ChevronLeft, ChevronRight, ChevronsUpDown, Repeat } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, ChevronsUpDown, Dumbbell, Moon, Repeat } from 'lucide-react';
+import { getWeeklyScheduleForDate } from '../../utils/weeklyPlan';
 import { useAppStore } from '../../store/useAppStore';
 import { useCalendarStore } from '../../store/useCalendarStore';
 import { buildCalendar, dayKey, monthWeeks, parseDayKey } from '../../utils/calendar';
@@ -90,6 +91,14 @@ export function CalendarView({ onSelectView, onEditTask }: CalendarViewProps) {
 
   const listColor = (task: TaskItem) => lists.find((l) => l.id === task.categoryId)?.color || DEFAULT_COLOR;
   const listName = (task: TaskItem) => lists.find((l) => l.id === task.categoryId)?.name || 'Recordatorios';
+
+  const scheduledWeeklyDay = useMemo(() => {
+    const gymList = lists.find((l) => l.id === 'gimnasio' || l.id === 'gym');
+    if (!gymList) return null;
+    const split = (gymList.activeRoutineSplit as any) || 'torso_pierna_4d';
+    const gymSections = listSections.filter((s) => s.listId === gymList.id);
+    return getWeeklyScheduleForDate(selected, split, gymSections, Object.values(tasks));
+  }, [lists, listSections, tasks, selected]);
 
   const select = (date: Date) => {
     if (date.getFullYear() !== visible.year || date.getMonth() !== visible.month) {
@@ -182,15 +191,31 @@ export function CalendarView({ onSelectView, onEditTask }: CalendarViewProps) {
   };
 
   type Chip = { key: string; label: string; color: string; done?: boolean };
-  const chips = (info: CalendarDay | undefined): { shown: Chip[]; more: number } => {
-    if (!info) return { shown: [], more: 0 };
-    const all: Chip[] = [
-      ...info.rounds.filter((r) => r.periodicity !== 'day').map((r) => ({ key: r.periodicity, label: ROUND_LABEL[r.periodicity], color: FREQUENCY_RESERVED_COLORS[r.periodicity] })),
-      ...info.items.map((i) => ({ key: i.key, label: i.task.title || 'Recordatorio', color: i.overdue ? OVERDUE_COLOR : listColor(i.task), done: i.done })),
-    ];
+  const chips = (info: CalendarDay | undefined, date?: Date): { shown: Chip[]; more: number } => {
+    const all: Chip[] = [];
+    if (info) {
+      all.push(
+        ...info.rounds.filter((r) => r.periodicity !== 'day').map((r) => ({ key: r.periodicity, label: ROUND_LABEL[r.periodicity], color: FREQUENCY_RESERVED_COLORS[r.periodicity] })),
+        ...info.items.map((i) => ({ key: i.key, label: i.task.title || 'Recordatorio', color: i.overdue ? OVERDUE_COLOR : listColor(i.task), done: i.done }))
+      );
+    }
+    if (date && all.length < MAX_CHIPS) {
+      const gymList = lists.find((l) => l.id === 'gimnasio' || l.id === 'gym');
+      if (gymList) {
+        const split = (gymList.activeRoutineSplit as any) || 'torso_pierna_4d';
+        const gymSections = listSections.filter((s) => s.listId === gymList.id);
+        const plan = getWeeklyScheduleForDate(date, split, gymSections);
+        if (plan) {
+          if (plan.isRest) {
+            all.push({ key: `rest-${dayKey(date)}`, label: '💤 Descanso', color: 'var(--accent-orange, #ff9f0a)' });
+          } else {
+            all.push({ key: `gym-${dayKey(date)}`, label: `🏋️ ${plan.shortLabel}`, color: 'var(--accent-blue, #2997ff)' });
+          }
+        }
+      }
+    }
     return { shown: all.slice(0, MAX_CHIPS), more: Math.max(0, all.length - MAX_CHIPS) };
   };
-
   const renderRound = (round: CalendarRound) => (
     <li key={round.periodicity}>
       <button type="button" className="cal-row" onClick={() => onSelectView(ROUND_VIEW[round.periodicity])}>
@@ -303,7 +328,7 @@ export function CalendarView({ onSelectView, onEditTask }: CalendarViewProps) {
                   const isToday = key === todayKey;
                   const inMonth = date.getMonth() === visible.month;
                   const dots = markers(info);
-                  const { shown, more } = chips(info);
+                  const { shown, more } = chips(info, date);
                   const className = [
                     'cal-day',
                     inMonth ? '' : 'is-outside',
@@ -351,6 +376,100 @@ export function CalendarView({ onSelectView, onEditTask }: CalendarViewProps) {
             <h3>{title}</h3>
             <p>{subtitle}</p>
           </header>
+
+          {/* Plan semanal de entrenamiento / descanso sincronizado */}
+          {scheduledWeeklyDay && (
+            <div className="cal-group" data-testid="cal-weekly-plan" style={{ marginBottom: 16 }}>
+              <h4 className="cal-group-label">Planificación semanal</h4>
+              <div
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: 14,
+                  background: scheduledWeeklyDay.isRest
+                    ? 'color-mix(in srgb, var(--accent-orange, #ff9f0a) 10%, var(--bg-surface, #ffffff))'
+                    : 'color-mix(in srgb, var(--accent-blue, #2997ff) 10%, var(--bg-surface, #ffffff))',
+                  border: `1px solid ${
+                    scheduledWeeklyDay.isRest
+                      ? 'color-mix(in srgb, var(--accent-orange, #ff9f0a) 28%, transparent)'
+                      : 'color-mix(in srgb, var(--accent-blue, #2997ff) 28%, transparent)'
+                  }`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                  <div
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 10,
+                      background: scheduledWeeklyDay.isRest
+                        ? 'color-mix(in srgb, var(--accent-orange, #ff9f0a) 20%, transparent)'
+                        : 'color-mix(in srgb, var(--accent-blue, #2997ff) 20%, transparent)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: scheduledWeeklyDay.isRest ? 'var(--accent-orange, #ff9f0a)' : 'var(--accent-blue, #2997ff)',
+                      flexShrink: 0
+                    }}
+                  >
+                    {scheduledWeeklyDay.isRest ? <Moon size={16} /> : <Dumbbell size={16} />}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {scheduledWeeklyDay.fullWeekday} · {scheduledWeeklyDay.shortLabel}
+                      </span>
+                      {scheduledWeeklyDay.isRest && (
+                        <span
+                          style={{
+                            fontSize: '0.68rem',
+                            fontWeight: 600,
+                            padding: '1px 6px',
+                            borderRadius: 6,
+                            background: 'var(--accent-orange, #ff9f0a)',
+                            color: '#ffffff'
+                          }}
+                        >
+                          Descanso
+                        </span>
+                      )}
+                    </div>
+                    <span style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', display: 'block', marginTop: 2 }}>
+                      {scheduledWeeklyDay.title}
+                      {scheduledWeeklyDay.meta ? ` · ${scheduledWeeklyDay.meta}` : ''}
+                    </span>
+                  </div>
+                </div>
+
+                {!scheduledWeeklyDay.isRest && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      HapticService.selection();
+                      const gymList = lists.find((l) => l.id === 'gimnasio' || l.id === 'gym');
+                      onSelectView(gymList?.id || 'gimnasio');
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: 8,
+                      background: 'var(--accent-primary, #2997ff)',
+                      border: 'none',
+                      color: '#ffffff',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      flexShrink: 0
+                    }}
+                  >
+                    Ver rutina
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {rounds.length > 0 && (
             <div className="cal-group">

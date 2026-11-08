@@ -112,7 +112,7 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
     return () => {
       // Early exit: persist partial elapsed progress immediately
       const elapsed = activeElapsedRef.current;
-      if (elapsed > 0 && task?.id) {
+      if (elapsed >= 5 && task?.id) {
         useAppStore.getState().trackTaskExecution(task.id, elapsed);
       }
     };

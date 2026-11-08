@@ -1,5 +1,6 @@
 import React from 'react';
-import { Dumbbell, Flame, Settings2 } from 'lucide-react';
+import { Dumbbell, Flame, Moon, Settings2 } from 'lucide-react';
+import { getWeeklySplitSchedule } from '../../utils/weeklyPlan';
 import type { ListSection } from '../../models/Task';
 import { GYM_SPLITS_CONFIG, type GymRoutineSplit } from '../../utils/gymExercises';
 import { HapticService } from '../../services/HapticService';
@@ -104,7 +105,7 @@ export const GymActiveRoutineHeader: React.FC<GymActiveRoutineHeaderProps> = ({
         </button>
       </div>
 
-      {/* Selector de días horizontal */}
+      {/* Planificación semanal: Lunes a Domingo con días de descanso */}
       <div
         style={{
           display: 'flex',
@@ -113,32 +114,79 @@ export const GymActiveRoutineHeader: React.FC<GymActiveRoutineHeaderProps> = ({
           paddingBottom: 2,
           scrollbarWidth: 'none'
         }}
+        role="region"
+        aria-label="Planificación semanal de entrenamiento y descansos"
       >
-        {daySections.map((sec, idx) => {
-          const isActive = activeGymSectionId === sec.id;
-          // Extraer número o nombre corto del día (ej. "Día 1", "Día 2")
-          const dayMatch = sec.name.match(/d[ií]a\s*(\d+)/i);
-          const shortLabel = dayMatch ? `Día ${dayMatch[1]}` : `Día ${idx + 1}`;
-          const cleanSubtitle = sec.name.replace(/d[ií]a\s*\d+\s*:?\s*/i, '').trim();
+        {getWeeklySplitSchedule(currentSplit, daySections).map((item) => {
+          if (item.isRest) {
+            return (
+              <button
+                key={`rest-${item.weekdayIndex}`}
+                type="button"
+                onClick={() => {
+                  HapticService.selection();
+                  window.dispatchEvent(new CustomEvent('show-toast', {
+                    detail: `${item.fullWeekday}: Día de descanso y recuperación activa 💤`
+                  }));
+                }}
+                style={{
+                  flex: '1 1 0',
+                  minWidth: 70,
+                  padding: '7px 6px',
+                  borderRadius: 10,
+                  border: item.isToday
+                    ? '1.5px solid var(--accent-orange, #ff9f0a)'
+                    : '1px dashed var(--border-subtle, rgba(0, 0, 0, 0.14))',
+                  background: item.isToday
+                    ? 'color-mix(in srgb, var(--accent-orange, #ff9f0a) 12%, var(--bg-surface))'
+                    : 'var(--bg-surface, rgba(0, 0, 0, 0.02))',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 2,
+                  opacity: item.isToday ? 1 : 0.8,
+                  transition: 'all 0.15s ease'
+                }}
+                title={`${item.fullWeekday}: ${item.title}`}
+                aria-label={`${item.fullWeekday}: Descanso y recuperación`}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <Moon size={11} color="var(--accent-orange, #ff9f0a)" />
+                  <span style={{ fontSize: '0.74rem', fontWeight: 600, color: 'var(--accent-orange, #ff9f0a)' }}>
+                    {item.shortWeekday}
+                  </span>
+                </div>
+                <span style={{ fontSize: '0.66rem', color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>
+                  Descanso
+                </span>
+              </button>
+            );
+          }
 
+          const isActive = activeGymSectionId === item.sectionId;
           return (
             <button
-              key={sec.id}
+              key={item.sectionId || `train-${item.weekdayIndex}`}
               type="button"
               onClick={() => {
-                HapticService.selection();
-                onSelectDay(sec.id);
+                if (item.sectionId) {
+                  HapticService.selection();
+                  onSelectDay(item.sectionId);
+                }
               }}
               style={{
                 flex: '1 1 0',
-                minWidth: 80,
-                padding: '7px 8px',
+                minWidth: 84,
+                padding: '7px 6px',
                 borderRadius: 10,
                 border: isActive
-                  ? '1.5px solid var(--accent-primary, #0a84ff)'
+                  ? '1.5px solid var(--accent-primary, #2997ff)'
+                  : item.isToday
+                  ? '1.5px solid color-mix(in srgb, var(--accent-primary, #2997ff) 45%, var(--border-subtle))'
                   : '1px solid var(--border-subtle, rgba(0, 0, 0, 0.08))',
                 background: isActive
-                  ? 'var(--accent-glow, rgba(0, 122, 255, 0.12))'
+                  ? 'var(--accent-glow, rgba(41, 151, 255, 0.14))'
                   : 'var(--bg-surface, rgba(0, 0, 0, 0.02))',
                 cursor: 'pointer',
                 display: 'flex',
@@ -147,32 +195,34 @@ export const GymActiveRoutineHeader: React.FC<GymActiveRoutineHeaderProps> = ({
                 gap: 2,
                 transition: 'all 0.15s ease'
               }}
+              title={`${item.fullWeekday} · ${item.shortLabel}: ${item.title}`}
+              aria-label={`${item.shortLabel} (${item.shortWeekday}): ${item.title}`}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 {isActive && <Flame size={12} color="var(--accent-orange, #ff9500)" />}
                 <span
                   style={{
-                    fontSize: '0.80rem',
+                    fontSize: '0.75rem',
                     fontWeight: 700,
-                    color: isActive ? 'var(--accent-primary, #0a84ff)' : 'var(--text-primary)'
+                    color: isActive ? 'var(--accent-primary, #2997ff)' : 'var(--text-primary)'
                   }}
                 >
-                  {shortLabel}
+                  {item.shortWeekday} · {item.shortLabel}
                 </span>
               </div>
-              {cleanSubtitle && (
+              {item.title && (
                 <span
                   style={{
-                    fontSize: '0.68rem',
+                    fontSize: '0.66rem',
                     color: isActive ? 'var(--text-primary)' : 'var(--text-tertiary)',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
-                    maxWidth: 90
+                    maxWidth: 88
                   }}
-                  title={cleanSubtitle}
+                  title={item.title}
                 >
-                  {cleanSubtitle}
+                  {item.title}
                 </span>
               )}
             </button>

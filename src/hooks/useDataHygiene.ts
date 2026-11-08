@@ -479,6 +479,86 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
             updated_at: EPOCH
           });
         }
+        const hasLinfaticos = currentGymTasks.some(t => /linf[aá]tico/i.test(t.title));
+        if (!hasLinfaticos) {
+          state.addTask({
+            id: 'task_gym_daily_linfaticos',
+            user_id: state.userId || '',
+            type: 'task',
+            categoryId: gymList.id,
+            sectionId: diariaSec.id,
+            title: 'Ejercicios linfáticos',
+            description: 'Ayuda al sistema linfático a transportar desechos y toxinas del cuerpo.',
+            duration: 1,
+            cycle_id: 'cycle_day',
+            status: 'pending',
+            order: 4,
+            version: 1,
+            created_at: EPOCH,
+            updated_at: EPOCH
+          });
+        }
+        const hasGolf = currentGymTasks.some(t => /golf/i.test(t.title));
+        if (!hasGolf) {
+          state.addTask({
+            id: 'task_gym_daily_rotaciones_golf',
+            user_id: state.userId || '',
+            type: 'task',
+            categoryId: gymList.id,
+            sectionId: diariaSec.id,
+            title: 'Rotaciones de golf',
+            description: 'Moviliza los hombros y la columna torácica y activa la circulación sanguínea por todo el cuerpo.',
+            targetCount: 20,
+            currentCount: 0,
+            duration: 1,
+            cycle_id: 'cycle_day',
+            status: 'pending',
+            order: 5,
+            version: 1,
+            created_at: EPOCH,
+            updated_at: EPOCH
+          });
+        }
+        const hasSentadillaProfunda = currentGymTasks.some(t => /sentadilla.*profunda/i.test(t.title));
+        if (!hasSentadillaProfunda) {
+          state.addTask({
+            id: 'task_gym_daily_sentadilla_profunda',
+            user_id: state.userId || '',
+            type: 'task',
+            categoryId: gymList.id,
+            sectionId: diariaSec.id,
+            title: 'Sentadilla profunda',
+            description: 'Ideal para mejorar la movilidad de las caderas después de dormir.',
+            duration: 1,
+            cycle_id: 'cycle_day',
+            status: 'pending',
+            order: 6,
+            version: 1,
+            created_at: EPOCH,
+            updated_at: EPOCH
+          });
+        }
+        const hasRespiraciones = currentGymTasks.some(t => /respiraci[oó]n/i.test(t.title));
+        if (!hasRespiraciones) {
+          state.addTask({
+            id: 'task_gym_daily_respiraciones',
+            user_id: state.userId || '',
+            type: 'task',
+            categoryId: gymList.id,
+            sectionId: diariaSec.id,
+            title: 'Respiraciones',
+            description: 'Oxigena tu cuerpo y regula tu sistema nervioso.',
+            targetCount: 20,
+            currentCount: 0,
+            duration: 2,
+            cycle_id: 'cycle_day',
+            status: 'pending',
+            order: 7,
+            version: 1,
+            created_at: EPOCH,
+            updated_at: EPOCH
+          });
+        }
 
         // Actualizar tareas de tren inferior por defecto a la rutina real del usuario (Jaca, Leg curl, Máquina de glúteos, Extensiones de cuádriceps)
         const legacyGymMap: Record<string, { title: string; desc: string; rest: number; duration: number; order?: number; targetCount?: number }> = {
