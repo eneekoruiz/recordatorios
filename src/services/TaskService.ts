@@ -4,20 +4,68 @@ import { getEffectiveCycleId } from '../utils/sectionRoutine';
 /**
  * Retorna el inicio de la semana actual (lunes a las 00:00:00 local).
  */
-export function getStartOfWeek(date: Date = new Date()): Date {
+export function getStartOfWeek(date: Date = new Date(), startDay: number = 1): Date {
   const d = new Date(date);
-  const day = d.getDay(); // 0 es domingo, 1 es lunes...
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  d.setDate(diff);
+  const day = d.getDay();
+  const diff = (day - startDay + 7) % 7;
+  d.setDate(d.getDate() - diff);
   d.setHours(0, 0, 0, 0);
   return d;
 }
 
 /** Retorna el límite exclusivo de la semana local, respetando cambios de horario. */
-export function getStartOfNextWeek(date: Date = new Date()): Date {
-  const next = getStartOfWeek(date);
+export function getStartOfNextWeek(date: Date = new Date(), startDay: number = 1): Date {
+  const next = getStartOfWeek(date, startDay);
   next.setDate(next.getDate() + 7);
   return next;
+}
+
+/**
+ * Comprueba si una tarea recurrente fue creada estrictamente después del período indicado por referenceDate.
+ * Aísla históricamente tareas mensuales, semanales o anuales para que no se exijan en ciclos previos a su creación.
+ */
+export function isTaskCreatedAfterPeriod(
+  task: Partial<TaskItem>,
+  cycleId?: string | null,
+  referenceDate: Date = new Date(),
+  cycles?: CustomCycle[]
+): boolean {
+  const createdAtStr = task.created_at || (task as any).createdAt;
+  if (!createdAtStr) return false;
+  const created = new Date(createdAtStr);
+  if (Number.isNaN(created.getTime())) return false;
+
+  const eff = cycleId || 'cycle_day';
+
+  if (eff === 'cycle_day' || eff === 'day') {
+    const endOfDay = new Date(referenceDate);
+    endOfDay.setHours(23, 59, 59, 999);
+    return created.getTime() > endOfDay.getTime();
+  }
+
+  if (eff === 'cycle_week' || eff === 'week') {
+    const nextWeek = getStartOfNextWeek(referenceDate);
+    return created.getTime() >= nextWeek.getTime();
+  }
+
+  if (eff === 'cycle_month' || eff === 'month') {
+    const endOfMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 1, 0, 0, 0, 0);
+    return created.getTime() >= endOfMonth.getTime();
+  }
+
+  if (eff === 'cycle_year' || eff === 'year') {
+    const endOfYear = new Date(referenceDate.getFullYear() + 1, 0, 1, 0, 0, 0, 0);
+    return created.getTime() >= endOfYear.getTime();
+  }
+
+  const cycleObj = cycles?.find(c => c.id === eff);
+  if (cycleObj?.daysValue) {
+    const endOfPeriod = new Date(referenceDate);
+    endOfPeriod.setDate(endOfPeriod.getDate() + cycleObj.daysValue);
+    return created.getTime() >= endOfPeriod.getTime();
+  }
+
+  return false;
 }
 
 /**
@@ -182,6 +230,11 @@ export function isTaskActuallyCompletedInCurrentPeriod(
   if (!effCycleId) {
     if (task.targetCount && task.targetCount > 1 && (task.currentCount || 0) < task.targetCount) return false;
     return isDone;
+  }
+
+  // Creation-Awareness: Si la tarea periódica fue creada tras el ciclo de referencia, no se exige
+  if (effCycleId && isTaskCreatedAfterPeriod(task, effCycleId, ref, cyclesList)) {
+    return true;
   }
 
   if (sessionDates && task.completionHistory?.length) {

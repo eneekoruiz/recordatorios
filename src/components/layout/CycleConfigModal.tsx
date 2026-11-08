@@ -56,6 +56,8 @@ function CycleConfigModalContent({
     const sheetRef = useSheetRef<HTMLDivElement>(null);
     useModalFocus(sheetRef, true, onClose);
   const addCycle = useAppStore(state => state.addCycle);
+  const weeklyTasksDay = useAppStore(state => state.weeklyTasksDay ?? 1);
+  const setWeeklyTasksDay = useAppStore(state => state.setWeeklyTasksDay);
   const [name, setName] = useState('');
   const [days, setDays] = useState<number | ''>(90);
   const [selectedColor, setSelectedColor] = useState<string>('#7928CA'); // de la paleta, para que se vea marcado
@@ -210,6 +212,42 @@ function CycleConfigModalContent({
                 : 'Indica cada cuántos días se repiten sus tareas.'}
             </p>
           </div>
+
+          {/* Intervalo de inicio semanal */}
+          <div>
+            <p className="form-group-label">Inicio de ciclo semanal</p>
+            <div className="form-group is-padded" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="preset-row" role="radiogroup" aria-label="Día de inicio del ciclo semanal">
+                {[
+                  { day: 1, name: 'Lunes' },
+                  { day: 5, name: 'Viernes' },
+                  { day: 6, name: 'Sábado' },
+                  { day: 0, name: 'Domingo' }
+                ].map((item) => {
+                  const isSel = weeklyTasksDay === item.day;
+                  return (
+                    <button
+                      key={item.day}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSel}
+                      className={`preset-chip${isSel ? ' is-selected' : ''}`}
+                      onClick={() => {
+                        HapticService.selection();
+                        setWeeklyTasksDay(item.day);
+                      }}
+                    >
+                      {item.name}
+                    </button>
+                  );
+                })}
+              </div>
+              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>
+                {weeklyTasksDay === 5 ? 'Ciclo semanal de Viernes a Jueves.' : weeklyTasksDay === 6 ? 'Ciclo semanal de Sábado a Viernes.' : weeklyTasksDay === 0 ? 'Ciclo semanal de Domingo a Sábado.' : 'Ciclo semanal estándar de Lunes a Domingo.'}
+              </p>
+            </div>
+          </div>
+
 
           {/* Color */}
           <details className="context-details appearance-details"><summary>Color <span aria-hidden="true">›</span></summary><div>

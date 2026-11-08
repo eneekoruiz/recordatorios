@@ -20,7 +20,7 @@ import { SoundService } from '../../services/SoundService';
 import { extractPeopleFromText, calculateExpirationStatus, calculateSubscriptionCosts, findFlashbackMemories, isCompletedInCurrentPeriod, isTaskActuallyCompletedInCurrentPeriod, getRoutineSessionDates, matchesPeriod, getStartOfWeek } from '../../services/TaskService';
 import { AIService } from '../../services/AIService';
 import { isCaducidadesList, isQueHeHechoList, isGoalsList, ensureCaducidadesSections, isLimpiezaList, isRoutineList, isShoppingList, isLifeLibraryList, getRoomForCleaningTask, getListType, doesListSupportSequenceMode, isGymTask } from '../../utils/specialLists';
-import { isVitalHabitsList } from '../../utils/vitalHabits';
+import { isVitalHabitsList, isVitalHabitTask } from '../../utils/vitalHabits';
 import { 
   getSectionPeriodicity, 
   getTaskPeriodicity, 
@@ -958,10 +958,15 @@ const CORE_CYCLES = [
   }, [editingSectionId, editingSectionName, updateListSection]);
 
   const updateTaskSection = useCallback((taskId: string, sectionId: string) => {
-    updateTask(taskId, { sectionId });
+    const targetSec = (listSections || []).find(s => s.id === sectionId);
+    const targetListId = targetSec?.listId || (currentList ? currentList.id : undefined);
+    updateTask(taskId, {
+      sectionId,
+      ...(targetListId ? { categoryId: targetListId } : {})
+    });
     setDragOverSectionId(null);
     HapticService.selection();
-  }, [updateTask]);
+  }, [updateTask, listSections, currentList]);
 
   const handleRenameSectionMenu = useCallback(() => {
     if (sectionMenu.sectionId && sectionMenu.sectionName) {
@@ -3387,7 +3392,7 @@ const CORE_CYCLES = [
         startDuration={canRunExecutionMode ? viewTasksDuration?.formattedActive : undefined}
         isStartDisabled={!viewTasks.some(t => !isTaskCompleted(t))}
         onStartSequence={onStartSequence && canRunExecutionMode ? () => {
-          const pendingTasks = viewTasks.filter(t => !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists, periodReferenceDate, viewRoutineSessionDates));
+          const pendingTasks = viewTasks.filter(t => !isTaskCompleted(t) && !isCompletedInCurrentPeriod(t, cycles, listSections, lists, periodReferenceDate, viewRoutineSessionDates) && !isVitalHabitTask(t));
           // En un programa por días solo entra el día de hoy (y lo común: calentamiento, core, estiramientos).
           const queue = trainingPlan ? orderTrainingSession(trainingPlan, pendingTasks, listSections) : pendingTasks;
           if (queue.length > 0) {
@@ -3532,7 +3537,7 @@ const CORE_CYCLES = [
                           cycleViewLayout={currentCycle || isLimpiezaList(currentList?.id, currentList) ? cycleViewLayout : undefined}
                           onToggleCycleViewLayout={currentCycle || isLimpiezaList(currentList?.id, currentList) ? toggleCycleViewLayout : undefined}
                           onStartSequence={onStartSequence && canRunExecutionMode ? () => {
-                            const pendingTasks = visibleTasks.filter(t => !isTaskCompleted(t));
+                            const pendingTasks = visibleTasks.filter(t => !isTaskCompleted(t) && !isVitalHabitTask(t));
                             if (pendingTasks.length > 0) {
                               onStartSequence(pendingTasks.map(t => t.id), getTitle(), viewColor);
                             }
@@ -3562,7 +3567,7 @@ const CORE_CYCLES = [
                     const sectionTasks = (data.category ? renderedSectionTasks[data.category] : null) || groupedTasks[data.category] || [];
                     const sectionTotal = sectionTasks.reduce((sum: number, t: TaskItem) => sum + (t.price && !isDoneThisPeriod(t) ? parseTaskPrice(t.price) * (t.quantity || 1) : 0), 0);
                     const sectionCompletedTotal = sectionTasks.reduce((sum: number, t: TaskItem) => sum + (t.price && isDoneThisPeriod(t) ? parseTaskPrice(t.price) * (t.quantity || 1) : 0), 0);
-                    const sectionPendingTaskIds = data.sectionTaskIds || sectionTasks.filter((t: TaskItem) => !isTaskCompleted(t)).map((t: TaskItem) => t.id);
+                    const sectionPendingTaskIds = (data.sectionTaskIds ? data.sectionTaskIds.filter((id: string) => tasks[id] && !isVitalHabitTask(tasks[id])) : null) || sectionTasks.filter((t: TaskItem) => !isTaskCompleted(t) && !isVitalHabitTask(t)).map((t: TaskItem) => t.id);
                     const tasksForSection = data.sectionTaskIds && data.sectionTaskIds.length > 0
                       ? data.sectionTaskIds.map((id: string) => tasks[id]).filter(Boolean)
                       : sectionTasks;
@@ -3900,7 +3905,7 @@ const CORE_CYCLES = [
             } : undefined}
             onStartSequence={onStartSequence ? () => {
               if (sectionMenu.category) {
-                const pendingIds = pendingSectionTasks.map((t: TaskItem) => t.id);
+                const pendingIds = pendingSectionTasks.filter((t: TaskItem) => !isVitalHabitTask(t)).map((t: TaskItem) => t.id);
                 if (pendingIds.length > 0) {
                   const rawTitle = (sectionMenu.sectionName || '').replace(/^[\p{Emoji}\s⏳]+/gu, '').trim() || sectionMenu.sectionName || 'Sección';
                   const cleanTitle = rawTitle.length > 0 

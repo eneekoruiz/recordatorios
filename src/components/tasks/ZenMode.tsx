@@ -109,6 +109,16 @@ export function ZenMode({ taskId, onClose }: ZenModeProps) {
   });
 
   useEffect(() => {
+    return () => {
+      // Early exit: persist partial elapsed progress immediately
+      const elapsed = activeElapsedRef.current;
+      if (elapsed > 0 && task?.id) {
+        useAppStore.getState().trackTaskExecution(task.id, elapsed);
+      }
+    };
+  }, [task?.id]);
+
+  useEffect(() => {
     activeElapsedRef.current = 0;
     currentSetWorkSecondsRef.current = 0;
     completedSetsWorkDurationsRef.current = [];

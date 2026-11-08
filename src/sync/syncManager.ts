@@ -415,7 +415,8 @@ class SyncManager {
 
       // Tareas
       let tasks = current.tasks;
-      if (Array.isArray(data.tasks) && data.tasks.length) tasks = mergeServerTasks(tasks, data.tasks).tasks;
+      const tombstoneIds = new Set<string>((current.tombstones?.tasks || []).map((t: any) => t.id));
+      if (Array.isArray(data.tasks) && data.tasks.length) tasks = mergeServerTasks(tasks, data.tasks, tombstoneIds).tasks;
       if (Array.isArray(data.activeTaskIds)) {
         const incomingIds = new Set<string>((data.tasks || []).map((t: any) => t.id));
         tasks = reconcileTasks(tasks, data.activeTaskIds, incomingIds).tasks;

@@ -18,6 +18,7 @@ import { isSeriesTask, seriesDone, setRestSeconds, setWorkSeconds, setLogProposa
 import type { TaskItem } from '../../models/Task';
 import { calculateSessionVolume } from '../../utils/weightHistory';
 import { setRestCountdownTitle, notifyRestFinished, restoreDocumentTitle } from '../../utils/timerTitleNotification';
+import { isVitalHabitTask } from '../../utils/vitalHabits';
 
 interface ListSequenceModeProps {
   /** IDs de las tareas a recorrer en orden */
@@ -255,7 +256,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
 
   // Dynamic task queue: allows postponing tasks to the end of the sequence
   const [sequenceTaskIds, setSequenceTaskIds] = useState<string[]>(() =>
-    taskIds.filter(id => tasks[id] && !tasks[id].deleted_at)
+    taskIds.filter(id => tasks[id] && !tasks[id].deleted_at && !isVitalHabitTask(tasks[id]))
   );
 
   const activeTaskIds = sequenceTaskIds.filter(id => tasks[id] && !tasks[id].deleted_at);
@@ -327,6 +328,17 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
       setIsActive(!setRest);
     }
   }
+  useEffect(() => {
+    return () => {
+      // Early exit: persist partial elapsed progress immediately
+      const elapsed = activeElapsedRef.current;
+      const activeTaskId = currentTask?.id;
+      if (elapsed > 0 && activeTaskId) {
+        useAppStore.getState().trackTaskExecution(activeTaskId, elapsed);
+      }
+    };
+  }, [currentTask?.id]);
+
   useEffect(() => {
     activeElapsedRef.current = 0;
     if (loadKey) SoundService.playPop();

@@ -1,6 +1,6 @@
 import type { TaskItem, CustomCycle, ListSection, CustomList } from '../models/Task';
 import { isTaskCompleted } from '../store/useAppStore';
-import { isCompletedInCurrentPeriod, getRoutineSessionDates } from '../services/TaskService';
+import { isCompletedInCurrentPeriod, getRoutineSessionDates, isTaskCreatedAfterPeriod } from '../services/TaskService';
 import { getEffectiveCycleId } from './sectionRoutine';
 import { getReservedFrequencyColor } from '../constants/colors';
 import { isGymTask } from './specialLists';
@@ -164,6 +164,7 @@ export function calculateCycleRoutineStatus({
     const effCycleId =
       getEffectiveCycleId(task, listSections, lists) || task.cycle_id;
     if (!effCycleId) continue;
+    if (isTaskCreatedAfterPeriod(task, effCycleId, referenceDate, cycles)) continue;
 
     const cycleObj =
       cycles.find((c) => c.id === effCycleId) ||

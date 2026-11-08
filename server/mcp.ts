@@ -292,7 +292,57 @@ export const MCP_TOOLS = [
       },
       required: ['updates']
     }
-  }
+  },
+  {
+    name: 'delete_reminders',
+    description: 'Elimina recordatorios de forma inmediata, atómica y definitiva o por soft-delete vía MCP.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        ids: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Lista de IDs de recordatorios a eliminar'
+        },
+        id: { type: 'string', description: 'ID de un único recordatorio a eliminar' },
+        permanent: {
+          type: 'boolean',
+          description: 'Si es true, realiza un borrado físico irreversible (hard delete). Si es false (por defecto), realiza soft-delete.'
+        }
+      }
+    }
+  },
+  {
+    name: 'track_agent_session',
+    description: 'Monitoriza en tiempo real el progreso de un agente de IA (Orca, Codex, Claude, Antigravity) o un relevo multi-agente en la lista "🤖 Agentes & Proyectos". Crea o actualiza la tarea de sesión del agente, su estado, modelo, porcentaje de avance, notas y subtareas de checklist para que el usuario pueda seguir la conversación y las fases directamente desde la app de Recordatorios.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectName: { type: 'string', description: 'Nombre del proyecto o repositorio (ej: "recordatorios", "antigravity-core")' },
+        agentName: { type: 'string', description: 'Nombre o rol del agente (ej: "Antigravity", "Codex", "Claude 3.7", "Orca Dispatcher")' },
+        model: { type: 'string', description: 'Modelo LLM en ejecución (ej: "gemini-2.0-flash", "o3-mini", "claude-3-7-sonnet")' },
+        goal: { type: 'string', description: 'Objetivo principal o instrucción que está ejecutando el agente' },
+        phase: { type: 'string', description: 'Fase actual del flujo (ej: "Análisis", "Implementación", "Pruebas", "Relevo/Handoff", "Completado")' },
+        progressPercent: { type: 'number', description: 'Porcentaje estimado de avance (0-100)' },
+        status: { type: 'string', enum: ['in_progress', 'completed', 'blocked', 'handoff'], description: 'Estado general del agente' },
+        notes: { type: 'string', description: 'Notas, hallazgos o resumen de lo ejecutado en el paso actual' },
+        handoffTo: { type: 'string', description: 'Agente/modelo al que se transfiere el testigo en caso de relevo (ej: "Codex (o3-mini)")' },
+        subtasks: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              title: { type: 'string', description: 'Hito o subtarea' },
+              completed: { type: 'boolean', description: 'Si el hito ha sido completado' }
+            },
+            required: ['title']
+          },
+          description: 'Checklist de hitos de la sesión para mostrar como subtareas'
+        }
+      },
+      required: ['projectName', 'agentName', 'goal']
+    }
+  },
 ];
 
 const rpcResult = (id: string | number | null, data: unknown) => ({
@@ -961,7 +1011,8 @@ export async function handleMcpRequest(reqBody: any, prisma: any, userId: string
       const taskRows = await prisma.task.findMany({ where: { userId, deletedAt: null } });
       const existingTasks = taskRows.map((r: any) => ({ ...toClientPayload(userId, r), _rowId: r.id }));
 
-      const targets = [
+      const includeCleaning = Boolean(args.includeCleaning || args.category === 'cleaning' || args.category === 'all');
+      const coreTargets = [
         {
           key: 'dental_checkup',
           title: '[A] Chequeo preventivo médico y dental anual',
@@ -997,6 +1048,77 @@ export async function handleMcpRequest(reqBody: any, prisma: any, userId: string
           matcher: (t: any) => /(respaldo|backup).*(egela|moodle|curso).*junio|egela.*junio/i.test(t.title || ''),
         }
       ];
+
+      const cleaningTargets = [
+        {
+          key: 'aspirar_empezar',
+          title: '[S] Aspirar suelo (Para empezar)',
+          cycle: 'cycle_week',
+          priority: 'medium',
+          categoryId: resolveListTarget('limpieza'),
+          description: 'Aspirado inicial preparatorio de suelos antes de mover polvo o limpiar superficies altas.',
+          playbook: '1. Retirar obstáculos del suelo. 2. Pasar la aspiradora por pasillos y zonas de paso. 3. Dejar el suelo libre para la limpieza.',
+          verificationMethod: 'Inspección visual del suelo',
+          matcher: (t: any) => /aspirar.*(para empezar|suelo.*empezar)/i.test(t.title || ''),
+        },
+        {
+          key: 'aspirar_terminar',
+          title: '[S] Aspirar suelo (Para terminar)',
+          cycle: 'cycle_week',
+          priority: 'medium',
+          categoryId: resolveListTarget('limpieza'),
+          description: 'Aspirado final de remate tras haber limpiado muebles, encimeras y polvo de superficies.',
+          playbook: '1. Aspirar polvo y residuos caídos de las superficies. 2. Repasar esquinas y zócalos. 3. Dejar aspiradora guardada.',
+          verificationMethod: 'Inspección visual del suelo',
+          matcher: (t: any) => /aspirar.*(para terminar|suelo.*terminar)/i.test(t.title || ''),
+        },
+        {
+          key: 'vaciar_tanque',
+          title: '[S] Vaciar el tanque',
+          cycle: 'cycle_week',
+          priority: 'medium',
+          categoryId: resolveListTarget('limpieza'),
+          description: 'Vaciar el tanque de polvo de la aspiradora y el depósito de agua de la fregona.',
+          playbook: '1. Abrir depósito sobre la papelera o cubo. 2. Sacudir filtro. 3. Enjuagar depósito de agua sucia y dejar secar.',
+          verificationMethod: 'Depósito vacío y seco',
+          matcher: (t: any) => /vaciar.*(el )?tanque|vaciar.*dep[oó]sito/i.test(t.title || ''),
+        },
+        {
+          key: 'limpiar_fondo_dentro',
+          title: '[M] Limpiar a fondo por dentro',
+          cycle: 'cycle_month',
+          priority: 'medium',
+          categoryId: resolveListTarget('limpieza'),
+          description: 'Limpiar a fondo el interior de electrodomésticos (microondas, nevera, horno) y armarios de cocina.',
+          playbook: '1. Vaciar estantes interiores. 2. Pulverizar bayeta con limpiador multisuperficie. 3. Secar y recolocar ordenadamente.',
+          verificationMethod: 'Interiores desinfectados y sin restos',
+          matcher: (t: any) => /limpiar.*a fondo.*(por )?dentro|limpiar.*interior.*(electrodom|armario)/i.test(t.title || ''),
+        },
+        {
+          key: 'limpiar_espejos_bano',
+          title: '[S] Limpiar espejos (Baño)',
+          cycle: 'cycle_week',
+          priority: 'low',
+          categoryId: resolveListTarget('limpieza'),
+          description: 'Limpiar marcas de agua, pasta de dientes y salpicaduras en el espejo del baño con limpiacristales.',
+          playbook: '1. Pulverizar limpiacristales sobre bayeta de microfibra específica de cristales. 2. Frotar en zig-zag sin dejar huellas. 3. Secar bordes con papel o paño seco.',
+          verificationMethod: 'Espejo sin marcas ni vaho',
+          matcher: (t: any) => /limpiar.*espejo.*ba[ñn]o|espejo.*ba[ñn]o/i.test(t.title || ''),
+        },
+        {
+          key: 'limpiar_espejos_habitaciones',
+          title: '[S] Limpiar espejos (Habitaciones y pasillo)',
+          cycle: 'cycle_week',
+          priority: 'low',
+          categoryId: resolveListTarget('limpieza'),
+          description: 'Limpiar polvo y marcas en espejos de armarios, habitaciones y recibidor o pasillo.',
+          playbook: '1. Pasar plumero o bayeta seca para quitar polvo superficial. 2. Pulverizar limpiacristales. 3. Repasar con bayeta de microfibra limpia.',
+          verificationMethod: 'Espejos limpios y nítidos',
+          matcher: (t: any) => /limpiar.*espejo.*(habitaci|pasillo|dormitorio)|espejo.*(habitaci|pasillo)/i.test(t.title || ''),
+        }
+      ];
+
+      const targets: any[] = includeCleaning ? [...coreTargets, ...cleaningTargets] : coreTargets;
 
       const created = [];
       const alreadyExisting = [];
@@ -1884,6 +2006,266 @@ export async function handleMcpRequest(reqBody: any, prisma: any, userId: string
 
       return rpcResult(id, { success: true, count: updated.length, updated });
     }
+
+    if (toolName === 'delete_reminders') {
+      const rawIds: string[] = Array.isArray(args.ids)
+        ? args.ids
+        : (args.id ? [args.id] : []);
+      const permanent = Boolean(args.permanent);
+
+      if (rawIds.length === 0) {
+        return rpcError(id, -32602, 'Debes enviar al menos un ID en "ids" o "id"');
+      }
+
+      const existingTaskRows = await prisma.task.findMany({ where: { userId } });
+      const existingTasks = existingTaskRows.map((r: any) => ({ ...toClientPayload(userId, r), _rowId: r.id }));
+
+      const targetRows = existingTasks.filter((t: any) =>
+        rawIds.some(targetId => t.id === targetId || t._rowId === targetId || scopedId(userId, t.id) === targetId)
+      );
+
+      if (targetRows.length === 0) {
+        return rpcResult(id, { success: true, deletedCount: 0, deletedIds: [], message: 'No se encontraron recordatorios con los IDs indicados' });
+      }
+
+      const rowIds = targetRows.map((t: any) => t._rowId || scopedId(userId, t.id));
+      const deletedIds = targetRows.map((t: any) => t.id);
+      const now = new Date();
+
+      if (permanent) {
+        await prisma.task.deleteMany({
+          where: { id: { in: rowIds }, userId }
+        });
+      } else {
+        await prisma.task.updateMany({
+          where: { id: { in: rowIds }, userId },
+          data: {
+            deletedAt: now,
+            updatedAt: now
+          }
+        });
+      }
+
+      try {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { version: { increment: 1 } }
+        });
+      } catch {
+        // ignore if version bump not needed
+      }
+
+      return rpcResult(id, {
+        success: true,
+        deletedCount: targetRows.length,
+        deletedIds,
+        permanent,
+        message: permanent
+          ? `Purgados ${targetRows.length} recordatorios de forma permanente e inmediata.`
+          : `Eliminados ${targetRows.length} recordatorios vía soft-delete.`
+      });
+    }
+
+    if (toolName === 'track_agent_session') {
+      const projectName = cleanString(args.projectName, 120);
+      const agentName = cleanString(args.agentName, 80);
+      const goal = cleanString(args.goal, 300);
+      const model = cleanString(args.model, 80);
+      const phase = cleanString(args.phase, 100) || 'En ejecución';
+      const progressPercent = typeof args.progressPercent === 'number' ? Math.max(0, Math.min(100, Math.round(args.progressPercent))) : 0;
+      const status = ['in_progress', 'completed', 'blocked', 'handoff'].includes(args.status) ? args.status : 'in_progress';
+      const notes = cleanString(args.notes, 2000) || '';
+      const handoffTo = cleanString(args.handoffTo, 120);
+      const subtasks = Array.isArray(args.subtasks) ? args.subtasks.slice(0, 30) : [];
+
+      if (!projectName || !agentName || !goal) {
+        return rpcError(id, -32602, 'projectName, agentName y goal son campos obligatorios');
+      }
+
+      // 1. Obtener o crear la lista "🤖 Agentes & Proyectos"
+      const listRows = await prisma.list.findMany({ where: { userId, deletedAt: null } });
+      const userLists = listRows.map((r: any) => toClientPayload(userId, r)).filter((l: any) => !isSettingsList(l));
+
+      let agentList = userLists.find((l: any) =>
+        l.id === 'agentes_proyectos' ||
+        String(l.name || '').toLowerCase().includes('agentes') ||
+        String(l.name || '').toLowerCase().includes('proyectos')
+      );
+
+      const now = new Date().toISOString();
+      const ops: any[] = [];
+
+      if (!agentList) {
+        const agentListPayload = {
+          id: 'agentes_proyectos',
+          name: '🤖 Agentes & Proyectos',
+          color: '#5856d6',
+          icon: 'code',
+          created_at: now,
+          updated_at: now,
+        };
+        agentList = agentListPayload;
+        ops.push(prisma.list.create({
+          data: {
+            id: scopedId(userId, 'agentes_proyectos'),
+            userId,
+            payload: agentListPayload
+          }
+        }));
+      }
+
+      // 2. Buscar o crear la tarea principal de sesión
+      const existingTaskRows = await prisma.task.findMany({ where: { userId, deletedAt: null } });
+      const existingTasks = existingTaskRows.map((r: any) => ({ ...toClientPayload(userId, r), _rowId: r.id }));
+
+      const sessionTitle = `[${agentName}${model ? ` · ${model}` : ''}] ${projectName}: ${goal}`;
+
+      let parentTask = existingTasks.find((t: any) =>
+        t.categoryId === agentList.id &&
+        !t.parentId &&
+        (t.title === sessionTitle || (String(t.title || '').includes(projectName) && String(t.title || '').includes(goal)))
+      );
+
+      const statusBadge = status === 'completed' ? '✅ COMPLETADO' : status === 'blocked' ? '⛔ BLOQUEADO' : status === 'handoff' ? '🤝 RELEVO' : '⚡ EN EJECUCIÓN';
+      const descriptionLines = [
+        `🎯 **Objetivo**: ${goal}`,
+        `🤖 **Agente**: ${agentName} (${model || 'IA'})`,
+        `📊 **Progreso**: ${progressPercent}% — ${phase}`,
+        `⚡ **Estado**: ${statusBadge}`,
+        notes ? `📝 **Notas**: ${notes}` : '',
+        handoffTo ? `🤝 **Relevo hacia**: ${handoffTo}` : '',
+        `🕒 **Última actualización**: ${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
+      ].filter(Boolean).join('\n');
+
+      let parentId: string;
+      if (!parentTask) {
+        parentId = `agent_session_${randomUUID()}`;
+        const newParentPayload = {
+          id: parentId,
+          user_id: userId,
+          type: 'task',
+          title: sessionTitle,
+          description: descriptionLines,
+          categoryId: agentList.id,
+          status: status === 'completed' ? 'completed' : 'pending',
+          priority: status === 'blocked' ? 'high' : 'medium',
+          version: 1,
+          created_at: now,
+          updated_at: now,
+        };
+        parentTask = newParentPayload;
+        ops.push(prisma.task.create({
+          data: {
+            id: scopedId(userId, parentId),
+            userId,
+            payload: newParentPayload
+          }
+        }));
+      } else {
+        parentId = parentTask.id;
+        const rowId = parentTask._rowId || scopedId(userId, parentTask.id);
+        const updatedParent = {
+          ...parentTask,
+          title: sessionTitle,
+          description: descriptionLines,
+          status: status === 'completed' ? 'completed' : parentTask.status,
+          priority: status === 'blocked' ? 'high' : parentTask.priority || 'medium',
+          version: (parentTask.version || 1) + 1,
+          updated_at: now,
+        };
+        delete updatedParent._rowId;
+        parentTask = updatedParent;
+        ops.push(prisma.task.update({
+          where: { id: rowId },
+          data: {
+            payload: updatedParent,
+            updatedAt: new Date()
+          }
+        }));
+      }
+
+      // 3. Crear / actualizar subtareas de hitos
+      const existingChildTasks = existingTasks.filter((t: any) => t.parentId === parentId);
+      let subtasksUpdatedCount = 0;
+
+      for (let i = 0; i < subtasks.length; i++) {
+        const item = subtasks[i];
+        const subTitle = cleanString(item?.title, 200);
+        if (!subTitle) continue;
+        const isDone = Boolean(item?.completed);
+
+        const existingChild = existingChildTasks.find((c: any) => c.title === subTitle);
+        if (existingChild) {
+          const childRowId = existingChild._rowId || scopedId(userId, existingChild.id);
+          const updatedChild = {
+            ...existingChild,
+            status: isDone ? 'completed' : 'pending',
+            order: i,
+            version: (existingChild.version || 1) + 1,
+            updated_at: now,
+          };
+          delete updatedChild._rowId;
+          ops.push(prisma.task.update({
+            where: { id: childRowId },
+            data: { payload: updatedChild, updatedAt: new Date() }
+          }));
+          subtasksUpdatedCount++;
+        } else {
+          const childId = `sub_${randomUUID()}`;
+          const newChildPayload = {
+            id: childId,
+            user_id: userId,
+            type: 'task',
+            title: subTitle,
+            parentId: parentId,
+            categoryId: agentList.id,
+            status: isDone ? 'completed' : 'pending',
+            order: i,
+            version: 1,
+            created_at: now,
+            updated_at: now,
+          };
+          ops.push(prisma.task.create({
+            data: {
+              id: scopedId(userId, childId),
+              userId,
+              payload: newChildPayload
+            }
+          }));
+          subtasksUpdatedCount++;
+        }
+      }
+
+      if (ops.length > 0) {
+        await prisma.$transaction(ops);
+      }
+
+      try {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { version: { increment: 1 } }
+        });
+      } catch {
+        // ignore if not configured
+      }
+
+      return rpcResult(id, {
+        success: true,
+        list: agentList.name || '🤖 Agentes & Proyectos',
+        listId: agentList.id,
+        parentTask: {
+          id: parentId,
+          title: sessionTitle,
+          status: parentTask.status,
+          phase,
+          progressPercent
+        },
+        subtasksCount: subtasksUpdatedCount,
+        message: `Sesión de ${agentName} (${model || 'IA'}) en "${projectName}" actualizada al ${progressPercent}% en Recordatorios.`
+      });
+    }
+
+
 
     return rpcError(id, -32601, `Herramienta no encontrada: ${toolName}`);
   } catch (err) {

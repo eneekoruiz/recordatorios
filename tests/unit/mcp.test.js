@@ -345,4 +345,63 @@ describe('MCP — integridad de datos', () => {
     expect(setNormal.success).toBe(true);
     expect(setNormal.activeMode.mode).toBe('normal');
   });
+
+  it('delete_reminders elimina tareas por soft-delete y hard-delete permanente', async () => {
+    await addTask('t-delete-1', { title: 'Eliminar soft' });
+    await addTask('t-delete-2', { title: 'Eliminar hard' });
+
+    // 1. Soft-delete
+    const softRes = await call('delete_reminders', { id: 't-delete-1' });
+    expect(softRes.success).toBe(true);
+    expect(softRes.deletedCount).toBe(1);
+    const softRow = (await prisma.task.findMany({ where: { userId: U } })).find(r => r.id === `${U}:t-delete-1`);
+    expect(softRow.deletedAt).toBeDefined();
+
+    // 2. Hard-delete
+    const hardRes = await call('delete_reminders', { ids: ['t-delete-2'], permanent: true });
+    expect(hardRes.success).toBe(true);
+    expect(hardRes.deletedCount).toBe(1);
+    const hardRow = (await prisma.task.findMany({ where: { userId: U } })).find(r => r.id === `${U}:t-delete-2`);
+    expect(hardRow).toBeUndefined();
+  });
+
+  it('track_agent_session crea la lista 🤖 Agentes & Proyectos, la tarea de sesión y subtareas de hitos en tiempo real', async () => {
+    const res = await call('track_agent_session', {
+      projectName: 'recordatorios',
+      agentName: 'Antigravity',
+      model: 'Gemini 2.0 Flash',
+      goal: 'Integración de Controles Apple HIG y Sync',
+      phase: 'Implementación',
+      progressPercent: 85,
+      status: 'in_progress',
+      notes: 'Todos los requisitos del 1 al 16 completados y validados',
+      subtasks: [
+        { title: 'Controles Apple HIG y Segmented Control', completed: true },
+        { title: 'Motor de Dependencias y Bloqueo', completed: true },
+        { title: 'Monitorización de Agentes en Recordatorios', completed: false }
+      ]
+    });
+
+    expect(res.success).toBe(true);
+    expect(res.list).toBe('🤖 Agentes & Proyectos');
+    expect(res.subtasksCount).toBe(3);
+    expect(res.parentTask.phase).toBe('Implementación');
+    expect(res.parentTask.progressPercent).toBe(85);
+
+    // Verificar en base de datos
+    const allTasks = await prisma.task.findMany({ where: { userId: U } });
+    const parent = allTasks.find(r => r.payload.id === res.parentTask.id)?.payload;
+    expect(parent).toBeDefined();
+    expect(parent.title).toContain('Antigravity');
+    expect(parent.title).toContain('Gemini 2.0 Flash');
+    expect(parent.description).toContain('85%');
+
+    // Verificar subtareas
+    const children = allTasks.filter(r => r.payload.parentId === parent.id).map(r => r.payload);
+    expect(children).toHaveLength(3);
+    const doneChild = children.find(c => c.title === 'Controles Apple HIG y Segmented Control');
+    expect(doneChild.status).toBe('completed');
+    const pendingChild = children.find(c => c.title === 'Monitorización de Agentes en Recordatorios');
+    expect(pendingChild.status).toBe('pending');
+  });
 });

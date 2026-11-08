@@ -420,6 +420,7 @@ export function Sidebar({ currentView, onSelectView }: SidebarProps) {
           onSelectView={onSelectView}
           togglePinSmartList={togglePinSmartList}
           getTaskCount={getTaskCount}
+          onOpenListConfig={(id) => { setEditingListId(id); setParentListId(undefined); setIsListConfigOpen(true); }}
         />
 
         {/* SMART LISTS GRID */}

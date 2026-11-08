@@ -13,6 +13,8 @@ import {
 
 } from 'lucide-react';
 import { useTemporalNavigationStore, type TemporalGranularity } from '../../../store/useTemporalNavigationStore';
+import { useAppStore } from '../../../store/useAppStore';
+import { getStartOfWeek } from '../../../services/TaskService';
 import { HapticService } from '../../../services/HapticService';
 import type { PeriodicityType } from '../../../utils/sectionRoutine';
 
@@ -60,6 +62,7 @@ export const ApplePeriodNavigator: React.FC<ApplePeriodNavigatorProps> = ({
     stepPeriod,
     isCurrentRealTime
   } = useTemporalNavigationStore();
+  const weeklyTasksDay = useAppStore(state => state.weeklyTasksDay ?? 1);
 
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
@@ -95,21 +98,14 @@ export const ApplePeriodNavigator: React.FC<ApplePeriodNavigatorProps> = ({
         (activeDate.getFullYear() === now.getFullYear() && activeDate.getMonth() < now.getMonth());
     }
     if (effGranularity === 'week') {
-      const getMonday = (d: Date) => {
-        const copy = new Date(d);
-        const day = copy.getDay();
-        const diff = copy.getDate() - day + (day === 0 ? -6 : 1);
-        copy.setDate(diff);
-        copy.setHours(0, 0, 0, 0);
-        return copy.getTime();
-      };
-      return getMonday(activeDate) < getMonday(now);
+      const getWeekStartTime = (d: Date) => getStartOfWeek(d, weeklyTasksDay).getTime();
+      return getWeekStartTime(activeDate) < getWeekStartTime(now);
     }
     // day
     const d1 = new Date(activeDate); d1.setHours(0, 0, 0, 0);
     const d2 = new Date(now); d2.setHours(0, 0, 0, 0);
     return d1.getTime() < d2.getTime();
-  }, [temporalDate, activeDate, effGranularity]);
+  }, [temporalDate, activeDate, effGranularity, weeklyTasksDay]);
 
   // Cerrar al pulsar fuera o al pulsar Escape
   useEffect(() => {
@@ -152,13 +148,9 @@ export const ApplePeriodNavigator: React.FC<ApplePeriodNavigatorProps> = ({
     }
 
     if (effGranularity === 'week') {
-      // Calcular número de semana ISO y rango
-      const monday = new Date(activeDate);
-      const dayIdx = monday.getDay();
-      const diff = monday.getDate() - dayIdx + (dayIdx === 0 ? -6 : 1);
-      monday.setDate(diff);
-      const sunday = new Date(monday);
-      sunday.setDate(monday.getDate() + 6);
+      const weekStart = getStartOfWeek(activeDate, weeklyTasksDay);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
 
       const d = new Date(Date.UTC(activeDate.getFullYear(), activeDate.getMonth(), activeDate.getDate()));
       const dayNum = d.getUTCDay() || 7;
@@ -166,9 +158,9 @@ export const ApplePeriodNavigator: React.FC<ApplePeriodNavigatorProps> = ({
       const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
       const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
 
-      const rangeText = monday.getMonth() === sunday.getMonth()
-        ? `${monday.getDate()}–${sunday.getDate()} ${monthInline(sunday.getMonth())}`
-        : `${monday.getDate()} ${monthInline(monday.getMonth())}–${sunday.getDate()} ${monthInline(sunday.getMonth())}`;
+      const rangeText = weekStart.getMonth() === weekEnd.getMonth()
+        ? `${weekStart.getDate()}–${weekEnd.getDate()} ${monthInline(weekEnd.getMonth())}`
+        : `${weekStart.getDate()} ${monthInline(weekStart.getMonth())}–${weekEnd.getDate()} ${monthInline(weekEnd.getMonth())}`;
 
       return `Semana ${weekNo} (${rangeText})`;
     }

@@ -45,13 +45,49 @@ export function normalizeServerTask(raw: any): TaskItem {
  * Fusiona las tareas recibidas. Un cambio local pendiente de subir (_is_dirty) solo se
  * sustituye si el servidor tiene una versión estrictamente más nueva.
  */
-export function mergeServerTasks(local: Record<string, TaskItem>, incoming: any[]): { tasks: Record<string, TaskItem>; changed: boolean } {
+export function mergeServerTasks(
+  local: Record<string, TaskItem>,
+  incoming: any[],
+  tombstoneIds?: Set<string>
+): { tasks: Record<string, TaskItem>; changed: boolean } {
   let changed = false;
   const next = { ...local };
   for (const raw of incoming) {
     if (!raw || typeof raw.id !== 'string') continue;
     const serverTask = normalizeServerTask(raw);
     const localTask = local[serverTask.id];
+
+    // Purga definitiva de resurrecciones por tombstones locales
+    if (tombstoneIds && tombstoneIds.has(serverTask.id) && !serverTask.deleted_at) {
+      if (next[serverTask.id]) {
+        delete next[serverTask.id];
+        changed = true;
+      }
+      continue;
+    }
+
+    // Si llega con marca de borrado del servidor:
+    if (serverTask.deleted_at) {
+      if (localTask) {
+        if (localTask._is_dirty && !localTask.deleted_at && toTime(localTask.updated_at) > toTime(serverTask.updated_at)) {
+          continue;
+        }
+        delete next[serverTask.id];
+        changed = true;
+      }
+      continue;
+    }
+
+    // Si localmente está borrada y el servidor no tiene deleted_at, prevenir resurrección fantasma
+    if (localTask?.deleted_at && !serverTask.deleted_at) {
+      const sv = serverTask.version || 0;
+      const lv = localTask.version || 0;
+      const serverIsStrictlyNewer = sv > lv && toTime(serverTask.updated_at) > toTime(localTask.deleted_at);
+      if (!serverIsStrictlyNewer) {
+        continue;
+      }
+    }
+
     const wins = localTask?._is_dirty ? serverWinsOverDirty(serverTask, localTask) : serverWins(serverTask, localTask);
     if (wins) {
       next[serverTask.id] = serverTask;

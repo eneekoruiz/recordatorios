@@ -11,7 +11,7 @@ import {
 import type { TaskItem, ListSection } from '../../models/Task';
 import { useAppStore, isTaskCompleted } from '../../store/useAppStore';
 import { useTemporalNavigationStore } from '../../store/useTemporalNavigationStore';
-import { isCompletedInCurrentPeriod, isSkippedInCurrentPeriod, calculateExpirationStatus, matchesPeriod } from '../../services/TaskService';
+import { isCompletedInCurrentPeriod, isSkippedInCurrentPeriod, isTaskActuallyCompletedInCurrentPeriod, calculateExpirationStatus, matchesPeriod } from '../../services/TaskService';
 import { calculateTaskStreak } from '../../utils/streaks';
 import { detectTaskSmartSuggestion } from '../../utils/taskSmartSuggestions';
 import { SoundService } from '../../services/SoundService';
@@ -108,7 +108,7 @@ export const TaskCard = React.memo(function TaskCard({
   isSelected, onToggleSelect, isSelectionMode, referenceDate: propReferenceDate, contextPeriodicity, sessionDates, gymSeriesLayout = 'grouped'
 }: TaskCardProps) {
   const cycles = useAppStore(state => state.cycles);
-  const hasPendingBlocker = useAppStore(state => Boolean(task.blockedBy?.some(id => state.tasks[id]?.status === 'pending')));
+  const tasks = useAppStore(state => state.tasks);
   const hasSubtasks = childCount > 0;
   const nestTask = useAppStore(state => state.nestTask);
   const lists = useAppStore(state => state.lists);
@@ -569,7 +569,22 @@ export const TaskCard = React.memo(function TaskCard({
     return temporalDate ? new Date(temporalDate) : new Date(today);
   }, [propReferenceDate, temporalDate, today]);
 
-  const isBlocked = hasPendingBlocker;
+  const pendingBlockersList = useMemo(() => {
+    if (!task.blockedBy || task.blockedBy.length === 0) return [];
+    return task.blockedBy
+      .map(id => tasks[id])
+      .filter((b): b is TaskItem => {
+        if (!b || b.deleted_at) return false;
+        const bEff = getEffectiveCycleId(b, listSections, lists);
+        if (!bEff) {
+          return !isTaskCompleted(b) && b.status !== 'completed';
+        }
+        const bDone = isTaskActuallyCompletedInCurrentPeriod(b, cycles, listSections, lists, referenceDate);
+        const bSkipped = isSkippedInCurrentPeriod(b, cycles, listSections, lists, referenceDate);
+        return !bDone && !bSkipped;
+      });
+  }, [task.blockedBy, tasks, listSections, lists, cycles, referenceDate]);
+  const isBlocked = pendingBlockersList.length > 0;
   // Se decide por el puntero, no por el ancho: una ventana estrecha con ratón también revela el (i) al pasar.
   const canHover = useMemo(() => typeof window !== 'undefined' && Boolean(window.matchMedia?.('(hover: hover) and (pointer: fine)').matches), []);
   const showInfoButton = contextMenuOpen || (canHover ? isHovered : (isEditingTitle || isEditingNote));
@@ -771,8 +786,31 @@ export const TaskCard = React.memo(function TaskCard({
     e.dataTransfer.setData('text/task-id', task.id);
     e.dataTransfer.setData('text/plain', task.id);
     e.dataTransfer.effectAllowed = 'move';
-    if (cardRef.current && e.dataTransfer.setDragImage) {
-      e.dataTransfer.setDragImage(cardRef.current, 20, 20);
+    if (typeof document !== 'undefined' && e.dataTransfer.setDragImage) {
+      const isDark = typeof window !== 'undefined' && (
+        document.documentElement.classList.contains('dark') || 
+        window.matchMedia?.('(prefers-color-scheme: dark)').matches
+      );
+      const ghost = document.createElement('div');
+      ghost.style.position = 'fixed';
+      ghost.style.top = '-9999px';
+      ghost.style.left = '-9999px';
+      ghost.style.padding = '8px 16px';
+      ghost.style.borderRadius = '12px';
+      ghost.style.background = isDark ? '#2c2c2e' : '#ffffff';
+      ghost.style.color = isDark ? '#ffffff' : '#000000';
+      ghost.style.fontSize = '14px';
+      ghost.style.fontWeight = '500';
+      ghost.style.boxShadow = '0 8px 24px rgba(0,0,0,0.22)';
+      ghost.style.border = isDark ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.1)';
+      ghost.style.pointerEvents = 'none';
+      ghost.style.zIndex = '999999';
+      ghost.textContent = task.title || 'Recordatorio';
+      document.body.appendChild(ghost);
+      e.dataTransfer.setDragImage(ghost, 20, 20);
+      setTimeout(() => {
+        if (ghost.parentNode) ghost.parentNode.removeChild(ghost);
+      }, 0);
     }
   };
 
@@ -1232,11 +1270,24 @@ export const TaskCard = React.memo(function TaskCard({
             className="hit-44"
             whileTap={{ scale: 0.85 }}
             aria-label={isEffectivelyDone ? 'Marcar como pendiente' : 'Completar tarea'}
-            disabled={!!isBlocked}
+            disabled={false}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e: React.MouseEvent) => {
               e.stopPropagation();
-              if (isBlocked) return;
+              if (isBlocked) {
+                HapticService.notification('warning');
+                SoundService.playUncomplete();
+                const blockerNames = pendingBlockersList.map(b => `«${b.title}»`).slice(0, 2).join(', ');
+                const extra = pendingBlockersList.length > 2 ? ` y ${pendingBlockersList.length - 2} más` : '';
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('show-toast', {
+                    detail: {
+                      message: `Bloqueado por: ${blockerNames || 'otra tarea'}${extra}`
+                    }
+                  }));
+                }
+                return;
+              }
               if (isEffectivelyDone) {
                 HapticService.selection();
                 SoundService.playUncomplete();
@@ -1471,9 +1522,16 @@ export const TaskCard = React.memo(function TaskCard({
                             updateTask(task.id, { title: raw });
                           }
                         }
-                        // 2. Crear inmediatamente el siguiente recordatorio
-                        const newTaskId = crypto.randomUUID();
+                        // 2. Desplazar los hermanos posteriores en el orden natural
+                        const allTasks = useAppStore.getState().tasks;
                         const currentOrder = typeof task.order === 'number' ? task.order : 0;
+                        Object.values(allTasks).forEach(t => {
+                          if (!t.deleted_at && t.categoryId === task.categoryId && t.sectionId === task.sectionId && t.parentId === task.parentId && (t.order ?? 0) > currentOrder) {
+                            useAppStore.getState().updateTask(t.id, { order: (t.order ?? 0) + 1 });
+                          }
+                        });
+                        // 3. Crear inmediatamente el siguiente recordatorio en currentOrder + 1
+                        const newTaskId = crypto.randomUUID();
                         useAppStore.getState().addTask({
                           id: newTaskId,
                           title: '',
@@ -1486,7 +1544,7 @@ export const TaskCard = React.memo(function TaskCard({
                           type: 'task',
                           created_at: new Date().toISOString()
                         });
-                        // 3. Enfocar el nuevo recordatorio creado
+                        // 4. Enfocar el nuevo recordatorio creado
                         useAppStore.getState().setInlineEditingTaskId(newTaskId);
                         HapticService.selection();
                       }
@@ -2080,8 +2138,7 @@ export const TaskCard = React.memo(function TaskCard({
         )}
 
         {/* Apple Reminders Info (i) button & clean drag handle */}
-        {!isBlocked && (
-          <div className="task-row-trailing" style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 'calc((var(--task-title-lh) - 32px) / 2)' }}>
+        <div className="task-row-trailing" style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 'calc((var(--task-title-lh) - 32px) / 2)' }}>
             <button
               className="task-info-btn"
               onPointerDown={(e) => e.stopPropagation()}
@@ -2142,7 +2199,6 @@ export const TaskCard = React.memo(function TaskCard({
               </div>
             )}
           </div>
-        )}
           </>
         )}
 

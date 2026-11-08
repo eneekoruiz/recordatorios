@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { completePrimaryHydration, getPersistenceRecovery, idbStorage } from '../utils/idbStorage';
 import type { TaskItem, CustomCycle, CustomList, ListSection } from '../models/Task';
 import { TaskRepository } from '../repositories/TaskRepository';
-import { isCompletedInCurrentPeriod, isSkippedInCurrentPeriod, isTaskActuallyCompletedInCurrentPeriod, findPeriodIndexInHistory, matchesPeriod, wouldCreateDependencyCycle, getStartOfWeek, getStartOfNextWeek } from '../services/TaskService';
+import { isCompletedInCurrentPeriod, isSkippedInCurrentPeriod, isTaskActuallyCompletedInCurrentPeriod, findPeriodIndexInHistory, matchesPeriod, wouldCreateDependencyCycle, getStartOfWeek, getStartOfNextWeek, isTaskCreatedAfterPeriod } from '../services/TaskService';
 import { getEffectiveCycleId, getPureCyclicPeriodicity, getTaskPeriodicity } from '../utils/sectionRoutine';
 import { ROOM_ANY_FREQUENCY_PREFIX, roomKeyOf, roomSectionId } from '../utils/limpiezaRooms';
 import { isGymTask } from '../utils/specialLists';
@@ -119,20 +119,36 @@ const changedTaskIds = (prev: Record<string, TaskItem>, next: Record<string, Tas
 export function sanitizeSectionHierarchy(sections: ListSection[]): ListSection[] {
   const secMap = new Map(sections.map(s => [s.id, s]));
   const detach = (s: ListSection): ListSection => ({ ...s, parentId: undefined, _is_dirty: true, updated_at: new Date().toISOString() });
+
+  const cleanTitle = (name: string): string => {
+    if (!name || typeof name !== 'string') return name;
+    let clean = name.replace(/^sec_(?:section_)?/i, '').trim();
+    clean = clean.replace(/(\s*\((?:copia|copy)(?:\s+\d+)?\))+$/gi, ' (copia)');
+    clean = clean.replace(/(\s*[-_]\s*(?:copia|copy))+$/gi, ' - Copia');
+    return clean.trim();
+  };
+
   return sections.map(s => {
-    if (!s.parentId) return s;
-    if (s.parentId === s.id) return detach(s);
-    const parent = secMap.get(s.parentId);
-    if (!parent || parent.deleted_at || parent.listId !== s.listId) return detach(s);
-    // Detección de ciclos
+    let current = s;
+    const sanitizedName = cleanTitle(s.name);
+    if (sanitizedName !== s.name) {
+      current = { ...current, name: sanitizedName, _is_dirty: true, updated_at: new Date().toISOString() };
+    }
+
+    if (!current.parentId) return current;
+    if (current.parentId === current.id) return detach(current);
+    const parent = secMap.get(current.parentId);
+    if (!parent || parent.deleted_at || parent.listId !== current.listId) return detach(current);
+
+    // Detección de ciclos y anidaciones circulares
     let curr: ListSection | undefined = parent;
-    const visited = new Set<string>([s.id]);
+    const visited = new Set<string>([current.id]);
     while (curr && curr.parentId) {
-      if (visited.has(curr.parentId)) return detach(s);
+      if (visited.has(curr.parentId)) return detach(current);
       visited.add(curr.parentId);
       curr = secMap.get(curr.parentId);
     }
-    return s;
+    return current;
   });
 }
 
@@ -192,7 +208,8 @@ interface AppState {
   addTask: (task: Partial<TaskItem>) => void;
   addTasksBatch: (tasks: Partial<TaskItem>[], options?: { createList?: CustomList }) => void;
   updateTaskRaw: (task: TaskItem) => void; // Para uso interno y SyncProvider
-  toggleTask: (id: string, forceReverse?: boolean, customTimestamp?: number | Date) => void;
+  toggleTask: (id: string, forceReverse?: boolean, customTimestamp?: number | Date, bypassBlockers?: boolean) => void;
+  skipDependency: (targetTaskId: string, blockedByTaskId: string) => void;
   skipTask: (id: string, forceReverse?: boolean, customTimestamp?: number | Date) => void;
   deleteTask: (id: string) => void;
   deleteTaskWithOptions: (id: string, options?: { keepSubtasks?: boolean; permanent?: boolean }) => void;
@@ -571,7 +588,7 @@ export const useAppStore = create<AppState>()(
         }
       })),
 
-      toggleTask: (id, forceReverse?: boolean, customTimestamp?: number | Date) => optimisticUpdate(get, set, (state) => {
+      toggleTask: (id, forceReverse?: boolean, customTimestamp?: number | Date, bypassBlockers?: boolean) => optimisticUpdate(get, set, (state) => {
         const existingTask = state.tasks[id];
         if (!existingTask) return state;
         
@@ -707,6 +724,36 @@ export const useAppStore = create<AppState>()(
             });
           }
         } else {
+          // Bloqueo activo: impedir completar si alguna tarea bloqueadora sigue pendiente
+          if (existingTask.blockedBy && existingTask.blockedBy.length > 0 && !bypassBlockers) {
+            const activeBlockers = existingTask.blockedBy
+              .map(bid => state.tasks[bid])
+              .filter((b): b is TaskItem => Boolean(b && !b.deleted_at));
+
+            const pendingBlockers = activeBlockers.filter(b => {
+              const bEff = getEffectiveCycleId(b, state.listSections, state.lists);
+              if (!bEff) {
+                return !isTaskCompleted(b) && b.status !== 'completed';
+              }
+              const bDone = isTaskActuallyCompletedInCurrentPeriod(b, state.cycles, state.listSections, state.lists, targetDate);
+              const bSkipped = isSkippedInCurrentPeriod(b, state.cycles, state.listSections, state.lists, targetDate);
+              return !bDone && !bSkipped;
+            });
+
+            if (pendingBlockers.length > 0) {
+              if (typeof window !== 'undefined') {
+                const names = pendingBlockers.map(b => `«${b.title || 'Recordatorio'}»`).slice(0, 2).join(', ');
+                const extra = pendingBlockers.length > 2 ? ` y ${pendingBlockers.length - 2} más` : '';
+                window.dispatchEvent(new CustomEvent('show-toast', {
+                  detail: {
+                    message: `Bloqueado por: ${names}${extra}. Completa la tarea bloqueadora primero.`
+                  }
+                }));
+              }
+              return state;
+            }
+          }
+
           // Normal complete forward logic
           if (isTargetTask) {
             const nextCount = currentCount + 1;
@@ -1710,6 +1757,7 @@ export const useAppStore = create<AppState>()(
             if (isGymTask(t, get().lists)) return false;
             const effCycle = getEffectiveCycleId(t, get().listSections, get().lists);
             if (!effCycle) return false;
+            if (referenceDate && isTaskCreatedAfterPeriod(t, effCycle, referenceDate, cycles)) return false;
             return validCycles.includes(effCycle as string);
           })
           .filter((t: any) => includeCompleted || temporarilyShowIds.includes(t.id) || !isCompletedInCurrentPeriod(t, cycles, get().listSections, get().lists, referenceDate));
@@ -1992,6 +2040,36 @@ export const useAppStore = create<AppState>()(
               _is_dirty: true,
               updated_at: new Date().toISOString()
             }
+          }
+        };
+      }),
+
+      skipDependency: (targetTaskId: string, blockedByTaskId: string) => optimisticUpdate(get, set, (state) => {
+        const targetTask = state.tasks[targetTaskId];
+        if (!targetTask) return state;
+        const currentBlockedBy = targetTask.blockedBy || [];
+        if (!currentBlockedBy.includes(blockedByTaskId)) return state;
+        const updatedBlockedBy = currentBlockedBy.filter(id => id !== blockedByTaskId);
+        const blockerTitle = state.tasks[blockedByTaskId]?.title || 'tarea bloqueadora';
+        
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('show-toast', {
+            detail: {
+              message: `Dependencia con «${blockerTitle}» omitida`,
+              onUndo: () => {
+                get().addDependency(targetTaskId, blockedByTaskId);
+              }
+            }
+          }));
+        }
+
+        return {
+          ...state,
+          tasks: {
+            ...state.tasks,
+            [targetTaskId]: TaskRepository.update(targetTask, {
+              blockedBy: updatedBlockedBy
+            })
           }
         };
       }),

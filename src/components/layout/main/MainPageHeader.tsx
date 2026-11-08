@@ -33,6 +33,7 @@ import type { RoutinePart } from '../../../utils/routineBreakdown';
 import { getReservedFrequencyColor } from '../../../constants/colors';
 
 import { CycleRoutineStatusCard } from './CycleRoutineStatusCard';
+import { AppleSegmentedControl } from '../../ui/AppleSegmentedControl';
 
 export interface CycleBreakdownInfo {
   ownCount: number;
@@ -699,83 +700,29 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
           </div>
         )}
         {isLimpiezaList(currentView, currentList) && onToggleCycleViewLayout && (
-          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <button
-              type="button"
-              data-testid="limpieza-layout-toggle-btn"
-              className={`routine-chip-btn layout-toggle-btn${cycleViewLayout === 'mixed' ? ' is-on' : ''}`}
-              aria-pressed={cycleViewLayout === 'mixed'}
-              style={{ ['--chip-color' as string]: viewColor }}
-              onClick={() => {
-                HapticService.selection();
-                onToggleCycleViewLayout(cycleViewLayout === 'sections' ? 'mixed' : 'sections');
-              }}
-            >
-              <span className={`routine-chip${cycleViewLayout === 'mixed' ? ' is-on' : ''}`}>
-                {cycleViewLayout === 'mixed' ? (
-                  <>
-                    <House size={12} strokeWidth={2.4} aria-hidden="true" />
-                    <span>Por estancias (continua)</span>
-                  </>
-                ) : (
-                  <>
-                    <Layers size={12} strokeWidth={2.4} aria-hidden="true" />
-                    <span>Por frecuencias</span>
-                  </>
-                )}
-              </span>
-            </button>
+          <div style={{ marginTop: 8, maxWidth: 360 }}>
+            <AppleSegmentedControl<'sections' | 'mixed'>
+              options={[
+                { value: 'sections', label: 'Por frecuencias', icon: <Layers size={13} strokeWidth={2.4} /> },
+                { value: 'mixed', label: 'Por estancias (continua)', icon: <House size={13} strokeWidth={2.4} /> }
+              ]}
+              value={cycleViewLayout === 'mixed' ? 'mixed' : 'sections'}
+              onChange={(val) => onToggleCycleViewLayout(val)}
+            />
           </div>
         )}
 
         {isQueHeHechoList(currentView, currentList) && (
           <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ display: 'inline-flex', background: 'var(--bg-card, rgba(0,0,0,0.05))', padding: '3px', borderRadius: 10, border: '1px solid var(--border-subtle)' }}>
-                <button
-                  type="button"
-                  onClick={() => { HapticService.selection(); setLifeLogViewMode('people'); }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '6px 14px',
-                    borderRadius: 7,
-                    fontSize: '0.82rem',
-                    fontWeight: 600,
-                    border: 'none',
-                    cursor: 'pointer',
-                    background: lifeLogViewMode === 'people' ? 'var(--bg-elevated, #fff)' : 'transparent',
-                    color: lifeLogViewMode === 'people' ? '#5856d6' : 'var(--text-secondary)',
-                    boxShadow: lifeLogViewMode === 'people' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
-                    transition: 'background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, fill 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease'
-                  }}
-                >
-                  <Users size={14} />
-                  <span>Por Personas</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { HapticService.selection(); setLifeLogViewMode('timeline'); }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '6px 14px',
-                    borderRadius: 7,
-                    fontSize: '0.82rem',
-                    fontWeight: 600,
-                    border: 'none',
-                    cursor: 'pointer',
-                    background: lifeLogViewMode === 'timeline' ? 'var(--bg-elevated, #fff)' : 'transparent',
-                    color: lifeLogViewMode === 'timeline' ? '#5856d6' : 'var(--text-secondary)',
-                    boxShadow: lifeLogViewMode === 'timeline' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
-                    transition: 'background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, fill 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease'
-                  }}
-                >
-                  <Clock size={14} />
-                  <span>Línea de Tiempo</span>
-                </button>
+                            <AppleSegmentedControl<'people' | 'timeline'>
+                options={[
+                  { value: 'people', label: 'Por Personas', icon: <Users size={14} /> },
+                  { value: 'timeline', label: 'Línea de Tiempo', icon: <Clock size={14} /> }
+                ]}
+                value={lifeLogViewMode}
+                onChange={(val) => setLifeLogViewMode(val)}
+              />
                 <button
                   type="button"
                   data-testid="monthly-summary-btn"
@@ -800,7 +747,6 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                   <span>Resumen del mes</span>
                 </button>
               </div>
-            </div>
 
             {/* Filtro rápido por persona en modo personas */}
             {lifeLogViewMode === 'people' && (() => {

@@ -1,32 +1,12 @@
-import { HapticService } from '../services/HapticService';
-
-// Aviso con «Deshacer» tras una eliminación, y el mismo deshacer con Ctrl/⌘+Z durante medio minuto.
-const WINDOW_MS = 30_000;
-let pending: { undo: () => void; at: number } | null = null;
+import { historyManager } from './historyManager';
 
 export function showUndoToast(message: string, undo: () => void): void {
-  let undone = false;
-  const run = () => {
-    if (undone) return;
-    undone = true;
-    if (pending?.undo === run) pending = null;
-    undo();
-    HapticService.selection();
-  };
-  pending = { undo: run, at: Date.now() };
-  window.dispatchEvent(new CustomEvent('show-toast', { detail: { message, onUndo: run } }));
+  historyManager.register(message, undo, { showToast: true });
 }
 
 /** Ctrl/⌘+Z: deshace la última eliminación si es reciente. Devuelve si hizo algo. */
 export function undoLastDeletion(): boolean {
-  if (!pending || Date.now() - pending.at > WINDOW_MS) {
-    pending = null;
-    return false;
-  }
-  const { undo } = pending;
-  undo();
-  window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Acción deshecha' }));
-  return true;
+  return historyManager.undo();
 }
 
 /** Elimina una frecuencia y ofrece deshacerla (con los recordatorios que la tenían). */
