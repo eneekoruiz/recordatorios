@@ -1,8 +1,30 @@
 #!/bin/sh
-# Pre-push hook optimizado y paralelizado para git push ultrarrápido
+# Pre-push hook optimizado con escaneo obligatorio de secretos
+
+# 0. Escaneo Crítico de Secretos (INNEGOCIABLE: Nunca se omite, ni con FAST_PUSH)
+echo "🔒 [Git Pre-Push Hook] Auditando secretos y credenciales antes de subir..."
+
+SCANNER_CMD="secret-scanner"
+if ! command -v secret-scanner >/dev/null 2>&1; then
+    if [ -f "$HOME/.gemini/antigravity/bin/secret-scanner.cjs" ]; then
+        SCANNER_CMD="node $HOME/.gemini/antigravity/bin/secret-scanner.cjs"
+    elif [ -f "C:/Users/User/.gemini/antigravity/bin/secret-scanner.cjs" ]; then
+        SCANNER_CMD="node C:/Users/User/.gemini/antigravity/bin/secret-scanner.cjs"
+    fi
+fi
+
+$SCANNER_CMD --pre-push
+STATUS=$?
+if [ $STATUS -ne 0 ]; then
+    echo ""
+    echo "❌ [ERROR CRÍTICO] Se detectaron secretos o archivos prohibidos en los cambios a subir."
+    echo "🚫 PUSH ABORTADO INMEDIATAMENTE POR SEGURIDAD."
+    echo ""
+    exit 1
+fi
 
 if [ "$FAST_PUSH" = "1" ] || [ "$SKIP_HOOKS" = "1" ]; then
-    echo "⚡ [Git Pre-Push Hook] Verificación omitida (FAST_PUSH=1)."
+    echo "⚡ [Git Pre-Push Hook] Verificación de tests omitida (FAST_PUSH=1)."
     exit 0
 fi
 
@@ -36,5 +58,5 @@ if [ $STATUS -ne 0 ]; then
     exit 1
 fi
 
-echo "✅ [Git Pre-Push Hook] Validación paralela completada con éxito."
+echo "✅ [Git Pre-Push Hook] Validación de seguridad y calidad completada con éxito."
 exit 0
