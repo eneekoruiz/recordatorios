@@ -14,6 +14,7 @@ import { runContentMigrations } from '../utils/contentMigrations';
 import type { TaskItem } from '../models/Task';
 import { createDefaultGymRoutine, ensureAllGymRoutinesExist } from '../utils/gymExercises';
 import { planGymRestsForSection } from '../utils/gymRests';
+import { getStartOfWeek, getStartOfNextWeek } from '../services/TaskService';
 
 export function useDataHygiene(hasHydrated: boolean): boolean {
   const [isDone, setIsDone] = useState(false);
@@ -737,6 +738,62 @@ export function useDataHygiene(hasHydrated: boolean): boolean {
             updated_at: EPOCH
           });
         }
+
+        // Garantizar renovación semanal periódica de los ejercicios de gimnasio:
+        // - En cada nueva semana, los ejercicios vuelven a estar pendientes (0 series hechas) para la nueva semana,
+        //   preservando al 100% el historial completionHistory para estadísticas, análisis y rachas.
+        const now = new Date();
+        const currentWeekStart = getStartOfWeek(now).getTime();
+        const currentWeekEnd = getStartOfNextWeek(now).getTime();
+        const todayStr = now.toDateString();
+
+        allGymTasks.forEach(t => {
+          const isDaily = t.sectionId === 'sec_gym_diaria' || /diari|core|estiramiento/i.test(t.sectionId || '') || /diari|core|estiramiento/i.test(t.title || '');
+          const expectedCycle = isDaily ? 'cycle_day' : 'cycle_week';
+          
+          const cycleUpdate: Partial<TaskItem> = {};
+          if (t.cycle_id !== expectedCycle) {
+            cycleUpdate.cycle_id = expectedCycle;
+          }
+
+          const history = t.completionHistory;
+          const hasHistory = Array.isArray(history) && history.length > 0;
+
+          if (expectedCycle === 'cycle_week') {
+            const doneThisWeek = hasHistory && history.some(ts => {
+              const time = typeof ts === 'number' ? ts : new Date(ts).getTime();
+              return time >= currentWeekStart && time < currentWeekEnd;
+            });
+            const updatedTime = t.updated_at ? new Date(t.updated_at).getTime() : 0;
+            const updatedThisWeek = updatedTime >= currentWeekStart && updatedTime < currentWeekEnd;
+
+            // Si no se ha completado esta semana pero arrastra status 'completed' o series de semanas pasadas:
+            if (!doneThisWeek) {
+              if (t.status === 'completed') {
+                cycleUpdate.status = 'pending';
+              }
+              if ((t.currentCount || 0) > 0 && !updatedThisWeek) {
+                cycleUpdate.currentCount = 0;
+              }
+            }
+          } else if (expectedCycle === 'cycle_day') {
+            const doneToday = hasHistory && history.some(ts => new Date(ts).toDateString() === todayStr);
+            const updatedToday = t.updated_at ? new Date(t.updated_at).toDateString() === todayStr : false;
+
+            if (!doneToday) {
+              if (t.status === 'completed') {
+                cycleUpdate.status = 'pending';
+              }
+              if ((t.currentCount || 0) > 0 && !updatedToday) {
+                cycleUpdate.currentCount = 0;
+              }
+            }
+          }
+
+          if (Object.keys(cycleUpdate).length > 0) {
+            state.updateTask(t.id, cycleUpdate);
+          }
+        });
       }
 
       // Unificación homogénea de nombres de secciones en todas las listas (Quehaceres, Limpieza, etc.)

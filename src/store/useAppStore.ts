@@ -48,14 +48,63 @@ const getInitialTheme = (): 'light' | 'dark' => {
   return 'light';
 };
 
-export const isTaskCompleted = (t?: TaskItem | null): boolean => {
+export const isTaskCompleted = (t?: TaskItem | null, referenceDate: Date = new Date()): boolean => {
   if (!t) return false;
-  // Si la tarea tiene meta de repeticiones (ej. 3 vasos de agua), solo se considera completada si se alcanza la meta
+
+  const history = t.completionHistory;
+  const hasHistory = Array.isArray(history) && history.length > 0;
+
+  // Si la tarea tiene ciclo semanal (ej. ejercicios de fuerza de gimnasio, quehaceres semanales)
+  if (t.cycle_id === 'cycle_week') {
+    const weekStart = getStartOfWeek(referenceDate).getTime();
+    const weekEnd = getStartOfNextWeek(referenceDate).getTime();
+    if (hasHistory) {
+      const doneThisWeek = history.some(ts => {
+        const time = typeof ts === 'number' ? ts : new Date(ts).getTime();
+        return time >= weekStart && time < weekEnd;
+      });
+      if (doneThisWeek) return true;
+    }
+    const stamp = t.completed_at ? new Date(t.completed_at).getTime() : (t.updated_at ? new Date(t.updated_at).getTime() : 0);
+    const updatedThisWeek = stamp >= weekStart && stamp < weekEnd;
+    if (t.targetCount && t.targetCount > 1) {
+      if ((t.currentCount || 0) >= t.targetCount) {
+        return updatedThisWeek || (!t.updated_at && !hasHistory && t.status === 'completed');
+      }
+      return false;
+    }
+    if (t.status === 'completed' || !!t.completed_at) {
+      return updatedThisWeek || (!t.updated_at && !hasHistory);
+    }
+    return false;
+  }
+
+  // Si la tarea tiene ciclo diario (ej. rutinas diarias de gimnasio o de casa)
+  if (t.cycle_id === 'cycle_day') {
+    const todayStr = referenceDate.toDateString();
+    if (hasHistory) {
+      const doneToday = history.some(ts => new Date(ts).toDateString() === todayStr);
+      if (doneToday) return true;
+    }
+    const stampDate = t.completed_at ? new Date(t.completed_at).toDateString() : (t.updated_at ? new Date(t.updated_at).toDateString() : null);
+    const updatedToday = stampDate === todayStr;
+    if (t.targetCount && t.targetCount > 1) {
+      if ((t.currentCount || 0) >= t.targetCount) {
+        return updatedToday || (!t.updated_at && !hasHistory && t.status === 'completed');
+      }
+      return false;
+    }
+    if (t.status === 'completed' || !!t.completed_at) {
+      return updatedToday || (!t.updated_at && !hasHistory);
+    }
+    return false;
+  }
+
+  // Si la tarea tiene meta de repeticiones puntual (ej. vasos de agua o series)
   if (t.targetCount && t.targetCount > 1) {
     return (t.currentCount || 0) >= t.targetCount;
   }
-  // Only treat as completed if status is explicitly 'completed' or has a completed_at timestamp.
-  // We do NOT use completionHistory here because recurring tasks accumulate history but reset to 'pending'.
+  // Comprobación estándar para tareas puntuales
   return t.status === 'completed' || !!t.completed_at;
 };
 

@@ -12,6 +12,7 @@ import type { TaskItem } from '../../models/Task';
 import { FREQUENCY_RESERVED_COLORS } from '../../constants/colors';
 import { WEEKDAY_NAMES } from '../../utils/routineDay';
 import { capitalize } from '../../utils/format';
+import { isCompletedInCurrentPeriod } from '../../services/TaskService';
 import { HapticService } from '../../services/HapticService';
 import './CalendarView.css';
 
@@ -169,6 +170,15 @@ export function CalendarView({ onSelectView, onEditTask }: CalendarViewProps) {
   const dayLabel = (date: Date, info: CalendarDay | undefined) => {
     const base = capitalize(date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }));
     const parts: string[] = [];
+    const gymList = lists.find((l) => l.id === 'gimnasio' || l.id === 'gym');
+    if (gymList) {
+      const split = (gymList.activeRoutineSplit as any) || 'torso_pierna_4d';
+      const gymSections = listSections.filter((s) => s.listId === gymList.id);
+      const plan = getWeeklyScheduleForDate(date, split, gymSections, Object.values(tasks));
+      if (plan) {
+        parts.push(plan.isRest ? 'Día de descanso' : `Entrenamiento: ${plan.shortLabel} (${plan.title})`);
+      }
+    }
     const pending = info?.items.filter((i) => !i.done).length || 0;
     if (pending) parts.push(pending === 1 ? '1 recordatorio' : `${pending} recordatorios`);
     const rounds = (info?.rounds || []).filter((r) => r.periodicity !== 'day').map((r) => ROUND_LABEL[r.periodicity].toLowerCase());
@@ -176,18 +186,42 @@ export function CalendarView({ onSelectView, onEditTask }: CalendarViewProps) {
     return parts.length ? `${base}: ${parts.join(', ')}` : base;
   };
 
-  const markers = (info: CalendarDay | undefined): string[] => {
-    if (!info) return [];
+  const markers = (info: CalendarDay | undefined, date: Date): string[] => {
     const colors: string[] = [];
-    const round = info.rounds.find((r) => r.periodicity !== 'day');
-    if (round) colors.push(FREQUENCY_RESERVED_COLORS[round.periodicity]);
-    for (const item of info.items) {
-      if (item.done) continue;
-      const color = item.overdue ? OVERDUE_COLOR : listColor(item.task);
-      if (!colors.includes(color)) colors.push(color);
-      if (colors.length === 3) break;
+
+    // 1. Actividad de gimnasio según planificación semanal (Entreno vs Descanso)
+    const gymList = lists.find((l) => l.id === 'gimnasio' || l.id === 'gym');
+    if (gymList) {
+      const split = (gymList.activeRoutineSplit as any) || 'torso_pierna_4d';
+      const gymSections = listSections.filter((s) => s.listId === gymList.id);
+      const plan = getWeeklyScheduleForDate(date, split, gymSections, Object.values(tasks));
+      if (plan) {
+        if (!plan.isRest) {
+          colors.push('var(--accent-blue, #2997ff)'); // Entrenamiento
+        } else {
+          colors.push('var(--accent-orange, #ff9f0a)'); // Descanso
+        }
+      }
     }
-    return colors;
+
+    if (info) {
+      // 2. Rondas de rutinas periódicas
+      const round = info.rounds.find((r) => r.periodicity !== 'day');
+      if (round) {
+        const roundColor = FREQUENCY_RESERVED_COLORS[round.periodicity];
+        if (!colors.includes(roundColor)) colors.push(roundColor);
+      }
+
+      // 3. Recordatorios con fecha (vencidos en rojo o color de su lista)
+      for (const item of info.items) {
+        if (item.done) continue;
+        const color = item.overdue ? OVERDUE_COLOR : listColor(item.task);
+        if (!colors.includes(color)) colors.push(color);
+        if (colors.length >= 4) break;
+      }
+    }
+
+    return colors.slice(0, 4);
   };
 
   type Chip = { key: string; label: string; color: string; done?: boolean };
@@ -296,6 +330,26 @@ export function CalendarView({ onSelectView, onEditTask }: CalendarViewProps) {
             </div>
           </header>
 
+          {/* Leyenda visual Apple HIG para clarificar los puntos del calendario */}
+          <div className="cal-legend" role="note" aria-label="Leyenda de puntos de actividad">
+            <span className="cal-legend-item">
+              <span className="cal-legend-dot" style={{ background: 'var(--accent-blue, #2997ff)' }} aria-hidden="true" />
+              <span>Gimnasio</span>
+            </span>
+            <span className="cal-legend-item">
+              <span className="cal-legend-dot" style={{ background: 'var(--accent-orange, #ff9f0a)' }} aria-hidden="true" />
+              <span>Descanso</span>
+            </span>
+            <span className="cal-legend-item">
+              <span className="cal-legend-dot" style={{ background: FREQUENCY_RESERVED_COLORS.week }} aria-hidden="true" />
+              <span>Rutinas</span>
+            </span>
+            <span className="cal-legend-item">
+              <span className="cal-legend-dot" style={{ background: DEFAULT_COLOR }} aria-hidden="true" />
+              <span>Recordatorios</span>
+            </span>
+          </div>
+
           <div className="cal-weekdays" aria-hidden="true">
             {WEEKDAY_LETTERS.map((letter, i) => (
               <span key={letter + i} className={i >= 5 ? 'is-weekend' : undefined}>
@@ -327,7 +381,7 @@ export function CalendarView({ onSelectView, onEditTask }: CalendarViewProps) {
                   const isSelected = key === currentSelectedKey;
                   const isToday = key === todayKey;
                   const inMonth = date.getMonth() === visible.month;
-                  const dots = markers(info);
+                  const dots = markers(info, date);
                   const { shown, more } = chips(info, date);
                   const className = [
                     'cal-day',
@@ -353,7 +407,7 @@ export function CalendarView({ onSelectView, onEditTask }: CalendarViewProps) {
                     >
                       <span className="cal-num">{date.getDate()}</span>
                       <span className="cal-dots" aria-hidden="true">
-                        {dots.map((color) => <span key={color} style={{ ['--dot' as string]: color }} />)}
+                        {dots.map((color, idx) => <span key={`${color}-${idx}`} style={{ ['--dot' as string]: color }} />)}
                       </span>
                       <span className="cal-chips" aria-hidden="true">
                         {shown.map((chip) => (
@@ -394,78 +448,119 @@ export function CalendarView({ onSelectView, onEditTask }: CalendarViewProps) {
                       : 'color-mix(in srgb, var(--accent-blue, #2997ff) 28%, transparent)'
                   }`,
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 12
+                  flexDirection: 'column',
+                  gap: 10
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                  <div
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 10,
-                      background: scheduledWeeklyDay.isRest
-                        ? 'color-mix(in srgb, var(--accent-orange, #ff9f0a) 20%, transparent)'
-                        : 'color-mix(in srgb, var(--accent-blue, #2997ff) 20%, transparent)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: scheduledWeeklyDay.isRest ? 'var(--accent-orange, #ff9f0a)' : 'var(--accent-blue, #2997ff)',
-                      flexShrink: 0
-                    }}
-                  >
-                    {scheduledWeeklyDay.isRest ? <Moon size={16} /> : <Dumbbell size={16} />}
-                  </div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                        {scheduledWeeklyDay.fullWeekday} · {scheduledWeeklyDay.shortLabel}
-                      </span>
-                      {scheduledWeeklyDay.isRest && (
-                        <span
-                          style={{
-                            fontSize: '0.68rem',
-                            fontWeight: 600,
-                            padding: '1px 6px',
-                            borderRadius: 6,
-                            background: 'var(--accent-orange, #ff9f0a)',
-                            color: '#ffffff'
-                          }}
-                        >
-                          Descanso
-                        </span>
-                      )}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                    <div
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 10,
+                        background: scheduledWeeklyDay.isRest
+                          ? 'color-mix(in srgb, var(--accent-orange, #ff9f0a) 20%, transparent)'
+                          : 'color-mix(in srgb, var(--accent-blue, #2997ff) 20%, transparent)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: scheduledWeeklyDay.isRest ? 'var(--accent-orange, #ff9f0a)' : 'var(--accent-blue, #2997ff)',
+                        flexShrink: 0
+                      }}
+                    >
+                      {scheduledWeeklyDay.isRest ? <Moon size={16} /> : <Dumbbell size={16} />}
                     </div>
-                    <span style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', display: 'block', marginTop: 2 }}>
-                      {scheduledWeeklyDay.title}
-                      {scheduledWeeklyDay.meta ? ` · ${scheduledWeeklyDay.meta}` : ''}
-                    </span>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                          {scheduledWeeklyDay.fullWeekday} · {scheduledWeeklyDay.shortLabel}
+                        </span>
+                        {scheduledWeeklyDay.isRest && (
+                          <span
+                            style={{
+                              fontSize: '0.68rem',
+                              fontWeight: 600,
+                              padding: '1px 6px',
+                              borderRadius: 6,
+                              background: 'var(--accent-orange, #ff9f0a)',
+                              color: '#ffffff'
+                            }}
+                          >
+                            Descanso
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', display: 'block', marginTop: 2 }}>
+                        {scheduledWeeklyDay.title}
+                        {scheduledWeeklyDay.meta ? ` · ${scheduledWeeklyDay.meta}` : ''}
+                      </span>
+                    </div>
                   </div>
+
+                  {!scheduledWeeklyDay.isRest && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        HapticService.selection();
+                        const gymList = lists.find((l) => l.id === 'gimnasio' || l.id === 'gym');
+                        onSelectView(gymList?.id || 'gimnasio');
+                      }}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: 8,
+                        background: 'var(--accent-primary, #2997ff)',
+                        border: 'none',
+                        color: '#ffffff',
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        flexShrink: 0
+                      }}
+                    >
+                      Ver rutina
+                    </button>
+                  )}
                 </div>
 
-                {!scheduledWeeklyDay.isRest && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      HapticService.selection();
-                      const gymList = lists.find((l) => l.id === 'gimnasio' || l.id === 'gym');
-                      onSelectView(gymList?.id || 'gimnasio');
-                    }}
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: 8,
-                      background: 'var(--accent-primary, #2997ff)',
-                      border: 'none',
-                      color: '#ffffff',
-                      fontSize: '0.78rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      flexShrink: 0
-                    }}
-                  >
-                    Ver rutina
-                  </button>
+                {/* Desglose de ejercicios de la sesión para días de entreno */}
+                {!scheduledWeeklyDay.isRest && scheduledWeeklyDay.sectionId && (
+                  <div style={{ borderTop: '0.5px solid color-mix(in srgb, var(--accent-blue, #2997ff) 20%, transparent)', paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                      Ejercicios de la sesión:
+                    </span>
+                    {Object.values(tasks)
+                      .filter(t => !t.deleted_at && t.sectionId === scheduledWeeklyDay.sectionId && !t.isRest && !t.id?.startsWith('task_gym_rest_'))
+                      .slice(0, 6)
+                      .map(t => {
+                        const done = isCompletedInCurrentPeriod(t, cycles, listSections, lists, selected);
+                        return (
+                          <div key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', color: done ? 'var(--text-tertiary)' : 'var(--text-primary)', padding: '2px 0' }}>
+                            <span style={{ textDecoration: done ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              • {t.title}
+                            </span>
+                            <span style={{ fontSize: '0.72rem', opacity: done ? 0.6 : 0.85, flexShrink: 0, marginLeft: 8, color: done ? 'var(--accent-green, #34c759)' : 'var(--text-secondary)', fontWeight: done ? 600 : 400 }}>
+                              {done ? '✓ Completado' : `${t.targetCount || 1} series`}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+
+                {/* Si es día de descanso, sugerencia de movilidad activa y hábitos */}
+                {scheduledWeeklyDay.isRest && (
+                  <div style={{ borderTop: '0.5px solid color-mix(in srgb, var(--accent-orange, #ff9f0a) 20%, transparent)', paddingTop: 8 }}>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
+                      Día de descanso muscular. Recomendado para recuperación activa y movilidad diaria:
+                    </span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      <span className="cal-mobility-chip">🧘 Linfáticos (1 min)</span>
+                      <span className="cal-mobility-chip">🏌️ Rotaciones golf</span>
+                      <span className="cal-mobility-chip">🏋️ Sentadilla profunda</span>
+                      <span className="cal-mobility-chip">💨 Respiraciones</span>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

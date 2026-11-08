@@ -23,6 +23,8 @@ export function getPeriodicityFromPrefix(title) {
 
 const periodicityFromText = (text) => {
   if (text.includes('aburr')) return null;
+  // "Día 1", "Día 2", "Día 3"... son los números de sesión de un split semanal de entrenamiento
+  if (/\bd[ií]a\s*\d+\b/i.test(text)) return 'week';
   if (text.includes('diari') || text.includes('recurrent') || text.includes('vital') || text.includes('hábito') || text.includes('habito') || /\b(d[ií]as?)\b/i.test(text)) return 'day';
   if (text.includes('seman') || /\b(sem)\b/i.test(text)) return 'week';
   if (text.includes('mensu') || /\b(mes(es)?)\b/i.test(text)) return 'month';
@@ -79,13 +81,14 @@ export function getTaskPeriodicity(task, sections, lists) {
     }
   }
 
-  // Hábitos sin otra frecuencia: contador diario.
-  if (task.targetCount && task.targetCount > 1) return 'day';
-
   // Frecuencia heredada de la lista cuando la sección no la define.
   const catId = task.categoryId || task.category_id;
   if (catId) {
     const catLower = (catId || '').toLowerCase();
+    if (catLower === 'gimnasio' || catLower === 'gym') {
+      const isDailyGym = secId === 'sec_gym_diaria' || /diari|core|estiramiento/i.test(secId || '') || /diari|core|estiramiento/i.test(task.title || '');
+      return isDailyGym ? 'day' : 'week';
+    }
     if (catLower === 'limpieza_diaria' || catLower.includes('diari')) return 'day';
     if (catLower === 'limpieza_semanal' || catLower.includes('seman')) return 'week';
     if (catLower === 'limpieza_mensual' || catLower.includes('mensu')) return 'month';
@@ -93,10 +96,18 @@ export function getTaskPeriodicity(task, sections, lists) {
 
     const listObj = lists?.find((l) => l.id === catId);
     if (listObj) {
+      const listName = (listObj.name || '').toLowerCase();
+      if (listName.includes('gimnasio') || listName.includes('gym') || listName.includes('entreno')) {
+        const isDailyGym = secId === 'sec_gym_diaria' || /diari|core|estiramiento/i.test(secId || '') || /diari|core|estiramiento/i.test(task.title || '');
+        return isDailyGym ? 'day' : 'week';
+      }
       const fromList = periodicityFromText((listObj.name || catId || '').toLowerCase());
       if (fromList) return fromList;
     }
   }
+
+  // Hábitos sin otra frecuencia: contador diario.
+  if (task.targetCount && task.targetCount > 1) return 'day';
 
   return null;
 }
