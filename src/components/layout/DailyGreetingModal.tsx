@@ -9,6 +9,7 @@ import { getUserFirstName } from '../../utils/userIdentity';
 import { formatRelativeDay, formatTime, plural } from '../../utils/format';
 import './DailyGreetingModal.css';
 import { RoutineRecovery } from './RoutineRecovery';
+import { MoodCheckin } from '../mood/MoodCheckin';
 
 interface DailyGreetingModalProps {
   onSelectView?: (view: string) => void;
@@ -208,6 +209,10 @@ export const DailyGreetingModal: React.FC<DailyGreetingModalProps> = ({ onSelect
                 {briefing.detail ? ` ${briefing.detail}` : ''}
               </p>
             </header>
+
+            <div className="greeting-mood-section" style={{ margin: '14px 0' }}>
+              <MoodCheckin compact />
+            </div>
 
             <RoutineRecovery groups={briefing.recovery} onStartTask={onStartTask ? (id) => { setIsOpen(false); onStartTask(id); } : undefined} onOpenTask={openTask} onSelectView={onSelectView ? view => { setIsOpen(false); onSelectView(view); } : undefined} />
 

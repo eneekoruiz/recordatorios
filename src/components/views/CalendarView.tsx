@@ -14,6 +14,7 @@ import { WEEKDAY_NAMES } from '../../utils/routineDay';
 import { capitalize } from '../../utils/format';
 import { isCompletedInCurrentPeriod } from '../../services/TaskService';
 import { HapticService } from '../../services/HapticService';
+import { loadMoodEntries, type MoodEntry } from '../mood/MoodCheckin';
 import './CalendarView.css';
 
 interface CalendarViewProps {
@@ -81,6 +82,13 @@ export function CalendarView({ onSelectView, onEditTask }: CalendarViewProps) {
   const currentSelectedKey = dayKey(selected);
   const [visible, setVisible] = useState(() => ({ year: selected.getFullYear(), month: selected.getMonth() }));
   const [direction, setDirection] = useState(0);
+  const [moodEntries, setMoodEntries] = useState<Record<string, MoodEntry>>(() => loadMoodEntries());
+
+  useEffect(() => {
+    const handleSaved = () => setMoodEntries(loadMoodEntries());
+    window.addEventListener('mood-entry-saved', handleSaved);
+    return () => window.removeEventListener('mood-entry-saved', handleSaved);
+  }, []);
 
   const weeks = useMemo(() => monthWeeks(visible.year, visible.month), [visible.year, visible.month]);
   const calendar = useMemo(() => {
@@ -188,6 +196,12 @@ export function CalendarView({ onSelectView, onEditTask }: CalendarViewProps) {
 
   const markers = (info: CalendarDay | undefined, date: Date): string[] => {
     const colors: string[] = [];
+    const dayKeyStr = dayKey(date);
+    const dayMood = moodEntries[dayKeyStr];
+    if (dayMood) {
+      const moodColor = dayMood.score >= 4 ? '#8b5cf6' : dayMood.score === 3 ? '#10b981' : '#f97316';
+      colors.push(moodColor);
+    }
 
     // 1. Actividad de gimnasio según planificación semanal (Entreno vs Descanso)
     const gymList = lists.find((l) => l.id === 'gimnasio' || l.id === 'gym');
@@ -348,6 +362,10 @@ export function CalendarView({ onSelectView, onEditTask }: CalendarViewProps) {
               <span className="cal-legend-dot" style={{ background: DEFAULT_COLOR }} aria-hidden="true" />
               <span>Recordatorios</span>
             </span>
+            <span className="cal-legend-item">
+              <span className="cal-legend-dot" style={{ background: '#8b5cf6' }} aria-hidden="true" />
+              <span>Ánimo</span>
+            </span>
           </div>
 
           <div className="cal-weekdays" aria-hidden="true">
@@ -429,6 +447,41 @@ export function CalendarView({ onSelectView, onEditTask }: CalendarViewProps) {
           <header className="cal-agenda-head" aria-live="polite">
             <h3>{title}</h3>
             <p>{subtitle}</p>
+          </header>
+
+          {moodEntries[currentSelectedKey] && (
+            <div className="cal-group" style={{ marginBottom: 16 }}>
+              <h4 className="cal-group-label">Estado de ánimo</h4>
+              <div
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: 14,
+                  background: 'var(--bg-surface, #ffffff)',
+                  border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 24 }}>
+                    {moodEntries[currentSelectedKey].score === 5 ? '😄' : moodEntries[currentSelectedKey].score === 4 ? '😊' : moodEntries[currentSelectedKey].score === 3 ? '😐' : moodEntries[currentSelectedKey].score === 2 ? '😕' : '😔'}
+                  </span>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 13 }}>{moodEntries[currentSelectedKey].label}</div>
+                    {moodEntries[currentSelectedKey].factors?.length > 0 && (
+                      <div style={{ fontSize: 11, opacity: 0.7 }}>{moodEntries[currentSelectedKey].factors.join(' · ')}</div>
+                    )}
+                  </div>
+                </div>
+                <span style={{ fontSize: 11, opacity: 0.5 }}>
+                  {new Date(moodEntries[currentSelectedKey].loggedAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+            </div>
+          )}
+          <header className="cal-agenda-head-dummy" style={{ display: 'none' }}>
           </header>
 
           {/* Plan semanal de entrenamiento / descanso sincronizado */}
