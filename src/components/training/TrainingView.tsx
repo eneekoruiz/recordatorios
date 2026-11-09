@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, MoreHorizontal, Play, Plus } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Play, Plus, Dumbbell, Scale } from 'lucide-react';
+import { BodyEvolution } from '../body/BodyEvolution';
 import { useTrainingStore } from '../../store/useTrainingStore';
 import { useAppStore } from '../../store/useAppStore';
 import type { Routine, RoutineSplit, TrainingDay } from '../../models/Training';
@@ -28,6 +29,7 @@ export function TrainingView({ onBack }: { onBack: () => void }) {
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
+  const [viewMode, setViewMode] = useState<'routines' | 'evolution'>('routines');
 
   const active = routines.find((r) => r.status === 'active');
   const saved = routines.filter((r) => r.status === 'saved' || r.status === 'paused');
@@ -66,6 +68,38 @@ export function TrainingView({ onBack }: { onBack: () => void }) {
         <button type="button" className="tr-back" onClick={onBack}><ChevronLeft size={20} aria-hidden="true" /> Listas</button>
         <h1>Entrenamiento</h1>
       </header>
+
+      <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl w-fit mb-4">
+        <button
+          type="button"
+          onClick={() => setViewMode('routines')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+            viewMode === 'routines'
+              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+              : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <Dumbbell size={15} aria-hidden="true" />
+          Rutinas
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMode('evolution')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+            viewMode === 'evolution'
+              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+              : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <Scale size={15} aria-hidden="true" />
+          Evolución Corporal
+        </button>
+      </div>
+
+      {viewMode === 'evolution' ? (
+        <BodyEvolution />
+      ) : (
+        <>
 
       {activeSession && resumable && (
         <section className="tr-resume" aria-label="Entrenamiento sin terminar">
@@ -158,6 +192,9 @@ export function TrainingView({ onBack }: { onBack: () => void }) {
             ))}
           </ul>
         </details>
+      )}
+
+        </>
       )}
 
       {creating && (
