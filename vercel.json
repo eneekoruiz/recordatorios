@@ -1,7 +1,8 @@
 {
   "git": {
     "deploymentEnabled": {
-      "codex/plan-helen-20261104": false
+      "codex/plan-helen-20261104": false,
+      "codex/automation-catalog-20261112": false
     }
   },
   "rewrites": [

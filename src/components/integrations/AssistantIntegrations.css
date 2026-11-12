@@ -46,3 +46,7 @@
 .channel-link-code label { display: grid; gap: 8px; }
 .channel-link-code textarea { box-sizing: border-box; width: 100%; min-width: 0; resize: vertical; font: inherit; color: var(--text-primary); background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 10px 12px; }
 .channel-link-code textarea:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 3px; }
+.automations-summary-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.automation-chip { font-size: 0.75rem; background: var(--bg-elevated); color: var(--text-secondary); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-subtle); }
+.automation-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.antigravity-feedback { color: var(--accent-purple, #af52de); font-weight: 500; }
