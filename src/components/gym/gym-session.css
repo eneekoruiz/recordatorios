@@ -1,0 +1,148 @@
+/* Entreno del día: hoja a pantalla completa con la tabla de series de cada ejercicio. */
+.gym-session {
+  --gs-bg: #f2f2f7;
+  --gs-card: #ffffff;
+  --gs-fill: rgba(118, 118, 128, 0.12);
+  --gs-green: #30d158;
+  --gs-green-text: #1c7c34;
+  --gs-orange: #ff9500;
+  --gs-orange-text: #c93400;
+  --gs-red-text: #d70015;
+  position: fixed; inset: 0; z-index: 99999;
+  display: flex; flex-direction: column;
+  background: var(--gs-bg); color: var(--label-1, #000);
+  font-variant-numeric: tabular-nums;
+}
+:where([data-theme="dark"], html.dark) .gym-session {
+  --gs-bg: #000000; --gs-card: #1c1c1e; --gs-fill: rgba(118, 118, 128, 0.24);
+  --gs-green-text: #30d158; --gs-orange-text: #ff9f0a; --gs-red-text: #ff6961;
+}
+@media (prefers-color-scheme: dark) {
+  :where(:root:not([data-theme="light"])) .gym-session {
+    --gs-bg: #000000; --gs-card: #1c1c1e; --gs-fill: rgba(118, 118, 128, 0.24);
+    --gs-green-text: #30d158; --gs-orange-text: #ff9f0a; --gs-red-text: #ff6961;
+  }
+}
+
+.gym-session-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: max(env(safe-area-inset-top), 8px) 12px 8px;
+  border-bottom: 0.5px solid var(--separator-hair, rgba(60, 60, 67, 0.2));
+}
+.gym-icon-btn {
+  width: 44px; height: 44px; flex-shrink: 0; border: none; background: transparent; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; color: var(--label-2);
+}
+.gym-session-title { flex: 1; min-width: 0; display: flex; flex-direction: column; text-align: center; line-height: 1.25; }
+.gym-session-title strong { font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gym-session-title span { font-size: 0.8rem; color: var(--label-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gym-finish {
+  min-height: 36px; padding: 0 14px; border-radius: 18px; border: none; cursor: pointer; flex-shrink: 0;
+  background: var(--gs-fill); color: var(--label-1); font-weight: 600; font-size: 0.9rem;
+}
+.gym-finish.is-ready { background: var(--gs-green); color: #000; }
+
+.gym-session-scroll {
+  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 12px 16px calc(120px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 10px;
+}
+
+/* Las tarjetas no se encogen para caber: la lista se desplaza. */
+.gym-session-scroll > * { flex-shrink: 0; }
+
+/* Ejercicio */
+.gym-ex { background: var(--gs-card); border-radius: 14px; overflow: hidden; }
+.gym-ex.is-done:not(.is-open) { opacity: 0.6; }
+.gym-ex-head {
+  width: 100%; display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; column-gap: 8px;
+  padding: 12px 12px 10px 14px; border: none; background: transparent; cursor: pointer; text-align: left; color: inherit; font: inherit;
+}
+.gym-ex-name { font-size: 1.02rem; font-weight: 600; min-width: 0; }
+.gym-ex-meta { grid-column: 1; font-size: 0.82rem; color: var(--label-2); margin-top: 2px; }
+.gym-ex-chevron { grid-column: 2; grid-row: 1 / span 2; align-self: center; color: var(--label-2); transition: transform 0.2s ease; }
+.gym-ex.is-open .gym-ex-chevron { transform: rotate(180deg); }
+.gym-suggest {
+  display: flex; align-items: flex-start; gap: 6px; margin: 0 14px 8px; font-size: 0.82rem; line-height: 1.35; color: var(--label-2);
+}
+.gym-suggest svg { flex-shrink: 0; margin-top: 2px; }
+.gym-suggest.is-up svg { color: var(--gs-green-text); }
+.gym-suggest.is-down svg { color: var(--gs-red-text); }
+
+/* Tabla de series: Serie · Anterior · kg · Reps · ✓ (cabe en 358 px) */
+.gym-table { padding: 0 8px 8px; }
+.gym-row {
+  display: grid; grid-template-columns: 34px minmax(0, 1fr) 68px 58px 44px; align-items: center; gap: 6px;
+  min-height: 48px; padding: 2px 4px; border-radius: 10px;
+}
+.gym-row-head { min-height: 26px; font-size: 0.72rem; font-weight: 600; color: var(--label-2); text-transform: uppercase; letter-spacing: 0.02em; }
+.gym-row-head span:nth-child(3), .gym-row-head span:nth-child(4) { text-align: center; }
+.gym-row.is-done { background: color-mix(in srgb, var(--gs-green) 16%, transparent); }
+.gym-set-n { text-align: center; font-weight: 600; color: var(--label-2); }
+.gym-row.is-next .gym-set-n { color: var(--gs-orange-text); }
+.gym-prev { font-size: 0.85rem; color: var(--label-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gym-input {
+  width: 100%; min-height: 40px; box-sizing: border-box; border: none; border-radius: 9px; text-align: center;
+  background: var(--gs-fill); color: var(--label-1); font: inherit; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.gym-input:disabled { background: transparent; color: var(--label-3, rgba(60, 60, 67, 0.3)); }
+.gym-row.is-done .gym-input { background: transparent; }
+.gym-input:focus { outline: 2px solid var(--accent-primary, #007aff); outline-offset: 0; }
+.gym-check {
+  width: 44px; height: 44px; border-radius: 12px; border: none; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--gs-fill); color: var(--label-2);
+}
+.gym-check:disabled { opacity: 0.35; cursor: default; }
+.gym-check.is-done { background: var(--gs-green); color: #000; }
+.gym-row.is-next .gym-check:not(:disabled) { box-shadow: inset 0 0 0 2px var(--gs-orange); color: var(--label-1); }
+
+/* Calentamiento, estiramientos, cardio: una fila con su ✓ */
+.gym-simple {
+  display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 4px 8px 4px 14px;
+  background: var(--gs-card); border-radius: 14px;
+}
+.gym-simple-title { flex: 1; min-width: 0; font-weight: 500; }
+.gym-simple.is-done .gym-simple-title { color: var(--label-2); text-decoration: line-through; }
+
+/* Barra de descanso */
+.gym-rest {
+  position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom));
+  border-radius: 18px; overflow: hidden; background: var(--gs-card);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25), 0 0 0 0.5px var(--separator-hair, rgba(60, 60, 67, 0.2));
+}
+.gym-rest-progress {
+  position: absolute; inset: 0; transform-origin: left center;
+  background: color-mix(in srgb, var(--gs-orange) 18%, transparent); transition: transform 0.25s linear;
+}
+.gym-rest.is-over .gym-rest-progress { background: color-mix(in srgb, var(--gs-green) 22%, transparent); }
+.gym-rest-body { position: relative; display: flex; align-items: center; gap: 6px; padding: 8px 8px 8px 16px; }
+.gym-rest-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+.gym-rest-text strong { font-size: 1.35rem; }
+.gym-rest-text span { font-size: 0.8rem; color: var(--label-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gym-rest-btn {
+  min-height: 44px; min-width: 52px; padding: 0 10px; border: none; border-radius: 12px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 2px;
+  background: var(--gs-fill); color: var(--label-1); font: inherit; font-weight: 600; font-size: 0.9rem;
+}
+.gym-rest-skip { min-width: 64px; }
+
+/* Resumen */
+.gym-summary { margin: auto; width: 100%; max-width: 420px; padding: 24px; box-sizing: border-box; text-align: center; overflow-y: auto; }
+.gym-summary-check { display: inline-flex; width: 64px; height: 64px; border-radius: 50%; align-items: center; justify-content: center; background: var(--gs-green); color: #000; }
+.gym-summary h2 { margin: 14px 0 2px; font-size: 1.6rem; }
+.gym-summary-sub { margin: 0 0 18px; color: var(--label-2); }
+.gym-summary-stats { margin: 0 0 16px; padding: 0 14px; background: var(--gs-card); border-radius: 14px; text-align: left; }
+.gym-summary-stats div { display: flex; justify-content: space-between; padding: 12px 0; border-top: 0.5px solid var(--separator-hair, rgba(60, 60, 67, 0.2)); }
+.gym-summary-stats div:first-child { border-top: none; }
+.gym-summary-stats dt { color: var(--label-2); }
+.gym-summary-stats dd { margin: 0; font-weight: 600; }
+.gym-summary-records { text-align: left; margin-bottom: 18px; }
+.gym-summary-records h3 { display: flex; align-items: center; gap: 6px; font-size: 0.95rem; margin: 0 0 6px; color: var(--gs-orange-text); }
+.gym-summary-records ul { margin: 0; padding-left: 20px; }
+.gym-primary {
+  width: 100%; min-height: 52px; border: none; border-radius: 16px; cursor: pointer;
+  background: var(--gs-green); color: #000; font: inherit; font-weight: 600; font-size: 1.05rem;
+}
+.gym-finish-all { margin-top: 6px; }
+@media (prefers-reduced-motion: reduce) { .gym-ex-chevron, .gym-rest-progress { transition: none; } }

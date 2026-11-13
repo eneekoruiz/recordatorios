@@ -270,19 +270,6 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
   );
 
 
-  // Organización visual de las series de gimnasio: 'grouped' (1 tarjeta por ejercicio) o 'detailed' (serie a serie con descansos)
-  const [gymSeriesLayout, setGymSeriesLayout] = useState<'grouped' | 'detailed'>(() =>
-    safeGetJSON<string>('gym_series_layout_pref', 'grouped') === 'detailed' ? 'detailed' : 'grouped'
-  );
-
-  const toggleGymSeriesLayout = useCallback((layout?: 'grouped' | 'detailed') => {
-    setGymSeriesLayout(prev => {
-      const next = layout ?? (prev === 'grouped' ? 'detailed' : 'grouped');
-      safeSetJSON('gym_series_layout_pref', next);
-      return next;
-    });
-    HapticService.selection();
-  }, []);
   const toggleCycleViewLayout = useCallback((layout?: 'sections' | 'mixed') => {
     setCycleViewLayout(prev => {
       const next = layout ?? (prev === 'sections' ? 'mixed' : 'sections');
@@ -376,12 +363,6 @@ const CORE_CYCLES = [
   const currentList = lists?.find((l) => l.id === currentView.replace('list_', '').replace('folder_', ''));
   const currentCycle = (cycles || []).find((c) => c.id === currentView) || (CORE_CYCLES.find((c) => c.id === currentView) as any);
 
-  const isGymList = Boolean(
-    currentList?.id === 'gym-routine' ||
-    currentList?.id === 'gimnasio' ||
-    currentList?.name?.toLowerCase().includes('gimnasio') ||
-    currentList?.name?.toLowerCase().includes('gym')
-  );
 
 
   // Elegir otro día vale para hoy: mañana vuelve la rotación (antes se quedaba fijo para siempre).
@@ -466,7 +447,7 @@ const CORE_CYCLES = [
   // Manejo de mostrar descansos intermedios en listas de gimnasio / rutinas
   const [showRest, setShowRest] = useState<boolean>(false);
   // En Gimnasio los descansos entre ejercicios se ven por defecto (se pueden ocultar desde «···»).
-  const resolvedShowRest = currentList?.showRestPeriods ?? (isGymList || showRest);
+  const resolvedShowRest = currentList?.showRestPeriods ?? showRest;
 
   const toggleShowRest = () => {
     HapticService.selection();
@@ -3324,7 +3305,6 @@ const CORE_CYCLES = [
             referenceDate={taskReferenceDate}
             contextPeriodicity={contextPeriodicity}
             sessionDates={sessionDates ?? viewRoutineSessionDates}
-            gymSeriesLayout={isGymList ? gymSeriesLayout : 'grouped'}
             {...({
             hasChildren,
             childCount,
@@ -3335,7 +3315,7 @@ const CORE_CYCLES = [
         </div>
       </div>
     );
-  }, [childCountByTaskId, mixedFrequencyIndexes, isSmartView, visibleIndexById, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, onSelectView, currentView, setSelectedPersonForProfile, recentlyCompletedIds, visibleTasks, handleMoveTaskUp, handleMoveTaskDown, handleReorderTasks, canStartIndividualTasks, handleStartTask, selectedTaskIds, handleToggleSelectTask, isMobile, isExplicitSelectionMode, viewRoutineSessionDates, cycles, listSections, lists, periodReferenceDate, isGymList, gymSeriesLayout]);
+  }, [childCountByTaskId, mixedFrequencyIndexes, isSmartView, visibleIndexById, isCatCollapsed, toggleCategory, handleToggleTask, handleDeleteTask, onOpenZenMode, onEditTask, onSelectView, currentView, setSelectedPersonForProfile, recentlyCompletedIds, visibleTasks, handleMoveTaskUp, handleMoveTaskDown, handleReorderTasks, canStartIndividualTasks, handleStartTask, selectedTaskIds, handleToggleSelectTask, isMobile, isExplicitSelectionMode, viewRoutineSessionDates, cycles, listSections, lists, periodReferenceDate]);
 
   const CycleIcon = currentCycle ? getCycleIcon(currentCycle.icon) : null;
   const smartListInfo = isSmartView ? SMART_LISTS.find(l => l.id === currentView) : null;
@@ -3361,8 +3341,6 @@ const CORE_CYCLES = [
       {/* Sticky Glass Top Bar */}
       <MainGlassHeader
         cycleViewLayout={currentCycle || isLimpiezaList(currentList?.id, currentList) ? cycleViewLayout : undefined}
-        gymSeriesLayout={isGymList ? gymSeriesLayout : undefined}
-        onToggleGymSeriesLayout={isGymList ? toggleGymSeriesLayout : undefined}
         onToggleCycleViewLayout={currentCycle || isLimpiezaList(currentList?.id, currentList) ? toggleCycleViewLayout : undefined}
         isScrolled={isScrolled}
         scrollTop={scrollTop}

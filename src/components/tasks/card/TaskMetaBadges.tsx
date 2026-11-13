@@ -1,10 +1,11 @@
 import { useMemo, type ReactNode, type MouseEvent } from 'react';
-import { Calendar, CalendarX2, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen, Flame, Bot, Sparkles } from 'lucide-react';
+import { Calendar, CalendarX2, Sun, Clock, Moon, LayoutList, ChevronRight, Link2, Repeat, FolderOpen, Flame, Bot, Sparkles, Dumbbell } from 'lucide-react';
 import type { TaskItem, CustomList } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
 import { getTaskDuration, formatDuration, formatSeriesDuration } from '../../../utils/taskDuration';
 import { getSeriesBreakdown } from '../../../utils/seriesTasks';
+import { previousSessions } from '../../../utils/gymProgression';
 import { isShoppingList } from '../../../utils/specialLists';
 import { formatEuro } from '../../../utils/format';
 
@@ -184,6 +185,19 @@ export function TaskMetaBadges({
       items.push(<span key="duration-rest" className="task-meta-item task-meta-num" data-meta-field="duration" aria-hidden="true">{text.rest}</span>);
     }
     items.push(<span key="duration-total" className="task-meta-item task-meta-num" data-meta-field="duration" aria-hidden="true">{text.total}</span>);
+    // Lo de la última vez (peso × reps de la primera serie), para planificar sin abrir el entreno.
+    const [lastSession] = previousSessions(task);
+    const lastSet = lastSession?.sets[0];
+    if (lastSet && lastSet.weightKg > 0) {
+      const kg = String(Math.round(lastSet.weightKg * 10) / 10).replace('.', ',');
+      items.push(
+        <span key="last-load" className="task-meta-item task-meta-num" data-testid="last-load" title="La última vez">
+          <Dumbbell size={12} aria-hidden="true" />
+          <span className="sr-only">La última vez: </span>
+          <span>{kg} kg{lastSet.reps ? ` × ${lastSet.reps}` : ''}</span>
+        </span>
+      );
+    }
   } else if (hasDuration) {
     items.push(
       <span key="duration" className="task-meta-item task-meta-num" data-meta-field="duration" title={`Duración: ${durationDescription}${isParallel ? `, más ${formatDuration(totalParallelMinutes)} de espera en segundo plano` : ''}`}>

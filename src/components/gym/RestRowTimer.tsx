@@ -33,33 +33,40 @@ export function RestRowTimer({ title, minutes, autoStart = false, onChangeMinute
 
   const currentSeconds = Math.max(15, Math.round(minutes * 60));
 
-  useEffect(() => {
-    if (autoStart && endsAt === null) {
-      setEndsAt(Date.now() + minutes * 60_000);
-    }
-  }, [autoStart, minutes, endsAt]);
+  // Arranque automático: una sola vez al montar (antes, al volver a cero se rearmaba solo y avisaba en bucle).
+  const onFinishedRef = useRef(onFinished);
+  useEffect(() => { onFinishedRef.current = onFinished; }, [onFinished]);
+  const notifiedForRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!endsAt) return;
     const tick = window.setInterval(() => setNow(Date.now()), 250);
     const done = window.setTimeout(() => {
+      // Un aviso por descanso, aunque el componente se vuelva a pintar.
+      if (notifiedForRef.current === endsAt) return;
+      notifiedForRef.current = endsAt;
       SoundService.playComplete();
       HapticService.notification('success');
-      try {
-        NotificationService.getInstance().show('¡Descanso terminado! ⚡', {
-          body: `${title || 'Descanso'}: Es hora de la siguiente serie. ¡A por ella!`,
-          icon: '/icons/icon-192.png',
-          badge: '/icons/icon-192.png',
-          tag: 'gym-rest',
-        });
-      } catch {}
-      onFinished?.();
+      // Notificación solo con la app en segundo plano y si llega a tiempo (con el móvil bloqueado los
+      // temporizadores se paran y avisaría tarde, de golpe, al desbloquear).
+      const late = Date.now() - endsAt > 5000;
+      if (typeof document !== 'undefined' && document.hidden && !late) {
+        try {
+          NotificationService.getInstance().show('Descanso terminado', {
+            body: title && !/^descanso/i.test(title.trim()) ? `Siguiente: ${title}` : 'Siguiente serie.',
+            icon: '/icons/icon-192.png',
+            badge: '/icons/icon-192.png',
+            tag: 'gym-rest',
+          });
+        } catch { /* sin permiso de notificaciones */ }
+      }
+      onFinishedRef.current?.();
     }, Math.max(0, endsAt - Date.now()));
 
-    // Tras avisar, vuelve a su estado normal.
+    // Tras avisar, vuelve a su estado normal (sin volver a arrancar).
     const reset = window.setTimeout(() => setEndsAt(null), Math.max(0, endsAt - Date.now()) + 2500);
     return () => { window.clearInterval(tick); window.clearTimeout(done); window.clearTimeout(reset); };
-  }, [endsAt, title, onFinished]);
+  }, [endsAt, title]);
 
   useEffect(() => {
     if (!isPickerOpen) return;
