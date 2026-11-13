@@ -3605,7 +3605,7 @@ const CORE_CYCLES = [
                         sectionRoutineModes={sectionRoutineModes}
                         toggleSectionRoutineMode={toggleSectionRoutineMode}
                         dragOverSectionId={dragOverSectionId}
-                        showStartButton={!data.trainingDay && ((isFrequencyView && !isCustomSection) || (Boolean(currentList && (currentList.id === 'gimnasio' || (currentList.name || '').toLowerCase().includes('gimnasio') || (currentList.name || '').toLowerCase().includes('gym') || (currentList.name || '').toLowerCase().includes('entreno'))) && isCustomSection))}
+                        showStartButton={((isFrequencyView && !isCustomSection) || (Boolean(currentList && (currentList.id === 'gimnasio' || (currentList.name || '').toLowerCase().includes('gimnasio') || (currentList.name || '').toLowerCase().includes('gym') || (currentList.name || '').toLowerCase().includes('entreno'))) && isCustomSection))}
                         onStartSectionSequence={onStartSequence && (canRunExecutionMode || Boolean(currentList && (currentList.id === 'gimnasio' || (currentList.name || '').toLowerCase().includes('gimnasio') || (currentList.name || '').toLowerCase().includes('gym') || (currentList.name || '').toLowerCase().includes('entreno')))) && sectionPendingTaskIds.length > 0 ? () => {
                           const rawTitle = (data?.title || '').replace(/^[\p{Emoji}\s⏳]+/gu, '').trim() || (data?.title || '');
                           const cleanTitle = rawTitle.length > 0 

@@ -173,9 +173,19 @@ export const idbStorage: StateStorage = {
                   const backupSanitized = sanitizePersistedCollections(backupEnvelope.state);
                   if (backupSanitized.quarantined === 0) {
                     const backupState = backupSanitized.state as Record<string, unknown>;
+                    // Lo apartado vuelve, pero sin pisar lo que se ha creado o cambiado después.
+                    const mergeById = (key: string) => {
+                      const now = Array.isArray(candidateState[key]) ? candidateState[key] as { id?: string }[] : [];
+                      const old = Array.isArray(backupState[key]) ? backupState[key] as { id?: string }[] : [];
+                      const ids = new Set(now.map(item => item?.id));
+                      return [...now, ...old.filter(item => !ids.has(item?.id))];
+                    };
                     candidateState = {
-                      ...candidateState,
                       ...backupState,
+                      ...candidateState,
+                      lists: mergeById('lists'),
+                      cycles: mergeById('cycles'),
+                      listSections: mergeById('listSections'),
                       tasks: {
                         ...((backupState.tasks as Record<string, unknown>) || {}),
                         ...((candidateState.tasks as Record<string, unknown>) || {}),

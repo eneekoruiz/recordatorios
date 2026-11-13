@@ -128,10 +128,34 @@ const listSchema = z.object({
   listType: optional(z.enum(['routines', 'simple', 'events', 'goals', 'caducidades', 'que_he_hecho', 'library'])),
   autoEstimateDuration: flag, specialType: optional(z.enum(['caducidades', 'que_he_hecho'])),
   isShared: flag, order: number,
-  sortMode: optional(z.enum(['manual', 'dueDate', 'priority', 'title', 'createdAt', 'routine'])),
+  sortMode: optional(z.enum(['manual', 'dueDate', 'priority', 'title', 'title_desc', 'createdAt', 'routine'])),
   ...syncFields,
 });
 const sectionSchema = z.object({ id, listId: id, name: z.string().trim().min(1), parentId: reference, order: number, ...syncFields });
+
+const schemas = { tasks: taskSchema, lists: listSchema, cycles: cycleSchema, listSections: sectionSchema } as const;
+/** Campos sin los que un registro guardado no se puede reparar (sin ellos sí se aparta). */
+const essential: Record<keyof typeof schemas, string[]> = {
+  tasks: ['id', 'title'], lists: ['id', 'name'], cycles: ['id', 'name', 'daysValue'], listSections: ['id', 'listId', 'name'],
+};
+
+/**
+ * Reparación de un registro guardado: si un campo opcional no es válido (p. ej. un valor nuevo de un menú
+ * que esta versión aún no conoce), se quita ese campo en vez de apartar el registro entero.
+ * Devuelve el registro (igual o sin los campos inválidos) o null si no tiene arreglo.
+ */
+export function repairPersistedRecord(kind: keyof typeof schemas, value: Record<string, unknown>): Record<string, unknown> | null {
+  let current: Record<string, unknown> = value;
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const result = (schemas[kind] as z.ZodType).safeParse(current);
+    if (result.success) return current;
+    const keys = [...new Set(result.error.issues.map(issue => String(issue.path[0] ?? '')))];
+    if (keys.some(key => !key || essential[kind].includes(key))) return null;
+    current = { ...current };
+    keys.forEach(key => { delete current[key]; });
+  }
+  return null;
+}
 
 function collection<T>(value: unknown, schema: z.ZodType<T>, label: string): T[] {
   if (value === undefined) return [];
