@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Minus, Plus, TrendingDown, TrendingUp, Equal, Trophy, X } from 'lucide-react';
+import { undoSetKeepingDataSafe } from '../../utils/gymUndo';
 import { useAppStore } from '../../store/useAppStore';
 import type { TaskItem, TaskWeightLog } from '../../models/Task';
 import { HapticService } from '../../services/HapticService';
@@ -150,11 +151,11 @@ export function GymSession({ taskIds, title, onClose }: GymSessionProps) {
 
   const undoSet = (task: TaskItem, set: number) => {
     HapticService.selection();
-    SoundService.playUncomplete();
-    toggleTask(task.id, true);
-    const fresh = useAppStore.getState().tasks[task.id] || task;
-    updateTask(task.id, { weightLogs: (fresh.weightLogs || []).filter(l => !(l.set === set && isToday(l.date))) });
-    setRest(null);
+    void undoSetKeepingDataSafe(task.id, set, () => {
+      SoundService.playUncomplete();
+      toggleTask(task.id, true);
+      setRest(null);
+    });
   };
 
   const toggleSimple = (task: TaskItem) => {

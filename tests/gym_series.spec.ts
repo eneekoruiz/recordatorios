@@ -122,6 +122,14 @@ test('«Empezar» abre el entreno: series en orden, el peso se guarda al marcar 
   await page.getByRole('button', { name: 'Empezar lista' }).first().click();
   await expect(banca.getByRole('button', { name: 'Deshacer la serie 1' })).toBeVisible();
   await expect(banca.getByRole('button', { name: 'Serie 2 hecha' })).toBeEnabled();
+
+  // Deshacer una serie con peso apuntado pregunta antes: «Mantener» no cambia nada.
+  await banca.getByRole('button', { name: 'Deshacer la serie 1' }).click();
+  const confirm = page.getByRole('alertdialog');
+  await expect(confirm).toContainText('60 kg × 8');
+  await confirm.getByRole('button', { name: 'Mantener' }).click();
+  await expect(banca.getByRole('button', { name: 'Deshacer la serie 1' })).toBeVisible();
+  expect(await page.evaluate(() => (window as any).useAppStore.getState().tasks.g_banca.currentCount)).toBe(1);
   // La serie 2 propone lo mismo que la última vez (sin historial de la 2, la última serie anterior).
   await banca.getByRole('button', { name: 'Serie 2 hecha' }).click();
   await page.getByRole('timer', { name: /Descanso/ }).getByRole('button', { name: 'Saltar' }).click();

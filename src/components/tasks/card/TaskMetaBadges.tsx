@@ -3,7 +3,7 @@ import { Calendar, CalendarX2, Sun, Clock, Moon, LayoutList, ChevronRight, Link2
 import type { TaskItem, CustomList } from '../../../models/Task';
 import { useAppStore } from '../../../store/useAppStore';
 import { HapticService } from '../../../services/HapticService';
-import { getTaskDuration, formatDuration, formatSeriesDuration } from '../../../utils/taskDuration';
+import { getTaskDuration, formatDuration, formatSeriesDuration, formatSummaryDuration } from '../../../utils/taskDuration';
 import { getSeriesBreakdown } from '../../../utils/seriesTasks';
 import { previousSessions } from '../../../utils/gymProgression';
 import { isShoppingList } from '../../../utils/specialLists';
@@ -173,18 +173,16 @@ export function TaskMetaBadges({
   // leía «14 min (4×2m +6m desc)», con el descanso sumado, y no se entendía cuánto se descansa entre series.
   const seriesBreakdown = hasDuration && !subtasksDuration.hasSubtasksDuration && !isParallel ? getSeriesBreakdown(task) : null;
   if (seriesBreakdown) {
+    // En la lista basta con el total: las series ya las dice el contador (3/4) y el descanso entre series
+    // se ve en el entreno. El desglose completo queda en el título y para VoiceOver.
     const text = formatSeriesDuration(seriesBreakdown);
     items.push(
       <span key="duration" className="task-meta-item task-meta-num" data-meta-field="duration" data-testid="series-duration" title={`Duración: ${text.description}`}>
         <Clock size={13} aria-hidden="true" />
         <span className="sr-only">{text.description}</span>
-        <span aria-hidden="true">{text.sets}</span>
+        <span aria-hidden="true">{formatSummaryDuration(seriesBreakdown.totalMinutes)}</span>
       </span>
     );
-    if (text.rest) {
-      items.push(<span key="duration-rest" className="task-meta-item task-meta-num" data-meta-field="duration" aria-hidden="true">{text.rest}</span>);
-    }
-    items.push(<span key="duration-total" className="task-meta-item task-meta-num" data-meta-field="duration" aria-hidden="true">{text.total}</span>);
     // Lo de la última vez (peso × reps de la primera serie), para planificar sin abrir el entreno.
     const [lastSession] = previousSessions(task);
     const lastSet = lastSession?.sets[0];

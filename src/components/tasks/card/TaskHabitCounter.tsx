@@ -5,6 +5,7 @@ import type { TaskItem } from '../../../models/Task';
 import { SoundService } from '../../../services/SoundService';
 import { HapticService } from '../../../services/HapticService';
 import { ConfettiService } from '../../../services/ConfettiService';
+import { undoSetKeepingDataSafe } from '../../../utils/gymUndo';
 
 interface TaskHabitCounterProps {
   task: TaskItem;
@@ -30,6 +31,15 @@ export const TaskHabitCounter: React.FC<TaskHabitCounterProps> = ({
     };
   }, []);
 
+  // Restar una: si esa serie tenía peso apuntado hoy, se pregunta antes de borrarlo.
+  const reverseOne = () => {
+    void undoSetKeepingDataSafe(task.id, effectiveCurrentCount, () => {
+      SoundService.playUncomplete();
+      onToggle(task.id, true);
+      setRecentlyIncremented(false);
+    });
+  };
+
   const getHabitIcon = (title?: string | null) => {
     const t = (title || '').toLowerCase();
     if (t.includes('agua')) return <Droplet size={11} />;
@@ -47,9 +57,7 @@ export const TaskHabitCounter: React.FC<TaskHabitCounterProps> = ({
           onClick={(e) => {
             e.stopPropagation();
             if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate([6]);
-            SoundService.playUncomplete();
-            onToggle(task.id, true);
-            setRecentlyIncremented(false);
+            reverseOne();
           }}
           title="Restar 1 repetición (-1)"
           aria-label={`Restar una repetición de «${task.title || 'hábito'}»`}
@@ -65,9 +73,7 @@ export const TaskHabitCounter: React.FC<TaskHabitCounterProps> = ({
           e.stopPropagation();
           if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate([6]);
           if (isEffectivelyDone) {
-            SoundService.playUncomplete();
-            onToggle(task.id, true);
-            setRecentlyIncremented(false);
+            reverseOne();
           } else {
             const isNextFinal = effectiveCurrentCount + 1 >= targetCount;
             if (isNextFinal) {
@@ -91,9 +97,7 @@ export const TaskHabitCounter: React.FC<TaskHabitCounterProps> = ({
             return;
           }
           if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) navigator.vibrate([6]);
-          SoundService.playUncomplete();
-          onToggle(task.id, true);
-          setRecentlyIncremented(false);
+          reverseOne();
         }}
         title="Clic: avanzar progreso (+1). Clic derecho o botón −: retroceder progreso (-1)."
         aria-label={`${task.title || 'Hábito'}: ${effectiveCurrentCount} de ${task.targetCount}. Sumar una`}
@@ -113,9 +117,7 @@ export const TaskHabitCounter: React.FC<TaskHabitCounterProps> = ({
           onClick={(e) => {
             e.stopPropagation();
             HapticService.impact('light');
-            SoundService.playUncomplete();
-            onToggle(task.id, true);
-            setRecentlyIncremented(false);
+            reverseOne();
           }}
           style={{
             display: 'inline-flex',
