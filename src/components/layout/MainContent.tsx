@@ -279,6 +279,14 @@ export function MainContent({ currentView, onOpenNewTask, onOpenZenMode, onEditT
     HapticService.selection();
   }, []);
 
+  // Por estancias: dentro de cada estancia, separar Diarias / Semanales / Mensuales o mezclarlas.
+  // Una sola preferencia para la lista de Limpieza y para las vistas de frecuencia.
+  const [roomFreqSplit, setRoomFreqSplit] = useState<boolean>(() => safeGetJSON<boolean>('room_freq_split_pref', false) === true);
+  const toggleRoomFreqSplit = useCallback(() => {
+    setRoomFreqSplit(prev => { safeSetJSON('room_freq_split_pref', !prev); return !prev; });
+    HapticService.selection();
+  }, []);
+
   const handleUndoDelete = useCallback((taskId: string) => {
     if (deletedToast && deletedToast.timeoutId) {
       window.clearTimeout(deletedToast.timeoutId);
@@ -870,7 +878,7 @@ const CORE_CYCLES = [
       return Boolean(collapsed[category]);
     }
     // Subtareas y tareas incluidas de otras frecuencias empiezan desplegadas
-    if (category.startsWith('task_') || category.startsWith('incluidas_')) {
+    if (category.startsWith('task_') || category.startsWith('incluidas_') || category.includes('__freq_')) {
       return false;
     }
     // En Qué he hecho (bitácora de vida), las personas y meses se muestran abiertos
@@ -1049,6 +1057,50 @@ const CORE_CYCLES = [
     const flat: VirtualItemType[] = [{ type: 'page-header' }];
     // Tareas que pinta cada cabecera agrupada (habitaciones de Limpieza…), para su precio y su menú.
     const sectionTasksByKey: Record<string, TaskItem[]> = {};
+
+    // Tareas de una estancia: en árbol (subtareas debajo) y, si se pide, separadas por frecuencia.
+    const pushTaskTree = (tasks: TaskItem[], depth: number, extra?: Partial<VirtualItemType>) => {
+      const inScope = new Set(tasks.map(t => t.id));
+      const roots = tasks.filter(t => !t.parentId || !inScope.has(t.parentId));
+      const processNode = (task: TaskItem, d: number) => {
+        flat.push({ type: 'task', task, depth: d, ...(extra || {}) } as VirtualItemType);
+        if (!isCatCollapsed(`task_${task.id}`)) tasks.filter(t => t.parentId === task.id).forEach(c => processNode(c, d + 1));
+      };
+      roots.forEach(r => processNode(r, depth));
+    };
+    const FREQ_ORDER = ['day', 'week', 'month', 'year'] as const;
+    const FREQ_LABEL: Record<string, string> = { day: 'Diarias', week: 'Semanales', month: 'Mensuales', year: 'Anuales' };
+    const pushRoomTasks = (roomTasks: TaskItem[], catKey: string, depth: number, color: string, sectionId?: string, extra?: Partial<VirtualItemType>) => {
+      if (roomFreqSplit) {
+        const byId = new Map(roomTasks.map(t => [t.id, t]));
+        const rootOf = (t: TaskItem) => { let r = t; const seen = new Set<string>(); while (r.parentId && byId.has(r.parentId) && !seen.has(r.parentId)) { seen.add(r.parentId); r = byId.get(r.parentId)!; } return r; };
+        const groups = new Map<string, TaskItem[]>();
+        roomTasks.forEach(t => {
+          const p = getTaskPeriodicity(rootOf(t), listSections, lists) || 'none';
+          if (!groups.has(p)) groups.set(p, []);
+          groups.get(p)!.push(t);
+        });
+        if (groups.size > 1) {
+          const keys = [...groups.keys()].sort((a, b) => {
+            const ia = FREQ_ORDER.indexOf(a as typeof FREQ_ORDER[number]); const ib = FREQ_ORDER.indexOf(b as typeof FREQ_ORDER[number]);
+            return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+          });
+          keys.forEach(p => {
+            const tasks = groups.get(p)!;
+            const subKey = `${catKey}__freq_${p}`;
+            sectionTasksByKey[subKey] = tasks;
+            const pending = tasks.filter(t => !isTaskCompleted(t));
+            flat.push({
+              type: 'header', title: FREQ_LABEL[p] || 'Otras', category: subKey, color, depth: depth + 1, sectionId,
+              sectionTaskIds: pending.map(t => t.id), pendingCount: pending.length, totalCount: tasks.length,
+            } as VirtualItemType);
+            if (!isCatCollapsed(subKey)) pushTaskTree(tasks, depth + 1, extra);
+          });
+          return;
+        }
+      }
+      pushTaskTree(roomTasks, depth, extra);
+    };
     // Mismo criterio que el recuento de la barra lateral: lo hecho en su periodo no cuenta.
     const countPending = (list: TaskItem[], sessionDates = viewRoutineSessionDates) => {
       const ref = periodReferenceDate;
@@ -1377,16 +1429,7 @@ const CORE_CYCLES = [
                       depth: baseDepth
                     });
                   } else {
-                    const inScope = new Set(roomTasks.map(t => t.id));
-                    const roots = roomTasks.filter(t => !t.parentId || !inScope.has(t.parentId));
-                    const processNode = (task: TaskItem, d: number) => {
-                      flat.push({ type: 'task', task, depth: d });
-                      if (!isCatCollapsed(`task_${task.id}`)) {
-                        const children = roomTasks.filter(t => t.parentId === task.id);
-                        children.forEach(c => processNode(c, d + 1));
-                      }
-                    };
-                    roots.forEach(r => processNode(r, baseDepth));
+                    pushRoomTasks(roomTasks, roomCategoryKey, baseDepth, parentColor, room.primarySectionId);
                   }
                 }
               });
@@ -2027,22 +2070,7 @@ const CORE_CYCLES = [
                 if (roomTasks.length === 0) {
                   flat.push({ type: 'empty-section', title: 'Sin tareas', category: roomCatKey, color, sectionId: effectiveRoomSectionId, depth: 0 });
                 } else {
-                  const inRoom = new Set(roomTasks.map(t => t.id));
-                  const roots = roomTasks.filter(t => !t.parentId || !inRoom.has(t.parentId));
-                  const processNode = (task: TaskItem, d: number) => {
-                    flat.push({
-                      type: 'task',
-                      task,
-                      depth: d,
-                      referenceDate: periodReferenceDate,
-                      contextPeriodicity: undefined
-                    });
-                    if (!isCatCollapsed(`task_${task.id}`)) {
-                      const children = roomTasks.filter(t => t.parentId === task.id);
-                      children.forEach(c => processNode(c, d + 1));
-                    }
-                  };
-                  roots.forEach(r => processNode(r, 0));
+                  pushRoomTasks(roomTasks, roomCatKey, 0, color, effectiveRoomSectionId, { referenceDate: periodReferenceDate, contextPeriodicity: undefined } as Partial<VirtualItemType>);
                 }
               }
             });
@@ -2584,7 +2612,7 @@ const CORE_CYCLES = [
     }
 
     return { flattenedData: flat, renderedSectionTasks: sectionTasksByKey };
-  }, [groupedTasks, currentView, currentCycle, cycleViewMode, collapsed, isListView, lists, listSections, cycles, currentList, listSectionFilter, sortBy, defaultSortForList, isCatCollapsed, isolatedSectionKey, sectionRoutineModes, cycleRoutineCounts, periodReferenceDate, resolvedShowCompleted, cycleViewLayout, recentlyCompletedIds, viewRoutineSessionDates, trainingPlan, resolvedShowRest]);
+  }, [groupedTasks, currentView, currentCycle, cycleViewMode, collapsed, isListView, lists, listSections, cycles, currentList, listSectionFilter, sortBy, defaultSortForList, isCatCollapsed, isolatedSectionKey, sectionRoutineModes, cycleRoutineCounts, periodReferenceDate, resolvedShowCompleted, cycleViewLayout, recentlyCompletedIds, viewRoutineSessionDates, trainingPlan, resolvedShowRest, roomFreqSplit]);
 
   // Tareas visibles en pantalla respetando el orden visual exacto de renderizado
   // En las vistas inteligentes (Con marca, Todos…) una sección sin tareas no aporta nada: ni su cabecera ni su
@@ -3515,6 +3543,8 @@ const CORE_CYCLES = [
                           cycleRoutineMode={currentCycle ? cycleViewMode : undefined}
                           onToggleCycleRoutineMode={currentCycle ? toggleCycleGeneralMode : undefined}
                           cycleViewLayout={currentCycle || isLimpiezaList(currentList?.id, currentList) ? cycleViewLayout : undefined}
+                          roomFreqSplit={roomFreqSplit}
+                          onToggleRoomFreqSplit={currentCycle || isLimpiezaList(currentList?.id, currentList) ? toggleRoomFreqSplit : undefined}
                           onToggleCycleViewLayout={currentCycle || isLimpiezaList(currentList?.id, currentList) ? toggleCycleViewLayout : undefined}
                           onStartSequence={onStartSequence && canRunExecutionMode ? () => {
                             const pendingTasks = visibleTasks.filter(t => !isTaskCompleted(t) && !isVitalHabitTask(t));

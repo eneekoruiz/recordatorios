@@ -14,6 +14,7 @@ import {
   Check,
   Plus,
   House,
+  Layers,
   Dumbbell,
 } from 'lucide-react';
 import { DurationInfoCard } from '../../ui/DurationInfoCard';
@@ -90,6 +91,9 @@ interface MainPageHeaderProps {
   onToggleCycleRoutineMode?: (mode: 'only_section' | 'full_routine') => void;
   cycleViewLayout?: 'sections' | 'mixed';
   onToggleCycleViewLayout?: (layout?: 'sections' | 'mixed') => void;
+  /** Por estancias: separar Diarias / Semanales / Mensuales dentro de cada estancia. */
+  roomFreqSplit?: boolean;
+  onToggleRoomFreqSplit?: () => void;
   onNavigateView?: (view: string) => void;
   onOpenGymRoutineModal?: () => void;
 }
@@ -142,8 +146,25 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
   onToggleCycleRoutineMode,
   cycleViewLayout = 'sections',
   onToggleCycleViewLayout,
+  roomFreqSplit = false,
+  onToggleRoomFreqSplit,
   onOpenGymRoutineModal
 }) => {
+  const freqSplitChip = onToggleRoomFreqSplit ? (
+    <button
+      type="button"
+      data-testid="room-freq-split-btn"
+      className={`routine-chip${roomFreqSplit ? ' is-on' : ''}`}
+      aria-pressed={roomFreqSplit}
+      title={roomFreqSplit ? 'Mezclar las frecuencias en cada estancia' : 'Separar diarias, semanales y mensuales en cada estancia'}
+      style={{ ['--chip-color' as string]: viewColor }}
+      onClick={() => onToggleRoomFreqSplit()}
+    >
+      <Layers size={13} strokeWidth={2.4} aria-hidden="true" />
+      <span>Separar frecuencias</span>
+    </button>
+  ) : null;
+
   const updateList = useAppStore((state) => state.updateList);
 
   const [isEditingListName, setIsEditingListName] = React.useState(false);
@@ -538,6 +559,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
                         ))}
                       </span>
                     )}
+                    {cycleViewLayout === 'sections' && cycleRoutineMode === 'full_routine' && freqSplitChip}
                   </div>
                 ) : null
               }
@@ -665,7 +687,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
 
         
         {isLimpiezaList(currentView, currentList) && onToggleCycleViewLayout && (
-          <div style={{ marginTop: 8 }}>
+          <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {/* Una sola cápsula: encendida = por estancias (seguida); apagada = por frecuencias. */}
             <button
               type="button"
@@ -682,6 +704,7 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
               <House size={13} strokeWidth={2.4} aria-hidden="true" />
               <span>Por estancias</span>
             </button>
+            {cycleViewLayout === 'mixed' && freqSplitChip}
           </div>
         )}
 

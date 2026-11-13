@@ -114,3 +114,32 @@ test('una tarea con frecuencia pero sin estancia no crea una cabecera con un ide
   await expect(page.locator('.section-head-title', { hasText: /^Cocina$/ })).toBeVisible();
   await expect(page.locator('.section-head-title', { hasText: /sec_|_/ })).toHaveCount(0);
 });
+
+test('por estancias se puede mezclar o separar las frecuencias dentro de cada estancia', async ({ page }) => {
+  await bootApp(page);
+  await page.evaluate(() => {
+    localStorage.setItem('cycle_view_layout_pref', JSON.stringify('mixed'));
+    const created = new Date(Date.now() - 30 * 86400000).toISOString();
+    const base = { user_id: 'local_guest_e2e', type: 'task', status: 'pending', created_at: created, updated_at: created, version: 1, categoryId: 'limpieza', duration: 5 };
+    (window as any).useAppStore.setState((s: any) => ({ tasks: { ...s.tasks,
+      f1: { ...base, id: 'f1', title: 'Limpiar la vitrocerámica', sectionId: 'sec_limp_semanal_cocina', cycle_id: 'cycle_week' },
+      f2: { ...base, id: 'f2', title: 'Limpiar el horno a fondo', sectionId: 'sec_limp_mensual_cocina', cycle_id: 'cycle_month' },
+    } }));
+    window.dispatchEvent(new CustomEvent('select-view', { detail: 'list_limpieza' }));
+  });
+  const toggle = page.getByTestId('limpieza-layout-toggle-btn');
+  await expect(toggle).toBeVisible();
+  if (await toggle.getAttribute('aria-pressed') !== 'true') await toggle.click();
+  const split = page.getByTestId('room-freq-split-btn');
+  await expect(split).toHaveAttribute('aria-pressed', 'false');
+  const cocina = page.locator('.group-header', { has: page.locator('.section-head-title', { hasText: /^Cocina$/ }) });
+  if (await page.locator('.task-item-wrapper[data-task-id="f1"]').count() === 0) await cocina.click();
+  await expect(page.locator('.task-item-wrapper[data-task-id="f2"]')).toBeVisible();
+  await expect(page.locator('.section-head-title', { hasText: /^Mensuales$/ })).toHaveCount(0);
+
+  await split.click();
+  await expect(split).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.section-head-title', { hasText: /^Semanales$/ })).toBeVisible();
+  await expect(page.locator('.section-head-title', { hasText: /^Mensuales$/ })).toBeVisible();
+  await expect(page.locator('.task-item-wrapper[data-task-id="f2"]')).toBeVisible();
+});
