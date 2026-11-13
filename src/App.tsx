@@ -35,8 +35,6 @@ import { useGlobalShortcuts } from './hooks/useGlobalShortcuts';
 
 
 import { lazyWithRetry } from './utils/lazyWithRetry';
-import { isGymList } from './utils/specialLists';
-import { isSeriesTask } from './utils/seriesTasks';
 
 // Piezas pesadas o de uso ocasional: se descargan bajo demanda con recuperación de chunks.
 const UniversalImporter = lazyWithRetry(() => import('./components/views/UniversalImporter'), 'UniversalImporter');
@@ -44,7 +42,6 @@ const AnalyticsView = lazyWithRetry(() => import('./components/analytics/Analyti
 const TrainingView = lazyWithRetry(() => import('./components/training/TrainingView'), 'TrainingView');
 const ZenMode = lazyWithRetry(() => import('./components/tasks/ZenMode'), 'ZenMode');
 const ListSequenceMode = lazyWithRetry(() => import('./components/tasks/ListSequenceMode'), 'ListSequenceMode');
-const GymSession = lazyWithRetry(() => import('./components/gym/GymSession'), 'GymSession');
 const SecuritySheet = lazyWithRetry(() => import('./components/account/SecuritySheet'), 'SecuritySheet');
 const TaskDrawer = lazyWithRetry(() => import('./components/tasks/TaskDrawer'), 'TaskDrawer');
 const AIAssistantModal = lazyWithRetry(() => import('./components/ai/AIAssistantModal'), 'AIAssistantModal');
@@ -91,13 +88,6 @@ function App() {
   const [defaultSectionId, setDefaultSectionId] = useState<string | undefined>(undefined);
   const [zenModeTaskId, setZenModeTaskId] = useState<string | null>(null);
   const [sequenceMode, setSequenceMode] = useState<{ taskIds: string[]; listName: string; listColor?: string } | null>(null);
-  // «Empezar» en un día de gimnasio abre el entreno con su tabla de series; el resto, la secuencia.
-  const isGymSequence = (taskIds: string[]) => {
-    const { tasks, lists } = useAppStore.getState();
-    const first = taskIds.map(id => tasks[id]).find(Boolean);
-    const list = lists.find(l => l.id === first?.categoryId);
-    return Boolean(first && isGymList(first.categoryId, list) && taskIds.some(id => isSeriesTask(tasks[id])));
-  };
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isIntegrationsOpen, setIsIntegrationsOpen] = useState(false);
   useEffect(() => {
@@ -463,12 +453,8 @@ function App() {
 
       <BackgroundTimersBar />
 
-      {sequenceMode && isGymSequence(sequenceMode.taskIds) && (
-        <Suspense fallback={null}>
-          <GymSession taskIds={sequenceMode.taskIds} title={sequenceMode.listName} onClose={() => setSequenceMode(null)} />
-        </Suspense>
-      )}
-      {sequenceMode && !isGymSequence(sequenceMode.taskIds) && (
+      {/* Una sola pantalla para todas las listas: la cuenta atrás manda; en el gimnasio, con las series. */}
+      {sequenceMode && (
         <Suspense fallback={null}>
         <ListSequenceMode
           taskIds={sequenceMode.taskIds}

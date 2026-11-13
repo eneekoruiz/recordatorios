@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Play, Pause, CheckCircle, SkipForward, Clock, VolumeX, Zap, Share, Headphones, ArrowRight, Plus,
-  Timer, Flame
+  Timer, Flame, Table2
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { SoundService } from '../../services/SoundService';
@@ -19,6 +19,30 @@ import type { TaskItem } from '../../models/Task';
 import { calculateSessionVolume } from '../../utils/weightHistory';
 import { setRestCountdownTitle, notifyRestFinished, restoreDocumentTitle } from '../../utils/timerTitleNotification';
 import { isVitalHabitTask } from '../../utils/vitalHabits';
+import { suggestLoad, previousForSet, parseRepRange } from '../../utils/gymProgression';
+import { lazyWithRetry } from '../../utils/lazyWithRetry';
+
+// La tabla de todas las series (Serie | Anterior | kg | Reps) se abre encima del temporizador cuando se pide.
+const GymSession = lazyWithRetry(() => import('../gym/GymSession'), 'GymSession');
+
+const isTodayIso = (iso?: string) => Boolean(iso && new Date(iso).toDateString() === new Date().toDateString());
+const fmtKg = (kg?: number) => (kg && kg > 0 ? String(Math.round(kg * 10) / 10).replace('.', ',') : '');
+const parseNum = (v: string) => { const n = parseFloat((v || '').replace(',', '.')); return Number.isFinite(n) && n > 0 ? n : null; };
+
+/** Apunta (o corrige) el peso y las repeticiones de una serie de hoy. Sin datos, no apunta nada. */
+function writeSetLog(taskId: string, set: number, kgText: string, repsText: string) {
+  const { tasks, updateTask } = useAppStore.getState();
+  const task = tasks[taskId];
+  if (!task) return;
+  const weightKg = parseNum(kgText);
+  const reps = parseNum(repsText);
+  const others = (task.weightLogs || []).filter(l => !(l.set === set && isTodayIso(l.date)));
+  if (!weightKg && !reps) {
+    if (others.length !== (task.weightLogs || []).length) updateTask(taskId, { weightLogs: others });
+    return;
+  }
+  updateTask(taskId, { weightLogs: [...others, { set, weightKg: weightKg ?? 0, ...(reps ? { reps: Math.round(reps) } : {}), date: new Date().toISOString() }] });
+}
 
 interface ListSequenceModeProps {
   /** IDs de las tareas a recorrer en orden */
@@ -225,6 +249,9 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     taskId: string; doneSet: number; totalSets: number; nextLabel: string; kg: string; reps: string; kgHint: string; repsHint: string;
   } | null>(null);
   const [isActive, setIsActive] = useState(false);
+  // Kilos y repeticiones de la serie en curso (propuestos; se guardan al marcarla).
+  const [setDraft, setSetDraft] = useState<{ key: string; kg: string; reps: string } | null>(null);
+  const [showTable, setShowTable] = useState(false);
   const activeElapsedRef = useRef<number>(0);
   const [showDurationPicker, setShowDurationPicker] = useState(false);
   const [startedAt] = useState(() => Date.now());
@@ -272,6 +299,22 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
   const isSeries = isSeriesTask(currentTask);
   const totalSets = isSeries && currentTask ? currentTask.targetCount || 1 : 1;
   const setNumber = isSeries && currentTask ? Math.min(totalSets, doneSetsOf(currentTask) + 1) : 1;
+  // Lo propuesto para esta serie: lo de la serie anterior de hoy; si no, la sugerencia; si no, la última vez.
+  const setProposal = useMemo(() => {
+    if (!isSeries || !currentTask) return null;
+    const suggestion = suggestLoad(currentTask);
+    const prev = previousForSet(currentTask, setNumber);
+    const todayPrev = (currentTask.weightLogs || []).filter(l => isTodayIso(l.date) && l.set < setNumber).sort((a, b) => b.set - a.set)[0];
+    const range = parseRepRange(currentTask);
+    return {
+      suggestion,
+      prev,
+      kg: fmtKg(todayPrev?.weightKg ?? suggestion.weightKg ?? prev?.weightKg),
+      reps: String(todayPrev?.reps ?? suggestion.reps ?? prev?.reps ?? range?.min ?? ''),
+    };
+  }, [isSeries, currentTask, setNumber]);
+  const draftKey = currentTask ? `${currentTask.id}|${setNumber}` : '';
+  const draft = useMemo(() => (setDraft && setDraft.key === draftKey ? setDraft : { key: draftKey, kg: setProposal?.kg ?? '', reps: setProposal?.reps ?? '' }), [setDraft, draftKey, setProposal]);
   // Minutos que ocupa una tarea en la secuencia: en un ejercicio por series, las series que faltan y sus descansos.
   const sequenceMinutes = useCallback((t: TaskItem) => {
     if (isSeriesTask(t)) {
@@ -445,14 +488,16 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     if (!currentTask) return;
     const done = setNumber;
     HapticService.notification('success');
+    // La serie y su peso se guardan ya (antes se guardaba al acabar el descanso y se perdía al salir).
+    writeSetLog(currentTask.id, done, draft.kg, draft.reps);
     toggleTask(currentTask.id);
     setIsActive(false);
     SoundService.stopAmbientSound();
     setLastStepAt(Date.now());
-    const { value, hint } = setLogProposal(currentTask, done);
+    const { hint } = setLogProposal(currentTask, done);
     const restBase = {
       startedAt: Date.now(), plannedSec: setRestSeconds(currentTask), adjustSec: 0, taskId: currentTask.id, doneSet: done, totalSets,
-      kg: value ? String(value.weightKg) : '', reps: value?.reps ? String(value.reps) : '',
+      kg: draft.kg, reps: draft.reps,
       kgHint: hint ? String(hint.weightKg) : '', repsHint: hint?.reps ? String(hint.reps) : '',
     };
     if (done < totalSets) {
@@ -467,24 +512,17 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     const next = tasks[activeTaskIds[index + 1]];
     if (next) setSetRest({ ...restBase, kind: 'transition', nextLabel: next.title });
     setIndex(i => i + 1);
-  }, [currentTask, setNumber, totalSets, toggleTask, tasks, activeTaskIds, index]);
+  }, [currentTask, setNumber, totalSets, toggleTask, tasks, activeTaskIds, index, draft]);
 
   // Al acabar el descanso: guarda el peso de la serie (si se puso) y arranca lo siguiente.
   const endSetRest = useCallback(() => {
     if (!setRest) return;
-    const task = useAppStore.getState().tasks[setRest.taskId];
-    const kg = parseFloat(setRest.kg.replace(',', '.'));
-    const reps = parseInt(setRest.reps, 10);
-    if (task && Number.isFinite(kg) && kg > 0) {
-      updateTask(task.id, {
-        weightLogs: [...(task.weightLogs || []), { set: setRest.doneSet, weightKg: kg, ...(Number.isFinite(reps) && reps > 0 ? { reps } : {}), date: new Date().toISOString() }]
-      });
-    }
+    // El peso ya está guardado (al marcar la serie y al corregirlo durante el descanso).
     setSetRest(null);
     setTimeLeft(initialDuration);
     setIsActive(true);
     SoundService.playPop();
-  }, [setRest, updateTask, initialDuration]);
+  }, [setRest, initialDuration]);
 
   useEffect(() => {
     if (!setRest) return;
@@ -765,7 +803,7 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
     const fieldBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)';
     const restTask = tasks[setRest.taskId];
     const adjust = (delta: number) => { HapticService.selection(); setSetRest(r => r && ({ ...r, adjustSec: Math.max(-r.plannedSec, r.adjustSec + delta) })); };
-    const field: React.CSSProperties = { width: 84, minHeight: 44, borderRadius: 12, border: 'none', background: fieldBg, color: primaryText, fontSize: '1.05rem', textAlign: 'center', fontVariantNumeric: 'tabular-nums' };
+    const field: React.CSSProperties = { width: 72, minHeight: 44, borderRadius: 12, border: 'none', background: fieldBg, color: primaryText, fontSize: '1.05rem', textAlign: 'center', fontVariantNumeric: 'tabular-nums' };
     const pill: React.CSSProperties = { minHeight: 44, padding: '0 18px', borderRadius: 22, border: 'none', background: fieldBg, color: primaryText, fontSize: '1rem', cursor: 'pointer', fontVariantNumeric: 'tabular-nums' };
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} role="dialog" aria-modal="true" aria-label="Descanso" data-testid="set-rest"
@@ -793,10 +831,11 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, color: mutedText, fontSize: '0.95rem' }}>
           <span>Serie {setRest.doneSet}</span>
           <input aria-label={`Kilos de la serie ${setRest.doneSet}`} inputMode="decimal" placeholder={setRest.kgHint || 'kg'} value={setRest.kg}
-            onChange={e => setSetRest(r => r && ({ ...r, kg: e.target.value }))} style={field} />
-          <span aria-hidden="true">×</span>
+            onChange={e => { const v = e.target.value; setSetRest(r => r && ({ ...r, kg: v })); if (setRest.kind === 'set' || setRest.totalSets > 1) writeSetLog(setRest.taskId, setRest.doneSet, v, setRest.reps); }} style={field} />
+          <span aria-hidden="true">kg ×</span>
           <input aria-label={`Repeticiones de la serie ${setRest.doneSet}`} inputMode="numeric" placeholder={setRest.repsHint || 'reps'} value={setRest.reps}
-            onChange={e => setSetRest(r => r && ({ ...r, reps: e.target.value }))} style={field} />
+            onChange={e => { const v = e.target.value; setSetRest(r => r && ({ ...r, reps: v })); if (setRest.kind === 'set' || setRest.totalSets > 1) writeSetLog(setRest.taskId, setRest.doneSet, setRest.kg, v); }} style={field} />
+          <span aria-hidden="true">reps</span>
         </div>
 
         <p style={{ margin: '14px 0 0', color: mutedText, fontSize: '0.95rem', maxWidth: 340 }}>
@@ -974,6 +1013,11 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
               {totalEstimatedMins > 0 && remainingEstimatedMins > 0 ? `, quedan ${formatDuration(remainingEstimatedMins)}` : ''}
             </div>
           </div>
+          {isGymWorkout && activeTaskIds.some(id => isSeriesTask(tasks[id])) && (
+            <button onClick={() => setShowTable(true)} style={iconButton} title="Ver todas las series" aria-label="Ver todas las series">
+              <Table2 size={20} />
+            </button>
+          )}
           <button
             onClick={() => setShowSound(v => !v)}
             style={{ ...iconButton, color: ambient !== 'off' ? listColor : muted }}
@@ -1052,7 +1096,28 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
                 </div>
               )}
 
-              {currentTask?.description && (
+              {/* Serie en curso: kilos y repeticiones ya propuestos; se guardan al marcarla. */}
+              {isSeries && currentTask && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input aria-label={`Kilos de la serie ${setNumber}`} inputMode="decimal" placeholder="kg" value={draft.kg}
+                      onChange={e => setSetDraft({ key: draftKey, kg: e.target.value, reps: draft.reps })}
+                      style={{ width: 84, minHeight: 44, borderRadius: 12, border: 'none', background: chipBg, color: primaryText, fontSize: 16, fontWeight: 600, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }} />
+                    <span style={{ color: muted, fontSize: '0.9rem' }}>kg ×</span>
+                    <input aria-label={`Repeticiones de la serie ${setNumber}`} inputMode="numeric" placeholder="reps" value={draft.reps}
+                      onChange={e => setSetDraft({ key: draftKey, kg: draft.kg, reps: e.target.value })}
+                      style={{ width: 64, minHeight: 44, borderRadius: 12, border: 'none', background: chipBg, color: primaryText, fontSize: 16, fontWeight: 600, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }} />
+                    <span style={{ color: muted, fontSize: '0.9rem' }}>reps</span>
+                  </div>
+                  {setProposal && (
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: muted, maxWidth: 340, lineHeight: 1.35 }}>
+                      {setProposal.prev ? `Anterior: ${fmtKg(setProposal.prev.weightKg)} × ${setProposal.prev.reps ?? '—'} · ` : ''}{setProposal.suggestion.reason}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {!isSeries && currentTask?.description && (
                 <p style={{ fontSize: '0.95rem', color: muted, margin: 0, lineHeight: 1.4, maxWidth: 400, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                   {currentTask.description}
                 </p>
@@ -1149,6 +1214,17 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
           </div>
         )}
 
+        {/* ── Lo que viene después: para saber qué queda sin salir de la cuenta atrás ── */}
+        {!showDurationPicker && currentTask && (() => {
+          const nextTask = activeTaskIds[index + 1] ? tasks[activeTaskIds[index + 1]] : null;
+          const text = isSeries && setNumber < totalSets
+            ? `Después: descanso ${formatDuration(setRestSeconds(currentTask) / 60)} y serie ${setNumber + 1}`
+            : nextTask ? `Después: ${nextTask.title}` : 'Es lo último';
+          return (
+            <p data-testid="sequence-next" style={{ width: '100%', maxWidth: 520, margin: '0 0 8px', textAlign: 'center', fontSize: '0.85rem', color: muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{text}</p>
+          );
+        })()}
+
         {/* ── Acciones: una principal, dos discretas ── */}
         {!showDurationPicker && (
           <div style={{ width: '100%', maxWidth: 520, display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -1181,6 +1257,12 @@ export function ListSequenceMode({ taskIds, listName, listColor = '#0a84ff', onC
               </button>
             </div>
           </div>
+        )}
+
+        {showTable && (
+          <Suspense fallback={null}>
+            <GymSession taskIds={activeTaskIds} title={listName} onClose={() => setShowTable(false)} />
+          </Suspense>
         )}
       </motion.div>
     </AnimatePresence>

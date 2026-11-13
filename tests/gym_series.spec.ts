@@ -84,72 +84,60 @@ test('rotación: si el Día 1 se hizo otro día, hoy toca el Día 2', async ({ p
   if (sameWeek) await expect(hub(page).getByRole('radio', { name: /^Día 1.*hecho esta semana/ })).toBeVisible();
 });
 
-test('«Empezar» abre el entreno: series en orden, el peso se guarda al marcar y se puede salir y volver', async ({ page }) => {
+test('«Empezar»: la cuenta atrás manda, el peso de cada serie se guarda al marcarla y la tabla se abre aparte', async ({ page }) => {
   await seedGym(page);
-  await page.getByRole('button', { name: 'Empezar lista' }).first().click();
-  const session = page.getByRole('dialog', { name: /^Entreno/ });
-  await expect(session).toBeVisible();
-
-  // Solo el día de hoy (y lo común): la sentadilla (Día 2) no está.
-  await expect(session.getByText('Press de banca')).toBeVisible();
-  await expect(session.getByText('Sentadilla')).toHaveCount(0);
-
-  // Calentamiento: una fila con su ✓.
-  await session.getByRole('button', { name: 'Hecho: Estiramientos previos' }).click();
-
-  // Press de banca abierto: lo de la última vez propuesto; la serie 2 no se puede marcar antes que la 1.
-  const banca = session.getByRole('table', { name: 'Series de Press de banca' });
-  await expect(banca.getByLabel('Kilos de la serie 1')).toHaveValue('57,5');
-  await expect(banca.getByRole('button', { name: /^Serie 2: primero la 1/ })).toBeDisabled();
-  await banca.getByLabel('Kilos de la serie 1').fill('60');
-  await banca.getByLabel('Repeticiones de la serie 1').fill('8');
-  await banca.getByRole('button', { name: 'Serie 1 hecha' }).click();
-
-  // Guardado al momento (no al acabar el descanso), con el descanso abajo.
-  await expect.poll(() => page.evaluate(() => {
+  const store = () => page.evaluate(() => {
     const t = (window as any).useAppStore.getState().tasks.g_banca;
     return [t.currentCount, (t.weightLogs || []).filter((l: any) => new Date(l.date).toDateString() === new Date().toDateString()).map((l: any) => [l.set, l.weightKg, l.reps])];
-  })).toEqual([1, [[1, 60, 8]]]);
-  const rest = page.getByRole('timer', { name: /Descanso/ });
-  await expect(rest).toBeVisible();
-  await expect(rest).toContainText('Serie 2');
-  await rest.getByRole('button', { name: 'Saltar' }).click();
-  await expect(rest).toHaveCount(0);
-
-  // Salir y volver: la serie 1 sigue hecha y la siguiente es la 2.
-  await session.getByRole('button', { name: /^Cerrar/ }).click();
-  await expect(session).toHaveCount(0);
+  });
+  const goToBanca = async () => {
+    const title = page.locator('h2').first();
+    for (let i = 0; i < 6; i++) {
+      await expect(title).not.toHaveText('');
+      const current = await title.textContent();
+      if (current === 'Press de banca') break;
+      await page.getByRole('button', { name: 'Omitir tarea' }).click();
+      await expect(title).not.toHaveText(current || '');
+    }
+    await expect(page.getByRole('heading', { name: 'Press de banca' })).toBeVisible();
+  };
   await page.getByRole('button', { name: 'Empezar lista' }).first().click();
-  await expect(banca.getByRole('button', { name: 'Deshacer la serie 1' })).toBeVisible();
-  await expect(banca.getByRole('button', { name: 'Serie 2 hecha' })).toBeEnabled();
+  await goToBanca();
 
-  // Deshacer una serie con peso apuntado pregunta antes: «Mantener» no cambia nada.
+  // Cuenta atrás de la serie en el centro, con lo de la última vez ya propuesto.
+  await expect(page.getByRole('button', { name: /Pausar|Reanudar/ }).first()).toBeVisible();
+  await expect(page.getByTestId('set-indicator')).toContainText('Serie 1 de 3');
+  await expect(page.getByLabel('Kilos de la serie 1')).toHaveValue('57,5');
+  await expect(page.getByTestId('sequence-next')).toContainText('serie 2');
+  await page.getByLabel('Kilos de la serie 1').fill('60');
+  await page.getByLabel('Repeticiones de la serie 1').fill('8');
+  await page.getByRole('button', { name: 'Serie 1 hecha' }).click();
+
+  // Guardado al momento; en el descanso se puede corregir y también se guarda.
+  await expect.poll(store).toEqual([1, [[1, 60, 8]]]);
+  await expect(page.getByTestId('set-rest')).toBeVisible();
+  await page.getByLabel('Repeticiones de la serie 1').fill('9');
+  await expect.poll(store).toEqual([1, [[1, 60, 9]]]);
+
+  // Salir en mitad del descanso no pierde nada; al volver toca la serie 2 con el peso de la 1.
+  await page.getByRole('button', { name: 'Salir del modo secuencia' }).click();
+  await page.getByRole('button', { name: 'Empezar lista' }).first().click();
+  await goToBanca();
+  await expect(page.getByTestId('set-indicator')).toContainText('Serie 2 de 3');
+  await expect(page.getByLabel('Kilos de la serie 2')).toHaveValue('60');
+
+  // La tabla de todas las series, aparte; deshacer con peso apuntado pregunta.
+  await page.getByRole('button', { name: 'Ver todas las series' }).click();
+  const table = page.getByRole('dialog', { name: /^Entreno/ });
+  const banca = table.getByRole('table', { name: 'Series de Press de banca' });
   await banca.getByRole('button', { name: 'Deshacer la serie 1' }).click();
   const confirm = page.getByRole('alertdialog');
-  await expect(confirm).toContainText('60 kg × 8');
+  await expect(confirm).toContainText('60 kg × 9');
   await confirm.getByRole('button', { name: 'Mantener' }).click();
-  await expect(banca.getByRole('button', { name: 'Deshacer la serie 1' })).toBeVisible();
-  expect(await page.evaluate(() => (window as any).useAppStore.getState().tasks.g_banca.currentCount)).toBe(1);
-  // La serie 2 propone lo mismo que la última vez (sin historial de la 2, la última serie anterior).
-  await banca.getByRole('button', { name: 'Serie 2 hecha' }).click();
-  await page.getByRole('timer', { name: /Descanso/ }).getByRole('button', { name: 'Saltar' }).click();
-  await banca.getByRole('button', { name: 'Serie 3 hecha' }).click();
-
-  // Tras la última serie: descanso de transición hacia el siguiente ejercicio, que se abre solo.
-  await expect(page.getByRole('timer', { name: /Descanso/ })).toContainText('Remo con barra');
-  await expect(session.getByRole('table', { name: 'Series de Remo con barra' })).toBeVisible();
-
-  // Resumen.
-  await session.getByRole('button', { name: 'Terminar' }).click();
-  const summary = page.getByRole('dialog', { name: 'Resumen del entreno' });
-  await expect(summary).toContainText('3 de 5');
-  await summary.getByRole('button', { name: 'Listo' }).click();
-
-  const state = await page.evaluate(() => {
-    const t = (window as any).useAppStore.getState().tasks;
-    return { banca: t.g_banca.currentCount, historial: (t.g_banca.completionHistory || []).length, sentadilla: t.g_sent.currentCount || 0 };
-  });
-  expect(state).toEqual({ banca: 3, historial: 1, sentadilla: 0 });
+  await table.getByRole('button', { name: /^Cerrar/ }).click();
+  await expect(table).toHaveCount(0);
+  await expect(page.getByTestId('set-indicator')).toContainText('Serie 2 de 3');
+  await expect.poll(store).toEqual([1, [[1, 60, 9]]]);
 });
 
 test('cada ejercicio dice sus series, el descanso entre series y el total, sin «Semanal»', async ({ page }) => {
