@@ -97,3 +97,20 @@ test.describe('oscuro', () => {
     expect(colors![1]).not.toBe('rgb(0, 0, 0)');
   });
 });
+
+test('una tarea con frecuencia pero sin estancia no crea una cabecera con un identificador', async ({ page }) => {
+  await bootApp(page);
+  await page.evaluate(() => {
+    localStorage.setItem('cycle_view_layout_pref', JSON.stringify('mixed'));
+    const created = new Date(Date.now() - 30 * 86400000).toISOString();
+    (window as any).useAppStore.setState((s: any) => ({ tasks: { ...s.tasks,
+      o1: { id: 'o1', user_id: 'local_guest_e2e', type: 'task', title: 'Limpiar el horno a fondo', status: 'pending', created_at: created, updated_at: created, version: 1, categoryId: 'limpieza', sectionId: 'sec_limpieza_mensual', cycle_id: 'cycle_month', duration: 15 },
+    } }));
+    window.dispatchEvent(new CustomEvent('select-view', { detail: 'list_limpieza' }));
+  });
+  await expect(page.getByTestId('limpieza-layout-toggle-btn')).toBeVisible();
+  if (await page.getByTestId('limpieza-layout-toggle-btn').getAttribute('aria-pressed') !== 'true') await page.getByTestId('limpieza-layout-toggle-btn').click();
+  await expect(page.getByTestId('limpieza-layout-toggle-btn')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.section-head-title', { hasText: /^Cocina$/ })).toBeVisible();
+  await expect(page.locator('.section-head-title', { hasText: /sec_|_/ })).toHaveCount(0);
+});

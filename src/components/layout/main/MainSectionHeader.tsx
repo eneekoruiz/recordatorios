@@ -10,7 +10,7 @@ import { formatEuro } from '../../../utils/format';
 import { classifyDropZone, DRAG_MOVE_THRESHOLD_PX, createEdgeAutoScroll, findScrollableParent, relativeYInRow, dropTargetAt, guardNativeScroll, createDragGhost } from '../../../utils/dragDrop';
 import { MetaSplit, MONEY_COLOR } from '../../ui/MetaSplit';
 import { routinePeriodLabel, type RoutinePart } from '../../../utils/routineBreakdown';
-import { getPeriodContextLabel } from '../../../utils/sectionRoutine';
+import { getPeriodContextLabel, humanizeInternalName } from '../../../utils/sectionRoutine';
 import type { TrainingDayStatus } from '../../../utils/trainingDays';
 
 interface SectionData {
@@ -677,9 +677,9 @@ export const MainSectionHeader: React.FC<MainSectionHeaderProps> = ({
                 className="section-head-title"
                 onDoubleClick={(e) => isCustomSection && startEditingSection(e, data.sectionId!, data.title)}
                 style={{ cursor: isCustomSection ? 'text' : 'pointer' }}
-                title={isCustomSection ? 'Doble clic para editar' : data.title}
+                title={isCustomSection ? 'Doble clic para editar' : humanizeInternalName(data.title)}
               >
-                {data.title}
+                {humanizeInternalName(data.title)}
               </h3>
               {/* Redundant Dia activo removed in favor of unified trainingDay status */}
               

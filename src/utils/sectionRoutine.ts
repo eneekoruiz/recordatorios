@@ -157,6 +157,47 @@ export function getPureCyclicPeriodicity(name?: string | null): PeriodicityType 
   return null;
 }
 
+const FREQ_WORDS: Record<string, string> = {
+  diaria: 'Diarias', diarias: 'Diarias', day: 'Diarias', daily: 'Diarias',
+  semanal: 'Semanales', semanales: 'Semanales', week: 'Semanales', weekly: 'Semanales',
+  mensual: 'Mensuales', mensuales: 'Mensuales', month: 'Mensuales', monthly: 'Mensuales',
+  anual: 'Anuales', anuales: 'Anuales', year: 'Anuales', yearly: 'Anuales',
+};
+const ROOM_WORDS: Record<string, string> = {
+  cocina: 'Cocina', bano: 'Baño', hab: 'Habitación', habitacion: 'Habitación', pasillo: 'Pasillo / Entrada',
+  entrada: 'Pasillo / Entrada', balcon: 'Balcón', general: 'General', salon: 'Salón',
+};
+const INTERNAL_PREFIX = /^(?:sec|section|lst|list|cat|cycle|task|room|limp|limpieza|gym|gimnasio|sec_limp_room)$/;
+const UUID_LIKE = /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i;
+
+/** ¿Parece un identificador interno (sec_limpieza_mensual, un uuid…) y no un nombre puesto por alguien? */
+export function looksLikeInternalId(value?: string | null): boolean {
+  const v = (value || '').trim();
+  if (!v) return false;
+  if (UUID_LIKE.test(v)) return true;
+  return /^[a-z0-9]+(?:_[a-z0-9]+)+$/.test(v) && INTERNAL_PREFIX.test(v.split('_')[0]);
+}
+
+/**
+ * Un identificador interno nunca se enseña tal cual: se traduce a algo que se entienda
+ * («sec_limpieza_mensual» → «Mensuales», «sec_limp_semanal_cocina» → «Cocina · Semanales»).
+ * Un nombre normal se devuelve sin tocar.
+ */
+export function humanizeInternalName(value?: string | null, fallback = 'Sin sección'): string {
+  const v = (value || '').trim();
+  if (!looksLikeInternalId(v)) return v;
+  if (UUID_LIKE.test(v)) return fallback;
+  const parts = v.split('_').filter(part => !INTERNAL_PREFIX.test(part));
+  const freq = parts.map(part => FREQ_WORDS[part]).find(Boolean);
+  const room = parts.map(part => ROOM_WORDS[part]).find(Boolean);
+  if (room && freq) return `${room} · ${freq}`;
+  if (room || freq) return (room || freq)!;
+  const words = parts.filter(part => !/^\d+$/.test(part) && part.length > 1);
+  if (!words.length) return fallback;
+  const text = words.join(' ');
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 /**
  * Unifica el formato de los títulos de sección (especialmente periódicas: Diarias, Semanales, etc.)
  * garantizando coherencia visual idéntica estilo Apple entre todas las listas (Quehaceres, Limpieza, etc.),
@@ -164,6 +205,7 @@ export function getPureCyclicPeriodicity(name?: string | null): PeriodicityType 
  */
 export function formatSectionTitle(title?: string | null): string {
   if (!title || typeof title !== 'string') return '';
+  if (looksLikeInternalId(title)) return humanizeInternalName(title);
   const clean = title.replace(/^⏳\s*/, '').trim();
 
   // Periodicidades estándar unificadas en formato plural Apple (Diarias, Semanales, Mensuales, Anuales)

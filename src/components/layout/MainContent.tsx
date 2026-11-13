@@ -1961,7 +1961,8 @@ const CORE_CYCLES = [
                   }
                   if (!roomKey) {
                     const info = canonicalRoomInfo(tSecId);
-                    if (info.key !== 'general' && info.key !== 'custom') {
+                    // Solo una estancia conocida: un id de frecuencia (sec_limpieza_mensual) no es una estancia.
+                    if (info.key !== 'general' && defaultRooms.some(dr => dr.key === info.key)) {
                       roomKey = info.key;
                     }
                   }
@@ -2168,7 +2169,8 @@ const CORE_CYCLES = [
                   }
                   if (!roomKey) {
                     const info = canonicalRoomInfo(tSecId);
-                    if (info.key !== 'general' && info.key !== 'custom') {
+                    // Solo una estancia conocida: un id de frecuencia (sec_limpieza_mensual) no es una estancia.
+                    if (info.key !== 'general' && defaultRooms.some(dr => dr.key === info.key)) {
                       roomKey = info.key;
                     }
                   }

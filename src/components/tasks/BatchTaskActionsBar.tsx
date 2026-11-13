@@ -1,3 +1,4 @@
+import { humanizeInternalName } from '../../utils/sectionRoutine';
 import React, { useState, useRef } from 'react';
 import { useModalFocus } from '../../hooks/useModalFocus';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -350,7 +351,7 @@ export const BatchTaskActionsBar: React.FC<BatchTaskActionsBarProps> = ({
                     }}
                   >
                     <LayoutList size={16} color="var(--accent-primary)" />
-                    <span>{sec.name}</span>
+                    <span>{humanizeInternalName(sec.name)}</span>
                   </button>
                 ))}
               </div>

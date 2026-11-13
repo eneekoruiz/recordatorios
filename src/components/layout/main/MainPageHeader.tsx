@@ -13,7 +13,6 @@ import {
   ChevronDown,
   Check,
   Plus,
-  Layers,
   House,
   Dumbbell,
 } from 'lucide-react';
@@ -666,15 +665,23 @@ export const MainPageHeader: React.FC<MainPageHeaderProps> = ({
 
         
         {isLimpiezaList(currentView, currentList) && onToggleCycleViewLayout && (
-          <div style={{ marginTop: 8, maxWidth: 360 }}>
-            <AppleSegmentedControl<'sections' | 'mixed'>
-              options={[
-                { value: 'sections', label: 'Por frecuencias', icon: <Layers size={13} strokeWidth={2.4} /> },
-                { value: 'mixed', label: 'Por estancias (continua)', icon: <House size={13} strokeWidth={2.4} /> }
-              ]}
-              value={cycleViewLayout === 'mixed' ? 'mixed' : 'sections'}
-              onChange={(val) => onToggleCycleViewLayout(val)}
-            />
+          <div style={{ marginTop: 8 }}>
+            {/* Una sola cápsula: encendida = por estancias (seguida); apagada = por frecuencias. */}
+            <button
+              type="button"
+              data-testid="limpieza-layout-toggle-btn"
+              className={`routine-chip${cycleViewLayout === 'mixed' ? ' is-on' : ''}`}
+              aria-pressed={cycleViewLayout === 'mixed'}
+              title={cycleViewLayout === 'mixed' ? 'Ver por frecuencias' : 'Ver por estancias, todo seguido'}
+              style={{ ['--chip-color' as string]: viewColor }}
+              onClick={() => {
+                HapticService.selection();
+                onToggleCycleViewLayout(cycleViewLayout === 'mixed' ? 'sections' : 'mixed');
+              }}
+            >
+              <House size={13} strokeWidth={2.4} aria-hidden="true" />
+              <span>Por estancias</span>
+            </button>
           </div>
         )}
 

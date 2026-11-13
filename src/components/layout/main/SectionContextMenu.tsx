@@ -1,3 +1,4 @@
+import { humanizeInternalName } from '../../../utils/sectionRoutine';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
@@ -308,7 +309,7 @@ export const SectionContextMenu: React.FC<SectionContextMenuProps> = ({
                       >
                         <Layers size={15} color="var(--accent-primary)" />
                         <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {sec.name}
+                          {humanizeInternalName(sec.name)}
                         </span>
                       </button>
                     ))}
