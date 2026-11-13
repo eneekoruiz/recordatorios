@@ -1917,3 +1917,10 @@ html, body {
   to { transform: none; opacity: 1; }
 }
 
+
+/* Indicador «Nube»: el texto en color de etiqueta (contraste AA sobre la cápsula); el estado lo da el icono.
+   Va aquí, con !important, porque la regla genérica de los botones redondos de cabecera fuerza el azul. */
+.glass-header .sync-indicator-btn,
+.sync-indicator-btn {
+  color: var(--text-primary) !important;
+}
