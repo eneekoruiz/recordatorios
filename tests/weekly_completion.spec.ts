@@ -72,6 +72,10 @@ for (const width of [375, 768, 1440]) {
 
       for (const theme of ['light', 'dark']) {
         await page.evaluate(theme => (window as any).useAppStore.getState().setTheme(theme), theme);
+        // El cambio de tema anima los colores: axe debe medir el color final, no uno a medio camino.
+        await page.evaluate(() => Promise.all(document.getAnimations()
+          .filter(a => a.effect?.getComputedTiming().iterations !== Infinity)
+          .map(a => a.finished.catch(() => undefined))));
         const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
         expect(axe.violations.filter(v => v.impact === 'serious' || v.impact === 'critical')).toEqual([]);
       }
