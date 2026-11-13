@@ -283,7 +283,8 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
                 background: "var(--bg-elevated)",
                 border: "1px solid var(--border-subtle)",
                 cursor: "pointer",
-                color: syncStatus === "error" ? "var(--accent-red, #ff453a)" : syncStatus === "offline" ? "var(--accent-orange, #ff9f0a)" : syncStatus === "syncing" ? "var(--accent-blue, #2997ff)" : "var(--accent-green, #30d158)",
+                // El texto en el color de etiqueta (contraste AA); el estado lo dice el color del icono.
+                color: "var(--text-primary)",
                 fontSize: "0.75rem",
                 fontWeight: 600,
                 marginRight: 6
@@ -292,6 +293,7 @@ export const MainGlassHeader: React.FC<MainGlassHeaderProps> = ({
               <RefreshCw
                 size={12}
                 strokeWidth={2.4}
+                color={syncStatus === "error" ? "var(--accent-red, #ff453a)" : syncStatus === "offline" ? "var(--accent-orange, #ff9f0a)" : syncStatus === "syncing" ? "var(--accent-blue, #2997ff)" : "var(--accent-green, #30d158)"}
                 style={{
                   animation: syncStatus === "syncing" ? "spin-anim 1s linear infinite" : "none"
                 }}
