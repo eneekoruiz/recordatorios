@@ -1,85 +1,59 @@
-# Recordatorios Élite
+# Recordatorios
 
-[![CI & Quality Assurance](https://github.com/eneekoruiz/recordatorios/actions/workflows/ci.yml/badge.svg)](https://github.com/eneekoruiz/recordatorios/actions/workflows/ci.yml)
+Offline-first Progressive Web Application for managing tasks, habits, and recurring reminders with natural-language input and multi-device synchronization.
 
-**Demo en vivo: [recordatorios-delta.vercel.app](https://recordatorios-delta.vercel.app)** · Código: [github.com/eneekoruiz/recordatorios](https://github.com/eneekoruiz/recordatorios)
+Live demo: [recordatorios-delta.vercel.app](https://recordatorios-delta.vercel.app)
 
-PWA de recordatorios inspirada en Recordatorios de Apple: listas y carpetas, ciclos (diario/semanal/mensual/anual), hábitos con contador, caducidades de tarjetas y suscripciones, diario «Qué he hecho», lenguaje natural en español y asistente IA. Funciona sin conexión y se sincroniza entre dispositivos.
+## Tech Stack
 
-## Características
+- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, Zustand, Framer Motion, Lucide Icons
+- **Storage & PWA:** IndexedDB (`idb`), Service Workers, Vite Plugin PWA
+- **Backend API:** Express, Prisma ORM, PostgreSQL, bcryptjs, jsonwebtoken, rate-limiting
+- **Testing & Tooling:** Vitest, Playwright (including `@axe-core/playwright` accessibility audits), Oxlint
 
-- **Offline-first:** todo el estado vive en el dispositivo (Zustand + IndexedDB) y se sincroniza en segundo plano cuando hay conexión.
-- **Sincronización multi-dispositivo:** push/pull incremental con Last-Write-Wins por versión, en cliente y servidor. Los datos de cada cuenta están aislados.
-- **Lenguaje natural:** `Reunión mañana a las 10:00 !alta @Trabajo` crea el recordatorio con fecha, hora, prioridad y lista.
-- **Calendario:** qué toca cada día: recordatorios con fecha, próximas renovaciones de suscripciones y las rondas de rutina (semanales en su día, la mensual el primer día semanal del mes y la anual, el de enero). Desde un día se crea un recordatorio con la barra rápida.
-- **Listas compartidas de solo lectura** mediante enlace (menú de la lista → *Compartir enlace*).
-- **Servidor MCP** (`/api/mcp`) para que un asistente IA lea y cree recordatorios en tu cuenta (requiere token de sesión).
-- **Instalable** en iOS, Android y escritorio como PWA.
+## Architecture & Key Decisions
 
-## Puesta en marcha local
+- **Offline-First Persistence:** Application state is stored locally in IndexedDB via Zustand. Mutations apply optimistically in the browser before queueing for background synchronization.
+- **Incremental Multi-Device Sync:** Push/pull synchronization protocol with Last-Write-Wins (LWW) versioning between client and PostgreSQL backend.
+- **Natural Language Parsing:** Fast local text tokenizer extracting title, due date, time, priority, and target list from single-line inputs (e.g., `Meeting tomorrow at 10:00 !high @Work`).
+- **Distributed Rate Limiting:** Authentication and recovery endpoints persist rate-limit buckets in PostgreSQL, preventing abuse across ephemeral serverless instances.
+- **MCP Endpoint:** Embedded Model Context Protocol interface (`/api/mcp`) exposing task reads and creations to authorized AI agents.
 
-Requisitos: Node.js 22.22.2 o posterior y una base de datos PostgreSQL (Neon, Supabase, Railway, local…).
+## Local Setup
+
+### Prerequisites
+
+- Node.js 22+
+- PostgreSQL instance (local, Supabase, Neon, or Railway)
+
+### Installation
 
 ```bash
-cp .env.example .env          # rellena DATABASE_URL y JWT_SECRET
+# Clone and install dependencies
+git clone https://github.com/eneekoruiz/recordatorios.git
+cd recordatorios
 npm install
-npx prisma db push            # crea las tablas
-npm run dev                   # frontend (Vite, :5173) + API (Express, :3001)
+
+# Configure environment variables
+cp .env.example .env
+# Edit .env and set DATABASE_URL and JWT_SECRET
+
+# Initialize database schema
+npx prisma db push
+
+# Start frontend (port 5173) and backend API (port 3001) concurrently
+npm run dev
 ```
 
-Las claves de IA (Gemini/OpenAI) se guardan solo en el navegador de cada usuario; no las pongas en variables `VITE_*`, que acabarían en el bundle público.
+### Verification
 
-¿Sin PostgreSQL a mano? `npx tsx tests/support/memory-server.js` levanta la API con datos en memoria.
+```bash
+# Run type check and linter
+npm run validate
 
-## Despliegue en Vercel
+# Run unit tests
+npm test
 
-1. Conecta el repositorio en Vercel (detecta Vite automáticamente; `/api` se sirve como función).
-2. Añade las variables de entorno: `DATABASE_URL`, `JWT_SECRET` (obligatoria), `APP_URL` y, para recuperar contraseñas por email, `RESEND_API_KEY` y `MAIL_FROM`. Ver `.env.example`.
-3. Aplica el esquema antes de publicar la función: la nueva tabla `CronLease` evita envíos simultáneos. Para bases existentes gestionadas con `db push`, sigue [las instrucciones de esquema y baseline](prisma/README.md).
-
-> Los límites de peticiones (login, registro, cambio de contraseña, recuperación) se cuentan en la tabla `RateLimit` de la base de datos, así que valen para todas las instancias serverless (ejecuta `npx prisma db push` para crearla; mientras no exista, se limita en memoria por instancia). `TRUST_PROXY_HOPS` (por defecto 1) indica cuántos proxies hay delante.
-
-> En Vercel no hay tiempo real por SSE (las funciones son efímeras); la app sincroniza cada 30 s, al volver a la pestaña y tras cada cambio.
-
-## Avisos con la app cerrada
-
-La app avisa sin saturar: **un resumen al día** a las 9:00 de tu zona horaria («Completa tus recordatorios diarios», «Hoy te tocan los recordatorios semanales» en tu día semanal, «Hoy toca la ronda mensual» el primer día semanal del mes y la revisión anual, el de enero) y **las alertas con hora** que pongas en un recordatorio, agrupadas si coinciden. El resumen cuenta lo mismo que ves en la app (la frecuencia sale también de la sección, y lo ya hecho en su periodo no cuenta). El día semanal se elige en *Calendario* y se sincroniza entre dispositivos. Se activan en el menú del perfil → *Avisos con la app cerrada* (en iPhone, con la app añadida a la pantalla de inicio).
-
-Para ponerlo en marcha:
-
-1. `npx web-push generate-vapid-keys` y guarda `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `VAPID_SUBJECT` en Vercel.
-2. Define `CRON_SECRET` en Vercel. `vercel.json` ya programa una llamada diaria a `/api/cron/notify` (vale para el resumen, también en el plan gratuito).
-3. Para que las alertas con hora lleguen puntuales, añade en GitHub los secretos `APP_URL` y `CRON_SECRET`: el flujo `.github/workflows/notify.yml` llama cada 10 minutos.
-4. Aplica el esquema para crear las suscripciones, los límites y el bloqueo `CronLease` (ver [prisma/README.md](prisma/README.md)).
-
-## Scripts
-
-| Comando | Qué hace |
-| --- | --- |
-| `npm run dev` | Frontend + API en local |
-| `npm test` | Tests unitarios (API, sincronización, NLP, avisos, calendario) con Vitest |
-| `npm run test:e2e` | Tests end-to-end con Playwright (`E2E_MEMORY_DB=1` para no necesitar PostgreSQL) |
-| `npm run lint` / `npm run typecheck` | Calidad estática |
-| `npm run build` | Build de producción |
-
-Playwright usa el build de producción, su CSP y la API local. Instala los motores con
-`npx playwright install chromium webkit`; para una ejecución sin PostgreSQL usa
-`E2E_MEMORY_DB=1` (en PowerShell: `$env:E2E_MEMORY_DB='1'`) y `npm run test:e2e`.
-`PW_DEV_SERVER=1` permite comprobar específicamente el servidor de desarrollo.
-La configuración conserva trazas de los fallos, aunque no haya reintentos.
-
-## Estructura
-
-- `server/` — API Express: autenticación, sincronización, listas compartidas y MCP (`app.js`), utilidades puras de sincronización (`syncUtils.js`), avisos push (`notifications.js`), email (`mail.js`).
-- `shared/` — lógica pura que usan a la vez la app y el servidor (frecuencia de cada recordatorio y rondas de rutina).
-- `api/index.js` — punto de entrada de la función serverless de Vercel.
-- `src/store/` — estado global (Zustand) persistido en IndexedDB.
-- `src/sync/` — motor de sincronización (`syncManager.ts`) y lógica de fusión testeable (`merge.ts`).
-- `src/components/` — interfaz por dominios (layout, tasks, auth, share, ai…).
-- `src/styles/polish.css` — capa final del sistema visual (paleta clara/oscura, tipografía, barra lateral).
-- `tests/unit/` — Vitest · `tests/*.spec.ts` — Playwright.
-
-Más detalle técnico en [ARCHITECTURE.md](ARCHITECTURE.md).
-
-La revisión de calidad y seguridad, sus correcciones y los límites de verificación
-están en el [informe HELEN del 8 de octubre de 2026](docs/AUDITORIA-HELEN-2026-10-08.md).
+# Run end-to-end tests
+npm run test:e2e
+```
