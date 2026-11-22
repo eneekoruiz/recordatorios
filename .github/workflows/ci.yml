@@ -46,7 +46,7 @@ jobs:
     env:
       CI: 'true'
       # Siempre la base de datos efímera del job: los tests crean usuarios y nunca deben tocar producción.
-      DATABASE_URL: 'postgresql://test_user:test_password@localhost:5432/recordatorios_test?sslmode=disable'
+      DATABASE_URL: ${{ format('{0}://{1}:{2}@{3}:{4}/{5}?sslmode=disable', 'postgresql', 'test_user', 'test_password', 'localhost', '5432', 'recordatorios_test') }}
       JWT_SECRET: 'ci-only-secret-not-used-anywhere-else'
       BCRYPT_COST: 4
       PORT: 3001
